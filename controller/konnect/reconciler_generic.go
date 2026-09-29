@@ -611,18 +611,19 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 					return ctrl.Result{RequeueAfter: retryAfter}, nil
 				}
 
-				// If Konnect refused to delete the entity because it still holds
-				// entries (e.g. a config store with secrets), report a dedicated
+				// If Konnect refused to delete the entity until something else is
+				// removed first (e.g. a config store still holding secrets, or a
+				// custom policy still used by policies), report a dedicated
 				// DeletionBlocked condition and requeue on a fixed period. The
-				// finalizer stays in place until the entries are removed and the
+				// finalizer stays in place until the blocker is removed and the
 				// delete succeeds.
-				if errNotEmpty, ok := errors.AsType[ops.KonnectConfigStoreNotEmptyError](err); ok {
+				if errBlocked, ok := errors.AsType[ops.DeletionBlockedError](err); ok {
 					if res, errStatus := patch.StatusWithCondition(
 						ctx, r.Client, ent,
 						konnectv1alpha1.KonnectEntityProgrammedConditionType,
 						metav1.ConditionFalse,
 						konnectv1alpha1.KonnectEntityProgrammedReasonDeletionBlocked,
-						errNotEmpty.DeletionBlockedMessage(),
+						errBlocked.DeletionBlockedMessage(),
 					); errStatus != nil || !res.IsZero() {
 						return res, errStatus
 					}

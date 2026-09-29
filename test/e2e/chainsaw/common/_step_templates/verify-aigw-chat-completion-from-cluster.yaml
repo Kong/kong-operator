@@ -1,0 +1,50 @@
+# Template for verifying AI Gateway chat-completion traffic from within the
+# cluster, via a short-lived curl Pod piped the aigw_chat_completion.sh script,
+# talking to the AIGatewayDataPlane ingress Service's cluster-DNS name. Retries
+# until the response matches (see aigw_chat_completion.sh).
+#
+# Required bindings:
+#   - namespace: Namespace of the AIGatewayDataPlane / ingress Service and
+#     where the test Pod will be created.
+#   - aigw_dp_name: Name of the AIGatewayDataPlane (ingress Service is
+#     "<aigw_dp_name>-ingress").
+#   - route_path: Route path of the model.
+#   - model_alias: Model alias sent in the request.
+#
+# Optional bindings (override with use.with.bindings):
+#   - expect_header: Response header that must be present (default: X-Kong-LLM-Model).
+#   - expect_header_value: Exact value the header must have, or '' (default)
+#     for any value.
+#   - expected_success: 'true' (default) if the request is expected to
+#     eventually succeed, 'false' if it's expected to be rejected.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: verify-aigw-chat-completion-from-cluster
+spec:
+  bindings:
+    - name: expect_header
+      value: X-Kong-LLM-Model
+    - name: expect_header_value
+      value: ''
+    - name: expected_success
+      value: 'true'
+  try:
+    - script:
+        env:
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: DP_SVC
+            value: (join('', [($aigw_dp_name), '-ingress']))
+          - name: ROUTE_PATH
+            value: ($route_path)
+          - name: MODEL_ALIAS
+            value: ($model_alias)
+          - name: EXPECT_HEADER
+            value: ($expect_header)
+          - name: EXPECT_HEADER_VALUE
+            value: ($expect_header_value)
+          - name: EXPECTED_SUCCESS
+            value: ($expected_success)
+        content: |
+          bash ../../common/scripts/aigw_chat_completion_from_cluster.sh

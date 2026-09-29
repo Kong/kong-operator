@@ -25,6 +25,22 @@ type opsControllerRootUnionFixture struct {
 	ExtraSeedObjects []string
 }
 
+// opsControllerInjectIntoCheck describes an additive (InjectInto) reference
+// whose resolution the generated create test asserts: the seeded referenced
+// object's Konnect name must be sent under TargetKey, and the reference's own
+// key must not reach Konnect.
+type opsControllerInjectIntoCheck struct {
+	// Kind is the referenced kind.
+	Kind string
+	// RefName is the name of the seeded referenced object.
+	RefName string
+	// TargetKey is the SDK payload key the resolved value is injected into.
+	TargetKey string
+	// KonnectGetter returns the referenced object's value the reference
+	// resolves to: "GetKonnectName" or "GetKonnectID" (see resolvesTo).
+	KonnectGetter string
+}
+
 type opsControllerCreateTestData struct {
 	*opsCreateFuncData
 
@@ -65,6 +81,12 @@ type opsControllerTestFileData struct {
 	// ExtraSeedObjects mirrors RootUnion.ExtraSeedObjects, hoisted to the
 	// top level for template convenience.
 	ExtraSeedObjects []string
+	// InjectIntoChecks lists the additive references whose injection the
+	// create test asserts.
+	InjectIntoChecks []opsControllerInjectIntoCheck
+	// AssertsInjectInto is true when the create test asserts InjectIntoChecks:
+	// there is a create op resolving references through the client.
+	AssertsInjectInto bool
 }
 
 func (g *Generator) generateEntityOpsTestFile(
@@ -89,7 +111,7 @@ func (g *Generator) generateEntityOpsTestFile(
 		return nil, nil
 	}
 
-	fixtureFields, refSeedObjects := g.buildOpsControllerTestFields(entityName, schema.Properties)
+	fixtureFields, refSeedObjects, injectIntoChecks := g.buildOpsControllerTestFields(entityName, schema.Properties)
 	rootUnion := buildOpsControllerRootUnionFixture(entityName, schema, g.config.APIGroupPackageAlias)
 
 	extraSeedObjects := refSeedObjects
@@ -105,6 +127,7 @@ func (g *Generator) generateEntityOpsTestFile(
 		RootUnion:        rootUnion,
 		SupportsMirror:   g.entitySupportsMirror(entityName),
 		ExtraSeedObjects: extraSeedObjects,
+		InjectIntoChecks: injectIntoChecks,
 	}
 
 	if createData != nil {
@@ -115,6 +138,7 @@ func (g *Generator) generateEntityOpsTestFile(
 		}
 		data.NeedsFakeClient = data.NeedsFakeClient || createData.NeedsClient
 		data.NeedsComponentsImport = true
+		data.AssertsInjectInto = createData.NeedsClient && len(injectIntoChecks) > 0
 	}
 	if updateData != nil {
 		data.Update = &opsControllerUpdateTestData{
@@ -148,11 +172,19 @@ func (g *Generator) generateEntityOpsTestFile(
 	}, nil
 }
 
-func (g *Generator) buildOpsControllerTestFields(entityName string, props []*parser.Property) ([]opsControllerTestField, []string) {
+func (g *Generator) buildOpsControllerTestFields(entityName string, props []*parser.Property) ([]opsControllerTestField, []string, []opsControllerInjectIntoCheck) {
 	testFields := make([]opsControllerTestField, 0, len(props))
-	var seedObjects []string
+	var (
+		seedObjects      []string
+		injectIntoChecks []opsControllerInjectIntoCheck
+	)
 	for _, prop := range props {
 		if skipProperty(prop) || prop.IsReference {
+			continue
+		}
+		// The target of an additive (InjectInto) reference is mutually
+		// exclusive with it; the fixture sets the reference below instead.
+		if g.isInjectIntoTarget(entityName, jsonName(prop.Name)) {
 			continue
 		}
 		// Configured inter-CR reference fields are typed ref slices; skip them
@@ -164,18 +196,47 @@ func (g *Generator) buildOpsControllerTestFields(entityName string, props []*par
 		// succeed against the test's fake client.
 		if ref := g.referenceForField(entityName, jsonName(prop.Name)); ref != nil {
 			if prop.Type != "array" && len(ref.Kinds) > 0 {
+				alias := g.config.APIGroupPackageAlias
 				refName := "test-" + jsonName(prop.Name)
 				testFields = append(testFields, opsControllerTestField{
 					FieldName: goFieldName(prop.Name),
-					TestValue: fmt.Sprintf("%s.%s{Name: %q}", g.config.APIGroupPackageAlias, ref.TypeName(), refName),
+					TestValue: fmt.Sprintf("%s.%s{Name: %q}", alias, ref.TypeName(), refName),
 				})
+				// An additive (InjectInto) reference is resolved to the
+				// referenced object's Konnect ID (seeded below) or Konnect name,
+				// which root-union kinds keep in their spec: seed the spec from
+				// the referenced kind's fixture, so the create test can assert
+				// the injected value.
+				spec := ""
+				if ref.InjectInto != "" {
+					check := opsControllerInjectIntoCheck{
+						Kind:          ref.Kinds[0],
+						RefName:       refName,
+						TargetKey:     g.injectIntoTargetSDKKey(entityName, ref.InjectInto),
+						KonnectGetter: "GetKonnectID",
+					}
+					fx := buildOpsControllerRootUnionFixture(ref.Kinds[0], findEntitySchema(g.parsed, ref.Kinds[0]), alias)
+					if fx != nil {
+						spec = fmt.Sprintf(
+							", Spec: %[1]s.%[2]sSpec{APISpec: %[1]s.%[2]sAPISpec{%[3]s: &%[1]s.%[3]s{Type: %[1]s.%[4]s, %[5]s: %[6]s}}}",
+							alias, ref.Kinds[0], fx.UnionTypeName, fx.TypeConstName, fx.VariantField, fx.VariantValue,
+						)
+					}
+					switch {
+					case ref.ResolvesTo == "name" && fx != nil:
+						check.KonnectGetter = "GetKonnectName"
+						injectIntoChecks = append(injectIntoChecks, check)
+					case ref.ResolvesTo != "name":
+						injectIntoChecks = append(injectIntoChecks, check)
+					}
+				}
 				seedObjects = append(seedObjects, fmt.Sprintf(
 					`func() *%[1]s.%[2]s {
-		r := &%[1]s.%[2]s{ObjectMeta: metav1.ObjectMeta{Name: %[3]q, Namespace: "default"}}
+		r := &%[1]s.%[2]s{ObjectMeta: metav1.ObjectMeta{Name: %[3]q, Namespace: "default"}%[4]s}
 		r.SetKonnectID(%[3]q + "-kid")
 		return r
 	}()`,
-					g.config.APIGroupPackageAlias, ref.Kinds[0], refName,
+					alias, ref.Kinds[0], refName, spec,
 				))
 			}
 			continue
@@ -215,11 +276,11 @@ func (g *Generator) buildOpsControllerTestFields(entityName string, props []*par
 			TestValue: testValue,
 		})
 	}
-	return testFields, seedObjects
+	return testFields, seedObjects, injectIntoChecks
 }
 
 func buildOpsControllerRootUnionFixture(entityName string, schema *parser.Schema, apiAlias string) *opsControllerRootUnionFixture {
-	if !hasRootOneOf(schema) || len(schema.OneOf) == 0 {
+	if schema == nil || !hasRootOneOf(schema) {
 		return nil
 	}
 

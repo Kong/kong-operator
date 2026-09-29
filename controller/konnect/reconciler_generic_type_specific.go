@@ -304,6 +304,9 @@ func isExpectedKonnectReferenceResolutionError(err error) bool {
 	if _, ok := errors.AsType[commonv1alpha1.ReferenceNotProgrammedError](err); ok {
 		return true
 	}
+	if _, ok := errors.AsType[commonv1alpha1.ReferenceBeingDeletedError](err); ok {
+		return true
+	}
 	if _, ok := errors.AsType[commonv1alpha1.ReferenceCrossNamespaceError](err); ok {
 		return true
 	}
@@ -346,6 +349,9 @@ func hasNotFoundKonnectReferenceResolutionError(err error) bool {
 }
 
 func hasNotProgrammedKonnectReferenceResolutionError(err error) bool {
-	_, ok := errors.AsType[commonv1alpha1.ReferenceNotProgrammedError](err)
+	if _, ok := errors.AsType[commonv1alpha1.ReferenceNotProgrammedError](err); ok {
+		return true
+	}
+	_, ok := errors.AsType[commonv1alpha1.ReferenceBeingDeletedError](err)
 	return ok
 }

@@ -1,0 +1,624 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: aigateway-custom-policy-dataplane
+spec:
+  description: |
+    Konnect AIGateway - Custom Policies on the data plane. Covers both custom
+    policy kinds, each used through both ways an AIGatewayPolicy can name it
+    (customPolicyRef and the literal type):
+
+    - streaming: Konnect streams the Lua handler to the data plane (which sets
+      KONG_CUSTOM_PLUGIN_STREAMING_ENABLED).
+    - installed: the data plane loads the plugin code itself (mounted from a
+      ConfigMap and enabled via KONG_PLUGINS).
+
+    Each plugin sets its own response header with the value from its
+    AIGatewayPolicy's config. Phase A uses the streaming custom policy via
+    customPolicyRef and the installed one via type; phase B switches each
+    policy to the other method with a new header value, and both values are
+    verified on real chat-completions requests routed through a model. Kong
+    allows a single global instance per plugin, hence switching the same
+    policy rather than running both methods side by side.
+
+    Deleting a custom policy that a policy still uses is blocked, and
+    proceeds once the policy is gone (through type and customPolicyRef). A
+    policy referencing a custom policy created after it becomes programmed
+    once the custom policy appears. Both rely on the watches: the timeouts
+    are well below the one-minute fixed retry of blocked deletions, and
+    unresolved references are not retried on a timer at all.
+
+    Built-in plugins can only be used through type; that is covered by the
+    aigateway-policy test.
+
+    Konnect rejects custom policy types on models ("not supported for scope
+    models"), so the policies are global rather than attached to the model.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: aigw_cp_namespace
+      value: ($namespace)
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+    # Streaming custom policy (CR and Konnect name) and the AIGatewayPolicy using it.
+    - name: streaming_custom_policy_name
+      value: custom-policy-streaming
+    - name: streaming_konnect_name
+      value: (join('-', [($test_name), 'streaming']))
+    - name: streaming_policy_name
+      value: (join('-', [($test_name), 'streaming-policy']))
+    # Installed custom policy (CR and Konnect name, also the plugin name), the
+    # ConfigMap with its plugin code, and the AIGatewayPolicy using it.
+    - name: installed_custom_policy_name
+      value: custom-policy-installed
+    - name: installed_konnect_name
+      value: (join('-', [($test_name), 'installed']))
+    - name: installed_plugin_configmap
+      value: installed-custom-plugin
+    - name: installed_policy_name
+      value: (join('-', [($test_name), 'installed-policy']))
+    # Streaming custom policy created after the policy referencing it, to
+    # exercise the watches (not checked on the data plane).
+    - name: late_custom_policy_name
+      value: custom-policy-late
+    - name: late_konnect_name
+      value: (join('-', [($test_name), 'late']))
+    - name: late_policy_name
+      value: (join('-', [($test_name), 'late-policy']))
+    # Header values, one per custom policy and naming method.
+    - name: streaming_via_ref_value
+      value: chainsaw-streaming-via-ref
+    - name: streaming_via_type_value
+      value: chainsaw-streaming-via-type
+    - name: installed_via_type_value
+      value: chainsaw-installed-via-type
+    - name: installed_via_ref_value
+      value: chainsaw-installed-via-ref
+    # The plugins: a Lua schema with header_name and header_value fields, split
+    # around the plugin name (which must match the custom policy's Konnect
+    # name), and a handler setting that header. The installed plugin's code is
+    # in 04-installed-plugin-configmap.yaml.
+    - name: plugin_schema_prefix
+      value: 'local typedefs = require "kong.db.schema.typedefs" return { name = "'
+    - name: plugin_schema_suffix
+      value: '", fields = { { protocols = typedefs.protocols_http }, { config = { type = "record", fields = { { header_name = { type = "string", default = "X-Chainsaw-Custom-Policy" } }, { header_value = { type = "string", default = "applied" } } } } } } }'
+    - name: streaming_plugin_handler
+      value: 'local P = { PRIORITY = 1000, VERSION = "1.0.0" } function P:header_filter(conf) kong.response.set_header(conf.header_name, conf.header_value) end return P'
+  steps:
+    - name: Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: Create-konnect-aigateway
+      description: |
+        Custom plugin streaming needs a 2.2 runtime.
+      bindings:
+        - name: auth_name
+          value: ($konnect_auth_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
+        with:
+          bindings:
+            - name: min_runtime_version
+              value: "2.2"
+            - name: runtime_auto_upgrade
+              value: Enabled
+    - name: Create-installed-plugin-configmap
+      try:
+        - apply:
+            file: 04-installed-plugin-configmap.yaml
+    - name: Create-aigateway-dataplane
+      description: |
+        KONG_CUSTOM_PLUGIN_STREAMING_ENABLED lets the data plane accept the
+        streaming custom policy's handler Konnect streams to it. The installed
+        custom policy's plugin is mounted from the ConfigMap on the Lua
+        package path (the trailing ";;" keeps Kong's default one) and enabled
+        via KONG_PLUGINS.
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+        with:
+          bindings:
+            - name: aigw_dp_env
+              value: >-
+                ([{name: 'KONG_CUSTOM_PLUGIN_STREAMING_ENABLED', value: 'on'},
+                {name: 'KONG_PLUGINS', value: join(',', ['bundled', $installed_konnect_name])},
+                {name: 'KONG_LUA_PACKAGE_PATH', value: '/opt/kong-plugins/?.lua;/opt/kong-plugins/?/init.lua;;'}])
+            - name: aigw_dp_volume_mounts
+              value: >-
+                ([{name: 'installed-custom-plugin', readOnly: `true`,
+                mountPath: join('', ['/opt/kong-plugins/kong/plugins/', $installed_konnect_name])}])
+            - name: aigw_dp_volumes
+              value: >-
+                ([{name: 'installed-custom-plugin', configMap: {name: $installed_plugin_configmap}}])
+    - name: Create-streaming-custom-policy
+      bindings:
+        - name: aigw_custom_policy_name
+          value: ($streaming_custom_policy_name)
+        - name: api_spec
+          value:
+            type: streaming
+            streaming:
+              name: ($streaming_konnect_name)
+              displayName: Chainsaw streaming custom policy
+              schema: (join('', [$plugin_schema_prefix, $streaming_konnect_name, $plugin_schema_suffix]))
+              handler: ($streaming_plugin_handler)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayCustomPolicy.yaml
+    - name: Create-installed-custom-policy
+      bindings:
+        - name: aigw_custom_policy_name
+          value: ($installed_custom_policy_name)
+        - name: api_spec
+          value:
+            type: installed
+            installed:
+              name: ($installed_konnect_name)
+              displayName: Chainsaw installed custom policy
+              schema: (join('', [$plugin_schema_prefix, $installed_konnect_name, $plugin_schema_suffix]))
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayCustomPolicy.yaml
+    - name: Phase-A-streaming-policy-via-customPolicyRef
+      description: |
+        The operator resolves customPolicyRef to the programmed custom policy,
+        then Konnect accepts the policy with the custom policy's name as its type.
+      bindings:
+        - name: aigw_policy_name
+          value: ($streaming_policy_name)
+        - name: api_spec
+          value:
+            name: ($streaming_policy_name)
+            displayName: Uses a custom policy
+            customPolicyRef:
+              name: ($streaming_custom_policy_name)
+            type: (`null`)
+            enabled: Enabled
+            global: Enabled
+            config:
+              type: inline
+              value:
+                header_name: X-Chainsaw-Custom-Policy
+                header_value: ($streaming_via_ref_value)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayPolicy.yaml
+    - name: Phase-A-installed-policy-via-type
+      description: |
+        Uses the installed custom policy through its Konnect name as type.
+      bindings:
+        - name: aigw_policy_name
+          value: ($installed_policy_name)
+        - name: api_spec
+          value:
+            name: ($installed_policy_name)
+            displayName: Uses a custom policy
+            customPolicyRef: (`null`)
+            type: ($installed_konnect_name)
+            enabled: Enabled
+            global: Enabled
+            config:
+              type: inline
+              value:
+                header_name: X-Chainsaw-Installed-Policy
+                header_value: ($installed_via_type_value)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayPolicy.yaml
+    - name: Create-model
+      try:
+        - apply:
+            file: 03-model.yaml
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayModel
+              metadata:
+                name: aigw11-model
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+    - name: Phase-A-verify-streaming-custom-policy-via-customPolicyRef
+      description: The streaming plugin runs on traffic with its policy's config.
+      bindings:
+        - name: route_path
+          value: /aigw11/chat
+        - name: model_alias
+          value: qwen2.5:0.5b
+      use:
+        template: ../../common/_step_templates/verify-aigw-chat-completion-from-cluster.yaml
+        with:
+          bindings:
+            - name: expect_header
+              value: X-Chainsaw-Custom-Policy
+            - name: expect_header_value
+              value: ($streaming_via_ref_value)
+    - name: Phase-A-verify-installed-custom-policy-via-type
+      description: The installed plugin runs on traffic with its policy's config.
+      bindings:
+        - name: route_path
+          value: /aigw11/chat
+        - name: model_alias
+          value: qwen2.5:0.5b
+      use:
+        template: ../../common/_step_templates/verify-aigw-chat-completion-from-cluster.yaml
+        with:
+          bindings:
+            - name: expect_header
+              value: X-Chainsaw-Installed-Policy
+            - name: expect_header_value
+              value: ($installed_via_type_value)
+    - name: Phase-B-switch-streaming-policy-to-type
+      description: |
+        Switch the same policy from customPolicyRef to the literal type (the
+        streaming custom policy's Konnect name), with a new header value.
+      bindings:
+        - name: aigw_policy_name
+          value: ($streaming_policy_name)
+        - name: api_spec
+          value:
+            name: ($streaming_policy_name)
+            displayName: Uses a custom policy
+            customPolicyRef: (`null`)
+            type: ($streaming_konnect_name)
+            enabled: Enabled
+            global: Enabled
+            config:
+              type: inline
+              value:
+                header_name: X-Chainsaw-Custom-Policy
+                header_value: ($streaming_via_type_value)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayPolicy.yaml
+    - name: Phase-B-switch-installed-policy-to-customPolicyRef
+      description: |
+        Switch the same policy from the literal type to customPolicyRef, with
+        a new header value; the operator resolves the reference again.
+      bindings:
+        - name: aigw_policy_name
+          value: ($installed_policy_name)
+        - name: api_spec
+          value:
+            name: ($installed_policy_name)
+            displayName: Uses a custom policy
+            customPolicyRef:
+              name: ($installed_custom_policy_name)
+            type: (`null`)
+            enabled: Enabled
+            global: Enabled
+            config:
+              type: inline
+              value:
+                header_name: X-Chainsaw-Installed-Policy
+                header_value: ($installed_via_ref_value)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayPolicy.yaml
+    - name: Phase-B-verify-streaming-custom-policy-via-type
+      description: The new header value proves the switched policy serves traffic.
+      bindings:
+        - name: route_path
+          value: /aigw11/chat
+        - name: model_alias
+          value: qwen2.5:0.5b
+      use:
+        template: ../../common/_step_templates/verify-aigw-chat-completion-from-cluster.yaml
+        with:
+          bindings:
+            - name: expect_header
+              value: X-Chainsaw-Custom-Policy
+            - name: expect_header_value
+              value: ($streaming_via_type_value)
+    - name: Phase-B-verify-installed-custom-policy-via-customPolicyRef
+      description: The new header value proves the switched policy serves traffic.
+      bindings:
+        - name: route_path
+          value: /aigw11/chat
+        - name: model_alias
+          value: qwen2.5:0.5b
+      use:
+        template: ../../common/_step_templates/verify-aigw-chat-completion-from-cluster.yaml
+        with:
+          bindings:
+            - name: expect_header
+              value: X-Chainsaw-Installed-Policy
+            - name: expect_header_value
+              value: ($installed_via_ref_value)
+    - name: Delete-custom-policy-in-use
+      description: Delete without waiting; the deletion is expected to block.
+      bindings:
+        - name: resource_type
+          value: aigatewaycustompolicies.aiconfiguration.konghq.com
+        - name: resource_name
+          value: ($streaming_custom_policy_name)
+        - name: resource_namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/delete-resource-non-blocking.yaml
+    - name: Custom-policy-deletion-is-blocked-while-in-use
+      description: |
+        Konnect refuses to delete a custom policy that policies still use
+        (via type since phase B): it stays with Programmed=False, reason DeletionBlocked,
+        naming the AIGatewayPolicy using it.
+      try:
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayCustomPolicy
+              metadata:
+                name: ($streaming_custom_policy_name)
+                namespace: ($namespace)
+                (deletionTimestamp != null): true
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+                    reason: DeletionBlocked
+                    (contains(message, join('/', [($namespace), ($streaming_policy_name)]))): true
+    - name: Delete-the-policy-using-the-custom-policy
+      try:
+        - delete:
+            ref:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              name: ($streaming_policy_name)
+              namespace: ($namespace)
+    - name: Blocked-deletion-proceeds-once-the-policy-is-gone
+      description: |
+        The custom policy watches the policies using it (via type since phase B), so its
+        deletion is retried as soon as the policy is gone, well before the
+        one-minute fixed retry of blocked deletions. That retry is scheduled
+        from the first blocked attempt, before this test deletes the policy,
+        so the 20s timeout keeps well clear of it.
+      bindings:
+        - name: resource_type
+          value: aigatewaycustompolicies.aiconfiguration.konghq.com
+        - name: resource_name
+          value: ($streaming_custom_policy_name)
+        - name: resource_namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/wait-for-resource-deleted.yaml
+        with:
+          bindings:
+            - name: timeout
+              value: "20"
+    - name: Policy-referencing-a-missing-custom-policy-is-not-programmed
+      description: |
+        A policy whose customPolicyRef names a custom policy that does not
+        exist yet cannot be resolved: it stays unprogrammed and nothing is
+        sent to Konnect. Unresolved references are not requeued on a timer.
+      try:
+        - apply:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                name: ($late_policy_name)
+                namespace: ($namespace)
+              spec:
+                aiGatewayRef:
+                  namespacedRef:
+                    name: ($aigw_cp_name)
+                apiSpec:
+                  name: ($late_policy_name)
+                  displayName: Uses a custom policy created later
+                  customPolicyRef:
+                    name: ($late_custom_policy_name)
+                  enabled: Enabled
+                  global: Enabled
+                  config:
+                    type: inline
+                    value:
+                      header_name: X-Chainsaw-Custom-Policy
+                      header_value: chainsaw-late
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                name: ($late_policy_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'KonnectReferencesResolved']):
+                  - status: 'False'
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+                (id == null): true
+    - name: Create-the-missing-custom-policy
+      bindings:
+        - name: aigw_custom_policy_name
+          value: ($late_custom_policy_name)
+        - name: api_spec
+          value:
+            type: streaming
+            streaming:
+              name: ($late_konnect_name)
+              displayName: Chainsaw custom policy created later
+              schema: (join('', [$plugin_schema_prefix, $late_konnect_name, $plugin_schema_suffix]))
+              handler: ($streaming_plugin_handler)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayCustomPolicy.yaml
+    - name: Policy-is-programmed-once-the-custom-policy-appears
+      description: |
+        Creating the referenced custom policy retriggers the policy through
+        the watch on the kind its customPolicyRef points to: with no timed
+        requeue for unresolved references, only that watch can make it
+        programmed.
+      try:
+        - assert:
+            # Short enough to fail if the policy were only retried on error
+            # backoff rather than through the watch.
+            timeout: 15s
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                name: ($late_policy_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'KonnectReferencesResolved']):
+                  - status: 'True'
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                (id != null): true
+    - name: Delete-custom-policy-in-use-via-customPolicyRef
+      description: Delete without waiting; the deletion is expected to block.
+      bindings:
+        - name: resource_type
+          value: aigatewaycustompolicies.aiconfiguration.konghq.com
+        - name: resource_name
+          value: ($late_custom_policy_name)
+        - name: resource_namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/delete-resource-non-blocking.yaml
+    - name: Custom-policy-deletion-is-blocked-while-in-use-via-customPolicyRef
+      description: |
+        Konnect refuses to delete a custom policy that policies still use
+        (via customPolicyRef): it stays with Programmed=False, reason DeletionBlocked,
+        naming the AIGatewayPolicy using it.
+      try:
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayCustomPolicy
+              metadata:
+                name: ($late_custom_policy_name)
+                namespace: ($namespace)
+                (deletionTimestamp != null): true
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+                    reason: DeletionBlocked
+                    (contains(message, join('/', [($namespace), ($late_policy_name)]))): true
+    - name: Delete-the-policy-using-the-custom-policy-via-customPolicyRef
+      try:
+        - delete:
+            ref:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              name: ($late_policy_name)
+              namespace: ($namespace)
+    - name: Blocked-deletion-via-customPolicyRef-proceeds-once-the-policy-is-gone
+      description: |
+        The custom policy watches the policies using it (via customPolicyRef), so its
+        deletion is retried as soon as the policy is gone, well before the
+        one-minute fixed retry of blocked deletions. That retry is scheduled
+        from the first blocked attempt, before this test deletes the policy,
+        so the 20s timeout keeps well clear of it.
+      bindings:
+        - name: resource_type
+          value: aigatewaycustompolicies.aiconfiguration.konghq.com
+        - name: resource_name
+          value: ($late_custom_policy_name)
+        - name: resource_namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/wait-for-resource-deleted.yaml
+        with:
+          bindings:
+            - name: timeout
+              value: "20"
+    - name: Delete-model-policy-and-custom-policy
+      description: |
+        Delete the model, then the remaining policy before the custom policy
+        it uses, and wait for each to be fully removed, so a hanging
+        Konnect-side deletion fires the catch: snapshot.
+      try:
+        - delete:
+            ref:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayModel
+              name: aigw11-model
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayModel
+              metadata:
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayModelProvider
+              name: openai-provider
+              namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              name: ($installed_policy_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayCustomPolicy
+              name: ($installed_custom_policy_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayCustomPolicy
+              metadata:
+                namespace: ($namespace)
+    - name: Verify-installed-custom-policy-removed-from-Konnect
+      try:
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: konnectaigateways.konnect.konghq.com
+              - name: RESOURCE_NAME
+                value: ($aigw_cp_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: FIELD
+                value: .status.id
+            content: |
+              bash ../../common/scripts/get_resource_field.sh
+            outputs:
+              - name: gateway_id
+                value: (json_parse($stdout).value)
+        - script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: API_PATH
+                value: (join('', ['/v1/ai-gateways/', $gateway_id, '/custom-policies/', $installed_konnect_name]))
+              - name: EXPECTED_STATUS
+                value: "404"
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: aigateway-custom-policy-dataplane
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

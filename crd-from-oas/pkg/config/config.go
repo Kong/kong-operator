@@ -104,6 +104,29 @@ type ReferenceConfig struct {
 	// false: a mismatched namespace is rejected with
 	// ReferenceCrossNamespaceError, exactly as today.
 	SupportCrossNamespaceReference bool `yaml:"supportCrossNamespaceReference,omitempty"`
+	// InjectInto makes this an additive, optional reference: Path names a new
+	// top-level apiSpec field that does not exist in the OAS (e.g.
+	// "spec.apiSpec.customPolicyRef"), and the resolved value is sent in the
+	// SDK request as the existing apiSpec field named here (its CRD JSON name,
+	// e.g. "type") instead. The target field becomes optional, and a generated
+	// CEL rule requires exactly one of the target field and the reference to be
+	// set, so the target keeps accepting literal values (e.g. built-in plugin
+	// names) while the reference offers an in-cluster alternative.
+	InjectInto string `yaml:"injectInto,omitempty"`
+	// Description is the doc comment of the field added for an InjectInto
+	// reference. Ignored otherwise: other references reuse the OAS field's
+	// description.
+	Description string `yaml:"description,omitempty"`
+	// ReverseWatch makes the referenced kind's controller watch the referring
+	// kind and re-reconcile the objects it references whenever a referrer
+	// changes or is deleted (the referrer always reacts to its references).
+	// Use it when the referenced object's reconciliation depends on its
+	// referrers, e.g. a deletion Konnect blocks while they still use it. The
+	// generator also emits <Referrer>Uses<Kind>(obj, referenced) in the API
+	// package; for an InjectInto reference it also matches referrers setting
+	// the InjectInto target to the referenced object's Konnect name on the
+	// same gateway. Requires a single kind.
+	ReverseWatch bool `yaml:"reverseWatch,omitempty"`
 }
 
 // TypeName returns the Go type name of the generated ref struct.
@@ -976,6 +999,30 @@ func (tc *TypeConfig) validate() error {
 		if len(ref.Kinds) > 1 && ref.RefTypeName == "" {
 			return fmt.Errorf("reference %q: refTypeName is required when multiple kinds are configured", ref.Path)
 		}
+		if ref.InjectInto != "" {
+			if strings.Contains(strings.TrimPrefix(ref.Path, "spec.apiSpec."), ".") {
+				return fmt.Errorf("reference %q: injectInto is only supported for top-level apiSpec fields", ref.Path)
+			}
+			if strings.Contains(ref.InjectInto, ".") {
+				return fmt.Errorf("reference %q: injectInto must name a top-level apiSpec field, got %q", ref.Path, ref.InjectInto)
+			}
+			if ref.SupportCrossNamespaceReference {
+				return fmt.Errorf("reference %q: supportCrossNamespaceReference is not supported with injectInto", ref.Path)
+			}
+		}
+		if ref.ReverseWatch && len(ref.Kinds) != 1 {
+			return fmt.Errorf("reference %q: reverseWatch requires exactly one kind", ref.Path)
+		}
+	}
+	seenReverseWatchKinds := make(map[string]string)
+	for _, ref := range tc.References {
+		if !ref.ReverseWatch {
+			continue
+		}
+		if prev, ok := seenReverseWatchKinds[ref.Kinds[0]]; ok {
+			return fmt.Errorf("references %q and %q: reverseWatch is supported for at most one reference per referenced kind", prev, ref.Path)
+		}
+		seenReverseWatchKinds[ref.Kinds[0]] = ref.Path
 	}
 	seenAssocNames := make(map[string]bool)
 	for i, a := range tc.Associations {
