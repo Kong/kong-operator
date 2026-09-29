@@ -31,10 +31,8 @@ func TestConfigStoreSecretWriteDecisionPersistedTimePrecision(t *testing.T) {
 
 func TestSetConditionSyncedDuringDeletionEnsuresRequiredConditions(t *testing.T) {
 	sync := &konnectv1alpha1.KonnectConfigStoreSync{
-		ObjectMeta: metav1.ObjectMeta{
-			DeletionTimestamp: new(metav1.Now()),
-			Generation:        2,
-		},
+		DeletionTimestamp: new(metav1.Now()),
+		Generation:        2,
 	}
 	r := &KonnectConfigStoreSyncReconciler{}
 
