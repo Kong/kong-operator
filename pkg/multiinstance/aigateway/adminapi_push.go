@@ -143,7 +143,7 @@ func (i *Instance) adminMTLSCertMaterial(ctx context.Context) (certPEM, keyPEM, 
 }
 
 // endpointDesc returns a human-readable description of a discovered Admin API endpoint,
-// used in condition messages and events.
+// used in push failure events and errors.
 func endpointDesc(endpoint adminapi.DiscoveredAdminAPI) string {
 	if ref := endpoint.PodRef; ref.Namespace != "" || ref.Name != "" {
 		return ref.String()
