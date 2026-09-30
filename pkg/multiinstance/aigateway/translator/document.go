@@ -19,6 +19,7 @@ package translator
 import (
 	"cmp"
 	"context"
+	"encoding/json"
 	"fmt"
 	"slices"
 
@@ -115,5 +116,55 @@ func BuildDocument(ctx context.Context, cl client.Client, gw types.NamespacedNam
 		return nil, err
 	}
 
+	if err := appendEntities(ctx, cl, gw, &aiconfigurationv1alpha1.AIGatewayPolicyList{},
+		index.IndexFieldAIGatewayPolicyOnOnPremAIGatewayRef, doc,
+		func(ctx context.Context, cl client.Client, p *aiconfigurationv1alpha1.AIGatewayPolicy) (*aigw.Policy, error) {
+			return p.ToAIGWPolicy(ctx, cl)
+		},
+		func(d *aigw.Document, p *aigw.Policy) { d.Policies = append(d.Policies, *p) },
+	); err != nil {
+		return nil, err
+	}
+
+	if err := appendEntities(ctx, cl, gw, &aiconfigurationv1alpha1.AIGatewayAuthStrategyList{},
+		index.IndexFieldAIGatewayAuthStrategyOnOnPremAIGatewayRef, doc,
+		// Returns a single-entity parsed *aigw.Document rather than an entity: aigw.AuthStrategy
+		// has no public alias, so the type can't be named — only reached through field access.
+		func(ctx context.Context, cl client.Client, s *aiconfigurationv1alpha1.AIGatewayAuthStrategy) (*aigw.Document, error) {
+			payload, err := s.MarshalAIGWAuthStrategy(ctx, cl)
+			if err != nil {
+				return nil, err
+			}
+			return parseAIGWEntities("auth_strategies", payload)
+		},
+		func(d *aigw.Document, parsed *aigw.Document) {
+			d.AuthStrategies = append(d.AuthStrategies, parsed.AuthStrategies...)
+		},
+	); err != nil {
+		return nil, err
+	}
+
+	if err := appendEntities(ctx, cl, gw, &aiconfigurationv1alpha1.AIGatewayConsumerGroupList{},
+		index.IndexFieldAIGatewayConsumerGroupOnOnPremAIGatewayRef, doc,
+		func(ctx context.Context, cl client.Client, g *aiconfigurationv1alpha1.AIGatewayConsumerGroup) (*aigw.ConsumerGroup, error) {
+			return g.ToAIGWConsumerGroup(ctx, cl)
+		},
+		func(d *aigw.Document, g *aigw.ConsumerGroup) { d.ConsumerGroups = append(d.ConsumerGroups, *g) },
+	); err != nil {
+		return nil, err
+	}
+
 	return doc, nil
+}
+
+// parseAIGWEntities wraps a single entity payload in a one-key document envelope (the payload
+// becomes the key's single-element list) and parses it with aigw.Parse. This is the bridge for
+// entity kinds whose aigw type has no public alias (AuthStrategy today; CACertificate will hit
+// the same gap) — see aigatewaymodel_aigw_manual.go's package comment.
+func parseAIGWEntities(key string, payload []byte) (*aigw.Document, error) {
+	envelope, err := json.Marshal(map[string][]json.RawMessage{key: {json.RawMessage(payload)}})
+	if err != nil {
+		return nil, fmt.Errorf("building %s envelope: %w", key, err)
+	}
+	return aigw.Parse(envelope)
 }
