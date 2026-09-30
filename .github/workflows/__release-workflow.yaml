@@ -155,15 +155,18 @@ jobs:
           input_string: ${{ inputs.tag }}
           version_extractor_regex: 'v(.*)$'
 
-      # NOTE: rapid releases must use the rapid.K.P form: rapid.K.0 starts the
-      # rapid line K, rapid.K.P with P > 0 patches it. rapid.K is rejected so
-      # that each rapid line has a single spelling.
+      # NOTE: rapid releases must use the N.M.0-rapid.K.P form: rapid.K.0 starts
+      # the rapid line K, rapid.K.P with P > 0 patches it. rapid.K is rejected so
+      # that each rapid line has a single spelling. The rapid prefix is matched
+      # case-insensitively so that e.g. Rapid.2 is rejected rather than released
+      # as a plain prerelease.
       - name: Validate rapid release version format
         env:
           TAG: ${{ inputs.tag }}
+          PATCH: ${{ steps.semver_parser.outputs.patch }}
           PRERELEASE: ${{ steps.semver_parser.outputs.prerelease }}
         run: |
-          if [[ "$PRERELEASE" == rapid* && ! "$PRERELEASE" =~ ^rapid\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+          if [[ "${PRERELEASE,,}" == rapid* ]] && [[ "$PATCH" != "0" || ! "$PRERELEASE" =~ ^rapid\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
             echo "Invalid rapid release version: $TAG"
             echo "Rapid releases must use the N.M.0-rapid.K.P form, e.g. v2.4.0-rapid.2.0 or v2.4.0-rapid.2.1"
             exit 1

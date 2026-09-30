@@ -127,10 +127,10 @@ jobs:
           PATCH: ${{ steps.semver_parser.outputs.patch }}
           PRERELEASE: ${{ steps.semver_parser.outputs.prerelease }}
         run: |
-          # NOTE: rapid releases must use the rapid.K.P form, as enforced by the
-          # release workflow. Fail here too so that a malformed rapid version is
-          # never published.
-          if [[ "$PRERELEASE" == rapid* && ! "$PRERELEASE" =~ ^rapid\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+          # NOTE: rapid releases must use the N.M.0-rapid.K.P form, as enforced by
+          # the release workflow. Fail here too so that a malformed rapid version
+          # is never published.
+          if [[ "${PRERELEASE,,}" == rapid* ]] && [[ "$PATCH" != "0" || ! "$PRERELEASE" =~ ^rapid\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
             echo "Invalid rapid release version: ${VERSION}, rapid releases must use the N.M.0-rapid.K.P form" >&2
             exit 1
           fi
