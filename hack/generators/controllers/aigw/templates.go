@@ -37,9 +37,7 @@ import (
 {{- if and .ConfigStatusNotificationsEnabled .ProgrammedCondition.UpdatesEnabled }}
 	ctrlutils "github.com/kong/kong-operator/v2/ingress-controller/pkg/controllerutils"
 {{- end}}
-{{- if .ConfigStatusNotificationsEnabled }}
-	"github.com/kong/kong-operator/v2/ingress-controller/pkg/status"
-{{- end}}
+"github.com/kong/kong-operator/v2/ingress-controller/pkg/status"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/changenotifier"
 
@@ -57,10 +55,8 @@ type {{.Kind}}Reconciler struct {
 	Log              logr.Logger
 	Scheme           *runtime.Scheme
 	CacheSyncTimeout time.Duration
-{{- if .ConfigStatusNotificationsEnabled }}
 	StatusClient     EntityStatusClient
 	StatusQueue      *status.Queue
-{{- end}}
 	ChangeNotifier   *changenotifier.ChangeNotifier
 	Cache            map[types.NamespacedName]types.NamespacedName
 }
@@ -119,20 +115,16 @@ func (r *{{.Kind}}Reconciler) SetCommonFields(
 	log logr.Logger,
 	cacheSyncTimeout time.Duration,
 	changeNotifier *changenotifier.ChangeNotifier,
-{{- if .ConfigStatusNotificationsEnabled }}
 	statusClient EntityStatusClient,
 	statusQueue *status.Queue,
-{{- end }}
 ) {
 	r.Client = client
 	r.Scheme = scheme
 	r.Log = log
 	r.CacheSyncTimeout = cacheSyncTimeout
 	r.ChangeNotifier = changeNotifier
-{{- if .ConfigStatusNotificationsEnabled }}
 	r.StatusClient = statusClient
 	r.StatusQueue = statusQueue
-{{- end }}
 }
 
 //+kubebuilder:rbac:groups={{.Group}},resources={{.Plural}},verbs={{ .RBACVerbs | join ";" }}
@@ -207,6 +199,10 @@ func (r *{{.Kind}}Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 {{- if .ConfigStatusNotificationsEnabled }}
 	// if status updates are enabled report the status for the object
 	if r.StatusClient != nil && r.StatusClient.AreKubernetesObjectReportsEnabled() {
+		// Declared outside the ProgrammedCondition.UpdatesEnabled conditional
+		// below, which only guards the assignment: the update check must
+		// compile regardless of the flag value.
+		var updateNeeded bool
 		{{- if .ProgrammedCondition.UpdatesEnabled }}
 		configurationStatus := r.StatusClient.KubernetesObjectConfigurationStatus(obj)
 		logger.Info("Updating programmed condition status", "configuration_status",configurationStatus)

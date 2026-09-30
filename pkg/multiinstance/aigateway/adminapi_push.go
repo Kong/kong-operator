@@ -78,11 +78,11 @@ func pushClientCacheKey(
 // A failure on any endpoint does not prevent the remaining endpoints from being
 // pushed: the returned error only reports the failures, and the sync loop retries
 // them on the next tick (already-up-to-date endpoints no-op thanks to check_hash).
-// The first return value reports whether the push happened: it is false only when
-// no Admin API endpoints are discovered and the push is skipped entirely (and in
-// that case the returned error is only a status reporting failure); every other
-// path pushed the payload to at least the endpoints discovered at snapshot time,
-// even when it also returns an error.
+// The first return value reports whether the push ran. It is false when the push
+// never started: no Admin API endpoints are discovered (the error is then only a
+// status reporting failure), the payload conversion fails, or the certificate
+// material is missing. It is true once the payload was offered to the endpoints
+// discovered at snapshot time, even when some or all of those sends fail.
 func (i *Instance) sendConfigToDataPlanes(
 	ctx context.Context,
 	gwNN types.NamespacedName,
