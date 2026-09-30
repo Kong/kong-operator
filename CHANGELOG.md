@@ -75,6 +75,12 @@
   supported by the cluster. When the operator's IP family is dual and both fields
   are unset, the ingress Service defaults to `PreferDualStack`.
   [#5797](https://github.com/Kong/kong-operator/pull/5797)
+- `KongLicense` is now handled for the on-prem AI Gateway: the operator picks
+  the newest enabled `KongLicense` and propagates it to `AIGatewayDataPlane`
+  gateway pods via the `KONG_LICENSE_DATA` environment variable. License
+  availability is reported on the `AIGatewayDataPlane` and `OnPremAIGateway`
+  status via a new `LicenseValid` condition, which does not gate `Ready`.
+  [#5912](https://github.com/Kong/kong-operator/issues/5912)
 - The on-prem AI Gateway control plane instances now dynamically discover the
   Admin API endpoints of all `AIGatewayDataPlane`s that reference the gateway
   via `spec.controlPlaneRef.type: onpremNamespacedRef` (through their Admin

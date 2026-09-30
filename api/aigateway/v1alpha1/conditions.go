@@ -235,3 +235,21 @@ const (
 	// push failed for at least one of the discovered Admin API endpoints.
 	OnPremAIGatewayConfigurationPushFailedReason consts.ConditionReason = "ConfigurationPushFailed"
 )
+
+// -----------------------------------------------------------------------------
+// DataPlane - License Condition Constants
+// -----------------------------------------------------------------------------
+
+const (
+	// LicenseValidType indicates whether a KongLicense is available to the
+	// DataPlane. It never gates the Ready condition.
+	LicenseValidType consts.ConditionType = "LicenseValid"
+
+	// LicenseValidReason indicates a KongLicense is available.
+	LicenseValidReason consts.ConditionReason = "LicenseProvided"
+	// LicenseMissingReason indicates no enabled KongLicense is available.
+	LicenseMissingReason consts.ConditionReason = "LicenseMissing"
+	// LicenseInvalidReason indicates the provided KongLicense is invalid.
+	// Currently unused: the operator does not wire a license validator yet.
+	LicenseInvalidReason consts.ConditionReason = "InvalidLicenseProvided"
+)

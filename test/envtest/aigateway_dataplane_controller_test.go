@@ -3,7 +3,9 @@ package envtest
 import (
 	"context"
 	"fmt"
+	"slices"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,11 +19,14 @@ import (
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	aigwdataplane "github.com/kong/kong-operator/v2/controller/aigateway/dataplane"
 	"github.com/kong/kong-operator/v2/controller/crdschema"
+	shareddataplane "github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
+	kiccontrollers "github.com/kong/kong-operator/v2/ingress-controller/pkg/controllers"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
@@ -680,6 +685,7 @@ func TestAIGatewayDataPlaneReconciler_OnPremAIGatewayAdminAPI(t *testing.T) {
 			ClusterCASecretNamespace: clusterCA.Namespace,
 			CertTTL:                  consts.DefaultCertTTL,
 			TypeConverter:            ssaProvider,
+			LicenseGetter:            shareddataplane.NewKongLicenseCacheGetter(mgr.GetClient()),
 		},
 		&crdschema.Reconciler{
 			Client:   mgr.GetClient(),
@@ -810,6 +816,22 @@ func TestAIGatewayDataPlaneReconciler_OnPremAIGatewayAdminAPI(t *testing.T) {
 			}
 			return len(certList.Items) > 0
 		}, waitTime, tickTime)
+
+		// The on-prem DataPlane consumes the operator-provided KongLicense, so
+		// its availability is reported even though no KongLicense exists in
+		// this environment.
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			current := &aigatewayv1alpha1.AIGatewayDataPlane{}
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(aigwdp), current)) {
+				return
+			}
+			cond := apimeta.FindStatusCondition(current.Status.Conditions, string(aigatewayv1alpha1.LicenseValidType))
+			if !assert.NotNil(ct, cond, "LicenseValid condition not set") {
+				return
+			}
+			assert.Equal(ct, metav1.ConditionFalse, cond.Status)
+			assert.Equal(ct, string(aigatewayv1alpha1.LicenseMissingReason), cond.Reason)
+		}, waitTime, tickTime)
 	})
 
 	t.Run("Konnect reference: no admin Service is provisioned", func(t *testing.T) {
@@ -837,6 +859,17 @@ func TestAIGatewayDataPlaneReconciler_OnPremAIGatewayAdminAPI(t *testing.T) {
 			return cl.Get(ctx, client.ObjectKey{
 				Name: aigwdp.Name + aigwdataplane.AdminServiceNameSuffix, Namespace: ns.Name,
 			}, svc) == nil
+		}, waitTime, tickTime)
+
+		// A Konnect-backed DataPlane is licensed by Konnect: the
+		// operator-provided KongLicense does not apply, so no license condition
+		// is reported for it (it would sit at False/LicenseMissing forever).
+		assert.Never(t, func() bool {
+			current := &aigatewayv1alpha1.AIGatewayDataPlane{}
+			if err := cl.Get(ctx, client.ObjectKeyFromObject(aigwdp), current); err != nil {
+				return false
+			}
+			return apimeta.FindStatusCondition(current.Status.Conditions, string(aigatewayv1alpha1.LicenseValidType)) != nil
 		}, waitTime, tickTime)
 	})
 }
@@ -890,4 +923,167 @@ func updateAIGatewayDataPlaneCertificateStatusWithProgrammed(
 		}
 		assert.NoError(ct, cl.Status().Update(ctx, obj))
 	}, waitTime, tickTime)
+}
+
+// TestAIGatewayDataPlaneReconciler_KongLicense verifies the KongLicense flow:
+// the license picked by the KongLicense controller (the same reconciler the
+// embedded KIC runs inside ControlPlanes, here run through the operator's
+// SetupKongLicense wiring) is propagated to the gateway Deployment as the
+// KONG_LICENSE_DATA env var, and its availability is reported in the
+// LicenseValid condition, which never gates Ready.
+func TestAIGatewayDataPlaneReconciler_KongLicense(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+
+	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
+	require.NoError(t, err)
+
+	require.NoError(t, kiccontrollers.SetupKongLicense(ctx, mgr, 10*time.Second, mgr.GetLogger()))
+	// Mirror the production wiring: the reconciler must read the license from
+	// the manager's informer cache, not from the KongLicense reconciler's own cache.
+	licenseGetter := shareddataplane.NewKongLicenseCacheGetter(mgr.GetClient())
+
+	StartReconcilers(ctx, t, mgr, logs,
+		&aigwdataplane.Reconciler{
+			Client:        mgr.GetClient(),
+			CertTTL:       consts.DefaultCertTTL,
+			TypeConverter: ssaProvider,
+			LicenseGetter: licenseGetter,
+		},
+		&crdschema.Reconciler{
+			Client:   mgr.GetClient(),
+			Provider: ssaProvider,
+		},
+	)
+
+	cl := mgr.GetClient()
+
+	aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{
+		Name: "aigwdp-license", Namespace: ns.Name,
+	}
+	require.NoError(t, cl.Create(ctx, aigwdp))
+
+	// aigwdpDeploymentEnv returns the gateway Deployment's first container env.
+	aigwdpDeploymentEnv := func(ct assert.TestingT) []corev1.EnvVar {
+		var deployList appsv1.DeploymentList
+		if !assert.NoError(ct, cl.List(ctx, &deployList,
+			client.InNamespace(ns.Name),
+			client.MatchingLabels{
+				consts.GatewayOperatorManagedByLabel:          consts.AIGatewayDataPlaneManagedByLabelValue,
+				consts.GatewayOperatorManagedByNameLabel:      aigwdp.Name,
+				consts.GatewayOperatorManagedByNamespaceLabel: ns.Name,
+			},
+		)) {
+			return nil
+		}
+		if !assert.Len(ct, deployList.Items, 1) {
+			return nil
+		}
+		return deployList.Items[0].Spec.Template.Spec.Containers[0].Env
+	}
+
+	t.Log("Before any KongLicense exists, the Deployment carries no KONG_LICENSE_DATA and the license condition is False")
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		envs := aigwdpDeploymentEnv(ct)
+		if envs == nil {
+			return
+		}
+		assertLicenseEnvVar(ct, envs, "")
+	}, waitTime, tickTime)
+
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		dp := &aigatewayv1alpha1.AIGatewayDataPlane{}
+		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(aigwdp), dp)) {
+			return
+		}
+		cond := apimeta.FindStatusCondition(dp.Status.Conditions, string(aigatewayv1alpha1.LicenseValidType))
+		if !assert.NotNil(ct, cond) {
+			return
+		}
+		assert.Equal(ct, metav1.ConditionFalse, cond.Status)
+		assert.Equal(ct, string(aigatewayv1alpha1.LicenseMissingReason), cond.Reason)
+	}, waitTime, tickTime)
+
+	t.Log("Create a KongLicense: the Deployment gets KONG_LICENSE_DATA and LicenseValid becomes True")
+	kongLicense := &configurationv1alpha1.KongLicense{
+		Name:             "license-aigwdp",
+		RawLicenseString: `{"license":{"payload":"test-license"}}`,
+		Enabled:          true,
+	}
+	require.NoError(t, cl.Create(ctx, kongLicense))
+
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		assertLicenseEnvVar(ct, aigwdpDeploymentEnv(ct), kongLicense.RawLicenseString)
+	}, waitTime, tickTime)
+
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		dp := &aigatewayv1alpha1.AIGatewayDataPlane{}
+		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(aigwdp), dp)) {
+			return
+		}
+		cond := apimeta.FindStatusCondition(dp.Status.Conditions, string(aigatewayv1alpha1.LicenseValidType))
+		if !assert.NotNil(ct, cond) {
+			return
+		}
+		assert.Equal(ct, metav1.ConditionTrue, cond.Status)
+		assert.Equal(ct, string(aigatewayv1alpha1.LicenseValidReason), cond.Reason)
+	}, waitTime, tickTime)
+
+	t.Log("Update the KongLicense: the Deployment env follows")
+	// Re-fetch first: the license controller updates the KongLicense status in
+	// the background, so the cached object is stale.
+	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(kongLicense), kongLicense))
+	kongLicense.RawLicenseString = `{"license":{"payload":"updated-license"}}`
+	require.NoError(t, cl.Update(ctx, kongLicense))
+
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		assertLicenseEnvVar(ct, aigwdpDeploymentEnv(ct), kongLicense.RawLicenseString)
+	}, waitTime, tickTime)
+
+	t.Log("Delete the KongLicense: the env var is removed, the condition turns False/LicenseMissing and Ready is not gated by it")
+	require.NoError(t, cl.Delete(ctx, kongLicense))
+
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		assertLicenseEnvVar(ct, aigwdpDeploymentEnv(ct), "")
+	}, waitTime, tickTime)
+
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		dp := &aigatewayv1alpha1.AIGatewayDataPlane{}
+		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(aigwdp), dp)) {
+			return
+		}
+		cond := apimeta.FindStatusCondition(dp.Status.Conditions, string(aigatewayv1alpha1.LicenseValidType))
+		if !assert.NotNil(ct, cond) {
+			return
+		}
+		assert.Equal(ct, metav1.ConditionFalse, cond.Status)
+		assert.Equal(ct, string(aigatewayv1alpha1.LicenseMissingReason), cond.Reason)
+
+		ready := apimeta.FindStatusCondition(dp.Status.Conditions, string(aigatewayv1alpha1.ReadyType))
+		if !assert.NotNil(ct, ready) {
+			return
+		}
+		// The Deployment exists but its pods never roll out in envtest, so the
+		// expected Ready reason is WaitingToBecomeReady; what must never
+		// happen is DependenciesNotReady caused by the license condition.
+		assert.NotEqual(ct, string(aigatewayv1alpha1.DependenciesNotReadyReason), ready.Reason)
+	}, waitTime, tickTime)
+}
+
+// assertLicenseEnvVar asserts that the given env var list contains the
+// KONG_LICENSE_DATA env var with the given value. An empty expected value
+// asserts the env var is absent.
+func assertLicenseEnvVar(ct *assert.CollectT, envVars []corev1.EnvVar, value string) {
+	idx := slices.IndexFunc(envVars, func(e corev1.EnvVar) bool { return e.Name == aigwdataplane.EnvKongLicenseData })
+	if value == "" {
+		assert.Equal(ct, -1, idx, "env var %s must not be set", aigwdataplane.EnvKongLicenseData)
+		return
+	}
+	if !assert.GreaterOrEqual(ct, idx, 0, "env var %s must be set", aigwdataplane.EnvKongLicenseData) {
+		return
+	}
+	assert.Equal(ct, value, envVars[idx].Value)
 }

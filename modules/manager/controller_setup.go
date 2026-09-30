@@ -49,9 +49,11 @@ import (
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/mcpserver"
+	shareddataplane "github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	secretcert "github.com/kong/kong-operator/v2/controller/secret_cert"
 	"github.com/kong/kong-operator/v2/controller/specialized"
+	kiccontrollers "github.com/kong/kong-operator/v2/ingress-controller/pkg/controllers"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstance"
 	"github.com/kong/kong-operator/v2/internal/metrics"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
@@ -432,6 +434,21 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 			},
 		},
 		{
+			// The AIGateway controllers watch KongLicense (the license is
+			// propagated to AIGatewayDataPlane Deployments as the
+			// KONG_LICENSE_DATA env var). The KongLicense controller itself is
+			// additionally protected by the DynamicCRDController wrapper, but
+			// the AIGatewayDataPlane controller's watch is not.
+			condition: c.OnPremAIGatewayControllerEnabled || c.AIGatewayDataPlaneControllerEnabled,
+			gvrs: []schema.GroupVersionResource{
+				{
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "konglicenses",
+				},
+			},
+		},
+		{
 			condition: c.KonnectControllersEnabled,
 			gvrs: []schema.GroupVersionResource{
 				gwtypes.GatewayConfigurationGVR(),
@@ -694,6 +711,27 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		}
 	}
 
+	// aigwLicenseGetter provides the effective Kong license to the AIGateway
+	// controllers. It picks the newest enabled KongLicense straight from the
+	// manager's shared informer cache, so a reconcile triggered by a
+	// KongLicense add/update/delete can never observe a stale license: the
+	// cache is updated before watch events are dispatched, unlike the
+	// KongLicense reconciler's own cache (updated in a separate workqueue).
+	// The KongLicense reconciler is still set up below for its KongLicense
+	// status reporting.
+	var aigwLicenseGetter shareddataplane.LicenseGetter
+	if c.OnPremAIGatewayControllerEnabled || c.AIGatewayDataPlaneControllerEnabled {
+		aigwLicenseGetter = shareddataplane.NewKongLicenseCacheGetter(mgr.GetClient())
+		if err := kiccontrollers.SetupKongLicense(
+			context.Background(),
+			mgr,
+			c.CacheSyncTimeout,
+			mgr.GetLogger().WithName("controllers").WithName("KongLicense"),
+		); err != nil {
+			return nil, err
+		}
+	}
+
 	ctrlOpts := controller.Options{
 		CacheSyncTimeout: c.CacheSyncTimeout,
 	}
@@ -887,6 +925,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				SecretLabelSelector:      c.SecretLabelSelector,
 				CertTTL:                  c.CertTTL,
 				TypeConverter:            ssaProvider,
+				LicenseGetter:            aigwLicenseGetter,
 			},
 		},
 		// On-prem AIGateway (control plane) controller. It schedules one in-process instance
@@ -908,6 +947,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 				SecretLabelSelector:      c.SecretLabelSelector,
 				CertTTL:                  c.CertTTL,
+				LicenseGetter:            aigwLicenseGetter,
 			},
 		},
 		// CRD schema reconciler: rebuilds the shared SSA TypeConverter when

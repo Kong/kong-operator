@@ -39,7 +39,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
+	dataplane "github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 	"github.com/kong/kong-operator/v2/controller/pkg/finalizer"
 	log "github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
@@ -86,6 +88,13 @@ type Reconciler struct {
 
 	// CertTTL is the TTL of the certificates provisioned by this controller.
 	CertTTL time.Duration
+
+	// LicenseGetter, when non-nil, provides the effective Kong license
+	// (from the KongLicense resource): its availability is reported in the
+	// LicenseValid status condition. The license itself is propagated to the
+	// gateway pods by the AIGatewayDataPlane controller (KONG_LICENSE_DATA
+	// env var).
+	LicenseGetter dataplane.LicenseGetter
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -96,6 +105,14 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 		Watches(
 			&aigatewayv1alpha1.AIGatewayDataPlane{},
 			handler.EnqueueRequestsFromMapFunc(mapAIGatewayDataPlaneToOnPremAIGateway),
+		).
+		// KongLicense is cluster-scoped: a license added, changed or disabled
+		// affects every OnPremAIGateway, so fan out to all of them. Without
+		// this watch the LicenseValid condition would stay stale until the
+		// periodic resync when no AIGatewayDataPlane references the gateway.
+		Watches(
+			&configurationv1alpha1.KongLicense{},
+			handler.EnqueueRequestsFromMapFunc(enqueueAllOnPremAIGateways(mgr.GetClient())),
 		).
 		// Watch the mTLS client certificate Secret: the secretcert controller renews
 		// expiring certificates by deleting the Secret, and EnsureCertificate recreates
@@ -170,6 +187,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 		// AddFinalizer calls returned true but the update resulted in a noop.
 		return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 	}
+
+	// Report license availability on the gateway. The condition never gates
+	// Ready (see setReadySkippingLicenseCondition); the license itself is
+	// propagated to the gateway pods by the AIGatewayDataPlane controller
+	// (KONG_LICENSE_DATA env var). The KongLicense watch registered in
+	// SetupWithManager re-triggers this reconcile when a license is added,
+	// changed or disabled.
+	dataplane.SetLicenseStatusCondition(
+		onprem, r.LicenseGetter,
+		string(aigatewayv1alpha1.LicenseValidType),
+		string(aigatewayv1alpha1.LicenseValidReason),
+		string(aigatewayv1alpha1.LicenseMissingReason),
+	)
 
 	// The mTLS client certificate is what the instance presents to the data planes'
 	// Admin API when pushing configuration. Provision it before scheduling the
@@ -252,7 +282,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 	}
 
 	onprem.Status.ConfigHash = hashRunning
-	k8sutils.SetReadyWithGeneration(onprem, onprem.Generation)
+	setReadySkippingLicenseCondition(onprem)
 
 	if err := r.applyStatus(ctx, logger, onprem); err != nil {
 		return ctrl.Result{}, err
@@ -260,6 +290,38 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 
 	log.Debug(logger, "reconciliation complete for OnPremAIGateway resource")
 	return ctrl.Result{}, nil
+}
+
+// setReadySkippingLicenseCondition sets the Ready condition without letting
+// the informational LicenseValid condition gate it: SetReadyWithGeneration
+// re-checks every condition via AreAllConditionsHaveTrueStatus and has no way
+// to skip LicenseValid, so a missing license (the default state) would flip
+// Ready to False and block every referencing AIGatewayDataPlane. Any other
+// non-True condition still blocks readiness, as with SetReadyWithGeneration.
+func setReadySkippingLicenseCondition(onprem *aigatewayv1alpha1.OnPremAIGateway) {
+	ready := true
+	blockedMessage := ""
+	for _, c := range onprem.GetConditions() {
+		if c.Type == string(aigatewayv1alpha1.ReadyType) || c.Type == string(aigatewayv1alpha1.LicenseValidType) {
+			continue
+		}
+		if c.Status != metav1.ConditionTrue {
+			ready = false
+			blockedMessage = c.Message
+		}
+	}
+	status := metav1.ConditionTrue
+	reason := aigatewayv1alpha1.ResourceReadyReason
+	if !ready {
+		status = metav1.ConditionFalse
+		reason = aigatewayv1alpha1.DependenciesNotReadyReason
+	}
+	k8sutils.SetCondition(
+		k8sutils.NewConditionWithGeneration(
+			aigatewayv1alpha1.ReadyType, status, reason, blockedMessage, onprem.GetGeneration(),
+		),
+		onprem,
+	)
 }
 
 // configFromSpec builds the control plane instance configuration from the OnPremAIGateway spec.
