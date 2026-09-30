@@ -60,10 +60,11 @@ func createControlPlane(
 	cl client.Client,
 	cp *konnectv1alpha2.KonnectGatewayControlPlane,
 ) error {
-	req := cp.Spec.CreateControlPlaneRequest
+	// Copy the request so that adding the Kubernetes metadata labels doesn't modify the object's spec.
+	req := *cp.Spec.CreateControlPlaneRequest
 	req.Labels = WithKubernetesMetadataLabels(cp, req.Labels)
 
-	resp, err := sdk.CreateControlPlane(ctx, *req)
+	resp, err := sdk.CreateControlPlane(ctx, req)
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, cp); errWrap != nil {
 		return errWrap
 	}

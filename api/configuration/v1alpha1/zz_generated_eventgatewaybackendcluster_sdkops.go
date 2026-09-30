@@ -143,8 +143,8 @@ func (s *EventGatewayBackendClusterAPISpec) marshalSDKOpsPayload() ([]byte, erro
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return nil, fmt.Errorf("failed to decode EventGatewayBackendClusterAPISpec: %w", err)
 	}
-	payload = flattenSDKUnions(payload)
-	payload = flattenSensitiveData(payload)
+	payload = flattenSDKUnionsExcept(payload, EventGatewayBackendClusterSDKOpsFreeformKeyFields)
+	payload = flattenSensitiveDataExcept(payload, EventGatewayBackendClusterSDKOpsFreeformKeyFields)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
 	payload = renameKeysToSDKExcept(payload, EventGatewayBackendClusterSDKOpsFreeformKeyFields)
@@ -197,7 +197,10 @@ func (obj *EventGatewayBackendCluster) sdkOpsAPISpec(ctx context.Context, cl cli
 		return nil, fmt.Errorf("EventGatewayBackendCluster is nil")
 	}
 
-	apiSpec := obj.Spec.APISpec
+	// Resolve against a deep copy: resolved values are written into the spec
+	// being walked, and union variants and slices are shared by reference, so
+	// a shallow copy would leak them into obj (e.g. the informer cache).
+	apiSpec := *obj.Spec.APISpec.DeepCopy()
 	// Resolve spec.apiSpec.tls.clientIdentity.certificate
 	{
 		src := apiSpec.TLS.ClientIdentity.Certificate

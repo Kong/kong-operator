@@ -198,6 +198,46 @@ spec:
                     - message: value required when type=inline; secretRef required
                         when type=secretRef
                       rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                  customPolicyRef:
+                    description: |-
+                      CustomPolicyRef references the AIGatewayCustomPolicy this policy uses, as an
+                      alternative to setting type to the custom policy's Konnect name.
+                      The referenced custom policy must be programmed in the same AI Gateway; its
+                      Konnect name is sent as the policy type.
+                      Exactly one of type and customPolicyRef must be set.
+                    properties:
+                      kind:
+                        default: AIGatewayCustomPolicy
+                        description: Kind is the kind of the referenced object.
+                        enum:
+                        - AIGatewayCustomPolicy
+                        type: string
+                      name:
+                        description: Name is the name of the referenced object.
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: Namespace is reserved for future cross-namespace
+                          support.
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  datastores:
+                    description: Names of the Datastores this policy references.
+                    items:
+                      description: AIGatewayDatastoreRef A reference to an existing
+                        datastore
+                      properties:
+                        name:
+                          description: An immutable user-defined identifier for this
+                            resource.
+                          maxLength: 255
+                          minLength: 2
+                          pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                          type: string
+                      type: object
+                    type: array
                   displayName:
                     description: The display name for this policy instance.
                     maxLength: 256
@@ -268,7 +308,6 @@ spec:
                 - config
                 - displayName
                 - name
-                - type
                 type: object
             required:
             - aiGatewayRef
@@ -373,6 +412,10 @@ spec:
           rule: '!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions)
             || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
             == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
+        - message: exactly one of spec.apiSpec.type and spec.apiSpec.customPolicyRef
+            must be set
+          rule: '!has(self.spec) || !has(self.spec.apiSpec) || has(self.spec.apiSpec.type)
+            != has(self.spec.apiSpec.customPolicyRef)'
     served: true
     storage: true
     subresources:

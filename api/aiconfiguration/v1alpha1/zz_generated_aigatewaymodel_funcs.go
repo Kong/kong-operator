@@ -105,7 +105,9 @@ func (obj *AIGatewayModel) SetParentRef(ref commonv1alpha1.ObjectRef) {
 
 // SkipKonnectReconciliation reports whether the entity's parent reference
 // resolves to a parent the Konnect reconciler does not manage (an
-// OnPremAIGateway): such entities are owned by the on-prem machinery.
+// OnPremAIGateway): such entities are handled by the on-prem controllers
+// where supported, or rejected at admission when the entity restricts its
+// parent kinds.
 func (obj *AIGatewayModel) SkipKonnectReconciliation() bool {
 	return obj.Spec.AIGatewayRef.TargetsOnPremAIGateway()
 }

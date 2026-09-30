@@ -223,6 +223,44 @@ func TestKubebuilderTags(t *testing.T) {
 	}
 }
 
+func TestKubebuilderTags_EnumQuoting(t *testing.T) {
+	prop := &parser.Property{
+		Name: "upstreamProtocolVersion",
+		Type: "string",
+		Enum: []any{"2026-07-28", "2025-11-25", "key-auth", "/openai/v1", "private+public"},
+	}
+
+	assert.Contains(t, KubebuilderTags(prop, nil),
+		`+kubebuilder:validation:Enum="2026-07-28";"2025-11-25";key-auth;/openai/v1;private+public`)
+}
+
+func TestQuoteEnumMarkerValue(t *testing.T) {
+	tests := map[string]string{
+		"inline":      "inline",
+		"key-auth":    "key-auth",
+		"/openai/v1":  "/openai/v1",
+		"2025-06-18":  `"2025-06-18"`,
+		"1":           `"1"`,
+		"-1":          `"-1"`,
+		".5":          `".5"`,
+		"true":        `"true"`,
+		"false":       `"false"`,
+		"":            `""`,
+		"a;b":         `"a;b"`,
+		"a,b":         `"a,b"`,
+		"has space":   `"has space"`,
+		"a\nb":        `"a\nb"`,
+		"a\rb":        `"a\rb"`,
+		`quo"te`:      `"quo\"te"`,
+		"key:value":   `"key:value"`,
+		"trueish":     "trueish",
+		"v2025-06-18": "v2025-06-18",
+	}
+	for in, want := range tests {
+		assert.Equal(t, want, quoteEnumMarkerValue(in), "input %q", in)
+	}
+}
+
 func TestKubebuilderTags_MapType(t *testing.T) {
 	tests := []struct {
 		name     string

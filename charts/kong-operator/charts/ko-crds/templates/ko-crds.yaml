@@ -19000,6 +19000,10 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                  managed_by:
+                    additionalProperties:
+                      type: string
+                    type: object
                   name:
                     type: string
                   proxy_urls:

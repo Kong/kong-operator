@@ -5,8 +5,10 @@ package v1alpha1
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -122,6 +124,7 @@ var AIGatewayPolicySDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 		Path: []string{
 			"config",
 		},
+		Sensitive: true,
 	},
 	{
 		Path: []string{
@@ -144,8 +147,8 @@ func (s *AIGatewayPolicyAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return nil, fmt.Errorf("failed to decode AIGatewayPolicyAPISpec: %w", err)
 	}
-	payload = flattenSDKUnions(payload)
-	payload = flattenSensitiveData(payload)
+	payload = flattenSDKUnionsExcept(payload, AIGatewayPolicySDKOpsFreeformKeyFields)
+	payload = flattenSensitiveDataExcept(payload, AIGatewayPolicySDKOpsFreeformKeyFields)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
 	payload = renameKeysToSDKExcept(payload, AIGatewayPolicySDKOpsFreeformKeyFields)
@@ -161,44 +164,15 @@ func (s *AIGatewayPolicyAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	return data, nil
 }
 
-// ToCreateAIGatewayPolicyRequest converts the AIGatewayPolicyAPISpec to the SDK type
-// sdkkonnectcomp.CreateAIGatewayPolicyRequest using JSON marshal/unmarshal.
-// Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes
-// object references) are naturally excluded because they have different JSON names.
-func (s *AIGatewayPolicyAPISpec) ToCreateAIGatewayPolicyRequest() (*sdkkonnectcomp.CreateAIGatewayPolicyRequest, error) {
-	data, err := s.marshalSDKOpsPayload()
-	if err != nil {
-		return nil, err
-	}
-	var target sdkkonnectcomp.CreateAIGatewayPolicyRequest
-	if err := json.Unmarshal(data, &target); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal into CreateAIGatewayPolicyRequest: %w", err)
-	}
-	return &target, nil
-}
-
-// ToUpdateAIGatewayPolicyRequest converts the AIGatewayPolicyAPISpec to the SDK type
-// sdkkonnectcomp.UpdateAIGatewayPolicyRequest using JSON marshal/unmarshal.
-// Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes
-// object references) are naturally excluded because they have different JSON names.
-func (s *AIGatewayPolicyAPISpec) ToUpdateAIGatewayPolicyRequest() (*sdkkonnectcomp.UpdateAIGatewayPolicyRequest, error) {
-	data, err := s.marshalSDKOpsPayload()
-	if err != nil {
-		return nil, err
-	}
-	var target sdkkonnectcomp.UpdateAIGatewayPolicyRequest
-	if err := json.Unmarshal(data, &target); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal into UpdateAIGatewayPolicyRequest: %w", err)
-	}
-	return &target, nil
-}
-
 func (obj *AIGatewayPolicy) sdkOpsAPISpec(ctx context.Context, cl client.Client) (*AIGatewayPolicyAPISpec, error) {
 	if obj == nil {
 		return nil, fmt.Errorf("AIGatewayPolicy is nil")
 	}
 
-	apiSpec := obj.Spec.APISpec
+	// Resolve against a deep copy: resolved values are written into the spec
+	// being walked, and union variants and slices are shared by reference, so
+	// a shallow copy would leak them into obj (e.g. the informer cache).
+	apiSpec := *obj.Spec.APISpec.DeepCopy()
 	// Resolve spec.apiSpec.config
 	{
 		src := apiSpec.Config
@@ -234,22 +208,180 @@ func (obj *AIGatewayPolicy) GetSensitiveDataSecretRefs() []SensitiveDataSecretRe
 	return refs
 }
 
+// RefsAtAIGatewayPolicyCustomPolicyRef returns the reference at spec.apiSpec.customPolicyRef,
+// or nil when it is unset.
+func RefsAtAIGatewayPolicyCustomPolicyRef(obj *AIGatewayPolicy) []AIGatewayCustomPolicyRef {
+	if obj.Spec.APISpec.CustomPolicyRef.Name == "" {
+		return nil
+	}
+	return []AIGatewayCustomPolicyRef{obj.Spec.APISpec.CustomPolicyRef}
+}
+
+// resolveAIGatewayPolicyCustomPolicyRef resolves the CR references in spec.apiSpec.customPolicyRef
+// to Konnect names.
+func resolveAIGatewayPolicyCustomPolicyRef(ctx context.Context, cl client.Client, obj *AIGatewayPolicy) ([]string, error) {
+	refs := RefsAtAIGatewayPolicyCustomPolicyRef(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayCustomPolicy"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		if ns != obj.GetNamespace() {
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
+		}
+		var referenced AIGatewayCustomPolicy
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayCustomPolicy", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayCustomPolicy %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayCustomPolicy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		// The resolved value replaces type: AIGatewayCustomPolicy objects
+		// being deleted must not gain new users, which could keep their deletion
+		// blocked.
+		if !referenced.GetDeletionTimestamp().IsZero() {
+			errs = append(errs, ReferenceBeingDeletedError{Kind: "AIGatewayCustomPolicy", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayCustomPolicy", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// AIGatewayPolicyRefsToAIGatewayCustomPolicy returns the keys of the AIGatewayCustomPolicy
+// objects obj references through spec.apiSpec.customPolicyRef, with the default namespace applied.
+func AIGatewayPolicyRefsToAIGatewayCustomPolicy(obj *AIGatewayPolicy) []client.ObjectKey {
+	var keys []client.ObjectKey
+	for _, ref := range RefsAtAIGatewayPolicyCustomPolicyRef(obj) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayCustomPolicy" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
+	}
+	return keys
+}
+
+// ResolveKonnectReferences resolves every CR reference declared on the spec and
+// returns the joined resolution errors, or nil when all references resolve.
+func (obj *AIGatewayPolicy) ResolveKonnectReferences(ctx context.Context, cl client.Client) error {
+	var errs []error
+	if _, err := resolveAIGatewayPolicyCustomPolicyRef(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
+}
+
+// CrossNamespaceSiblingReferences returns every cross-namespace sibling
+// reference declared on obj's spec whose SupportCrossNamespaceReference is
+// enabled, for callers to authorize against KongReferenceGrant before
+// calling ResolveKonnectReferences.
+func (obj *AIGatewayPolicy) CrossNamespaceSiblingReferences() []CrossNamespaceReferenceCheck {
+	var checks []CrossNamespaceReferenceCheck
+	return checks
+}
+
 // ToCreateAIGatewayPolicyRequest converts the AIGatewayPolicy to the SDK type
-// sdkkonnectcomp.CreateAIGatewayPolicyRequest, resolving referenced Secrets via the provided client.
+// sdkkonnectcomp.CreateAIGatewayPolicyRequest, resolving referenced Secrets, resolving referenced CRs to Konnect IDs via the provided client.
 func (obj *AIGatewayPolicy) ToCreateAIGatewayPolicyRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.CreateAIGatewayPolicyRequest, error) {
 	spec, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {
 		return nil, err
 	}
-	return spec.ToCreateAIGatewayPolicyRequest()
+	data, err := spec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, err
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return nil, fmt.Errorf("failed to decode AIGatewayPolicy SDK payload: %w", err)
+	}
+	if payload == nil {
+		payload = map[string]any{}
+	}
+	resolvedCustomPolicyRef, err := resolveAIGatewayPolicyCustomPolicyRef(ctx, cl, obj)
+	if err != nil {
+		return nil, fmt.Errorf("resolving spec.apiSpec.customPolicyRef references: %w", err)
+	}
+	// spec.apiSpec.customPolicyRef has no Konnect counterpart: its resolved value is sent as
+	// type. An unset reference leaves type as set in the spec.
+	delete(payload, "custom_policy_ref")
+	if len(resolvedCustomPolicyRef) > 0 {
+		payload["type"] = resolvedCustomPolicyRef[0]
+	}
+	data, err = json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal AIGatewayPolicy SDK payload with references: %w", err)
+	}
+	var target sdkkonnectcomp.CreateAIGatewayPolicyRequest
+	if err := json.Unmarshal(data, &target); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal into CreateAIGatewayPolicyRequest: %w", err)
+	}
+	return &target, nil
 }
 
 // ToUpdateAIGatewayPolicyRequest converts the AIGatewayPolicy to the SDK type
-// sdkkonnectcomp.UpdateAIGatewayPolicyRequest, resolving referenced Secrets via the provided client.
+// sdkkonnectcomp.UpdateAIGatewayPolicyRequest, resolving referenced Secrets, resolving referenced CRs to Konnect IDs via the provided client.
 func (obj *AIGatewayPolicy) ToUpdateAIGatewayPolicyRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.UpdateAIGatewayPolicyRequest, error) {
 	spec, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {
 		return nil, err
 	}
-	return spec.ToUpdateAIGatewayPolicyRequest()
+	data, err := spec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, err
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return nil, fmt.Errorf("failed to decode AIGatewayPolicy SDK payload: %w", err)
+	}
+	if payload == nil {
+		payload = map[string]any{}
+	}
+	resolvedCustomPolicyRef, err := resolveAIGatewayPolicyCustomPolicyRef(ctx, cl, obj)
+	if err != nil {
+		return nil, fmt.Errorf("resolving spec.apiSpec.customPolicyRef references: %w", err)
+	}
+	// spec.apiSpec.customPolicyRef has no Konnect counterpart: its resolved value is sent as
+	// type. An unset reference leaves type as set in the spec.
+	delete(payload, "custom_policy_ref")
+	if len(resolvedCustomPolicyRef) > 0 {
+		payload["type"] = resolvedCustomPolicyRef[0]
+	}
+	data, err = json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal AIGatewayPolicy SDK payload with references: %w", err)
+	}
+	var target sdkkonnectcomp.UpdateAIGatewayPolicyRequest
+	if err := json.Unmarshal(data, &target); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal into UpdateAIGatewayPolicyRequest: %w", err)
+	}
+	return &target, nil
 }

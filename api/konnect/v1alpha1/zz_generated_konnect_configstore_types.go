@@ -55,6 +55,17 @@ type KonnectConfigStoreSpec struct {
 
 // KonnectConfigStoreAPISpec defines the API spec fields for KonnectConfigStore.
 type KonnectConfigStoreAPISpec struct {
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+
 	//
 	//
 	// +optional

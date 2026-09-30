@@ -752,6 +752,15 @@ spec:
                                                   generation outputs.
                                                 maxLength: 253
                                                 type: string
+                                              vpcEndpoint:
+                                                description: |-
+                                                  Hostname of an AWS PrivateLink VPC endpoint to use instead of the public
+                                                  Bedrock endpoint.
+                                                  Ignored if `upstream_url` is set.
+
+                                                  **Requires a minimum runtime version of `2.3`**.
+                                                maxLength: 253
+                                                type: string
                                             type: object
                                           gemini:
                                             description: Gemini configuration.
@@ -1656,6 +1665,21 @@ spec:
                         required:
                         - route
                         type: object
+                      datastores:
+                        description: Names of the Datastores this model references.
+                        items:
+                          description: AIGatewayDatastoreRef A reference to an existing
+                            datastore
+                          properties:
+                            name:
+                              description: An immutable user-defined identifier for
+                                this resource.
+                              maxLength: 255
+                              minLength: 2
+                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              type: string
+                          type: object
+                        type: array
                       displayName:
                         description: The display name for this model instance.
                         maxLength: 256
@@ -1683,6 +1707,8 @@ spec:
                               - gemini
                               - huggingface
                               - openai
+                              - passthrough
+                              - typesafe
                               maxLength: 253
                               type: string
                           type: object
@@ -2525,6 +2551,15 @@ spec:
                                     videoOutputS3URI:
                                       description: S3 URI for storing video generation
                                         outputs.
+                                      maxLength: 253
+                                      type: string
+                                    vpcEndpoint:
+                                      description: |-
+                                        Hostname of an AWS PrivateLink VPC endpoint to use instead of the public
+                                        Bedrock endpoint.
+                                        Ignored if `upstream_url` is set.
+
+                                        **Requires a minimum runtime version of `2.3`**.
                                       maxLength: 253
                                       type: string
                                   type: object
@@ -5753,11 +5788,29 @@ spec:
                                   - ollama
                                   - openai
                                   - sagemaker
+                                  - typesafe
                                   - vercel
                                   - vllm
                                   - xai
                                   minLength: 1
                                   type: string
+                                typesafe:
+                                  description: Typesafe configuration.
+                                  properties:
+                                    inputCost:
+                                      description: Cost per 1M input tokens for billing
+                                        and cost tracking.
+                                      type: number
+                                    outputCost:
+                                      description: Cost per 1M output tokens for billing
+                                        and cost tracking.
+                                      type: number
+                                    upstreamURL:
+                                      description: The upstream URL for the model
+                                        endpoint.
+                                      maxLength: 253
+                                      type: string
+                                  type: object
                                 vercel:
                                   description: Vercel configuration.
                                   properties:
@@ -7144,6 +7197,15 @@ spec:
                                                   generation outputs.
                                                 maxLength: 253
                                                 type: string
+                                              vpcEndpoint:
+                                                description: |-
+                                                  Hostname of an AWS PrivateLink VPC endpoint to use instead of the public
+                                                  Bedrock endpoint.
+                                                  Ignored if `upstream_url` is set.
+
+                                                  **Requires a minimum runtime version of `2.3`**.
+                                                maxLength: 253
+                                                type: string
                                             type: object
                                           gemini:
                                             description: Gemini configuration.
@@ -8060,6 +8122,21 @@ spec:
                         required:
                         - route
                         type: object
+                      datastores:
+                        description: Names of the Datastores this model references.
+                        items:
+                          description: AIGatewayDatastoreRef A reference to an existing
+                            datastore
+                          properties:
+                            name:
+                              description: An immutable user-defined identifier for
+                                this resource.
+                              maxLength: 255
+                              minLength: 2
+                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              type: string
+                          type: object
+                        type: array
                       displayName:
                         description: The display name for this model instance.
                         maxLength: 256
@@ -8087,6 +8164,8 @@ spec:
                               - gemini
                               - huggingface
                               - openai
+                              - passthrough
+                              - typesafe
                               maxLength: 253
                               type: string
                           type: object
@@ -8929,6 +9008,15 @@ spec:
                                     videoOutputS3URI:
                                       description: S3 URI for storing video generation
                                         outputs.
+                                      maxLength: 253
+                                      type: string
+                                    vpcEndpoint:
+                                      description: |-
+                                        Hostname of an AWS PrivateLink VPC endpoint to use instead of the public
+                                        Bedrock endpoint.
+                                        Ignored if `upstream_url` is set.
+
+                                        **Requires a minimum runtime version of `2.3`**.
                                       maxLength: 253
                                       type: string
                                   type: object
@@ -12157,11 +12245,29 @@ spec:
                                   - ollama
                                   - openai
                                   - sagemaker
+                                  - typesafe
                                   - vercel
                                   - vllm
                                   - xai
                                   minLength: 1
                                   type: string
+                                typesafe:
+                                  description: Typesafe configuration.
+                                  properties:
+                                    inputCost:
+                                      description: Cost per 1M input tokens for billing
+                                        and cost tracking.
+                                      type: number
+                                    outputCost:
+                                      description: Cost per 1M output tokens for billing
+                                        and cost tracking.
+                                      type: number
+                                    upstreamURL:
+                                      description: The upstream URL for the model
+                                        endpoint.
+                                      maxLength: 253
+                                      type: string
+                                  type: object
                                 vercel:
                                   description: Vercel configuration.
                                   properties:

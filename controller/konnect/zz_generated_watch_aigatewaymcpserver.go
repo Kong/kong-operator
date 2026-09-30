@@ -25,9 +25,11 @@ func AIGatewayMCPServerReconciliationWatchOptions(
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	return []func(*ctrl.Builder) *ctrl.Builder{
 		func(b *ctrl.Builder) *ctrl.Builder {
-			// Entities whose AIGatewayRef targets an OnPremAIGateway are owned
-			// by the on-prem machinery and must never be enqueued into the
-			// Konnect reconciler.
+			// Entities whose AIGatewayRef targets an OnPremAIGateway are not
+			// managed by the Konnect reconciler and must never be enqueued into
+			// it: they are handled by the on-prem controllers where supported,
+			// or rejected at admission when the entity restricts its parent
+			// kinds.
 			return b.For(
 				&aiconfigurationv1alpha1.AIGatewayMCPServer{},
 				builder.WithPredicates(

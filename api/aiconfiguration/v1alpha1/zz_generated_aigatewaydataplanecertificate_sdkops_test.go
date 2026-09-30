@@ -13,6 +13,8 @@ func TestAIGatewayDataPlaneCertificateAPISpec_ToCreateAIGatewayDataPlaneCertific
 	spec := &AIGatewayDataPlaneCertificateAPISpec{
 		Cert:        SensitiveDataSource{Type: SensitiveDataSourceTypeInline, Value: new("test-value")},
 		Description: "test-value",
+		Labels:      PublicLabels{"test-key": "test-value"},
+		ManagedBy:   ManagedBy{"test-key": "test-value"},
 		Title:       "test-value",
 	}
 	result, err := spec.ToCreateAIGatewayDataPlaneCertificateRequest()
@@ -27,5 +29,7 @@ func TestAIGatewayDataPlaneCertificateAPISpec_ToCreateAIGatewayDataPlaneCertific
 	require.NoError(t, err)
 	require.Equal(t, "test-value", payload["cert"])
 	require.Equal(t, "test-value", payload["description"])
+	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["labels"])
+	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["managed_by"])
 	require.Equal(t, "test-value", payload["title"])
 }

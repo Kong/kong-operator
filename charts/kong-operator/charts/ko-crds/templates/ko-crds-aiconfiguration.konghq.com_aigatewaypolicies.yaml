@@ -131,6 +131,31 @@ spec:
                     - message: value required when type=inline; secretRef required
                         when type=secretRef
                       rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                  customPolicyRef:
+                    properties:
+                      kind:
+                        default: AIGatewayCustomPolicy
+                        enum:
+                        - AIGatewayCustomPolicy
+                        type: string
+                      name:
+                        minLength: 1
+                        type: string
+                      namespace:
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  datastores:
+                    items:
+                      properties:
+                        name:
+                          maxLength: 255
+                          minLength: 2
+                          pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                          type: string
+                      type: object
+                    type: array
                   displayName:
                     maxLength: 256
                     minLength: 1
@@ -172,7 +197,6 @@ spec:
                 - config
                 - displayName
                 - name
-                - type
                 type: object
             required:
             - aiGatewayRef
@@ -244,6 +268,10 @@ spec:
           rule: '!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions)
             || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
             == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
+        - message: exactly one of spec.apiSpec.type and spec.apiSpec.customPolicyRef
+            must be set
+          rule: '!has(self.spec) || !has(self.spec.apiSpec) || has(self.spec.apiSpec.type)
+            != has(self.spec.apiSpec.customPolicyRef)'
     served: true
     storage: true
     subresources:

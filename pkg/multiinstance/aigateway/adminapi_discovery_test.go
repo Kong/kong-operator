@@ -88,8 +88,12 @@ func TestAdminAPIEndpointsReconciler_Reconcile(t *testing.T) {
 			},
 			wantAdminAPI: sets.New(
 				adminapidiscovery.DiscoveredAdminAPI{
-					Address:       "https://10.0.0.1:8444",
-					TLSServerName: "pod.dp-1-admin.default.svc",
+					Address: "https://10.0.0.1:8444",
+					// The server name must be the Admin API Service's plain
+					// in-cluster DNS name, which is the AIGatewayDataPlane Admin
+					// API certificate subject (AdminAPIConfig.certificateSubject
+					// in controller/pkg/dataplane: <name>-admin.<namespace>.svc).
+					TLSServerName: "dp-1-admin.default.svc",
 					PodRef:        k8stypes.NamespacedName{Namespace: testGatewayNamespace, Name: "pod-1"},
 				},
 			),
@@ -105,12 +109,12 @@ func TestAdminAPIEndpointsReconciler_Reconcile(t *testing.T) {
 			wantAdminAPI: sets.New(
 				adminapidiscovery.DiscoveredAdminAPI{
 					Address:       "https://10.0.0.1:8444",
-					TLSServerName: "pod.dp-1-admin.default.svc",
+					TLSServerName: "dp-1-admin.default.svc",
 					PodRef:        k8stypes.NamespacedName{Namespace: testGatewayNamespace, Name: "pod-1"},
 				},
 				adminapidiscovery.DiscoveredAdminAPI{
 					Address:       "https://10.0.0.2:8444",
-					TLSServerName: "pod.dp-2-admin.default.svc",
+					TLSServerName: "dp-2-admin.default.svc",
 					PodRef:        k8stypes.NamespacedName{Namespace: testGatewayNamespace, Name: "pod-2"},
 				},
 			),
@@ -224,10 +228,67 @@ func TestAdminAPIEndpointsReconciler_Reconcile_ReturnsErrorOnDiscoveryFailure(t 
 	require.Equal(t, sets.New(
 		adminapidiscovery.DiscoveredAdminAPI{
 			Address:       "https://10.0.0.2:8444",
-			TLSServerName: "pod.dp-2-admin.default.svc",
+			TLSServerName: "dp-2-admin.default.svc",
 			PodRef:        k8stypes.NamespacedName{Namespace: testGatewayNamespace, Name: "pod-2"},
 		},
 	), gotAdminAPI)
+}
+
+// TestAdminAPIServiceTLSServerName pins the TLS ServerName override to the
+// AIGatewayDataPlane Admin API certificate subject format. If either this name
+// or the certificate subject (AdminAPIConfig.certificateSubject in
+// controller/pkg/dataplane: <name>-admin.<namespace>.svc) drifts apart, the
+// configuration push fails TLS verification with
+// "certificate is valid for ..., not ...".
+func TestAdminAPIServiceTLSServerName(t *testing.T) {
+	serviceNN := k8stypes.NamespacedName{Namespace: testGatewayNamespace, Name: "dp-1-admin"}
+	require.Equal(t, "dp-1-admin.default.svc", adminAPIServiceTLSServerName(serviceNN))
+}
+
+// TestWithTLSServerName verifies that the shared discovery's per-pod server
+// name (pod.<service>.<namespace>.svc) is replaced with the plain Admin API
+// Service DNS name for every endpoint, and that the input set is not mutated.
+func TestWithTLSServerName(t *testing.T) {
+	original := sets.New(
+		adminapidiscovery.DiscoveredAdminAPI{
+			Address:       "https://10.0.0.1:8444",
+			TLSServerName: "pod.dp-1-admin.default.svc",
+			PodRef:        k8stypes.NamespacedName{Namespace: testGatewayNamespace, Name: "pod-1"},
+		},
+		adminapidiscovery.DiscoveredAdminAPI{
+			Address:       "https://10.0.0.2:8444",
+			TLSServerName: "pod.dp-1-admin.default.svc",
+			PodRef:        k8stypes.NamespacedName{Namespace: testGatewayNamespace, Name: "pod-2"},
+		},
+	)
+	serviceNN := k8stypes.NamespacedName{Namespace: testGatewayNamespace, Name: "dp-1-admin"}
+
+	got := withTLSServerName(original, serviceNN)
+	require.Equal(t, sets.New(
+		adminapidiscovery.DiscoveredAdminAPI{
+			Address:       "https://10.0.0.1:8444",
+			TLSServerName: "dp-1-admin.default.svc",
+			PodRef:        k8stypes.NamespacedName{Namespace: testGatewayNamespace, Name: "pod-1"},
+		},
+		adminapidiscovery.DiscoveredAdminAPI{
+			Address:       "https://10.0.0.2:8444",
+			TLSServerName: "dp-1-admin.default.svc",
+			PodRef:        k8stypes.NamespacedName{Namespace: testGatewayNamespace, Name: "pod-2"},
+		},
+	), got)
+	// The input set keeps the shared discovery's server names.
+	require.Equal(t, sets.New(
+		adminapidiscovery.DiscoveredAdminAPI{
+			Address:       "https://10.0.0.1:8444",
+			TLSServerName: "pod.dp-1-admin.default.svc",
+			PodRef:        k8stypes.NamespacedName{Namespace: testGatewayNamespace, Name: "pod-1"},
+		},
+		adminapidiscovery.DiscoveredAdminAPI{
+			Address:       "https://10.0.0.2:8444",
+			TLSServerName: "pod.dp-1-admin.default.svc",
+			PodRef:        k8stypes.NamespacedName{Namespace: testGatewayNamespace, Name: "pod-2"},
+		},
+	), original)
 }
 
 func TestAdminAPIEndpointsReconciler_Predicates(t *testing.T) {

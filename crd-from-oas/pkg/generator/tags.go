@@ -2,6 +2,7 @@ package generator
 
 import (
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/config"
@@ -84,7 +85,7 @@ func KubebuilderTags(prop *parser.Property, fieldCursor *config.FieldConfig) []s
 		var enumValues []string
 		for _, e := range prop.Enum {
 			if s, ok := e.(string); ok {
-				enumValues = append(enumValues, s)
+				enumValues = append(enumValues, quoteEnumMarkerValue(s))
 			}
 		}
 		if len(enumValues) > 0 {
@@ -153,6 +154,23 @@ func valueTypeMarkers(ap *parser.Property) []string {
 		}
 	}
 	return markers
+}
+
+// quoteEnumMarkerValue quotes a string enum value for a
+// +kubebuilder:validation:Enum marker when a marker parser could read the bare
+// value as something other than a string: empty, a bool literal, anything that
+// starts like a number (e.g. the date-like "2025-06-18"), or anything holding a
+// marker delimiter or line break (quoting escapes it, keeping the marker on a
+// single comment line). Older marker parsers (such as the one bundled with
+// crd-ref-docs) fail on e.g. an unquoted date and silently drop the whole
+// package from the generated API reference.
+func quoteEnumMarkerValue(v string) string {
+	if v == "" || v == "true" || v == "false" ||
+		strings.ContainsAny(v[:1], "0123456789+-.") ||
+		strings.ContainsAny(v, ";,\"'`{}: \t\n\r") {
+		return strconv.Quote(v)
+	}
+	return v
 }
 
 // propertyToGoBaseType returns the Go base type for a simple property.

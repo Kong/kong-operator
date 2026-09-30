@@ -20,6 +20,7 @@ import (
 // +apireference:kgo:include
 // +kong:channels=kong-operator
 // +kubebuilder:validation:XValidation:rule="!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef", message="spec.aiGatewayRef is immutable when an entity is already Programmed"
+// +kubebuilder:validation:XValidation:rule="!has(self.spec) || !has(self.spec.apiSpec) || has(self.spec.apiSpec.type) != has(self.spec.apiSpec.customPolicyRef)", message="exactly one of spec.apiSpec.type and spec.apiSpec.customPolicyRef must be set"
 type AIGatewayPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitzero"`
@@ -74,6 +75,11 @@ type AIGatewayPolicyAPISpec struct {
 	//
 	// +required
 	Config AIGatewayPolicyConfigDataSource `json:"config,omitzero"`
+
+	// Names of the Datastores this policy references.
+	//
+	// +optional
+	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
 
 	// The display name for this policy instance.
 	//
@@ -135,10 +141,19 @@ type AIGatewayPolicyAPISpec struct {
 	// Docs](https://developer.konghq.com/plugins/).
 	//
 	//
-	// +required
+	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	Type string `json:"type,omitzero"`
+
+	// CustomPolicyRef references the AIGatewayCustomPolicy this policy uses, as an
+	// alternative to setting type to the custom policy's Konnect name.
+	// The referenced custom policy must be programmed in the same AI Gateway; its
+	// Konnect name is sent as the policy type.
+	// Exactly one of type and customPolicyRef must be set.
+	//
+	// +optional
+	CustomPolicyRef AIGatewayCustomPolicyRef `json:"customPolicyRef,omitzero"`
 }
 
 // AIGatewayPolicyStatus defines the observed state of AIGatewayPolicy.

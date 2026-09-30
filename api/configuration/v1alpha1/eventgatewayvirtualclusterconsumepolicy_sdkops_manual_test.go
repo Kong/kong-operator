@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	"maps"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -23,9 +24,14 @@ func TestEventGatewayVirtualClusterConsumePolicyAPISpec_ToCreateRequest_ModifyHe
 					ModifyHeadersPolicyCreate: &EventGatewayModifyHeadersPolicyCreate{
 						Name:        "add-header-1",
 						Description: "Test Consume Policy to add a header",
+						// Union-shaped on purpose: provider's value names the
+						// sibling headroom key, the shape the flattenSDKUnions
+						// heuristic used to collapse into the bare string "x".
+						// labels is a free-form subtree, so it must survive
+						// verbatim.
 						Labels: Labels{
-							"app": "test1",
-							"env": "test",
+							"provider": "headroom",
+							"headroom": "x",
 						},
 						Config: EventGatewayModifyHeadersPolicyCreateConfig{
 							Actions: []EventGatewayModifyHeaderAction{
@@ -52,6 +58,11 @@ func TestEventGatewayVirtualClusterConsumePolicyAPISpec_ToCreateRequest_ModifyHe
 	policy := req.GetEventGatewayConsumePolicyCreateModifyHeaders()
 	if policy == nil {
 		t.Fatal("expected modify headers policy in create request")
+	}
+
+	wantLabels := map[string]string{"provider": "headroom", "headroom": "x"}
+	if got := policy.Labels; !maps.Equal(got, wantLabels) {
+		t.Fatalf("unexpected labels: got %v want %v", got, wantLabels)
 	}
 
 	actions := policy.Config.Actions

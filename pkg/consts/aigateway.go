@@ -59,9 +59,27 @@ const (
 	RelatedImageAIGatewayDataPlaneEnvVar = "RELATED_IMAGE_AIGW"
 
 	// DefaultAIGatewayDataPlaneBaseImage is the base image name for the AI Gateway container.
-	DefaultAIGatewayDataPlaneBaseImage = "kong/kong-ai-gateway"
+	DefaultAIGatewayDataPlaneBaseImage = "kong/kong-ai-gateway-dev"
 	// DefaultAIGatewayDataPlaneTag is the default image tag for the AI Gateway container.
-	DefaultAIGatewayDataPlaneTag = "2.1.0" // renovate: datasource=docker depName=kong/kong-ai-gateway
+	DefaultAIGatewayDataPlaneTag = "2.2.0-rc.2" // renovate: datasource=docker depName=kong/kong-ai-gateway-dev
 	// DefaultAIGatewayDataPlaneImage is the full default image reference for the AI Gateway container.
 	DefaultAIGatewayDataPlaneImage = DefaultAIGatewayDataPlaneBaseImage + ":" + DefaultAIGatewayDataPlaneTag
+)
+
+// -----------------------------------------------------------------------------
+// Consts - OnPremAIGateway Labels
+// -----------------------------------------------------------------------------
+
+const (
+	// OnPremAIGatewayManagedByLabelValue is the managed-by label value for OnPremAIGateway owned resources.
+	OnPremAIGatewayManagedByLabelValue = "onprem-aigateway"
+
+	// OnPremAIGatewayPrefix is the GenerateName prefix used when creating mTLS certificate Secrets
+	// for OnPremAIGateway control plane instances.
+	OnPremAIGatewayPrefix = "onprem-aigw"
+
+	// SecretOnPremAIGatewayAdminClientCertificateLabel marks a Secret as the mTLS client
+	// certificate the control plane instance uses when pushing configuration to the Admin
+	// API of the AIGatewayDataPlanes referencing the gateway.
+	SecretOnPremAIGatewayAdminClientCertificateLabel = "konghq.com/onprem-aigw-admin-client-cert" //nolint:gosec
 )

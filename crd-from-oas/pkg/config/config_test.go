@@ -88,7 +88,7 @@ apiGroupVersions:
   konnect.konghq.com/v1alpha1:
     types:
       - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
-        secretReferences:
+        dataSources:
           - path: spec.apiSpec.certificate
             type: Secret
         ops:
@@ -105,9 +105,9 @@ apiGroupVersions:
 		konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
 		require.NotNil(t, konnect)
 		require.Len(t, konnect.Types, 1)
-		require.Len(t, konnect.Types[0].SecretReferences, 1)
-		assert.Equal(t, "spec.apiSpec.certificate", konnect.Types[0].SecretReferences[0].Path)
-		assert.Equal(t, "Secret", konnect.Types[0].SecretReferences[0].Type)
+		require.Len(t, konnect.Types[0].DataSources, 1)
+		assert.Equal(t, "spec.apiSpec.certificate", konnect.Types[0].DataSources[0].Path)
+		assert.Equal(t, "Secret", konnect.Types[0].DataSources[0].Type)
 		assert.True(t, konnect.Types[0].OpsRequireClient)
 		require.NotNil(t, konnect.Types[0].Ops)
 		assert.Equal(t,
@@ -738,6 +738,24 @@ func TestTypeConfig_ValidateAssociations(t *testing.T) {
 	})
 }
 
+func TestTypeConfig_ValidateDataSources(t *testing.T) {
+	t.Run("Secret and ConfigMap types are valid", func(t *testing.T) {
+		tc := &TypeConfig{DataSources: []DataSourceConfig{
+			{Path: "spec.apiSpec.apiKey", Type: DataSourceTypeSecret},
+			{Path: "spec.apiSpec.schema", Type: DataSourceTypeConfigMap},
+		}}
+		require.NoError(t, tc.validate())
+		require.False(t, tc.DataSources[0].IsConfigMap())
+		require.True(t, tc.DataSources[1].IsConfigMap())
+	})
+	t.Run("unknown type errors", func(t *testing.T) {
+		tc := &TypeConfig{DataSources: []DataSourceConfig{
+			{Path: "spec.apiSpec.schema", Type: "Other"},
+		}}
+		require.ErrorContains(t, tc.validate(), `dataSources[0].type "Other" is not supported`)
+	})
+}
+
 func TestAPIGroupVersionConfig_AssociationsConfig(t *testing.T) {
 	agv := &APIGroupVersionConfig{
 		Types: []*TypeConfig{
@@ -922,7 +940,7 @@ func TestAPIGroupVersionConfig_OpsConfig(t *testing.T) {
 					Ops: map[string]*OpConfig{
 						"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest"},
 					},
-					SecretReferences: []SecretReferenceConfig{
+					DataSources: []DataSourceConfig{
 						{Path: "spec.apiSpec.certificate", Type: "Secret"},
 					},
 				},
@@ -1261,6 +1279,62 @@ func TestReferenceConfigValidation(t *testing.T) {
 				rc.Kinds = []string{"AIGatewayConsumer", "AIGatewayConsumerGroup"}
 			}),
 			wantErr: "refTypeName is required when multiple kinds",
+		},
+		{
+			name: "injectInto on a top-level field accepted",
+			cfg: base(func(rc *ReferenceConfig) {
+				rc.Path = "spec.apiSpec.customPolicyRef"
+				rc.InjectInto = "type"
+			}),
+		},
+		{
+			name: "injectInto on a nested field rejected",
+			cfg: base(func(rc *ReferenceConfig) {
+				rc.Path = "spec.apiSpec.access.customPolicyRef"
+				rc.InjectInto = "type"
+			}),
+			wantErr: "injectInto is only supported for top-level apiSpec fields",
+		},
+		{
+			name: "injectInto into a nested target rejected",
+			cfg: base(func(rc *ReferenceConfig) {
+				rc.Path = "spec.apiSpec.customPolicyRef"
+				rc.InjectInto = "config.type"
+			}),
+			wantErr: "injectInto must name a top-level apiSpec field",
+		},
+		{
+			name: "injectInto with cross-namespace support rejected",
+			cfg: base(func(rc *ReferenceConfig) {
+				rc.Path = "spec.apiSpec.customPolicyRef"
+				rc.InjectInto = "type"
+				rc.SupportCrossNamespaceReference = true
+			}),
+			wantErr: "supportCrossNamespaceReference is not supported with injectInto",
+		},
+		{
+			name: "reverseWatch on a single-kind reference accepted",
+			cfg:  base(func(rc *ReferenceConfig) { rc.ReverseWatch = true }),
+		},
+		{
+			name: "reverseWatch on a multi-kind reference rejected",
+			cfg: base(func(rc *ReferenceConfig) {
+				rc.Kinds = []string{"AIGatewayConsumer", "AIGatewayConsumerGroup"}
+				rc.RefTypeName = "AIGatewayACLRef"
+				rc.ReverseWatch = true
+			}),
+			wantErr: "reverseWatch requires exactly one kind",
+		},
+		{
+			name: "two reverseWatch references to the same kind rejected",
+			cfg: func() *APIGroupVersionConfig {
+				cfg := base(func(rc *ReferenceConfig) { rc.ReverseWatch = true })
+				second := cfg.Types[0].References[0]
+				second.Path = "spec.apiSpec.otherPolicies"
+				cfg.Types[0].References = append(cfg.Types[0].References, second)
+				return cfg
+			}(),
+			wantErr: "reverseWatch is supported for at most one reference per referenced kind",
 		},
 	}
 	for _, tt := range tests {

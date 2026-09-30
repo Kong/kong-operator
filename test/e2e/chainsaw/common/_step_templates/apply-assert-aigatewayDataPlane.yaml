@@ -9,11 +9,24 @@
 #   - namespace: Namespace where the AIGatewayDataPlane will be created.
 #   - aigw_dp_image: AI Gateway data plane container image. Overrides the operator
 #     default. Must be pre-loaded into the cluster.
+#
+# Optional bindings (override with use.with.bindings; empty by default), each a
+# list, e.g. "([{name: 'KONG_LOG_LEVEL', value: 'debug'}])":
+#   - aigw_dp_env: Extra environment variables of the aigw container.
+#   - aigw_dp_volumes: Pod volumes.
+#   - aigw_dp_volume_mounts: Volume mounts of the aigw container.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
 metadata:
   name: apply-assert-aigateway-dataplane
 spec:
+  bindings:
+    - name: aigw_dp_env
+      value: (`[]`)
+    - name: aigw_dp_volumes
+      value: (`[]`)
+    - name: aigw_dp_volume_mounts
+      value: (`[]`)
   try:
     - apply:
         resource:
@@ -34,6 +47,9 @@ spec:
                   containers:
                     - name: aigw
                       image: ($aigw_dp_image)
+                      env: ($aigw_dp_env)
+                      volumeMounts: ($aigw_dp_volume_mounts)
+                  volumes: ($aigw_dp_volumes)
             network:
               services:
                 ingress:

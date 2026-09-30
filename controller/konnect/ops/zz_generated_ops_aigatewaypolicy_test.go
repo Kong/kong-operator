@@ -3,6 +3,7 @@
 package ops
 
 import (
+	"encoding/json"
 	"errors"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -12,6 +13,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
 )
@@ -30,14 +32,14 @@ func testGeneratedAIGatewayPolicyForSDKOps() *aiconfigurationv1alpha1.AIGatewayP
 		},
 		Spec: aiconfigurationv1alpha1.AIGatewayPolicySpec{
 			APISpec: aiconfigurationv1alpha1.AIGatewayPolicyAPISpec{
-				Condition:   new("test-value"),
-				DisplayName: "test-value",
-				Enabled:     "Enabled",
-				Global:      "Enabled",
-				Labels:      aiconfigurationv1alpha1.PublicLabels{"test-key": "test-value"},
-				ManagedBy:   aiconfigurationv1alpha1.ManagedBy{"test-key": "test-value"},
-				Name:        "test-value",
-				Type:        "test-value",
+				Condition:       new("test-value"),
+				DisplayName:     "test-value",
+				Enabled:         "Enabled",
+				Global:          "Enabled",
+				Labels:          aiconfigurationv1alpha1.PublicLabels{"test-key": "test-value"},
+				ManagedBy:       aiconfigurationv1alpha1.ManagedBy{"test-key": "test-value"},
+				Name:            "test-value",
+				CustomPolicyRef: aiconfigurationv1alpha1.AIGatewayCustomPolicyRef{Name: "test-customPolicyRef"},
 			},
 		},
 	}
@@ -48,12 +50,28 @@ func TestCreateAIGatewayPolicy_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayPoliciesSDK(t)
-	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(func() *aiconfigurationv1alpha1.AIGatewayCustomPolicy {
+		r := &aiconfigurationv1alpha1.AIGatewayCustomPolicy{ObjectMeta: metav1.ObjectMeta{Name: "test-customPolicyRef", Namespace: "default"}, Spec: aiconfigurationv1alpha1.AIGatewayCustomPolicySpec{APISpec: aiconfigurationv1alpha1.AIGatewayCustomPolicyAPISpec{AIGatewayCustomPolicyConfig: &aiconfigurationv1alpha1.AIGatewayCustomPolicyConfig{Type: aiconfigurationv1alpha1.AIGatewayCustomPolicyConfigTypeInstalled, Installed: &aiconfigurationv1alpha1.CreateAIGatewayCustomPolicyInstalledRequest{DisplayName: "test-display-name", Name: "test-custom-policy", Schema: aiconfigurationv1alpha1.ConfigMapDataSource{Type: aiconfigurationv1alpha1.ConfigMapDataSourceTypeInline, Value: new("return {}")}}}}}}
+		r.SetKonnectID("test-customPolicyRef" + "-kid")
+		return r
+	}()).Build()
 	obj := testGeneratedAIGatewayPolicyForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
 	expectedRequest, err := obj.ToCreateAIGatewayPolicyRequest(ctx, cl)
 	require.NoError(t, err)
+	{
+		// Additive references are resolved to the referenced object's Konnect
+		// key, sent in place of the reference.
+		data, err := json.Marshal(expectedRequest)
+		require.NoError(t, err)
+		var body map[string]any
+		require.NoError(t, json.Unmarshal(data, &body))
+		var referenced0 aiconfigurationv1alpha1.AIGatewayCustomPolicy
+		require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: "default", Name: "test-customPolicyRef"}, &referenced0))
+		require.NotEmpty(t, referenced0.GetKonnectName())
+		require.Equal(t, referenced0.GetKonnectName(), body["type"])
+	}
 	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
 	expectedID := "aigatewaypolicy-id"
 
@@ -79,7 +97,11 @@ func TestCreateAIGatewayPolicy_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayPoliciesSDK(t)
-	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(func() *aiconfigurationv1alpha1.AIGatewayCustomPolicy {
+		r := &aiconfigurationv1alpha1.AIGatewayCustomPolicy{ObjectMeta: metav1.ObjectMeta{Name: "test-customPolicyRef", Namespace: "default"}, Spec: aiconfigurationv1alpha1.AIGatewayCustomPolicySpec{APISpec: aiconfigurationv1alpha1.AIGatewayCustomPolicyAPISpec{AIGatewayCustomPolicyConfig: &aiconfigurationv1alpha1.AIGatewayCustomPolicyConfig{Type: aiconfigurationv1alpha1.AIGatewayCustomPolicyConfigTypeInstalled, Installed: &aiconfigurationv1alpha1.CreateAIGatewayCustomPolicyInstalledRequest{DisplayName: "test-display-name", Name: "test-custom-policy", Schema: aiconfigurationv1alpha1.ConfigMapDataSource{Type: aiconfigurationv1alpha1.ConfigMapDataSourceTypeInline, Value: new("return {}")}}}}}}
+		r.SetKonnectID("test-customPolicyRef" + "-kid")
+		return r
+	}()).Build()
 	obj := testGeneratedAIGatewayPolicyForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
@@ -106,7 +128,11 @@ func TestUpdateAIGatewayPolicy_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayPoliciesSDK(t)
-	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(func() *aiconfigurationv1alpha1.AIGatewayCustomPolicy {
+		r := &aiconfigurationv1alpha1.AIGatewayCustomPolicy{ObjectMeta: metav1.ObjectMeta{Name: "test-customPolicyRef", Namespace: "default"}, Spec: aiconfigurationv1alpha1.AIGatewayCustomPolicySpec{APISpec: aiconfigurationv1alpha1.AIGatewayCustomPolicyAPISpec{AIGatewayCustomPolicyConfig: &aiconfigurationv1alpha1.AIGatewayCustomPolicyConfig{Type: aiconfigurationv1alpha1.AIGatewayCustomPolicyConfigTypeInstalled, Installed: &aiconfigurationv1alpha1.CreateAIGatewayCustomPolicyInstalledRequest{DisplayName: "test-display-name", Name: "test-custom-policy", Schema: aiconfigurationv1alpha1.ConfigMapDataSource{Type: aiconfigurationv1alpha1.ConfigMapDataSourceTypeInline, Value: new("return {}")}}}}}}
+		r.SetKonnectID("test-customPolicyRef" + "-kid")
+		return r
+	}()).Build()
 	obj := testGeneratedAIGatewayPolicyForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
@@ -135,7 +161,11 @@ func TestUpdateAIGatewayPolicy_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayPoliciesSDK(t)
-	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(func() *aiconfigurationv1alpha1.AIGatewayCustomPolicy {
+		r := &aiconfigurationv1alpha1.AIGatewayCustomPolicy{ObjectMeta: metav1.ObjectMeta{Name: "test-customPolicyRef", Namespace: "default"}, Spec: aiconfigurationv1alpha1.AIGatewayCustomPolicySpec{APISpec: aiconfigurationv1alpha1.AIGatewayCustomPolicyAPISpec{AIGatewayCustomPolicyConfig: &aiconfigurationv1alpha1.AIGatewayCustomPolicyConfig{Type: aiconfigurationv1alpha1.AIGatewayCustomPolicyConfigTypeInstalled, Installed: &aiconfigurationv1alpha1.CreateAIGatewayCustomPolicyInstalledRequest{DisplayName: "test-display-name", Name: "test-custom-policy", Schema: aiconfigurationv1alpha1.ConfigMapDataSource{Type: aiconfigurationv1alpha1.ConfigMapDataSourceTypeInline, Value: new("return {}")}}}}}}
+		r.SetKonnectID("test-customPolicyRef" + "-kid")
+		return r
+	}()).Build()
 	obj := testGeneratedAIGatewayPolicyForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)

@@ -46,6 +46,11 @@ type ReferenceNotFoundError = commonv1alpha1.ReferenceNotFoundError
 // no Konnect ID yet.
 type ReferenceNotProgrammedError = commonv1alpha1.ReferenceNotProgrammedError
 
+// ReferenceBeingDeletedError is returned when a referenced CR is being
+// deleted, for references that must not start using an object that is going
+// away.
+type ReferenceBeingDeletedError = commonv1alpha1.ReferenceBeingDeletedError
+
 // ReferenceCrossNamespaceError is returned when a reference points to another
 // namespace. Cross-namespace references are rejected until explicit
 // cross-namespace support and authorization checks are implemented.
@@ -121,6 +126,28 @@ type AIGatewayCertificateRef struct {
 	// +optional
 	// +kubebuilder:validation:Enum=AIGatewayCertificate
 	// +kubebuilder:default=AIGatewayCertificate
+	Kind string `json:"kind,omitempty"`
+
+	// Name is the name of the referenced object.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+
+	// Namespace is reserved for future cross-namespace support.
+	//
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+}
+
+// AIGatewayCustomPolicyRef references an AIGatewayCustomPolicy in the cluster. The referenced
+// object's Konnect name is used where the Konnect API accepts it.
+type AIGatewayCustomPolicyRef struct {
+	// Kind is the kind of the referenced object.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=AIGatewayCustomPolicy
+	// +kubebuilder:default=AIGatewayCustomPolicy
 	Kind string `json:"kind,omitempty"`
 
 	// Name is the name of the referenced object.

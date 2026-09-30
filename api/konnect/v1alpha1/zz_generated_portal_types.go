@@ -55,6 +55,11 @@ type PortalSpec struct {
 
 // PortalAPISpec defines the API spec fields for Portal.
 type PortalAPISpec struct {
+	//
+	//
+	// +optional
+	AI AISettings `json:"ai,omitzero"`
+
 	// Whether the portal supports developer authentication.
 	// If disabled, developers cannot register for accounts or create applications.
 	//
@@ -76,6 +81,12 @@ type PortalAPISpec struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	AutoApproveDevelopers string `json:"autoApproveDevelopers,omitzero"`
+
+	// Use to create the portal page default content upon creation of this portal
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	CreateDefaultContent string `json:"createDefaultContent,omitzero"`
 
 	// The default visibility of APIs in the portal.
 	// If set to `public`, newly published APIs are visible to unauthenticated

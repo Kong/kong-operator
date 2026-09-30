@@ -38,8 +38,8 @@ func (s *AIGatewayCACertificateAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return nil, fmt.Errorf("failed to decode AIGatewayCACertificateAPISpec: %w", err)
 	}
-	payload = flattenSDKUnions(payload)
-	payload = flattenSensitiveData(payload)
+	payload = flattenSDKUnionsExcept(payload, AIGatewayCACertificateSDKOpsFreeformKeyFields)
+	payload = flattenSensitiveDataExcept(payload, AIGatewayCACertificateSDKOpsFreeformKeyFields)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
 	payload = renameKeysToSDKExcept(payload, AIGatewayCACertificateSDKOpsFreeformKeyFields)
@@ -87,7 +87,10 @@ func (obj *AIGatewayCACertificate) sdkOpsAPISpec(ctx context.Context, cl client.
 		return nil, fmt.Errorf("AIGatewayCACertificate is nil")
 	}
 
-	apiSpec := obj.Spec.APISpec
+	// Resolve against a deep copy: resolved values are written into the spec
+	// being walked, and union variants and slices are shared by reference, so
+	// a shallow copy would leak them into obj (e.g. the informer cache).
+	apiSpec := *obj.Spec.APISpec.DeepCopy()
 	// Resolve spec.apiSpec.cert
 	{
 		src := apiSpec.Cert
