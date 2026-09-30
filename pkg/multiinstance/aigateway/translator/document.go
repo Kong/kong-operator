@@ -166,6 +166,9 @@ func BuildDocument(
 		translateKind[aiconfigurationv1alpha1.AIGatewayConsumerGroupList](
 			cl, gw, index.IndexFieldAIGatewayConsumerGroupOnOnPremAIGatewayRef,
 			(*aiconfigurationv1alpha1.AIGatewayConsumerGroup).ToAIGWConsumerGroup, &doc.ConsumerGroups),
+		translateKind[aiconfigurationv1alpha1.AIGatewayConsumerList](
+			cl, gw, index.IndexFieldAIGatewayConsumerOnOnPremAIGatewayRef,
+			(*aiconfigurationv1alpha1.AIGatewayConsumer).ToAIGWConsumer, &doc.Consumers),
 		translateKind[aiconfigurationv1alpha1.AIGatewayAuthStrategyList](
 			cl, gw, index.IndexFieldAIGatewayAuthStrategyOnOnPremAIGatewayRef,
 			(*aiconfigurationv1alpha1.AIGatewayAuthStrategy).ToAIGWAuthStrategy, &doc.AuthStrategies),

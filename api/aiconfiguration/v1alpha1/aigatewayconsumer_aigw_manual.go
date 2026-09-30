@@ -1,0 +1,149 @@
+package v1alpha1
+
+// This file hand-translates AIGatewayConsumer into ai-deck-converter's aigw.Consumer,
+// for on-prem (dbless) config rendering. See aigatewaymodel_aigw_manual.go's package comment
+// for the shared background and the plan to generate this some day.
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"slices"
+
+	"github.com/Kong/ai-deck-converter/aigw"
+	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+// ToAIGWConsumer converts the AIGatewayConsumer into ai-deck-converter's aigw.Consumer,
+// resolving spec.apiSpec.policies and spec.consumerGroups references to the referenced
+// entities' names and embedding the credentials referencing it (each with its secretRef
+// apiKey resolved).
+func (obj *AIGatewayConsumer) ToAIGWConsumer(ctx context.Context, cl client.Client) (*aigw.Consumer, error) {
+	data, err := obj.Spec.APISpec.marshalAIGWConsumerPayload()
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayConsumer %s/%s: %w", obj.Namespace, obj.Name, err)
+	}
+
+	var consumer aigw.Consumer
+	if err := yaml.Unmarshal(data, &consumer); err != nil {
+		return nil, fmt.Errorf("decoding AIGatewayConsumer %s/%s as aigw.Consumer: %w", obj.Namespace, obj.Name, err)
+	}
+
+	if consumer.Policies, err = resolveEntityNames[AIGatewayPolicy](ctx, cl, obj.Namespace, policyRefs(obj.Spec.APISpec.Policies)); err != nil {
+		return nil, fmt.Errorf("resolving AIGatewayConsumer %s/%s policies: %w", obj.Namespace, obj.Name, err)
+	}
+	if consumer.ConsumerGroups, err = resolveEntityNames[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, consumerGroupNamespacedRefs(obj.Spec.ConsumerGroups)); err != nil {
+		return nil, fmt.Errorf("resolving AIGatewayConsumer %s/%s consumer groups: %w", obj.Namespace, obj.Name, err)
+	}
+	if consumer.Credentials, err = obj.aigwCredentials(ctx, cl); err != nil {
+		return nil, fmt.Errorf("resolving AIGatewayConsumer %s/%s credentials: %w", obj.Namespace, obj.Name, err)
+	}
+	return &consumer, nil
+}
+
+// marshalAIGWConsumerPayload builds the aigw.Consumer-shaped payload bytes. Shared by
+// ToAIGWConsumer and its strict round-trip test, so the test decodes the production
+// pipeline's output, not a copy of it.
+func (spec *AIGatewayConsumerAPISpec) marshalAIGWConsumerPayload() ([]byte, error) {
+	data, err := spec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, err
+	}
+	var cfg map[string]any
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("decoding AIGatewayConsumer SDK payload: %w", err)
+	}
+	// Konnect-only bookkeeping: no on-prem equivalent.
+	delete(cfg, "managed_by")
+	// These carry {kind,name} CR references; aigw wants plain resolved names. Stripped here,
+	// re-attached resolved in ToAIGWConsumer.
+	delete(cfg, "policies")
+	return json.Marshal(cfg)
+}
+
+// consumerGroupNamespacedRefs projects the AIGatewayConsumer's consumer group references onto
+// the common shape resolveEntityNames needs (same-namespace, name-only refs).
+func consumerGroupNamespacedRefs(refs []AIGatewayConsumerGroupRef) []namespacedRef {
+	out := make([]namespacedRef, len(refs))
+	for i, r := range refs {
+		out[i] = namespacedRef{Name: r.Name}
+	}
+	return out
+}
+
+// aigwCredentials translates the AIGatewayConsumerCredentials referencing this consumer into
+// aigw.Credentials, sorted by k8s name so the rendered document (and the payload hash derived
+// from it) doesn't flap across List calls that return in a different order.
+//
+// The credentials are listed namespace-wide and filtered in Go rather than via the
+// aiGatewayConsumerCredentialOnAIGatewayConsumerRef index: that index's constant lives in
+// internal/utils/index, which this api package cannot import without a cycle.
+func (obj *AIGatewayConsumer) aigwCredentials(ctx context.Context, cl client.Client) ([]aigw.Credential, error) {
+	var list AIGatewayConsumerCredentialList
+	if err := cl.List(ctx, &list, client.InNamespace(obj.Namespace)); err != nil {
+		return nil, fmt.Errorf("listing AIGatewayConsumerCredentials: %w", err)
+	}
+
+	slices.SortFunc(list.Items, func(a, b AIGatewayConsumerCredential) int {
+		return slices.Compare([]string{a.Namespace, a.Name}, []string{b.Namespace, b.Name})
+	})
+
+	var creds []aigw.Credential
+	for i := range list.Items {
+		cred := &list.Items[i]
+		ref := cred.Spec.AIGatewayConsumerRef.NamespacedRef
+		if ref == nil ||
+			ref.Name != obj.Name ||
+			(ref.Namespace != nil && *ref.Namespace != "" && *ref.Namespace != obj.Namespace) {
+			continue
+		}
+		translated, err := cred.toAIGWCredential(ctx, cl)
+		if err != nil {
+			return nil, fmt.Errorf("translating AIGatewayConsumerCredential %s/%s: %w", cred.Namespace, cred.Name, err)
+		}
+		creds = append(creds, *translated)
+	}
+	return creds, nil
+}
+
+// toAIGWCredential converts a single AIGatewayConsumerCredential into ai-deck-converter's
+// aigw.Credential, resolving its secretRef apiKey. Cross-namespace secretRefs are rejected
+// per the on-prem rule (the generated sdkOpsAPISpec alone would resolve them regardless of
+// namespace).
+func (obj *AIGatewayConsumerCredential) toAIGWCredential(ctx context.Context, cl client.Client) (*aigw.Credential, error) {
+	if err := rejectCrossNamespaceSecretRefs(obj); err != nil {
+		return nil, err
+	}
+
+	resolvedSpec, err := obj.sdkOpsAPISpec(ctx, cl)
+	if err != nil {
+		return nil, err
+	}
+	data, err := marshalAIGWConsumerCredentialPayload(resolvedSpec)
+	if err != nil {
+		return nil, err
+	}
+
+	var cred aigw.Credential
+	if err := yaml.Unmarshal(data, &cred); err != nil {
+		return nil, fmt.Errorf("decoding AIGatewayConsumerCredential %s/%s as aigw.Credential: %w", obj.Namespace, obj.Name, err)
+	}
+	return &cred, nil
+}
+
+// marshalAIGWConsumerCredentialPayload builds the aigw.Credential-shaped payload bytes from an
+// already secret-resolved AIGatewayConsumerCredentialAPISpec.
+func marshalAIGWConsumerCredentialPayload(spec *AIGatewayConsumerCredentialAPISpec) ([]byte, error) {
+	data, err := spec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, err
+	}
+	var cfg map[string]any
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("decoding AIGatewayConsumerCredential SDK payload: %w", err)
+	}
+	// Konnect-only bookkeeping: no on-prem equivalent.
+	delete(cfg, "managed_by")
+	return json.Marshal(cfg)
+}
