@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.5.0-rapid.2.0
+
+### Added
+
+- Added the `AIGatewayCustomPolicy` CRD, together with the RBAC rules the
+  operator needs to reconcile it.
+  [#5896](https://github.com/Kong/kong-operator/pull/5896)
+
+### Changed
+
+- Bump default image to 2.4.0-rapid.2.0
+
 ## 1.5.0-rapid.1
 
 ### Added
