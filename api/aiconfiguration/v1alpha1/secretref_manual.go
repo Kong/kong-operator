@@ -11,6 +11,34 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+// crossNamespaceSecretRefChecker is the generated GetSensitiveDataSecretRefs accessor the
+// on-prem translations gate through.
+type crossNamespaceSecretRefChecker interface {
+	GetNamespace() string
+	GetSensitiveDataSecretRefs() []SensitiveDataSecretRef
+}
+
+// rejectCrossNamespaceSecretRefs errors when any of the entity's secretRefs points outside the
+// entity's namespace. The on-prem translation path resolves secrets same-namespace only,
+// consistent with resolveEntityName's handling of entity references; the Konnect path instead
+// gates cross-namespace Secret access via KongReferenceGrants (controller/konnect
+// reconciler_secretref.go handleSecretRef), which the error-only translation functions cannot
+// express. Grant-based cross-namespace access can be added here as a deliberate feature once
+// the on-prem path grows status conditions.
+// TODO: cross-namespace secretRefs are rejected, tracked in
+// https://github.com/Kong/kong-operator/issues/5908.
+func rejectCrossNamespaceSecretRefs(entity crossNamespaceSecretRefChecker) error {
+	for _, ref := range entity.GetSensitiveDataSecretRefs() {
+		if ref.Namespace != nil && *ref.Namespace != "" && *ref.Namespace != entity.GetNamespace() {
+			return fmt.Errorf(
+				"cross-namespace secretRef to Secret %s/%s is not supported on-prem: secrets must live in the entity's namespace %s",
+				*ref.Namespace, ref.Name, entity.GetNamespace(),
+			)
+		}
+	}
+	return nil
+}
+
 // valueFromSecretRef converts a SecretRef to a JSON value by fetching the referenced Secret and extracting the specified key.
 func (src *AIGatewayPolicyConfigDataSource) valueFromSecretRef(ctx context.Context, cl client.Client, namespace string) (apiextensionsv1.JSON, error) {
 	if src.SecretRef == nil {

@@ -80,6 +80,24 @@ func aiGatewayModelProviderFixture(name string) *aiconfigurationv1alpha1.AIGatew
 	}
 }
 
+func aiGatewayPolicyFixture(name string) *aiconfigurationv1alpha1.AIGatewayPolicy {
+	return &aiconfigurationv1alpha1.AIGatewayPolicy{
+		Name: name, Namespace: "default",
+		Spec: aiconfigurationv1alpha1.AIGatewayPolicySpec{
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				Group:         aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+				Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gw"},
+			},
+			APISpec: aiconfigurationv1alpha1.AIGatewayPolicyAPISpec{
+				Name:        aiconfigurationv1alpha1.AIGatewayEntityIdentifier(name),
+				DisplayName: name,
+				Type:        "rate-limiting",
+			},
+		},
+	}
+}
+
 // TestBuildDocument covers listing, conversion and deterministic ordering: appendEntities sorts
 // by k8s object name so the rendered payload (and its hash, which drives the drift loop in
 // controller.go) doesn't flap across List calls that return in a different order.
@@ -96,12 +114,18 @@ func TestBuildDocument(t *testing.T) {
 	modelA := aiGatewayModelFixture("model-a")
 	providerB := aiGatewayModelProviderFixture("provider-b")
 	providerA := aiGatewayModelProviderFixture("provider-a")
+	policyB := aiGatewayPolicyFixture("policy-b")
+	policyA := aiGatewayPolicyFixture("policy-a")
 
-	builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gw, modelB, modelA, providerB, providerA)
+	builder := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(gw, modelB, modelA, providerB, providerA, policyB, policyA)
 	for _, opt := range index.OptionsForAIGatewayModel() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	for _, opt := range index.OptionsForAIGatewayModelProvider() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayPolicy() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	cl := builder.Build()
@@ -114,10 +138,12 @@ func TestBuildDocument(t *testing.T) {
 	require.Len(t, doc.ModelProviders, 2)
 	require.Equal(t, "provider-a", doc.ModelProviders[0].Name)
 	require.Equal(t, "provider-b", doc.ModelProviders[1].Name)
+	require.Len(t, doc.Policies, 2)
+	require.Equal(t, "policy-a", doc.Policies[0].Name)
+	require.Equal(t, "policy-b", doc.Policies[1].Name)
 
-	// Non-strict rendering must not fail even once references outside the fixture (dangling
-	// model_providers/policies/auth_strategies) are introduced by the next slice - pinned here
-	// with a target that references a provider this test never creates.
+	// Non-strict rendering must not fail even once a dangling reference is introduced by the
+	// next slice - pinned here with a target that references a provider this test never creates.
 	doc.Models[0].TargetModels = []aigw.TargetModel{{Name: "t", Provider: "does-not-exist"}}
 	payload, warnings, err := convert.ConvertDocumentToDBLessYAML(doc, convert.Options{Strict: false})
 	require.NoError(t, err)
@@ -143,10 +169,14 @@ func TestBuildDocument_NoModels(t *testing.T) {
 	for _, opt := range index.OptionsForAIGatewayModelProvider() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
+	for _, opt := range index.OptionsForAIGatewayPolicy() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
 	cl := builder.Build()
 
 	doc, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
 	require.NoError(t, err)
 	require.Empty(t, doc.Models)
 	require.Empty(t, doc.ModelProviders)
+	require.Empty(t, doc.Policies)
 }
