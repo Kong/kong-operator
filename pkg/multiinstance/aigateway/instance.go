@@ -299,13 +299,14 @@ func (i *Instance) sendConfig(
 		return fmt.Errorf("rendering dbless configuration: %w", err)
 	}
 
-	if err := i.sendConfigToDataPlanes(ctx, *gw, payload); err != nil {
+	pushed, err := i.sendConfigToDataPlanes(ctx, *gw, payload)
+	if err != nil {
 		// The push failed, so none of the entities included in the document was
 		// applied.
 		i.statusReporter.Report(nil, append(failuresForAll(included, err), failures...))
 		return fmt.Errorf("sending configuration to data planes: %w", err)
 	}
-	if i.AdminAPIs().Len() == 0 {
+	if !pushed {
 		// The push was skipped: no Admin API endpoints are discovered, so
 		// nothing was applied. Report the entities as failed instead of
 		// succeeded.

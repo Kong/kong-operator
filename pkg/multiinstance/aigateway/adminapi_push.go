@@ -78,28 +78,33 @@ func pushClientCacheKey(
 // A failure on any endpoint does not prevent the remaining endpoints from being
 // pushed: the returned error only reports the failures, and the sync loop retries
 // them on the next tick (already-up-to-date endpoints no-op thanks to check_hash).
+// The first return value reports whether the push happened: it is false only when
+// no Admin API endpoints are discovered and the push is skipped entirely (and in
+// that case the returned error is only a status reporting failure); every other
+// path pushed the payload to at least the endpoints discovered at snapshot time,
+// even when it also returns an error.
 func (i *Instance) sendConfigToDataPlanes(
 	ctx context.Context,
 	gwNN types.NamespacedName,
 	yamlPayload []byte,
-) error {
+) (pushed bool, err error) {
 	endpoints := i.AdminAPIs()
 	if endpoints.Len() == 0 {
 		log.Info(i.logger, "no Admin API endpoints discovered for the gateway, skipping configuration push",
 			"namespace", gwNN.Namespace, "name", gwNN.Name)
 		// Report anyway: the last push may have left DataPlanesConfigured=False
 		// behind, and nothing else clears it while the set is empty.
-		return i.reportPushStatus(ctx, gwNN, 0, nil)
+		return false, i.reportPushStatus(ctx, gwNN, 0, nil)
 	}
 
 	payload, err := yaml.YAMLToJSON(yamlPayload)
 	if err != nil {
-		return i.failPush(ctx, gwNN, endpoints.Len(), fmt.Errorf("converting rendered configuration to JSON: %w", err))
+		return false, i.failPush(ctx, gwNN, endpoints.Len(), fmt.Errorf("converting rendered configuration to JSON: %w", err))
 	}
 
 	certPEM, keyPEM, caPEM, err := i.adminMTLSCertMaterial(ctx)
 	if err != nil {
-		return i.failPush(ctx, gwNN, endpoints.Len(), fmt.Errorf("loading Admin API mTLS client certificate: %w", err))
+		return false, i.failPush(ctx, gwNN, endpoints.Len(), fmt.Errorf("loading Admin API mTLS client certificate: %w", err))
 	}
 
 	var failures []string
@@ -156,10 +161,10 @@ func (i *Instance) sendConfigToDataPlanes(
 	}
 
 	if len(failures) > 0 {
-		return fmt.Errorf("failed to push configuration to %d of %d Admin API endpoints: %s",
+		return true, fmt.Errorf("failed to push configuration to %d of %d Admin API endpoints: %s",
 			len(failures), endpoints.Len(), strings.Join(failures, "; "))
 	}
-	return nil
+	return true, nil
 }
 
 // failPush reports a push that failed before any endpoint could be contacted
