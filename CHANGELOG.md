@@ -77,6 +77,17 @@
   updated when only the condition message changes (e.g. a per-entity error
   text changing while the condition stays `Failed`).
   [#5930](https://github.com/Kong/kong-operator/pull/5930)
+- `DataPlane`: the default `KONG_PROXY_LISTEN` now enables `http2` on the
+  plain HTTP proxy, so gRPC over cleartext HTTP/2 (h2c), e.g. for `GRPCRoute`s
+  attached to `HTTP` listeners, works without overriding `KONG_PROXY_LISTEN`.
+  HTTP/1.1 is still served on the same port. **Existing `DataPlane` `Deployment`s
+  that use the default are rolled out on upgrade.**
+  The minimum supported `DataPlane` image version is raised from 3.4.1 to 3.6,
+  because Kong Gateway before 3.6 can't serve HTTP/1.1 and h2c on the same port.
+  The operator doesn't create or update `Deployment`s for `DataPlane`s with older
+  images. Kong Gateway versions older than 3.6 (previously 3.4.1) are no longer
+  supported by the operator and has to be upgraded.
+  [#5925](https://github.com/Kong/kong-operator/pull/5925)
 
 ## [v2.4.0-rapid.2.0]
 

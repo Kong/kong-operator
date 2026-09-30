@@ -18,6 +18,7 @@ import (
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/v2/controller/dataplane"
 	secretcert "github.com/kong/kong-operator/v2/controller/secret_cert"
+	"github.com/kong/kong-operator/v2/internal/versions"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/pkg/ipfamily"
@@ -158,7 +159,7 @@ func TestDataPlane(t *testing.T) {
 								Spec: corev1.PodSpec{
 									Containers: []corev1.Container{{
 										Name:  consts.DataPlaneProxyContainerName,
-										Image: "kong:3.0",
+										Image: consts.DefaultDataPlaneBaseImage + ":" + versions.MinimumDataPlaneVersion.String(),
 									}},
 								},
 							},
@@ -227,7 +228,7 @@ func TestDataPlane(t *testing.T) {
 								Spec: corev1.PodSpec{
 									Containers: []corev1.Container{{
 										Name:  consts.DataPlaneProxyContainerName,
-										Image: consts.DefaultDataPlaneBaseImage + ":3.2",
+										Image: consts.DefaultDataPlaneImage,
 										LivenessProbe: &corev1.Probe{
 											InitialDelaySeconds: 1,
 											PeriodSeconds:       1,
