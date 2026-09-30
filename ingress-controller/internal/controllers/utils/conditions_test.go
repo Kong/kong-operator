@@ -135,6 +135,54 @@ func TestEnsureProgrammedCondition(t *testing.T) {
 			expectedUpdatedConditions: []metav1.Condition{expectedProgrammedConditionTrue},
 			expectedUpdateNeeded:      true,
 		},
+		{
+			name:                "Failed condition with custom message",
+			configurationStatus: object.ConfigurationStatusFailed,
+			conditions:          nil,
+			options: []utils.ProgrammedConditionOption{
+				utils.WithFailedMessage("unresolved provider reference"),
+			},
+			expectedUpdatedConditions: []metav1.Condition{
+				func() metav1.Condition {
+					cond := expectedProgrammedConditionFalse
+					cond.Message = "unresolved provider reference"
+					return cond
+				}(),
+			},
+			expectedUpdateNeeded: true,
+		},
+		{
+			name:                "Failed condition ignores empty custom message",
+			configurationStatus: object.ConfigurationStatusFailed,
+			conditions:          nil,
+			options: []utils.ProgrammedConditionOption{
+				utils.WithFailedMessage(""),
+			},
+			expectedUpdatedConditions: []metav1.Condition{expectedProgrammedConditionFalse},
+			expectedUpdateNeeded:      true,
+		},
+		{
+			name:                "message-only change forces update",
+			configurationStatus: object.ConfigurationStatusFailed,
+			conditions: []metav1.Condition{
+				func() metav1.Condition {
+					cond := expectedProgrammedConditionFalse
+					cond.Message = "old error"
+					return cond
+				}(),
+			},
+			options: []utils.ProgrammedConditionOption{
+				utils.WithFailedMessage("new error"),
+			},
+			expectedUpdatedConditions: []metav1.Condition{
+				func() metav1.Condition {
+					cond := expectedProgrammedConditionFalse
+					cond.Message = "new error"
+					return cond
+				}(),
+			},
+			expectedUpdateNeeded: true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -147,4 +195,26 @@ func TestEnsureProgrammedCondition(t *testing.T) {
 			assert.Empty(t, diff, "conditions mismatch")
 		})
 	}
+}
+
+func TestEnsureProgrammedConditionPreservesTransitionTimeOnMessageChange(t *testing.T) {
+	const generation = int64(2)
+	transitionTime := metav1.Now()
+	existing := []metav1.Condition{{
+		Type:               string(configurationv1.ConditionProgrammed),
+		Status:             metav1.ConditionFalse,
+		ObservedGeneration: generation,
+		Reason:             string(configurationv1.ReasonInvalid),
+		Message:            "old error",
+		LastTransitionTime: transitionTime,
+	}}
+
+	conditions, updateNeeded := utils.EnsureProgrammedCondition(
+		object.ConfigurationStatusFailed, generation, existing,
+		utils.WithFailedMessage("new error"),
+	)
+	assert.True(t, updateNeeded)
+	assert.Len(t, conditions, 1)
+	assert.Equal(t, "new error", conditions[0].Message)
+	assert.Equal(t, transitionTime, conditions[0].LastTransitionTime)
 }

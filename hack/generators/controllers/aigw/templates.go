@@ -34,7 +34,7 @@ import (
 
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/controllers"
-{{- if .ProgrammedCondition.UpdatesEnabled }}
+{{- if and .ConfigStatusNotificationsEnabled .ProgrammedCondition.UpdatesEnabled }}
 	ctrlutils "github.com/kong/kong-operator/v2/ingress-controller/pkg/controllerutils"
 {{- end}}
 {{- if .ConfigStatusNotificationsEnabled }}
@@ -56,9 +56,9 @@ type {{.Kind}}Reconciler struct {
 
 	Log              logr.Logger
 	Scheme           *runtime.Scheme
-	DataplaneClient  controllers.DataPlane
-	CacheSyncTimeout time.Duration
 {{- if .ConfigStatusNotificationsEnabled }}
+	DataplaneClient  EntityStatusClient
+	CacheSyncTimeout time.Duration
 	StatusQueue      *status.Queue
 {{- end}}
 	ChangeNotifier   *changenotifier.ChangeNotifier
@@ -119,12 +119,20 @@ func (r *{{.Kind}}Reconciler) SetCommonFields(
 	log logr.Logger,
 	cacheSyncTimeout time.Duration,
 	changeNotifier *changenotifier.ChangeNotifier,
+{{- if .ConfigStatusNotificationsEnabled }}
+	dataplaneClient EntityStatusClient,
+	statusQueue *status.Queue,
+{{- end }}
 ) {
 	r.Client = client
 	r.Scheme = scheme
 	r.Log = log
 	r.CacheSyncTimeout = cacheSyncTimeout
 	r.ChangeNotifier = changeNotifier
+{{- if .ConfigStatusNotificationsEnabled }}
+	r.DataplaneClient = dataplaneClient
+	r.StatusQueue = statusQueue
+{{- end }}
 }
 
 //+kubebuilder:rbac:groups={{.Group}},resources={{.Plural}},verbs={{ .RBACVerbs | join ";" }}
@@ -209,6 +217,7 @@ func (r *{{.Kind}}Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		{{- if .ProgrammedCondition.CustomUnknownMessage }}
 			ctrlutils.WithUnknownMessage("{{ .ProgrammedCondition.CustomUnknownMessage }}"),
 		{{- end }}
+			ctrlutils.WithFailedMessage(r.DataplaneClient.KubernetesObjectConfigurationStatusMessage(obj)),
 		)
 		obj.Status.Conditions = conditions
 		{{- end }}

@@ -55,7 +55,7 @@ type AIGatewayConsumerGroupReconciler struct {
 
 	Log              logr.Logger
 	Scheme           *runtime.Scheme
-	DataplaneClient  controllers.DataPlane
+	DataplaneClient  EntityStatusClient
 	CacheSyncTimeout time.Duration
 	StatusQueue      *status.Queue
 	ChangeNotifier   *changenotifier.ChangeNotifier
@@ -113,12 +113,16 @@ func (r *AIGatewayConsumerGroupReconciler) SetCommonFields(
 	log logr.Logger,
 	cacheSyncTimeout time.Duration,
 	changeNotifier *changenotifier.ChangeNotifier,
+	dataplaneClient EntityStatusClient,
+	statusQueue *status.Queue,
 ) {
 	r.Client = client
 	r.Scheme = scheme
 	r.Log = log
 	r.CacheSyncTimeout = cacheSyncTimeout
 	r.ChangeNotifier = changeNotifier
+	r.DataplaneClient = dataplaneClient
+	r.StatusQueue = statusQueue
 }
 
 //+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewayconsumergroups,verbs=get;list;watch
@@ -195,6 +199,7 @@ func (r *AIGatewayConsumerGroupReconciler) Reconcile(ctx context.Context, req ct
 			configurationStatus,
 			obj.Generation,
 			obj.Status.Conditions,
+			ctrlutils.WithFailedMessage(r.DataplaneClient.KubernetesObjectConfigurationStatusMessage(obj)),
 		)
 		obj.Status.Conditions = conditions
 		if updateNeeded {

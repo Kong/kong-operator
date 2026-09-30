@@ -33,6 +33,16 @@ func WithUnknownMessage(message string) ProgrammedConditionOption {
 	}
 }
 
+// WithFailedMessage sets the message of the desired Programmed condition to the given message if the
+// configuration status is Failed. An empty message leaves the default in place.
+func WithFailedMessage(message string) ProgrammedConditionOption {
+	return func(status object.ConfigurationStatus, condition *metav1.Condition) {
+		if status == object.ConfigurationStatusFailed && message != "" {
+			condition.Message = message
+		}
+	}
+}
+
 // EnsureProgrammedCondition ensures that the programmed condition is present in the conditions slice with the
 // status reflecting the current configuration status of the object.
 // If the condition is already present with the correct status, the conditions slice is returned unmodified and false is
@@ -79,6 +89,7 @@ func EnsureProgrammedCondition(
 		opt(configurationStatus, &desiredCondition)
 	}
 
+	idx := slices.IndexFunc(conditions, func(c metav1.Condition) bool { return c.Type == string(configurationv1.ConditionProgrammed) })
 	hasMatchingCondition := util.CheckCondition(
 		conditions,
 		util.ConditionType(desiredCondition.Type),
@@ -86,18 +97,25 @@ func EnsureProgrammedCondition(
 		desiredCondition.Status,
 		desiredCondition.ObservedGeneration,
 	)
-
 	if hasMatchingCondition {
-		return conditions, false
+		// A message-only difference (e.g. a per-entity error text changing while the
+		// condition stays Failed) must still be reported: treat the condition as
+		// unmatched so it gets updated below, but preserve its LastTransitionTime,
+		// which only reflects status transitions.
+		if idx < 0 || conditions[idx].Message == desiredCondition.Message {
+			return conditions, false
+		}
 	}
 
-	idx := slices.IndexFunc(conditions, func(c metav1.Condition) bool { return c.Type == string(configurationv1.ConditionProgrammed) })
 	if idx < 0 {
 		conditions = append(conditions, desiredCondition)
 	} else {
 		// Do not update existing "Programmed" condition to Unknown to prevent races on updating status when new instance starts.
 		if configurationStatus == object.ConfigurationStatusUnknown {
 			return conditions, false
+		}
+		if conditions[idx].Status == desiredCondition.Status {
+			desiredCondition.LastTransitionTime = conditions[idx].LastTransitionTime
 		}
 		conditions[idx] = desiredCondition
 	}
