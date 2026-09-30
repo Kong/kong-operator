@@ -92,9 +92,9 @@ jobs:
       patch: ${{ steps.semver_parser.outputs.patch }}
       prerelease: ${{ steps.semver_parser.outputs.prerelease }}
       release_branch: ${{ steps.release_branch.outputs.release_branch }}
-      # NOTE: true for patches of a rapid release (e.g. 2.4.0-rapid.1.1), released
+      # NOTE: true for patches of a rapid release (e.g. 2.4.0-rapid.2.1), released
       # from release/N.M.0-rapid.K.x. False for the first release of a rapid
-      # line (e.g. 2.4.0-rapid.2 or 2.4.0-rapid.2.0).
+      # line (e.g. 2.4.0-rapid.2.0).
       rapid_patch: ${{ steps.release_branch.outputs.rapid_patch }}
       changelog_anchor: ${{ steps.release_branch.outputs.changelog_anchor }}
     runs-on: ubuntu-latest
@@ -130,8 +130,8 @@ jobs:
           RELEASE_BRANCH=""
           if [[ "$PATCH" == "0" && -z "$PRERELEASE" ]]; then
             RELEASE_BRANCH="release/${MAJOR}.${MINOR}.x"
-          elif [[ "$PATCH" == "0" && "$PRERELEASE" =~ ^(rapid\.[0-9]+)(\.0)?$ ]]; then
-            # Both rapid.K and rapid.K.0 start the release/N.M.0-rapid.K.x branch.
+          elif [[ "$PATCH" == "0" && "$PRERELEASE" =~ ^(rapid\.[0-9]+)\.0$ ]]; then
+            # rapid.K.0 starts the release/N.M.0-rapid.K.x branch.
             RELEASE_BRANCH="release/${MAJOR}.${MINOR}.0-${BASH_REMATCH[1]}.x"
           fi
           echo "release_branch=${RELEASE_BRANCH}" >> "$GITHUB_OUTPUT"
@@ -142,7 +142,7 @@ jobs:
           fi
           echo "rapid_patch=${RAPID_PATCH}" >> "$GITHUB_OUTPUT"
 
-          # CHANGELOG.md heading anchors drop the dots: 2.4.0-rapid.1.1 -> v240-rapid11.
+          # CHANGELOG.md heading anchors drop the dots: 2.4.0-rapid.2.1 -> v240-rapid21.
           echo "changelog_anchor=v${VERSION//./}" >> "$GITHUB_OUTPUT"
 
       - name: check if tag already exists
@@ -201,8 +201,8 @@ jobs:
       - publish-release
       - semver
     # NOTE: only create a release branch for releases the semver job maps to
-    # one: stable N.M.0 -> release/N.M.x, rapid N.M.0-rapid.K (or
-    # N.M.0-rapid.K.0) -> release/N.M.0-rapid.K.x. Patch releases already have their branch;
+    # one: stable N.M.0 -> release/N.M.x, rapid N.M.0-rapid.K.0 ->
+    # release/N.M.0-rapid.K.x. Patch releases already have their branch;
     # other prereleases get none.
     if: ${{ needs.look_for_release.outputs.release_found == 'true' && needs.semver.outputs.release_branch != '' }}
     runs-on: ubuntu-latest

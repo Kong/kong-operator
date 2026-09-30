@@ -112,9 +112,8 @@ jobs:
       minor: ${{ steps.semver_parser.outputs.minor }}
       patch: ${{ steps.semver_parser.outputs.patch }}
       prerelease: ${{ steps.semver_parser.outputs.prerelease }}
-      # NOTE: true for N.M.P with P != 0 and for rapid patches (e.g. 2.4.0-rapid.1.1).
-      # The first release of a rapid line (e.g. 2.4.0-rapid.2 or 2.4.0-rapid.2.0)
-      # is not a patch.
+      # NOTE: true for N.M.P with P != 0 and for rapid patches (e.g. 2.4.0-rapid.2.1).
+      # The first release of a rapid line (e.g. 2.4.0-rapid.2.0) is not a patch.
       is-patch: ${{ steps.release-kind.outputs.is-patch }}
     runs-on: ubuntu-latest
     steps:
@@ -155,6 +154,20 @@ jobs:
         with:
           input_string: ${{ inputs.tag }}
           version_extractor_regex: 'v(.*)$'
+
+      # NOTE: rapid releases must use the rapid.K.P form: rapid.K.0 starts the
+      # rapid line K, rapid.K.P with P > 0 patches it. rapid.K is rejected so
+      # that each rapid line has a single spelling.
+      - name: Validate rapid release version format
+        env:
+          TAG: ${{ inputs.tag }}
+          PRERELEASE: ${{ steps.semver_parser.outputs.prerelease }}
+        run: |
+          if [[ "$PRERELEASE" == rapid* && ! "$PRERELEASE" =~ ^rapid\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid rapid release version: $TAG"
+            echo "Rapid releases must use the N.M.0-rapid.K.P form, e.g. v2.4.0-rapid.2.0 or v2.4.0-rapid.2.1"
+            exit 1
+          fi
 
       - name: Determine whether this is a patch release
         id: release-kind
