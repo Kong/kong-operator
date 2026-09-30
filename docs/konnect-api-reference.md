@@ -367,87 +367,6 @@ Allowed values:
 | `Enabled` | AIGatewayRuntimeAutoUpgradeEnabled sets AIGatewayRuntimeAutoUpgrade as enabled.<br /> |
 | `Disabled` | AIGatewayRuntimeAutoUpgradeDisabled sets AIGatewayRuntimeAutoUpgrade as disabled.<br /> |
 
-#### AISettings
-
-
-AISettings is a type alias.
-
-
-
-| Field | Description |
-| --- | --- |
-| `enabled` _string_ | Is AI enabled? |
-| `features` _[AISettingsFeatures](#konnect-konghq-com-v1alpha1-types-aisettingsfeatures)_ | AI features configuration. When top-level `enabled` is false, every feature toggle here is automatically reset to false. |
-
-_Appears in:_
-
-- [PortalAPISpec](#konnect-konghq-com-v1alpha1-types-portalapispec)
-
-#### AISettingsFeatures
-
-
-AISettingsFeatures AI features configuration.
-When top-level `enabled` is false, every feature toggle here is automatically
-reset to false.
-
-
-
-| Field | Description |
-| --- | --- |
-| `aiSearch` _[AISettingsFeaturesAISearch](#konnect-konghq-com-v1alpha1-types-aisettingsfeaturesaisearch)_ | AI Search config |
-| `mcpServer` _[AISettingsFeaturesMcpServer](#konnect-konghq-com-v1alpha1-types-aisettingsfeaturesmcpserver)_ | AI Features config |
-| `portalAgent` _[AISettingsFeaturesPortalAgent](#konnect-konghq-com-v1alpha1-types-aisettingsfeaturesportalagent)_ | Portal Agent config |
-
-_Appears in:_
-
-- [AISettings](#konnect-konghq-com-v1alpha1-types-aisettings)
-
-#### AISettingsFeaturesAISearch
-
-
-AISettingsFeaturesAISearch AI Search config
-
-
-
-| Field | Description |
-| --- | --- |
-| `enabled` _string_ | Whether AI Search is enabled or not |
-
-_Appears in:_
-
-- [AISettingsFeatures](#konnect-konghq-com-v1alpha1-types-aisettingsfeatures)
-
-#### AISettingsFeaturesMcpServer
-
-
-AISettingsFeaturesMcpServer AI Features config
-
-
-
-| Field | Description |
-| --- | --- |
-| `enabled` _string_ | Whether the MCP Server is enabled or not |
-| `writeOperationsEnabled` _string_ | Whether write operations are enabled or not for the Portal MCP Server enabled |
-
-_Appears in:_
-
-- [AISettingsFeatures](#konnect-konghq-com-v1alpha1-types-aisettingsfeatures)
-
-#### AISettingsFeaturesPortalAgent
-
-
-AISettingsFeaturesPortalAgent Portal Agent config
-
-
-
-| Field | Description |
-| --- | --- |
-| `enabled` _string_ | Whether the Portal Agent is enabled or not |
-
-_Appears in:_
-
-- [AISettingsFeatures](#konnect-konghq-com-v1alpha1-types-aisettingsfeatures)
-
 
 
 #### AWSTransitGateway
@@ -738,21 +657,6 @@ _Appears in:_
 
 - [PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)
 
-#### Footer
-
-
-Footer is a type alias.
-
-
-
-| Field | Description |
-| --- | --- |
-| `snippetName` _string_ | The unique name of a snippet in the portal to render in place of the default footer. |
-
-_Appears in:_
-
-- [PortalLayout](#konnect-konghq-com-v1alpha1-types-portallayout)
-
 #### GatewayDescription
 
 _Underlying type:_ `string`
@@ -791,22 +695,6 @@ IdentityProviderType Specifies the type of identity provider.
 _Appears in:_
 
 - [PortalIdentityProviderRequestAPISpec](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestapispec)
-
-#### Js
-
-
-Js is a type alias.
-
-
-
-| Field | Description |
-| --- | --- |
-| `custom` _*string_ |  |
-| `scripts` _[]string_ |  |
-
-_Appears in:_
-
-- [PortalCustomizationAPISpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationapispec)
 
 #### KonnectAIGatewayAPISpec
 
@@ -1091,7 +979,6 @@ KonnectConfigStoreAPISpec defines the API spec fields for KonnectConfigStore.
 
 | Field | Description |
 | --- | --- |
-| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _string_ |  |
 
 _Appears in:_
@@ -1759,33 +1646,6 @@ _Appears in:_
 
 - [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
 
-#### ManagedBy
-
-_Underlying type:_ `[map[string]ManagedByValue](#map[string]managedbyvalue)`
-
-ManagedBy Stores information about what manages this entity, such as the tool
-or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character.
-
-
-
-
-_Appears in:_
-
-- [KonnectConfigStoreAPISpec](#konnect-konghq-com-v1alpha1-types-konnectconfigstoreapispec)
-
-#### ManagedByValue
-
-_Underlying type:_ `string`
-
-ManagedByValue is the value type for ManagedBy.
-
-
-
-
-_Appears in:_
-
-- [ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)
-
 #### Menu
 
 
@@ -2002,11 +1862,9 @@ PortalAPISpec defines the API spec fields for Portal.
 
 | Field | Description |
 | --- | --- |
-| `ai` _[AISettings](#konnect-konghq-com-v1alpha1-types-aisettings)_ |  |
 | `authenticationEnabled` _string_ | Whether the portal supports developer authentication. If disabled, developers cannot register for accounts or create applications. |
 | `autoApproveApplications` _string_ | Whether requests from applications to register for APIs will be automatically approved, or if they will be set to pending until approved by an admin. |
 | `autoApproveDevelopers` _string_ | Whether developer account registrations will be automatically approved, or if they will be set to pending until approved by an admin. |
-| `createDefaultContent` _string_ | Use to create the portal page default content upon creation of this portal |
 | `defaultAPIVisibility` _string_ | The default visibility of APIs in the portal. If set to `public`, newly published APIs are visible to unauthenticated developers. If set to `private`, newly published APIs are hidden from unauthenticated developers. |
 | `defaultApplicationAuthStrategyIDRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | The default authentication strategy for APIs published to the portal. Newly published APIs will use this authentication strategy unless overridden during publication. If set to `null`, API publications will not use an authentication strategy unless set during publication. |
 | `defaultPageVisibility` _string_ | The default visibility of pages in the portal. If set to `public`, newly created pages are visible to unauthenticated developers. If set to `private`, newly created pages are hidden from unauthenticated developers. |
@@ -2122,10 +1980,8 @@ PortalCustomizationAPISpec defines the API spec fields for PortalCustomization.
 | Field | Description |
 | --- | --- |
 | `css` _*string_ |  |
-| `js` _[Js](#konnect-konghq-com-v1alpha1-types-js)_ |  |
 | `layout` _string_ |  |
 | `menu` _[Menu](#konnect-konghq-com-v1alpha1-types-menu)_ |  |
-| `portalLayout` _[PortalLayout](#konnect-konghq-com-v1alpha1-types-portallayout)_ |  |
 | `robots` _*string_ |  |
 | `specRenderer` _[SpecRenderer](#konnect-konghq-com-v1alpha1-types-specrenderer)_ | The spec renderer settings of this portal |
 | `theme` _[Theme](#konnect-konghq-com-v1alpha1-types-theme)_ |  |
@@ -2344,21 +2200,6 @@ PortalIdentityProviderRequestStatus defines the observed state of PortalIdentity
 _Appears in:_
 
 - [PortalIdentityProviderRequest](#konnect-konghq-com-v1alpha1-portalidentityproviderrequest)
-
-#### PortalLayout
-
-
-PortalLayout is a type alias.
-
-
-
-| Field | Description |
-| --- | --- |
-| `footer` _[Footer](#konnect-konghq-com-v1alpha1-types-footer)_ |  |
-
-_Appears in:_
-
-- [PortalCustomizationAPISpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationapispec)
 
 #### PortalMenuItem
 
@@ -2665,7 +2506,6 @@ SpecRenderer The spec renderer settings of this portal
 | `showSchemas` _string_ | Control whether schemas are visible in your API specs. When enabled, schemas appear in the side navigation below the endpoints. |
 | `tryItInsomnia` _string_ | Enables users to open API specifications in Insomnia to explore and send requests with the native client. Only public API specifications are supported. |
 | `tryItUi` _string_ | Enable in-browser testing for your APIs. All linked gateways must have the CORS plugin configured. |
-| `tryItUiAudience` _string_ | The audience for the Try It UI feature.<br /><br />`all` means that the Try It UI will be available to all users, including unauthenticated users.<br /><br />`authenticated` means that the Try It UI will only be available to authenticated users.<br /><br />`registered` means that the Try It UI will only be available to users who have registered for the API. |
 
 _Appears in:_
 

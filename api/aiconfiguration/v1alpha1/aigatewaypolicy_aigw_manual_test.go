@@ -52,7 +52,6 @@ func TestAIGatewayPolicy_ToAIGWPolicy(t *testing.T) {
 								Raw: []byte(`{"limit_by_header":"x-api-key","second_limit":10}`),
 							},
 						},
-						Datastores:  []AIGatewayDatastoreRef{{Name: "my-redis"}},
 						DisplayName: "Rate limiting",
 						Enabled:     "Enabled",
 						Global:      "Disabled",
@@ -154,12 +153,6 @@ func TestAIGatewayPolicy_ToAIGWPolicy(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			// aigw.DatastoreRef has no public alias, so datastores are asserted via field
-			// access and blanked before the struct comparison.
-			if len(tt.obj.Spec.APISpec.Datastores) > 0 {
-				require.Len(t, got.Datastores, len(tt.obj.Spec.APISpec.Datastores))
-				require.Equal(t, string(tt.obj.Spec.APISpec.Datastores[0].Name), got.Datastores[0].Name)
-			}
 			got.Datastores = nil
 			require.Equal(t, tt.want, got)
 		})

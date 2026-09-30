@@ -76,11 +76,6 @@ type AIGatewayPolicyAPISpec struct {
 	// +required
 	Config AIGatewayPolicyConfigDataSource `json:"config,omitzero"`
 
-	// Names of the Datastores this policy references.
-	//
-	// +optional
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
-
 	// The display name for this policy instance.
 	//
 	// +required

@@ -652,15 +652,6 @@ type AIGatewayBedrockEmbeddingsModelConfig struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	VideoOutputS3URI string `json:"videoOutputS3URI,omitzero"`
-	// Hostname of an AWS PrivateLink VPC endpoint to use instead of the public
-	// Bedrock endpoint.
-	// Ignored if `upstream_url` is set.
-	//
-	// **Requires a minimum runtime version of `2.3`**.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	VpcEndpoint string `json:"vpcEndpoint,omitzero"`
 }
 
 // AIGatewayCacheWriteCost is a type alias.
@@ -698,21 +689,6 @@ type AIGatewayContextWindowFactor struct {
 	// +required
 	// +kubebuilder:validation:Minimum=0
 	OutputFactor float64 `json:"outputFactor,omitzero"`
-}
-
-// AIGatewayDatastoreName An immutable user-defined identifier for this
-// resource.
-type AIGatewayDatastoreName string
-
-// AIGatewayDatastoreRef A reference to an existing datastore
-type AIGatewayDatastoreRef struct {
-	// An immutable user-defined identifier for this resource.
-	//
-	// +optional
-	// +kubebuilder:validation:MinLength=2
-	// +kubebuilder:validation:MaxLength=255
-	// +kubebuilder:validation:Pattern=`^[a-z][a-z0-9-]*[a-z0-9]+$`
-	Name AIGatewayDatastoreName `json:"name,omitzero"`
 }
 
 // AIGatewayDenyACL is a type alias.
@@ -1205,23 +1181,6 @@ type AIGatewayMCPServerConversionListener struct {
 	//
 	// +optional
 	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
-	// Resolves an upstream credential per request via Kong's Token Vault instead
-	// of sending a static
-	// credential.
-	// Exchanged credentials are cached per node and, when `redis` is configured,
-	// shared
-	// across the cluster.
-	// Callers must enroll with the configured Token Vault provider before the
-	// upstream tools are exposed: until enrollment completes, the MCP Server
-	// serves virtual
-	// `authenticate` and `check_authentication_status` tools that guide the caller
-	// through the
-	// enrollment flow.
-	//
-	// **Requires a minimum runtime version of `2.3`**.
-	//
-	// +optional
-	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 	// List of tools exposed by this MCP Server.
 	// Each tool's `path`, `method`, and `host`
 	// describe the backend HTTP operation on the upstream selected by `config.url`
@@ -1496,23 +1455,6 @@ type AIGatewayMCPServerConversionOnly struct {
 	//
 	// +optional
 	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
-	// Resolves an upstream credential per request via Kong's Token Vault instead
-	// of sending a static
-	// credential.
-	// Exchanged credentials are cached per node and, when `redis` is configured,
-	// shared
-	// across the cluster.
-	// Callers must enroll with the configured Token Vault provider before the
-	// upstream tools are exposed: until enrollment completes, the MCP Server
-	// serves virtual
-	// `authenticate` and `check_authentication_status` tools that guide the caller
-	// through the
-	// enrollment flow.
-	//
-	// **Requires a minimum runtime version of `2.3`**.
-	//
-	// +optional
-	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 	// List of tools exposed by this MCP Server.
 	//
 	// +required
@@ -1585,23 +1527,6 @@ type AIGatewayMCPServerListener struct {
 	//
 	// +required
 	Sources []AIGatewayMCPServerRef `json:"sources,omitempty"`
-	// Resolves an upstream credential per request via Kong's Token Vault instead
-	// of sending a static
-	// credential.
-	// Exchanged credentials are cached per node and, when `redis` is configured,
-	// shared
-	// across the cluster.
-	// Callers must enroll with the configured Token Vault provider before the
-	// upstream tools are exposed: until enrollment completes, the MCP Server
-	// serves virtual
-	// `authenticate` and `check_authentication_status` tools that guide the caller
-	// through the
-	// enrollment flow.
-	//
-	// **Requires a minimum runtime version of `2.3`**.
-	//
-	// +optional
-	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 }
 
 // AIGatewayMCPServerListenerConfig Server-side configuration specific to modes
@@ -1969,23 +1894,6 @@ type AIGatewayMCPServerPassthroughListener struct {
 	//
 	// +optional
 	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
-	// Resolves an upstream credential per request via Kong's Token Vault instead
-	// of sending a static
-	// credential.
-	// Exchanged credentials are cached per node and, when `redis` is configured,
-	// shared
-	// across the cluster.
-	// Callers must enroll with the configured Token Vault provider before the
-	// upstream tools are exposed: until enrollment completes, the MCP Server
-	// serves virtual
-	// `authenticate` and `check_authentication_status` tools that guide the caller
-	// through the
-	// enrollment flow.
-	//
-	// **Requires a minimum runtime version of `2.3`**.
-	//
-	// +optional
-	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 	// Per-tool access-control overrides for tools advertised by the remote MCP
 	// Server.
 	// Each
@@ -2367,23 +2275,6 @@ type AIGatewayMCPServerUpstreamServer struct {
 	//
 	// +optional
 	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
-	// Resolves an upstream credential per request via Kong's Token Vault instead
-	// of sending a static
-	// credential.
-	// Exchanged credentials are cached per node and, when `redis` is configured,
-	// shared
-	// across the cluster.
-	// Callers must enroll with the configured Token Vault provider before the
-	// upstream tools are exposed: until enrollment completes, the MCP Server
-	// serves virtual
-	// `authenticate` and `check_authentication_status` tools that guide the caller
-	// through the
-	// enrollment flow.
-	//
-	// **Requires a minimum runtime version of `2.3`**.
-	//
-	// +optional
-	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 	// List of tools exposed by this MCP Server.
 	//
 	//
@@ -3254,10 +3145,6 @@ type AIGatewayModelAPI struct {
 	//
 	// +required
 	Config AIGatewayModelAPIConfig `json:"config,omitzero"`
-	// Names of the Datastores this model references.
-	//
-	// +optional
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
 	// The display name for this model instance.
 	//
 	// +required
@@ -4779,6 +4666,10 @@ func (s *AIGatewayModelBalancerSemanticConfig) UnmarshalJSON(data []byte) error 
 type AIGatewayModelFormat struct {
 	// The format type.
 	//
+	// **`passthrough` requires a minimum runtime version of `2.2`**.
+	//
+	// **`typesafe` requires a minimum runtime version of `2.2`**.
+	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=anthropic;bedrock;cohere;gemini;huggingface;openai;passthrough;typesafe
@@ -4800,10 +4691,6 @@ type AIGatewayModelModel struct {
 	//
 	// +required
 	Config AIGatewayModelModelConfig `json:"config,omitzero"`
-	// Names of the Datastores this model references.
-	//
-	// +optional
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
 	// The display name for this model instance.
 	//
 	// +required
@@ -9077,15 +8964,6 @@ type AIGatewayTargetBedrockConfig struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	VideoOutputS3URI string `json:"videoOutputS3URI,omitzero"`
-	// Hostname of an AWS PrivateLink VPC endpoint to use instead of the public
-	// Bedrock endpoint.
-	// Ignored if `upstream_url` is set.
-	//
-	// **Requires a minimum runtime version of `2.3`**.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	VpcEndpoint string `json:"vpcEndpoint,omitzero"`
 }
 
 // AIGatewayTargetCerebrasConfig Cerebras-specific configuration for a model.
@@ -11217,49 +11095,6 @@ type AIGatewayTargetXaiConfig struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	UpstreamURL string `json:"upstreamURL,omitzero"`
-}
-
-// AIGatewayTokenVault Resolves an upstream credential per request via Kong's
-// Token Vault instead of sending a static
-// credential.
-// Exchanged credentials are cached per node and, when `redis` is configured,
-// shared
-// across the cluster.
-// Callers must enroll with the configured Token Vault provider before the
-// upstream tools are exposed: until enrollment completes, the MCP Server serves
-// virtual
-// `authenticate` and `check_authentication_status` tools that guide the caller
-// through the
-// enrollment flow.
-//
-// **Requires a minimum runtime version of `2.3`**.
-type AIGatewayTokenVault struct {
-	// Directory name segment of the vault token endpoint.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Directory string `json:"directory,omitzero"`
-	// Secrets used to encrypt exchanged credentials before caching them in Redis.
-	// Required when
-	// `redis` is configured.
-	// The first secret is used for encryption, while all secrets are tried
-	// for decryption to support key rotation.
-	//
-	//
-	// +optional
-	EncryptionSecrets []string `json:"encryptionSecrets,omitempty"`
-	// Name of the upstream credential provider registered in the Token Vault
-	// directory.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Provider string `json:"provider,omitzero"`
-	// Config for connecting to a Cloud Provider's Redis instance.
-	//
-	// +optional
-	Redis AIGatewayRedisCloudConfiguration `json:"redis,omitzero"`
 }
 
 // AIGatewayUpstreamAuthAWS AWS IAM (SigV4) authentication for the upstream

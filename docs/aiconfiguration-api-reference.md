@@ -740,7 +740,6 @@ a model.
 | `region` _string_ | The AWS region for the model. Setting this option overrides the AWS_REGION environment variable. |
 | `upstreamURL` _string_ | The URL of the embeddings model. |
 | `videoOutputS3URI` _string_ | S3 URI for storing video generation outputs. |
-| `vpcEndpoint` _string_ | Hostname of an AWS PrivateLink VPC endpoint to use instead of the public Bedrock endpoint. Ignored if `upstream_url` is set.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -1269,37 +1268,6 @@ _Appears in:_
 
 - [AIGatewayDataPlaneCertificate](#aiconfiguration-konghq-com-v1alpha1-aigatewaydataplanecertificate)
 
-#### AIGatewayDatastoreName
-
-_Underlying type:_ `string`
-
-AIGatewayDatastoreName An immutable user-defined identifier for this
-resource.
-
-
-
-
-_Appears in:_
-
-- [AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)
-
-#### AIGatewayDatastoreRef
-
-
-AIGatewayDatastoreRef A reference to an existing datastore
-
-
-
-| Field | Description |
-| --- | --- |
-| `name` _[AIGatewayDatastoreName](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastorename)_ | An immutable user-defined identifier for this resource. |
-
-_Appears in:_
-
-- [AIGatewayModelAPI](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelapi)
-- [AIGatewayModelModel](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelmodel)
-- [AIGatewayPolicyAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyapispec)
-
 #### AIGatewayDenyACL
 
 
@@ -1654,7 +1622,6 @@ AIGatewayMCPServerConversionListener is a type alias.
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
 | `policies` _[][AIGatewayPolicyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
-| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. Exchanged credentials are cached per node and, when `redis` is configured, shared across the cluster. Callers must enroll with the configured Token Vault provider before the upstream tools are exposed: until enrollment completes, the MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `tools` _[][AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)_ | List of tools exposed by this MCP Server. Each tool's `path`, `method`, and `host` describe the backend HTTP operation on the upstream selected by `config.url` — they do not need to match the public MCP Route configured in `config.route`. |
 
 _Appears in:_
@@ -1773,7 +1740,6 @@ AIGatewayMCPServerConversionOnly is a type alias.
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
 | `policies` _[][AIGatewayPolicyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
-| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. Exchanged credentials are cached per node and, when `redis` is configured, shared across the cluster. Callers must enroll with the configured Token Vault provider before the upstream tools are exposed: until enrollment completes, the MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `tools` _[][AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)_ | List of tools exposed by this MCP Server. |
 
 _Appears in:_
@@ -1798,7 +1764,6 @@ AIGatewayMCPServerListener is a type alias.
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
 | `policies` _[][AIGatewayPolicyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
 | `sources` _[][AIGatewayMCPServerRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverref)_ | The explicit list of source MCP Servers whose tools this listener exposes. Each entry is the immutable `name` of a `conversion-only` (toolset) or `upstream-server` (third-party MCP server) MCP Server in the same AI Gateway. All of the referenced source's tools are exposed. |
-| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. Exchanged credentials are cached per node and, when `redis` is configured, shared across the cluster. Callers must enroll with the configured Token Vault provider before the upstream tools are exposed: until enrollment completes, the MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -1962,7 +1927,6 @@ AIGatewayMCPServerPassthroughListener is a type alias.
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
 | `policies` _[][AIGatewayPolicyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
-| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. Exchanged credentials are cached per node and, when `redis` is configured, shared across the cluster. Callers must enroll with the configured Token Vault provider before the upstream tools are exposed: until enrollment completes, the MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `tools` _[][AIGatewayMCPPassthroughTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcppassthroughtool)_ | Per-tool access-control overrides for tools advertised by the remote MCP Server. Each entry is matched to a remote tool by `name`; only its access-control rules are applied. |
 
 _Appears in:_
@@ -2192,7 +2156,6 @@ AIGatewayMCPServerUpstreamServer is a type alias.
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
 | `policies` _[][AIGatewayPolicyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
-| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. Exchanged credentials are cached per node and, when `redis` is configured, shared across the cluster. Callers must enroll with the configured Token Vault provider before the upstream tools are exposed: until enrollment completes, the MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `tools` _[][AIGatewayMCPUpstreamTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpupstreamtool)_ | List of tools exposed by this MCP Server. |
 
 _Appears in:_
@@ -2720,7 +2683,6 @@ to/from an AI Gateway model using the files, batches, and skills APIs.
 | `access` _[AIGatewayModelAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelaccess)_ | Access control configuration for a model. |
 | `capabilities` _[]string_ | List of AI capabilities enabled for this API model. |
 | `config` _[AIGatewayModelAPIConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelapiconfig)_ | Routing, logging, and load balancing configuration for the model. |
-| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | Names of the Datastores this model references. |
 | `displayName` _string_ | The display name for this model instance. |
 | `enabled` _string_ | Whether the model is enabled. |
 | `formats` _[][AIGatewayModelFormat](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelformat)_ | List of request/response formats supported by this model. |
@@ -3223,7 +3185,7 @@ AIGatewayModelFormat Request and response format supported by this model.
 
 | Field | Description |
 | --- | --- |
-| `type` _string_ | The format type. |
+| `type` _string_ | The format type.<br /><br />**`passthrough` requires a minimum runtime version of `2.2`**.<br /><br />**`typesafe` requires a minimum runtime version of `2.2`**. |
 
 _Appears in:_
 
@@ -3243,7 +3205,6 @@ to/from an AI Gateway model using generative APIs.
 | `access` _[AIGatewayModelAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelaccess)_ | Access control configuration for a model. |
 | `capabilities` _[]string_ | List of AI capabilities enabled for this model. |
 | `config` _[AIGatewayModelModelConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelmodelconfig)_ | Routing, logging, and load balancing configuration for the model. |
-| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | Names of the Datastores this model references. |
 | `displayName` _string_ | The display name for this model instance. |
 | `enabled` _string_ | Whether the model is enabled. |
 | `formats` _[][AIGatewayModelFormat](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelformat)_ | List of request/response formats supported by this model. |
@@ -4971,7 +4932,6 @@ AIGatewayPolicyAPISpec defines the API spec fields for AIGatewayPolicy.
 | --- | --- |
 | `condition` _*string_ | An expression used for conditional control over plugin execution. If the expression evaluates to `true` during the request flow, the plugin is executed; otherwise, it is skipped.<br /><br />**Requires a minimum runtime version of `2.1`**. |
 | `config` _[AIGatewayPolicyConfigDataSource](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyconfigdatasource)_ | Configuration for the policy. This is equivalent to the Kong 3 plugin configuration. Note: Plugins have been renamed to Policies in Kong AI Gateway. Policy types and configuration documentation can be found in the [Developer Docs](https://developer.konghq.com/plugins/). |
-| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | Names of the Datastores this policy references. |
 | `displayName` _string_ | The display name for this policy instance. |
 | `enabled` _string_ | Whether the policy is enabled. |
 | `global` _string_ | Whether the policy is globally applied to all resources. |
@@ -5213,7 +5173,6 @@ _Appears in:_
 - [AIGatewayMCPServerServerConfigBaseSession](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbasesession)
 - [AIGatewayMCPServerUpstreamServerServerConfigSession](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverserverconfigsession)
 - [AIGatewayMCPServerWithUpstreamConfigServerSession](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfigserversession)
-- [AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)
 
 #### AIGatewayRedisCloudConfigurationCloudAuthentication
 
@@ -5743,7 +5702,6 @@ AIGatewayTargetBedrockConfig AWS Bedrock-specific configuration for a model.
 | `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
 | `upstreamURL` _string_ | The upstream URL for the model endpoint. |
 | `videoOutputS3URI` _string_ | S3 URI for storing video generation outputs. |
-| `vpcEndpoint` _string_ | Hostname of an AWS PrivateLink VPC endpoint to use instead of the public Bedrock endpoint. Ignored if `upstream_url` is set.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -6325,39 +6283,6 @@ AIGatewayTargetXaiConfig Xai-specific configuration for a model.
 _Appears in:_
 
 - [AIGatewayTargetConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetconfig)
-
-#### AIGatewayTokenVault
-
-
-AIGatewayTokenVault Resolves an upstream credential per request via Kong's
-Token Vault instead of sending a static
-credential.
-Exchanged credentials are cached per node and, when `redis` is configured,
-shared
-across the cluster.
-Callers must enroll with the configured Token Vault provider before the
-upstream tools are exposed: until enrollment completes, the MCP Server serves
-virtual
-`authenticate` and `check_authentication_status` tools that guide the caller
-through the
-enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**.
-
-
-
-| Field | Description |
-| --- | --- |
-| `directory` _string_ | Directory name segment of the vault token endpoint. |
-| `encryptionSecrets` _[]string_ | Secrets used to encrypt exchanged credentials before caching them in Redis. Required when `redis` is configured. The first secret is used for encryption, while all secrets are tried for decryption to support key rotation. |
-| `provider` _string_ | Name of the upstream credential provider registered in the Token Vault directory. |
-| `redis` _[AIGatewayRedisCloudConfiguration](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayrediscloudconfiguration)_ | Config for connecting to a Cloud Provider's Redis instance. |
-
-_Appears in:_
-
-- [AIGatewayMCPServerConversionListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistener)
-- [AIGatewayMCPServerConversionOnly](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversiononly)
-- [AIGatewayMCPServerListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistener)
-- [AIGatewayMCPServerPassthroughListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlistener)
-- [AIGatewayMCPServerUpstreamServer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserver)
 
 #### AIGatewayUpstreamAuthAWS
 
