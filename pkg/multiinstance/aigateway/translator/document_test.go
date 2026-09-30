@@ -137,7 +137,7 @@ func aiGatewayAuthStrategyFixture(name string) *aiconfigurationv1alpha1.AIGatewa
 	}
 }
 
-// TestBuildDocument covers listing, conversion and deterministic ordering: appendEntities sorts
+// TestBuildDocument covers listing, conversion and deterministic ordering: translateKind sorts
 // by k8s object name so the rendered payload (and its hash, which drives the drift loop in
 // controller.go) doesn't flap across List calls that return in a different order.
 func TestBuildDocument(t *testing.T) {
@@ -148,7 +148,7 @@ func TestBuildDocument(t *testing.T) {
 	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
 
 	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
-	// Registered out of sort order to prove appendEntities, not List, does the sorting.
+	// Registered out of sort order to prove translateKind, not List, does the sorting.
 	modelB := aiGatewayModelFixture("model-b")
 	modelA := aiGatewayModelFixture("model-a")
 	providerB := aiGatewayModelProviderFixture("provider-b")
