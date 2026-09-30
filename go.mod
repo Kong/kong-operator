@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/container v1.54.0
 	dario.cat/mergo v1.0.2
 	github.com/Kong/ai-deck-converter v0.19.4
-	github.com/Kong/sdk-konnect-go v0.69.0-dev.2
+	github.com/Kong/sdk-konnect-go v0.71.0
 	github.com/avast/retry-go/v5 v5.0.0
 	github.com/blang/semver/v4 v4.0.0
 	github.com/cert-manager/cert-manager v1.21.2
@@ -358,5 +358,3 @@ replace (
 	k8s.io/sample-controller => k8s.io/sample-controller v0.37.1
 	k8s.io/streaming => k8s.io/streaming v0.37.1
 )
-
-replace github.com/Kong/sdk-konnect-go => github.com/Kong/sdk-konnect-go v0.69.0-dev.2

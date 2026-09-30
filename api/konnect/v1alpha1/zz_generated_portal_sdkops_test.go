@@ -14,7 +14,6 @@ func TestPortalAPISpec_ToCreatePortal(t *testing.T) {
 		AuthenticationEnabled:   "Enabled",
 		AutoApproveApplications: "Enabled",
 		AutoApproveDevelopers:   "Enabled",
-		CreateDefaultContent:    "Enabled",
 		DefaultAPIVisibility:    "public",
 		DefaultPageVisibility:   "public",
 		Description:             new("test-value"),
@@ -38,7 +37,6 @@ func TestPortalAPISpec_ToCreatePortal(t *testing.T) {
 	require.Equal(t, true, payload["authentication_enabled"])
 	require.Equal(t, true, payload["auto_approve_applications"])
 	require.Equal(t, true, payload["auto_approve_developers"])
-	require.Equal(t, true, payload["create_default_content"])
 	require.Equal(t, "public", payload["default_api_visibility"])
 	require.Equal(t, "public", payload["default_page_visibility"])
 	require.Equal(t, "test-value", payload["description"])
@@ -55,7 +53,6 @@ func TestPortalAPISpec_ToUpdatePortal(t *testing.T) {
 		AuthenticationEnabled:   "Enabled",
 		AutoApproveApplications: "Enabled",
 		AutoApproveDevelopers:   "Enabled",
-		CreateDefaultContent:    "Enabled",
 		DefaultAPIVisibility:    "public",
 		DefaultPageVisibility:   "public",
 		Description:             new("test-value"),
@@ -79,7 +76,6 @@ func TestPortalAPISpec_ToUpdatePortal(t *testing.T) {
 	require.Equal(t, true, payload["authentication_enabled"])
 	require.Equal(t, true, payload["auto_approve_applications"])
 	require.Equal(t, true, payload["auto_approve_developers"])
-	require.Equal(t, true, payload["create_default_content"])
 	require.Equal(t, "public", payload["default_api_visibility"])
 	require.Equal(t, "public", payload["default_page_visibility"])
 	require.Equal(t, "test-value", payload["description"])

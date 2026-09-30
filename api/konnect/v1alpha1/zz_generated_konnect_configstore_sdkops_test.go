@@ -11,8 +11,7 @@ import (
 
 func TestKonnectConfigStoreAPISpec_ToCreateConfigStore(t *testing.T) {
 	spec := &KonnectConfigStoreAPISpec{
-		ManagedBy: ManagedBy{"test-key": "test-value"},
-		Name:      "test-value",
+		Name: "test-value",
 	}
 	result, err := spec.ToCreateConfigStore()
 	require.NoError(t, err)
@@ -24,14 +23,12 @@ func TestKonnectConfigStoreAPISpec_ToCreateConfigStore(t *testing.T) {
 	var payload map[string]any
 	err = json.Unmarshal(data, &payload)
 	require.NoError(t, err)
-	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["managed_by"])
 	require.Equal(t, "test-value", payload["name"])
 }
 
 func TestKonnectConfigStoreAPISpec_ToUpdateConfigStoreRequest(t *testing.T) {
 	spec := &KonnectConfigStoreAPISpec{
-		ManagedBy: ManagedBy{"test-key": "test-value"},
-		Name:      "test-value",
+		Name: "test-value",
 	}
 	result, err := spec.ToUpdateConfigStoreRequest()
 	require.NoError(t, err)
@@ -43,6 +40,5 @@ func TestKonnectConfigStoreAPISpec_ToUpdateConfigStoreRequest(t *testing.T) {
 	var payload map[string]any
 	err = json.Unmarshal(data, &payload)
 	require.NoError(t, err)
-	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["managed_by"])
 	require.Equal(t, "test-value", payload["name"])
 }

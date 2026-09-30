@@ -189,6 +189,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -218,6 +219,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -247,6 +249,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -276,6 +279,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -305,6 +309,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -334,6 +339,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -363,6 +369,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -392,6 +399,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -421,6 +429,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -450,6 +459,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -479,6 +489,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -508,6 +519,37 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
+                                      type: array
+                                  required:
+                                  - rules
+                                  type: object
+                                txnOffsetCommit:
+                                  properties:
+                                    rules:
+                                      items:
+                                        properties:
+                                          action:
+                                            enum:
+                                            - reject
+                                            - passthrough
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          description:
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                          rule:
+                                            maxLength: 1000
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - action
+                                        - description
+                                        - rule
+                                        type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -526,11 +568,13 @@ spec:
                                   - offsetCommit
                                   - offsetFetch
                                   - produce
+                                  - txnOffsetCommit
                                   minLength: 1
                                   type: string
                               required:
                               - type
                               type: object
+                            maxItems: 100
                             type: array
                         required:
                         - requests
