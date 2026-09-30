@@ -56,9 +56,9 @@ type {{.Kind}}Reconciler struct {
 
 	Log              logr.Logger
 	Scheme           *runtime.Scheme
-{{- if .ConfigStatusNotificationsEnabled }}
-	DataplaneClient  EntityStatusClient
 	CacheSyncTimeout time.Duration
+{{- if .ConfigStatusNotificationsEnabled }}
+	StatusClient     EntityStatusClient
 	StatusQueue      *status.Queue
 {{- end}}
 	ChangeNotifier   *changenotifier.ChangeNotifier
@@ -120,7 +120,7 @@ func (r *{{.Kind}}Reconciler) SetCommonFields(
 	cacheSyncTimeout time.Duration,
 	changeNotifier *changenotifier.ChangeNotifier,
 {{- if .ConfigStatusNotificationsEnabled }}
-	dataplaneClient EntityStatusClient,
+	statusClient EntityStatusClient,
 	statusQueue *status.Queue,
 {{- end }}
 ) {
@@ -130,7 +130,7 @@ func (r *{{.Kind}}Reconciler) SetCommonFields(
 	r.CacheSyncTimeout = cacheSyncTimeout
 	r.ChangeNotifier = changeNotifier
 {{- if .ConfigStatusNotificationsEnabled }}
-	r.DataplaneClient = dataplaneClient
+	r.StatusClient = statusClient
 	r.StatusQueue = statusQueue
 {{- end }}
 }
@@ -206,9 +206,9 @@ func (r *{{.Kind}}Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 {{- if .ConfigStatusNotificationsEnabled }}
 	// if status updates are enabled report the status for the object
-	if r.DataplaneClient != nil && r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+	if r.StatusClient != nil && r.StatusClient.AreKubernetesObjectReportsEnabled() {
 		{{- if .ProgrammedCondition.UpdatesEnabled }}
-		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
+		configurationStatus := r.StatusClient.KubernetesObjectConfigurationStatus(obj)
 		logger.Info("Updating programmed condition status", "configuration_status",configurationStatus)
 		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(
 			configurationStatus,
@@ -217,7 +217,7 @@ func (r *{{.Kind}}Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		{{- if .ProgrammedCondition.CustomUnknownMessage }}
 			ctrlutils.WithUnknownMessage("{{ .ProgrammedCondition.CustomUnknownMessage }}"),
 		{{- end }}
-			ctrlutils.WithFailedMessage(r.DataplaneClient.KubernetesObjectConfigurationStatusMessage(obj)),
+			ctrlutils.WithFailedMessage(r.StatusClient.KubernetesObjectConfigurationStatusMessage(obj)),
 		)
 		obj.Status.Conditions = conditions
 		{{- end }}

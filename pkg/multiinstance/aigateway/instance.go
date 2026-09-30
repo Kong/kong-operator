@@ -295,7 +295,7 @@ func (i *Instance) sendConfig(
 	if err != nil {
 		// The rendered payload is broken, so nothing gets pushed: every entity
 		// included in the document failed to be applied.
-		i.statusReporter.Report(included, append(failuresForAll(included, err), failures...))
+		i.statusReporter.Report(nil, append(failuresForAll(included, err), failures...))
 		return fmt.Errorf("rendering dbless configuration: %w", err)
 	}
 
@@ -304,6 +304,14 @@ func (i *Instance) sendConfig(
 		// applied.
 		i.statusReporter.Report(nil, append(failuresForAll(included, err), failures...))
 		return fmt.Errorf("sending configuration to data planes: %w", err)
+	}
+	if i.AdminAPIs().Len() == 0 {
+		// The push was skipped: no Admin API endpoints are discovered, so
+		// nothing was applied. Report the entities as failed instead of
+		// succeeded.
+		err := fmt.Errorf("no Admin API endpoints discovered; configuration not pushed")
+		i.statusReporter.Report(nil, append(failuresForAll(included, err), failures...))
+		return nil
 	}
 	i.statusReporter.Report(included, failures)
 
@@ -417,7 +425,7 @@ func (i *Instance) Run(ctx context.Context) error {
 		Log:              i.logger,
 		CacheSyncTimeout: i.env.CacheSyncTimeout,
 		ChangeNotifier:   i.cn,
-		DataplaneClient:  i.statusReporter,
+		StatusClient:     i.statusReporter,
 		StatusQueue:      i.statusReporter.Queue(),
 	}
 	if err := cs.SetupWithManager(ctx, mgr); err != nil {

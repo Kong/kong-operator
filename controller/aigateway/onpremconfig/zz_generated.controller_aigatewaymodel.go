@@ -55,8 +55,8 @@ type AIGatewayModelReconciler struct {
 
 	Log              logr.Logger
 	Scheme           *runtime.Scheme
-	DataplaneClient  EntityStatusClient
 	CacheSyncTimeout time.Duration
+	StatusClient     EntityStatusClient
 	StatusQueue      *status.Queue
 	ChangeNotifier   *changenotifier.ChangeNotifier
 	Cache            map[types.NamespacedName]types.NamespacedName
@@ -113,7 +113,7 @@ func (r *AIGatewayModelReconciler) SetCommonFields(
 	log logr.Logger,
 	cacheSyncTimeout time.Duration,
 	changeNotifier *changenotifier.ChangeNotifier,
-	dataplaneClient EntityStatusClient,
+	statusClient EntityStatusClient,
 	statusQueue *status.Queue,
 ) {
 	r.Client = client
@@ -121,7 +121,7 @@ func (r *AIGatewayModelReconciler) SetCommonFields(
 	r.Log = log
 	r.CacheSyncTimeout = cacheSyncTimeout
 	r.ChangeNotifier = changeNotifier
-	r.DataplaneClient = dataplaneClient
+	r.StatusClient = statusClient
 	r.StatusQueue = statusQueue
 }
 
@@ -192,14 +192,14 @@ func (r *AIGatewayModelReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, nil
 	}
 	// if status updates are enabled report the status for the object
-	if r.DataplaneClient != nil && r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
-		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
+	if r.StatusClient != nil && r.StatusClient.AreKubernetesObjectReportsEnabled() {
+		configurationStatus := r.StatusClient.KubernetesObjectConfigurationStatus(obj)
 		logger.Info("Updating programmed condition status", "configuration_status", configurationStatus)
 		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(
 			configurationStatus,
 			obj.Generation,
 			obj.Status.Conditions,
-			ctrlutils.WithFailedMessage(r.DataplaneClient.KubernetesObjectConfigurationStatusMessage(obj)),
+			ctrlutils.WithFailedMessage(r.StatusClient.KubernetesObjectConfigurationStatusMessage(obj)),
 		)
 		obj.Status.Conditions = conditions
 		if updateNeeded {

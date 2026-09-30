@@ -155,14 +155,10 @@ func TestNotifyChange_SnapshotsObject(t *testing.T) {
 	go func() {
 		defer close(done)
 		for range 100 {
-			select {
-			case change := <-n.NotifyChannel():
-				if change.Object != nil {
-					_ = change.Object.GetNamespace()
-					_ = change.Object.GetName()
-				}
-			default:
-				return
+			change := <-n.NotifyChannel()
+			if change.Object != nil {
+				_ = change.Object.GetNamespace()
+				_ = change.Object.GetName()
 			}
 		}
 	}()

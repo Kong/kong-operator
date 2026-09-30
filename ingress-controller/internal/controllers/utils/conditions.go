@@ -45,9 +45,9 @@ func WithFailedMessage(message string) ProgrammedConditionOption {
 
 // EnsureProgrammedCondition ensures that the programmed condition is present in the conditions slice with the
 // status reflecting the current configuration status of the object.
-// If the condition is already present with the correct status, the conditions slice is returned unmodified and false is
-// returned as the second return value. If the condition is not present or has the wrong status, the conditions slice is
-// returned with the condition updated and true is returned.
+// If the condition is already present with the correct status and message, the conditions slice is returned unmodified
+// and false is returned as the second return value. If the condition is not present, has the wrong status or a
+// different message, the conditions slice is returned with the condition updated and true is returned.
 func EnsureProgrammedCondition(
 	configurationStatus object.ConfigurationStatus,
 	objectGeneration int64,

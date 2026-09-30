@@ -67,9 +67,9 @@ type Controllers struct {
 	Log              logr.Logger
 	CacheSyncTimeout time.Duration
 	ChangeNotifier   *changenotifier.ChangeNotifier
-	// DataplaneClient provides the per-entity configuration status the
+	// StatusClient provides the per-entity configuration status the
 	// reconcilers report on the entities' Programmed condition.
-	DataplaneClient EntityStatusClient
+	StatusClient EntityStatusClient
 	// StatusQueue re-triggers the reconcilers when the reported configuration
 	// status of entities changes.
 	StatusQueue *status.Queue
@@ -106,7 +106,7 @@ func (cs *Controllers) SetupWithManager(_ context.Context, mgr ctrl.Manager) err
 		&AIGatewayPolicyReconciler{},
 		&AIGatewaySNIReconciler{},
 	} {
-		r.SetCommonFields(cs.Client, cs.Scheme, cs.Log, cs.CacheSyncTimeout, cs.ChangeNotifier, cs.DataplaneClient, cs.StatusQueue)
+		r.SetCommonFields(cs.Client, cs.Scheme, cs.Log, cs.CacheSyncTimeout, cs.ChangeNotifier, cs.StatusClient, cs.StatusQueue)
 		if err := r.SetupWithManager(mgr); err != nil {
 			return err
 		}
