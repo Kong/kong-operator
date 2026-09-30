@@ -164,6 +164,13 @@ func BuildDeployment[T Object, Cert CertificateObject](
 			},
 		}
 
+		// The user overlay wins on env conflicts in MergeObjects, so drop the
+		// overlay's copies of the env vars the operator actually injected into
+		// the base container (names listed in ReassertEnvVars): the operator
+		// value must survive the merge. Vars the operator did not inject (e.g.
+		// KONG_LICENSE_DATA with no enabled KongLicense or with a Konnect
+		// control plane) are left untouched so the user's overlay value is not
+		// silently deleted.
 		if len(cfg.Deployment.ReassertEnvVars) > 0 {
 			injected := map[string]bool{}
 			if bc := k8sutils.GetPodContainerByName(&base.Spec.Template.Spec, cfg.Deployment.ContainerName); bc != nil {
@@ -178,11 +185,6 @@ func BuildDeployment[T Object, Cert CertificateObject](
 					return injected[e.Name]
 				})
 			}
-		}
-		if c := k8sutils.GetPodContainerByName(&userDeployment.Spec.Template.Spec, cfg.Deployment.ContainerName); c != nil {
-			c.Env = slices.DeleteFunc(c.Env, func(e corev1.EnvVar) bool {
-				return slices.Contains(cfg.Deployment.ReassertEnvVars, e.Name)
-			})
 		}
 
 		u, err = controllerpkgssa.MergeObjects(tc, base, userDeployment)

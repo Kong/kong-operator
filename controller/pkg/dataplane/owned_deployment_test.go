@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -423,65 +424,101 @@ func Test_BuildDeployment(t *testing.T) {
 	}
 }
 
-// Test_BuildDeployment_ReassertEnvVars verifies that a user PodTemplateSpec
-// overlay cannot override operator-injected env vars: the overlay's copies of
-// the ReassertEnvVars entries are dropped before MergeObjects, so the operator
-// value survives the merge.
+// Test_BuildDeployment_ReassertEnvVars verifies how a user PodTemplateSpec
+// overlay interacts with operator-injected env vars: the overlay's copies of
+// the ReassertEnvVars entries the operator actually injected are dropped
+// before MergeObjects, while entries the operator did not inject are left
+// untouched so the user's value is not silently deleted.
+//
+// Note: the DeducedTypeConverter used here replaces the env list atomically,
+// so whether the base's operator value survives the merge is a property of
+// MergeObjects (covered by the ssa tests with a real TypeConverter), not of
+// the drop logic under test here.
 func Test_BuildDeployment_ReassertEnvVars(t *testing.T) {
 	tc := managedfields.NewDeducedTypeConverter()
 
-	cfg := testConfig
-	cfg.Deployment.ReassertEnvVars = []string{"KONG_LICENSE_DATA"}
-
-	aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{
-		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
-			Deployment: &aigatewayv1alpha1.DeploymentOptions{
-				PodTemplateSpec: &corev1.PodTemplateSpec{
-					Spec: corev1.PodSpec{
-						Containers: []corev1.Container{
-							{
-								Name: consts.AIGatewayDataPlaneContainerName,
-								Env: []corev1.EnvVar{
-									{Name: "KONG_LICENSE_DATA", Value: "overlay-bogus-license"},
-									{Name: "KONG_DATABASE", Value: "overlay-value"},
+	overlayAIGwdp := func() *aigatewayv1alpha1.AIGatewayDataPlane {
+		return &aigatewayv1alpha1.AIGatewayDataPlane{
+			Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+				Deployment: &aigatewayv1alpha1.DeploymentOptions{
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name: consts.AIGatewayDataPlaneContainerName,
+									Env: []corev1.EnvVar{
+										{Name: "KONG_LICENSE_DATA", Value: "overlay-bogus-license"},
+										{Name: "KONG_DATABASE", Value: "overlay-value"},
+									},
 								},
 							},
 						},
 					},
 				},
 			},
-		},
-	}
-
-	u, err := BuildDeployment(logr.Discard(), tc, aigwdp, resolvedTestCP(testKonnectAIGateway()), "kong/aigw:test", "cert-secret", "", "", cfg)
-	require.NoError(t, err)
-	require.NotNil(t, u)
-
-	containersRaw, found, err := unstructured.NestedFieldNoCopy(u.Object, "spec", "template", "spec", "containers")
-	require.NoError(t, err)
-	require.True(t, found)
-	containers := containersRaw.([]any)
-	require.NotEmpty(t, containers)
-	envRaw, found, err := unstructured.NestedFieldNoCopy(containers[0].(map[string]any), "env")
-	require.NoError(t, err)
-	require.True(t, found)
-	env := envRaw.([]any)
-
-	for _, e := range env {
-		envVar := e.(map[string]any)
-		require.NotEqual(t, "overlay-bogus-license", envVar["value"],
-			"overlay value for reasserted env var %v must be dropped", envVar["name"])
-	}
-	// The overlay env var not listed in ReassertEnvVars must survive the merge.
-	found = false
-	for _, e := range env {
-		envVar := e.(map[string]any)
-		if envVar["name"] == "KONG_DATABASE" {
-			found = true
-			assert.Equal(t, "overlay-value", envVar["value"])
 		}
 	}
-	assert.True(t, found, "overlay env var not in ReassertEnvVars must survive the merge")
+
+	// buildAndExtractEnv runs BuildDeployment and returns the merged gateway
+	// container env as a name->value map.
+	buildAndExtractEnv := func(t *testing.T, cfg Config[*aigatewayv1alpha1.AIGatewayDataPlane, *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate]) map[string]string {
+		t.Helper()
+		u, err := BuildDeployment(logr.Discard(), tc, overlayAIGwdp(), resolvedTestCP(testKonnectAIGateway()), "kong/aigw:test", "cert-secret", "", "", cfg)
+		require.NoError(t, err)
+		require.NotNil(t, u)
+
+		containersRaw, found, err := unstructured.NestedFieldNoCopy(u.Object, "spec", "template", "spec", "containers")
+		require.NoError(t, err)
+		require.True(t, found)
+		containers := containersRaw.([]any)
+		require.NotEmpty(t, containers)
+		envRaw, found, err := unstructured.NestedFieldNoCopy(containers[0].(map[string]any), "env")
+		require.NoError(t, err)
+		require.True(t, found)
+
+		env := map[string]string{}
+		for _, e := range envRaw.([]any) {
+			envVar := e.(map[string]any)
+			env[envVar["name"].(string)] = envVar["value"].(string)
+		}
+		return env
+	}
+
+	t.Run("operator injected the env var: overlay copy is dropped", func(t *testing.T) {
+		cfg := testConfig
+		cfg.Deployment.ReassertEnvVars = []string{"KONG_LICENSE_DATA"}
+
+		// Inject KONG_LICENSE_DATA into the base container, as the real
+		// withLicenseEnvVar wrapper does when a license is available.
+		base := cfg.Deployment.BuildContainer
+		cfg.Deployment.BuildContainer = func(
+			dp *aigatewayv1alpha1.AIGatewayDataPlane, cp ResolvedControlPlane, image, certSecretName, adminCertSecretName string,
+		) (corev1.Container, []corev1.Volume, error) {
+			container, volumes, err := base(dp, cp, image, certSecretName, adminCertSecretName)
+			if err != nil {
+				return container, volumes, err
+			}
+			container.Env = append(container.Env, corev1.EnvVar{Name: "KONG_LICENSE_DATA", Value: "operator-license"})
+			return container, volumes, nil
+		}
+
+		env := buildAndExtractEnv(t, cfg)
+		assert.NotContains(t, env, "KONG_LICENSE_DATA",
+			"the overlay copy of an injected env var must be dropped before the merge")
+		assert.Equal(t, "overlay-value", env["KONG_DATABASE"],
+			"an overlay env var not in ReassertEnvVars must survive the merge")
+	})
+
+	t.Run("operator did not inject the env var: overlay copy survives", func(t *testing.T) {
+		cfg := testConfig
+		cfg.Deployment.ReassertEnvVars = []string{"KONG_LICENSE_DATA"}
+
+		env := buildAndExtractEnv(t, cfg)
+		assert.Equal(t, "overlay-bogus-license", env["KONG_LICENSE_DATA"],
+			"the operator did not inject the var, so the user's overlay value must not be deleted")
+		assert.Equal(t, "overlay-value", env["KONG_DATABASE"],
+			"an overlay env var not in ReassertEnvVars must survive the merge")
+	})
 }
 
 // -----------------------------------------------------------------
