@@ -113,11 +113,11 @@ func (f *FakeConfigStoreSecrets) store(controlPlaneID, configStoreID string) map
 	return s
 }
 
-// nextTimestamp advances the internal clock and returns a timestamp derived
-// from it, guaranteeing strictly increasing timestamps across writes.
+// nextTimestamp advances the internal clock in millisecond increments,
+// guaranteeing strictly increasing fractional timestamps across writes.
 func (f *FakeConfigStoreSecrets) nextTimestamp() time.Time {
 	f.clock++
-	return time.Unix(1_700_000_000+f.clock, 0).UTC()
+	return time.Unix(1_700_000_000, f.clock*int64(time.Millisecond)).UTC()
 }
 
 func newFakeSDKError(statusCode int, format string, args ...any) *sdkkonnecterrs.SDKError {
@@ -507,10 +507,14 @@ func (f *FakeConfigStoreSecrets) Value(controlPlaneID, configStoreID, key string
 
 // SetValue writes a value directly, bypassing the SDK interface, and advances
 // updated_at. It simulates an out-of-band write (drift) by another actor.
+// The clock jumps by more than a second so the write crosses the controller's
+// second-granularity drift comparison, matching a real external write that
+// happens at a later wall-clock time than the sync's own writes.
 func (f *FakeConfigStoreSecrets) SetValue(controlPlaneID, configStoreID, key, value string) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	store := f.store(controlPlaneID, configStoreID)
+	f.clock += int64(time.Second / time.Millisecond)
 	now := f.nextTimestamp()
 	if entry, ok := store[key]; ok {
 		entry.value = value
