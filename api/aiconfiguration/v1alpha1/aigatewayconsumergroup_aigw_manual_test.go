@@ -94,6 +94,20 @@ func TestAIGatewayConsumerGroup_ToAIGWConsumerGroup(t *testing.T) {
 			},
 			wantErr: "policies",
 		},
+		{
+			name: "cross-namespace policy reference rejected",
+			obj: &AIGatewayConsumerGroup{
+				Name: "sample-ai-gw-consumer-group-cross-ns", Namespace: "default",
+				Spec: AIGatewayConsumerGroupSpec{
+					APISpec: AIGatewayConsumerGroupAPISpec{
+						Name:        "cross-ns-group",
+						DisplayName: "Cross NS Group",
+						Policies:    []AIGatewayPolicyRef{{Name: "ai-gw-policy", Namespace: "other-namespace"}},
+					},
+				},
+			},
+			wantErr: "cross-namespace reference",
+		},
 	}
 
 	for _, tt := range tests {
