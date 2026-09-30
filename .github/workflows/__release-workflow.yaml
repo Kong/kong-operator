@@ -163,7 +163,7 @@ jobs:
           TAG: ${{ inputs.tag }}
           PRERELEASE: ${{ steps.semver_parser.outputs.prerelease }}
         run: |
-          if [[ "$PRERELEASE" == rapid* && ! "$PRERELEASE" =~ ^rapid\.[0-9]+\.[0-9]+$ ]]; then
+          if [[ "$PRERELEASE" == rapid* && ! "$PRERELEASE" =~ ^rapid\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
             echo "Invalid rapid release version: $TAG"
             echo "Rapid releases must use the N.M.0-rapid.K.P form, e.g. v2.4.0-rapid.2.0 or v2.4.0-rapid.2.1"
             exit 1
@@ -189,8 +189,11 @@ jobs:
     secrets:
       dockerhub-token: ${{ secrets.dockerhub-push-token }}
       gh-pat: ${{ needs.github-app-token.outputs.token }}
+    # NOTE: needs semver so that a tag rejected there (e.g. a malformed rapid
+    # version) does not get images pushed.
     needs:
     - github-app-token
+    - semver
     with:
       registry: docker.io
       username: ${{ inputs.dockerhub-push-username }}
