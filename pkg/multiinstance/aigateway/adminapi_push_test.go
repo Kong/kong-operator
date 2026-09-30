@@ -30,6 +30,7 @@ import (
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager"
 	adminapi "github.com/kong/kong-operator/v2/internal/adminapi"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
@@ -115,6 +116,7 @@ func testPushInstance(t *testing.T, objs ...client.Object) *Instance {
 		testr.New(t),
 		Config{},
 		Env{
+			Scheme:                  managerscheme.Get(),
 			GatewayNN:               types.NamespacedName{Namespace: testGatewayNamespace, Name: testGatewayName},
 			AdminClientCertSecretNN: types.NamespacedName{Namespace: testGatewayNamespace, Name: "gw-admin-client-cert"},
 			TypeConverter:           newTestTypeConverter(),
@@ -125,12 +127,25 @@ func testPushInstance(t *testing.T, objs ...client.Object) *Instance {
 		Namespace: testGatewayNamespace,
 		Name:      testGatewayName,
 	})
-	cl := fake.NewClientBuilder().
+	// The translator lists the configuration entities by the OnOnPremAIGatewayRef
+	// field index, so the fake client must register the same indexes the real
+	// manager does.
+	builder := fake.NewClientBuilder().
 		WithScheme(managerscheme.Get()).
 		WithReturnManagedFields().
 		WithStatusSubresource(&aigatewayv1alpha1.OnPremAIGateway{}).
-		WithObjects(objs...).
-		Build()
+		WithObjects(objs...)
+	for _, opts := range [][]index.Option{
+		index.OptionsForAIGatewayModel(),
+		index.OptionsForAIGatewayModelProvider(),
+		index.OptionsForAIGatewayPolicy(),
+		index.OptionsForAIGatewayConsumerGroup(),
+	} {
+		for _, opt := range opts {
+			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+		}
+	}
+	cl := builder.Build()
 	i.client = cl
 	i.eventRecorder = events.NewFakeRecorder(16)
 	return i
