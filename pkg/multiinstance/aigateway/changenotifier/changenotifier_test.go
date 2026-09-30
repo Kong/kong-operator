@@ -138,3 +138,47 @@ func TestConcurrentNotifyAndClose(t *testing.T) {
 	n.Close()
 	wg.Wait()
 }
+
+// TestNotifyChange_SnapshotsObject guards against the caller/consumer data race: the generated
+// configuration-entity reconcilers publish the reconciled object and then keep mutating it (the
+// status update's response decoding rewrites its fields), while the sync loop reads the notified
+// object's namespace and name. The notifier must store a snapshot, not the caller's object.
+// Without the snapshot this test fails under -race.
+func TestNotifyChange_SnapshotsObject(t *testing.T) {
+	n := New()
+	defer n.Close()
+
+	parent := &types.NamespacedName{Name: "gw", Namespace: "ns"}
+
+	// Consumer: read the fields the sync loop reads from every notified object.
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for range 100 {
+			select {
+			case change := <-n.NotifyChannel():
+				if change.Object != nil {
+					_ = change.Object.GetNamespace()
+					_ = change.Object.GetName()
+				}
+			default:
+				return
+			}
+		}
+	}()
+
+	for i := range 100 {
+		obj := testObject(types.UID(fmt.Sprintf("uid-%d", i)))
+		n.NotifyChange(t.Context(), parent, obj)
+		// Simulate what the reconciler does after publishing: the status update's
+		// response decoding zeroes and rewrites the object's fields.
+		obj.SetName(fmt.Sprintf("rewritten-%d", i))
+		obj.SetNamespace("rewritten")
+	}
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("consumer did not finish")
+	}
+}
