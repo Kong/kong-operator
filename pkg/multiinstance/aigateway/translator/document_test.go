@@ -58,7 +58,29 @@ func aiGatewayModelFixture(name string) *aiconfigurationv1alpha1.AIGatewayModel 
 	}
 }
 
-// TestBuildDocument covers listing, conversion and deterministic ordering: buildDocument sorts
+func aiGatewayModelProviderFixture(name string) *aiconfigurationv1alpha1.AIGatewayModelProvider {
+	return &aiconfigurationv1alpha1.AIGatewayModelProvider{
+		Name: name, Namespace: "default",
+		Spec: aiconfigurationv1alpha1.AIGatewayModelProviderSpec{
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				Group:         aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+				Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gw"},
+			},
+			APISpec: aiconfigurationv1alpha1.AIGatewayModelProviderAPISpec{
+				AIGatewayModelProviderConfig: &aiconfigurationv1alpha1.AIGatewayModelProviderConfig{
+					Type: aiconfigurationv1alpha1.AIGatewayModelProviderConfigTypeOpenai,
+					Openai: &aiconfigurationv1alpha1.AIGatewayModelProviderOpenai{
+						Name:        aiconfigurationv1alpha1.AIGatewayEntityIdentifier(name),
+						DisplayName: name,
+					},
+				},
+			},
+		},
+	}
+}
+
+// TestBuildDocument covers listing, conversion and deterministic ordering: appendEntities sorts
 // by k8s object name so the rendered payload (and its hash, which drives the drift loop in
 // controller.go) doesn't flap across List calls that return in a different order.
 func TestBuildDocument(t *testing.T) {
@@ -69,12 +91,17 @@ func TestBuildDocument(t *testing.T) {
 	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
 
 	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
-	// Registered out of sort order to prove buildDocument, not List, does the sorting.
+	// Registered out of sort order to prove appendEntities, not List, does the sorting.
 	modelB := aiGatewayModelFixture("model-b")
 	modelA := aiGatewayModelFixture("model-a")
+	providerB := aiGatewayModelProviderFixture("provider-b")
+	providerA := aiGatewayModelProviderFixture("provider-a")
 
-	builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gw, modelB, modelA)
+	builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gw, modelB, modelA, providerB, providerA)
 	for _, opt := range index.OptionsForAIGatewayModel() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayModelProvider() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	cl := builder.Build()
@@ -84,6 +111,9 @@ func TestBuildDocument(t *testing.T) {
 	require.Len(t, doc.Models, 2)
 	require.Equal(t, "model-a", doc.Models[0].Name)
 	require.Equal(t, "model-b", doc.Models[1].Name)
+	require.Len(t, doc.ModelProviders, 2)
+	require.Equal(t, "provider-a", doc.ModelProviders[0].Name)
+	require.Equal(t, "provider-b", doc.ModelProviders[1].Name)
 
 	// Non-strict rendering must not fail even once references outside the fixture (dangling
 	// model_providers/policies/auth_strategies) are introduced by the next slice - pinned here
@@ -110,9 +140,13 @@ func TestBuildDocument_NoModels(t *testing.T) {
 	for _, opt := range index.OptionsForAIGatewayModel() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
+	for _, opt := range index.OptionsForAIGatewayModelProvider() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
 	cl := builder.Build()
 
 	doc, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
 	require.NoError(t, err)
 	require.Empty(t, doc.Models)
+	require.Empty(t, doc.ModelProviders)
 }

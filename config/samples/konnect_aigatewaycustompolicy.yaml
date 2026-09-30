@@ -1,0 +1,172 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth-1
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # For a complete list of available API URLs see:https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
+  serverURL: us.api.konghq.com
+---
+kind: KonnectAIGateway
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-cp-1
+  namespace: default
+spec:
+  apiSpec:
+    name: ai-gw-cp-1
+    displayName: My AI Gateway
+    description: AI Gateway control plane
+    labels:
+      app: test1
+  konnect:
+    authRef:
+      name: konnect-api-auth-1
+---
+# An "installed" custom policy references a Kong plugin that is already
+# installed on the data plane; only its schema is registered with Konnect.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayCustomPolicy
+metadata:
+  name: aigw-custom-policy-installed
+  namespace: default
+spec:
+  aiGatewayRef:
+    namespacedRef:
+      name: ai-gw-cp-1
+      namespace: default
+  apiSpec:
+    type: installed
+    installed:
+      # Unique, immutable identifier of the custom policy.
+      name: my-installed-custom-policy
+      displayName: My installed custom policy
+      # Lua schema definition, equivalent to a Kong plugin's schema.lua,
+      # provided inline.
+      schema:
+        type: inline
+        value: |
+          local typedefs = require "kong.db.schema.typedefs"
+
+          return {
+            name = "my-installed-custom-policy",
+            fields = {
+              { protocols = typedefs.protocols_http },
+              { config = {
+                  type = "record",
+                  fields = {
+                    { header_name = { type = "string", default = "X-Custom-Policy" } },
+                  },
+                },
+              },
+            },
+          }
+---
+# A "streaming" custom policy ships both the Lua schema and handler, which
+# Konnect distributes to the data plane.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayCustomPolicy
+metadata:
+  name: aigw-custom-policy-streaming
+  namespace: default
+spec:
+  aiGatewayRef:
+    namespacedRef:
+      name: ai-gw-cp-1
+      namespace: default
+  apiSpec:
+    type: streaming
+    streaming:
+      # Unique, immutable identifier of the custom policy.
+      name: my-streaming-custom-policy
+      displayName: My streaming custom policy
+      # Lua schema definition, equivalent to a Kong plugin's schema.lua,
+      # provided inline.
+      schema:
+        type: inline
+        value: |
+          local typedefs = require "kong.db.schema.typedefs"
+
+          return {
+            name = "my-streaming-custom-policy",
+            fields = {
+              { protocols = typedefs.protocols_http },
+              { config = {
+                  type = "record",
+                  fields = {
+                    { header_name = { type = "string", default = "X-Custom-Policy" } },
+                  },
+                },
+              },
+            },
+          }
+      # Lua handler implementation, equivalent to a Kong plugin's handler.lua,
+      # provided inline.
+      handler:
+        type: inline
+        value: |
+          local MyStreamingCustomPolicy = {
+            PRIORITY = 1000,
+            VERSION = "1.0.0",
+          }
+
+          function MyStreamingCustomPolicy:header_filter(conf)
+            kong.response.set_header(conf.header_name, "applied")
+          end
+
+          return MyStreamingCustomPolicy
+---
+# An AIGatewayPolicy using the streaming custom policy above. customPolicyRef
+# references the AIGatewayCustomPolicy in the cluster: the operator waits until
+# it exists in Konnect and sends its Konnect name as the policy type. Setting
+# `type: my-streaming-custom-policy` instead is equivalent; exactly one of the
+# two must be set.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayPolicy
+metadata:
+  name: aigw-policy-uses-custom-policy
+  namespace: default
+spec:
+  aiGatewayRef:
+    namespacedRef:
+      name: ai-gw-cp-1
+      namespace: default
+  apiSpec:
+    name: aigw-policy-uses-custom-policy
+    displayName: Uses the streaming custom policy
+    customPolicyRef:
+      name: aigw-custom-policy-streaming
+    enabled: Enabled
+    global: Enabled
+    config:
+      type: inline
+      value:
+        # Field from the custom policy's schema.lua.
+        header_name: X-Custom-Policy
+---
+# An AIGatewayPolicy using the installed custom policy above through its
+# Konnect name as the literal type, the alternative to customPolicyRef. It is
+# also how Konnect-managed or built-in policies are used.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayPolicy
+metadata:
+  name: aigw-policy-uses-installed-custom-policy
+  namespace: default
+spec:
+  aiGatewayRef:
+    namespacedRef:
+      name: ai-gw-cp-1
+      namespace: default
+  apiSpec:
+    name: aigw-policy-uses-installed-custom-policy
+    displayName: Uses the installed custom policy
+    type: my-installed-custom-policy
+    enabled: Enabled
+    global: Enabled
+    config:
+      type: inline
+      value:
+        # Field from the custom policy's schema.lua.
+        header_name: X-Installed-Custom-Policy

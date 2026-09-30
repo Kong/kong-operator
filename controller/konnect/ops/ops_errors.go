@@ -37,6 +37,17 @@ type entity interface {
 	GetTypeName() string
 }
 
+// DeletionBlockedError is implemented by errors returned when Konnect refuses
+// to delete an entity until something else is removed first (e.g. a config
+// store that still holds secret entries, or a custom policy still used by
+// policies). The reconciler keeps the cleanup finalizer, reports
+// DeletionBlockedMessage in a DeletionBlocked Programmed condition, and retries
+// on a fixed period.
+type DeletionBlockedError interface {
+	error
+	DeletionBlockedMessage() string
+}
+
 // EntityWithMatchingUIDNotFoundError is an error indicating that an entity with a matching UID was not found on Konnect.
 type EntityWithMatchingUIDNotFoundError struct {
 	Entity entity

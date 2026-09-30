@@ -215,3 +215,23 @@ const (
 	// on Konnect by the Konnect controller.
 	KonnectCertificateNotProgrammedReason consts.ConditionReason = "KonnectCertificateNotProgrammed"
 )
+
+// -----------------------------------------------------------------------------
+// OnPremAIGateway - Data Planes Configuration Condition Constants
+// -----------------------------------------------------------------------------
+
+const (
+	// OnPremAIGatewayDataPlanesConfiguredType indicates whether the rendered
+	// configuration has been successfully pushed to the Admin API endpoints of
+	// all the AIGatewayDataPlanes referencing the OnPremAIGateway.
+	OnPremAIGatewayDataPlanesConfiguredType consts.ConditionType = "DataPlanesConfigured"
+
+	// OnPremAIGatewayConfigurationPushSucceededReason indicates the
+	// configuration was pushed successfully to all the discovered Admin API
+	// endpoints.
+	OnPremAIGatewayConfigurationPushSucceededReason consts.ConditionReason = "ConfigurationPushSucceeded"
+
+	// OnPremAIGatewayConfigurationPushFailedReason indicates the configuration
+	// push failed for at least one of the discovered Admin API endpoints.
+	OnPremAIGatewayConfigurationPushFailedReason consts.ConditionReason = "ConfigurationPushFailed"
+)

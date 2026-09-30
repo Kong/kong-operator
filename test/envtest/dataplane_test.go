@@ -56,8 +56,15 @@ func TestDataPlane(t *testing.T) {
 		}
 		require.NoError(t, cl.Create(ctx, dp))
 
+		// A reconcile running on a stale cache can create a duplicate ingress Service, which a
+		// later reconcile reduces, possibly keeping the duplicate. Wait for the DataPlane status
+		// to reference the single listed Service: the controller only sets it in a reconcile
+		// that found exactly one ingress Service, so the primary one is settled by then.
+		dpNN := client.ObjectKeyFromObject(dp)
 		var primaryIngressService corev1.Service
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			var current operatorv1beta1.DataPlane
+			require.NoError(ct, cl.Get(ctx, dpNN, &current))
 			var serviceList corev1.ServiceList
 			require.NoError(ct, cl.List(ctx, &serviceList,
 				client.InNamespace(ns.Name),
@@ -68,6 +75,7 @@ func TestDataPlane(t *testing.T) {
 				},
 			))
 			require.Len(ct, serviceList.Items, 1)
+			require.Equal(ct, current.Status.Service, serviceList.Items[0].Name)
 			primaryIngressService = serviceList.Items[0]
 		}, waitTime, tickTime)
 

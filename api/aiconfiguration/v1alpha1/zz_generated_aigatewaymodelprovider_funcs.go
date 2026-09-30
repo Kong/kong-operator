@@ -95,6 +95,10 @@ func (obj *AIGatewayModelProvider) GetKonnectName() string {
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Sagemaker != nil {
 			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Sagemaker.Name)
 		}
+	case AIGatewayModelProviderConfigTypeTypesafe:
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Typesafe != nil {
+			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Typesafe.Name)
+		}
 	case AIGatewayModelProviderConfigTypeVercel:
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vercel != nil {
 			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Vercel.Name)
@@ -173,7 +177,9 @@ func (obj *AIGatewayModelProvider) SetParentRef(ref commonv1alpha1.ObjectRef) {
 
 // SkipKonnectReconciliation reports whether the entity's parent reference
 // resolves to a parent the Konnect reconciler does not manage (an
-// OnPremAIGateway): such entities are owned by the on-prem machinery.
+// OnPremAIGateway): such entities are handled by the on-prem controllers
+// where supported, or rejected at admission when the entity restricts its
+// parent kinds.
 func (obj *AIGatewayModelProvider) SkipKonnectReconciliation() bool {
 	return obj.Spec.AIGatewayRef.TargetsOnPremAIGateway()
 }

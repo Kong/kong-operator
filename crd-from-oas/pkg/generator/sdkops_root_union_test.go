@@ -71,6 +71,58 @@ func TestGenerateSDKOps_RootUnionUsesDiscriminatorJSONNames(t *testing.T) {
 	assert.NotContains(t, content, `payload["forwardtovirtualclust"]`)
 }
 
+func TestGenerateSDKOps_RootUnionFlattenSkipsFreeformFields(t *testing.T) {
+	// Root-union entities select the variant payload before flattening, and
+	// their free-form paths are stored with the variant's JSON name as the
+	// first segment (they are shared with the full-payload-scope rename walk).
+	// The flatten call must therefore strip the variant prefix via
+	// flattenSDKUnionsExceptUnder instead of flattening unconditionally.
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+
+	schema := &parser.Schema{
+		OneOf: []*parser.Property{
+			{
+				RefName: "EventGatewayTLSListenerPolicy",
+				Properties: []*parser.Property{
+					{Name: "enabled", Type: "boolean"},
+					{
+						Name: "labels",
+						Type: "object",
+						AdditionalProperties: &parser.Property{
+							Type: "object",
+						},
+					},
+				},
+			},
+			{
+				RefName: "ForwardToVirtualClusterPolicy",
+				Properties: []*parser.Property{
+					{Name: "enabled", Type: "boolean"},
+				},
+			},
+		},
+		DiscriminatorMapping: map[string]string{
+			"tls_server":                 "EventGatewayTLSListenerPolicy",
+			"forward_to_virtual_cluster": "ForwardToVirtualClusterPolicy",
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/operations.CreateEventGatewayListenerPolicyRequest"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayListenerPolicyRequest"},
+		},
+	}
+
+	content, err := g.generateSDKOps("EventGatewayListenerPolicy", schema, opsConfig)
+	require.NoError(t, err)
+	_, err = format.Source([]byte(content))
+	require.NoError(t, err)
+
+	assert.Contains(t, content, `selected = flattenSDKUnionsExceptUnder(selected, EventGatewayListenerPolicySDKOpsFreeformKeyFields, variantJSON)`)
+	assert.Contains(t, content, `variantJSON = "tls_server"`)
+	assert.NotContains(t, content, `selected = flattenSDKUnions(selected)`)
+}
+
 func TestFlattenSDKUnionsHelper_FlattensNonObjectMembers(t *testing.T) {
 	t.Parallel()
 
@@ -78,4 +130,103 @@ func TestFlattenSDKUnionsHelper_FlattensNonObjectMembers(t *testing.T) {
 	assert.Contains(t, flattenSDKUnionsHelper, `return inner`)
 	assert.Contains(t, flattenSDKUnionsHelper, `func nestedSDKUnionMember(object map[string]any) (string, string, any, bool) {`)
 	assert.Contains(t, flattenSDKUnionsHelper, `func nestedSDKUnionMemberForKey(object map[string]any, key string) (string, any, bool) {`)
+	assert.Contains(t, flattenSDKUnionsHelper, `func flattenSDKUnionsExcept(v any, fields []sdkOpsFreeformKeyField) any {`)
+	assert.Contains(t, flattenSDKUnionsHelper, `func flattenSDKUnionsExceptUnder(v any, fields []sdkOpsFreeformKeyField, variant string) any {`)
+}
+
+func TestRootUnionUpdateVariantTypeName(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name              string
+		createVariantType string
+		updateMemberTypes map[string]struct{}
+		want              string
+	}{
+		{
+			name:              "update union reuses create variant type",
+			createVariantType: "AIGatewayAuthStrategyKeyAuth",
+			updateMemberTypes: map[string]struct{}{
+				"AIGatewayAuthStrategyKeyAuth":       {},
+				"AIGatewayAuthStrategyOpenIDConnect": {},
+			},
+			want: "AIGatewayAuthStrategyKeyAuth",
+		},
+		{
+			name:              "update union declares dedicated update variant type",
+			createVariantType: "CreateAIGatewayCustomPolicyInstalledRequest",
+			updateMemberTypes: map[string]struct{}{
+				"UpdateAIGatewayCustomPolicyInstalledRequest": {},
+				"UpdateAIGatewayCustomPolicyStreamingRequest": {},
+			},
+			want: "UpdateAIGatewayCustomPolicyInstalledRequest",
+		},
+		{
+			name:              "no matching update member falls back to create variant type",
+			createVariantType: "CreateFooBarRequest",
+			updateMemberTypes: map[string]struct{}{
+				"SomethingElse": {},
+			},
+			want: "CreateFooBarRequest",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, rootUnionUpdateVariantTypeName(tt.createVariantType, tt.updateMemberTypes))
+		})
+	}
+}
+
+func TestGenerateSDKOps_RootUnionUsesDedicatedUpdateVariantTypes(t *testing.T) {
+	t.Parallel()
+
+	g := NewGenerator(Config{
+		APIVersion: "v1alpha1",
+	})
+
+	variantProps := func(extra ...*parser.Property) []*parser.Property {
+		return append([]*parser.Property{
+			{Name: "name", Type: "string"},
+			{Name: "type", Type: "string"},
+			{Name: "display_name", Type: "string"},
+			{Name: "schema", Type: "string"},
+		}, extra...)
+	}
+	schema := &parser.Schema{
+		OneOf: []*parser.Property{
+			{
+				RefName:    "CreateAIGatewayCustomPolicyInstalledRequest",
+				Properties: variantProps(),
+			},
+			{
+				RefName:    "CreateAIGatewayCustomPolicyStreamingRequest",
+				Properties: variantProps(&parser.Property{Name: "handler", Type: "string"}),
+			},
+		},
+		DiscriminatorMapping: map[string]string{
+			"installed": "CreateAIGatewayCustomPolicyInstalledRequest",
+			"streaming": "CreateAIGatewayCustomPolicyStreamingRequest",
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayCustomPolicyRequest"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayCustomPolicyRequest"},
+		},
+	}
+
+	content, err := g.generateSDKOps("AIGatewayCustomPolicy", schema, opsConfig)
+	require.NoError(t, err)
+
+	_, err = format.Source([]byte(content))
+	require.NoError(t, err)
+
+	assert.Contains(t, content, `var member sdkkonnectcomp.CreateAIGatewayCustomPolicyInstalledRequest`)
+	assert.Contains(t, content, `target := sdkkonnectcomp.CreateCreateAIGatewayCustomPolicyRequestInstalled(member)`)
+	assert.Contains(t, content, `var member sdkkonnectcomp.UpdateAIGatewayCustomPolicyInstalledRequest`)
+	assert.Contains(t, content, `var member sdkkonnectcomp.UpdateAIGatewayCustomPolicyStreamingRequest`)
+	assert.Contains(t, content, `target := sdkkonnectcomp.CreateUpdateAIGatewayCustomPolicyRequestInstalled(member)`)
+	assert.Contains(t, content, `target := sdkkonnectcomp.CreateUpdateAIGatewayCustomPolicyRequestStreaming(member)`)
 }

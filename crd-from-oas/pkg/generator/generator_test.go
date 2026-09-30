@@ -498,7 +498,7 @@ func TestGenerateCommonTypes(t *testing.T) {
 	t.Run("with secret refs adds hardcoded SensitiveDataSource value max length marker", func(t *testing.T) {
 		g := NewGenerator(Config{
 			APIVersion: "v1alpha1",
-			SecretReferences: map[string][]config.SecretReferenceConfig{
+			DataSources: map[string][]config.DataSourceConfig{
 				"Entity": {{Path: "spec.apiSpec.certificate", Type: "Secret"}},
 			},
 		})
@@ -2653,7 +2653,7 @@ func TestBuildSchemaCursors_SecretReferenceDoesNotRecordOriginalLeafTypeCursor(t
 	gen := NewGenerator(Config{
 		APIVersion:  "v1alpha1",
 		FieldConfig: fieldCfg,
-		SecretReferences: map[string][]config.SecretReferenceConfig{
+		DataSources: map[string][]config.DataSourceConfig{
 			"BackendCluster": {{Path: "spec.apiSpec.certificate", Type: "Secret"}},
 		},
 	})
@@ -3274,6 +3274,97 @@ func TestGenerateSDKOps_NormalizesBooleanFields(t *testing.T) {
 	assert.Contains(t, content, "if err := normalizePortalSDKOpsBoolFields(pm); err != nil {")
 }
 
+func TestGenerateSDKOps_FlattenSkipsFreeformFields(t *testing.T) {
+	// Free-form (data-keyed) subtrees hold user data, so flattenSDKUnions must
+	// not rewrite them: its union heuristic fires on shapes like
+	// {"provider": "headroom", "headroom": {...}} inside free-form config and
+	// hoists the nested block into config, which Konnect then rejects with
+	// "unknown field" errors.
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	schema := &parser.Schema{
+		Properties: []*parser.Property{
+			{
+				Name: "name",
+				Type: "string",
+			},
+			{
+				Name: "config",
+				Type: "object",
+				AdditionalProperties: &parser.Property{
+					Type: "object",
+				},
+			},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.CreatePortal",
+			},
+		},
+	}
+
+	content, err := g.generateSDKOps("Portal", schema, opsConfig)
+	require.NoError(t, err)
+	_, err = format.Source([]byte(content))
+	require.NoError(t, err)
+
+	assert.Contains(t, content, "var PortalSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField")
+	assert.Contains(t, content, "payload = flattenSDKUnionsExcept(payload, PortalSDKOpsFreeformKeyFields)")
+	assert.NotContains(t, content, "payload = flattenSDKUnions(payload)")
+}
+
+func TestGenerateSDKOps_SensitiveFreeformLeaf(t *testing.T) {
+	// A free-form leaf that is itself a dataSource target (like
+	// AIGatewayPolicy spec.apiSpec.config) must be emitted with Sensitive: true
+	// so flattenSensitiveDataExcept unwraps its own DataSource wrapper while
+	// leaving the user data below it verbatim. Non-sensitive free-form leaves
+	// (labels) must stay unmarked, so user data that merely looks like a
+	// DataSource wrapper is not collapsed.
+	g := NewGenerator(Config{
+		APIVersion: "v1alpha1",
+		DataSources: map[string][]config.DataSourceConfig{
+			"Portal": {{Path: "spec.apiSpec.config", Type: "Secret"}},
+		},
+	})
+	schema := &parser.Schema{
+		Properties: []*parser.Property{
+			{
+				Name: "name",
+				Type: "string",
+			},
+			{
+				Name: "config",
+				Type: "object",
+			},
+			{
+				Name: "labels",
+				Type: "object",
+				AdditionalProperties: &parser.Property{
+					Type: "object",
+				},
+			},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.CreatePortal",
+			},
+		},
+	}
+
+	content, err := g.generateSDKOps("Portal", schema, opsConfig)
+	require.NoError(t, err)
+	_, err = format.Source([]byte(content))
+	require.NoError(t, err)
+
+	assert.Contains(t, content, "payload = flattenSensitiveDataExcept(payload, PortalSDKOpsFreeformKeyFields)")
+	assert.NotContains(t, content, "payload = flattenSensitiveData(payload)")
+	// Only the sensitive free-form leaf (config) is marked.
+	assert.Equal(t, 1, strings.Count(content, "Sensitive: true,"))
+}
+
 func TestGenerateSDKOps_OmitsDoubleBlankLineBeforeMarshalPayload(t *testing.T) {
 	g := NewGenerator(Config{APIVersion: "v1alpha1"})
 	schema := &parser.Schema{
@@ -3781,7 +3872,7 @@ func TestGenerateSDKOpsTest_AssertsNormalizedPayload(t *testing.T) {
 func TestGenerateSDKOpsTest_UsesRawConfiguredSensitiveFields(t *testing.T) {
 	g := NewGenerator(Config{
 		APIVersion: "v1alpha1",
-		SecretReferences: map[string][]config.SecretReferenceConfig{
+		DataSources: map[string][]config.DataSourceConfig{
 			"EventGatewayBackendCluster": {
 				{
 					Path: "spec.apiSpec.key",
@@ -5747,7 +5838,7 @@ func TestGenerateOpsUpdate_NonRootEntityWithParentTypeOverride(t *testing.T) {
 func TestGenerateSDKOps_ClientRequestMethodsResolveSecretRef(t *testing.T) {
 	g := NewGenerator(Config{
 		APIVersion: "v1alpha1",
-		SecretReferences: map[string][]config.SecretReferenceConfig{
+		DataSources: map[string][]config.DataSourceConfig{
 			"KonnectEventDataPlaneCertificate": {
 				{Path: "spec.apiSpec.certificate", Type: "Secret"},
 				{Path: "spec.apiSpec.key", Type: "Secret"},
@@ -7153,4 +7244,37 @@ func TestGenerateSDKOps_AllOfCompositeRefCollectsBoolAndFreeformFields(t *testin
 	// ...and route itself must NOT be listed as free-form (its keys are field
 	// names that need camelCase -> snake_case renaming).
 	assert.NotContains(t, content, "\"listener\",\n\t\t\t\"config\",\n\t\t\t\"route\",\n\t\t},")
+}
+
+func TestParentRefAllowedKindsXValidation(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		allowedKinds []string
+		want         string
+	}{
+		{
+			name:         "single kind",
+			allowedKinds: []string{"KonnectAIGateway"},
+			want:         `+kubebuilder:validation:XValidation:rule="!has(self.spec.aiGatewayRef) || !has(self.spec.aiGatewayRef.kind) || self.spec.aiGatewayRef.kind in ['KonnectAIGateway']", message="spec.aiGatewayRef.kind must be one of: KonnectAIGateway"`,
+		},
+		{
+			name:         "multiple kinds",
+			allowedKinds: []string{"KonnectAIGateway", "OnPremAIGateway"},
+			want:         `+kubebuilder:validation:XValidation:rule="!has(self.spec.aiGatewayRef) || !has(self.spec.aiGatewayRef.kind) || self.spec.aiGatewayRef.kind in ['KonnectAIGateway', 'OnPremAIGateway']", message="spec.aiGatewayRef.kind must be one of: KonnectAIGateway, OnPremAIGateway"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := parentRefAllowedKindsXValidation(&config.ParentRefConfig{
+				FieldName:    "aiGatewayRef",
+				TypeName:     "AIGatewayRef",
+				AllowedKinds: tt.allowedKinds,
+			})
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }

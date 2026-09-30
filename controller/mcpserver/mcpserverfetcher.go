@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"sync/atomic"
 	"time"
 
@@ -27,6 +26,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
+	"github.com/kong/kong-operator/v2/internal/utils/konnectpagination"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 )
 
@@ -311,7 +311,7 @@ func (f *MCPServersFetcher) fetchAll(ctx context.Context) ([]sdkkonnectcomp.MCPS
 			break
 		}
 
-		cursor, err := pageAfterCursorFromNextPageURL(*next)
+		cursor, err := konnectpagination.PageAfterCursorFromNextPageURL(*next)
 		if err != nil {
 			return nil, err
 		}
@@ -326,27 +326,6 @@ func (f *MCPServersFetcher) fetchAll(ctx context.Context) ([]sdkkonnectcomp.MCPS
 	}
 
 	return servers, nil
-}
-
-// pageAfterCursorFromNextPageURL extracts the page[after] item cursor from a
-// next-page URI as returned in Konnect list responses' meta.page.next. The SDK
-// models Next as a full URI while the list requests' PageAfter parameter
-// expects only the item cursor, so the URI must be parsed.
-//
-// next must be non-empty: callers treat an absent or empty meta.page.next as
-// the last page. A next-page URI carrying no cursor is reported as an error
-// rather than as the last page, so that an unfollowable page never passes for
-// a complete listing.
-func pageAfterCursorFromNextPageURL(next string) (string, error) {
-	u, err := url.Parse(next)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse next page URI %q: %w", next, err)
-	}
-	cursor := u.Query().Get("page[after]")
-	if cursor == "" {
-		return "", fmt.Errorf("next page URI %q carries no page[after] cursor", next)
-	}
-	return cursor, nil
 }
 
 // syncMCPServer syncs a single Konnect MCP server to Kubernetes: if a

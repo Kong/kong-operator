@@ -72,6 +72,62 @@ spec:
                       anonymous:
                         description: Anonymous configuration.
                         type: object
+                      saslAwsIam:
+                        description: SaslAwsIam configuration.
+                        properties:
+                          saslAwsIam:
+                            description: |-
+                              BackendClusterAuthenticationSaslAwsIamSaslAwsIam represents a union type for sasl_aws_iam.
+                              Only one of the fields should be set based on the Type.
+                            properties:
+                              assumeRole:
+                                description: AssumeRole configuration.
+                                properties:
+                                  assumeRole:
+                                    description: |-
+                                      Configuration for assuming an IAM role.
+                                      Required when `type` is `assume_role`.
+                                    properties:
+                                      arn:
+                                        description: |-
+                                          The
+                                          [ARN](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html#identifiers-arns)
+                                          of the IAM role to assume, formatted as
+                                          `arn:aws:iam::<account-id>:role/<role-name>`.
+                                        maxLength: 2048
+                                        minLength: 10
+                                        pattern: ^arn:aws(-[a-z-]+)?:iam:.+
+                                        type: string
+                                      sessionName:
+                                        description: |-
+                                          The session name to attach to the assumed role session.
+                                          The value becomes part of the assumed
+                                          role user ARN, queryable as
+                                          `arn:aws:sts::<account-id>:assumed-role/<role-name>/<session-name>`.
+                                        maxLength: 253
+                                        type: string
+                                    required:
+                                    - arn
+                                    type: object
+                                required:
+                                - assumeRole
+                                type: object
+                              defaultProviderChain:
+                                description: DefaultProviderChain configuration.
+                                type: object
+                              type:
+                                description: Type designates the type of configuration.
+                                enum:
+                                - assumeRole
+                                - defaultProviderChain
+                                minLength: 1
+                                type: string
+                            required:
+                            - type
+                            type: object
+                        required:
+                        - saslAwsIam
+                        type: object
                       saslPlain:
                         description: SaslPlain configuration.
                         properties:
@@ -139,6 +195,7 @@ spec:
                         description: Type designates the type of configuration.
                         enum:
                         - anonymous
+                        - saslAwsIam
                         - saslPlain
                         - saslScram
                         minLength: 1

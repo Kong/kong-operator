@@ -2,6 +2,10 @@ package v1alpha1
 
 // SensitiveDataSecretRef identifies a specific key inside a Kubernetes Secret
 // that holds a sensitive value for a CRD field.
+//
+// Write access to the referenced Secret equals write access to this field:
+// its value ships to Konnect on the next sync. Grant Secret write
+// accordingly.
 type SensitiveDataSecretRef struct {
 	// Name is the name of the referred resource.
 	//

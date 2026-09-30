@@ -112,6 +112,8 @@ jobs:
       minor: ${{ steps.semver_parser.outputs.minor }}
       patch: ${{ steps.semver_parser.outputs.patch }}
       prerelease: ${{ steps.semver_parser.outputs.prerelease }}
+      # NOTE: true for N.M.P with P != 0 and for rapid patches (e.g. 2.4.0-rapid.1.1).
+      is-patch: ${{ steps.release-kind.outputs.is-patch }}
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
@@ -151,6 +153,18 @@ jobs:
         with:
           input_string: ${{ inputs.tag }}
           version_extractor_regex: 'v(.*)$'
+
+      - name: Determine whether this is a patch release
+        id: release-kind
+        env:
+          PATCH: ${{ steps.semver_parser.outputs.patch }}
+          PRERELEASE: ${{ steps.semver_parser.outputs.prerelease }}
+        run: |
+          if [[ "$PATCH" != "0" || "$PRERELEASE" =~ ^rapid\.[0-9]+\.[0-9]+$ ]]; then
+            echo "is-patch=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is-patch=false" >> "$GITHUB_OUTPUT"
+          fi
 
   build-push-images:
     permissions:
@@ -293,7 +307,7 @@ jobs:
             kong-operator
             developer.konghq.com
       - name: Check if we're not trying to trigger a major/minor release from non main
-        if: ${{ inputs.base != 'main' && needs.semver.outputs.patch == '0' }}
+        if: ${{ inputs.base != 'main' && needs.semver.outputs.is-patch != 'true' }}
         env:
           FULLVERSION: ${{ needs.semver.outputs.fullversion }}
           BASE: ${{ inputs.base }}
@@ -303,7 +317,7 @@ jobs:
           exit 1
 
       - name: Check if we're not trying to trigger a patch release from main
-        if: ${{ inputs.base == 'main' && needs.semver.outputs.patch != '0' }}
+        if: ${{ inputs.base == 'main' && needs.semver.outputs.is-patch == 'true' }}
         env:
           FULLVERSION: ${{ needs.semver.outputs.fullversion }}
           BASE: ${{ inputs.base }}

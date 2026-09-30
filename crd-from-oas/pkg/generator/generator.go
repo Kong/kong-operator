@@ -36,10 +36,11 @@ type Config struct {
 	// SchemaFieldOmissions maps generated schema type names to JSON field names
 	// that should be omitted when emitting schema_types.go.
 	SchemaFieldOmissions map[string]map[string]bool
-	// SecretReferences maps entity names to their per-path secret reference configurations.
-	// When set, the designated OAS-derived string fields are replaced with SensitiveDataSource
-	// structs and per-entity resolvers are generated in the sdkops file.
-	SecretReferences map[string][]config.SecretReferenceConfig
+	// DataSources maps entity names to their per-path data source configurations.
+	// When set, the designated OAS-derived fields are replaced with
+	// SensitiveDataSource/ConfigMapDataSource (or dedicated) structs and
+	// per-entity resolvers are generated in the sdkops file.
+	DataSources map[string][]config.DataSourceConfig
 	// ReconcilerConfig maps entity names to reconciler generation configurations.
 	// When set, reconciler wiring files are generated for the entity.
 	ReconcilerConfig map[string]*config.ReconcilerConfig
@@ -99,12 +100,12 @@ type Generator struct {
 	// anyOfSchemaNames holds schema names whose Go type is an anyOf union struct.
 	// Fields referencing these schemas must be pointers so omitempty omits zero values.
 	anyOfSchemaNames map[string]bool
-	// sensitiveSchemaLeaves maps schema Go type name → JSON field name → secret reference config
+	// sensitiveSchemaLeaves maps schema Go type name → JSON field name → data source config
 	// for leaf fields inside $ref'd schema types that become SensitiveDataSource.
-	sensitiveSchemaLeaves map[string]map[string]config.SecretReferenceConfig
-	// entityDirectSensitiveLeaves maps entity name → JSON field name → secret reference config
+	sensitiveSchemaLeaves map[string]map[string]config.DataSourceConfig
+	// entityDirectSensitiveLeaves maps entity name → JSON field name → data source config
 	// for leaf fields that are direct children of the entity's apiSpec (depth 1 paths).
-	entityDirectSensitiveLeaves map[string]map[string]config.SecretReferenceConfig
+	entityDirectSensitiveLeaves map[string]map[string]config.DataSourceConfig
 	// schemaLeafValueTypes mirrors sensitiveSchemaLeaves, additionally recording
 	// each leaf's resolved value type so field emission can choose between the
 	// shared SensitiveDataSource type and a dedicated per-field type.
@@ -117,10 +118,10 @@ type Generator struct {
 	// parent struct that contains the sensitive leaf.
 	sensitiveObjectFieldParents map[string]map[string]string
 	// sensitiveLeafSelectors maps entity name → config path → pre-computed
-	// SecretReferenceForTemplate data (including slice/union-aware Go selectors).
+	// DataSourceForTemplate data (including slice/union-aware Go selectors).
 	// A path maps to more than one entry when it fans out across a "*" wildcard
 	// union (one entry per matching variant).
-	sensitiveLeafSelectors map[string]map[string][]SecretReferenceForTemplate
+	sensitiveLeafSelectors map[string]map[string][]DataSourceForTemplate
 	// ambiguousInlineTypeNames holds inline object type base names that would
 	// collide with another generated package type and therefore need a parent
 	// prefix when emitted.
@@ -133,6 +134,10 @@ type Generator struct {
 
 const sensitiveDataSourceTypeName = "SensitiveDataSource"
 
+// configMapDataSourceTypeName is the shared type emitted for string leaves
+// configured with a "ConfigMap" reference type.
+const configMapDataSourceTypeName = "ConfigMapDataSource"
+
 // sensitiveLeafType records the resolved value type for a single secret
 // reference leaf. ValueGoType "string" means the leaf keeps using the shared
 // SensitiveDataSource type; any other value means DedicatedTypeName is the
@@ -140,6 +145,9 @@ const sensitiveDataSourceTypeName = "SensitiveDataSource"
 type sensitiveLeafType struct {
 	ValueGoType       string
 	DedicatedTypeName string
+	// ConfigMap is true when the leaf is sourced from a ConfigMap and uses the
+	// shared ConfigMapDataSource type.
+	ConfigMap bool
 }
 
 // NewGenerator creates a new generator.
@@ -212,14 +220,47 @@ const (
 	defaultKonnectStatusType    = "KonnectEntityStatus"
 )
 
-// hasSecretRefs returns true if the entity has at least one configured SecretReference.
+// hasSecretRefs returns true if the entity has at least one configured
+// data source of type Secret.
 func (g *Generator) hasSecretRefs(entityName string) bool {
-	return len(g.config.SecretReferences[entityName]) > 0
+	return hasReferenceOfType(g.config.DataSources[entityName], false)
 }
 
-// hasAnySecretRefs returns true if any entity in the config has SecretReferences.
+// hasConfigMapRefs returns true if the entity has at least one configured
+// data source of type ConfigMap.
+func (g *Generator) hasConfigMapRefs(entityName string) bool {
+	return hasReferenceOfType(g.config.DataSources[entityName], true)
+}
+
+// hasAnySecretRefs returns true if any entity in the config has
+// data sources of type Secret.
 func (g *Generator) hasAnySecretRefs() bool {
-	return len(g.config.SecretReferences) > 0
+	for entityName := range g.config.DataSources {
+		if g.hasSecretRefs(entityName) {
+			return true
+		}
+	}
+	return false
+}
+
+// hasAnyConfigMapRefs returns true if any entity in the config has
+// data sources of type ConfigMap.
+func (g *Generator) hasAnyConfigMapRefs() bool {
+	for entityName := range g.config.DataSources {
+		if g.hasConfigMapRefs(entityName) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasReferenceOfType(refs []config.DataSourceConfig, configMap bool) bool {
+	for _, ref := range refs {
+		if ref.IsConfigMap() == configMap {
+			return true
+		}
+	}
+	return false
 }
 
 // entitySupportsMirror reports whether the entity opted into Origin+Mirror via
@@ -234,14 +275,14 @@ func (g *Generator) entitySupportsMirror(entityName string) bool {
 // correct SensitiveDataSource type for the right fields.
 func (g *Generator) buildSensitiveLeaves(parsed *parser.ParsedSpec) error {
 	g.ensureInlineTypeNames(parsed)
-	g.sensitiveSchemaLeaves = make(map[string]map[string]config.SecretReferenceConfig)
-	g.entityDirectSensitiveLeaves = make(map[string]map[string]config.SecretReferenceConfig)
+	g.sensitiveSchemaLeaves = make(map[string]map[string]config.DataSourceConfig)
+	g.entityDirectSensitiveLeaves = make(map[string]map[string]config.DataSourceConfig)
 	g.sensitiveObjectFieldParents = make(map[string]map[string]string)
-	g.sensitiveLeafSelectors = make(map[string]map[string][]SecretReferenceForTemplate)
+	g.sensitiveLeafSelectors = make(map[string]map[string][]DataSourceForTemplate)
 	g.schemaLeafValueTypes = make(map[string]map[string]sensitiveLeafType)
 	g.entityDirectLeafValueTypes = make(map[string]map[string]sensitiveLeafType)
 
-	for entityName, refs := range g.config.SecretReferences {
+	for entityName, refs := range g.config.DataSources {
 		for _, ref := range refs {
 			remainder := strings.TrimPrefix(ref.Path, "spec.apiSpec.")
 			segments := strings.Split(remainder, ".")
@@ -249,7 +290,7 @@ func (g *Generator) buildSensitiveLeaves(parsed *parser.ParsedSpec) error {
 			if len(segments) == 1 {
 				// Direct apiSpec field (e.g. "certificate")
 				if g.entityDirectSensitiveLeaves[entityName] == nil {
-					g.entityDirectSensitiveLeaves[entityName] = make(map[string]config.SecretReferenceConfig)
+					g.entityDirectSensitiveLeaves[entityName] = make(map[string]config.DataSourceConfig)
 				}
 				g.entityDirectSensitiveLeaves[entityName][segments[0]] = ref
 
@@ -274,7 +315,10 @@ func (g *Generator) buildSensitiveLeaves(parsed *parser.ParsedSpec) error {
 				if targetProp != nil {
 					leafGoField = goFieldName(targetProp.Name)
 				}
-				leafType := g.recordSensitiveLeafSelector(entityName, ref.Path, selectorAccumulator{}, leafGoField, valueGoType)
+				if err := validateConfigMapLeaf(ref, valueGoType, false); err != nil {
+					return err
+				}
+				leafType := g.recordSensitiveLeafSelector(entityName, ref, selectorAccumulator{}, leafGoField, valueGoType)
 				if g.entityDirectLeafValueTypes[entityName] == nil {
 					g.entityDirectLeafValueTypes[entityName] = make(map[string]sensitiveLeafType)
 				}
@@ -285,7 +329,7 @@ func (g *Generator) buildSensitiveLeaves(parsed *parser.ParsedSpec) error {
 			// Nested field — walk entity schema to find the containing schema type
 			entitySchema := findEntitySchema(parsed, entityName)
 			if entitySchema == nil {
-				return fmt.Errorf("entity %q: schema not found for secretReferences path %q", entityName, ref.Path)
+				return fmt.Errorf("entity %q: schema not found for dataSources path %q", entityName, ref.Path)
 			}
 			if err := g.walkSensitiveLeafPath(entityName, entityName+"APISpec", "Spec.APISpec", entitySchema, segments, ref, parsed.Schemas, selectorAccumulator{}); err != nil {
 				return fmt.Errorf("entity %q path %q: %w", entityName, ref.Path, err)
@@ -305,7 +349,7 @@ func (g *Generator) walkSensitiveLeafPath(
 	objectFieldPath string,
 	schema *parser.Schema,
 	segments []string,
-	ref config.SecretReferenceConfig,
+	ref config.DataSourceConfig,
 	schemas map[string]*parser.Schema,
 	acc selectorAccumulator,
 ) error {
@@ -383,7 +427,7 @@ func (g *Generator) walkSensitiveLeafPath(
 			return fmt.Errorf("field %q in schema %q is not an array type", lookupJSON, schemaGoTypeName)
 		}
 		if len(segments) == 1 {
-			return fmt.Errorf("array field %q cannot be a secret reference leaf", lookupJSON)
+			return fmt.Errorf("array field %q cannot be a data source leaf", lookupJSON)
 		}
 		nextObjectFieldPath := objectFieldPath + "." + goFieldName(targetProp.Name)
 		newAcc := acc.withSlice(goFieldName(targetProp.Name))
@@ -407,7 +451,7 @@ func (g *Generator) walkSensitiveLeafPath(
 	// the variant by discriminator value.
 	if len(targetProp.OneOf) > 0 && len(targetProp.DiscriminatorMapping) > 0 {
 		if len(segments) < 2 {
-			return fmt.Errorf("field %q in schema %q is a union and cannot be a secret reference leaf directly", lookupJSON, schemaGoTypeName)
+			return fmt.Errorf("field %q in schema %q is a union and cannot be a data source leaf directly", lookupJSON, schemaGoTypeName)
 		}
 		variantSegment := segments[1]
 		variantRef, ok := targetProp.DiscriminatorMapping[variantSegment]
@@ -423,7 +467,7 @@ func (g *Generator) walkSensitiveLeafPath(
 	if len(segments) == 1 {
 		// Leaf — record against the containing schema.
 		if g.sensitiveSchemaLeaves[schemaGoTypeName] == nil {
-			g.sensitiveSchemaLeaves[schemaGoTypeName] = make(map[string]config.SecretReferenceConfig)
+			g.sensitiveSchemaLeaves[schemaGoTypeName] = make(map[string]config.DataSourceConfig)
 		}
 		g.sensitiveSchemaLeaves[schemaGoTypeName][lookupJSON] = ref
 		if objectFieldPath != "Spec.APISpec" {
@@ -439,6 +483,9 @@ func (g *Generator) walkSensitiveLeafPath(
 		// Record the structured selector for template generation.
 		leafGoField := goFieldName(targetProp.Name)
 		effectiveAcc, effectiveLeafGoField, effectiveValueGoType := acc, leafGoField, valueGoType
+		if err := validateConfigMapLeaf(ref, valueGoType, isScalarArraySensitiveLeaf(targetProp)); err != nil {
+			return err
+		}
 		if isScalarArraySensitiveLeaf(targetProp) {
 			// The leaf itself is an array of secrets (e.g. "clientSecret: []string"):
 			// each element IS the SensitiveDataSource, so there's no per-element
@@ -447,7 +494,7 @@ func (g *Generator) walkSensitiveLeafPath(
 			// dedicated non-string per-field types don't extend to this shape.
 			effectiveAcc, effectiveLeafGoField, effectiveValueGoType = acc.withSlice(leafGoField), "", "string"
 		}
-		leafType := g.recordSensitiveLeafSelector(entityName, ref.Path, effectiveAcc, effectiveLeafGoField, effectiveValueGoType)
+		leafType := g.recordSensitiveLeafSelector(entityName, ref, effectiveAcc, effectiveLeafGoField, effectiveValueGoType)
 		if g.schemaLeafValueTypes[schemaGoTypeName] == nil {
 			g.schemaLeafValueTypes[schemaGoTypeName] = make(map[string]sensitiveLeafType)
 		}
@@ -489,7 +536,7 @@ func (g *Generator) walkOneOfVariant(
 	variants []*parser.Property,
 	variantRef string,
 	segments []string,
-	ref config.SecretReferenceConfig,
+	ref config.DataSourceConfig,
 	schemas map[string]*parser.Schema,
 	acc selectorAccumulator,
 ) error {
@@ -531,16 +578,33 @@ func (g *Generator) walkOneOfVariant(
 // schemaLeafValueTypes/entityDirectLeafValueTypes, which is what
 // writeDedicatedSensitiveTypesForSchema/Entity later read to emit the
 // dedicated struct definitions.
-func (g *Generator) recordSensitiveLeafSelector(entityName, path string, acc selectorAccumulator, leafGoField, valueGoType string) sensitiveLeafType {
+func (g *Generator) recordSensitiveLeafSelector(entityName string, ref config.DataSourceConfig, acc selectorAccumulator, leafGoField, valueGoType string) sensitiveLeafType {
+	path := ref.Path
 	if g.sensitiveLeafSelectors == nil {
-		g.sensitiveLeafSelectors = make(map[string]map[string][]SecretReferenceForTemplate)
+		g.sensitiveLeafSelectors = make(map[string]map[string][]DataSourceForTemplate)
 	}
 	if g.sensitiveLeafSelectors[entityName] == nil {
-		g.sensitiveLeafSelectors[entityName] = make(map[string][]SecretReferenceForTemplate)
+		g.sensitiveLeafSelectors[entityName] = make(map[string][]DataSourceForTemplate)
 	}
 	tmpl := acc.buildTemplate(entityName, path, leafGoField, valueGoType)
+	tmpl.IsConfigMap = ref.IsConfigMap()
 	g.sensitiveLeafSelectors[entityName][path] = append(g.sensitiveLeafSelectors[entityName][path], tmpl)
-	return sensitiveLeafType{ValueGoType: tmpl.ValueGoType, DedicatedTypeName: tmpl.DedicatedTypeName}
+	return sensitiveLeafType{ValueGoType: tmpl.ValueGoType, DedicatedTypeName: tmpl.DedicatedTypeName, ConfigMap: tmpl.IsConfigMap}
+}
+
+// validateConfigMapLeaf rejects "ConfigMap" references on leaves that the
+// shared ConfigMapDataSource (a single string value) cannot represent.
+func validateConfigMapLeaf(ref config.DataSourceConfig, valueGoType string, scalarArray bool) error {
+	if !ref.IsConfigMap() {
+		return nil
+	}
+	if scalarArray {
+		return fmt.Errorf("dataSources path %q: array leaves are not supported for type %q", ref.Path, config.DataSourceTypeConfigMap)
+	}
+	if valueGoType != "string" {
+		return fmt.Errorf("dataSources path %q: only string leaves are supported for type %q, got %q", ref.Path, config.DataSourceTypeConfigMap, valueGoType)
+	}
+	return nil
 }
 
 // sensitiveLeafValueType resolves the Go type that should back a secret
@@ -550,18 +614,18 @@ func (g *Generator) recordSensitiveLeafSelector(entityName, path string, acc sel
 // inline-vs-secretRef wrapper.
 func (g *Generator) sensitiveLeafValueType(prop *parser.Property, path string, schemas map[string]*parser.Schema) (string, error) {
 	if len(prop.OneOf) > 0 {
-		return "", fmt.Errorf("secretReferences path %q: field is a union and cannot be a secret reference leaf", path)
+		return "", fmt.Errorf("dataSources path %q: field is a union and cannot be a data source leaf", path)
 	}
 	if len(prop.Properties) > 0 {
-		return "", fmt.Errorf("secretReferences path %q: field is an object with nested properties and cannot be a secret reference leaf", path)
+		return "", fmt.Errorf("dataSources path %q: field is an object with nested properties and cannot be a data source leaf", path)
 	}
 	if prop.RefName != "" && !prop.IsReference {
 		refSchema := schemas[prop.RefName]
 		if refSchema == nil {
-			return "", fmt.Errorf("secretReferences path %q: schema %q not found", path, prop.RefName)
+			return "", fmt.Errorf("dataSources path %q: schema %q not found", path, prop.RefName)
 		}
 		if len(refSchema.Properties) > 0 || len(refSchema.OneOf) > 0 {
-			return "", fmt.Errorf("secretReferences path %q: field references schema %q which is a struct/union and cannot be a secret reference leaf", path, prop.RefName)
+			return "", fmt.Errorf("dataSources path %q: field references schema %q which is a struct/union and cannot be a data source leaf", path, prop.RefName)
 		}
 		// The $ref points at a plain scalar-aliased schema (e.g. a named string
 		// type). Resolve through to its underlying Go type instead of using
@@ -664,9 +728,13 @@ func (g *Generator) entityAPISpecFieldSensitiveType(entityName, jsonFieldName st
 }
 
 // sensitiveGoTypeName returns the Go type name to emit for a sensitive leaf:
-// the shared SensitiveDataSource for string-valued leaves, or the dedicated
-// per-field type name otherwise.
+// the shared ConfigMapDataSource for ConfigMap-sourced leaves, the shared
+// SensitiveDataSource for string-valued leaves, or the dedicated per-field
+// type name otherwise.
 func (lt sensitiveLeafType) sensitiveGoTypeName() string {
+	if lt.ConfigMap {
+		return configMapDataSourceTypeName
+	}
 	if lt.DedicatedTypeName != "" {
 		return lt.DedicatedTypeName
 	}
@@ -817,7 +885,7 @@ func (g *Generator) inlineTypeName(entityName, schemaGoTypeName, propName string
 	return inlineTypeParentName(entityName, schemaGoTypeName) + baseName
 }
 
-// pathToGoSelector converts a secretReference path (e.g. "spec.apiSpec.tls.clientIdentity.certificate")
+// pathToGoSelector converts a dataSource path (e.g. "spec.apiSpec.tls.clientIdentity.certificate")
 // into a Go field selector string (e.g. "TLS.ClientIdentity.Certificate") by stripping the
 // "spec.apiSpec." prefix and applying goFieldName to each remaining segment.
 func pathToGoSelector(path string) string {
@@ -829,9 +897,9 @@ func pathToGoSelector(path string) string {
 	return strings.Join(segments, ".")
 }
 
-// SecretReferenceForTemplate holds per-path secret reference data rendered inside
+// DataSourceForTemplate holds per-path data source data rendered inside
 // the sdkOpsTemplate and sdkOpsRootUnionTemplate.
-type SecretReferenceForTemplate struct {
+type DataSourceForTemplate struct {
 	// GoFieldSelector is the Go selector string relative to obj.Spec.APISpec,
 	// e.g. "TLS.ClientIdentity.Certificate". Empty when IsSlice is true.
 	GoFieldSelector string
@@ -860,6 +928,9 @@ type SecretReferenceForTemplate struct {
 	// this leaf instead of the shared SensitiveDataSource, e.g.
 	// "AIGatewayPolicyConfigDataSource". Empty when ValueGoType is "string".
 	DedicatedTypeName string
+	// IsConfigMap is true when the leaf is a ConfigMapDataSource resolved from
+	// a ConfigMap rather than a SensitiveDataSource resolved from a Secret.
+	IsConfigMap bool
 }
 
 // selectorPart records one step in a Go field selector during sensitive-leaf path walking.
@@ -906,11 +977,11 @@ func dedicatedSensitiveTypeName(entityName, selector string) string {
 	return entityName + strings.ReplaceAll(selector, ".", "") + "DataSource"
 }
 
-// buildTemplate constructs a SecretReferenceForTemplate from the accumulated
+// buildTemplate constructs a DataSourceForTemplate from the accumulated
 // path parts. valueGoType is the leaf's resolved Go type ("string" reuses the
 // shared SensitiveDataSource type; anything else gets a dedicated type name
 // derived from entityName and the leaf's Go selector).
-func (acc selectorAccumulator) buildTemplate(entityName, path, leafGoField, valueGoType string) SecretReferenceForTemplate {
+func (acc selectorAccumulator) buildTemplate(entityName, path, leafGoField, valueGoType string) DataSourceForTemplate {
 	sliceIdx := -1
 	for i, p := range acc.parts {
 		if p.isSlice {
@@ -936,7 +1007,7 @@ func (acc selectorAccumulator) buildTemplate(entityName, path, leafGoField, valu
 		if valueGoType != "string" {
 			dedicatedTypeName = dedicatedSensitiveTypeName(entityName, selector)
 		}
-		return SecretReferenceForTemplate{
+		return DataSourceForTemplate{
 			GoFieldSelector:   selector,
 			Path:              path,
 			PointerGuards:     pointerGuards,
@@ -965,7 +1036,7 @@ func (acc selectorAccumulator) buildTemplate(entityName, path, leafGoField, valu
 		dedicatedTypeName = dedicatedSensitiveTypeName(entityName, sliceParentSelector+"."+leafGoField)
 	}
 
-	return SecretReferenceForTemplate{
+	return DataSourceForTemplate{
 		Path:                path,
 		IsSlice:             true,
 		PointerGuards:       pointerGuards,
@@ -976,13 +1047,13 @@ func (acc selectorAccumulator) buildTemplate(entityName, path, leafGoField, valu
 	}
 }
 
-// templateSecretReferences returns the list of SecretReferenceForTemplate for the
+// templateDataSources returns the list of DataSourceForTemplate for the
 // given entity, ready for use inside Go text/templates. A single configured
 // path can expand to more than one entry when it fans out across a "*"
 // wildcard union (one entry per matching variant).
-func (g *Generator) templateSecretReferences(entityName string) []SecretReferenceForTemplate {
-	refs := g.config.SecretReferences[entityName]
-	var result []SecretReferenceForTemplate
+func (g *Generator) templateDataSources(entityName string) []DataSourceForTemplate {
+	refs := g.config.DataSources[entityName]
+	var result []DataSourceForTemplate
 	for _, ref := range refs {
 		if selectors, ok := g.sensitiveLeafSelectors[entityName]; ok {
 			if tmpls, ok := selectors[ref.Path]; ok && len(tmpls) > 0 {
@@ -994,22 +1065,33 @@ func (g *Generator) templateSecretReferences(entityName string) []SecretReferenc
 		// buildSensitiveLeaves above. Default to "string" (the pre-existing
 		// behavior) so an unexpected miss here doesn't wrongly route through the
 		// dedicated-type/manual-resolver path.
-		result = append(result, SecretReferenceForTemplate{
+		result = append(result, DataSourceForTemplate{
 			GoFieldSelector: pathToGoSelector(ref.Path),
 			Path:            ref.Path,
 			ValueGoType:     "string",
+			IsConfigMap:     ref.IsConfigMap(),
 		})
 	}
 	return result
 }
 
-// secretReferencesNeedCoreV1Import reports whether any of the given secret
-// references resolves to a string value — only those render the inline
-// Secret-fetch-and-convert code path in sdkOpsAPISpec that references
-// corev1.Secret. Non-string leaves resolve via a hand-written
-// valueFromSecretRef method instead, which doesn't need this import in the
-// generated file.
-func secretReferencesNeedCoreV1Import(refs []SecretReferenceForTemplate) bool {
+// templateReferencesHaveSource reports whether refs contain at least one
+// ConfigMap-sourced (configMap true) or Secret-sourced (configMap false) leaf.
+func templateReferencesHaveSource(refs []DataSourceForTemplate, configMap bool) bool {
+	for _, ref := range refs {
+		if ref.IsConfigMap == configMap {
+			return true
+		}
+	}
+	return false
+}
+
+// dataSourcesNeedCoreV1Import reports whether any of the given data sources
+// resolves to a string value — only those render the inline
+// Secret/ConfigMap-fetch code path in sdkOpsAPISpec that references corev1.
+// Non-string leaves resolve via a hand-written valueFromSecretRef method
+// instead, which doesn't need this import in the generated file.
+func dataSourcesNeedCoreV1Import(refs []DataSourceForTemplate) bool {
 	for _, ref := range refs {
 		if ref.ValueGoType == "" || ref.ValueGoType == "string" {
 			return true
@@ -1034,6 +1116,13 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 	var reconcilerEntities []string
 	g.parsed = parsed
 	g.ensureInlineTypeNames(parsed)
+
+	// Add the fields of additive (InjectInto) references before anything
+	// inspects the entity schemas, so they flow through the regular reference
+	// machinery like any OAS-derived field.
+	if err := g.addInjectIntoReferenceProperties(parsed); err != nil {
+		return nil, err
+	}
 
 	// Pre-compute the set of schema names whose Go type is an anyOf union struct.
 	// These need pointer treatment at field sites so omitempty omits zero values.
@@ -1222,6 +1311,15 @@ func isEmptyFieldConfig(fc *config.FieldConfig) bool {
 	return true
 }
 
+// apiSpecCursorValidations returns the validations configured directly on the
+// spec.apiSpec cursor, or nil when there are none.
+func apiSpecCursorValidations(apiSpecCursor *config.FieldConfig) []string {
+	if apiSpecCursor == nil || len(apiSpecCursor.Validations) == 0 {
+		return nil
+	}
+	return append([]string(nil), apiSpecCursor.Validations...)
+}
+
 // childFieldConfig returns a deep copy of fc containing only descendant field
 // configuration. Direct validations on the current field are intentionally
 // dropped because they are applied at the field site, not on the nested shared
@@ -1286,6 +1384,30 @@ func sensitiveDataSourceSchema() *parser.Schema {
 	}
 }
 
+// configMapDataSourceSchema mirrors sensitiveDataSourceSchema for the
+// ConfigMapDataSource type, so CEL config cursors can address its fields.
+func configMapDataSourceSchema() *parser.Schema {
+	return &parser.Schema{
+		Properties: []*parser.Property{
+			{Name: "type", Type: "string"},
+			{Name: "value", Type: "string"},
+			{Name: "config_map_ref", Type: "object"},
+		},
+	}
+}
+
+// isConfigMapLeafAtLevel reports whether the sensitive leaf at the given
+// level is sourced from a ConfigMap.
+func (g *Generator) isConfigMapLeafAtLevel(entityName, schemaGoTypeName, jsonFieldName string) bool {
+	var ref config.DataSourceConfig
+	if schemaGoTypeName == entityName+"APISpec" {
+		ref = g.entityDirectSensitiveLeaves[entityName][jsonFieldName]
+	} else {
+		ref = g.sensitiveSchemaLeaves[schemaGoTypeName][jsonFieldName]
+	}
+	return ref.IsConfigMap()
+}
+
 func (g *Generator) isSensitiveLeafAtLevel(entityName, schemaGoTypeName, jsonFieldName string) bool {
 	if schemaGoTypeName == entityName+"APISpec" {
 		return g.isEntityAPISpecFieldSensitiveLeaf(entityName, jsonFieldName)
@@ -1324,10 +1446,14 @@ func (g *Generator) collectSchemaCursors(
 			if sensitiveCursor == nil {
 				continue
 			}
-			if err := g.recordSchemaCursor(sensitiveDataSourceTypeName, entityName, propPath, sensitiveCursor, out, origins); err != nil {
+			dataSourceTypeName, dataSourceSchema := sensitiveDataSourceTypeName, sensitiveDataSourceSchema()
+			if g.isConfigMapLeafAtLevel(entityName, schemaGoTypeName, jsonTag) {
+				dataSourceTypeName, dataSourceSchema = configMapDataSourceTypeName, configMapDataSourceSchema()
+			}
+			if err := g.recordSchemaCursor(dataSourceTypeName, entityName, propPath, sensitiveCursor, out, origins); err != nil {
 				return err
 			}
-			if err := g.collectSchemaCursors(entityName, sensitiveDataSourceTypeName, propPath, sensitiveDataSourceSchema(), sensitiveCursor, schemas, out, origins); err != nil {
+			if err := g.collectSchemaCursors(entityName, dataSourceTypeName, propPath, dataSourceSchema, sensitiveCursor, schemas, out, origins); err != nil {
 				return err
 			}
 			continue
@@ -2771,6 +2897,10 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 				fn, fn, fn, fn,
 			)}
 	}
+	if parentRef != nil && len(parentRef.AllowedKinds) > 0 {
+		typeXValidations = append(typeXValidations, parentRefAllowedKindsXValidation(parentRef))
+	}
+	typeXValidations = append(typeXValidations, injectIntoReferenceXValidations(g.config.References[entityName])...)
 	// A same-type ObjectRefField reference (e.g. PortalPage's parentPageIDRef)
 	// must not point at the object itself: the reference can never resolve
 	// (the object is not programmed until the reference resolves). The CEL
@@ -2813,6 +2943,10 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		EmitParentRefStatusField  bool
 		ResponseStatusFields      []config.ResponseStatusFieldConfig
 		TypeXValidations          []string
+		// APISpecValidations are the markers configured directly on
+		// spec.apiSpec (cel.spec.apiSpec._validations), emitted on the APISpec
+		// field, e.g. transition rules spanning a root union's discriminator.
+		APISpecValidations        []string
 		SupportsMirror            bool
 		NeedsCommonV1Alpha1Import bool
 	}{
@@ -2838,6 +2972,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		EmitParentRefStatusField:  emitParentRefStatusField,
 		ResponseStatusFields:      responseStatusFields,
 		TypeXValidations:          typeXValidations,
+		APISpecValidations:        apiSpecCursorValidations(apiSpecCursor),
 		SupportsMirror:            g.entitySupportsMirror(entityName),
 		NeedsCommonV1Alpha1Import: g.needsCommonV1Alpha1Import(entityName, objectRefImport),
 	}
@@ -3174,6 +3309,21 @@ func parentRefImmutableFieldName(parentRef *config.ParentRefConfig, immediatePar
 		return immediateParentDep.JSONName
 	}
 	return ""
+}
+
+// parentRefAllowedKindsXValidation returns the type-level CEL marker that
+// restricts the config-driven parent ref field's "kind" to
+// parentRef.AllowedKinds.
+func parentRefAllowedKindsXValidation(parentRef *config.ParentRefConfig) string {
+	quoted := make([]string, 0, len(parentRef.AllowedKinds))
+	for _, kind := range parentRef.AllowedKinds {
+		quoted = append(quoted, "'"+kind+"'")
+	}
+	fn := parentRef.FieldName
+	return fmt.Sprintf(
+		`+kubebuilder:validation:XValidation:rule="!has(self.spec.%s) || !has(self.spec.%s.kind) || self.spec.%s.kind in [%s]", message="spec.%s.kind must be one of: %s"`,
+		fn, fn, fn, strings.Join(quoted, ", "), fn, strings.Join(parentRef.AllowedKinds, ", "),
+	)
 }
 
 func rootRefAccessorEntityName(dep *parser.Dependency) string {
@@ -4300,9 +4450,10 @@ func (g *Generator) generateCommonTypes(typeCursors map[string]*config.FieldConf
 	if g.objectRefImported() && g.config.CommonTypes != nil && g.config.CommonTypes.ObjectRef != nil {
 		objectRefImport = g.config.CommonTypes.ObjectRef.Import
 	}
-	var sensitiveCursor *config.FieldConfig
+	var sensitiveCursor, configMapCursor *config.FieldConfig
 	if typeCursors != nil {
 		sensitiveCursor = typeCursors[sensitiveDataSourceTypeName]
+		configMapCursor = typeCursors[configMapDataSourceTypeName]
 	}
 	fieldValidations := func(fc *config.FieldConfig, fieldName string) []string {
 		if fc == nil {
@@ -4325,6 +4476,11 @@ func (g *Generator) generateCommonTypes(typeCursors map[string]*config.FieldConf
 		SensitiveDataSourceValueMaxLength       int
 		SensitiveDataSourceTypeValidations      []string
 		SensitiveDataSourceSecretRefValidations []string
+
+		HasConfigMapRefEntities                    bool
+		ConfigMapDataSourceValueMaxLength          int
+		ConfigMapDataSourceTypeValidations         []string
+		ConfigMapDataSourceConfigMapRefValidations []string
 	}{
 		APIVersion:                              g.config.APIVersion,
 		KonnectStatusImport:                     defaultKonnectStatusImport(),
@@ -4336,6 +4492,11 @@ func (g *Generator) generateCommonTypes(typeCursors map[string]*config.FieldConf
 		SensitiveDataSourceValueMaxLength:       sensitiveDataSourceValueMaxLength,
 		SensitiveDataSourceTypeValidations:      fieldValidations(sensitiveCursor, "type"),
 		SensitiveDataSourceSecretRefValidations: fieldValidations(sensitiveCursor, "secretRef"),
+
+		HasConfigMapRefEntities:                    g.hasAnyConfigMapRefs(),
+		ConfigMapDataSourceValueMaxLength:          configMapDataSourceValueMaxLength,
+		ConfigMapDataSourceTypeValidations:         fieldValidations(configMapCursor, "type"),
+		ConfigMapDataSourceConfigMapRefValidations: fieldValidations(configMapCursor, "configMapRef"),
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -4516,8 +4677,19 @@ type TemplateReferenceConfig struct {
 	// than a direct spec field.
 	NestedRef bool
 	// RefsExpr is the Go expression yielding the []<RefType> slice to resolve.
-	// Top-level: obj.Spec.APISpec.<GoFieldName>. Nested: RefsAt<Entity><GoResolverName>(obj).
+	// Top-level: obj.Spec.APISpec.<GoFieldName>. Nested and optional:
+	// RefsAt<Entity><GoResolverName>(obj).
 	RefsExpr string
+	// OptionalRef is true for an additive (InjectInto) reference: its field is
+	// optional, so it sources its slice from a RefsAt<Entity><GoResolverName>
+	// accessor that yields no reference while the field is unset.
+	OptionalRef bool
+	// InjectIntoSDKJSONFieldName is the SDK payload key the resolved value of
+	// an additive (InjectInto) reference is written to, e.g. "type".
+	InjectIntoSDKJSONFieldName string
+	// InjectIntoGoFieldName is the Go field name of an additive (InjectInto)
+	// reference's target on the APISpec, e.g. "Type".
+	InjectIntoGoFieldName string
 	// GoPathSegments is the Go field-access chain for nested reference paths,
 	// computed by refFieldTarget's walk. Empty for top-level paths (which use
 	// RefsExpr's direct field access without an accessor). Nested references
@@ -4673,6 +4845,13 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 				refsExpr = "[]" + ref.TypeName() + "{obj.Spec.APISpec." + goFieldNameStr + "}"
 			}
 		}
+		// An additive (InjectInto) reference is a top-level scalar reference
+		// whose field is optional: resolve it through a RefsAt accessor that
+		// yields nothing while the field is unset.
+		optionalRef := ref.InjectInto != "" && directScalarRef
+		if optionalRef {
+			refsExpr = "RefsAt" + entityName + goResolverName + "(obj)"
+		}
 		nestedArrayScalar := isNestedArrayScalar(goPathSegments)
 		var nestedArrayList bool
 		var arrayGuardExprs, elementGuardExprs []string
@@ -4754,6 +4933,11 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 			SameTypeRef:          sameTypeRef,
 			SameParentRefField:   sameParentRefField,
 			SameParentRefKind:    sameParentRefKind,
+			OptionalRef:          optionalRef,
+		}
+		if optionalRef {
+			result[i].InjectIntoSDKJSONFieldName = g.injectIntoTargetSDKKey(entityName, ref.InjectInto)
+			result[i].InjectIntoGoFieldName = goFieldName(result[i].InjectIntoSDKJSONFieldName)
 		}
 	}
 	return result
@@ -5199,6 +5383,235 @@ func sdkJSONKey(s string) string {
 		}
 	}
 	return string(buf)
+}
+
+// addInjectIntoReferenceProperties prepares the entity request-body schemas
+// for additive references (config.ReferenceConfig.InjectInto): it adds each
+// reference's field as an optional string property, which the top-level
+// scalar-reference machinery then emits as the ref struct, resolves and
+// watches, and it makes the InjectInto target field optional, since either it
+// or the reference supplies the value (see injectIntoReferenceXValidations).
+func (g *Generator) addInjectIntoReferenceProperties(parsed *parser.ParsedSpec) error {
+	entityNames := make([]string, 0, len(g.config.References))
+	for entityName := range g.config.References {
+		entityNames = append(entityNames, entityName)
+	}
+	slices.Sort(entityNames)
+
+	for _, entityName := range entityNames {
+		// A target filled by two references would get contradictory
+		// exactly-one rules and conflicting values.
+		injectedTargets := make(map[string]string)
+		for _, ref := range g.config.References[entityName] {
+			if ref.InjectInto == "" {
+				continue
+			}
+			if other, ok := injectedTargets[ref.InjectInto]; ok {
+				return fmt.Errorf("entity %q: references %q and %q: both inject into %q", entityName, other, ref.Path, ref.InjectInto)
+			}
+			injectedTargets[ref.InjectInto] = ref.Path
+			// Generated code reads the target as obj.Spec.APISpec.<Field>,
+			// which Origin/Mirror entities (pointer APISpec) do not support.
+			if g.entitySupportsMirror(entityName) {
+				return fmt.Errorf("entity %q: reference %q: injectInto is not supported for entities supporting mirror", entityName, ref.Path)
+			}
+			field := strings.TrimPrefix(ref.Path, "spec.apiSpec.")
+			found := false
+			for name, schema := range parsed.RequestBodies {
+				if parser.GetEntityNameFromType(name) != entityName {
+					continue
+				}
+				found = true
+				if len(schema.OneOf) > 0 {
+					return fmt.Errorf("entity %q: reference %q: injectInto is not supported for root-union entities", entityName, ref.Path)
+				}
+				var target *parser.Property
+				for _, p := range schema.Properties {
+					switch jsonName(p.Name) {
+					case field:
+						return fmt.Errorf("entity %q: reference %q: injectInto field %q already exists in the OAS schema", entityName, ref.Path, field)
+					case ref.InjectInto:
+						target = p
+					}
+				}
+				if target == nil {
+					return fmt.Errorf("entity %q: reference %q: injectInto target %q not found in the OAS schema", entityName, ref.Path, ref.InjectInto)
+				}
+				// Generated code compares and concatenates the target with plain
+				// strings: a named ($ref) or nullable (*string) type would not
+				// compile there.
+				if target.Type != "string" || target.RefName != "" || target.Nullable {
+					return fmt.Errorf("entity %q: reference %q: injectInto target %q must be a plain, non-nullable string field", entityName, ref.Path, ref.InjectInto)
+				}
+				target.Required = false
+				// Required strings get an implicit MinLength of 1 (see
+				// KubebuilderTags); keep (at least) it now that the target is
+				// optional, so an empty value can't satisfy the exactly-one rule.
+				if target.MinLength == nil || *target.MinLength < 1 {
+					target.MinLength = new(int64(1))
+				}
+				schema.Required = slices.DeleteFunc(slices.Clone(schema.Required), func(n string) bool {
+					return jsonName(n) == ref.InjectInto
+				})
+				schema.Properties = append(schema.Properties, &parser.Property{
+					Name:        sdkJSONKey(field),
+					Type:        "string",
+					Description: ref.Description,
+				})
+			}
+			if !found {
+				return fmt.Errorf("entity %q: reference %q: no request body schema found", entityName, ref.Path)
+			}
+		}
+	}
+	return nil
+}
+
+// injectIntoTargetSDKKey returns the SDK payload key of an InjectInto target
+// (given by its CRD JSON name): its OAS property name, under which the SDK
+// request unmarshals it. Deriving it back from the CRD JSON name does not
+// round-trip for every name (a camelCase OAS name like "policyType" would
+// become "policy_type"), so that is only a fallback.
+func (g *Generator) injectIntoTargetSDKKey(entityName, injectInto string) string {
+	if target := findAPISpecProperty(g.parsed, entityName, injectInto); target != nil {
+		return target.Name
+	}
+	return sdkJSONKey(injectInto)
+}
+
+// validateReverseWatchReferences rejects reverseWatch on reference shapes the
+// generated <Referrer>RefsTo<Kind> accessor does not support: per-element ref
+// lists (a [][]<RefType>) and single ObjectRef fields.
+func validateReverseWatchReferences(entityName string, refs []TemplateReferenceConfig) error {
+	for _, ref := range refs {
+		if !ref.ReverseWatch {
+			continue
+		}
+		if ref.NestedArrayList || ref.ObjectRefField {
+			return fmt.Errorf("entity %q: reference %q: reverseWatch is not supported for this reference shape", entityName, ref.Path)
+		}
+	}
+	return nil
+}
+
+// reverseWatchReferrer describes a referring entity with a reverseWatch
+// reference to an entity, whose controller watches it.
+type reverseWatchReferrer struct {
+	// Referrer is the referring entity kind, e.g. "AIGatewayPolicy".
+	Referrer string
+	// LiteralGoField is the Go field of the reference's InjectInto target on
+	// the referrer's APISpec (e.g. "Type"), set only for an InjectInto
+	// reference: referrers may then set it literally to the referenced
+	// object's Konnect key instead of using the reference.
+	LiteralGoField string
+	// KonnectKeySuffix names the referenced entity's index on its Konnect key
+	// (IndexField<Entity>On<KonnectKeySuffix>): "KonnectName" or "KonnectID",
+	// following the reference's resolvesTo. Set together with LiteralGoField.
+	KonnectKeySuffix string
+}
+
+// konnectKeyIndexSuffix returns the name suffix of the index on a referenced
+// entity's Konnect key for a reference resolving to resolvesTo.
+func konnectKeyIndexSuffix(resolvesTo string) string {
+	if resolvesTo == "id" {
+		return "KonnectID"
+	}
+	return "KonnectName"
+}
+
+// reverseWatchReferrers returns the referring entities (sorted) with a
+// reverseWatch reference to entityName, whose controller must watch them.
+func (g *Generator) reverseWatchReferrers(entityName string) []reverseWatchReferrer {
+	var referrers []reverseWatchReferrer
+	for referrer, refs := range g.config.References {
+		for _, ref := range refs {
+			if !ref.ReverseWatch || len(ref.Kinds) != 1 || ref.Kinds[0] != entityName {
+				continue
+			}
+			rw := reverseWatchReferrer{Referrer: referrer}
+			if ref.InjectInto != "" {
+				rw.LiteralGoField = goFieldName(g.injectIntoTargetSDKKey(referrer, ref.InjectInto))
+				rw.KonnectKeySuffix = konnectKeyIndexSuffix(ref.ResolvesTo)
+			}
+			referrers = append(referrers, rw)
+			break
+		}
+	}
+	slices.SortFunc(referrers, func(a, b reverseWatchReferrer) int { return strings.Compare(a.Referrer, b.Referrer) })
+	return referrers
+}
+
+// konnectKeyIndex describes an index on an entity's "<gatewayID>/<Konnect
+// key>", used to find the objects referrers name literally.
+type konnectKeyIndex struct {
+	// Suffix is the index name suffix: "KonnectName" or "KonnectID".
+	Suffix string
+	// Getter is the method returning the Konnect key, e.g. "GetKonnectName".
+	Getter string
+}
+
+// konnectKeyIndexes returns the Konnect-key indexes entityName needs because
+// reverseWatch InjectInto references target it.
+func (g *Generator) konnectKeyIndexes(entityName string) []konnectKeyIndex {
+	seen := make(map[string]bool)
+	var indexes []konnectKeyIndex
+	for _, rw := range g.reverseWatchReferrers(entityName) {
+		if rw.KonnectKeySuffix == "" || seen[rw.KonnectKeySuffix] {
+			continue
+		}
+		seen[rw.KonnectKeySuffix] = true
+		indexes = append(indexes, konnectKeyIndex{Suffix: rw.KonnectKeySuffix, Getter: "Get" + rw.KonnectKeySuffix})
+	}
+	slices.SortFunc(indexes, func(a, b konnectKeyIndex) int { return strings.Compare(a.Suffix, b.Suffix) })
+	return indexes
+}
+
+// literalTargetIndexes returns the Go fields of entityName's APISpec that its
+// InjectInto references target, indexed on "<gatewayID>/<value>" so that the
+// entities naming a referenced object literally (rather than through the
+// reference) can be found: by the entity's own watch on the referenced kind,
+// and by the referenced kind's reverse watch.
+func (g *Generator) literalTargetIndexes(entityName string) []string {
+	var fields []string
+	for _, ref := range g.config.References[entityName] {
+		if ref.InjectInto == "" {
+			continue
+		}
+		field := goFieldName(g.injectIntoTargetSDKKey(entityName, ref.InjectInto))
+		if !slices.Contains(fields, field) {
+			fields = append(fields, field)
+		}
+	}
+	slices.Sort(fields)
+	return fields
+}
+
+// isInjectIntoTarget reports whether jsonFieldName is the InjectInto target of
+// one of entityName's additive references.
+func (g *Generator) isInjectIntoTarget(entityName, jsonFieldName string) bool {
+	for _, ref := range g.config.References[entityName] {
+		if ref.InjectInto == jsonFieldName {
+			return true
+		}
+	}
+	return false
+}
+
+// injectIntoReferenceXValidations returns the type-level CEL markers requiring
+// exactly one of each additive reference and its InjectInto target to be set.
+func injectIntoReferenceXValidations(refs []config.ReferenceConfig) []string {
+	var markers []string
+	for _, ref := range refs {
+		if ref.InjectInto == "" {
+			continue
+		}
+		field := strings.TrimPrefix(ref.Path, "spec.apiSpec.")
+		markers = append(markers, fmt.Sprintf(
+			`+kubebuilder:validation:XValidation:rule="!has(self.spec) || !has(self.spec.apiSpec) || has(self.spec.apiSpec.%s) != has(self.spec.apiSpec.%s)", message="exactly one of spec.apiSpec.%s and spec.apiSpec.%s must be set"`,
+			ref.InjectInto, field, ref.InjectInto, field,
+		))
+	}
+	return markers
 }
 
 // referenceForField returns the ReferenceConfig for the given entity+field if
@@ -6004,6 +6417,27 @@ type sdkOpsRootUnionVariant struct {
 	WrappedUpdateConstructorName string
 }
 
+// rootUnionUpdateVariantTypeName returns the SDK type of the update-union
+// member matching a create-union variant. Some SDK update unions reuse the
+// create variant types (e.g. AIGatewayAuthStrategyKeyAuth in both), while
+// others declare dedicated update variants (e.g.
+// CreateAIGatewayCustomPolicyInstalledRequest vs.
+// UpdateAIGatewayCustomPolicyInstalledRequest). Prefer the create variant
+// when the update union declares it, then its Create->Update counterpart,
+// and fall back to the create variant otherwise.
+func rootUnionUpdateVariantTypeName(createVariantTypeName string, updateMemberTypes map[string]struct{}) string {
+	if _, ok := updateMemberTypes[createVariantTypeName]; ok {
+		return createVariantTypeName
+	}
+	if after, ok := strings.CutPrefix(createVariantTypeName, "Create"); ok {
+		candidate := "Update" + after
+		if _, ok := updateMemberTypes[candidate]; ok {
+			return candidate
+		}
+	}
+	return createVariantTypeName
+}
+
 // generateSDKOps generates a file with conversion methods from {Entity}APISpec
 // to SDK request types using JSON marshal/unmarshal.
 func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, opsConfig *config.EntityOpsConfig) (string, error) {
@@ -6014,7 +6448,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 	boolFields := g.collectSDKOpsBoolFields(schema)
 	constFields := g.collectSDKOpsConstFields(schema)
 	unionUnwrapFields := g.collectSDKOpsUnionUnwrapFields(schema)
-	freeformKeyFields := g.collectSDKOpsFreeformKeyFields(schema)
+	freeformKeyFields := g.collectSDKOpsFreeformKeyFields(entityName, schema)
 
 	if hasRootOneOf(schema) {
 		return g.generateRootUnionSDKOps(entityName, schema, opsConfig, imports, methods, boolFields, constFields, unionUnwrapFields, freeformKeyFields)
@@ -6069,13 +6503,16 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 	}
 
 	references := g.templateReferences(entityName)
+	if err := validateReverseWatchReferences(entityName, references); err != nil {
+		return "", err
+	}
 	injections, err := refInjections(references)
 	if err != nil {
 		return "", fmt.Errorf("entity %s: %w", entityName, err)
 	}
 	imports, objectRefTypePrefix := g.addObjectRefImportIfNeeded(imports, references)
 
-	secretReferences := g.templateSecretReferences(entityName)
+	dataSources := g.templateDataSources(entityName)
 	data := struct {
 		APIVersion               string
 		EntityName               string
@@ -6085,7 +6522,9 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		FreeformKeyFields        []sdkOpsFreeformKeyField
 		Methods                  []sdkOpsMethod
 		NeedsClient              bool
-		SecretReferences         []SecretReferenceForTemplate
+		DataSources              []DataSourceForTemplate
+		HasSecretSourceRefs      bool
+		HasConfigMapSourceRefs   bool
 		NeedsSecretFetchImport   bool
 		HasReferences            bool
 		References               []TemplateReferenceConfig
@@ -6104,8 +6543,10 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		FreeformKeyFields:        freeformKeyFields,
 		Methods:                  standardMethods,
 		NeedsClient:              opsConfig.RequireClient || g.entityHasReferences(entityName),
-		SecretReferences:         secretReferences,
-		NeedsSecretFetchImport:   secretReferencesNeedCoreV1Import(secretReferences),
+		DataSources:              dataSources,
+		HasSecretSourceRefs:      templateReferencesHaveSource(dataSources, false),
+		HasConfigMapSourceRefs:   templateReferencesHaveSource(dataSources, true),
+		NeedsSecretFetchImport:   dataSourcesNeedCoreV1Import(dataSources),
 		HasReferences:            g.entityHasReferences(entityName),
 		References:               references,
 		NeedsCrossNamespaceCheck: referencesNeedCrossNamespaceCheck(references),
@@ -6275,12 +6716,16 @@ func (g *Generator) generateRootUnionSDKOps(
 	// the OAS shape misclassifies variants whose only required $ref property is a
 	// scalar (e.g. a named string), which the SDK collapses to a plain type.
 	updateSDKTypeIsUnion := false
+	updateSDKUnionMemberTypes := map[string]struct{}{}
 	if hasUpdateMethod && !updateIsOperationsWrapped && updateMethodTypeName != "" {
-		memberFields, err := ParseSDKUnionMemberFieldNames(updateMethodImportPath, updateMethodTypeName)
+		memberTypes, err := ParseSDKUnionMemberTypeNames(updateMethodImportPath, updateMethodTypeName)
 		if err != nil {
 			return "", fmt.Errorf("failed to inspect SDK update type %s for %s: %w", updateMethodTypeName, entityName, err)
 		}
-		updateSDKTypeIsUnion = len(memberFields) > 0
+		updateSDKTypeIsUnion = len(memberTypes) > 0
+		for _, memberType := range memberTypes {
+			updateSDKUnionMemberTypes[memberType] = struct{}{}
+		}
 	}
 
 	var rawVariantNames []string
@@ -6321,7 +6766,9 @@ func (g *Generator) generateRootUnionSDKOps(
 			// The SDK update request is a discriminated union (same shape as
 			// create); rebuild the selected variant directly via its update
 			// constructor instead of targeting a nested payload field.
-			updateVariantTypeName = fixInitialisms(variantRefName)
+			updateVariantTypeName = rootUnionUpdateVariantTypeName(
+				fixInitialisms(variantRefName), updateSDKUnionMemberTypes,
+			)
 			updateConstructorName = "Create" + updateMethodTypeName + ctorSuffix
 			updateDirectUnion = true
 		} else if hasUpdateMethod && !updateIsOperationsWrapped {
@@ -6375,6 +6822,9 @@ func (g *Generator) generateRootUnionSDKOps(
 	}
 
 	references := g.templateReferences(entityName)
+	if err := validateReverseWatchReferences(entityName, references); err != nil {
+		return "", err
+	}
 	injections, err := refInjections(references)
 	if err != nil {
 		return "", fmt.Errorf("entity %s: %w", entityName, err)
@@ -6383,7 +6833,7 @@ func (g *Generator) generateRootUnionSDKOps(
 
 	tmpl := template.Must(template.New("sdkops-root-union").Parse(sdkOpsRootUnionTemplate))
 	var buf strings.Builder
-	secretReferences := g.templateSecretReferences(entityName)
+	dataSources := g.templateDataSources(entityName)
 	data := struct {
 		APIVersion               string
 		EntityName               string
@@ -6396,7 +6846,9 @@ func (g *Generator) generateRootUnionSDKOps(
 		Methods                  []sdkOpsRootUnionMethod
 		Variants                 []sdkOpsRootUnionVariant
 		NeedsClient              bool
-		SecretReferences         []SecretReferenceForTemplate
+		DataSources              []DataSourceForTemplate
+		HasSecretSourceRefs      bool
+		HasConfigMapSourceRefs   bool
 		NeedsSecretFetchImport   bool
 		References               []TemplateReferenceConfig
 		NeedsCrossNamespaceCheck bool
@@ -6414,8 +6866,10 @@ func (g *Generator) generateRootUnionSDKOps(
 		Methods:                  rootUnionMethods,
 		Variants:                 variants,
 		NeedsClient:              opsConfig.RequireClient || g.entityHasReferences(entityName),
-		SecretReferences:         secretReferences,
-		NeedsSecretFetchImport:   secretReferencesNeedCoreV1Import(secretReferences),
+		DataSources:              dataSources,
+		HasSecretSourceRefs:      templateReferencesHaveSource(dataSources, false),
+		HasConfigMapSourceRefs:   templateReferencesHaveSource(dataSources, true),
+		NeedsSecretFetchImport:   dataSourcesNeedCoreV1Import(dataSources),
 		References:               references,
 		NeedsCrossNamespaceCheck: referencesNeedCrossNamespaceCheck(references),
 		RefInjections:            injections,
@@ -6868,13 +7322,18 @@ func allVariantsAnonymousSingleProperty(variants []*parser.Property) bool {
 // pass verbatim. See renameKeysToSDKExcept.
 type sdkOpsFreeformKeyField struct {
 	Path []string
+	// Sensitive marks a free-form leaf that is itself a dataSource
+	// target: the generator wraps it in a SensitiveDataSource, so
+	// flattenSensitiveDataExcept collapses that wrapper at the leaf while
+	// leaving everything below it (user data) verbatim.
+	Sensitive bool
 }
 
 // collectSDKOpsFreeformKeyFields finds free-form/map-data fields, mirroring
 // collectSDKOpsUnionUnwrapFields' walk (including the root-oneOf variant
 // traversal) so it reaches free-form fields nested inside a root union's own
 // variants (e.g. AIGatewayModel's api.config.route.headers).
-func (g *Generator) collectSDKOpsFreeformKeyFields(schema *parser.Schema) []sdkOpsFreeformKeyField {
+func (g *Generator) collectSDKOpsFreeformKeyFields(entityName string, schema *parser.Schema) []sdkOpsFreeformKeyField {
 	if schema == nil {
 		return nil
 	}
@@ -6916,7 +7375,49 @@ func (g *Generator) collectSDKOpsFreeformKeyFields(schema *parser.Schema) []sdkO
 		return strings.Join(fields[i].Path, ".") < strings.Join(fields[j].Path, ".")
 	})
 
+	refs := g.config.DataSources[entityName]
+	for i := range fields {
+		fields[i].Sensitive = sensitiveFreeformLeaf(refs, fields[i].Path)
+	}
+
 	return fields
+}
+
+// sensitiveFreeformLeaf reports whether the free-form leaf at path is the
+// target of one of the entity's configured DataSources, i.e. the
+// generator wraps that leaf in a SensitiveDataSource. Path segments use the
+// payload JSON convention ("[]" descends into every array element); spec
+// paths use "."-separated JSON names where "*" matches any single segment
+// (a union variant) and "headers[]" is expanded to "headers","[]". A
+// dataSource leaf can never be an object with nested properties, so an
+// exact-length match is complete: a sensitive leaf never contains a free-form
+// subtree beneath it.
+func sensitiveFreeformLeaf(refs []config.DataSourceConfig, path []string) bool {
+	for _, ref := range refs {
+		segs := strings.Split(strings.TrimPrefix(ref.Path, "spec.apiSpec."), ".")
+		normalized := make([]string, 0, len(segs)+1)
+		for _, s := range segs {
+			if base, hasSlice := strings.CutSuffix(s, "[]"); hasSlice {
+				normalized = append(normalized, base, "[]")
+			} else {
+				normalized = append(normalized, s)
+			}
+		}
+		if len(normalized) != len(path) {
+			continue
+		}
+		matched := true
+		for i := range normalized {
+			if normalized[i] != "*" && normalized[i] != path[i] {
+				matched = false
+				break
+			}
+		}
+		if matched {
+			return true
+		}
+	}
+	return false
 }
 
 func (g *Generator) collectSDKOpsFreeformKeyFieldsFromProperty(prop *parser.Property, path []string, fields *[]sdkOpsFreeformKeyField) {

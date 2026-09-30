@@ -1,0 +1,15 @@
+# Assert the AIGatewayCustomPolicy is not programmed in Konnect and holds no
+# Konnect ID, e.g. because its create hit a conflict with a custom policy the
+# operator does not own.
+# Required bindings:
+#  - namespace: Namespace of the AIGatewayCustomPolicy.
+#  - aigw_custom_policy_name: Name of the AIGatewayCustomPolicy.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayCustomPolicy
+metadata:
+  name: ($aigw_custom_policy_name)
+  namespace: ($namespace)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: 'False'
+  (id == null || id == ''): true

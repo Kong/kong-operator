@@ -815,3 +815,63 @@ func TestRemoveCondition(t *testing.T) {
 		})
 	}
 }
+
+func TestUpdatedConditionPreservingLastTransitionTime(t *testing.T) {
+	stored := metav1.Condition{
+		Type:               "example",
+		Status:             metav1.ConditionTrue,
+		Reason:             "SomeReason",
+		Message:            "some message",
+		LastTransitionTime: metav1.Now(),
+	}
+	updated := metav1.Condition{
+		Type:               "example",
+		Status:             metav1.ConditionTrue,
+		Reason:             "SomeReason",
+		Message:            "some message",
+		LastTransitionTime: metav1.Now(),
+	}
+
+	changedCondition := func() metav1.Condition {
+		c := updated
+		c.Status = metav1.ConditionFalse
+		c.LastTransitionTime = metav1.Now()
+		return c
+	}()
+	testCases := []struct {
+		name              string
+		conditions        []metav1.Condition
+		updated           metav1.Condition
+		expectedCondition metav1.Condition
+		expectedChanged   bool
+	}{
+		{
+			name:              "unchanged condition keeps the stored one and its transition time",
+			conditions:        []metav1.Condition{stored},
+			updated:           updated,
+			expectedCondition: stored,
+			expectedChanged:   false,
+		},
+		{
+			name:              "changed condition returns the updated one",
+			conditions:        []metav1.Condition{stored},
+			updated:           changedCondition,
+			expectedCondition: changedCondition,
+			expectedChanged:   true,
+		},
+		{
+			name:              "absent condition type returns the updated one",
+			conditions:        nil,
+			updated:           updated,
+			expectedCondition: updated,
+			expectedChanged:   true,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			condition, changed := UpdatedConditionPreservingLastTransitionTime(tc.conditions, tc.updated)
+			assert.Equal(t, tc.expectedCondition, condition)
+			assert.Equal(t, tc.expectedChanged, changed)
+		})
+	}
+}

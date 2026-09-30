@@ -1,0 +1,666 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: custom-policy-scoped
+spec:
+  description: |
+    Konnect AIGateway - Custom Policies scoped to entities rather than applied
+    globally, verified on real traffic. One streaming custom policy sets a
+    response header from its config; one AIGatewayPolicy using it is attached
+    at each level, each with its own header value:
+
+    - global (global: Enabled)
+    - a model (AIGatewayModel policies)
+    - a consumer (AIGatewayConsumer policies)
+    - a consumer group (AIGatewayConsumerGroup policies)
+    - an agent (AIGatewayAgent policies)
+    - an MCP server (AIGatewayMCPServer policies)
+
+    Two key-auth protected models are driven with three consumers: A has its
+    own policy and is in group G, B is only in group G, C has neither. When
+    several instances match a request, Kong runs only the most specific one:
+    consumer > consumer group > model > global, as in the data plane's
+    kong/runloop/plugins_iterator.lua (Consumer, Consumer Group, then Route +
+    Model, where the model-scoped instance lands, then Global). On the model
+    without a policy A, B and C get the consumer, group and global values; on
+    the model with one, A and B keep their consumer and group values and C
+    gets the model's value instead of the global one, which is the check that
+    proves model scope. The agent and the MCP server each get their own value
+    on their own route.
+
+    Model scope needs the custom plugin to run after ai-model-selector
+    (PRIORITY 957), which selects the model the request is scoped to: the data
+    plane evaluates plugins in PRIORITY order and skips, for the whole request,
+    a model-scoped plugin evaluated before a model is selected. Hence the
+    handler's PRIORITY of 900.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: aigw_cp_namespace
+      value: ($namespace)
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+    - name: echo_deployment_name
+      value: echo
+    - name: echo_deployment_namespace
+      value: ($namespace)
+    - name: echo_deployment_replicas
+      value: 1
+    # Streaming custom policy (CR and Konnect name). Its handler sets the
+    # header named by the policy config to the configured value. PRIORITY
+    # must stay below ai-model-selector's 957 for model scope (see above).
+    - name: custom_policy_name
+      value: scope-header
+    - name: custom_policy_konnect_name
+      value: (join('-', [($test_name), 'scope-header']))
+    - name: scope_header
+      value: X-Chainsaw-Scope
+    - name: plugin_schema_prefix
+      value: 'local typedefs = require "kong.db.schema.typedefs" return { name = "'
+    - name: plugin_schema_suffix
+      value: '", fields = { { protocols = typedefs.protocols_http }, { config = { type = "record", fields = { { header_name = { type = "string", default = "X-Chainsaw-Scope" } }, { header_value = { type = "string", default = "applied" } } } } } } }'
+    - name: plugin_handler
+      value: 'local P = { PRIORITY = 900, VERSION = "1.0.0" } function P:header_filter(conf) kong.response.set_header(conf.header_name, conf.header_value) end return P'
+    # One AIGatewayPolicy per level; each sets the header to the level's name.
+    - name: global_policy_name
+      value: (join('-', [($test_name), 'global-policy']))
+    - name: model_policy_name
+      value: (join('-', [($test_name), 'model-policy']))
+    - name: consumer_policy_name
+      value: (join('-', [($test_name), 'consumer-policy']))
+    - name: consumer_group_policy_name
+      value: (join('-', [($test_name), 'consumer-group-policy']))
+    - name: agent_policy_name
+      value: (join('-', [($test_name), 'agent-policy']))
+    - name: mcp_policy_name
+      value: (join('-', [($test_name), 'mcp-policy']))
+    # Key-auth, the consumer group and the consumers with their api keys.
+    - name: auth_strategy_name
+      value: keyauth
+    - name: consumer_group_name
+      value: group-g
+    - name: consumer_a_name
+      value: consumer-a
+    - name: consumer_b_name
+      value: consumer-b
+    - name: consumer_c_name
+      value: consumer-c
+    - name: consumer_a_api_key
+      value: chainsaw-scoped-key-a
+    - name: consumer_b_api_key
+      value: chainsaw-scoped-key-b
+    - name: consumer_c_api_key
+      value: chainsaw-scoped-key-c
+    # Models: one without a policy of its own, one with the model policy.
+    - name: plain_model_name
+      value: plain-model
+    - name: plain_model_route_path
+      value: /scoped/plain
+    - name: scoped_model_name
+      value: scoped-model
+    - name: scoped_model_route_path
+      value: /scoped/model
+    # Agent and MCP server.
+    - name: agent_name
+      value: scoped-agent
+    - name: agent_route_path
+      value: /scoped/agent
+    - name: mcp_server_name
+      value: scoped-mcp
+    - name: mcp_route_path
+      value: /scoped/mcp
+    # Defaults of verify-aigw-agent-request-from-cluster.yaml.
+    - name: method
+      value: GET
+    - name: request_headers
+      value: ''
+    - name: request_body
+      value: ''
+    - name: content_type
+      value: application/json
+    - name: expected_status
+      value: "200"
+    - name: expected_status_not
+      value: ''
+    - name: expected_body
+      value: ''
+    - name: unexpected_body
+      value: ''
+    - name: expected_jsonrpc
+      value: ''
+    - name: expected_json_id
+      value: ''
+    - name: expected_json_result_text
+      value: ''
+    - name: oidc_token_url
+      value: ''
+    - name: oidc_client_id
+      value: ''
+    - name: oidc_client_secret
+      value: ''
+    - name: oidc_scope
+      value: ''
+    - name: expected_success
+      value: 'true'
+  steps:
+    - name: Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: Create-konnect-aigateway
+      description: |
+        Custom plugin streaming needs a 2.2 runtime.
+      bindings:
+        - name: auth_name
+          value: ($konnect_auth_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
+        with:
+          bindings:
+            - name: min_runtime_version
+              value: "2.2"
+            - name: runtime_auto_upgrade
+              value: Enabled
+    - name: Create-aigateway-dataplane
+      description: |
+        KONG_CUSTOM_PLUGIN_STREAMING_ENABLED lets the data plane accept the
+        streaming custom policy's handler Konnect streams to it.
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+        with:
+          bindings:
+            - name: aigw_dp_env
+              value: >-
+                ([{name: 'KONG_CUSTOM_PLUGIN_STREAMING_ENABLED', value: 'on'}])
+    - name: Start-echo-backend
+      description: Backend of the agent and the MCP server.
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
+    - name: Create-streaming-custom-policy
+      bindings:
+        - name: aigw_custom_policy_name
+          value: ($custom_policy_name)
+        - name: api_spec
+          value:
+            type: streaming
+            streaming:
+              name: ($custom_policy_konnect_name)
+              displayName: Chainsaw scoped streaming custom policy
+              schema:
+                type: inline
+                value: (join('', [$plugin_schema_prefix, $custom_policy_konnect_name, $plugin_schema_suffix]))
+              handler:
+                type: inline
+                value: ($plugin_handler)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayCustomPolicy.yaml
+    - name: Create-global-policy
+      description: Applies to all traffic, unless a more specific instance matches.
+      bindings:
+        - name: aigw_policy_name
+          value: ($global_policy_name)
+        - name: api_spec
+          value:
+            name: ($global_policy_name)
+            displayName: Custom policy scoped to global
+            customPolicyRef:
+              name: ($custom_policy_name)
+            enabled: Enabled
+            global: Enabled
+            config:
+              type: inline
+              value:
+                header_name: ($scope_header)
+                header_value: global
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayPolicy.yaml
+    - name: Create-model-policy
+      description: Attached to the scoped model.
+      bindings:
+        - name: aigw_policy_name
+          value: ($model_policy_name)
+        - name: api_spec
+          value:
+            name: ($model_policy_name)
+            displayName: Custom policy scoped to model
+            customPolicyRef:
+              name: ($custom_policy_name)
+            enabled: Enabled
+            global: Disabled
+            config:
+              type: inline
+              value:
+                header_name: ($scope_header)
+                header_value: model
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayPolicy.yaml
+    - name: Create-consumer-policy
+      description: Attached to consumer A.
+      bindings:
+        - name: aigw_policy_name
+          value: ($consumer_policy_name)
+        - name: api_spec
+          value:
+            name: ($consumer_policy_name)
+            displayName: Custom policy scoped to consumer
+            customPolicyRef:
+              name: ($custom_policy_name)
+            enabled: Enabled
+            global: Disabled
+            config:
+              type: inline
+              value:
+                header_name: ($scope_header)
+                header_value: consumer
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayPolicy.yaml
+    - name: Create-consumer-group-policy
+      description: Attached to consumer group G.
+      bindings:
+        - name: aigw_policy_name
+          value: ($consumer_group_policy_name)
+        - name: api_spec
+          value:
+            name: ($consumer_group_policy_name)
+            displayName: Custom policy scoped to consumer group
+            customPolicyRef:
+              name: ($custom_policy_name)
+            enabled: Enabled
+            global: Disabled
+            config:
+              type: inline
+              value:
+                header_name: ($scope_header)
+                header_value: consumer-group
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayPolicy.yaml
+    - name: Create-agent-policy
+      description: Attached to the agent.
+      bindings:
+        - name: aigw_policy_name
+          value: ($agent_policy_name)
+        - name: api_spec
+          value:
+            name: ($agent_policy_name)
+            displayName: Custom policy scoped to agent
+            customPolicyRef:
+              name: ($custom_policy_name)
+            enabled: Enabled
+            global: Disabled
+            config:
+              type: inline
+              value:
+                header_name: ($scope_header)
+                header_value: agent
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayPolicy.yaml
+    - name: Create-mcp-policy
+      description: Attached to the MCP server.
+      bindings:
+        - name: aigw_policy_name
+          value: ($mcp_policy_name)
+        - name: api_spec
+          value:
+            name: ($mcp_policy_name)
+            displayName: Custom policy scoped to mcp
+            customPolicyRef:
+              name: ($custom_policy_name)
+            enabled: Enabled
+            global: Disabled
+            config:
+              type: inline
+              value:
+                header_name: ($scope_header)
+                header_value: mcp
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayPolicy.yaml
+    - name: Create-keyauth-auth-strategy
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayAuthStrategy-keyauth.yaml
+    - name: Create-consumer-group
+      bindings:
+        - name: policies
+          value:
+            - name: ($consumer_group_policy_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayConsumerGroup.yaml
+    - name: Create-consumer-a
+      description: Own policy, and a member of group G.
+      bindings:
+        - name: consumer_name
+          value: ($consumer_a_name)
+        - name: consumer_policies
+          value: '([{name: $consumer_policy_name}])'
+        - name: consumer_groups
+          value: '([{name: $consumer_group_name}])'
+      try:
+        - apply:
+            file: 02-consumer.yaml
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumer
+              metadata:
+                name: ($consumer_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+    - name: Create-consumer-a-credential
+      bindings:
+        - name: consumer_name
+          value: ($consumer_a_name)
+        - name: credential_name
+          value: (join('-', [($consumer_a_name), 'key']))
+        - name: secret_name
+          value: (join('-', [($consumer_a_name), 'key']))
+        - name: api_key_value
+          value: ($consumer_a_api_key)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayConsumerCredential-apikey.yaml
+    - name: Create-consumer-b
+      description: No policy of its own, a member of group G.
+      bindings:
+        - name: consumer_name
+          value: ($consumer_b_name)
+        - name: consumer_policies
+          value: (`[]`)
+        - name: consumer_groups
+          value: '([{name: $consumer_group_name}])'
+      try:
+        - apply:
+            file: 02-consumer.yaml
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumer
+              metadata:
+                name: ($consumer_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+    - name: Create-consumer-b-credential
+      bindings:
+        - name: consumer_name
+          value: ($consumer_b_name)
+        - name: credential_name
+          value: (join('-', [($consumer_b_name), 'key']))
+        - name: secret_name
+          value: (join('-', [($consumer_b_name), 'key']))
+        - name: api_key_value
+          value: ($consumer_b_api_key)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayConsumerCredential-apikey.yaml
+    - name: Create-consumer-c
+      description: No policy of its own, in no group.
+      bindings:
+        - name: consumer_name
+          value: ($consumer_c_name)
+        - name: consumer_policies
+          value: (`[]`)
+        - name: consumer_groups
+          value: (`[]`)
+      try:
+        - apply:
+            file: 02-consumer.yaml
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumer
+              metadata:
+                name: ($consumer_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+    - name: Create-consumer-c-credential
+      bindings:
+        - name: consumer_name
+          value: ($consumer_c_name)
+        - name: credential_name
+          value: (join('-', [($consumer_c_name), 'key']))
+        - name: secret_name
+          value: (join('-', [($consumer_c_name), 'key']))
+        - name: api_key_value
+          value: ($consumer_c_api_key)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayConsumerCredential-apikey.yaml
+    - name: Create-plain-model
+      description: Model without a policy of its own.
+      bindings:
+        - name: model_name
+          value: ($plain_model_name)
+        - name: model_route_path
+          value: ($plain_model_route_path)
+        - name: model_policies
+          value: (`[]`)
+      try:
+        - apply:
+            file: 01-model.yaml
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayModel
+              metadata:
+                name: ($model_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+    - name: Create-scoped-model
+      description: Model with the model policy attached.
+      bindings:
+        - name: model_name
+          value: ($scoped_model_name)
+        - name: model_route_path
+          value: ($scoped_model_route_path)
+        - name: model_policies
+          value: '([{name: $model_policy_name}])'
+      try:
+        - apply:
+            file: 01-model.yaml
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayModel
+              metadata:
+                name: ($model_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+    - name: Create-agent-and-mcp-server
+      try:
+        - apply:
+            file: 03-agent-and-mcp-server.yaml
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayAgent
+              metadata:
+                name: ($agent_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayMCPServer
+              metadata:
+                name: ($mcp_server_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+    - name: Verify-plain-model-consumer-a-gets-consumer-policy
+      description: Consumer A's own policy wins over its group's and the global one.
+      bindings:
+        - name: route_path
+          value: ($plain_model_route_path)
+        - name: model_alias
+          value: qwen2.5:0.5b
+      use:
+        template: ../../common/_step_templates/verify-aigw-chat-completion-from-cluster.yaml
+        with:
+          bindings:
+            - name: request_headers
+              value: (join('', ['apikey:', $consumer_a_api_key]))
+            - name: expect_header
+              value: ($scope_header)
+            - name: expect_header_value
+              value: consumer
+    - name: Verify-plain-model-consumer-b-gets-consumer-group-policy
+      description: Consumer B has no policy of its own, so its group's wins over the global one.
+      bindings:
+        - name: route_path
+          value: ($plain_model_route_path)
+        - name: model_alias
+          value: qwen2.5:0.5b
+      use:
+        template: ../../common/_step_templates/verify-aigw-chat-completion-from-cluster.yaml
+        with:
+          bindings:
+            - name: request_headers
+              value: (join('', ['apikey:', $consumer_b_api_key]))
+            - name: expect_header
+              value: ($scope_header)
+            - name: expect_header_value
+              value: consumer-group
+    - name: Verify-plain-model-consumer-c-gets-global-policy
+      description: Consumer C matches nothing more specific than the global policy.
+      bindings:
+        - name: route_path
+          value: ($plain_model_route_path)
+        - name: model_alias
+          value: qwen2.5:0.5b
+      use:
+        template: ../../common/_step_templates/verify-aigw-chat-completion-from-cluster.yaml
+        with:
+          bindings:
+            - name: request_headers
+              value: (join('', ['apikey:', $consumer_c_api_key]))
+            - name: expect_header
+              value: ($scope_header)
+            - name: expect_header_value
+              value: global
+    - name: Verify-scoped-model-consumer-a-gets-consumer-policy
+      description: |
+        A consumer policy still wins on a model with its own policy (Consumer
+        ranks above Route + Model). This alone does not prove model scope: the
+        same value comes back if the model's instance is not applied at all.
+      bindings:
+        - name: route_path
+          value: ($scoped_model_route_path)
+        - name: model_alias
+          value: qwen2.5:0.5b
+      use:
+        template: ../../common/_step_templates/verify-aigw-chat-completion-from-cluster.yaml
+        with:
+          bindings:
+            - name: request_headers
+              value: (join('', ['apikey:', $consumer_a_api_key]))
+            - name: expect_header
+              value: ($scope_header)
+            - name: expect_header_value
+              value: consumer
+    - name: Verify-scoped-model-consumer-b-gets-consumer-group-policy
+      description: |
+        A consumer group policy still wins on a model with its own policy
+        (Consumer Group ranks above Route + Model). Like the previous check,
+        this alone does not prove model scope.
+      bindings:
+        - name: route_path
+          value: ($scoped_model_route_path)
+        - name: model_alias
+          value: qwen2.5:0.5b
+      use:
+        template: ../../common/_step_templates/verify-aigw-chat-completion-from-cluster.yaml
+        with:
+          bindings:
+            - name: request_headers
+              value: (join('', ['apikey:', $consumer_b_api_key]))
+            - name: expect_header
+              value: ($scope_header)
+            - name: expect_header_value
+              value: consumer-group
+    - name: Verify-scoped-model-consumer-c-gets-model-policy
+      description: |
+        The model's policy wins over the global one: the check proving that
+        model scope works.
+      bindings:
+        - name: route_path
+          value: ($scoped_model_route_path)
+        - name: model_alias
+          value: qwen2.5:0.5b
+      use:
+        template: ../../common/_step_templates/verify-aigw-chat-completion-from-cluster.yaml
+        with:
+          bindings:
+            - name: request_headers
+              value: (join('', ['apikey:', $consumer_c_api_key]))
+            - name: expect_header
+              value: ($scope_header)
+            - name: expect_header_value
+              value: model
+    - name: Verify-agent-gets-agent-policy
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($agent_route_path)
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+        with:
+          bindings:
+            - name: expected_header
+              value: ($scope_header)
+            - name: expected_header_value
+              value: agent
+    - name: Verify-mcp-server-gets-mcp-policy
+      bindings:
+        - name: method
+          value: POST
+        - name: route_path
+          value: ($mcp_route_path)
+        - name: request_body
+          value: '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+        with:
+          bindings:
+            - name: expected_header
+              value: ($scope_header)
+            - name: expected_header_value
+              value: mcp
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: custom-policy-scoped
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

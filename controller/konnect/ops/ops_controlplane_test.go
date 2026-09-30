@@ -271,9 +271,11 @@ func TestCreateControlPlane(t *testing.T) {
 				WithScheme(scheme.Get()).
 				WithObjects(tc.objects...).
 				Build()
+			specBefore := cp.Spec.DeepCopy()
 
 			err := createControlPlane(ctx, sdk, sdkGroups, fakeClient, cp)
 			require.ErrorIs(t, err, tc.expectedError)
+			assert.Equal(t, specBefore, &cp.Spec, "creating the control plane must not modify its spec")
 
 			if tc.expectedID != "" {
 				assert.Equal(t, tc.expectedID, cp.Status.ID)

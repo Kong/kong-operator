@@ -16,6 +16,7 @@ type generatedMockSDKWrapper struct {
 	AIGatewayCertificatesSDK                     *mocks.MockAIGatewayCertificatesSDK
 	AIGatewayConsumersSDK                        *mocks.MockAIGatewayConsumersSDK
 	AIGatewayConsumerGroupsSDK                   *mocks.MockAIGatewayConsumerGroupsSDK
+	AIGatewayCustomPoliciesSDK                   *mocks.MockAIGatewayCustomPoliciesSDK
 	AIGatewayDataPlaneCertificatesSDK            *mocks.MockAIGatewayDataPlaneCertificatesSDK
 	AIGatewayMCPServersSDK                       *mocks.MockAIGatewayMCPServersSDK
 	AIGatewayModelsSDK                           *mocks.MockAIGatewayModelsSDK
@@ -52,6 +53,7 @@ func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {
 		AIGatewayCertificatesSDK:                     mocks.NewMockAIGatewayCertificatesSDK(t),
 		AIGatewayConsumersSDK:                        mocks.NewMockAIGatewayConsumersSDK(t),
 		AIGatewayConsumerGroupsSDK:                   mocks.NewMockAIGatewayConsumerGroupsSDK(t),
+		AIGatewayCustomPoliciesSDK:                   mocks.NewMockAIGatewayCustomPoliciesSDK(t),
 		AIGatewayDataPlaneCertificatesSDK:            mocks.NewMockAIGatewayDataPlaneCertificatesSDK(t),
 		AIGatewayMCPServersSDK:                       mocks.NewMockAIGatewayMCPServersSDK(t),
 		AIGatewayModelsSDK:                           mocks.NewMockAIGatewayModelsSDK(t),
@@ -109,6 +111,11 @@ func (m generatedMockSDKWrapper) GetAIGatewayConsumersSDK() sdkkonnectgo.AIGatew
 // GetAIGatewayConsumerGroupsSDK returns the SDK to operate AIGatewayConsumerGroup.
 func (m generatedMockSDKWrapper) GetAIGatewayConsumerGroupsSDK() sdkkonnectgo.AIGatewayConsumerGroupsSDK {
 	return m.AIGatewayConsumerGroupsSDK
+}
+
+// GetAIGatewayCustomPoliciesSDK returns the SDK to operate AIGatewayCustomPolicy.
+func (m generatedMockSDKWrapper) GetAIGatewayCustomPoliciesSDK() sdkkonnectgo.AIGatewayCustomPoliciesSDK {
+	return m.AIGatewayCustomPoliciesSDK
 }
 
 // GetAIGatewayDataPlaneCertificatesSDK returns the SDK to operate AIGatewayDataPlaneCertificate.

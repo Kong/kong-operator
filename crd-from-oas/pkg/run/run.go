@@ -143,7 +143,7 @@ func (r *Runner) Run(
 			OpsConfig:                  agvConfig.OpsConfig(pathToEntityName),
 			CommonTypes:                agvConfig.CommonTypes,
 			SchemaFieldOmissions:       agvConfig.SchemaFieldOmissionsConfig(),
-			SecretReferences:           agvConfig.SecretReferencesConfig(pathToEntityName),
+			DataSources:                agvConfig.DataSourcesConfig(pathToEntityName),
 			ReconcilerConfig:           agvConfig.ReconcilerConfigs(pathToEntityName),
 			APIGroupPackagePath:        apiGroupPackagePath,
 			APIGroupPackageAlias:       apiGroupPackageAlias,

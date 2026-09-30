@@ -113,11 +113,11 @@ func (f *FakeConfigStoreSecrets) store(controlPlaneID, configStoreID string) map
 	return s
 }
 
-// nextTimestamp advances the internal clock and returns a timestamp derived
-// from it, guaranteeing strictly increasing timestamps across writes.
+// nextTimestamp advances the internal clock in millisecond increments,
+// guaranteeing strictly increasing fractional timestamps across writes.
 func (f *FakeConfigStoreSecrets) nextTimestamp() time.Time {
 	f.clock++
-	return time.Unix(1_700_000_000+f.clock, 0).UTC()
+	return time.Unix(1_700_000_000, f.clock*int64(time.Millisecond)).UTC()
 }
 
 func newFakeSDKError(statusCode int, format string, args ...any) *sdkkonnecterrs.SDKError {
@@ -358,6 +358,111 @@ func (f *FakeConfigStoreSecrets) DeleteConfigStoreSecret(
 	}, nil
 }
 
+// The ...InWorkspace variants delegate to their workspace-agnostic
+// counterparts, ignoring the Workspace path param: the fake's store is keyed
+// by control plane + config store only, and no test distinguishes workspaces.
+
+// CreateConfigStoreSecretInWorkspace creates a secret in a workspace.
+func (f *FakeConfigStoreSecrets) CreateConfigStoreSecretInWorkspace(
+	ctx context.Context,
+	request sdkkonnectops.CreateConfigStoreSecretInWorkspaceRequest,
+	opts ...sdkkonnectops.Option,
+) (*sdkkonnectops.CreateConfigStoreSecretInWorkspaceResponse, error) {
+	resp, err := f.CreateConfigStoreSecret(ctx, sdkkonnectops.CreateConfigStoreSecretRequest{
+		ControlPlaneID:          request.ControlPlaneID,
+		ConfigStoreID:           request.ConfigStoreID,
+		CreateConfigStoreSecret: request.CreateConfigStoreSecret,
+	}, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &sdkkonnectops.CreateConfigStoreSecretInWorkspaceResponse{
+		StatusCode:        resp.StatusCode,
+		ConfigStoreSecret: resp.ConfigStoreSecret,
+	}, nil
+}
+
+// ListConfigStoreSecretsInWorkspace lists secret metadata in a workspace.
+func (f *FakeConfigStoreSecrets) ListConfigStoreSecretsInWorkspace(
+	ctx context.Context,
+	request sdkkonnectops.ListConfigStoreSecretsInWorkspaceRequest,
+	opts ...sdkkonnectops.Option,
+) (*sdkkonnectops.ListConfigStoreSecretsInWorkspaceResponse, error) {
+	resp, err := f.ListConfigStoreSecrets(ctx, sdkkonnectops.ListConfigStoreSecretsRequest{
+		ControlPlaneID: request.ControlPlaneID,
+		ConfigStoreID:  request.ConfigStoreID,
+		PageSize:       request.PageSize,
+		PageAfter:      request.PageAfter,
+	}, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &sdkkonnectops.ListConfigStoreSecretsInWorkspaceResponse{
+		StatusCode:                     resp.StatusCode,
+		ListConfigStoreSecretsResponse: resp.ListConfigStoreSecretsResponse,
+	}, nil
+}
+
+// GetConfigStoreSecretInWorkspace returns secret metadata in a workspace.
+func (f *FakeConfigStoreSecrets) GetConfigStoreSecretInWorkspace(
+	ctx context.Context,
+	request sdkkonnectops.GetConfigStoreSecretInWorkspaceRequest,
+	opts ...sdkkonnectops.Option,
+) (*sdkkonnectops.GetConfigStoreSecretInWorkspaceResponse, error) {
+	resp, err := f.GetConfigStoreSecret(ctx, sdkkonnectops.GetConfigStoreSecretRequest{
+		ControlPlaneID: request.ControlPlaneID,
+		ConfigStoreID:  request.ConfigStoreID,
+		Key:            request.Key,
+	}, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &sdkkonnectops.GetConfigStoreSecretInWorkspaceResponse{
+		StatusCode:        resp.StatusCode,
+		ConfigStoreSecret: resp.ConfigStoreSecret,
+	}, nil
+}
+
+// UpdateConfigStoreSecretInWorkspace upserts a secret's value in a workspace.
+func (f *FakeConfigStoreSecrets) UpdateConfigStoreSecretInWorkspace(
+	ctx context.Context,
+	request sdkkonnectops.UpdateConfigStoreSecretInWorkspaceRequest,
+	opts ...sdkkonnectops.Option,
+) (*sdkkonnectops.UpdateConfigStoreSecretInWorkspaceResponse, error) {
+	resp, err := f.UpdateConfigStoreSecret(ctx, sdkkonnectops.UpdateConfigStoreSecretRequest{
+		ControlPlaneID:          request.ControlPlaneID,
+		ConfigStoreID:           request.ConfigStoreID,
+		Key:                     request.Key,
+		UpdateConfigStoreSecret: request.UpdateConfigStoreSecret,
+	}, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &sdkkonnectops.UpdateConfigStoreSecretInWorkspaceResponse{
+		StatusCode:        resp.StatusCode,
+		ConfigStoreSecret: resp.ConfigStoreSecret,
+	}, nil
+}
+
+// DeleteConfigStoreSecretInWorkspace deletes a secret in a workspace.
+func (f *FakeConfigStoreSecrets) DeleteConfigStoreSecretInWorkspace(
+	ctx context.Context,
+	request sdkkonnectops.DeleteConfigStoreSecretInWorkspaceRequest,
+	opts ...sdkkonnectops.Option,
+) (*sdkkonnectops.DeleteConfigStoreSecretInWorkspaceResponse, error) {
+	resp, err := f.DeleteConfigStoreSecret(ctx, sdkkonnectops.DeleteConfigStoreSecretRequest{
+		ControlPlaneID: request.ControlPlaneID,
+		ConfigStoreID:  request.ConfigStoreID,
+		Key:            request.Key,
+	}, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &sdkkonnectops.DeleteConfigStoreSecretInWorkspaceResponse{
+		StatusCode: resp.StatusCode,
+	}, nil
+}
+
 // -----------------------------------------------------------------------------
 // Test helpers (not part of the SDK interface)
 // -----------------------------------------------------------------------------
@@ -402,10 +507,14 @@ func (f *FakeConfigStoreSecrets) Value(controlPlaneID, configStoreID, key string
 
 // SetValue writes a value directly, bypassing the SDK interface, and advances
 // updated_at. It simulates an out-of-band write (drift) by another actor.
+// The clock jumps by more than a second so the write crosses the controller's
+// second-granularity drift comparison, matching a real external write that
+// happens at a later wall-clock time than the sync's own writes.
 func (f *FakeConfigStoreSecrets) SetValue(controlPlaneID, configStoreID, key, value string) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	store := f.store(controlPlaneID, configStoreID)
+	f.clock += int64(time.Second / time.Millisecond)
 	now := f.nextTimestamp()
 	if entry, ok := store[key]; ok {
 		entry.value = value

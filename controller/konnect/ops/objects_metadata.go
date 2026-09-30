@@ -118,7 +118,30 @@ func generateKubernetesMetadataTags(obj ObjectWithMetadata) []string {
 
 // WithKubernetesMetadataLabels returns a map of user-provided labels to be assigned to a Konnect entity with the origin
 // Kubernetes object's metadata added. These can be assigned to a Konnect entity that supports labels (e.g. ControlPlane).
+// The Kubernetes metadata labels take precedence over user-provided labels with the same keys, so that users cannot
+// override the labels the operator relies on (e.g. the UID label used to find the entity owned by an object).
 func WithKubernetesMetadataLabels(obj ObjectWithMetadata, userSetLabels map[string]string) map[string]string {
+	labels := maps.Clone(userSetLabels)
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	// The namespace label is only set for namespaced objects, so drop a user-provided
+	// one explicitly: it would otherwise survive for cluster-scoped objects.
+	delete(labels, KubernetesNamespaceLabelKey)
+	maps.Copy(labels, kubernetesMetadataLabels(obj))
+
+	// The maximum length of a label value in Konnect is 63 characters. We truncate the values to ensure they are
+	// within the limit.
+	const maxAllowedValueLength = 63
+	for k, v := range labels {
+		labels[k] = truncate(v, maxAllowedValueLength)
+	}
+
+	return labels
+}
+
+// kubernetesMetadataLabels returns the labels describing the given object's Kubernetes metadata.
+func kubernetesMetadataLabels(obj ObjectWithMetadata) map[string]string {
 	labels := map[string]string{
 		KubernetesNameLabelKey:       obj.GetName(),
 		KubernetesUIDLabelKey:        string(obj.GetUID()),
@@ -131,15 +154,6 @@ func WithKubernetesMetadataLabels(obj ObjectWithMetadata, userSetLabels map[stri
 	if k8sNamespace := obj.GetNamespace(); k8sNamespace != "" {
 		labels[KubernetesNamespaceLabelKey] = k8sNamespace
 	}
-	maps.Copy(labels, userSetLabels)
-
-	// The maximum length of a label value in Konnect is 63 characters. We truncate the values to ensure they are
-	// within the limit.
-	const maxAllowedValueLength = 63
-	for k, v := range labels {
-		labels[k] = truncate(v, maxAllowedValueLength)
-	}
-
 	return labels
 }
 
@@ -153,14 +167,18 @@ func UIDLabelForObject(obj client.Object) string {
 // WithKubernetesMetadataLabels for Konnect APIs whose label maps use
 // nullable string values (map[string]*string). It preserves nil user-set
 // entries (which semantically delete a label on update) while adding the
-// Kubernetes metadata labels as non-nil values.
+// Kubernetes metadata labels as non-nil values. As in WithKubernetesMetadataLabels,
+// the Kubernetes metadata labels take precedence, so a user-set entry (nil or not)
+// cannot override or delete them.
 func WithKubernetesMetadataLabelsPtr(obj ObjectWithMetadata, userSetLabels map[string]*string) map[string]*string {
-	merged := WithKubernetesMetadataLabels(obj, nil)
-	out := make(map[string]*string, len(merged)+len(userSetLabels))
-	for k, v := range merged {
+	out := maps.Clone(userSetLabels)
+	if out == nil {
+		out = map[string]*string{}
+	}
+	delete(out, KubernetesNamespaceLabelKey)
+	for k, v := range WithKubernetesMetadataLabels(obj, nil) {
 		out[k] = &v
 	}
-	maps.Copy(out, userSetLabels)
 	return out
 }
 

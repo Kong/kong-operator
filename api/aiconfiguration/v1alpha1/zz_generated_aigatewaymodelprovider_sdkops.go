@@ -126,6 +126,15 @@ var AIGatewayModelProviderSDKOpsConstFields = []sdkOpsConstField{
 	},
 	{
 		Path: []string{
+			"typesafe",
+			"config",
+			"auth",
+		},
+		Key:   "type",
+		Value: "basic",
+	},
+	{
+		Path: []string{
 			"vercel",
 			"config",
 			"auth",
@@ -351,6 +360,18 @@ var AIGatewayModelProviderSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 	},
 	{
 		Path: []string{
+			"typesafe",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"typesafe",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
 			"vercel",
 			"labels",
 		},
@@ -397,7 +418,7 @@ func (s *AIGatewayModelProviderAPISpec) marshalSDKOpsPayload() (map[string]any, 
 	if err := json.Unmarshal(data, &rawPayload); err != nil {
 		return nil, fmt.Errorf("failed to decode AIGatewayModelProviderAPISpec: %w", err)
 	}
-	rawPayload = flattenSensitiveData(rawPayload)
+	rawPayload = flattenSensitiveDataExcept(rawPayload, AIGatewayModelProviderSDKOpsFreeformKeyFields)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
 	renamed := renameKeysToSDKExcept(rawPayload, AIGatewayModelProviderSDKOpsFreeformKeyFields)
@@ -416,64 +437,88 @@ func (s *AIGatewayModelProviderAPISpec) selectedSDKOpsPayload(payload map[string
 
 	var selected any
 	var variant string
+	variantJSON := ""
 	switch s.AIGatewayModelProviderConfig.Type {
 	case AIGatewayModelProviderConfigTypeAnthropic:
 		selected = payload["anthropic"]
 		variant = "Anthropic"
+		variantJSON = "anthropic"
 	case AIGatewayModelProviderConfigTypeAzure:
 		selected = payload["azure"]
 		variant = "Azure"
+		variantJSON = "azure"
 	case AIGatewayModelProviderConfigTypeBedrock:
 		selected = payload["bedrock"]
 		variant = "Bedrock"
+		variantJSON = "bedrock"
 	case AIGatewayModelProviderConfigTypeCerebras:
 		selected = payload["cerebras"]
 		variant = "Cerebras"
+		variantJSON = "cerebras"
 	case AIGatewayModelProviderConfigTypeCohere:
 		selected = payload["cohere"]
 		variant = "Cohere"
+		variantJSON = "cohere"
 	case AIGatewayModelProviderConfigTypeDashscope:
 		selected = payload["dashscope"]
 		variant = "Dashscope"
+		variantJSON = "dashscope"
 	case AIGatewayModelProviderConfigTypeDatabricks:
 		selected = payload["databricks"]
 		variant = "Databricks"
+		variantJSON = "databricks"
 	case AIGatewayModelProviderConfigTypeDeepseek:
 		selected = payload["deepseek"]
 		variant = "Deepseek"
+		variantJSON = "deepseek"
 	case AIGatewayModelProviderConfigTypeGemini:
 		selected = payload["gemini"]
 		variant = "Gemini"
+		variantJSON = "gemini"
 	case AIGatewayModelProviderConfigTypeHuggingface:
 		selected = payload["huggingface"]
 		variant = "Huggingface"
+		variantJSON = "huggingface"
 	case AIGatewayModelProviderConfigTypeKimi:
 		selected = payload["kimi"]
 		variant = "Kimi"
+		variantJSON = "kimi"
 	case AIGatewayModelProviderConfigTypeLlama2:
 		selected = payload["llama2"]
 		variant = "Llama2"
+		variantJSON = "llama2"
 	case AIGatewayModelProviderConfigTypeMistral:
 		selected = payload["mistral"]
 		variant = "Mistral"
+		variantJSON = "mistral"
 	case AIGatewayModelProviderConfigTypeOllama:
 		selected = payload["ollama"]
 		variant = "Ollama"
+		variantJSON = "ollama"
 	case AIGatewayModelProviderConfigTypeOpenai:
 		selected = payload["openai"]
 		variant = "Openai"
+		variantJSON = "openai"
 	case AIGatewayModelProviderConfigTypeVercel:
 		selected = payload["vercel"]
 		variant = "Vercel"
+		variantJSON = "vercel"
 	case AIGatewayModelProviderConfigTypeVllm:
 		selected = payload["vllm"]
 		variant = "Vllm"
+		variantJSON = "vllm"
 	case AIGatewayModelProviderConfigTypeXai:
 		selected = payload["xai"]
 		variant = "Xai"
+		variantJSON = "xai"
 	case AIGatewayModelProviderConfigTypeSagemaker:
 		selected = payload["sagemaker"]
 		variant = "Sagemaker"
+		variantJSON = "sagemaker"
+	case AIGatewayModelProviderConfigTypeTypesafe:
+		selected = payload["typesafe"]
+		variant = "Typesafe"
+		variantJSON = "typesafe"
 	default:
 		return nil, "", fmt.Errorf("unsupported AIGatewayModelProvider config type %q", s.AIGatewayModelProviderConfig.Type)
 	}
@@ -481,7 +526,7 @@ func (s *AIGatewayModelProviderAPISpec) selectedSDKOpsPayload(payload map[string
 	if selected == nil {
 		return nil, "", fmt.Errorf("AIGatewayModelProvider config payload missing for type %q", s.AIGatewayModelProviderConfig.Type)
 	}
-	selected = flattenSDKUnions(selected)
+	selected = flattenSDKUnionsExceptUnder(selected, AIGatewayModelProviderSDKOpsFreeformKeyFields, variantJSON)
 	if selectedMap, ok := selected.(map[string]any); ok {
 		if typeValue, ok := payload["type"]; ok {
 			if _, hasType := selectedMap["type"]; !hasType {
@@ -650,6 +695,13 @@ func (s *AIGatewayModelProviderAPISpec) ToCreateAIGatewayModelProviderRequest() 
 		}
 		target := sdkkonnectcomp.CreateCreateAIGatewayModelProviderRequestSagemaker(member)
 		return &target, nil
+	case "Typesafe":
+		var member sdkkonnectcomp.AIGatewayModelProviderTypesafe
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayModelProviderTypesafe: %w", err)
+		}
+		target := sdkkonnectcomp.CreateCreateAIGatewayModelProviderRequestTypesafe(member)
+		return &target, nil
 	default:
 		return nil, fmt.Errorf("unsupported AIGatewayModelProvider config variant %q", variant)
 	}
@@ -811,6 +863,13 @@ func (s *AIGatewayModelProviderAPISpec) ToUpdateAIGatewayModelProviderRequest() 
 		}
 		target := sdkkonnectcomp.CreateUpdateAIGatewayModelProviderRequestSagemaker(member)
 		return &target, nil
+	case "Typesafe":
+		var member sdkkonnectcomp.AIGatewayModelProviderTypesafe
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayModelProviderTypesafe: %w", err)
+		}
+		target := sdkkonnectcomp.CreateUpdateAIGatewayModelProviderRequestTypesafe(member)
+		return &target, nil
 	default:
 		return nil, fmt.Errorf("unsupported AIGatewayModelProvider config variant %q", variant)
 	}
@@ -821,7 +880,10 @@ func (obj *AIGatewayModelProvider) sdkOpsAPISpec(ctx context.Context, cl client.
 		return nil, fmt.Errorf("AIGatewayModelProvider is nil")
 	}
 
-	apiSpec := obj.Spec.APISpec
+	// Resolve against a deep copy: resolved values are written into the spec
+	// being walked, and union variants and slices are shared by reference, so
+	// a shallow copy would leak them into obj (e.g. the informer cache).
+	apiSpec := *obj.Spec.APISpec.DeepCopy()
 	// Resolve spec.apiSpec.*.config.auth.headers[].value
 	if apiSpec.AIGatewayModelProviderConfig != nil {
 		if apiSpec.AIGatewayModelProviderConfig.Anthropic != nil {
@@ -1142,6 +1204,33 @@ func (obj *AIGatewayModelProvider) sdkOpsAPISpec(ctx context.Context, cl client.
 					}
 					resolved := string(secretBytes)
 					apiSpec.AIGatewayModelProviderConfig.Openai.Config.Auth.Headers[i].Value.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.config.auth.headers[].value
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Typesafe != nil {
+			for i := range apiSpec.AIGatewayModelProviderConfig.Typesafe.Config.Auth.Headers {
+				src := apiSpec.AIGatewayModelProviderConfig.Typesafe.Config.Auth.Headers[i].Value
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.config.auth.headers[].value")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Typesafe.Config.Auth.Headers[i].Value.Value = &resolved
 				}
 			}
 		}
@@ -1547,6 +1636,33 @@ func (obj *AIGatewayModelProvider) sdkOpsAPISpec(ctx context.Context, cl client.
 					}
 					resolved := string(secretBytes)
 					apiSpec.AIGatewayModelProviderConfig.Openai.Config.Auth.Params[i].Value.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.config.auth.params[].value
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Typesafe != nil {
+			for i := range apiSpec.AIGatewayModelProviderConfig.Typesafe.Config.Auth.Params {
+				src := apiSpec.AIGatewayModelProviderConfig.Typesafe.Config.Auth.Params[i].Value
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.config.auth.params[].value")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Typesafe.Config.Auth.Params[i].Value.Value = &resolved
 				}
 			}
 		}
@@ -2091,6 +2207,15 @@ func (obj *AIGatewayModelProvider) GetSensitiveDataSecretRefs() []SensitiveDataS
 		}
 	}
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Typesafe != nil {
+			for _, item := range obj.Spec.APISpec.AIGatewayModelProviderConfig.Typesafe.Config.Auth.Headers {
+				if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
+					refs = append(refs, *item.Value.SecretRef)
+				}
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vercel != nil {
 			for _, item := range obj.Spec.APISpec.AIGatewayModelProviderConfig.Vercel.Config.Auth.Headers {
 				if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
@@ -2219,6 +2344,15 @@ func (obj *AIGatewayModelProvider) GetSensitiveDataSecretRefs() []SensitiveDataS
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Openai != nil {
 			for _, item := range obj.Spec.APISpec.AIGatewayModelProviderConfig.Openai.Config.Auth.Params {
+				if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
+					refs = append(refs, *item.Value.SecretRef)
+				}
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Typesafe != nil {
+			for _, item := range obj.Spec.APISpec.AIGatewayModelProviderConfig.Typesafe.Config.Auth.Params {
 				if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
 					refs = append(refs, *item.Value.SecretRef)
 				}
