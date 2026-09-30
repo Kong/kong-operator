@@ -302,19 +302,20 @@ func TestKonnectConfigStoreSync(t *testing.T) {
 				ExpectedUpdateErrorMessage: new("spec.mode is immutable"),
 			},
 			{
-				Name:       "configStoreRef.name is immutable",
+				Name:       "configStoreRef name is immutable",
 				TestObject: validKonnectConfigStoreSync(ns.Name),
 				Update: func(obj *konnectv1alpha1.KonnectConfigStoreSync) {
 					obj.Spec.ConfigStoreRef.Name = "other-config-store"
 				},
-				ExpectedUpdateErrorMessage: new("spec.configStoreRef.name is immutable"),
+				ExpectedUpdateErrorMessage: new("spec.configStoreRef is immutable"),
 			},
 			{
-				Name:       "configStoreRef.namespace is mutable",
+				Name:       "configStoreRef namespace is immutable",
 				TestObject: validKonnectConfigStoreSync(ns.Name),
 				Update: func(obj *konnectv1alpha1.KonnectConfigStoreSync) {
 					obj.Spec.ConfigStoreRef.Namespace = new("other-namespace")
 				},
+				ExpectedUpdateErrorMessage: new("spec.configStoreRef is immutable"),
 			},
 			{
 				Name:       "secretRef is mutable",

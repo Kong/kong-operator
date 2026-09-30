@@ -27,6 +27,7 @@ func createAIGatewayDataPlaneCertificate(
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
+	req.Labels = WithKubernetesMetadataLabels(obj, req.Labels)
 
 	resp, err := sdk.CreateAiGatewayDataPlaneCertificate(ctx, parentID, req)
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, obj); errWrap != nil {

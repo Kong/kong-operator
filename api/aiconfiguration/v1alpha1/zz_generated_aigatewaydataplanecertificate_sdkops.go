@@ -13,6 +13,22 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 )
 
+// AIGatewayDataPlaneCertificateSDKOpsFreeformKeyFields lists free-form / map data-keyed
+// subtrees whose keys are user data (e.g. an HTTP header name) and must be
+// preserved verbatim rather than camelCase→snake_case renamed.
+var AIGatewayDataPlaneCertificateSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
+	{
+		Path: []string{
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"managed_by",
+		},
+	},
+}
+
 func (s *AIGatewayDataPlaneCertificateAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	data, err := json.Marshal(s)
 	if err != nil {
@@ -22,11 +38,11 @@ func (s *AIGatewayDataPlaneCertificateAPISpec) marshalSDKOpsPayload() ([]byte, e
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return nil, fmt.Errorf("failed to decode AIGatewayDataPlaneCertificateAPISpec: %w", err)
 	}
-	payload = flattenSDKUnions(payload)
-	payload = flattenSensitiveData(payload)
+	payload = flattenSDKUnionsExcept(payload, AIGatewayDataPlaneCertificateSDKOpsFreeformKeyFields)
+	payload = flattenSensitiveDataExcept(payload, AIGatewayDataPlaneCertificateSDKOpsFreeformKeyFields)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
-	payload = renameKeysToSDK(payload)
+	payload = renameKeysToSDKExcept(payload, AIGatewayDataPlaneCertificateSDKOpsFreeformKeyFields)
 	data, err = json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal normalized AIGatewayDataPlaneCertificateAPISpec: %w", err)
@@ -55,7 +71,10 @@ func (obj *AIGatewayDataPlaneCertificate) sdkOpsAPISpec(ctx context.Context, cl 
 		return nil, fmt.Errorf("AIGatewayDataPlaneCertificate is nil")
 	}
 
-	apiSpec := obj.Spec.APISpec
+	// Resolve against a deep copy: resolved values are written into the spec
+	// being walked, and union variants and slices are shared by reference, so
+	// a shallow copy would leak them into obj (e.g. the informer cache).
+	apiSpec := *obj.Spec.APISpec.DeepCopy()
 	// Resolve spec.apiSpec.cert
 	{
 		src := apiSpec.Cert

@@ -5,12 +5,15 @@ package index
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
 
 const (
 	// IndexFieldPortalPageOnPortalRef is the index field for PortalPage -> Portal.
 	IndexFieldPortalPageOnPortalRef = "portalPageOnPortalRef"
+	// IndexFieldPortalPageOnPortalPageRef is the index field for PortalPage -> PortalPage.
+	IndexFieldPortalPageOnPortalPageRef = "portalPageOnPortalPageRef"
 )
 
 // OptionsForPortalPage returns required Index options for PortalPage reconciler.
@@ -20,6 +23,11 @@ func OptionsForPortalPage() []Option {
 			Object:         &konnectv1alpha1.PortalPage{},
 			Field:          IndexFieldPortalPageOnPortalRef,
 			ExtractValueFn: portalPageOnPortalRef,
+		},
+		{
+			Object:         &konnectv1alpha1.PortalPage{},
+			Field:          IndexFieldPortalPageOnPortalPageRef,
+			ExtractValueFn: portalPageOnPortalPageRef,
 		},
 	}
 }
@@ -39,4 +47,20 @@ func portalPageOnPortalRef(object client.Object) []string {
 	}
 
 	return []string{refNamespace + "/" + ent.Spec.PortalRef.NamespacedRef.Name}
+}
+
+func portalPageOnPortalPageRef(object client.Object) []string {
+	ent, ok := object.(*konnectv1alpha1.PortalPage)
+	if !ok {
+		return nil
+	}
+	var out []string
+	if ref := ent.Spec.APISpec.ParentPageIDRef; ref != nil && ref.Type == commonv1alpha1.ObjectRefTypeNamespacedRef && ref.NamespacedRef != nil {
+		ns := ent.GetNamespace()
+		if ref.NamespacedRef.Namespace != nil && *ref.NamespacedRef.Namespace != "" {
+			ns = *ref.NamespacedRef.Namespace
+		}
+		out = append(out, ns+"/"+ref.NamespacedRef.Name)
+	}
+	return out
 }

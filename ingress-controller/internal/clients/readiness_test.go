@@ -15,6 +15,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/adminapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/clients"
 	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	adminapidiscovery "github.com/kong/kong-operator/v2/internal/adminapi"
 )
 
 type mockClientFactory struct {
@@ -32,7 +33,7 @@ func newMockClientFactory(t *testing.T, ready map[string]bool) *mockClientFactor
 	}
 }
 
-func (cf *mockClientFactory) CreateAdminAPIClient(_ context.Context, adminAPI adminapi.DiscoveredAdminAPI) (*adminapi.Client, error) {
+func (cf *mockClientFactory) CreateAdminAPIClient(_ context.Context, adminAPI adminapidiscovery.DiscoveredAdminAPI) (*adminapi.Client, error) {
 	address := adminAPI.Address
 
 	cf.lock.Lock()
@@ -99,7 +100,7 @@ func TestDefaultReadinessChecker(t *testing.T) {
 		name string
 
 		alreadyCreatedClients   []clients.AlreadyCreatedClient
-		pendingClients          []adminapi.DiscoveredAdminAPI
+		pendingClients          []adminapidiscovery.DiscoveredAdminAPI
 		pendingClientsReadiness map[string]bool
 
 		expectedTurnedReady   []string
@@ -118,7 +119,7 @@ func TestDefaultReadinessChecker(t *testing.T) {
 		},
 		{
 			name: "pending turning ready",
-			pendingClients: []adminapi.DiscoveredAdminAPI{
+			pendingClients: []adminapidiscovery.DiscoveredAdminAPI{
 				{
 					Address: testURL1,
 					PodRef:  testPodRef,
@@ -143,7 +144,7 @@ func TestDefaultReadinessChecker(t *testing.T) {
 					isReady: true,
 				},
 			},
-			pendingClients: []adminapi.DiscoveredAdminAPI{
+			pendingClients: []adminapidiscovery.DiscoveredAdminAPI{
 				{
 					Address: testURL2,
 					PodRef:  testPodRef,
@@ -168,7 +169,7 @@ func TestDefaultReadinessChecker(t *testing.T) {
 					isReady: true,
 				},
 			},
-			pendingClients: []adminapi.DiscoveredAdminAPI{
+			pendingClients: []adminapidiscovery.DiscoveredAdminAPI{
 				{
 					Address: testURL2,
 					PodRef:  testPodRef,
@@ -206,7 +207,7 @@ func TestDefaultReadinessChecker(t *testing.T) {
 		},
 		{
 			name: "multiple pending, one turning ready",
-			pendingClients: []adminapi.DiscoveredAdminAPI{
+			pendingClients: []adminapidiscovery.DiscoveredAdminAPI{
 				{
 					Address: testURL1,
 					PodRef:  testPodRef,
@@ -226,7 +227,7 @@ func TestDefaultReadinessChecker(t *testing.T) {
 		},
 		{
 			name: "multiple pending, two turning ready",
-			pendingClients: []adminapi.DiscoveredAdminAPI{
+			pendingClients: []adminapidiscovery.DiscoveredAdminAPI{
 				{
 					Address: testURL1,
 					PodRef:  testPodRef,
@@ -263,7 +264,7 @@ func TestDefaultReadinessChecker(t *testing.T) {
 			checker := clients.NewDefaultReadinessChecker(factory, managercfg.DefaultDataPlanesReadinessCheckTimeout, logr.Discard())
 			result := checker.CheckReadiness(t.Context(), tc.alreadyCreatedClients, tc.pendingClients)
 
-			turnedPending := lo.Map(result.ClientsTurnedPending, func(c adminapi.DiscoveredAdminAPI, _ int) string { return c.Address })
+			turnedPending := lo.Map(result.ClientsTurnedPending, func(c adminapidiscovery.DiscoveredAdminAPI, _ int) string { return c.Address })
 			turnedReady := lo.Map(result.ClientsTurnedReady, func(c *adminapi.Client, _ int) string { return c.BaseRootURL() })
 
 			require.ElementsMatch(t, tc.expectedTurnedReady, turnedReady)
@@ -306,7 +307,7 @@ func TestDefaultReadinessChecker_PreservesTLSServerNameForPendingClients(t *test
 	}, nil)
 
 	require.Len(t, result.ClientsTurnedPending, 1)
-	require.Equal(t, adminapi.DiscoveredAdminAPI{
+	require.Equal(t, adminapidiscovery.DiscoveredAdminAPI{
 		Address:       testURL,
 		TLSServerName: testTLSServerName,
 		PodRef:        testPodRef,

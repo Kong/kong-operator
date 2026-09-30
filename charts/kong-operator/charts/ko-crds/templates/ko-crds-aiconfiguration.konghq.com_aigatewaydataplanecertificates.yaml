@@ -8,7 +8,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: aigatewaydataplanecertificates.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -88,6 +88,9 @@ spec:
                     and konnect.konghq.com when kind is KonnectAIGateway
                   rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com''
                     : self.group == ''konnect.konghq.com'''
+                - message: repointing an entity between KonnectAIGateway and OnPremAIGateway
+                    is forbidden
+                  rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
                 properties:
                   cert:
@@ -128,6 +131,20 @@ spec:
                   description:
                     maxLength: 1024
                     type: string
+                  labels:
+                    additionalProperties:
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                      type: string
+                    type: object
+                  managedBy:
+                    additionalProperties:
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                      type: string
+                    type: object
                   title:
                     maxLength: 256
                     minLength: 1
@@ -203,9 +220,9 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.aiGatewayRef) || !has(self.status.conditions) || !self.status.conditions.exists(c,
-            c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef
-            == self.spec.aiGatewayRef'
+          rule: '!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions)
+            || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
+            == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
     served: true
     storage: true
     subresources:

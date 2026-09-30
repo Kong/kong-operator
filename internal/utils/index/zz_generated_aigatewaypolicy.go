@@ -11,6 +11,13 @@ import (
 const (
 	// IndexFieldAIGatewayPolicyOnKonnectAIGatewayRef is the index field for AIGatewayPolicy -> KonnectAIGateway.
 	IndexFieldAIGatewayPolicyOnKonnectAIGatewayRef = "aiGatewayPolicyOnKonnectAIGatewayRef"
+	// IndexFieldAIGatewayPolicyOnOnPremAIGatewayRef is the index field for AIGatewayPolicy -> OnPremAIGateway.
+	IndexFieldAIGatewayPolicyOnOnPremAIGatewayRef = "aiGatewayPolicyOnOnPremAIGatewayRef"
+	// IndexFieldAIGatewayPolicyOnAIGatewayCustomPolicyRef is the index field for AIGatewayPolicy -> AIGatewayCustomPolicy.
+	IndexFieldAIGatewayPolicyOnAIGatewayCustomPolicyRef = "aiGatewayPolicyOnAIGatewayCustomPolicyRef"
+	// IndexFieldAIGatewayPolicyOnType is the index field for AIGatewayPolicy by
+	// "<gatewayID>/<Type>", used to find the objects naming a referenced object literally (injectInto).
+	IndexFieldAIGatewayPolicyOnType = "aiGatewayPolicyOnType"
 )
 
 // OptionsForAIGatewayPolicy returns required Index options for AIGatewayPolicy reconciler.
@@ -20,6 +27,21 @@ func OptionsForAIGatewayPolicy() []Option {
 			Object:         &aiconfigurationv1alpha1.AIGatewayPolicy{},
 			Field:          IndexFieldAIGatewayPolicyOnKonnectAIGatewayRef,
 			ExtractValueFn: aiGatewayPolicyOnKonnectAIGatewayRef,
+		},
+		{
+			Object:         &aiconfigurationv1alpha1.AIGatewayPolicy{},
+			Field:          IndexFieldAIGatewayPolicyOnOnPremAIGatewayRef,
+			ExtractValueFn: aiGatewayPolicyOnOnPremAIGatewayRef,
+		},
+		{
+			Object:         &aiconfigurationv1alpha1.AIGatewayPolicy{},
+			Field:          IndexFieldAIGatewayPolicyOnAIGatewayCustomPolicyRef,
+			ExtractValueFn: aiGatewayPolicyOnAIGatewayCustomPolicyRef,
+		},
+		{
+			Object:         &aiconfigurationv1alpha1.AIGatewayPolicy{},
+			Field:          IndexFieldAIGatewayPolicyOnType,
+			ExtractValueFn: aiGatewayPolicyOnType,
 		},
 	}
 }
@@ -32,6 +54,11 @@ func aiGatewayPolicyOnKonnectAIGatewayRef(object client.Object) []string {
 	if ent.Spec.AIGatewayRef.NamespacedRef == nil {
 		return nil
 	}
+	// Only entities targeting a KonnectAIGateway are visible to the Konnect
+	// reconciler: on-prem-targeted ones are indexed separately.
+	if !ent.Spec.AIGatewayRef.TargetsKonnectAIGateway() {
+		return nil
+	}
 
 	refNamespace := ent.GetNamespace()
 	if ent.Spec.AIGatewayRef.NamespacedRef.Namespace != nil && *ent.Spec.AIGatewayRef.NamespacedRef.Namespace != "" {
@@ -39,4 +66,56 @@ func aiGatewayPolicyOnKonnectAIGatewayRef(object client.Object) []string {
 	}
 
 	return []string{refNamespace + "/" + ent.Spec.AIGatewayRef.NamespacedRef.Name}
+}
+func aiGatewayPolicyOnOnPremAIGatewayRef(object client.Object) []string {
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayPolicy)
+	if !ok {
+		return nil
+	}
+	if ent.Spec.AIGatewayRef.NamespacedRef == nil {
+		return nil
+	}
+	// Only entities targeting an OnPremAIGateway are visible to the on-prem
+	// reconciler: Konnect-targeted ones stay in the KonnectAIGateway index.
+	if !ent.Spec.AIGatewayRef.TargetsOnPremAIGateway() {
+		return nil
+	}
+
+	refNamespace := ent.GetNamespace()
+	if ent.Spec.AIGatewayRef.NamespacedRef.Namespace != nil && *ent.Spec.AIGatewayRef.NamespacedRef.Namespace != "" {
+		refNamespace = *ent.Spec.AIGatewayRef.NamespacedRef.Namespace
+	}
+
+	return []string{refNamespace + "/" + ent.Spec.AIGatewayRef.NamespacedRef.Name}
+}
+
+func aiGatewayPolicyOnAIGatewayCustomPolicyRef(object client.Object) []string {
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayPolicy)
+	if !ok {
+		return nil
+	}
+	var out []string
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayPolicyCustomPolicyRef(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayCustomPolicy" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
+}
+
+func aiGatewayPolicyOnType(object client.Object) []string {
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayPolicy)
+	if !ok {
+		return nil
+	}
+	gatewayID, value := ent.GetGatewayID(), ent.Spec.APISpec.Type
+	if gatewayID == "" || value == "" {
+		return nil
+	}
+	return []string{gatewayID + "/" + value}
 }

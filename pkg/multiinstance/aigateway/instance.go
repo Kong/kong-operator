@@ -6,21 +6,32 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/Kong/ai-deck-converter/convert"
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/managedfields"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/config"
 	ctrlmetricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	aigwonpremconfig "github.com/kong/kong-operator/v2/controller/aigateway/onpremconfig"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	adminapi "github.com/kong/kong-operator/v2/internal/adminapi"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/changenotifier"
 	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/translator"
 	"github.com/kong/kong-operator/v2/pkg/multiinstance/instances"
@@ -32,12 +43,24 @@ type Config struct {
 	// DBLessConfig is the rendered dbless declarative payload for this gateway, ready to be
 	// pushed to its data planes' Admin API.
 	DBLessConfig []byte
+
+	// AdminClientCertSecretNN is the reference to the mTLS client certificate Secret the
+	// instance reads when pushing configuration to its data planes. It is part of the
+	// hashed config so that a renewed Secret - recreated under a new GenerateName by
+	// EnsureCertificate - drifts the hash and restarts the instance with the new reference.
+	AdminClientCertSecretNN types.NamespacedName
 }
 
 // Hash computes a hash of the given config. It's used to detect configuration drift of running instances.
 func Hash(cfg Config) (string, error) {
-	sum := sha256.Sum256(cfg.DBLessConfig)
-	return hex.EncodeToString(sum[:]), nil
+	h := sha256.New()
+	h.Write(cfg.DBLessConfig)
+	// Skip the zero value so an empty config keeps hashing to sha256(""): the
+	// zero NN's String() is "/", which would otherwise shift every hash.
+	if cfg.AdminClientCertSecretNN != (types.NamespacedName{}) {
+		h.Write([]byte(cfg.AdminClientCertSecretNN.String()))
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 // Env carries the process-level dependencies an instance needs to build and run its own
@@ -52,6 +75,19 @@ type Env struct {
 
 	// CacheSyncTimeout is the cache sync timeout for the instance's controllers.
 	CacheSyncTimeout time.Duration
+
+	// GatewayNN is the reference to the OnPremAIGateway resource the instance
+	// serves. It is used to discover the AIGatewayDataPlanes referencing the
+	// gateway and their Admin API endpoints.
+	GatewayNN types.NamespacedName
+
+	// AdminClientCertSecretNN is the reference to the mTLS client certificate Secret
+	// provisioned by the OnPremAIGateway controller. The instance reads it to build
+	// the Admin API clients that push configuration to the data planes.
+	AdminClientCertSecretNN types.NamespacedName
+
+	// TypeConverter is the SSA type converter used to patch the OnPremAIGateway status.
+	TypeConverter managedfields.TypeConverter
 }
 
 // Instance is a single on-prem AI Gateway control plane instance. It runs its own
@@ -66,6 +102,28 @@ type Instance struct {
 	cn     *changenotifier.ChangeNotifier
 	// client is the instance's own manager client, set in Run once the manager is built.
 	client client.Client
+
+	// adminAPIsMu guards adminAPIs.
+	adminAPIsMu sync.RWMutex
+	// adminAPIs holds the Admin API endpoints discovered for the AIGatewayDataPlanes
+	// referencing the instance's OnPremAIGateway. They are kept up to date by the
+	// AdminAPIEndpointsReconciler running on the instance's own manager.
+	adminAPIs sets.Set[adminapi.DiscoveredAdminAPI]
+
+	// newPushClient builds the Admin API client used to push configuration to a
+	// single discovered endpoint. Swappable in tests.
+	newPushClient newPushClientFunc
+
+	// eventRecorder records events on the instance's OnPremAIGateway. It is set in
+	// Run once the instance's manager is built, and may be nil in tests.
+	eventRecorder events.EventRecorder
+
+	// pushClients caches the Admin API push clients per endpoint address, TLS
+	// server name and certificate material: building a client parses the key
+	// pair, builds a transport and performs a TLS handshake, which the retry
+	// loop would otherwise repeat on every sync. Only the sync loop goroutine
+	// touches it, so no locking.
+	pushClients map[string]pusher
 }
 
 var _ instances.Instance = &Instance{}
@@ -78,11 +136,12 @@ func NewInstance(
 	env Env,
 ) *Instance {
 	return &Instance{
-		id:     id,
-		logger: logger.WithValues("instanceID", id.String()),
-		env:    env,
-		cfg:    cfg,
-		cn:     changenotifier.New(),
+		id:            id,
+		logger:        logger.WithValues("instanceID", id.String()),
+		env:           env,
+		cfg:           cfg,
+		cn:            changenotifier.New(),
+		newPushClient: newMTLSClientAdapter,
 	}
 }
 
@@ -103,8 +162,8 @@ func (i *Instance) ConfigHash() (string, error) {
 
 // IsReady returns an error if the instance is not ready yet.
 //
-// There is nothing to wait for yet: the instance does not talk to anything on startup. Once configuration
-// assembly and push land, this has to report the actual readiness of the pushing machinery.
+// The instance reports push failures on the gateway's DataPlanesConfigured
+// condition, so there is nothing to wait for here yet.
 // TODO: https://github.com/Kong/kong-operator/issues/5569
 func (i *Instance) IsReady() error {
 	return nil
@@ -114,6 +173,49 @@ func (i *Instance) IsReady() error {
 // TODO: https://github.com/Kong/kong-operator/issues/5630
 func (i *Instance) DiagnosticsHandler() http.Handler {
 	return nil
+}
+
+// setAdminAPIs stores the Admin API endpoints discovered for the AIGatewayDataPlanes
+// referencing the instance's OnPremAIGateway.
+func (i *Instance) setAdminAPIs(adminAPIs sets.Set[adminapi.DiscoveredAdminAPI]) {
+	i.adminAPIsMu.Lock()
+	defer i.adminAPIsMu.Unlock()
+	i.adminAPIs = adminAPIs
+}
+
+// onAdminAPIsDiscovered stores the Admin API endpoints discovered for the
+// AIGatewayDataPlanes referencing this instance's OnPremAIGateway and, when the
+// set changed and is non-empty, notifies the sync loop so the configuration is
+// re-rendered for the discovered endpoints.
+func (i *Instance) onAdminAPIsDiscovered(
+	ctx context.Context,
+	adminAPIs sets.Set[adminapi.DiscoveredAdminAPI],
+) {
+	prev := i.AdminAPIs()
+	i.setAdminAPIs(adminAPIs)
+	if prev.Equal(adminAPIs) {
+		return
+	}
+	if adminAPIs.Len() == 0 {
+		// No endpoints discovered: there are no push targets, so there is
+		// nothing to re-render for. The next non-empty discovery notifies.
+		return
+	}
+	// Notify the sync loop so the configuration is re-rendered for the
+	// discovered endpoints. The notified object is only used for logging
+	// by the sync loop.
+	i.cn.NotifyChange(ctx, &i.env.GatewayNN, &aigatewayv1alpha1.OnPremAIGateway{
+		Namespace: i.env.GatewayNN.Namespace,
+		Name:      i.env.GatewayNN.Name,
+	})
+}
+
+// AdminAPIs returns a copy of the Admin API endpoints discovered for the
+// AIGatewayDataPlanes referencing the instance's OnPremAIGateway.
+func (i *Instance) AdminAPIs() sets.Set[adminapi.DiscoveredAdminAPI] {
+	i.adminAPIsMu.RLock()
+	defer i.adminAPIsMu.RUnlock()
+	return i.adminAPIs.Clone()
 }
 
 // newCtrlManager builds the instance's own lightweight controller-runtime manager.
@@ -129,8 +231,39 @@ func (i *Instance) newCtrlManager() (ctrl.Manager, error) {
 		Controller:             config.Controller{SkipNameValidation: new(true)},
 		Metrics:                ctrlmetricsserver.Options{BindAddress: "0"},
 		HealthProbeBindAddress: "0",
+		Cache:                  i.cacheOpts(),
 		// No leader election and no webhooks: instances are ephemeral, one per OnPremAIGateway.
-		// No cache namespace scoping: AIGatewayModels may reference the gateway from any namespace.
+	})
+}
+
+// cacheOpts scopes the instance manager's per-object caches. AIGatewayModels stay
+// cluster-wide: they may reference the gateway from any namespace. EndpointSlices,
+// AIGatewayDataPlanes, the Admin API client certificate Secret and the OnPremAIGateway
+// itself are scoped to the gateway's namespace: the onpremNamespacedRef is
+// same-namespace and only objects in it are read there. The Secret cache is further
+// bounded to the Admin API client certificate Secrets by label, as those are the only
+// Secrets the instance reads.
+func (i *Instance) cacheOpts() cache.Options {
+	opts := cache.Options{}
+	if i.env.GatewayNN.Namespace == "" {
+		return opts
+	}
+	namespaces := map[string]cache.Config{i.env.GatewayNN.Namespace: {}}
+	opts.ByObject = map[client.Object]cache.ByObject{
+		&discoveryv1.EndpointSlice{}:            {Namespaces: namespaces},
+		&aigatewayv1alpha1.AIGatewayDataPlane{}: {Namespaces: namespaces},
+		&aigatewayv1alpha1.OnPremAIGateway{}:    {Namespaces: namespaces},
+		&corev1.Secret{}:                        {Namespaces: namespaces, Label: adminClientCertSecretSelector()},
+	}
+	return opts
+}
+
+// adminClientCertSecretSelector matches the OnPremAIGateway Admin API client
+// certificate Secrets - the only Secrets the instance reads - so unrelated
+// Secrets in the gateway namespace stay out of the instance's cache.
+func adminClientCertSecretSelector() labels.Selector {
+	return labels.SelectorFromSet(labels.Set{
+		consts.SecretOnPremAIGatewayAdminClientCertificateLabel: "true",
 	})
 }
 
@@ -151,7 +284,10 @@ func (i *Instance) sendConfig(
 	if err != nil {
 		return fmt.Errorf("rendering dbless configuration: %w", err)
 	}
-	_ = payload
+
+	if err := i.sendConfigToDataPlanes(ctx, *gw, payload); err != nil {
+		return fmt.Errorf("sending configuration to data planes: %w", err)
+	}
 
 	for _, w := range warnings {
 		// TODO: https://github.com/Kong/kong-operator/issues/5664
@@ -166,7 +302,7 @@ func (i *Instance) sendConfig(
 // syncPending re-renders the configuration for every gateway with pending changes and removes
 // the rendered ones from the set. Failed renders stay in the set so that the timer retries
 // them. lastSyncTS is updated on every attempt so that bursts of changes debounce even
-// when renders fail. Nothing is pushed yet: sendConfig only renders the payload.
+// when renders fail.
 func (i *Instance) syncPending(
 	ctx context.Context,
 	pending map[types.NamespacedName]struct{},
@@ -195,14 +331,36 @@ func (i *Instance) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("creating instance controller-runtime manager: %w", err)
 	}
+	// The event recorder is used to emit Warning events on the instance's
+	// OnPremAIGateway when the configuration push to a data plane Admin API fails.
+	i.eventRecorder = mgr.GetEventRecorder(ControllerNameAdminAPIEndpoints)
 
-	// The field index is used by translator.BuildDocument to list the AIGatewayModels
-	// referencing this gateway. It lives on the instance's own cache, alongside its only
-	// consumer.
-	// TODO: This will require adjustments for indexing excluding the KonnectAIGateway.
-	for _, opt := range index.OptionsForAIGatewayModel() {
-		if err := mgr.GetFieldIndexer().IndexField(ctx, opt.Object, opt.Field, opt.ExtractValueFn); err != nil {
-			return fmt.Errorf("registering AIGatewayModel field index: %w", err)
+	// The field indexes are used by translator.BuildDocument to list the
+	// configuration entities referencing this gateway. They live on the
+	// instance's own cache, alongside their only consumer. Every entity kind
+	// registers both its KonnectAIGatewayRef index (unused here, kept for
+	// parity with the main manager's indexes) and its OnOnPremAIGatewayRef
+	// index, whose extractor only matches entities actually targeting an
+	// OnPremAIGateway, so a KonnectAIGateway sharing namespace/name never
+	// collides.
+	for _, opts := range [][]index.Option{
+		index.OptionsForAIGatewayAgent(),
+		index.OptionsForAIGatewayAuthStrategy(),
+		index.OptionsForAIGatewayCACertificate(),
+		index.OptionsForAIGatewayCertificate(),
+		index.OptionsForAIGatewayConsumer(),
+		index.OptionsForAIGatewayConsumerGroup(),
+		index.OptionsForAIGatewayDataPlaneCertificate(),
+		index.OptionsForAIGatewayMCPServer(),
+		index.OptionsForAIGatewayModel(),
+		index.OptionsForAIGatewayModelProvider(),
+		index.OptionsForAIGatewayPolicy(),
+		index.OptionsForAIGatewaySNI(),
+	} {
+		for _, opt := range opts {
+			if err := mgr.GetFieldIndexer().IndexField(ctx, opt.Object, opt.Field, opt.ExtractValueFn); err != nil {
+				return fmt.Errorf("registering %s field index: %w", opt.Field, err)
+			}
 		}
 	}
 
@@ -219,6 +377,23 @@ func (i *Instance) Run(ctx context.Context) error {
 		return fmt.Errorf("setting up configuration-entity controllers: %w", err)
 	}
 	i.client = mgr.GetClient()
+
+	// The Admin API endpoints discovery controller discovers the Admin API endpoints of
+	// the AIGatewayDataPlanes referencing this instance's OnPremAIGateway, so that the
+	// rendered configuration can be pushed to them.
+	discoverer, err := adminapi.NewDiscoverer(sets.New(consts.DataPlaneAdminServicePortName))
+	if err != nil {
+		return fmt.Errorf("creating Admin API endpoints discoverer: %w", err)
+	}
+	if err := (&AdminAPIEndpointsReconciler{
+		Client:      mgr.GetClient(),
+		GatewayNN:   i.env.GatewayNN,
+		Discoverer:  discoverer,
+		Log:         i.logger.WithName(ControllerNameAdminAPIEndpoints),
+		OnDiscovery: i.onAdminAPIsDiscovered,
+	}).SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("setting up Admin API endpoints discovery controller: %w", err)
+	}
 
 	mgrErrCh := make(chan error, 1)
 	go func() {

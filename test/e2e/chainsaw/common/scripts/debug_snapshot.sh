@@ -205,7 +205,7 @@ for ns in ${ALL_NAMESPACES}; do
 
   # Kong Configuration resources (base Kong gateway config only)
   capture_resource_group "${RESOURCES_FILE}" "${ns}" "Kong Configuration Resources" \
-    "kongcertificates.configuration.konghq.com,kongsnis.configuration.konghq.com,kongroutes.configuration.konghq.com,kongservices.configuration.konghq.com,kongupstreams.configuration.konghq.com,kongtargets.configuration.konghq.com,kongvaults.configuration.konghq.com,kongreferencegrants.configuration.konghq.com,kongplugins.configuration.konghq.com,kongclusterplugins.configuration.konghq.com,kongpluginbindings.configuration.konghq.com,kongconsumers.configuration.konghq.com,kongconsumergroups.configuration.konghq.com,kongupstreampolicies.configuration.konghq.com"
+    "kongcertificates.configuration.konghq.com,kongsnis.configuration.konghq.com,kongroutes.configuration.konghq.com,kongservices.configuration.konghq.com,kongupstreams.configuration.konghq.com,kongtargets.configuration.konghq.com,kongvaults.configuration.konghq.com,kongreferencegrants.configuration.konghq.com,kongplugins.configuration.konghq.com,kongclusterplugins.configuration.konghq.com,kongpluginbindings.configuration.konghq.com,kongconsumers.configuration.konghq.com,kongconsumergroups.configuration.konghq.com,kongupstreampolicies.configuration.konghq.com,kongdataplaneclientcertificates.configuration.konghq.com"
 
   # Konnect resources (base only - excluding KonnectAPIAuthConfiguration captured separately with redaction)
   capture_resource_group "${RESOURCES_FILE}" "${ns}" "Konnect Resources" \
@@ -239,11 +239,27 @@ for ns in ${ALL_NAMESPACES}; do
 
   # AI Gateway resources (all related resources regardless of API group)
   capture_resource_group "${RESOURCES_FILE}" "${ns}" "AI Gateway Resources" \
-    "aigatewaydataplanes.aigateway.konghq.com,konnectaigateways.konnect.konghq.com,aigatewaydataplanecertificates.aiconfiguration.konghq.com,aigatewaymodelproviders.aiconfiguration.konghq.com,aigatewaymodels.aiconfiguration.konghq.com,aigatewaypolicies.aiconfiguration.konghq.com,aigatewayconsumers.aiconfiguration.konghq.com,aigatewayconsumercredentials.aiconfiguration.konghq.com,aigatewayconsumergroups.aiconfiguration.konghq.com,aigatewayagents.aiconfiguration.konghq.com,aigatewaymcpservers.aiconfiguration.konghq.com,aigatewayauthstrategies.aiconfiguration.konghq.com"
+    "aigatewaydataplanes.aigateway.konghq.com,konnectaigateways.konnect.konghq.com,aigatewaydataplanecertificates.aiconfiguration.konghq.com,aigatewaymodelproviders.aiconfiguration.konghq.com,aigatewaymodels.aiconfiguration.konghq.com,aigatewaypolicies.aiconfiguration.konghq.com,aigatewayconsumers.aiconfiguration.konghq.com,aigatewayconsumercredentials.aiconfiguration.konghq.com,aigatewayconsumergroups.aiconfiguration.konghq.com,aigatewayagents.aiconfiguration.konghq.com,aigatewaymcpservers.aiconfiguration.konghq.com,aigatewayauthstrategies.aiconfiguration.konghq.com,aigatewaycustompolicies.aiconfiguration.konghq.com,aigatewaycertificates.aiconfiguration.konghq.com,aigatewaycacertificates.aiconfiguration.konghq.com,aigatewaysnis.aiconfiguration.konghq.com,onpremaigateways.aigateway.konghq.com"
 
   # Core Kubernetes resources
   capture_resource_group "${RESOURCES_FILE}" "${ns}" "Core Kubernetes Resources" \
-    "pods,services,deployments.apps,replicasets.apps,statefulsets.apps,configmaps,serviceaccounts,roles.rbac.authorization.k8s.io,rolebindings.rbac.authorization.k8s.io"
+    "pods,services,deployments.apps,replicasets.apps,statefulsets.apps,configmaps,serviceaccounts,roles.rbac.authorization.k8s.io,rolebindings.rbac.authorization.k8s.io,leases.coordination.k8s.io"
+
+  # Secrets with payloads redacted (finalizers on Secrets are a common cause of
+  # namespaces stuck in Terminating, so their metadata matters for debugging).
+  {
+    echo ""
+    echo "# ------------------------------------------"
+    echo "# Secrets (data redacted)"
+    echo "# ------------------------------------------"
+    echo ""
+  } >> "${RESOURCES_FILE}"
+  if ! kc get secrets -n "${ns}" -o json 2>/dev/null | \
+      jq 'del(.items[].data, .items[].stringData, .items[].metadata.annotations["kubectl.kubernetes.io/last-applied-configuration"])' >> "${RESOURCES_FILE}" 2>&1; then
+    echo "# No Secrets found or error occurred" >> "${RESOURCES_FILE}"
+    echo "" >> "${RESOURCES_FILE}"
+  fi
+  echo "" >> "${RESOURCES_FILE}"
 done
 
 # 6. Capture detailed descriptions of all resources
@@ -331,7 +347,7 @@ for ns in ${ALL_NAMESPACES}; do
     echo ""
   } >> "${DESCRIBED_FILE}"
 
-  safe_kubectl "${DESCRIBED_FILE}" describe aigatewaydataplanes.aigateway.konghq.com,konnectaigateways,aigatewaydataplanecertificates,aigatewaymodelproviders,aigatewaymodels,aigatewaypolicies,aigatewayconsumers,aigatewayconsumercredentials,aigatewayconsumergroups,aigatewayagents,aigatewaymcpservers,aigatewayauthstrategies -n "${ns}"
+  safe_kubectl "${DESCRIBED_FILE}" describe aigatewaydataplanes.aigateway.konghq.com,konnectaigateways,aigatewaydataplanecertificates,aigatewaymodelproviders,aigatewaymodels,aigatewaypolicies,aigatewayconsumers,aigatewayconsumercredentials,aigatewayconsumergroups,aigatewayagents,aigatewaymcpservers,aigatewayauthstrategies,aigatewaycustompolicies,aigatewaycertificates,aigatewaycacertificates,aigatewaysnis,onpremaigateways.aigateway.konghq.com -n "${ns}"
 done
 
 # 7. Capture workload pod logs in test namespaces (DataPlane, Kafka, etc.)

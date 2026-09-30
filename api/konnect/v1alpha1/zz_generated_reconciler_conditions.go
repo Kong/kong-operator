@@ -18,4 +18,20 @@ const (
 	// condition type indicating that the referenced Portal exists but is not
 	// yet programmed in Konnect.
 	PortalRefReasonNotProgrammed = "NotProgrammed"
+
+	// PortalPageRefValidConditionType is the type of the condition that indicates
+	// whether the PortalPage reference is valid and points to an existing
+	// PortalPage.
+	PortalPageRefValidConditionType = "PortalPageRefValid"
+
+	// PortalPageRefReasonValid is the reason used with the PortalPageRefValid
+	// condition type indicating that the PortalPage reference is valid.
+	PortalPageRefReasonValid = "Valid"
+	// PortalPageRefReasonInvalid is the reason used with the PortalPageRefValid
+	// condition type indicating that the PortalPage reference is invalid.
+	PortalPageRefReasonInvalid = "Invalid"
+	// PortalPageRefReasonNotProgrammed is the reason used with the PortalPageRefValid
+	// condition type indicating that the referenced PortalPage exists but is not
+	// yet programmed in Konnect.
+	PortalPageRefReasonNotProgrammed = "NotProgrammed"
 )

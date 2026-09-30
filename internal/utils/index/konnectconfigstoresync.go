@@ -46,23 +46,29 @@ func OptionsForKonnectConfigStoreSync() []Option {
 }
 
 // konnectConfigStoreSyncStoreKeys extracts "<storeID>/<storeKey>" for every
-// entry the sync manages. The store ID comes from status (it is only known
-// after the referenced store has been read once); the keys are resolved from
-// the spec, which is always possible because derivation depends only on the
-// sync's identity. Syncs that have never persisted a store ID are not
-// indexed: they have not written anything yet, so they cannot conflict.
+// entry the sync has durably recorded as owned and still declares in spec.
+// Store ID and entry status are persisted only after the referenced store is
+// observed and a write succeeds. A fail-closed sync that never wrote a key
+// therefore cannot block a healthy sync, while a sync that wrote successfully
+// before becoming invalid retains ownership of its serving value.
 func konnectConfigStoreSyncStoreKeys(obj client.Object) []string {
 	sync, ok := obj.(*konnectv1alpha1.KonnectConfigStoreSync)
 	if !ok {
 		return nil
 	}
-	if sync.Status.StoreID == "" {
+	if sync.Status.StoreID == "" || len(sync.Status.Entries) == 0 {
 		return nil
+	}
+	owned := make(map[string]struct{}, len(sync.Status.Entries))
+	for _, entry := range sync.Status.Entries {
+		owned[entry.StoreKey] = struct{}{}
 	}
 	entries := configstoresync.ResolveEntries(sync)
 	values := make([]string, 0, len(entries))
 	for _, e := range entries {
-		values = append(values, sync.Status.StoreID+"/"+e.StoreKey)
+		if _, ok := owned[e.StoreKey]; ok {
+			values = append(values, sync.Status.StoreID+"/"+e.StoreKey)
+		}
 	}
 	return values
 }

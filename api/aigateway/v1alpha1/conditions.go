@@ -215,3 +215,41 @@ const (
 	// on Konnect by the Konnect controller.
 	KonnectCertificateNotProgrammedReason consts.ConditionReason = "KonnectCertificateNotProgrammed"
 )
+
+// -----------------------------------------------------------------------------
+// OnPremAIGateway - Data Planes Configuration Condition Constants
+// -----------------------------------------------------------------------------
+
+const (
+	// OnPremAIGatewayDataPlanesConfiguredType indicates whether the rendered
+	// configuration has been successfully pushed to the Admin API endpoints of
+	// all the AIGatewayDataPlanes referencing the OnPremAIGateway.
+	OnPremAIGatewayDataPlanesConfiguredType consts.ConditionType = "DataPlanesConfigured"
+
+	// OnPremAIGatewayConfigurationPushSucceededReason indicates the
+	// configuration was pushed successfully to all the discovered Admin API
+	// endpoints.
+	OnPremAIGatewayConfigurationPushSucceededReason consts.ConditionReason = "ConfigurationPushSucceeded"
+
+	// OnPremAIGatewayConfigurationPushFailedReason indicates the configuration
+	// push failed for at least one of the discovered Admin API endpoints.
+	OnPremAIGatewayConfigurationPushFailedReason consts.ConditionReason = "ConfigurationPushFailed"
+)
+
+// -----------------------------------------------------------------------------
+// DataPlane - License Condition Constants
+// -----------------------------------------------------------------------------
+
+const (
+	// LicenseValidType indicates whether a KongLicense is available to the
+	// DataPlane. It never gates the Ready condition.
+	LicenseValidType consts.ConditionType = "LicenseValid"
+
+	// LicenseValidReason indicates a KongLicense is available.
+	LicenseValidReason consts.ConditionReason = "LicenseProvided"
+	// LicenseMissingReason indicates no enabled KongLicense is available.
+	LicenseMissingReason consts.ConditionReason = "LicenseMissing"
+	// LicenseInvalidReason indicates the provided KongLicense is invalid.
+	// Currently unused: the operator does not wire a license validator yet.
+	LicenseInvalidReason consts.ConditionReason = "InvalidLicenseProvided"
+)

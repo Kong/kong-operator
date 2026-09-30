@@ -48,6 +48,12 @@ type Reconciler struct {
 	// structured-merge-diff based PodTemplateSpec merging.
 	TypeConverter managedfields.TypeConverter
 
+	// LicenseGetter, when non-nil, provides the effective Kong license
+	// (from the KongLicense resource): it is propagated to the gateway
+	// Deployment as the KONG_LICENSE_DATA env var and reported in the
+	// LicenseValid status condition.
+	LicenseGetter shareddataplane.LicenseGetter
+
 	// eventRecorder records Kubernetes events on AIGatewayDataPlane objects.
 	eventRecorder events.EventRecorder
 }
@@ -60,6 +66,13 @@ type sharedReconciler = shareddataplane.Reconciler[
 // base returns the shared generic reconciler wired with the AIGatewayDataPlane
 // configuration.
 func (r *Reconciler) base() *sharedReconciler {
+	// The package-level config stays immutable; the license wiring is applied
+	// on the per-instance copy.
+	cfg := config
+	if r.LicenseGetter != nil {
+		cfg.Deployment.BuildContainer = withLicenseEnvVar(config.Deployment.BuildContainer, r.LicenseGetter)
+		cfg.ExtraWatches = withKongLicenseWatch(config.ExtraWatches)
+	}
 	return &sharedReconciler{
 		Client:                   r.Client,
 		LoggingMode:              r.LoggingMode,
@@ -69,7 +82,8 @@ func (r *Reconciler) base() *sharedReconciler {
 		CertTTL:                  r.CertTTL,
 		TypeConverter:            r.TypeConverter,
 		EventRecorder:            r.eventRecorder,
-		Config:                   config,
+		LicenseGetter:            r.LicenseGetter,
+		Config:                   cfg,
 	}
 }
 

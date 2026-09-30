@@ -9,6 +9,35 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+// GetKonnectLabels gets the Konnect labels from the object's API spec.
+func (obj *AIGatewayDataPlaneCertificate) GetKonnectLabels() map[string]string {
+	if obj.Spec.APISpec.Labels == nil {
+		return nil
+	}
+
+	labels := make(map[string]string, len(obj.Spec.APISpec.Labels))
+	for key, value := range obj.Spec.APISpec.Labels {
+		labels[key] = string(value)
+	}
+
+	return labels
+}
+
+// SetKonnectLabels sets the Konnect labels in the object's API spec.
+func (obj *AIGatewayDataPlaneCertificate) SetKonnectLabels(labels map[string]string) {
+	if labels == nil {
+		obj.Spec.APISpec.Labels = nil
+		return
+	}
+
+	converted := make(PublicLabels, len(labels))
+	for key, value := range labels {
+		converted[key] = PublicLabelsValue(value)
+	}
+
+	obj.Spec.APISpec.Labels = converted
+}
+
 // GetKonnectStatus returns the Konnect status contained in the AIGatewayDataPlaneCertificate status.
 func (obj *AIGatewayDataPlaneCertificate) GetKonnectStatus() *konnectv1alpha2.KonnectEntityStatus {
 	return &obj.Status.KonnectEntityStatus
@@ -65,8 +94,8 @@ func (obj *AIGatewayDataPlaneCertificate) SetGatewayID(id string) {
 	obj.Status.GatewayID.ID = id
 }
 
-// GetKonnectAIGatewayRef returns the reference to the parent KonnectAIGateway.
-func (obj *AIGatewayDataPlaneCertificate) GetKonnectAIGatewayRef() AIGatewayRef {
+// GetAIGatewayRef returns the reference to the parent AI Gateway (control plane).
+func (obj *AIGatewayDataPlaneCertificate) GetAIGatewayRef() AIGatewayRef {
 	return obj.Spec.AIGatewayRef
 }
 
@@ -74,7 +103,7 @@ func (obj *AIGatewayDataPlaneCertificate) GetKonnectAIGatewayRef() AIGatewayRef 
 // ObjectRef. The custom parent ref type's Group/Kind discriminator has no
 // ObjectRef representation, so only the namespaced reference is carried over.
 func (obj *AIGatewayDataPlaneCertificate) GetParentRef() commonv1alpha1.ObjectRef {
-	return obj.GetKonnectAIGatewayRef().ToObjectRef()
+	return obj.GetAIGatewayRef().ToObjectRef()
 }
 
 // SetParentRef sets the reference to the parent entity from a generic
@@ -84,6 +113,15 @@ func (obj *AIGatewayDataPlaneCertificate) SetParentRef(ref commonv1alpha1.Object
 	obj.Spec.AIGatewayRef = AIGatewayRefFromObjectRef(ref)
 }
 
+// SkipKonnectReconciliation reports whether the entity's parent reference
+// resolves to a parent the Konnect reconciler does not manage (an
+// OnPremAIGateway): such entities are handled by the on-prem controllers
+// where supported, or rejected at admission when the entity restricts its
+// parent kinds.
+func (obj *AIGatewayDataPlaneCertificate) SkipKonnectReconciliation() bool {
+	return obj.Spec.AIGatewayRef.TargetsOnPremAIGateway()
+}
+
 // SetParentID sets the Konnect ID of the immediate parent entity.
 func (obj *AIGatewayDataPlaneCertificate) SetParentID(id string) {
 	obj.SetGatewayID(id)
@@ -91,11 +129,7 @@ func (obj *AIGatewayDataPlaneCertificate) SetParentID(id string) {
 
 // GetParentGVK returns the GroupVersionKind of the parent entity.
 func (obj *AIGatewayDataPlaneCertificate) GetParentGVK() schema.GroupVersionKind {
-	return schema.GroupVersionKind{
-		Group:   "konnect.konghq.com",
-		Version: GroupVersion.Version,
-		Kind:    "KonnectAIGateway",
-	}
+	return obj.Spec.AIGatewayRef.ParentGVK()
 }
 
 // GetStatusConditionTypeParentRefValid returns the status condition type

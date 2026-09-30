@@ -1,0 +1,150 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth-1
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # For a complete list of available API URLs see:https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
+  serverURL: us.api.konghq.com
+---
+kind: KonnectAIGateway
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-cp-1
+  namespace: default
+spec:
+  apiSpec:
+    name: ai-gw-cp-1
+    displayName: My AI Gateway
+    description: AI Gateway control plane
+    labels:
+      app: test1
+  konnect:
+    authRef:
+      name: konnect-api-auth-1
+---
+# The Lua sources of the custom policies below are kept in ConfigMaps in the
+# same namespace as the AIGatewayCustomPolicy. Updating a ConfigMap re-syncs
+# every custom policy referencing it to Konnect.
+#
+# The operator only sees ConfigMaps matching its --config-map-label-selector,
+# so each ConfigMap carries the konghq.com/configmap: "true" label (the
+# default selector).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-installed-custom-policy-lua
+  namespace: default
+  labels:
+    konghq.com/configmap: "true"
+data:
+  # Lua schema definition, equivalent to a Kong plugin's schema.lua.
+  schema.lua: |
+    local typedefs = require "kong.db.schema.typedefs"
+
+    return {
+      name = "my-installed-custom-policy",
+      fields = {
+        { protocols = typedefs.protocols_http },
+        { config = {
+            type = "record",
+            fields = {
+              { header_name = { type = "string", default = "X-Custom-Policy" } },
+            },
+          },
+        },
+      },
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-streaming-custom-policy-lua
+  namespace: default
+  labels:
+    konghq.com/configmap: "true"
+data:
+  # Lua schema definition, equivalent to a Kong plugin's schema.lua.
+  schema.lua: |
+    local typedefs = require "kong.db.schema.typedefs"
+
+    return {
+      name = "my-streaming-custom-policy",
+      fields = {
+        { protocols = typedefs.protocols_http },
+        { config = {
+            type = "record",
+            fields = {
+              { header_name = { type = "string", default = "X-Custom-Policy" } },
+            },
+          },
+        },
+      },
+    }
+  # Lua handler implementation, equivalent to a Kong plugin's handler.lua.
+  handler.lua: |
+    local MyStreamingCustomPolicy = {
+      PRIORITY = 1000,
+      VERSION = "1.0.0",
+    }
+
+    function MyStreamingCustomPolicy:header_filter(conf)
+      kong.response.set_header(conf.header_name, "applied")
+    end
+
+    return MyStreamingCustomPolicy
+---
+# An "installed" custom policy references a Kong plugin that is already
+# installed on the data plane; only its schema is registered with Konnect.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayCustomPolicy
+metadata:
+  name: aigw-custom-policy-installed
+  namespace: default
+spec:
+  aiGatewayRef:
+    namespacedRef:
+      name: ai-gw-cp-1
+      namespace: default
+  apiSpec:
+    type: installed
+    installed:
+      # Unique, immutable identifier of the custom policy.
+      name: my-installed-custom-policy
+      displayName: My installed custom policy
+      schema:
+        type: configMapRef
+        configMapRef:
+          name: my-installed-custom-policy-lua
+          key: schema.lua
+---
+# A "streaming" custom policy ships both the Lua schema and handler, which
+# Konnect distributes to the data plane.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayCustomPolicy
+metadata:
+  name: aigw-custom-policy-streaming
+  namespace: default
+spec:
+  aiGatewayRef:
+    namespacedRef:
+      name: ai-gw-cp-1
+      namespace: default
+  apiSpec:
+    type: streaming
+    streaming:
+      # Unique, immutable identifier of the custom policy.
+      name: my-streaming-custom-policy
+      displayName: My streaming custom policy
+      schema:
+        type: configMapRef
+        configMapRef:
+          name: my-streaming-custom-policy-lua
+          key: schema.lua
+      handler:
+        type: configMapRef
+        configMapRef:
+          name: my-streaming-custom-policy-lua
+          key: handler.lua

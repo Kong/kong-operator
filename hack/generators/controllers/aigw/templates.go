@@ -32,7 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 {{- end}}
 
-	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/controllers"
 {{- if .ProgrammedCondition.UpdatesEnabled }}
@@ -100,6 +99,9 @@ func (r *{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&{{.PackageImportAlias}}.{{.Kind}}{},
 			builder.WithPredicates(
 				GenerationChangedPredicate{},
+				// Entities referencing a KonnectAIGateway are owned by the
+				// Konnect reconciler, not the on-prem machinery.
+				OnPremAIGatewayTargetedPredicate{},
 			),
 		).
 		Complete(r)
@@ -108,6 +110,21 @@ func (r *{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 // SetLogger sets the logger.
 func (r *{{.Kind}}Reconciler) SetLogger(l logr.Logger) {
 	r.Log = l
+}
+
+// SetCommonFields sets the shared controller dependencies.
+func (r *{{.Kind}}Reconciler) SetCommonFields(
+	client client.Client,
+	scheme *runtime.Scheme,
+	log logr.Logger,
+	cacheSyncTimeout time.Duration,
+	changeNotifier *changenotifier.ChangeNotifier,
+) {
+	r.Client = client
+	r.Scheme = scheme
+	r.Log = log
+	r.CacheSyncTimeout = cacheSyncTimeout
+	r.ChangeNotifier = changeNotifier
 }
 
 //+kubebuilder:rbac:groups={{.Group}},resources={{.Plural}},verbs={{ .RBACVerbs | join ";" }}
@@ -147,13 +164,25 @@ func (r *{{.Kind}}Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, err
 	}
 
-	parent := types.NamespacedName{}
-	if parentRef := obj.GetParentRef(); parentRef.Type == commonv1alpha1.ObjectRefTypeNamespacedRef {
-		parent.Namespace = obj.Namespace
-		if parentRef.NamespacedRef.Namespace != nil {
-			parent.Namespace = *parentRef.NamespacedRef.Namespace
+	// The watch predicate guarantees the entity targets an OnPremAIGateway,
+	// and CRD validation requires namespacedRef, so the reference always
+	// resolves here.
+	ref := obj.GetAIGatewayRef()
+	parent := types.NamespacedName{
+		Namespace: obj.Namespace,
+		Name:      ref.NamespacedRef.Name,
+	}
+	if ref.NamespacedRef.Namespace != nil && *ref.NamespacedRef.Namespace != "" {
+		parent.Namespace = *ref.NamespacedRef.Namespace
+	}
+
+	previous, hadPrevious := r.Cache[req.NamespacedName]
+	if hadPrevious && previous != parent {
+		// The entity was repointed at a different OnPremAIGateway: notify the
+		// previously referenced one so it re-renders without the entity.
+		if r.ChangeNotifier != nil {
+			r.ChangeNotifier.NotifyChange(ctx, &previous, obj)
 		}
-		parent.Name = parentRef.NamespacedRef.Name
 	}
 	r.Cache[req.NamespacedName] = parent
 

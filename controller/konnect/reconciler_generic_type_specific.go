@@ -304,10 +304,19 @@ func isExpectedKonnectReferenceResolutionError(err error) bool {
 	if _, ok := errors.AsType[commonv1alpha1.ReferenceNotProgrammedError](err); ok {
 		return true
 	}
+	if _, ok := errors.AsType[commonv1alpha1.ReferenceBeingDeletedError](err); ok {
+		return true
+	}
 	if _, ok := errors.AsType[commonv1alpha1.ReferenceCrossNamespaceError](err); ok {
 		return true
 	}
 	if _, ok := errors.AsType[commonv1alpha1.ReferenceDifferentGatewayError](err); ok {
+		return true
+	}
+	if _, ok := errors.AsType[commonv1alpha1.ReferenceDifferentParentError](err); ok {
+		return true
+	}
+	if _, ok := errors.AsType[commonv1alpha1.ReferenceSelfError](err); ok {
 		return true
 	}
 	if crossnamespace.IsReferenceNotGranted(err) {
@@ -320,7 +329,13 @@ func hasInvalidKonnectReferenceResolutionError(err error) bool {
 	if _, ok := errors.AsType[commonv1alpha1.ReferenceCrossNamespaceError](err); ok {
 		return true
 	}
-	_, ok := errors.AsType[commonv1alpha1.ReferenceDifferentGatewayError](err)
+	if _, ok := errors.AsType[commonv1alpha1.ReferenceDifferentGatewayError](err); ok {
+		return true
+	}
+	if _, ok := errors.AsType[commonv1alpha1.ReferenceDifferentParentError](err); ok {
+		return true
+	}
+	_, ok := errors.AsType[commonv1alpha1.ReferenceSelfError](err)
 	return ok
 }
 
@@ -334,6 +349,9 @@ func hasNotFoundKonnectReferenceResolutionError(err error) bool {
 }
 
 func hasNotProgrammedKonnectReferenceResolutionError(err error) bool {
-	_, ok := errors.AsType[commonv1alpha1.ReferenceNotProgrammedError](err)
+	if _, ok := errors.AsType[commonv1alpha1.ReferenceNotProgrammedError](err); ok {
+		return true
+	}
+	_, ok := errors.AsType[commonv1alpha1.ReferenceBeingDeletedError](err)
 	return ok
 }

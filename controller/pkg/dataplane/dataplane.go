@@ -28,6 +28,8 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/kong/go-kong/kong"
+	"github.com/samber/mo"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	certificatesv1 "k8s.io/api/certificates/v1"
@@ -86,6 +88,14 @@ type EnsureCertificateFunc[T Object] func(
 	certTTL time.Duration,
 ) (op.Result, *corev1.Secret, error)
 
+// LicenseGetter provides the effective Kong license for DataPlane
+// deployments. It is satisfied by the KongLicense reconciler
+// (ingress-controller/internal/controllers/license); the local interface
+// keeps this shared package decoupled from the KIC internals.
+type LicenseGetter interface {
+	GetLicense() mo.Option[kong.License]
+}
+
 // Conditions carries the condition types, reasons and messages used by the
 // reconciler. Values are supplied by each specialized controller from its API
 // package constants so the shared logic stays bound to the API definitions.
@@ -136,6 +146,18 @@ type Conditions struct {
 	// AdminCertificateProvisionedReason is the reason used when the Admin
 	// API certificate Secret has been provisioned.
 	AdminCertificateProvisionedReason string
+
+	// LicenseValidType is the type of the license condition. When empty, the
+	// license condition is disabled (the reconciler never sets it and the
+	// Ready computation ignores the feature).
+	LicenseValidType string
+	// LicenseValidReason is the reason used when a license is available.
+	LicenseValidReason string
+	// LicenseMissingReason is the reason used when no license is available.
+	LicenseMissingReason string
+	// LicenseInvalidReason is the reason used when the license is invalid.
+	// Currently unused: the operator does not wire a license validator yet.
+	LicenseInvalidReason string
 }
 
 // DeploymentConfig carries the type specific bits of the owned Deployment.
@@ -166,6 +188,13 @@ type DeploymentConfig[T Object] struct {
 	// not empty. cp.Object is nil when the DataPlane has no control plane
 	// reference configured.
 	BuildContainer func(dp T, cp ResolvedControlPlane, image, certSecretName, adminCertSecretName string) (corev1.Container, []corev1.Volume, error)
+	// ReassertEnvVars lists env var names that the operator injects into the
+	// DataPlane container and that must win over a user pod template overlay
+	// (e.g. KONG_LICENSE_DATA): MergeObjects lets the overlay win on conflicts,
+	// so the overlay's conflicting entries are dropped before the merge, like
+	// the certificate checksum annotation is re-asserted after it. Leave it
+	// empty for DataPlanes that inject no such env vars.
+	ReassertEnvVars []string
 	// LabelManaged, when non-nil, marks the Deployment and its pod template as
 	// managed (e.g. k8sresources.LabelObjectAsAIGatewayDataPlaneManaged).
 	LabelManaged func(metav1.Object)
@@ -419,6 +448,12 @@ type Reconciler[T Object, Cert CertificateObject] struct {
 	// EventRecorder records Kubernetes events on the DataPlane objects.
 	EventRecorder events.EventRecorder
 
+	// LicenseGetter, when non-nil, provides the effective Kong license: the
+	// reconciler propagates it to the gateway (via the type-specific
+	// DeploymentConfig.BuildContainer) and reports its availability in the
+	// license condition configured in Config.Conditions.
+	LicenseGetter LicenseGetter
+
 	// Config wires the type specific behavior.
 	Config Config[T, Cert]
 }
@@ -515,6 +550,17 @@ func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Res
 	// are skipped.
 	var cp ResolvedControlPlane
 	ref := r.Config.ControlPlaneRef(dp)
+	// A DataPlane backed by a Konnect control plane is licensed by Konnect: the
+	// operator-provided KongLicense does not apply to it, so no license
+	// condition is reported (it would sit at False/LicenseMissing forever).
+	if cpKindCfg, ok := r.Config.ControlPlaneKindConfig(ref.Kind); !ok || !cpKindCfg.IsKonnect {
+		SetLicenseStatusCondition(
+			dp, r.LicenseGetter,
+			r.Config.Conditions.LicenseValidType,
+			r.Config.Conditions.LicenseValidReason,
+			r.Config.Conditions.LicenseMissingReason,
+		)
+	}
 	if ref.Name != "" {
 		cp, err = r.resolveControlPlane(ctx, logger, dp, ref)
 		if err != nil {

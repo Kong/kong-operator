@@ -8,7 +8,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: aigatewaypolicies.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -88,6 +88,9 @@ spec:
                     and konnect.konghq.com when kind is KonnectAIGateway
                   rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com''
                     : self.group == ''konnect.konghq.com'''
+                - message: repointing an entity between KonnectAIGateway and OnPremAIGateway
+                    is forbidden
+                  rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
                 properties:
                   condition:
@@ -128,6 +131,21 @@ spec:
                     - message: value required when type=inline; secretRef required
                         when type=secretRef
                       rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                  customPolicyRef:
+                    properties:
+                      kind:
+                        default: AIGatewayCustomPolicy
+                        enum:
+                        - AIGatewayCustomPolicy
+                        type: string
+                      name:
+                        minLength: 1
+                        type: string
+                      namespace:
+                        type: string
+                    required:
+                    - name
+                    type: object
                   displayName:
                     maxLength: 256
                     minLength: 1
@@ -169,7 +187,6 @@ spec:
                 - config
                 - displayName
                 - name
-                - type
                 type: object
             required:
             - aiGatewayRef
@@ -238,9 +255,13 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.aiGatewayRef) || !has(self.status.conditions) || !self.status.conditions.exists(c,
-            c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef
-            == self.spec.aiGatewayRef'
+          rule: '!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions)
+            || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
+            == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
+        - message: exactly one of spec.apiSpec.type and spec.apiSpec.customPolicyRef
+            must be set
+          rule: '!has(self.spec) || !has(self.spec.apiSpec) || has(self.spec.apiSpec.type)
+            != has(self.spec.apiSpec.customPolicyRef)'
     served: true
     storage: true
     subresources:

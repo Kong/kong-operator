@@ -3,6 +3,7 @@ package konnect
 import (
 	"context"
 	"reflect"
+	"slices"
 
 	corev1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -124,6 +125,12 @@ func objHasControlPlaneRef[
 }
 
 // objectListToReconcileRequests converts a list of objects to a list of reconcile requests.
+//
+// Entities whose parent reference resolves to a parent the Konnect reconciler
+// does not manage (an AIGatewayRef targeting an OnPremAIGateway, handled by the
+// on-prem controllers where supported) are never enqueued: the watch criteria
+// of the individual types must keep them out of the Konnect reconciler's work
+// queue.
 func objectListToReconcileRequests[
 	T any,
 	TPtr constraints.EntityTypeObject[T],
@@ -139,6 +146,9 @@ func objectListToReconcileRequests[
 itemLoop:
 	for _, item := range items {
 		var e TPtr = &item
+		if skipper, ok := any(e).(konnectReconciliationSkipper); ok && skipper.SkipKonnectReconciliation() {
+			continue itemLoop
+		}
 		for _, filter := range filters {
 			if filter != nil && !filter(e) {
 				continue itemLoop
@@ -314,6 +324,7 @@ type WatchableEntityType interface {
 		aiconfigurationv1alpha1.AIGatewayModel |
 		aiconfigurationv1alpha1.AIGatewayModelProvider |
 		aiconfigurationv1alpha1.AIGatewayPolicy |
+		aiconfigurationv1alpha1.AIGatewayCustomPolicy |
 		aiconfigurationv1alpha1.AIGatewayAgent |
 		aiconfigurationv1alpha1.AIGatewayConsumer |
 		aiconfigurationv1alpha1.AIGatewayConsumerCredential |
@@ -425,6 +436,12 @@ func enqueueObjectsForKongReferenceGrant[
 
 				ksPtr := TT(&ks)
 
+				// Skip entities the Konnect reconciler does not manage (see
+				// objectListToReconcileRequests).
+				if skipper, ok := any(ksPtr).(konnectReconciliationSkipper); ok && skipper.SkipKonnectReconciliation() {
+					continue
+				}
+
 				ret = append(ret, reconcile.Request{
 					Namespace: ksPtr.GetNamespace(),
 					Name:      ksPtr.GetName(),
@@ -446,7 +463,7 @@ func enqueueObjectsForKongReferenceGrant[
 // SensitiveDataSecretRef type, so a single generic method-return-type
 // constraint can't span all of them — dispatch by type switch instead,
 // mirroring getSecretRefs in reconciler_secretref.go. Add a case here when a
-// new API group-version starts generating entities with secretReferences.
+// new API group-version starts generating entities with Secret-typed dataSources.
 func secretRefsForSensitiveData(obj any) ([]commonv1alpha1.NamespacedRef, bool) {
 	switch g := obj.(type) {
 	case interface {
@@ -514,6 +531,13 @@ func enqueueObjectsForSecretRef[
 		items := lPtr.GetItems()
 		for i := range items {
 			itemPtr := TT(&items[i])
+
+			// Skip entities the Konnect reconciler does not manage (see
+			// objectListToReconcileRequests).
+			if skipper, ok := any(itemPtr).(konnectReconciliationSkipper); ok && skipper.SkipKonnectReconciliation() {
+				continue
+			}
+
 			refs, ok := secretRefsForSensitiveData(any(itemPtr))
 			if !ok {
 				continue
@@ -530,6 +554,100 @@ func enqueueObjectsForSecretRef[
 					})
 					break
 				}
+			}
+		}
+
+		return ret
+	}
+}
+
+// configMapDataSourceRef is a reference to a key of a ConfigMap in the
+// referencing object's namespace.
+type configMapDataSourceRef struct {
+	Name string
+	Key  string
+}
+
+// configMapRefsForDataSource extracts the active ConfigMap references from
+// obj's generated GetConfigMapDataSourceRefs method (always in obj's
+// namespace), and reports whether obj has one at all. Each API group-version
+// generates its own ConfigMapDataSourceRef type, so dispatch by type switch
+// and add a case here when a new API group-version starts generating entities
+// with ConfigMap-typed dataSources.
+func configMapRefsForDataSource(obj any) ([]configMapDataSourceRef, bool) {
+	switch g := obj.(type) {
+	case interface {
+		GetConfigMapDataSourceRefs() []aiconfigurationv1alpha1.ConfigMapDataSourceRef
+	}:
+		refs := g.GetConfigMapDataSourceRefs()
+		out := make([]configMapDataSourceRef, len(refs))
+		for i, r := range refs {
+			out[i] = configMapDataSourceRef{Name: r.Name, Key: r.Key}
+		}
+		return out, true
+	default:
+		return nil, false
+	}
+}
+
+// enqueueObjectsForConfigMapRef returns a function that enqueues
+// reconcile.Requests for all objects of type T in the ConfigMap's namespace
+// whose generated GetConfigMapDataSourceRefs() references the changed
+// ConfigMap, so that creating or fixing a referenced ConfigMap retriggers
+// reconciliation (and the ConfigMapRefValid check) of every entity depending
+// on it. Changes to an already applied ConfigMap's data reach Konnect on the
+// next sync, as the entity's generation doesn't change.
+func enqueueObjectsForConfigMapRef[
+	TList interface {
+		GetItems() []T
+	},
+	TListPtr interface {
+		*TList
+		client.ObjectList
+		GetItems() []T
+	},
+	T any,
+	TT interface {
+		*T
+		client.Object
+	},
+](
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		configMap, ok := obj.(*corev1.ConfigMap)
+		if !ok {
+			return nil
+		}
+
+		var (
+			l    TList
+			lPtr TListPtr = &l
+		)
+		if err := cl.List(ctx, lPtr, client.InNamespace(configMap.Namespace)); err != nil {
+			return nil
+		}
+
+		var ret []reconcile.Request
+		items := lPtr.GetItems()
+		for i := range items {
+			itemPtr := TT(&items[i])
+
+			// Skip entities the Konnect reconciler does not manage (see
+			// objectListToReconcileRequests).
+			if skipper, ok := any(itemPtr).(konnectReconciliationSkipper); ok && skipper.SkipKonnectReconciliation() {
+				continue
+			}
+
+			refs, ok := configMapRefsForDataSource(any(itemPtr))
+			if !ok {
+				continue
+			}
+			if slices.ContainsFunc(refs, func(r configMapDataSourceRef) bool { return r.Name == configMap.Name }) {
+				ret = append(ret, reconcile.Request{
+					Namespace: itemPtr.GetNamespace(),
+					Name:      itemPtr.GetName(),
+				})
 			}
 		}
 

@@ -943,6 +943,19 @@ func TestAIGatewayModelProviderSagemaker_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestAIGatewayModelProviderTypesafe_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayModelProviderTypesafe
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestAIGatewayModelProviderVercel_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -1372,6 +1385,19 @@ func TestAIGatewayTargetSagemakerConfig_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestAIGatewayTargetTypesafeConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayTargetTypesafeConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestAIGatewayTargetVercelConfig_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -1441,6 +1467,32 @@ func TestAuthGCPWorkloadIdentityFederationAwsIam_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
 	var spec AuthGCPWorkloadIdentityFederationAwsIam
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestCreateAIGatewayCustomPolicyInstalledRequest_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec CreateAIGatewayCustomPolicyInstalledRequest
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestCreateAIGatewayCustomPolicyStreamingRequest_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec CreateAIGatewayCustomPolicyStreamingRequest
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -2011,6 +2063,7 @@ func TestAIGatewayTargetConfigUnmarshalJSON_NilReceiver(t *testing.T) {
 		{name: "ollama", payload: []byte("{\"type\":\"ollama\",\"ollama\":{}}")},
 		{name: "openai", payload: []byte("{\"type\":\"openai\",\"openai\":{}}")},
 		{name: "sagemaker", payload: []byte("{\"type\":\"sagemaker\",\"sagemaker\":{}}")},
+		{name: "typesafe", payload: []byte("{\"type\":\"typesafe\",\"typesafe\":{}}")},
 		{name: "vercel", payload: []byte("{\"type\":\"vercel\",\"vercel\":{}}")},
 		{name: "vllm", payload: []byte("{\"type\":\"vllm\",\"vllm\":{}}")},
 		{name: "xai", payload: []byte("{\"type\":\"xai\",\"xai\":{}}")},
@@ -3260,6 +3313,22 @@ func TestAIGatewayTargetUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 				}
 				if target.Config.Sagemaker == nil {
 					t.Fatalf("Config.Sagemaker should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Config/typesafe",
+			payload: []byte("{\"config\":{\"type\":\"typesafe\",\"typesafe\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayTarget) {
+				t.Helper()
+				if target.Config == nil {
+					t.Fatalf("Config should be allocated")
+				}
+				if got, want := target.Config.Type, AIGatewayTargetConfigTypeTypesafe; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Config.Typesafe == nil {
+					t.Fatalf("Config.Typesafe should be allocated")
 				}
 			},
 		},

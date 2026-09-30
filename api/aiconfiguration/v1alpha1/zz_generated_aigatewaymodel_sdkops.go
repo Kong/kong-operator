@@ -312,13 +312,16 @@ func (s *AIGatewayModelAPISpec) selectedSDKOpsPayload(payload map[string]any) ([
 
 	var selected any
 	var variant string
+	variantJSON := ""
 	switch s.AIGatewayModelConfig.Type {
 	case AIGatewayModelConfigTypeAPI:
 		selected = payload["api"]
 		variant = "API"
+		variantJSON = "api"
 	case AIGatewayModelConfigTypeModel:
 		selected = payload["model"]
 		variant = "Model"
+		variantJSON = "model"
 	default:
 		return nil, "", fmt.Errorf("unsupported AIGatewayModel config type %q", s.AIGatewayModelConfig.Type)
 	}
@@ -326,7 +329,7 @@ func (s *AIGatewayModelAPISpec) selectedSDKOpsPayload(payload map[string]any) ([
 	if selected == nil {
 		return nil, "", fmt.Errorf("AIGatewayModel config payload missing for type %q", s.AIGatewayModelConfig.Type)
 	}
-	selected = flattenSDKUnions(selected)
+	selected = flattenSDKUnionsExceptUnder(selected, AIGatewayModelSDKOpsFreeformKeyFields, variantJSON)
 	if selectedMap, ok := selected.(map[string]any); ok {
 		if typeValue, ok := payload["type"]; ok {
 			if _, hasType := selectedMap["type"]; !hasType {

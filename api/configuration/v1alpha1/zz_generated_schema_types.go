@@ -728,9 +728,11 @@ type EventGatewayAlterClientQuotasRequestRules struct {
 	// Every rule in this list is evaluated independently against each quota
 	// operation in the request.
 	// A rule that evaluates to `false` runs its action.
+	// A maximum of 10 rules are allowed.
 	//
 	//
 	// +required
+	// +kubebuilder:validation:MaxItems=10
 	Rules []EventGatewayAlterClientQuotasRule `json:"rules,omitempty"`
 }
 
@@ -777,9 +779,11 @@ type EventGatewayAlterConfigsRequestRules struct {
 	// Every rule in this list is evaluated independently against each resource in
 	// the request.
 	// A rule that evaluates to `false` runs its action.
+	// A maximum of 10 rules are allowed.
 	//
 	//
 	// +required
+	// +kubebuilder:validation:MaxItems=10
 	Rules []EventGatewayAlterConfigsRule `json:"rules,omitempty"`
 }
 
@@ -826,9 +830,11 @@ type EventGatewayAlterUserScramCredentialsRequestRules struct {
 	// Every rule in this list is evaluated independently against each credential
 	// in the request.
 	// A rule that evaluates to `false` runs its action.
+	// A maximum of 10 rules are allowed.
 	//
 	//
 	// +required
+	// +kubebuilder:validation:MaxItems=10
 	Rules []EventGatewayAlterUserScramCredentialsRule `json:"rules,omitempty"`
 }
 
@@ -1366,9 +1372,11 @@ type EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig struct {
 type EventGatewayConsumerGroupHeartbeatRequestRules struct {
 	// Every rule in this list is evaluated independently against the request.
 	// A rule that evaluates to `false` runs its action.
+	// A maximum of 10 rules are allowed.
 	//
 	//
 	// +required
+	// +kubebuilder:validation:MaxItems=10
 	Rules []EventGatewayConsumerGroupHeartbeatRule `json:"rules,omitempty"`
 }
 
@@ -1415,9 +1423,11 @@ type EventGatewayCreatePartitionsRequestRules struct {
 	// Every rule in this list is evaluated independently against each topic in the
 	// request.
 	// A rule that evaluates to `false` runs its action.
+	// A maximum of 10 rules are allowed.
 	//
 	//
 	// +required
+	// +kubebuilder:validation:MaxItems=10
 	Rules []EventGatewayCreatePartitionsRule `json:"rules,omitempty"`
 }
 
@@ -1460,13 +1470,20 @@ type EventGatewayCreatePartitionsRule struct {
 
 // EventGatewayCreateTopicsRequestRules The rules to apply to Kafka
 // `CreateTopics` requests.
+//
+// When at least one `create_topics` rule is configured, Event Gateway turns
+// auto topic
+// creation off on `Metadata` requests, because clients could use it to bypass
+// the rules.
 type EventGatewayCreateTopicsRequestRules struct {
 	// Every rule in this list is evaluated independently against each topic in the
 	// request.
 	// A rule that evaluates to `false` runs its action.
+	// A maximum of 10 rules are allowed.
 	//
 	//
 	// +required
+	// +kubebuilder:validation:MaxItems=10
 	Rules []EventGatewayCreateTopicsRule `json:"rules,omitempty"`
 }
 
@@ -1760,9 +1777,11 @@ type EventGatewayEncryptPolicy struct {
 type EventGatewayFetchRequestRules struct {
 	// Every rule in this list is evaluated independently against the request.
 	// A rule that evaluates to `false` runs its action.
+	// A maximum of 10 rules are allowed.
 	//
 	//
 	// +required
+	// +kubebuilder:validation:MaxItems=10
 	Rules []EventGatewayFetchRule `json:"rules,omitempty"`
 }
 
@@ -1809,9 +1828,11 @@ type EventGatewayIncrementalAlterConfigsRequestRules struct {
 	// Every rule in this list is evaluated independently against each
 	// configuration entry in the request.
 	// A rule that evaluates to `false` runs its action.
+	// A maximum of 10 rules are allowed.
 	//
 	//
 	// +required
+	// +kubebuilder:validation:MaxItems=10
 	Rules []EventGatewayIncrementalAlterConfigsRule `json:"rules,omitempty"`
 }
 
@@ -1857,9 +1878,11 @@ type EventGatewayIncrementalAlterConfigsRule struct {
 type EventGatewayJoinGroupRequestRules struct {
 	// Every rule in this list is evaluated independently against the request.
 	// A rule that evaluates to `false` runs its action.
+	// A maximum of 10 rules are allowed.
 	//
 	//
 	// +required
+	// +kubebuilder:validation:MaxItems=10
 	Rules []EventGatewayJoinGroupRule `json:"rules,omitempty"`
 }
 
@@ -2195,9 +2218,11 @@ type EventGatewayModifyHeadersPolicyCreateConfig struct {
 type EventGatewayOffsetCommitRequestRules struct {
 	// Every rule in this list is evaluated independently against the request.
 	// A rule that evaluates to `false` runs its action.
+	// A maximum of 10 rules are allowed.
 	//
 	//
 	// +required
+	// +kubebuilder:validation:MaxItems=10
 	Rules []EventGatewayOffsetCommitRule `json:"rules,omitempty"`
 }
 
@@ -2243,9 +2268,11 @@ type EventGatewayOffsetCommitRule struct {
 type EventGatewayOffsetFetchRequestRules struct {
 	// Every rule in this list is evaluated independently against the request.
 	// A rule that evaluates to `false` runs its action.
+	// A maximum of 10 rules are allowed.
 	//
 	//
 	// +required
+	// +kubebuilder:validation:MaxItems=10
 	Rules []EventGatewayOffsetFetchRule `json:"rules,omitempty"`
 }
 
@@ -2832,9 +2859,11 @@ type EventGatewayParsedRecordFieldPathsExpression string
 type EventGatewayProduceRequestRules struct {
 	// Every rule in this list is evaluated independently against the request.
 	// A rule that evaluates to `false` runs its action.
+	// A maximum of 10 rules are allowed.
 	//
 	//
 	// +required
+	// +kubebuilder:validation:MaxItems=10
 	Rules []EventGatewayProduceRule `json:"rules,omitempty"`
 }
 
@@ -3606,9 +3635,11 @@ type EventGatewayRequestRuleValidatorConfig struct {
 	// A request type can occur more than
 	// once in this list. Every entry for the type applies, in list order.
 	// Requests of a type that is not in this list are not validated.
+	// A maximum of 100 entries are allowed.
 	//
 	//
 	// +required
+	// +kubebuilder:validation:MaxItems=100
 	Requests []EventGatewayRequestRules `json:"requests,omitempty"`
 }
 
@@ -3672,7 +3703,7 @@ type EventGatewayRequestRules struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=alterClientQuotas;alterConfigs;alterUserScramCredentials;consumerGroupHeartbeat;createPartitions;createTopics;fetch;incrementalAlterConfigs;joinGroup;offsetCommit;offsetFetch;produce
+	// +kubebuilder:validation:Enum=alterClientQuotas;alterConfigs;alterUserScramCredentials;consumerGroupHeartbeat;createPartitions;createTopics;fetch;incrementalAlterConfigs;joinGroup;offsetCommit;offsetFetch;produce;txnOffsetCommit
 	Type EventGatewayRequestRulesType `json:"type,omitempty"`
 
 	// AlterClientQuotas configuration.
@@ -3723,6 +3754,10 @@ type EventGatewayRequestRules struct {
 	//
 	// +optional
 	Produce *EventGatewayProduceRequestRules `json:"produce,omitempty"`
+	// TxnOffsetCommit configuration.
+	//
+	// +optional
+	TxnOffsetCommit *EventGatewayTxnOffsetCommitRequestRules `json:"txnOffsetCommit,omitempty"`
 }
 
 // EventGatewayRequestRulesType represents the type of EventGatewayRequestRules.
@@ -3742,6 +3777,7 @@ const (
 	EventGatewayRequestRulesTypeOffsetCommit              EventGatewayRequestRulesType = "offsetCommit"
 	EventGatewayRequestRulesTypeOffsetFetch               EventGatewayRequestRulesType = "offsetFetch"
 	EventGatewayRequestRulesTypeProduce                   EventGatewayRequestRulesType = "produce"
+	EventGatewayRequestRulesTypeTxnOffsetCommit           EventGatewayRequestRulesType = "txnOffsetCommit"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -3848,6 +3884,14 @@ func (u EventGatewayRequestRules) MarshalJSON() ([]byte, error) {
 				return nil, fmt.Errorf("marshaling EventGatewayRequestRules produce: %w", err)
 			}
 			m["produce"] = raw
+		}
+	case EventGatewayRequestRulesTypeTxnOffsetCommit:
+		if u.TxnOffsetCommit != nil {
+			raw, err := json.Marshal(u.TxnOffsetCommit)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayRequestRules txn_offset_commit: %w", err)
+			}
+			m["txnOffsetCommit"] = raw
 		}
 	}
 	return json.Marshal(m)
@@ -3990,6 +4034,16 @@ func (u *EventGatewayRequestRules) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling EventGatewayRequestRules produce: %w", err)
 		}
 		u.Produce = &val
+	case "txnOffsetCommit":
+		payload, ok := raw["txnOffsetCommit"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayTxnOffsetCommitRequestRules
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayRequestRules txn_offset_commit: %w", err)
+		}
+		u.TxnOffsetCommit = &val
 	}
 	return nil
 }
@@ -4145,6 +4199,56 @@ type EventGatewayTLSListenerPolicyConfigClientAuthentication struct {
 	//
 	// +required
 	TLSTrustBundles []TLSTrustBundleReference `json:"tlsTrustBundles,omitempty"`
+}
+
+// EventGatewayTxnOffsetCommitRequestRules The rules to apply to Kafka
+// `TxnOffsetCommit` requests.
+type EventGatewayTxnOffsetCommitRequestRules struct {
+	// Every rule in this list is evaluated independently against the request.
+	// A rule that evaluates to `false` runs its action.
+	// A maximum of 10 rules are allowed.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MaxItems=10
+	Rules []EventGatewayTxnOffsetCommitRule `json:"rules,omitempty"`
+}
+
+// EventGatewayTxnOffsetCommitRule is a type alias.
+type EventGatewayTxnOffsetCommitRule struct {
+	// What to do when a rule evaluates to `false`.
+	//
+	// `reject` fails the request with the `POLICY_VIOLATION` error code.
+	// `passthrough` lets the request continue, but logs the violation in the same
+	// way as `reject`.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=reject;passthrough
+	Action EventGatewayRequestRuleAction `json:"action,omitzero"`
+	// An explanation of the rule.
+	// Event Gateway writes this text to the logs when the request
+	// violates the rule, because the rule expression alone does not show the
+	// intent.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	Description string `json:"description,omitzero"`
+	// A boolean expression that describes the valid state of the request.
+	// The action runs when the expression evaluates to `false`.
+	// An expression that cannot be evaluated, for example because a value has an
+	// unexpected
+	// format, also counts as `false`.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=1000
+	Rule string `json:"rule,omitzero"`
 }
 
 // FetchKongIdentityPrincipal Fetches principal metadata from Kong Identity

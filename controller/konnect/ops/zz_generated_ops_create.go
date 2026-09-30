@@ -42,6 +42,8 @@ func CreateGeneratedOps[
 		return createAIGatewayConsumerCredential(ctx, cl, sdk.GetAIGatewayConsumersSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayConsumerGroup:
 		return createAIGatewayConsumerGroup(ctx, cl, sdk.GetAIGatewayConsumerGroupsSDK(), ent)
+	case *aiconfigurationv1alpha1.AIGatewayCustomPolicy:
+		return createAIGatewayCustomPolicy(ctx, cl, sdk.GetAIGatewayCustomPoliciesSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate:
 		return createAIGatewayDataPlaneCertificate(ctx, cl, sdk.GetAIGatewayDataPlaneCertificatesSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayMCPServer:
@@ -91,7 +93,7 @@ func CreateGeneratedOps[
 	case *konnectv1alpha1.PortalIdentityProviderRequest:
 		return createPortalIdentityProviderRequest(ctx, sdk.GetPortalAuthSettingsSDK(), ent)
 	case *konnectv1alpha1.PortalPage:
-		return createPortalPage(ctx, sdk.GetPortalPagesSDK(), ent)
+		return createPortalPage(ctx, cl, sdk.GetPortalPagesSDK(), ent)
 	case *konnectv1alpha1.PortalTeam:
 		return createPortalTeam(ctx, sdk.GetPortalTeamsSDK(), ent)
 	default:

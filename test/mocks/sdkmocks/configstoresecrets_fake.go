@@ -26,6 +26,7 @@ import (
 //
 //   - Reads (Get/List) are metadata-only: secret values are never returned.
 //   - Create on an existing key fails with 409 Conflict.
+//   - Update is an upsert: it returns 201 for a new key and 200 otherwise.
 //   - Keys are capped at 512 bytes, values at 5120 bytes (400 Bad Request).
 //   - There is NO key-character validation on create: keys containing '#',
 //     '%' or '/' are accepted, but subsequent reads/updates/deletes of such
@@ -112,11 +113,11 @@ func (f *FakeConfigStoreSecrets) store(controlPlaneID, configStoreID string) map
 	return s
 }
 
-// nextTimestamp advances the internal clock and returns a timestamp derived
-// from it, guaranteeing strictly increasing timestamps across writes.
+// nextTimestamp advances the internal clock in millisecond increments,
+// guaranteeing strictly increasing fractional timestamps across writes.
 func (f *FakeConfigStoreSecrets) nextTimestamp() time.Time {
 	f.clock++
-	return time.Unix(1_700_000_000+f.clock, 0).UTC()
+	return time.Unix(1_700_000_000, f.clock*int64(time.Millisecond)).UTC()
 }
 
 func newFakeSDKError(statusCode int, format string, args ...any) *sdkkonnecterrs.SDKError {
@@ -265,8 +266,9 @@ func (f *FakeConfigStoreSecrets) GetConfigStoreSecret(
 	}, nil
 }
 
-// UpdateConfigStoreSecret updates a secret's value. updated_at advances even
-// when the new value is identical to the stored one, matching the real API.
+// UpdateConfigStoreSecret upserts a secret's value. It returns 201 when the
+// key is created and 200 when it is updated. updated_at advances even when the
+// new value is identical to the stored one, matching the real API.
 func (f *FakeConfigStoreSecrets) UpdateConfigStoreSecret(
 	_ context.Context,
 	request sdkkonnectops.UpdateConfigStoreSecretRequest,
@@ -291,9 +293,24 @@ func (f *FakeConfigStoreSecrets) UpdateConfigStoreSecret(
 	if err := validateKeyValueCaps(request.Key, request.UpdateConfigStoreSecret.Value); err != nil {
 		return nil, err
 	}
-	entry, exists := f.store(request.ControlPlaneID, request.ConfigStoreID)[request.Key]
+	store := f.store(request.ControlPlaneID, request.ConfigStoreID)
+	entry, exists := store[request.Key]
 	if !exists {
-		return nil, newFakeSDKError(http.StatusNotFound, "secret %q not found", request.Key)
+		now := f.nextTimestamp()
+		store[request.Key] = &fakeConfigStoreSecretEntry{
+			value:     request.UpdateConfigStoreSecret.Value,
+			createdAt: now,
+			updatedAt: now,
+		}
+		key := request.Key
+		return &sdkkonnectops.UpdateConfigStoreSecretResponse{
+			StatusCode: http.StatusCreated,
+			ConfigStoreSecret: &sdkkonnectcomp.ConfigStoreSecret{
+				Key:       &key,
+				CreatedAt: new(now),
+				UpdatedAt: new(now),
+			},
+		}, nil
 	}
 
 	entry.value = request.UpdateConfigStoreSecret.Value
@@ -385,10 +402,14 @@ func (f *FakeConfigStoreSecrets) Value(controlPlaneID, configStoreID, key string
 
 // SetValue writes a value directly, bypassing the SDK interface, and advances
 // updated_at. It simulates an out-of-band write (drift) by another actor.
+// The clock jumps by more than a second so the write crosses the controller's
+// second-granularity drift comparison, matching a real external write that
+// happens at a later wall-clock time than the sync's own writes.
 func (f *FakeConfigStoreSecrets) SetValue(controlPlaneID, configStoreID, key, value string) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	store := f.store(controlPlaneID, configStoreID)
+	f.clock += int64(time.Second / time.Millisecond)
 	now := f.nextTimestamp()
 	if entry, ok := store[key]; ok {
 		entry.value = value

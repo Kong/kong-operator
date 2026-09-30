@@ -10,6 +10,10 @@ package v1alpha1
 // Data planes older than this version still connect for topology visibility.
 //
 // When not specified, the latest generally available runtime version is used.
+//
+// When runtime_auto_upgrade is enabled (the default), this value is raised
+// automatically to track the minimum runtime version reported across connected
+// data planes, so any value set here may be superseded as the fleet upgrades.
 type AIGatewayMinRuntimeVersion string
 
 // AIGatewayProxyURL Proxy URL associated with reaching the data-planes
@@ -34,8 +38,9 @@ type AIGatewayProxyURL struct {
 }
 
 // AIGatewayRuntimeAutoUpgrade Whether the control plane should automatically
-// raise min_runtime_version as connected data planes report a newer AI Gateway
-// runtime version.
+// raise min_runtime_version to match the DP fleet's minimum runtime version
+// (the lowest AI Gateway runtime version reported across all connected data
+// planes) as that value increases.
 //
 // +kubebuilder:validation:Enum=Enabled;Disabled
 type AIGatewayRuntimeAutoUpgrade string

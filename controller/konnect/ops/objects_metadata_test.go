@@ -1,6 +1,7 @@
 package ops_test
 
 import (
+	"maps"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -102,6 +103,69 @@ func TestWithKubernetesMetadataLabels(t *testing.T) {
 			},
 		},
 		{
+			name: "user-provided labels cannot override Kubernetes metadata labels",
+			obj: testObjectKind{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "TestObjectKind",
+					APIVersion: "test.objects.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-object",
+					Namespace:  "test-namespace",
+					UID:        "test-uid",
+					Generation: 2,
+				},
+			},
+			userLabels: map[string]string{
+				ops.KubernetesKindLabelKey:       "user-kind",
+				ops.KubernetesGroupLabelKey:      "user-group",
+				ops.KubernetesVersionLabelKey:    "user-version",
+				ops.KubernetesNameLabelKey:       "user-name",
+				ops.KubernetesNamespaceLabelKey:  "user-namespace",
+				ops.KubernetesUIDLabelKey:        "user-uid",
+				ops.KubernetesGenerationLabelKey: "100",
+				ops.ManagedByLabelKey:            "user",
+				"custom-label":                   "custom-value",
+			},
+			expectedLabels: map[string]string{
+				ops.KubernetesKindLabelKey:       "TestObjectKind",
+				ops.KubernetesGroupLabelKey:      "test.objects.io",
+				ops.KubernetesVersionLabelKey:    "v1",
+				ops.KubernetesNameLabelKey:       "test-object",
+				ops.KubernetesNamespaceLabelKey:  "test-namespace",
+				ops.KubernetesUIDLabelKey:        "test-uid",
+				ops.KubernetesGenerationLabelKey: "2",
+				ops.ManagedByLabelKey:            ops.ManagedByKongOperatorLabelValue,
+				"custom-label":                   "custom-value",
+			},
+		},
+		{
+			name: "user-provided namespace label is dropped for cluster-scoped objects",
+			obj: testObjectKind{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       "TestObjectKind",
+					APIVersion: "test.objects.io/v1",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-object",
+					UID:        "test-uid",
+					Generation: 2,
+				},
+			},
+			userLabels: map[string]string{
+				ops.KubernetesNamespaceLabelKey: "user-namespace",
+			},
+			expectedLabels: map[string]string{
+				ops.KubernetesKindLabelKey:       "TestObjectKind",
+				ops.KubernetesGroupLabelKey:      "test.objects.io",
+				ops.KubernetesVersionLabelKey:    "v1",
+				ops.KubernetesNameLabelKey:       "test-object",
+				ops.KubernetesUIDLabelKey:        "test-uid",
+				ops.KubernetesGenerationLabelKey: "2",
+				ops.ManagedByLabelKey:            ops.ManagedByKongOperatorLabelValue,
+			},
+		},
+		{
 			name: "too long kind, group, name, and namespace are truncated",
 			obj: testObjectKind{
 				TypeMeta: metav1.TypeMeta{
@@ -131,6 +195,93 @@ func TestWithKubernetesMetadataLabels(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			labels := ops.WithKubernetesMetadataLabels(&tc.obj, tc.userLabels)
+			require.Equal(t, tc.expectedLabels, labels)
+		})
+	}
+}
+
+func TestWithKubernetesMetadataLabelsPtr(t *testing.T) {
+	namespacedObject := testObjectKind{
+		Kind:       "TestObjectKind",
+		APIVersion: "test.objects.io/v1",
+		Name:       "test-object",
+		Namespace:  "test-namespace",
+		UID:        "test-uid",
+		Generation: 2,
+	}
+	clusterScopedObject := namespacedObject
+	clusterScopedObject.Namespace = ""
+
+	metadataLabels := func(obj testObjectKind) map[string]*string {
+		labels := map[string]*string{
+			ops.KubernetesKindLabelKey:       new("TestObjectKind"),
+			ops.KubernetesGroupLabelKey:      new("test.objects.io"),
+			ops.KubernetesVersionLabelKey:    new("v1"),
+			ops.KubernetesNameLabelKey:       new("test-object"),
+			ops.KubernetesUIDLabelKey:        new("test-uid"),
+			ops.KubernetesGenerationLabelKey: new("2"),
+			ops.ManagedByLabelKey:            new(ops.ManagedByKongOperatorLabelValue),
+		}
+		if obj.Namespace != "" {
+			labels[ops.KubernetesNamespaceLabelKey] = new(obj.Namespace)
+		}
+		return labels
+	}
+	withLabels := func(labels map[string]*string, extra map[string]*string) map[string]*string {
+		maps.Copy(labels, extra)
+		return labels
+	}
+
+	testCases := []struct {
+		name           string
+		obj            testObjectKind
+		userLabels     map[string]*string
+		expectedLabels map[string]*string
+	}{
+		{
+			name:           "no user-provided labels",
+			obj:            namespacedObject,
+			expectedLabels: metadataLabels(namespacedObject),
+		},
+		{
+			name: "user-provided labels are added, including nil ones",
+			obj:  namespacedObject,
+			userLabels: map[string]*string{
+				"custom-label":  new("custom-value"),
+				"removed-label": nil,
+			},
+			expectedLabels: withLabels(metadataLabels(namespacedObject), map[string]*string{
+				"custom-label":  new("custom-value"),
+				"removed-label": nil,
+			}),
+		},
+		{
+			name: "user-provided labels cannot override or delete Kubernetes metadata labels",
+			obj:  namespacedObject,
+			userLabels: map[string]*string{
+				ops.KubernetesUIDLabelKey:       new("user-uid"),
+				ops.KubernetesNameLabelKey:      nil,
+				ops.KubernetesNamespaceLabelKey: nil,
+				ops.ManagedByLabelKey:           new("user"),
+				"custom-label":                  new("custom-value"),
+			},
+			expectedLabels: withLabels(metadataLabels(namespacedObject), map[string]*string{
+				"custom-label": new("custom-value"),
+			}),
+		},
+		{
+			name: "user-provided namespace label is dropped for cluster-scoped objects",
+			obj:  clusterScopedObject,
+			userLabels: map[string]*string{
+				ops.KubernetesNamespaceLabelKey: new("user-namespace"),
+			},
+			expectedLabels: metadataLabels(clusterScopedObject),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			labels := ops.WithKubernetesMetadataLabelsPtr(&tc.obj, tc.userLabels)
 			require.Equal(t, tc.expectedLabels, labels)
 		})
 	}

@@ -1005,22 +1005,28 @@ func (s *AIGatewayMCPServerAPISpec) selectedSDKOpsPayload(payload map[string]any
 
 	var selected any
 	var variant string
+	variantJSON := ""
 	switch s.AIGatewayMCPServerConfig.Type {
 	case AIGatewayMCPServerConfigTypeConversionOnly:
 		selected = payload["conversion-only"]
 		variant = "ConversionOnly"
+		variantJSON = "conversion-only"
 	case AIGatewayMCPServerConfigTypeConversionListener:
 		selected = payload["conversion-listener"]
 		variant = "ConversionListener"
+		variantJSON = "conversion-listener"
 	case AIGatewayMCPServerConfigTypeListener:
 		selected = payload["listener"]
 		variant = "Listener"
+		variantJSON = "listener"
 	case AIGatewayMCPServerConfigTypePassthroughListener:
 		selected = payload["passthrough-listener"]
 		variant = "PassthroughListener"
+		variantJSON = "passthrough-listener"
 	case AIGatewayMCPServerConfigTypeUpstreamServer:
 		selected = payload["upstream-server"]
 		variant = "UpstreamServer"
+		variantJSON = "upstream-server"
 	default:
 		return nil, "", fmt.Errorf("unsupported AIGatewayMCPServer config type %q", s.AIGatewayMCPServerConfig.Type)
 	}
@@ -1028,7 +1034,7 @@ func (s *AIGatewayMCPServerAPISpec) selectedSDKOpsPayload(payload map[string]any
 	if selected == nil {
 		return nil, "", fmt.Errorf("AIGatewayMCPServer config payload missing for type %q", s.AIGatewayMCPServerConfig.Type)
 	}
-	selected = flattenSDKUnions(selected)
+	selected = flattenSDKUnionsExceptUnder(selected, AIGatewayMCPServerSDKOpsFreeformKeyFields, variantJSON)
 	if selectedMap, ok := selected.(map[string]any); ok {
 		if typeValue, ok := payload["type"]; ok {
 			if _, hasType := selectedMap["type"]; !hasType {

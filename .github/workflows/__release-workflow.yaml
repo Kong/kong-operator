@@ -22,6 +22,9 @@ on:
       op-service-account-token:
         required: false
         description: "The 1Password service account token to fetch the Kong Enterprise License. If left empty, no license will be fetched"
+      kong-license-data:
+        required: false
+        description: "The cached Kong Enterprise License, used in preference to fetching it from 1Password. Refreshed by the kong-license-refresh workflow"
     inputs:
       dockerhub-push-username:
         description: "The username to push images to Docker Hub"
@@ -90,6 +93,9 @@ jobs:
       minor: ${{ steps.semver_parser.outputs.minor }}
       patch: ${{ steps.semver_parser.outputs.patch }}
       prerelease: ${{ steps.semver_parser.outputs.prerelease }}
+      # NOTE: true for N.M.P with P != 0 and for rapid patches (e.g. 2.4.0-rapid.2.1).
+      # The first release of a rapid line (e.g. 2.4.0-rapid.2.0) is not a patch.
+      is-patch: ${{ steps.release-kind.outputs.is-patch }}
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
@@ -130,6 +136,35 @@ jobs:
           input_string: ${{ inputs.tag }}
           version_extractor_regex: 'v(.*)$'
 
+      # NOTE: rapid releases must use the N.M.0-rapid.K.P form: rapid.K.0 starts
+      # the rapid line K, rapid.K.P with P > 0 patches it. rapid.K is rejected so
+      # that each rapid line has a single spelling. The rapid prefix is matched
+      # case-insensitively so that e.g. Rapid.2 is rejected rather than released
+      # as a plain prerelease.
+      - name: Validate rapid release version format
+        env:
+          TAG: ${{ inputs.tag }}
+          PATCH: ${{ steps.semver_parser.outputs.patch }}
+          PRERELEASE: ${{ steps.semver_parser.outputs.prerelease }}
+        run: |
+          if [[ "${PRERELEASE,,}" == rapid* ]] && [[ "$PATCH" != "0" || ! "$PRERELEASE" =~ ^rapid\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Invalid rapid release version: $TAG"
+            echo "Rapid releases must use the N.M.0-rapid.K.P form, e.g. v2.4.0-rapid.2.0 or v2.4.0-rapid.2.1"
+            exit 1
+          fi
+
+      - name: Determine whether this is a patch release
+        id: release-kind
+        env:
+          PATCH: ${{ steps.semver_parser.outputs.patch }}
+          PRERELEASE: ${{ steps.semver_parser.outputs.prerelease }}
+        run: |
+          if [[ "$PATCH" != "0" || "$PRERELEASE" =~ ^rapid\.[0-9]+\.[1-9][0-9]*$ ]]; then
+            echo "is-patch=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "is-patch=false" >> "$GITHUB_OUTPUT"
+          fi
+
   build-push-images:
     permissions:
       actions: read
@@ -137,6 +172,10 @@ jobs:
     uses: ./.github/workflows/__build-workflow.yaml
     secrets:
       dockerhub-token: ${{ secrets.dockerhub-push-token }}
+    # NOTE: needs semver so that a tag rejected there (e.g. a malformed rapid
+    # version) does not get images pushed.
+    needs:
+    - semver
     with:
       registry: docker.io
       username: ${{ inputs.dockerhub-push-username }}
@@ -186,26 +225,31 @@ jobs:
         with:
           install: false
 
-      # This step is required to check if the OP Service Account Token is available and export a boolean output
-      # to be used in the next step. It's because we cannot use a secret in a step's condition.
-      # See: https://github.com/actions/runner/issues/520
-      - name: Check OP Service Account Token available
-        id: check-op-service-account-token
+      # This step is required to check whether either license credential is available and export a
+      # boolean output to be used in the next step. It's because we cannot use a secret in a step's
+      # condition. See: https://github.com/actions/runner/issues/520
+      - name: Check Kong license credentials available
+        id: check-license-creds
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.op-service-account-token }}
+          CACHED_LICENSE: ${{ secrets.kong-license-data }}
         run: |
-          # If OP_SERVICE_ACCOUNT_TOKEN is set, return true.
-          if [ -n "$OP_SERVICE_ACCOUNT_TOKEN" ]; then
+          # If either the cached license or the 1Password token is set, return true.
+          if [ -n "$CACHED_LICENSE" ] || [ -n "$OP_SERVICE_ACCOUNT_TOKEN" ]; then
               echo "provided=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Get Kong Enterprise License
-        if: steps.check-op-service-account-token.outputs.provided == 'true'
+        if: steps.check-license-creds.outputs.provided == 'true'
         id: get-license
-        uses: Kong/kong-license@ddccb487a0b319cef85f348b16a1ad2b6d9c1df7 # master @ 20260529
+        uses: ./.github/actions/kong-license
         with:
-          # OP (1Password) token is used to fetch the Kong Enterprise License from 1Password.
+          cached-license: ${{ secrets.kong-license-data }}
+          # OP (1Password) token is used to fetch the Kong Enterprise License from 1Password
+          # when the cached license is missing or expired.
           op-token: ${{ secrets.op-service-account-token }}
+          # This workflow tolerates running without a license at all.
+          allow-empty: "true"
 
       - name: integration tests
         run: make test.integration-ko
@@ -235,6 +279,7 @@ jobs:
     secrets:
       konnect-pat: ${{ secrets.konnect-pat }}
       op-service-account-token: ${{ secrets.op-service-account-token }}
+      kong-license-data: ${{ secrets.kong-license-data }}
 
   create-release-pr:
     runs-on: ubuntu-latest
@@ -262,7 +307,7 @@ jobs:
             kong-operator
             developer.konghq.com
       - name: Check if we're not trying to trigger a major/minor release from non main
-        if: ${{ inputs.base != 'main' && needs.semver.outputs.patch == '0' }}
+        if: ${{ inputs.base != 'main' && needs.semver.outputs.is-patch != 'true' }}
         env:
           FULLVERSION: ${{ needs.semver.outputs.fullversion }}
           BASE: ${{ inputs.base }}
@@ -272,7 +317,7 @@ jobs:
           exit 1
 
       - name: Check if we're not trying to trigger a patch release from main
-        if: ${{ inputs.base == 'main' && needs.semver.outputs.patch != '0' }}
+        if: ${{ inputs.base == 'main' && needs.semver.outputs.is-patch == 'true' }}
         env:
           FULLVERSION: ${{ needs.semver.outputs.fullversion }}
           BASE: ${{ inputs.base }}

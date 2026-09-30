@@ -14,9 +14,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/adminapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/manager"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
+	adminapidiscovery "github.com/kong/kong-operator/v2/internal/adminapi"
 )
 
 func TestAdminAPIClientFromServiceDiscovery(t *testing.T) {
@@ -24,8 +24,8 @@ func TestAdminAPIClientFromServiceDiscovery(t *testing.T) {
 	adminAPISvcNN := k8stypes.NamespacedName{Name: "admin-api", Namespace: "kong"}
 	kubeClient := fake.NewFakeClient()
 	genericErr := errors.New("some generic error")
-	someDiscoveredAPI := func(address string) adminapi.DiscoveredAdminAPI {
-		return adminapi.DiscoveredAdminAPI{
+	someDiscoveredAPI := func(address string) adminapidiscovery.DiscoveredAdminAPI {
+		return adminapidiscovery.DiscoveredAdminAPI{
 			Address: address,
 			PodRef: k8stypes.NamespacedName{
 				Namespace: "kong",
@@ -35,7 +35,7 @@ func TestAdminAPIClientFromServiceDiscovery(t *testing.T) {
 	}
 	testCases := []struct {
 		name           string
-		discoveredAPIs sets.Set[adminapi.DiscoveredAdminAPI]
+		discoveredAPIs sets.Set[adminapidiscovery.DiscoveredAdminAPI]
 		discovererErr  error
 		factoryErrs    map[string]error // Map from address to error.
 		cancelContext  bool             // If true, will cancel the context after GetAdminAPIsForService is called 2 times.

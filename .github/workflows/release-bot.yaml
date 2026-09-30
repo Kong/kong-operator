@@ -14,15 +14,15 @@ permissions:
 
 jobs:
   look_for_release:
-    # NOTE: skip the branch-creation echo from create-release-branch (below),
-    # which creates the release branch with PAT_GITHUB (team-k8s-bot) and so
-    # emits its own push event. Without this, that push re-runs this workflow
-    # on the new branch, matches the same release commit again, and
-    # publish-release fails because the GitHub release already exists.
-    # Gated on the actor too (not just `created`) so a manually created
-    # release/X.Y.x branch whose tip already carries a real release commit
-    # is not silently skipped.
-    if: ${{ !(github.event.created && github.actor == 'team-k8s-bot') }}
+    # NOTE: create-release-branch (below) pushes the release branch with the App
+    # token, and that push re-enters this workflow on the new branch. Without
+    # skipping it, it matches the same release commit again and the run fails in
+    # semver ("fail if tag already exists" - the tag was created by publish-release
+    # moments before; publish-release is skipped here because it needs semver). The
+    # echo is detected in commit_parser against the App's own login, since a ref
+    # pushed by an App token reports github.actor as "<app-slug>[bot]". Gated on the
+    # actor too (not just `created`) so a manually created release/X.Y.x branch whose
+    # tip already carries a real release commit is not silently skipped.
     outputs:
       release_found: ${{ steps.commit_parser.outputs.release_found }}
       release_type: ${{ steps.commit_parser.outputs.release_type }}
@@ -34,13 +34,36 @@ jobs:
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           egress-policy: audit
+      # Mint the token in the same job that uses it: app tokens do not survive
+      # being passed between jobs or through reusable-workflow boundaries.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        if: ${{ github.event.created }}
+        with:
+          client-id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
+          private-key: ${{ secrets.GH_APP__KONG_K8S__PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            kong-operator
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: search for release command in commit message
         id: commit_parser
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
         with:
           script: |
+            // Skip the echo push of the release branch that create-release-branch
+            // makes below: it carries the same release commit, and matching it again
+            // fails the run in semver, where the tag created by publish-release
+            // already exists.
+            if (context.payload.created && process.env.APP_SLUG
+                && context.actor === `${process.env.APP_SLUG}[bot]`) {
+              core.setOutput('release_found', 'false')
+              return
+            }
+
             const commitMessage = context.payload.head_commit.message
             if (commitMessage.includes('chore(release): [bot]')) {
               core.setOutput('release_found', 'true')
@@ -68,6 +91,12 @@ jobs:
       minor: ${{ steps.semver_parser.outputs.minor }}
       patch: ${{ steps.semver_parser.outputs.patch }}
       prerelease: ${{ steps.semver_parser.outputs.prerelease }}
+      release_branch: ${{ steps.release_branch.outputs.release_branch }}
+      # NOTE: true for patches of a rapid release (e.g. 2.4.0-rapid.2.1), released
+      # from release/N.M.0-rapid.K.x. False for the first release of a rapid
+      # line (e.g. 2.4.0-rapid.2.0).
+      rapid_patch: ${{ steps.release_branch.outputs.rapid_patch }}
+      changelog_anchor: ${{ steps.release_branch.outputs.changelog_anchor }}
     runs-on: ubuntu-latest
 
     steps:
@@ -88,6 +117,41 @@ jobs:
         with:
           input_string: ${{ env.VERSION }}
           version_extractor_regex: "(.*)$"
+
+      - name: Determine the release branch, rapid patch flag and changelog anchor
+        id: release_branch
+        env:
+          VERSION: ${{ steps.semver_parser.outputs.fullversion }}
+          MAJOR: ${{ steps.semver_parser.outputs.major }}
+          MINOR: ${{ steps.semver_parser.outputs.minor }}
+          PATCH: ${{ steps.semver_parser.outputs.patch }}
+          PRERELEASE: ${{ steps.semver_parser.outputs.prerelease }}
+        run: |
+          # NOTE: rapid releases must use the N.M.0-rapid.K.P form, as enforced by
+          # the release workflow. Fail here too so that a malformed rapid version
+          # is never published.
+          if [[ "${PRERELEASE,,}" == rapid* ]] && [[ "$PATCH" != "0" || ! "$PRERELEASE" =~ ^rapid\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Invalid rapid release version: ${VERSION}, rapid releases must use the N.M.0-rapid.K.P form" >&2
+            exit 1
+          fi
+
+          RELEASE_BRANCH=""
+          if [[ "$PATCH" == "0" && -z "$PRERELEASE" ]]; then
+            RELEASE_BRANCH="release/${MAJOR}.${MINOR}.x"
+          elif [[ "$PATCH" == "0" && "$PRERELEASE" =~ ^(rapid\.[0-9]+)\.0$ ]]; then
+            # rapid.K.0 starts the release/N.M.0-rapid.K.x branch.
+            RELEASE_BRANCH="release/${MAJOR}.${MINOR}.0-${BASH_REMATCH[1]}.x"
+          fi
+          echo "release_branch=${RELEASE_BRANCH}" >> "$GITHUB_OUTPUT"
+
+          RAPID_PATCH=false
+          if [[ "$PATCH" == "0" && "$PRERELEASE" =~ ^rapid\.[0-9]+\.[1-9][0-9]*$ ]]; then
+            RAPID_PATCH=true
+          fi
+          echo "rapid_patch=${RAPID_PATCH}" >> "$GITHUB_OUTPUT"
+
+          # CHANGELOG.md heading anchors drop the dots: 2.4.0-rapid.2.1 -> v240-rapid21.
+          echo "changelog_anchor=v${VERSION//./}" >> "$GITHUB_OUTPUT"
 
       - name: check if tag already exists
         uses: mukunku/tag-exists-action@5c39604fe8aef7e65acb6fbcf96ec580f7680313 # v1.7.0
@@ -124,7 +188,7 @@ jobs:
 
             #### Links:
 
-            - [Changelog](https://github.com/kong/kong-operator/blob/main/CHANGELOG.md#v${{ needs.semver.outputs.major }}${{ needs.semver.outputs.minor }}${{ needs.semver.outputs.patch }}${{ needs.semver.outputs.prerelease }})
+            - [Changelog](https://github.com/kong/kong-operator/blob/main/CHANGELOG.md#${{ needs.semver.outputs.changelog_anchor }})
 
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: v${{ needs.semver.outputs.version }}
@@ -144,32 +208,45 @@ jobs:
       - look_for_release
       - publish-release
       - semver
-    # NOTE: only create a release branch if the release is not a patch release
-    # or a prerelease.
-    # For patch releases, the release branch should already be in place.
-    # For prereleases, we do not want to create a release branch.
-    if: ${{ needs.look_for_release.outputs.release_found == 'true' && needs.semver.outputs.patch == '0' && needs.semver.outputs.prerelease == '' }}
+    # NOTE: only create a release branch for releases the semver job maps to
+    # one: stable N.M.0 -> release/N.M.x, rapid N.M.0-rapid.K.0 ->
+    # release/N.M.0-rapid.K.x. Patch releases already have their branch;
+    # other prereleases get none.
+    if: ${{ needs.look_for_release.outputs.release_found == 'true' && needs.semver.outputs.release_branch != '' }}
     runs-on: ubuntu-latest
     env:
-      RELEASE_BRANCH: "release/${{ needs.semver.outputs.major }}.${{ needs.semver.outputs.minor }}.x"
+      RELEASE_BRANCH: ${{ needs.semver.outputs.release_branch }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           egress-policy: audit
+      # Mint the token in the same job that uses it: app tokens do not survive
+      # being passed between jobs or through reusable-workflow boundaries.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
+          private-key: ${{ secrets.GH_APP__KONG_K8S__PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            kong-operator
       - uses: peterjgrainger/action-create-branch@4b81ce657e255acd677cc6c55c9c763654be3aef # v4.0.0
         env:
-          # NOTE: secrets.GITHUB_TOKEN (github-actions[bot]) is not a bypass
-          # actor on the release-branches ruleset, so creating refs/heads/release/*
-          # with it is rejected ("Reference update failed"). Use the bot PAT
-          # (team-k8s-bot), which is a bypass actor, instead.
-          GITHUB_TOKEN: ${{ secrets.PAT_GITHUB }}
+          # NOTE: the release-branches ruleset gates refs/heads/release/* with a
+          # `creation` rule, and secrets.GITHUB_TOKEN (github-actions[bot]) is not a
+          # bypass actor on it, so creating the ref with it is rejected
+          # ("Reference update failed"). Use an identity that the ruleset lists as a
+          # bypass actor: the Kong k8s App.
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         with:
           # NOTE: using the full ref name because
           # https://github.com/peterjgrainger/action-create-branch?tab=readme-ov-file#branch
           branch: "refs/heads/${{ env.RELEASE_BRANCH }}"
           sha: "${{ github.sha }}"
 
+      # NOTE: charts-sync.yaml tracks a single branch: the most recently created
+      # release branch (release/N.M.x or release/N.M.0-rapid.K.x).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - env:
           CHARTS_SYNC_WORKFLOW_PATH: .github/workflows/charts-sync.yaml
@@ -179,16 +256,19 @@ jobs:
           yq eval '.on.push.branches = [ strenv(RELEASE_BRANCH) ]' -i "$CHARTS_SYNC_WORKFLOW_PATH"
           git add "$CHARTS_SYNC_WORKFLOW_PATH"
           git commit -m "chore: update charts sync workflow to trigger on $RELEASE_BRANCH branch"
+          # e.g. release/2.4.x -> chore/charts-sync-2.4.x
+          echo "CHARTS_SYNC_PR_BRANCH=chore/charts-sync-${RELEASE_BRANCH#release/}" >> "$GITHUB_ENV"
 
       - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           # NOTE: use a dedicated head branch, not RELEASE_BRANCH itself - with
           # delete-branch: true, merging this PR would otherwise delete the
-          # freshly created release branch. Use PAT_GITHUB so the PR is
-          # attributed to team-k8s-bot: GITHUB_TOKEN-authored PRs don't trigger
-          # pull_request-triggered required checks, so this PR could never merge.
-          token: ${{ secrets.PAT_GITHUB }}
-          branch: "chore/charts-sync-${{ needs.semver.outputs.major }}.${{ needs.semver.outputs.minor }}.x"
+          # freshly created release branch. Use the App token, not GITHUB_TOKEN:
+          # GITHUB_TOKEN-authored PRs don't trigger pull_request-triggered
+          # required checks, so this PR could never merge. The App additionally
+          # needs the `workflows` permission, because this PR edits a workflow.
+          token: ${{ steps.app-token.outputs.token }}
+          branch: ${{ env.CHARTS_SYNC_PR_BRANCH }}
           base: main
           delete-branch: true
           title: "chore: update charts sync workflow to trigger on ${{ env.RELEASE_BRANCH }} branch"
@@ -206,7 +286,9 @@ jobs:
       - look_for_release
       - publish-release
       - semver
-    if: ${{ needs.look_for_release.outputs.release_found == 'true' && needs.semver.outputs.patch != '0' && needs.semver.outputs.prerelease == '' && needs.look_for_release.outputs.release_latest == 'true' && github.ref_name != 'main' }}
+    # NOTE: patch releases (N.M.P with P != 0) and patches of rapid releases
+    # (e.g. 2.4.0-rapid.1.1) are cherry-picked back to main.
+    if: ${{ needs.look_for_release.outputs.release_found == 'true' && ((needs.semver.outputs.patch != '0' && needs.semver.outputs.prerelease == '') || needs.semver.outputs.rapid_patch == 'true') && needs.look_for_release.outputs.release_latest == 'true' && github.ref_name != 'main' }}
     env:
       CHERRYPICK_BRANCH: cherry-pick/${{ github.sha }}-to-main
     runs-on: ubuntu-latest
@@ -215,6 +297,16 @@ jobs:
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           egress-policy: audit
+      # Mint the token in the same job that uses it: app tokens do not survive
+      # being passed between jobs or through reusable-workflow boundaries.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
+          private-key: ${{ secrets.GH_APP__KONG_K8S__PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            kong-operator
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
@@ -237,10 +329,10 @@ jobs:
 
       - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
-          # NOTE: use PAT_GITHUB, not GITHUB_TOKEN - a GITHUB_TOKEN-authored PR
+          # NOTE: use the App token, not GITHUB_TOKEN - a GITHUB_TOKEN-authored PR
           # doesn't trigger pull_request-triggered required checks, so it could
           # never merge into main.
-          token: ${{ secrets.PAT_GITHUB }}
+          token: ${{ steps.app-token.outputs.token }}
           branch: ${{ env.CHERRYPICK_BRANCH }}
           base: main
           delete-branch: true

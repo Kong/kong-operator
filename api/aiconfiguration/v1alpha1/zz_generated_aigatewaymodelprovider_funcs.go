@@ -95,6 +95,10 @@ func (obj *AIGatewayModelProvider) GetKonnectName() string {
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Sagemaker != nil {
 			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Sagemaker.Name)
 		}
+	case AIGatewayModelProviderConfigTypeTypesafe:
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Typesafe != nil {
+			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Typesafe.Name)
+		}
 	case AIGatewayModelProviderConfigTypeVercel:
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vercel != nil {
 			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Vercel.Name)
@@ -152,8 +156,8 @@ func (obj *AIGatewayModelProvider) SetGatewayID(id string) {
 	obj.Status.GatewayID.ID = id
 }
 
-// GetKonnectAIGatewayRef returns the reference to the parent KonnectAIGateway.
-func (obj *AIGatewayModelProvider) GetKonnectAIGatewayRef() AIGatewayRef {
+// GetAIGatewayRef returns the reference to the parent AI Gateway (control plane).
+func (obj *AIGatewayModelProvider) GetAIGatewayRef() AIGatewayRef {
 	return obj.Spec.AIGatewayRef
 }
 
@@ -161,7 +165,7 @@ func (obj *AIGatewayModelProvider) GetKonnectAIGatewayRef() AIGatewayRef {
 // ObjectRef. The custom parent ref type's Group/Kind discriminator has no
 // ObjectRef representation, so only the namespaced reference is carried over.
 func (obj *AIGatewayModelProvider) GetParentRef() commonv1alpha1.ObjectRef {
-	return obj.GetKonnectAIGatewayRef().ToObjectRef()
+	return obj.GetAIGatewayRef().ToObjectRef()
 }
 
 // SetParentRef sets the reference to the parent entity from a generic
@@ -171,6 +175,15 @@ func (obj *AIGatewayModelProvider) SetParentRef(ref commonv1alpha1.ObjectRef) {
 	obj.Spec.AIGatewayRef = AIGatewayRefFromObjectRef(ref)
 }
 
+// SkipKonnectReconciliation reports whether the entity's parent reference
+// resolves to a parent the Konnect reconciler does not manage (an
+// OnPremAIGateway): such entities are handled by the on-prem controllers
+// where supported, or rejected at admission when the entity restricts its
+// parent kinds.
+func (obj *AIGatewayModelProvider) SkipKonnectReconciliation() bool {
+	return obj.Spec.AIGatewayRef.TargetsOnPremAIGateway()
+}
+
 // SetParentID sets the Konnect ID of the immediate parent entity.
 func (obj *AIGatewayModelProvider) SetParentID(id string) {
 	obj.SetGatewayID(id)
@@ -178,11 +191,7 @@ func (obj *AIGatewayModelProvider) SetParentID(id string) {
 
 // GetParentGVK returns the GroupVersionKind of the parent entity.
 func (obj *AIGatewayModelProvider) GetParentGVK() schema.GroupVersionKind {
-	return schema.GroupVersionKind{
-		Group:   "konnect.konghq.com",
-		Version: GroupVersion.Version,
-		Kind:    "KonnectAIGateway",
-	}
+	return obj.Spec.AIGatewayRef.ParentGVK()
 }
 
 // GetStatusConditionTypeParentRefValid returns the status condition type

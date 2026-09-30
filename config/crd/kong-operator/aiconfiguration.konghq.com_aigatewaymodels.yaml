@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: aigatewaymodels.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -59,15 +59,15 @@ spec:
             description: AIGatewayModelSpec defines the desired state of AIGatewayModel.
             properties:
               aiGatewayRef:
-                description: AIGatewayRef is the reference to the parent KonnectAIGateway
-                  object.
+                description: AIGatewayRef is the reference to the parent AI Gateway
+                  (control plane) object.
                 properties:
                   group:
                     default: konnect.konghq.com
                     description: |-
                       Group is the API group of the referenced AI Gateway (control plane).
-                      Defaults to konnect.konghq.com for KonnectAIGateway; on-prem
-                      OnPremAIGateway lives in the aigateway.konghq.com group.
+                      Defaults to konnect.konghq.com; an OnPremAIGateway reference must set
+                      it to aigateway.konghq.com explicitly.
                     enum:
                     - konnect.konghq.com
                     - aigateway.konghq.com
@@ -124,6 +124,9 @@ spec:
                     and konnect.konghq.com when kind is KonnectAIGateway
                   rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com''
                     : self.group == ''konnect.konghq.com'''
+                - message: repointing an entity between KonnectAIGateway and OnPremAIGateway
+                    is forbidden
+                  rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
                 description: APISpec defines the desired state of the resource's API
                   spec fields.
@@ -1672,7 +1675,12 @@ spec:
                             supported by this model.
                           properties:
                             type:
-                              description: The format type.
+                              description: |-
+                                The format type.
+
+                                **`passthrough` requires a minimum runtime version of `2.2`**.
+
+                                **`typesafe` requires a minimum runtime version of `2.2`**.
                               enum:
                               - anthropic
                               - bedrock
@@ -1680,6 +1688,8 @@ spec:
                               - gemini
                               - huggingface
                               - openai
+                              - passthrough
+                              - typesafe
                               maxLength: 253
                               type: string
                           type: object
@@ -5750,11 +5760,29 @@ spec:
                                   - ollama
                                   - openai
                                   - sagemaker
+                                  - typesafe
                                   - vercel
                                   - vllm
                                   - xai
                                   minLength: 1
                                   type: string
+                                typesafe:
+                                  description: Typesafe configuration.
+                                  properties:
+                                    inputCost:
+                                      description: Cost per 1M input tokens for billing
+                                        and cost tracking.
+                                      type: number
+                                    outputCost:
+                                      description: Cost per 1M output tokens for billing
+                                        and cost tracking.
+                                      type: number
+                                    upstreamURL:
+                                      description: The upstream URL for the model
+                                        endpoint.
+                                      maxLength: 253
+                                      type: string
+                                  type: object
                                 vercel:
                                   description: Vercel configuration.
                                   properties:
@@ -8076,7 +8104,12 @@ spec:
                             supported by this model.
                           properties:
                             type:
-                              description: The format type.
+                              description: |-
+                                The format type.
+
+                                **`passthrough` requires a minimum runtime version of `2.2`**.
+
+                                **`typesafe` requires a minimum runtime version of `2.2`**.
                               enum:
                               - anthropic
                               - bedrock
@@ -8084,6 +8117,8 @@ spec:
                               - gemini
                               - huggingface
                               - openai
+                              - passthrough
+                              - typesafe
                               maxLength: 253
                               type: string
                           type: object
@@ -12154,11 +12189,29 @@ spec:
                                   - ollama
                                   - openai
                                   - sagemaker
+                                  - typesafe
                                   - vercel
                                   - vllm
                                   - xai
                                   minLength: 1
                                   type: string
+                                typesafe:
+                                  description: Typesafe configuration.
+                                  properties:
+                                    inputCost:
+                                      description: Cost per 1M input tokens for billing
+                                        and cost tracking.
+                                      type: number
+                                    outputCost:
+                                      description: Cost per 1M output tokens for billing
+                                        and cost tracking.
+                                      type: number
+                                    upstreamURL:
+                                      description: The upstream URL for the model
+                                        endpoint.
+                                      maxLength: 253
+                                      type: string
+                                  type: object
                                 vercel:
                                   description: Vercel configuration.
                                   properties:
@@ -13035,9 +13088,9 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.aiGatewayRef) || !has(self.status.conditions) || !self.status.conditions.exists(c,
-            c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef
-            == self.spec.aiGatewayRef'
+          rule: '!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions)
+            || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
+            == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
     served: true
     storage: true
     subresources:

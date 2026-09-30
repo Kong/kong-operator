@@ -27,7 +27,7 @@ func TestBuildSensitiveLeaves_DirectField_NonString(t *testing.T) {
 	}
 	g := NewGenerator(Config{
 		APIVersion: "v1alpha1",
-		SecretReferences: map[string][]config.SecretReferenceConfig{
+		DataSources: map[string][]config.DataSourceConfig{
 			"FakePolicy": {
 				{Path: "spec.apiSpec.config", Type: "Secret"},
 			},
@@ -35,7 +35,7 @@ func TestBuildSensitiveLeaves_DirectField_NonString(t *testing.T) {
 	})
 	require.NoError(t, g.buildSensitiveLeaves(parsed))
 
-	tmpls := g.templateSecretReferences("FakePolicy")
+	tmpls := g.templateDataSources("FakePolicy")
 	require.Len(t, tmpls, 1)
 	tmpl := tmpls[0]
 	assert.Equal(t, "map[string]string", tmpl.ValueGoType)
@@ -64,7 +64,7 @@ func TestBuildSensitiveLeaves_DirectField_StringStillUsesSharedType(t *testing.T
 	}
 	g := NewGenerator(Config{
 		APIVersion: "v1alpha1",
-		SecretReferences: map[string][]config.SecretReferenceConfig{
+		DataSources: map[string][]config.DataSourceConfig{
 			"FakeCredential": {
 				{Path: "spec.apiSpec.apiKey", Type: "Secret"},
 			},
@@ -72,7 +72,7 @@ func TestBuildSensitiveLeaves_DirectField_StringStillUsesSharedType(t *testing.T
 	})
 	require.NoError(t, g.buildSensitiveLeaves(parsed))
 
-	tmpls := g.templateSecretReferences("FakeCredential")
+	tmpls := g.templateDataSources("FakeCredential")
 	require.Len(t, tmpls, 1)
 	assert.Equal(t, "string", tmpls[0].ValueGoType)
 	assert.Empty(t, tmpls[0].DedicatedTypeName)
@@ -104,7 +104,7 @@ func TestBuildSensitiveLeaves_NestedSchemaField_NonString(t *testing.T) {
 	}
 	g := NewGenerator(Config{
 		APIVersion: "v1alpha1",
-		SecretReferences: map[string][]config.SecretReferenceConfig{
+		DataSources: map[string][]config.DataSourceConfig{
 			"FakeListener": {
 				{Path: "spec.apiSpec.tls.port", Type: "Secret"},
 			},
@@ -112,7 +112,7 @@ func TestBuildSensitiveLeaves_NestedSchemaField_NonString(t *testing.T) {
 	})
 	require.NoError(t, g.buildSensitiveLeaves(parsed))
 
-	tmpls := g.templateSecretReferences("FakeListener")
+	tmpls := g.templateDataSources("FakeListener")
 	require.Len(t, tmpls, 1)
 	assert.Equal(t, "int", tmpls[0].ValueGoType)
 	assert.Equal(t, "FakeListenerTLSPortDataSource", tmpls[0].DedicatedTypeName)
@@ -140,7 +140,7 @@ func TestBuildSensitiveLeaves_RefToScalarAliasSchema_ResolvesUnderlyingType(t *t
 	}
 	g := NewGenerator(Config{
 		APIVersion: "v1alpha1",
-		SecretReferences: map[string][]config.SecretReferenceConfig{
+		DataSources: map[string][]config.DataSourceConfig{
 			"FakeCertHolder": {
 				{Path: "spec.apiSpec.certificate", Type: "Secret"},
 			},
@@ -148,7 +148,7 @@ func TestBuildSensitiveLeaves_RefToScalarAliasSchema_ResolvesUnderlyingType(t *t
 	})
 	require.NoError(t, g.buildSensitiveLeaves(parsed))
 
-	tmpls := g.templateSecretReferences("FakeCertHolder")
+	tmpls := g.templateDataSources("FakeCertHolder")
 	require.Len(t, tmpls, 1)
 	assert.Equal(t, "string", tmpls[0].ValueGoType)
 	assert.Empty(t, tmpls[0].DedicatedTypeName)
@@ -176,7 +176,7 @@ func TestBuildSensitiveLeaves_UnionLeaf_Errors(t *testing.T) {
 	}
 	g := NewGenerator(Config{
 		APIVersion: "v1alpha1",
-		SecretReferences: map[string][]config.SecretReferenceConfig{
+		DataSources: map[string][]config.DataSourceConfig{
 			"FakeEntity": {
 				{Path: "spec.apiSpec.auth", Type: "Secret"},
 			},
@@ -205,7 +205,7 @@ func TestBuildSensitiveLeaves_NestedObjectLeaf_Errors(t *testing.T) {
 	}
 	g := NewGenerator(Config{
 		APIVersion: "v1alpha1",
-		SecretReferences: map[string][]config.SecretReferenceConfig{
+		DataSources: map[string][]config.DataSourceConfig{
 			"FakeEntity": {
 				{Path: "spec.apiSpec.identity", Type: "Secret"},
 			},
@@ -233,7 +233,7 @@ func TestGenerateSDKOps_NonStringSecretReference_CallsManualResolver(t *testing.
 	}
 	g := NewGenerator(Config{
 		APIVersion: "v1alpha1",
-		SecretReferences: map[string][]config.SecretReferenceConfig{
+		DataSources: map[string][]config.DataSourceConfig{
 			"FakePolicy": {
 				{Path: "spec.apiSpec.config", Type: "Secret"},
 			},

@@ -160,6 +160,19 @@ const (
 )
 
 const (
+	// ConfigMapRefValidConditionType is the type of the condition that
+	// indicates whether the ConfigMap references are valid and point to
+	// existing ConfigMaps containing the referenced keys.
+	ConfigMapRefValidConditionType = "ConfigMapRefValid"
+	// ConfigMapRefReasonValid is the reason used with the ConfigMapRefValid
+	// condition type indicating that the ConfigMap references are valid.
+	ConfigMapRefReasonValid = "Valid"
+	// ConfigMapRefReasonInvalid is the reason used with the ConfigMapRefValid
+	// condition type indicating that a ConfigMap reference is invalid.
+	ConfigMapRefReasonInvalid = "Invalid"
+)
+
+const (
 	// KeySetRefValidConditionType is the type of the condition that indicates
 	// whether the KeySet reference is valid and points to an existing
 	// KeySet.

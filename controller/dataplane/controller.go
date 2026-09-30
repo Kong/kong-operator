@@ -142,6 +142,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, dataplane *operatorv1beta1.D
 		additionalServiceLabels,
 		k8sresources.LabelSelectorFromDataPlaneStatusSelectorServiceOpt(dataplane),
 		k8sresources.ServicePortsFromDataPlaneIngressOpt(dataplane),
+		k8sresources.IPFamilyPolicyServiceOpt(r.DataPlaneIPFamily),
 	)
 	if err != nil {
 		return ctrl.Result{}, err

@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
+	"github.com/kong/go-kong/kong"
+	"github.com/samber/mo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -320,4 +322,143 @@ func Test_applyStatus(t *testing.T) {
 			}
 		})
 	}
+}
+
+// -----------------------------------------------------------------
+// SetLicenseStatusCondition
+// -----------------------------------------------------------------
+
+func Test_SetLicenseStatusCondition(t *testing.T) {
+	newDP := func() *aigatewayv1alpha1.AIGatewayDataPlane {
+		return &aigatewayv1alpha1.AIGatewayDataPlane{
+			Namespace: testCASecretNamespace, Name: testDPName,
+		}
+	}
+
+	const (
+		condType      = string(aigatewayv1alpha1.LicenseValidType)
+		validReason   = string(aigatewayv1alpha1.LicenseValidReason)
+		missingReason = string(aigatewayv1alpha1.LicenseMissingReason)
+	)
+
+	tests := []struct {
+		name         string
+		getter       LicenseGetter
+		condType     string
+		wantStatus   metav1.ConditionStatus
+		wantReason   string
+		wantNoChange bool
+	}{
+		{
+			name:         "nil getter: no condition set",
+			wantNoChange: true,
+		},
+		{
+			name:         "empty condition type: no condition set",
+			getter:       licenseGetterWithLicense(),
+			wantNoChange: true,
+		},
+		{
+			name:       "no license: LicenseValid=False with LicenseMissing",
+			getter:     licenseGetterWithNoLicense(),
+			condType:   condType,
+			wantStatus: metav1.ConditionFalse,
+			wantReason: missingReason,
+		},
+		{
+			name:       "license present: LicenseValid=True",
+			getter:     licenseGetterWithLicense(),
+			condType:   condType,
+			wantStatus: metav1.ConditionTrue,
+			wantReason: validReason,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			dp := newDP()
+			SetLicenseStatusCondition(dp, tc.getter, tc.condType, validReason, missingReason)
+
+			cond := apimeta.FindStatusCondition(dp.GetConditions(), condType)
+			if tc.wantNoChange {
+				assert.Nil(t, cond)
+				return
+			}
+			require.NotNil(t, cond)
+			assert.Equal(t, tc.wantStatus, cond.Status)
+			assert.Equal(t, tc.wantReason, cond.Reason)
+		})
+	}
+}
+
+// licenseGetterWithLicense returns a LicenseGetter with a license available.
+func licenseGetterWithLicense() LicenseGetter {
+	return getterFunc(func() mo.Option[kong.License] {
+		return mo.Some(kong.License{Payload: new("{}")})
+	})
+}
+
+// licenseGetterWithNoLicense returns a LicenseGetter with no license available.
+func licenseGetterWithNoLicense() LicenseGetter {
+	return getterFunc(func() mo.Option[kong.License] {
+		return mo.None[kong.License]()
+	})
+}
+
+// getterFunc adapts a function to the LicenseGetter interface.
+type getterFunc func() mo.Option[kong.License]
+
+func (f getterFunc) GetLicense() mo.Option[kong.License] {
+	return f()
+}
+
+// Test_ensureReadyStatus_ignoresLicenseCondition verifies that a False license
+// condition does not gate the Ready condition: a missing license is reported
+// in its own condition while the gateway keeps running (and can become Ready).
+func Test_ensureReadyStatus_ignoresLicenseCondition(t *testing.T) {
+	scheme := managerscheme.Get()
+
+	cfg := testConfig
+	cfg.Conditions.LicenseValidType = string(aigatewayv1alpha1.LicenseValidType)
+	cfg.Conditions.LicenseValidReason = string(aigatewayv1alpha1.LicenseValidReason)
+	cfg.Conditions.LicenseMissingReason = string(aigatewayv1alpha1.LicenseMissingReason)
+
+	// A fully rolled out Deployment.
+	deployment := &appsv1.Deployment{
+		Namespace: testCASecretNamespace, Name: testDPName, Generation: 1,
+		Spec: appsv1.DeploymentSpec{Replicas: new(int32(1))},
+	}
+	deployment.Status = appsv1.DeploymentStatus{
+		ObservedGeneration: 1,
+		Replicas:           1,
+		UpdatedReplicas:    1,
+		AvailableReplicas:  1,
+		ReadyReplicas:      1,
+	}
+
+	dp := &aigatewayv1alpha1.AIGatewayDataPlane{
+		Namespace: testCASecretNamespace, Name: testDPName,
+	}
+	dp.Status.Conditions = []metav1.Condition{
+		{
+			Type:               string(aigatewayv1alpha1.LicenseValidType),
+			Status:             metav1.ConditionFalse,
+			Reason:             string(aigatewayv1alpha1.LicenseMissingReason),
+			Message:            LicenseMissingMessage,
+			LastTransitionTime: metav1.Now(),
+		},
+	}
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(deployment).
+		WithStatusSubresource(deployment).
+		Build()
+
+	err := (&testReconciler{Client: cl, Config: cfg}).ensureReadyStatus(context.Background(), dp)
+	require.NoError(t, err)
+
+	readyCond := apimeta.FindStatusCondition(dp.Status.Conditions, string(aigatewayv1alpha1.ReadyType))
+	require.NotNil(t, readyCond)
+	assert.Equal(t, metav1.ConditionTrue, readyCond.Status)
 }

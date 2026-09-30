@@ -18,7 +18,7 @@ import (
 // +kubebuilder:storageversion
 // +apireference:kgo:include
 // +kong:channels=kong-operator
-// +kubebuilder:validation:XValidation:rule="!has(self.spec.aiGatewayRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef", message="spec.aiGatewayRef is immutable when an entity is already Programmed"
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef", message="spec.aiGatewayRef is immutable when an entity is already Programmed"
 type AIGatewayDataPlaneCertificate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitzero"`
@@ -41,7 +41,7 @@ type AIGatewayDataPlaneCertificateList struct {
 
 // AIGatewayDataPlaneCertificateSpec defines the desired state of AIGatewayDataPlaneCertificate.
 type AIGatewayDataPlaneCertificateSpec struct {
-	// AIGatewayRef is the reference to the parent KonnectAIGateway object.
+	// AIGatewayRef is the reference to the parent AI Gateway (control plane) object.
 	//
 	// +required
 	AIGatewayRef AIGatewayRef `json:"aiGatewayRef,omitzero"`
@@ -64,6 +64,30 @@ type AIGatewayDataPlaneCertificateAPISpec struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=1024
 	Description string `json:"description,omitzero"`
+
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 
 	// A human-readable name for the certificate.
 	//

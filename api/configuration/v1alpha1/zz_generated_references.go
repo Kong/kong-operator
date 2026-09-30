@@ -46,6 +46,11 @@ type ReferenceNotFoundError = commonv1alpha1.ReferenceNotFoundError
 // no Konnect ID yet.
 type ReferenceNotProgrammedError = commonv1alpha1.ReferenceNotProgrammedError
 
+// ReferenceBeingDeletedError is returned when a referenced CR is being
+// deleted, for references that must not start using an object that is going
+// away.
+type ReferenceBeingDeletedError = commonv1alpha1.ReferenceBeingDeletedError
+
 // ReferenceCrossNamespaceError is returned when a reference points to another
 // namespace. Cross-namespace references are rejected until explicit
 // cross-namespace support and authorization checks are implemented.
@@ -56,6 +61,17 @@ type ReferenceCrossNamespaceError = commonv1alpha1.ReferenceCrossNamespaceError
 // within the same Konnect Gateway because Konnect only accepts policy and ACL
 // references from the same AI Gateway.
 type ReferenceDifferentGatewayError = commonv1alpha1.ReferenceDifferentGatewayError
+
+// ReferenceDifferentParentError is returned when a same-type reference (e.g.
+// PortalPage's parentPageIDRef) points to a CR whose parent reference differs
+// from the referrer's. Konnect scopes child entities under their parent, so
+// such a reference can never resolve to a usable ID.
+type ReferenceDifferentParentError = commonv1alpha1.ReferenceDifferentParentError
+
+// ReferenceSelfError is returned when a same-type reference (e.g. PortalPage's
+// parentPageIDRef) points at the referencing object itself. Such a reference
+// can never resolve to a usable ID.
+type ReferenceSelfError = commonv1alpha1.ReferenceSelfError
 
 // EventGatewaySchemaRegistryRef references an EventGatewaySchemaRegistry in the cluster. The referenced
 // object's Konnect name is used where the Konnect API accepts it.

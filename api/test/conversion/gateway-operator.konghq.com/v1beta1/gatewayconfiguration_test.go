@@ -68,6 +68,37 @@ func TestGatewayConfiguration_ConvertTo(t *testing.T) {
 			},
 		},
 		{
+			name: "DataPlane Options with ingress service IP families",
+			spec: operatorv1beta1.GatewayConfigurationSpec{
+				DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
+					Network: operatorv1beta1.GatewayConfigDataPlaneNetworkOptions{
+						Services: &operatorv1beta1.GatewayConfigDataPlaneServices{
+							Ingress: &operatorv1beta1.GatewayConfigServiceOptions{
+								IPFamilies: []corev1.IPFamily{
+									corev1.IPv4Protocol,
+									corev1.IPv6Protocol,
+								},
+								IPFamilyPolicy: new(corev1.IPFamilyPolicyPreferDualStack),
+							},
+						},
+					},
+				},
+			},
+			expectedDataPlane: &operatorv2beta1.GatewayConfigDataPlaneOptions{
+				Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
+					Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
+						Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
+							IPFamilies: []corev1.IPFamily{
+								corev1.IPv4Protocol,
+								corev1.IPv6Protocol,
+							},
+							IPFamilyPolicy: new(corev1.IPFamilyPolicyPreferDualStack),
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "ControlPlane IngressClass Option",
 			spec: operatorv1beta1.GatewayConfigurationSpec{
 				ControlPlaneOptions: &operatorv1beta1.ControlPlaneOptions{
@@ -411,6 +442,38 @@ func TestGatewayConfiguration_ConvertFrom(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "DataPlane Options with ingress service IP families",
+			spec: operatorv2beta1.GatewayConfigurationSpec{
+				DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
+					Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
+						Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
+							Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
+								IPFamilies: []corev1.IPFamily{
+									corev1.IPv4Protocol,
+									corev1.IPv6Protocol,
+								},
+								IPFamilyPolicy: new(corev1.IPFamilyPolicyPreferDualStack),
+							},
+						},
+					},
+				},
+			},
+			expectedDataPlane: &operatorv1beta1.GatewayConfigDataPlaneOptions{
+				Network: operatorv1beta1.GatewayConfigDataPlaneNetworkOptions{
+					Services: &operatorv1beta1.GatewayConfigDataPlaneServices{
+						Ingress: &operatorv1beta1.GatewayConfigServiceOptions{
+							IPFamilies: []corev1.IPFamily{
+								corev1.IPv4Protocol,
+								corev1.IPv6Protocol,
+							},
+							IPFamilyPolicy: new(corev1.IPFamilyPolicyPreferDualStack),
+						},
+					},
+				},
+			},
+			expectedExtensions: []commonv1alpha1.ExtensionRef{},
+		},
 	}
 
 	for _, tc := range cases {
@@ -436,10 +499,13 @@ func TestGatewayConfiguration_ConvertFrom(t *testing.T) {
 
 			require.Equal(t, src.ObjectMeta, obj.ObjectMeta)
 
-			require.Equal(t,
-				tc.expectedControlPlane.Deployment.PodTemplateSpec.Spec.Containers[0].Env,
-				obj.Spec.ControlPlaneOptions.Deployment.PodTemplateSpec.Spec.Containers[0].Env)
-			require.Equal(t, tc.expectedControlPlane.Extensions, obj.Spec.ControlPlaneOptions.Extensions)
+			require.Equal(t, tc.expectedDataPlane, obj.Spec.DataPlaneOptions)
+			if tc.expectedControlPlane != nil {
+				require.Equal(t,
+					tc.expectedControlPlane.Deployment.PodTemplateSpec.Spec.Containers[0].Env,
+					obj.Spec.ControlPlaneOptions.Deployment.PodTemplateSpec.Spec.Containers[0].Env)
+				require.Equal(t, tc.expectedControlPlane.Extensions, obj.Spec.ControlPlaneOptions.Extensions)
+			}
 			require.Equal(t, tc.expectedExtensions, obj.Spec.Extensions)
 			require.Equal(t, src.Status.Conditions, obj.Status.Conditions)
 		})
@@ -523,6 +589,17 @@ func TestGatewayConfiguration_RoundTrip(t *testing.T) {
 								},
 							},
 						},
+						Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
+							Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
+								Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
+									IPFamilies: []corev1.IPFamily{
+										corev1.IPv4Protocol,
+										corev1.IPv6Protocol,
+									},
+									IPFamilyPolicy: new(corev1.IPFamilyPolicyPreferDualStack),
+								},
+							},
+						},
 					},
 					Extensions: []commonv1alpha1.ExtensionRef{
 						{
@@ -586,6 +663,7 @@ func TestGatewayConfiguration_RoundTrip(t *testing.T) {
 			}
 
 			require.Equal(t, original.Spec.DataPlaneOptions.Deployment, roundTrip.Spec.DataPlaneOptions.Deployment)
+			require.Equal(t, original.Spec.DataPlaneOptions.Network, roundTrip.Spec.DataPlaneOptions.Network)
 			require.Equal(t, original.Spec.Extensions, roundTrip.Spec.Extensions)
 			require.ElementsMatch(t, original.Spec.ControlPlaneOptions.FeatureGates, roundTrip.Spec.ControlPlaneOptions.FeatureGates)
 			require.ElementsMatch(t, original.Spec.ControlPlaneOptions.Controllers, roundTrip.Spec.ControlPlaneOptions.Controllers)

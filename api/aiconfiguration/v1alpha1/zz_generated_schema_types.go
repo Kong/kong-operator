@@ -2397,7 +2397,7 @@ type AIGatewayMCPServerUpstreamServerServerConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Enum=2026-07-28;2025-11-25;2025-06-18;2025-03-26
+	// +kubebuilder:validation:Enum="2026-07-28";"2025-11-25";"2025-06-18";"2025-03-26"
 	UpstreamProtocolVersion string `json:"upstreamProtocolVersion,omitzero"`
 }
 
@@ -3131,7 +3131,7 @@ type AIGatewayModalCostList struct {
 }
 
 // AIGatewayModelAPI Configuration for proxying asynchronous requests/responses
-// to/from an AI Gateway model using the files and batches APIs.
+// to/from an AI Gateway model using the files, batches, and skills APIs.
 type AIGatewayModelAPI struct {
 	// Access control configuration for a model.
 	//
@@ -4666,9 +4666,13 @@ func (s *AIGatewayModelBalancerSemanticConfig) UnmarshalJSON(data []byte) error 
 type AIGatewayModelFormat struct {
 	// The format type.
 	//
+	// **`passthrough` requires a minimum runtime version of `2.2`**.
+	//
+	// **`typesafe` requires a minimum runtime version of `2.2`**.
+	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Enum=anthropic;bedrock;cohere;gemini;huggingface;openai
+	// +kubebuilder:validation:Enum=anthropic;bedrock;cohere;gemini;huggingface;openai;passthrough;typesafe
 	Type string `json:"type,omitzero"`
 }
 
@@ -6717,6 +6721,60 @@ func (s *AIGatewayModelProviderSagemakerConfig) UnmarshalJSON(data []byte) error
 	return nil
 }
 
+// AIGatewayModelProviderTypesafe Configuration for an upstream model provider.
+type AIGatewayModelProviderTypesafe struct {
+	// Configuration for the model provider.
+	//
+	// +required
+	Config AIGatewayModelProviderTypesafeConfig `json:"config,omitzero"`
+	// The display name for this model provider instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this model provider instance, used as a
+	// stable human-readable reference.
+	// This value is immutable after creation.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+}
+
+// AIGatewayModelProviderTypesafeConfig Configuration for the model provider.
+type AIGatewayModelProviderTypesafeConfig struct {
+	// Basic auth config for an upstream model provider.
+	//
+	//
+	// +required
+	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
+}
+
 // AIGatewayModelProviderVercel Configuration for an upstream model provider.
 type AIGatewayModelProviderVercel struct {
 	// Configuration for the model provider.
@@ -8569,7 +8627,7 @@ func (s *AIGatewayTarget) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling AIGatewayTarget: %w", err)
 	}
-	if aux.Config != nil && aux.Config.Type == "" && aux.Config.Anthropic == nil && aux.Config.Azure == nil && aux.Config.Bedrock == nil && aux.Config.Cerebras == nil && aux.Config.Cohere == nil && aux.Config.Dashscope == nil && aux.Config.Databricks == nil && aux.Config.Deepseek == nil && aux.Config.Gemini == nil && aux.Config.Huggingface == nil && aux.Config.Kimi == nil && aux.Config.Llama2 == nil && aux.Config.Mistral == nil && aux.Config.Ollama == nil && aux.Config.Openai == nil && aux.Config.Sagemaker == nil && aux.Config.Vercel == nil && aux.Config.Vllm == nil && aux.Config.Xai == nil {
+	if aux.Config != nil && aux.Config.Type == "" && aux.Config.Anthropic == nil && aux.Config.Azure == nil && aux.Config.Bedrock == nil && aux.Config.Cerebras == nil && aux.Config.Cohere == nil && aux.Config.Dashscope == nil && aux.Config.Databricks == nil && aux.Config.Deepseek == nil && aux.Config.Gemini == nil && aux.Config.Huggingface == nil && aux.Config.Kimi == nil && aux.Config.Llama2 == nil && aux.Config.Mistral == nil && aux.Config.Ollama == nil && aux.Config.Openai == nil && aux.Config.Sagemaker == nil && aux.Config.Typesafe == nil && aux.Config.Vercel == nil && aux.Config.Vllm == nil && aux.Config.Xai == nil {
 		aux.Config = nil
 	}
 	*s = AIGatewayTarget(aux)
@@ -9118,7 +9176,7 @@ type AIGatewayTargetConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=anthropic;azure;bedrock;cerebras;cohere;dashscope;databricks;deepseek;gemini;huggingface;kimi;llama2;mistral;ollama;openai;sagemaker;vercel;vllm;xai
+	// +kubebuilder:validation:Enum=anthropic;azure;bedrock;cerebras;cohere;dashscope;databricks;deepseek;gemini;huggingface;kimi;llama2;mistral;ollama;openai;sagemaker;typesafe;vercel;vllm;xai
 	Type AIGatewayTargetConfigType `json:"type,omitempty"`
 
 	// Anthropic configuration.
@@ -9185,6 +9243,10 @@ type AIGatewayTargetConfig struct {
 	//
 	// +optional
 	Sagemaker *AIGatewayTargetSagemakerConfig `json:"sagemaker,omitempty"`
+	// Typesafe configuration.
+	//
+	// +optional
+	Typesafe *AIGatewayTargetTypesafeConfig `json:"typesafe,omitempty"`
 	// Vercel configuration.
 	//
 	// +optional
@@ -9220,6 +9282,7 @@ const (
 	AIGatewayTargetConfigTypeOllama      AIGatewayTargetConfigType = "ollama"
 	AIGatewayTargetConfigTypeOpenai      AIGatewayTargetConfigType = "openai"
 	AIGatewayTargetConfigTypeSagemaker   AIGatewayTargetConfigType = "sagemaker"
+	AIGatewayTargetConfigTypeTypesafe    AIGatewayTargetConfigType = "typesafe"
 	AIGatewayTargetConfigTypeVercel      AIGatewayTargetConfigType = "vercel"
 	AIGatewayTargetConfigTypeVllm        AIGatewayTargetConfigType = "vllm"
 	AIGatewayTargetConfigTypeXai         AIGatewayTargetConfigType = "xai"
@@ -9361,6 +9424,14 @@ func (u AIGatewayTargetConfig) MarshalJSON() ([]byte, error) {
 				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig sagemaker: %w", err)
 			}
 			m["sagemaker"] = raw
+		}
+	case AIGatewayTargetConfigTypeTypesafe:
+		if u.Typesafe != nil {
+			raw, err := json.Marshal(u.Typesafe)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig typesafe: %w", err)
+			}
+			m["typesafe"] = raw
 		}
 	case AIGatewayTargetConfigTypeVercel:
 		if u.Vercel != nil {
@@ -9567,6 +9638,16 @@ func (u *AIGatewayTargetConfig) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling AIGatewayTargetConfig sagemaker: %w", err)
 		}
 		u.Sagemaker = &val
+	case "typesafe":
+		payload, ok := raw["typesafe"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayTargetTypesafeConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayTargetConfig typesafe: %w", err)
+		}
+		u.Typesafe = &val
 	case "vercel":
 		payload, ok := raw["vercel"]
 		if !ok || len(payload) == 0 {
@@ -10719,6 +10800,25 @@ type AIGatewayTargetSagemakerConfigTarget struct {
 	Variant string `json:"variant,omitzero"`
 }
 
+// AIGatewayTargetTypesafeConfig Typesafe-specific configuration for a model.
+//
+// **Requires a minimum runtime version of `2.2`**.
+type AIGatewayTargetTypesafeConfig struct {
+	// Cost per 1M input tokens for billing and cost tracking.
+	//
+	// +optional
+	InputCost float64 `json:"inputCost,omitzero"`
+	// Cost per 1M output tokens for billing and cost tracking.
+	//
+	// +optional
+	OutputCost float64 `json:"outputCost,omitzero"`
+	// The upstream URL for the model endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
 // AIGatewayTargetVercelConfig Vercel AI Gateway-specific configuration for a
 // model.
 type AIGatewayTargetVercelConfig struct {
@@ -11258,6 +11358,105 @@ type AuthGCPWorkloadIdentityFederationAwsIam struct {
 	//
 	// +optional
 	Aws AIGatewayUpstreamAuthAWS `json:"aws,omitzero"`
+}
+
+// CreateAIGatewayCustomPolicyInstalledRequest is a type alias.
+type CreateAIGatewayCustomPolicyInstalledRequest struct {
+	// The display name for this custom policy.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this custom policy, used as a stable
+	// human-readable reference.
+	// This value is immutable after creation.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="name is immutable"
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// The Lua schema definition for the custom policy, equivalent to a Kong
+	// plugin's `schema.lua`.
+	//
+	// +required
+	Schema ConfigMapDataSource `json:"schema,omitzero"`
+}
+
+// CreateAIGatewayCustomPolicyStreamingRequest is a type alias.
+type CreateAIGatewayCustomPolicyStreamingRequest struct {
+	// The display name for this custom policy.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// The Lua handler implementation for the custom policy, equivalent to a Kong
+	// plugin's `handler.lua`.
+	//
+	// +required
+	Handler ConfigMapDataSource `json:"handler,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this custom policy, used as a stable
+	// human-readable reference.
+	// This value is immutable after creation.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="name is immutable"
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// The Lua schema definition for the custom policy, equivalent to a Kong
+	// plugin's `schema.lua`.
+	//
+	// +required
+	Schema ConfigMapDataSource `json:"schema,omitzero"`
 }
 
 // GCPModelConfig Configuration for a model hosted on Google Cloud Project.

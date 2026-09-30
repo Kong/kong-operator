@@ -20,7 +20,7 @@ import (
 // +kubebuilder:storageversion
 // +apireference:kgo:include
 // +kong:channels=kong-operator
-// +kubebuilder:validation:XValidation:rule="!has(self.spec.aiGatewayRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef", message="spec.aiGatewayRef is immutable when an entity is already Programmed"
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef", message="spec.aiGatewayRef is immutable when an entity is already Programmed"
 type AIGatewayModelProvider struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitzero"`
@@ -43,7 +43,7 @@ type AIGatewayModelProviderList struct {
 
 // AIGatewayModelProviderSpec defines the desired state of AIGatewayModelProvider.
 type AIGatewayModelProviderSpec struct {
-	// AIGatewayRef is the reference to the parent KonnectAIGateway object.
+	// AIGatewayRef is the reference to the parent AI Gateway (control plane) object.
 	//
 	// +required
 	AIGatewayRef AIGatewayRef `json:"aiGatewayRef,omitzero"`
@@ -97,7 +97,7 @@ type AIGatewayModelProviderConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=anthropic;azure;bedrock;cerebras;cohere;dashscope;databricks;deepseek;gemini;huggingface;kimi;llama2;mistral;ollama;openai;sagemaker;vercel;vllm;xai
+	// +kubebuilder:validation:Enum=anthropic;azure;bedrock;cerebras;cohere;dashscope;databricks;deepseek;gemini;huggingface;kimi;llama2;mistral;ollama;openai;sagemaker;typesafe;vercel;vllm;xai
 	Type AIGatewayModelProviderConfigType `json:"type,omitempty"`
 
 	// Anthropic configuration.
@@ -164,6 +164,10 @@ type AIGatewayModelProviderConfig struct {
 	//
 	// +optional
 	Sagemaker *AIGatewayModelProviderSagemaker `json:"sagemaker,omitempty"`
+	// Typesafe configuration.
+	//
+	// +optional
+	Typesafe *AIGatewayModelProviderTypesafe `json:"typesafe,omitempty"`
 	// Vercel configuration.
 	//
 	// +optional
@@ -199,6 +203,7 @@ const (
 	AIGatewayModelProviderConfigTypeOllama      AIGatewayModelProviderConfigType = "ollama"
 	AIGatewayModelProviderConfigTypeOpenai      AIGatewayModelProviderConfigType = "openai"
 	AIGatewayModelProviderConfigTypeSagemaker   AIGatewayModelProviderConfigType = "sagemaker"
+	AIGatewayModelProviderConfigTypeTypesafe    AIGatewayModelProviderConfigType = "typesafe"
 	AIGatewayModelProviderConfigTypeVercel      AIGatewayModelProviderConfigType = "vercel"
 	AIGatewayModelProviderConfigTypeVllm        AIGatewayModelProviderConfigType = "vllm"
 	AIGatewayModelProviderConfigTypeXai         AIGatewayModelProviderConfigType = "xai"
@@ -340,6 +345,14 @@ func (u AIGatewayModelProviderConfig) MarshalJSON() ([]byte, error) {
 				return nil, fmt.Errorf("marshaling AIGatewayModelProviderConfig sagemaker: %w", err)
 			}
 			m["sagemaker"] = raw
+		}
+	case AIGatewayModelProviderConfigTypeTypesafe:
+		if u.Typesafe != nil {
+			raw, err := json.Marshal(u.Typesafe)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelProviderConfig typesafe: %w", err)
+			}
+			m["typesafe"] = raw
 		}
 	case AIGatewayModelProviderConfigTypeVercel:
 		if u.Vercel != nil {
@@ -546,6 +559,16 @@ func (u *AIGatewayModelProviderConfig) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling AIGatewayModelProviderConfig sagemaker: %w", err)
 		}
 		u.Sagemaker = &val
+	case "typesafe":
+		payload, ok := raw["typesafe"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelProviderTypesafe
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelProviderConfig typesafe: %w", err)
+		}
+		u.Typesafe = &val
 	case "vercel":
 		payload, ok := raw["vercel"]
 		if !ok || len(payload) == 0 {
@@ -606,7 +629,7 @@ func (s *AIGatewayModelProviderAPISpec) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling AIGatewayModelProviderAPISpec: %w", err)
 	}
-	if aux.AIGatewayModelProviderConfig != nil && aux.AIGatewayModelProviderConfig.Type == "" && aux.AIGatewayModelProviderConfig.Anthropic == nil && aux.AIGatewayModelProviderConfig.Azure == nil && aux.AIGatewayModelProviderConfig.Bedrock == nil && aux.AIGatewayModelProviderConfig.Cerebras == nil && aux.AIGatewayModelProviderConfig.Cohere == nil && aux.AIGatewayModelProviderConfig.Dashscope == nil && aux.AIGatewayModelProviderConfig.Databricks == nil && aux.AIGatewayModelProviderConfig.Deepseek == nil && aux.AIGatewayModelProviderConfig.Gemini == nil && aux.AIGatewayModelProviderConfig.Huggingface == nil && aux.AIGatewayModelProviderConfig.Kimi == nil && aux.AIGatewayModelProviderConfig.Llama2 == nil && aux.AIGatewayModelProviderConfig.Mistral == nil && aux.AIGatewayModelProviderConfig.Ollama == nil && aux.AIGatewayModelProviderConfig.Openai == nil && aux.AIGatewayModelProviderConfig.Sagemaker == nil && aux.AIGatewayModelProviderConfig.Vercel == nil && aux.AIGatewayModelProviderConfig.Vllm == nil && aux.AIGatewayModelProviderConfig.Xai == nil {
+	if aux.AIGatewayModelProviderConfig != nil && aux.AIGatewayModelProviderConfig.Type == "" && aux.AIGatewayModelProviderConfig.Anthropic == nil && aux.AIGatewayModelProviderConfig.Azure == nil && aux.AIGatewayModelProviderConfig.Bedrock == nil && aux.AIGatewayModelProviderConfig.Cerebras == nil && aux.AIGatewayModelProviderConfig.Cohere == nil && aux.AIGatewayModelProviderConfig.Dashscope == nil && aux.AIGatewayModelProviderConfig.Databricks == nil && aux.AIGatewayModelProviderConfig.Deepseek == nil && aux.AIGatewayModelProviderConfig.Gemini == nil && aux.AIGatewayModelProviderConfig.Huggingface == nil && aux.AIGatewayModelProviderConfig.Kimi == nil && aux.AIGatewayModelProviderConfig.Llama2 == nil && aux.AIGatewayModelProviderConfig.Mistral == nil && aux.AIGatewayModelProviderConfig.Ollama == nil && aux.AIGatewayModelProviderConfig.Openai == nil && aux.AIGatewayModelProviderConfig.Sagemaker == nil && aux.AIGatewayModelProviderConfig.Typesafe == nil && aux.AIGatewayModelProviderConfig.Vercel == nil && aux.AIGatewayModelProviderConfig.Vllm == nil && aux.AIGatewayModelProviderConfig.Xai == nil {
 		aux.AIGatewayModelProviderConfig = nil
 	}
 	*s = AIGatewayModelProviderAPISpec(aux)

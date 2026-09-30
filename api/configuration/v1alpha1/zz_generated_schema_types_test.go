@@ -878,6 +878,32 @@ func TestEventGatewayTLSListenerPolicyConfig_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestEventGatewayTxnOffsetCommitRequestRules_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayTxnOffsetCommitRequestRules
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayTxnOffsetCommitRule_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayTxnOffsetCommitRule
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestFetchKongIdentityPrincipal_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -1775,6 +1801,7 @@ func TestEventGatewayRequestRulesUnmarshalJSON_NilReceiver(t *testing.T) {
 		{name: "offset_commit", payload: []byte("{\"type\":\"offsetCommit\",\"offsetCommit\":{}}")},
 		{name: "offset_fetch", payload: []byte("{\"type\":\"offsetFetch\",\"offsetFetch\":{}}")},
 		{name: "produce", payload: []byte("{\"type\":\"produce\",\"produce\":{}}")},
+		{name: "txn_offset_commit", payload: []byte("{\"type\":\"txnOffsetCommit\",\"txnOffsetCommit\":{}}")},
 	}
 
 	for _, tt := range tests {

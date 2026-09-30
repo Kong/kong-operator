@@ -1298,7 +1298,7 @@ EventGatewayAlterClientQuotasRequestRules The rules to apply to Kafka
 
 | Field | Description |
 | --- | --- |
-| `rules` _[][EventGatewayAlterClientQuotasRule](#configuration-konghq-com-v1alpha1-types-eventgatewayalterclientquotasrule)_ | Every rule in this list is evaluated independently against each quota operation in the request. A rule that evaluates to `false` runs its action. |
+| `rules` _[][EventGatewayAlterClientQuotasRule](#configuration-konghq-com-v1alpha1-types-eventgatewayalterclientquotasrule)_ | Every rule in this list is evaluated independently against each quota operation in the request. A rule that evaluates to `false` runs its action. A maximum of 10 rules are allowed. |
 
 _Appears in:_
 
@@ -1331,7 +1331,7 @@ EventGatewayAlterConfigsRequestRules The rules to apply to Kafka
 
 | Field | Description |
 | --- | --- |
-| `rules` _[][EventGatewayAlterConfigsRule](#configuration-konghq-com-v1alpha1-types-eventgatewayalterconfigsrule)_ | Every rule in this list is evaluated independently against each resource in the request. A rule that evaluates to `false` runs its action. |
+| `rules` _[][EventGatewayAlterConfigsRule](#configuration-konghq-com-v1alpha1-types-eventgatewayalterconfigsrule)_ | Every rule in this list is evaluated independently against each resource in the request. A rule that evaluates to `false` runs its action. A maximum of 10 rules are allowed. |
 
 _Appears in:_
 
@@ -1364,7 +1364,7 @@ EventGatewayAlterUserScramCredentialsRequestRules The rules to apply to Kafka
 
 | Field | Description |
 | --- | --- |
-| `rules` _[][EventGatewayAlterUserScramCredentialsRule](#configuration-konghq-com-v1alpha1-types-eventgatewayalteruserscramcredentialsrule)_ | Every rule in this list is evaluated independently against each credential in the request. A rule that evaluates to `false` runs its action. |
+| `rules` _[][EventGatewayAlterUserScramCredentialsRule](#configuration-konghq-com-v1alpha1-types-eventgatewayalteruserscramcredentialsrule)_ | Every rule in this list is evaluated independently against each credential in the request. A rule that evaluates to `false` runs its action. A maximum of 10 rules are allowed. |
 
 _Appears in:_
 
@@ -1657,7 +1657,7 @@ EventGatewayConsumerGroupHeartbeatRequestRules The rules to apply to Kafka
 
 | Field | Description |
 | --- | --- |
-| `rules` _[][EventGatewayConsumerGroupHeartbeatRule](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumergroupheartbeatrule)_ | Every rule in this list is evaluated independently against the request. A rule that evaluates to `false` runs its action. |
+| `rules` _[][EventGatewayConsumerGroupHeartbeatRule](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumergroupheartbeatrule)_ | Every rule in this list is evaluated independently against the request. A rule that evaluates to `false` runs its action. A maximum of 10 rules are allowed. |
 
 _Appears in:_
 
@@ -1690,7 +1690,7 @@ EventGatewayCreatePartitionsRequestRules The rules to apply to Kafka
 
 | Field | Description |
 | --- | --- |
-| `rules` _[][EventGatewayCreatePartitionsRule](#configuration-konghq-com-v1alpha1-types-eventgatewaycreatepartitionsrule)_ | Every rule in this list is evaluated independently against each topic in the request. A rule that evaluates to `false` runs its action. |
+| `rules` _[][EventGatewayCreatePartitionsRule](#configuration-konghq-com-v1alpha1-types-eventgatewaycreatepartitionsrule)_ | Every rule in this list is evaluated independently against each topic in the request. A rule that evaluates to `false` runs its action. A maximum of 10 rules are allowed. |
 
 _Appears in:_
 
@@ -1717,13 +1717,16 @@ _Appears in:_
 
 
 EventGatewayCreateTopicsRequestRules The rules to apply to Kafka
-`CreateTopics` requests.
+`CreateTopics` requests.<br /><br />When at least one `create_topics` rule is configured, Event Gateway turns
+auto topic
+creation off on `Metadata` requests, because clients could use it to bypass
+the rules.
 
 
 
 | Field | Description |
 | --- | --- |
-| `rules` _[][EventGatewayCreateTopicsRule](#configuration-konghq-com-v1alpha1-types-eventgatewaycreatetopicsrule)_ | Every rule in this list is evaluated independently against each topic in the request. A rule that evaluates to `false` runs its action. |
+| `rules` _[][EventGatewayCreateTopicsRule](#configuration-konghq-com-v1alpha1-types-eventgatewaycreatetopicsrule)_ | Every rule in this list is evaluated independently against each topic in the request. A rule that evaluates to `false` runs its action. A maximum of 10 rules are allowed. |
 
 _Appears in:_
 
@@ -1919,7 +1922,7 @@ EventGatewayFetchRequestRules The rules to apply to Kafka `Fetch` requests.
 
 | Field | Description |
 | --- | --- |
-| `rules` _[][EventGatewayFetchRule](#configuration-konghq-com-v1alpha1-types-eventgatewayfetchrule)_ | Every rule in this list is evaluated independently against the request. A rule that evaluates to `false` runs its action. |
+| `rules` _[][EventGatewayFetchRule](#configuration-konghq-com-v1alpha1-types-eventgatewayfetchrule)_ | Every rule in this list is evaluated independently against the request. A rule that evaluates to `false` runs its action. A maximum of 10 rules are allowed. |
 
 _Appears in:_
 
@@ -1952,7 +1955,7 @@ EventGatewayIncrementalAlterConfigsRequestRules The rules to apply to Kafka
 
 | Field | Description |
 | --- | --- |
-| `rules` _[][EventGatewayIncrementalAlterConfigsRule](#configuration-konghq-com-v1alpha1-types-eventgatewayincrementalalterconfigsrule)_ | Every rule in this list is evaluated independently against each configuration entry in the request. A rule that evaluates to `false` runs its action. |
+| `rules` _[][EventGatewayIncrementalAlterConfigsRule](#configuration-konghq-com-v1alpha1-types-eventgatewayincrementalalterconfigsrule)_ | Every rule in this list is evaluated independently against each configuration entry in the request. A rule that evaluates to `false` runs its action. A maximum of 10 rules are allowed. |
 
 _Appears in:_
 
@@ -1985,7 +1988,7 @@ requests.
 
 | Field | Description |
 | --- | --- |
-| `rules` _[][EventGatewayJoinGroupRule](#configuration-konghq-com-v1alpha1-types-eventgatewayjoingrouprule)_ | Every rule in this list is evaluated independently against the request. A rule that evaluates to `false` runs its action. |
+| `rules` _[][EventGatewayJoinGroupRule](#configuration-konghq-com-v1alpha1-types-eventgatewayjoingrouprule)_ | Every rule in this list is evaluated independently against the request. A rule that evaluates to `false` runs its action. A maximum of 10 rules are allowed. |
 
 _Appears in:_
 
@@ -2308,7 +2311,7 @@ EventGatewayOffsetCommitRequestRules The rules to apply to Kafka
 
 | Field | Description |
 | --- | --- |
-| `rules` _[][EventGatewayOffsetCommitRule](#configuration-konghq-com-v1alpha1-types-eventgatewayoffsetcommitrule)_ | Every rule in this list is evaluated independently against the request. A rule that evaluates to `false` runs its action. |
+| `rules` _[][EventGatewayOffsetCommitRule](#configuration-konghq-com-v1alpha1-types-eventgatewayoffsetcommitrule)_ | Every rule in this list is evaluated independently against the request. A rule that evaluates to `false` runs its action. A maximum of 10 rules are allowed. |
 
 _Appears in:_
 
@@ -2341,7 +2344,7 @@ requests.
 
 | Field | Description |
 | --- | --- |
-| `rules` _[][EventGatewayOffsetFetchRule](#configuration-konghq-com-v1alpha1-types-eventgatewayoffsetfetchrule)_ | Every rule in this list is evaluated independently against the request. A rule that evaluates to `false` runs its action. |
+| `rules` _[][EventGatewayOffsetFetchRule](#configuration-konghq-com-v1alpha1-types-eventgatewayoffsetfetchrule)_ | Every rule in this list is evaluated independently against the request. A rule that evaluates to `false` runs its action. A maximum of 10 rules are allowed. |
 
 _Appears in:_
 
@@ -2650,7 +2653,7 @@ requests.
 
 | Field | Description |
 | --- | --- |
-| `rules` _[][EventGatewayProduceRule](#configuration-konghq-com-v1alpha1-types-eventgatewayproducerule)_ | Every rule in this list is evaluated independently against the request. A rule that evaluates to `false` runs its action. |
+| `rules` _[][EventGatewayProduceRule](#configuration-konghq-com-v1alpha1-types-eventgatewayproducerule)_ | Every rule in this list is evaluated independently against the request. A rule that evaluates to `false` runs its action. A maximum of 10 rules are allowed. |
 
 _Appears in:_
 
@@ -2937,6 +2940,7 @@ _Appears in:_
 - [EventGatewayOffsetCommitRule](#configuration-konghq-com-v1alpha1-types-eventgatewayoffsetcommitrule)
 - [EventGatewayOffsetFetchRule](#configuration-konghq-com-v1alpha1-types-eventgatewayoffsetfetchrule)
 - [EventGatewayProduceRule](#configuration-konghq-com-v1alpha1-types-eventgatewayproducerule)
+- [EventGatewayTxnOffsetCommitRule](#configuration-konghq-com-v1alpha1-types-eventgatewaytxnoffsetcommitrule)
 
 #### EventGatewayRequestRuleValidatorConfig
 
@@ -2948,7 +2952,7 @@ validator policy.
 
 | Field | Description |
 | --- | --- |
-| `requests` _[][EventGatewayRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestrules)_ | The rules to apply, grouped by Kafka request type. A request type can occur more than once in this list. Every entry for the type applies, in list order. Requests of a type that is not in this list are not validated. |
+| `requests` _[][EventGatewayRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestrules)_ | The rules to apply, grouped by Kafka request type. A request type can occur more than once in this list. Every entry for the type applies, in list order. Requests of a type that is not in this list are not validated. A maximum of 100 entries are allowed. |
 
 _Appears in:_
 
@@ -3005,6 +3009,7 @@ Only one of the fields should be set based on the Type.
 | `offsetCommit` _[EventGatewayOffsetCommitRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayoffsetcommitrequestrules)_ | OffsetCommit configuration. |
 | `offsetFetch` _[EventGatewayOffsetFetchRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayoffsetfetchrequestrules)_ | OffsetFetch configuration. |
 | `produce` _[EventGatewayProduceRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayproducerequestrules)_ | Produce configuration. |
+| `txnOffsetCommit` _[EventGatewayTxnOffsetCommitRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewaytxnoffsetcommitrequestrules)_ | TxnOffsetCommit configuration. |
 
 _Appears in:_
 
@@ -3039,6 +3044,7 @@ Allowed values:
 | `offsetCommit` |  |
 | `offsetFetch` |  |
 | `produce` |  |
+| `txnOffsetCommit` |  |
 
 #### EventGatewaySchemaRegistryAPISpec
 
@@ -3232,6 +3238,39 @@ handshake.<br /><br />**Requires a minimum runtime version of `1.1`**.
 _Appears in:_
 
 - [EventGatewayTLSListenerPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicyconfig)
+
+#### EventGatewayTxnOffsetCommitRequestRules
+
+
+EventGatewayTxnOffsetCommitRequestRules The rules to apply to Kafka
+`TxnOffsetCommit` requests.
+
+
+
+| Field | Description |
+| --- | --- |
+| `rules` _[][EventGatewayTxnOffsetCommitRule](#configuration-konghq-com-v1alpha1-types-eventgatewaytxnoffsetcommitrule)_ | Every rule in this list is evaluated independently against the request. A rule that evaluates to `false` runs its action. A maximum of 10 rules are allowed. |
+
+_Appears in:_
+
+- [EventGatewayRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestrules)
+
+#### EventGatewayTxnOffsetCommitRule
+
+
+EventGatewayTxnOffsetCommitRule is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `action` _[EventGatewayRequestRuleAction](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestruleaction)_ | What to do when a rule evaluates to `false`.<br /><br />`reject` fails the request with the `POLICY_VIOLATION` error code. `passthrough` lets the request continue, but logs the violation in the same way as `reject`. |
+| `description` _string_ | An explanation of the rule. Event Gateway writes this text to the logs when the request violates the rule, because the rule expression alone does not show the intent. |
+| `rule` _string_ | A boolean expression that describes the valid state of the request. The action runs when the expression evaluates to `false`. An expression that cannot be evaluated, for example because a value has an unexpected format, also counts as `false`. |
+
+_Appears in:_
+
+- [EventGatewayTxnOffsetCommitRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewaytxnoffsetcommitrequestrules)
 
 #### EventGatewayVirtualClusterAPISpec
 
@@ -5437,7 +5476,9 @@ _Appears in:_
 
 
 SensitiveDataSecretRef identifies a specific key inside a Kubernetes Secret
-that holds a sensitive value for a CRD field.
+that holds a sensitive value for a CRD field.<br /><br />Write access to the referenced Secret equals write access to this field:
+its value ships to Konnect on the next sync. Grant Secret write
+accordingly.
 
 
 

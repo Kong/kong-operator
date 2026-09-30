@@ -42,6 +42,8 @@ func UpdateGeneratedOps[
 		return nil // Entity does not support update.
 	case *aiconfigurationv1alpha1.AIGatewayConsumerGroup:
 		return updateAIGatewayConsumerGroup(ctx, cl, sdk.GetAIGatewayConsumerGroupsSDK(), ent)
+	case *aiconfigurationv1alpha1.AIGatewayCustomPolicy:
+		return updateAIGatewayCustomPolicy(ctx, cl, sdk.GetAIGatewayCustomPoliciesSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate:
 		return nil // Entity does not support update.
 	case *aiconfigurationv1alpha1.AIGatewayMCPServer:
@@ -91,7 +93,7 @@ func UpdateGeneratedOps[
 	case *konnectv1alpha1.PortalIdentityProviderRequest:
 		return updatePortalIdentityProviderRequest(ctx, sdk.GetPortalAuthSettingsSDK(), ent)
 	case *konnectv1alpha1.PortalPage:
-		return updatePortalPage(ctx, sdk.GetPortalPagesSDK(), ent)
+		return updatePortalPage(ctx, cl, sdk.GetPortalPagesSDK(), ent)
 	case *konnectv1alpha1.PortalTeam:
 		return updatePortalTeam(ctx, sdk.GetPortalTeamsSDK(), ent)
 	default:

@@ -5,8 +5,10 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -17,6 +19,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/konnect/ops"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/test/envtest"
 	"github.com/kong/kong-operator/v2/test/envtest/consts"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
@@ -102,7 +105,7 @@ func TestPortalPage(t *testing.T) {
 
 		pageWatch := envtest.SetupWatch[konnectv1alpha1.PortalPageList](t, ctx, cl, client.InNamespace(ns.Name))
 		page := testEnvtestPortalPage(ns.Name, portal.GetName(), initialTitle, initialSlug, initialBody, description)
-		expectedCreateRequest, err := page.Spec.APISpec.ToCreatePortalPageRequest()
+		expectedCreateRequest, err := page.ToCreatePortalPageRequest(ctx, clientNamespaced)
 		require.NoError(t, err)
 
 		sdk.PortalPagesSDK.EXPECT().
@@ -135,7 +138,7 @@ func TestPortalPage(t *testing.T) {
 		pageToPatch := page.DeepCopy()
 		pageToPatch.Spec.APISpec.Title = konnectv1alpha1.PageTitle(updatedTitle)
 		pageToPatch.Spec.APISpec.Content = konnectv1alpha1.PageContent(updatedBody)
-		expectedUpdateRequest, err := pageToPatch.Spec.APISpec.ToUpdatePortalPageRequest()
+		expectedUpdateRequest, err := pageToPatch.ToUpdatePortalPageRequest(ctx, clientNamespaced)
 		require.NoError(t, err)
 
 		sdk.PortalPagesSDK.EXPECT().
@@ -172,6 +175,550 @@ func TestPortalPage(t *testing.T) {
 		t.Log("Deleting PortalPage")
 		require.NoError(t, clientNamespaced.Delete(ctx, page))
 		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, page, consts.WaitTime, consts.TickTime)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PortalPagesSDK, consts.WaitTime, consts.TickTime)
+	})
+
+	t.Run("should resolve parentPageIDRef to the parent PortalPage Konnect ID", func(t *testing.T) {
+		const (
+			portalID     = "portal-67890"
+			parentPageID = "parent-page-12345"
+			childPageID  = "child-page-12345"
+		)
+
+		portalWatch := envtest.SetupWatch[konnectv1alpha1.PortalList](t, ctx, cl, client.InNamespace(ns.Name))
+		sdk.PortalsSDK.EXPECT().
+			CreatePortal(mock.Anything, mock.Anything).
+			Return(&sdkkonnectops.CreatePortalResponse{
+				PortalResponse: &sdkkonnectcomp.PortalResponse{
+					ID: portalID,
+				},
+			}, nil).Once()
+
+		t.Log("Creating Portal")
+		portal := deploy.Portal(t, ctx, clientNamespaced, apiAuth)
+
+		t.Log("Waiting for Portal to be programmed")
+		envtest.WatchFor(t, ctx, portalWatch, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(portal),
+				envtest.ObjectMatchesKonnectID[*konnectv1alpha1.Portal](portalID),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
+			),
+			"Portal didn't get Programmed status condition or Konnect ID",
+		)
+
+		pageWatch := envtest.SetupWatch[konnectv1alpha1.PortalPageList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Creating parent PortalPage")
+		parentPage := testEnvtestPortalPage(ns.Name, portal.GetName(), "Parent", "parent", "# parent", "parent page")
+		parentPage.Name = "parent-page"
+		expectedParentCreate, err := parentPage.ToCreatePortalPageRequest(ctx, clientNamespaced)
+		require.NoError(t, err)
+		require.Nil(t, expectedParentCreate.ParentPageID)
+		sdk.PortalPagesSDK.EXPECT().
+			CreatePortalPage(mock.Anything, portalID, *expectedParentCreate).
+			Return(&sdkkonnectops.CreatePortalPageResponse{
+				PortalPageResponse: &sdkkonnectcomp.PortalPageResponse{
+					ID: parentPageID,
+				},
+			}, nil)
+		require.NoError(t, clientNamespaced.Create(ctx, parentPage))
+
+		t.Log("Waiting for parent PortalPage to be programmed")
+		envtest.WatchFor(t, ctx, pageWatch, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(parentPage),
+				envtest.ObjectMatchesKonnectID[*konnectv1alpha1.PortalPage](parentPageID),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalPage](),
+			),
+			"Parent PortalPage didn't get Programmed status condition or Konnect ID",
+		)
+
+		t.Log("Creating child PortalPage referencing the parent via parentPageIDRef")
+		childPage := testEnvtestPortalPage(ns.Name, portal.GetName(), "Child", "child", "# child", "child page")
+		childPage.Name = "child-page"
+		childPage.Spec.APISpec.ParentPageIDRef = &commonv1alpha1.ObjectRef{
+			Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+			NamespacedRef: &commonv1alpha1.NamespacedRef{
+				Name: parentPage.Name,
+			},
+		}
+		// The expected request resolves the reference through the cluster
+		// client: parent_page_id must carry the parent's Konnect ID. The
+		// manager's cached client may lag behind the watch that observed the
+		// parent's Programmed status, so poll until the cache catches up.
+		var expectedChildCreate *sdkkonnectcomp.CreatePortalPageRequest
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
+			req, err := childPage.ToCreatePortalPageRequest(ctx, clientNamespaced)
+			if !assert.NoError(c, err) {
+				return
+			}
+			if assert.NotNil(c, req.ParentPageID) {
+				assert.Equal(c, parentPageID, *req.ParentPageID)
+			}
+			expectedChildCreate = req
+		}, consts.WaitTime, consts.TickTime)
+		sdk.PortalPagesSDK.EXPECT().
+			CreatePortalPage(mock.Anything, portalID, *expectedChildCreate).
+			Return(&sdkkonnectops.CreatePortalPageResponse{
+				PortalPageResponse: &sdkkonnectcomp.PortalPageResponse{
+					ID: childPageID,
+				},
+			}, nil)
+		require.NoError(t, clientNamespaced.Create(ctx, childPage))
+
+		t.Log("Waiting for child PortalPage to be programmed")
+		envtest.WatchFor(t, ctx, pageWatch, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(childPage),
+				envtest.ObjectMatchesKonnectID[*konnectv1alpha1.PortalPage](childPageID),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalPage](),
+			),
+			"Child PortalPage didn't get Programmed status condition or Konnect ID",
+		)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PortalPagesSDK, consts.WaitTime, consts.TickTime)
+	})
+
+	t.Run("should re-enqueue a child PortalPage created before its parent is programmed", func(t *testing.T) {
+		const (
+			portalID     = "portal-99999"
+			parentPageID = "parent-page-99999"
+			childPageID  = "child-page-99999"
+		)
+
+		portalWatch := envtest.SetupWatch[konnectv1alpha1.PortalList](t, ctx, cl, client.InNamespace(ns.Name))
+		sdk.PortalsSDK.EXPECT().
+			CreatePortal(mock.Anything, mock.Anything).
+			Return(&sdkkonnectops.CreatePortalResponse{
+				PortalResponse: &sdkkonnectcomp.PortalResponse{
+					ID: portalID,
+				},
+			}, nil).Once()
+
+		t.Log("Creating Portal")
+		portal := deploy.Portal(t, ctx, clientNamespaced, apiAuth)
+
+		t.Log("Waiting for Portal to be programmed")
+		envtest.WatchFor(t, ctx, portalWatch, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(portal),
+				envtest.ObjectMatchesKonnectID[*konnectv1alpha1.Portal](portalID),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
+			),
+			"Portal didn't get Programmed status condition or Konnect ID",
+		)
+
+		pageWatch := envtest.SetupWatch[konnectv1alpha1.PortalPageList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Creating child PortalPage referencing a parent that does not exist yet")
+		childPage := testEnvtestPortalPage(ns.Name, portal.GetName(), "Child First", "child-first", "# child first", "child page created before parent")
+		childPage.Name = "child-first-page"
+		childPage.Spec.APISpec.ParentPageIDRef = &commonv1alpha1.ObjectRef{
+			Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+			NamespacedRef: &commonv1alpha1.NamespacedRef{
+				Name: "parent-later-page",
+			},
+		}
+		require.NoError(t, clientNamespaced.Create(ctx, childPage))
+
+		t.Log("Waiting for KonnectReferencesResolved=False with ReferenceNotFound reason")
+		envtest.WatchFor(t, ctx, pageWatch, apiwatch.Modified,
+			func(p *konnectv1alpha1.PortalPage) bool {
+				if p.GetName() != childPage.GetName() {
+					return false
+				}
+				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectReferencesResolvedConditionType, p)
+				return ok &&
+					cond.Status == metav1.ConditionFalse &&
+					cond.Reason == konnectv1alpha1.KonnectReferencesResolvedReasonNotFound
+			},
+			"Child PortalPage didn't report KonnectReferencesResolved=False/ReferenceNotFound for the missing parent",
+		)
+
+		t.Log("Setting up SDK expectations for the parent and the re-enqueued child")
+		sdk.PortalPagesSDK.EXPECT().
+			CreatePortalPage(mock.Anything, portalID, mock.MatchedBy(func(req sdkkonnectcomp.CreatePortalPageRequest) bool {
+				return req.ParentPageID == nil && req.Slug == "parent-later"
+			})).
+			Return(&sdkkonnectops.CreatePortalPageResponse{
+				PortalPageResponse: &sdkkonnectcomp.PortalPageResponse{
+					ID: parentPageID,
+				},
+			}, nil)
+		sdk.PortalPagesSDK.EXPECT().
+			CreatePortalPage(mock.Anything, portalID, mock.MatchedBy(func(req sdkkonnectcomp.CreatePortalPageRequest) bool {
+				return req.ParentPageID != nil && *req.ParentPageID == parentPageID && req.Slug == "child-first"
+			})).
+			Return(&sdkkonnectops.CreatePortalPageResponse{
+				PortalPageResponse: &sdkkonnectcomp.PortalPageResponse{
+					ID: childPageID,
+				},
+			}, nil)
+
+		t.Log("Creating the parent PortalPage")
+		parentPage := testEnvtestPortalPage(ns.Name, portal.GetName(), "Parent Later", "parent-later", "# parent later", "parent page created after child")
+		parentPage.Name = "parent-later-page"
+		require.NoError(t, clientNamespaced.Create(ctx, parentPage))
+
+		t.Log("Waiting for parent PortalPage to be programmed")
+		envtest.WatchFor(t, ctx, pageWatch, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(parentPage),
+				envtest.ObjectMatchesKonnectID[*konnectv1alpha1.PortalPage](parentPageID),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalPage](),
+			),
+			"Parent PortalPage didn't get Programmed status condition or Konnect ID",
+		)
+
+		t.Log("Waiting for the watch to re-enqueue the child and get it programmed")
+		envtest.WatchFor(t, ctx, pageWatch, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(childPage),
+				envtest.ObjectMatchesKonnectID[*konnectv1alpha1.PortalPage](childPageID),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalPage](),
+			),
+			"Child PortalPage wasn't re-enqueued and programmed after its parent became programmed",
+		)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PortalPagesSDK, consts.WaitTime, consts.TickTime)
+	})
+
+	t.Run("should reject a parentPageIDRef to a PortalPage under a different Portal", func(t *testing.T) {
+		const (
+			portalAID    = "portal-a-12345"
+			portalBID    = "portal-b-12345"
+			parentPageID = "parent-page-a-12345"
+		)
+
+		portalWatch := envtest.SetupWatch[konnectv1alpha1.PortalList](t, ctx, cl, client.InNamespace(ns.Name))
+		sdk.PortalsSDK.EXPECT().
+			CreatePortal(mock.Anything, mock.Anything).
+			Return(&sdkkonnectops.CreatePortalResponse{
+				PortalResponse: &sdkkonnectcomp.PortalResponse{
+					ID: portalAID,
+				},
+			}, nil).Once()
+		sdk.PortalsSDK.EXPECT().
+			CreatePortal(mock.Anything, mock.Anything).
+			Return(&sdkkonnectops.CreatePortalResponse{
+				PortalResponse: &sdkkonnectcomp.PortalResponse{
+					ID: portalBID,
+				},
+			}, nil).Once()
+
+		t.Log("Creating two Portals")
+		portalA := deploy.Portal(t, ctx, clientNamespaced, apiAuth)
+		envtest.WatchFor(t, ctx, portalWatch, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(portalA),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
+			),
+			"Portal A didn't get Programmed status condition",
+		)
+		portalB := deploy.Portal(t, ctx, clientNamespaced, apiAuth)
+		envtest.WatchFor(t, ctx, portalWatch, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(portalB),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
+			),
+			"Portal B didn't get Programmed status condition",
+		)
+
+		pageWatch := envtest.SetupWatch[konnectv1alpha1.PortalPageList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Creating parent PortalPage under Portal A")
+		parentPage := testEnvtestPortalPage(ns.Name, portalA.GetName(), "Parent A", "parent-a", "# parent a", "parent page under portal A")
+		parentPage.Name = "parent-page-a"
+		sdk.PortalPagesSDK.EXPECT().
+			CreatePortalPage(mock.Anything, portalAID, mock.MatchedBy(func(req sdkkonnectcomp.CreatePortalPageRequest) bool {
+				return req.Slug == "parent-a"
+			})).
+			Return(&sdkkonnectops.CreatePortalPageResponse{
+				PortalPageResponse: &sdkkonnectcomp.PortalPageResponse{
+					ID: parentPageID,
+				},
+			}, nil)
+		require.NoError(t, clientNamespaced.Create(ctx, parentPage))
+
+		t.Log("Waiting for parent PortalPage to be programmed")
+		envtest.WatchFor(t, ctx, pageWatch, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(parentPage),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalPage](),
+			),
+			"Parent PortalPage didn't get Programmed status condition",
+		)
+
+		t.Log("Creating child PortalPage under Portal B referencing the parent under Portal A")
+		childPage := testEnvtestPortalPage(ns.Name, portalB.GetName(), "Child B", "child-b", "# child b", "child page under portal B")
+		childPage.Name = "child-page-b"
+		childPage.Spec.APISpec.ParentPageIDRef = &commonv1alpha1.ObjectRef{
+			Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+			NamespacedRef: &commonv1alpha1.NamespacedRef{
+				Name: parentPage.Name,
+			},
+		}
+		require.NoError(t, clientNamespaced.Create(ctx, childPage))
+
+		t.Log("Waiting for KonnectReferencesResolved=False with ReferenceInvalid reason")
+		envtest.WatchFor(t, ctx, pageWatch, apiwatch.Modified,
+			func(p *konnectv1alpha1.PortalPage) bool {
+				if p.GetName() != childPage.GetName() {
+					return false
+				}
+				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectReferencesResolvedConditionType, p)
+				return ok &&
+					cond.Status == metav1.ConditionFalse &&
+					cond.Reason == konnectv1alpha1.KonnectReferencesResolvedReasonInvalid
+			},
+			"Child PortalPage didn't report KonnectReferencesResolved=False/ReferenceInvalid for the cross-Portal parent reference",
+		)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PortalPagesSDK, consts.WaitTime, consts.TickTime)
+	})
+
+	t.Run("should reject a parentPageIDRef pointing at the page's own Konnect ID", func(t *testing.T) {
+		const (
+			portalID = "portal-self-12345"
+			pageID   = "page-self-12345"
+		)
+
+		portalWatch := envtest.SetupWatch[konnectv1alpha1.PortalList](t, ctx, cl, client.InNamespace(ns.Name))
+		sdk.PortalsSDK.EXPECT().
+			CreatePortal(mock.Anything, mock.Anything).
+			Return(&sdkkonnectops.CreatePortalResponse{
+				PortalResponse: &sdkkonnectcomp.PortalResponse{
+					ID: portalID,
+				},
+			}, nil).Once()
+
+		t.Log("Creating Portal")
+		portal := deploy.Portal(t, ctx, clientNamespaced, apiAuth)
+		envtest.WatchFor(t, ctx, portalWatch, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(portal),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
+			),
+			"Portal didn't get Programmed status condition",
+		)
+
+		pageWatch := envtest.SetupWatch[konnectv1alpha1.PortalPageList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Creating PortalPage")
+		page := testEnvtestPortalPage(ns.Name, portal.GetName(), "Self", "self", "# self", "self page")
+		page.Name = "self-page"
+		sdk.PortalPagesSDK.EXPECT().
+			CreatePortalPage(mock.Anything, portalID, mock.MatchedBy(func(req sdkkonnectcomp.CreatePortalPageRequest) bool {
+				return req.Slug == "self"
+			})).
+			Return(&sdkkonnectops.CreatePortalPageResponse{
+				PortalPageResponse: &sdkkonnectcomp.PortalPageResponse{
+					ID: pageID,
+				},
+			}, nil)
+		require.NoError(t, clientNamespaced.Create(ctx, page))
+
+		t.Log("Waiting for PortalPage to be programmed")
+		envtest.WatchFor(t, ctx, pageWatch, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(page),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalPage](),
+			),
+			"PortalPage didn't get Programmed status condition",
+		)
+
+		t.Log("Patching parentPageIDRef to the page's own Konnect ID")
+		pageToPatch := page.DeepCopy()
+		pageToPatch.Spec.APISpec.ParentPageIDRef = &commonv1alpha1.ObjectRef{
+			Type:      commonv1alpha1.ObjectRefTypeKonnectID,
+			KonnectID: new(pageID),
+		}
+		require.NoError(t, clientNamespaced.Patch(ctx, pageToPatch, client.MergeFrom(page)))
+
+		t.Log("Waiting for KonnectReferencesResolved=False with ReferenceInvalid reason")
+		envtest.WatchFor(t, ctx, pageWatch, apiwatch.Modified,
+			func(p *konnectv1alpha1.PortalPage) bool {
+				if p.GetName() != page.GetName() {
+					return false
+				}
+				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectReferencesResolvedConditionType, p)
+				return ok &&
+					cond.Status == metav1.ConditionFalse &&
+					cond.Reason == konnectv1alpha1.KonnectReferencesResolvedReasonInvalid
+			},
+			"PortalPage didn't report KonnectReferencesResolved=False/ReferenceInvalid for the self reference",
+		)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PortalPagesSDK, consts.WaitTime, consts.TickTime)
+	})
+
+	t.Run("should propagate parentPageIDRef changes to Konnect on update", func(t *testing.T) {
+		const (
+			portalID  = "portal-update-12345"
+			parentAID = "parent-a-update-12345"
+			parentBID = "parent-b-update-12345"
+			childID   = "child-update-12345"
+		)
+
+		portalWatch := envtest.SetupWatch[konnectv1alpha1.PortalList](t, ctx, cl, client.InNamespace(ns.Name))
+		sdk.PortalsSDK.EXPECT().
+			CreatePortal(mock.Anything, mock.Anything).
+			Return(&sdkkonnectops.CreatePortalResponse{
+				PortalResponse: &sdkkonnectcomp.PortalResponse{
+					ID: portalID,
+				},
+			}, nil).Once()
+
+		t.Log("Creating Portal")
+		portal := deploy.Portal(t, ctx, clientNamespaced, apiAuth)
+		envtest.WatchFor(t, ctx, portalWatch, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(portal),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.Portal](),
+			),
+			"Portal didn't get Programmed status condition",
+		)
+
+		pageWatch := envtest.SetupWatch[konnectv1alpha1.PortalPageList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Creating parent PortalPages A and B")
+		parentA := testEnvtestPortalPage(ns.Name, portal.GetName(), "Parent A", "parent-upd-a", "# parent a", "parent page A")
+		parentA.Name = "parent-upd-a-page"
+		sdk.PortalPagesSDK.EXPECT().
+			CreatePortalPage(mock.Anything, portalID, mock.MatchedBy(func(req sdkkonnectcomp.CreatePortalPageRequest) bool {
+				return req.Slug == "parent-upd-a"
+			})).
+			Return(&sdkkonnectops.CreatePortalPageResponse{
+				PortalPageResponse: &sdkkonnectcomp.PortalPageResponse{
+					ID: parentAID,
+				},
+			}, nil).Once()
+		require.NoError(t, clientNamespaced.Create(ctx, parentA))
+		envtest.WatchFor(t, ctx, pageWatch, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(parentA),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalPage](),
+			),
+			"Parent PortalPage A didn't get Programmed status condition",
+		)
+
+		parentB := testEnvtestPortalPage(ns.Name, portal.GetName(), "Parent B", "parent-upd-b", "# parent b", "parent page B")
+		parentB.Name = "parent-upd-b-page"
+		sdk.PortalPagesSDK.EXPECT().
+			CreatePortalPage(mock.Anything, portalID, mock.MatchedBy(func(req sdkkonnectcomp.CreatePortalPageRequest) bool {
+				return req.Slug == "parent-upd-b"
+			})).
+			Return(&sdkkonnectops.CreatePortalPageResponse{
+				PortalPageResponse: &sdkkonnectcomp.PortalPageResponse{
+					ID: parentBID,
+				},
+			}, nil).Once()
+		require.NoError(t, clientNamespaced.Create(ctx, parentB))
+		envtest.WatchFor(t, ctx, pageWatch, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(parentB),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalPage](),
+			),
+			"Parent PortalPage B didn't get Programmed status condition",
+		)
+
+		t.Log("Creating child PortalPage with parentPageIDRef to parent A")
+		child := testEnvtestPortalPage(ns.Name, portal.GetName(), "Child", "child-upd", "# child", "child page")
+		child.Name = "child-upd-page"
+		child.Spec.APISpec.ParentPageIDRef = &commonv1alpha1.ObjectRef{
+			Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+			NamespacedRef: &commonv1alpha1.NamespacedRef{
+				Name: parentA.Name,
+			},
+		}
+		var expectedChildCreate *sdkkonnectcomp.CreatePortalPageRequest
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
+			req, err := child.ToCreatePortalPageRequest(ctx, clientNamespaced)
+			if !assert.NoError(c, err) {
+				return
+			}
+			if assert.NotNil(c, req.ParentPageID) {
+				assert.Equal(c, parentAID, *req.ParentPageID)
+			}
+			expectedChildCreate = req
+		}, consts.WaitTime, consts.TickTime)
+		sdk.PortalPagesSDK.EXPECT().
+			CreatePortalPage(mock.Anything, portalID, *expectedChildCreate).
+			Return(&sdkkonnectops.CreatePortalPageResponse{
+				PortalPageResponse: &sdkkonnectcomp.PortalPageResponse{
+					ID: childID,
+				},
+			}, nil).Once()
+		require.NoError(t, clientNamespaced.Create(ctx, child))
+		envtest.WatchFor(t, ctx, pageWatch, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(child),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.PortalPage](),
+			),
+			"Child PortalPage didn't get Programmed status condition",
+		)
+
+		t.Log("Patching child parentPageIDRef from parent A to parent B")
+		childToB := child.DeepCopy()
+		childToB.Spec.APISpec.ParentPageIDRef.NamespacedRef.Name = parentB.Name
+		var expectedUpdateToB *sdkkonnectcomp.UpdatePortalPageRequest
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
+			req, err := childToB.ToUpdatePortalPageRequest(ctx, clientNamespaced)
+			if !assert.NoError(c, err) {
+				return
+			}
+			if assert.NotNil(c, req.ParentPageID) {
+				assert.Equal(c, parentBID, *req.ParentPageID)
+			}
+			expectedUpdateToB = req
+		}, consts.WaitTime, consts.TickTime)
+		sdk.PortalPagesSDK.EXPECT().
+			UpdatePortalPage(mock.Anything, sdkkonnectops.UpdatePortalPageRequest{
+				PortalID:                portalID,
+				PageID:                  childID,
+				UpdatePortalPageRequest: *expectedUpdateToB,
+			}).
+			Return(&sdkkonnectops.UpdatePortalPageResponse{}, nil).Once()
+		require.NoError(t, clientNamespaced.Patch(ctx, childToB, client.MergeFrom(child)))
+		envtest.WatchFor(t, ctx, pageWatch, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(child),
+				func(p *konnectv1alpha1.PortalPage) bool {
+					return p.Spec.APISpec.ParentPageIDRef != nil &&
+						p.Spec.APISpec.ParentPageIDRef.NamespacedRef != nil &&
+						p.Spec.APISpec.ParentPageIDRef.NamespacedRef.Name == parentB.Name
+				},
+			),
+			"Child PortalPage patch to parent B wasn't observed",
+		)
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PortalPagesSDK, consts.WaitTime, consts.TickTime)
+
+		t.Log("Patching child to clear parentPageIDRef")
+		childCleared := childToB.DeepCopy()
+		childCleared.Spec.APISpec.ParentPageIDRef = nil
+		var expectedUpdateCleared *sdkkonnectcomp.UpdatePortalPageRequest
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
+			req, err := childCleared.ToUpdatePortalPageRequest(ctx, clientNamespaced)
+			if !assert.NoError(c, err) {
+				return
+			}
+			assert.Nil(c, req.ParentPageID)
+			expectedUpdateCleared = req
+		}, consts.WaitTime, consts.TickTime)
+		sdk.PortalPagesSDK.EXPECT().
+			UpdatePortalPage(mock.Anything, sdkkonnectops.UpdatePortalPageRequest{
+				PortalID:                portalID,
+				PageID:                  childID,
+				UpdatePortalPageRequest: *expectedUpdateCleared,
+			}).
+			Return(&sdkkonnectops.UpdatePortalPageResponse{}, nil).Once()
+		require.NoError(t, clientNamespaced.Patch(ctx, childCleared, client.MergeFrom(childToB)))
+		envtest.WatchFor(t, ctx, pageWatch, apiwatch.Modified,
+			envtest.AssertsAnd(
+				envtest.ObjectMatchesName(child),
+				func(p *konnectv1alpha1.PortalPage) bool {
+					return p.Spec.APISpec.ParentPageIDRef == nil
+				},
+			),
+			"Child PortalPage patch clearing parentPageIDRef wasn't observed",
+		)
 		envtest.EventuallyAssertSDKExpectations(t, sdk.PortalPagesSDK, consts.WaitTime, consts.TickTime)
 	})
 }

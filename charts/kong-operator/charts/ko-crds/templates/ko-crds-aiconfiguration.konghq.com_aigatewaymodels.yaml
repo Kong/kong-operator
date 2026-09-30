@@ -8,7 +8,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: aigatewaymodels.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -88,6 +88,9 @@ spec:
                     and konnect.konghq.com when kind is KonnectAIGateway
                   rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com''
                     : self.group == ''konnect.konghq.com'''
+                - message: repointing an entity between KonnectAIGateway and OnPremAIGateway
+                    is forbidden
+                  rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
                 properties:
                   api:
@@ -1021,6 +1024,8 @@ spec:
                               - gemini
                               - huggingface
                               - openai
+                              - passthrough
+                              - typesafe
                               maxLength: 253
                               type: string
                           type: object
@@ -3491,11 +3496,22 @@ spec:
                                   - ollama
                                   - openai
                                   - sagemaker
+                                  - typesafe
                                   - vercel
                                   - vllm
                                   - xai
                                   minLength: 1
                                   type: string
+                                typesafe:
+                                  properties:
+                                    inputCost:
+                                      type: number
+                                    outputCost:
+                                      type: number
+                                    upstreamURL:
+                                      maxLength: 253
+                                      type: string
+                                  type: object
                                 vercel:
                                   properties:
                                     cacheReadCost:
@@ -4904,6 +4920,8 @@ spec:
                               - gemini
                               - huggingface
                               - openai
+                              - passthrough
+                              - typesafe
                               maxLength: 253
                               type: string
                           type: object
@@ -7374,11 +7392,22 @@ spec:
                                   - ollama
                                   - openai
                                   - sagemaker
+                                  - typesafe
                                   - vercel
                                   - vllm
                                   - xai
                                   minLength: 1
                                   type: string
+                                typesafe:
+                                  properties:
+                                    inputCost:
+                                      type: number
+                                    outputCost:
+                                      type: number
+                                    upstreamURL:
+                                      maxLength: 253
+                                      type: string
+                                  type: object
                                 vercel:
                                   properties:
                                     cacheReadCost:
@@ -7924,9 +7953,9 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.aiGatewayRef) || !has(self.status.conditions) || !self.status.conditions.exists(c,
-            c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef
-            == self.spec.aiGatewayRef'
+          rule: '!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions)
+            || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
+            == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
     served: true
     storage: true
     subresources:

@@ -36,7 +36,7 @@ func (s *EventGatewaySchemaRegistryAPISpec) marshalSDKOpsPayload() (map[string]a
 	if err := json.Unmarshal(data, &rawPayload); err != nil {
 		return nil, fmt.Errorf("failed to decode EventGatewaySchemaRegistryAPISpec: %w", err)
 	}
-	rawPayload = flattenSensitiveData(rawPayload)
+	rawPayload = flattenSensitiveDataExcept(rawPayload, EventGatewaySchemaRegistrySDKOpsFreeformKeyFields)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
 	renamed := renameKeysToSDKExcept(rawPayload, EventGatewaySchemaRegistrySDKOpsFreeformKeyFields)
@@ -54,10 +54,12 @@ func (s *EventGatewaySchemaRegistryAPISpec) selectedSDKOpsPayload(payload map[st
 
 	var selected any
 	var variant string
+	variantJSON := ""
 	switch s.EventGatewaySchemaRegistryConfig.Type {
 	case EventGatewaySchemaRegistryConfigTypeSchemaRegistryConfluent:
 		selected = payload["confluent"]
 		variant = "SchemaRegistryConfluent"
+		variantJSON = "confluent"
 	default:
 		return nil, "", fmt.Errorf("unsupported EventGatewaySchemaRegistry config type %q", s.EventGatewaySchemaRegistryConfig.Type)
 	}
@@ -65,7 +67,7 @@ func (s *EventGatewaySchemaRegistryAPISpec) selectedSDKOpsPayload(payload map[st
 	if selected == nil {
 		return nil, "", fmt.Errorf("EventGatewaySchemaRegistry config payload missing for type %q", s.EventGatewaySchemaRegistryConfig.Type)
 	}
-	selected = flattenSDKUnions(selected)
+	selected = flattenSDKUnionsExceptUnder(selected, EventGatewaySchemaRegistrySDKOpsFreeformKeyFields, variantJSON)
 	if selectedMap, ok := selected.(map[string]any); ok {
 		if typeValue, ok := payload["type"]; ok {
 			if _, hasType := selectedMap["type"]; !hasType {
@@ -142,7 +144,10 @@ func (obj *EventGatewaySchemaRegistry) sdkOpsAPISpec(ctx context.Context, cl cli
 		return nil, fmt.Errorf("EventGatewaySchemaRegistry is nil")
 	}
 
-	apiSpec := obj.Spec.APISpec
+	// Resolve against a deep copy: resolved values are written into the spec
+	// being walked, and union variants and slices are shared by reference, so
+	// a shallow copy would leak them into obj (e.g. the informer cache).
+	apiSpec := *obj.Spec.APISpec.DeepCopy()
 	// Resolve spec.apiSpec.confluent.config.authentication.basic.password
 	if apiSpec.EventGatewaySchemaRegistryConfig != nil {
 		if apiSpec.EventGatewaySchemaRegistryConfig.SchemaRegistryConfluent != nil {

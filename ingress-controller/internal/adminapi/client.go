@@ -16,6 +16,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/clock"
 	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	adminapidiscovery "github.com/kong/kong-operator/v2/internal/adminapi"
 )
 
 // Client is a wrapper around raw *kong.Client. It's advised to pass this wrapper across the codebase, and
@@ -237,7 +238,7 @@ func NewClientFactoryForWorkspace(
 	}
 }
 
-func (cf ClientFactory) CreateAdminAPIClient(ctx context.Context, discoveredAdminAPI DiscoveredAdminAPI) (*Client, error) {
+func (cf ClientFactory) CreateAdminAPIClient(ctx context.Context, discoveredAdminAPI adminapidiscovery.DiscoveredAdminAPI) (*Client, error) {
 	cf.logger.V(logging.DebugLevel).Info(
 		"Creating Kong Gateway Admin API client",
 		"address", discoveredAdminAPI.Address, "tlsServerName", discoveredAdminAPI.TLSServerName,

@@ -15,7 +15,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: aigatewayagents.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -93,6 +93,8 @@ spec:
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
                   rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
+                - message: repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden
+                  rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
                 properties:
                   access:
@@ -456,7 +458,7 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.aiGatewayRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
+          rule: '!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
     served: true
     storage: true
     subresources:
@@ -470,7 +472,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: aigatewayauthstrategies.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -548,6 +550,8 @@ spec:
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
                   rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
+                - message: repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden
+                  rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
                 properties:
                   key-auth:
@@ -931,7 +935,7 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.aiGatewayRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
+          rule: '!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
     served: true
     storage: true
     subresources:
@@ -945,7 +949,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: aigatewaycacertificates.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -1023,6 +1027,8 @@ spec:
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
                   rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
+                - message: repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden
+                  rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
                 properties:
                   cert:
@@ -1149,7 +1155,7 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.aiGatewayRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
+          rule: '!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
     served: true
     storage: true
     subresources:
@@ -1163,7 +1169,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: aigatewaycertificates.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -1241,6 +1247,8 @@ spec:
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
                   rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
+                - message: repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden
+                  rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
                 properties:
                   cert:
@@ -1470,7 +1478,7 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.aiGatewayRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
+          rule: '!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
     served: true
     storage: true
     subresources:
@@ -1484,7 +1492,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: aigatewayconsumercredentials.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -1718,7 +1726,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: aigatewayconsumergroups.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -1796,6 +1804,8 @@ spec:
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
                   rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
+                - message: repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden
+                  rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
                 properties:
                   displayName:
@@ -1909,7 +1919,7 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.aiGatewayRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
+          rule: '!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
     served: true
     storage: true
     subresources:
@@ -1923,7 +1933,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: aigatewayconsumers.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -2001,6 +2011,8 @@ spec:
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
                   rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
+                - message: repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden
+                  rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
                 properties:
                   customID:
@@ -2136,7 +2148,353 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.aiGatewayRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
+          rule: '!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+# Source: kong-operator/charts/ko-crds/templates/ko-crds-aiconfiguration.konghq.com_aigatewaycustompolicies.yaml
+# This file is auto-generated by KO's hack/generators/conversion-webhook/main.go generator.
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+    kubernetes-configuration.konghq.com/channels: kong-operator
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
+  name: aigatewaycustompolicies.aiconfiguration.konghq.com
+spec:
+  group: aiconfiguration.konghq.com
+  names:
+    categories:
+    - kong
+    kind: AIGatewayCustomPolicy
+    listKind: AIGatewayCustomPolicyList
+    plural: aigatewaycustompolicies
+    singular: aigatewaycustompolicy
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Konnect ID
+      jsonPath: .status.id
+      name: ID
+      type: string
+    - description: The Resource is Programmed on Konnect
+      jsonPath: .status.conditions[?(@.type=='Programmed')].status
+      name: Programmed
+      type: string
+    - description: Konnect Organization ID this resource belongs to.
+      jsonPath: .status.organizationID
+      name: OrgID
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              aiGatewayRef:
+                properties:
+                  group:
+                    default: konnect.konghq.com
+                    enum:
+                    - konnect.konghq.com
+                    - aigateway.konghq.com
+                    type: string
+                  kind:
+                    default: KonnectAIGateway
+                    enum:
+                    - KonnectAIGateway
+                    - OnPremAIGateway
+                    type: string
+                  namespacedRef:
+                    properties:
+                      name:
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        maxLength: 253
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  type:
+                    default: namespacedRef
+                    enum:
+                    - namespacedRef
+                    type: string
+                required:
+                - namespacedRef
+                type: object
+                x-kubernetes-validations:
+                - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
+                - message: repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden
+                  rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
+              apiSpec:
+                properties:
+                  installed:
+                    properties:
+                      displayName:
+                        maxLength: 256
+                        minLength: 1
+                        type: string
+                      labels:
+                        additionalProperties:
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        type: object
+                      managedBy:
+                        additionalProperties:
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        type: object
+                      name:
+                        maxLength: 256
+                        minLength: 1
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
+                        type: string
+                        x-kubernetes-validations:
+                        - message: name is immutable
+                          rule: self == oldSelf
+                      schema:
+                        properties:
+                          configMapRef:
+                            properties:
+                              key:
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              name:
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                            required:
+                            - key
+                            - name
+                            type: object
+                          type:
+                            default: inline
+                            enum:
+                            - inline
+                            - configMapRef
+                            type: string
+                          value:
+                            maxLength: 262144
+                            minLength: 1
+                            type: string
+                        required:
+                        - type
+                        type: object
+                        x-kubernetes-validations:
+                        - message: value required when type=inline; configMapRef required when type=configMapRef
+                          rule: 'self.type == ''inline'' ? has(self.value) : has(self.configMapRef)'
+                        - message: only one of value and configMapRef can be set
+                          rule: '!(has(self.value) && has(self.configMapRef))'
+                    required:
+                    - displayName
+                    - name
+                    - schema
+                    type: object
+                  streaming:
+                    properties:
+                      displayName:
+                        maxLength: 256
+                        minLength: 1
+                        type: string
+                      handler:
+                        properties:
+                          configMapRef:
+                            properties:
+                              key:
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              name:
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                            required:
+                            - key
+                            - name
+                            type: object
+                          type:
+                            default: inline
+                            enum:
+                            - inline
+                            - configMapRef
+                            type: string
+                          value:
+                            maxLength: 262144
+                            minLength: 1
+                            type: string
+                        required:
+                        - type
+                        type: object
+                        x-kubernetes-validations:
+                        - message: value required when type=inline; configMapRef required when type=configMapRef
+                          rule: 'self.type == ''inline'' ? has(self.value) : has(self.configMapRef)'
+                        - message: only one of value and configMapRef can be set
+                          rule: '!(has(self.value) && has(self.configMapRef))'
+                      labels:
+                        additionalProperties:
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        type: object
+                      managedBy:
+                        additionalProperties:
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        type: object
+                      name:
+                        maxLength: 256
+                        minLength: 1
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
+                        type: string
+                        x-kubernetes-validations:
+                        - message: name is immutable
+                          rule: self == oldSelf
+                      schema:
+                        properties:
+                          configMapRef:
+                            properties:
+                              key:
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              name:
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                            required:
+                            - key
+                            - name
+                            type: object
+                          type:
+                            default: inline
+                            enum:
+                            - inline
+                            - configMapRef
+                            type: string
+                          value:
+                            maxLength: 262144
+                            minLength: 1
+                            type: string
+                        required:
+                        - type
+                        type: object
+                        x-kubernetes-validations:
+                        - message: value required when type=inline; configMapRef required when type=configMapRef
+                          rule: 'self.type == ''inline'' ? has(self.value) : has(self.configMapRef)'
+                        - message: only one of value and configMapRef can be set
+                          rule: '!(has(self.value) && has(self.configMapRef))'
+                    required:
+                    - displayName
+                    - handler
+                    - name
+                    - schema
+                    type: object
+                  type:
+                    enum:
+                    - installed
+                    - streaming
+                    minLength: 1
+                    type: string
+                required:
+                - type
+                type: object
+                x-kubernetes-validations:
+                - message: type is immutable
+                  rule: '!has(oldSelf.type) || self.type == oldSelf.type'
+            required:
+            - aiGatewayRef
+            type: object
+          status:
+            properties:
+              conditions:
+                items:
+                  properties:
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                maxItems: 8
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              gatewayID:
+                properties:
+                  id:
+                    maxLength: 256
+                    type: string
+                type: object
+              id:
+                maxLength: 256
+                type: string
+              observedGeneration:
+                format: int64
+                type: integer
+              organizationID:
+                maxLength: 256
+                type: string
+              serverURL:
+                maxLength: 512
+                type: string
+            type: object
+        type: object
+        x-kubernetes-validations:
+        - message: spec.aiGatewayRef is immutable when an entity is already Programmed
+          rule: '!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
+        - message: 'spec.aiGatewayRef.kind must be one of: KonnectAIGateway'
+          rule: '!has(self.spec.aiGatewayRef) || !has(self.spec.aiGatewayRef.kind) || self.spec.aiGatewayRef.kind in [''KonnectAIGateway'']'
     served: true
     storage: true
     subresources:
@@ -2150,7 +2508,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: aigatewaydataplanecertificates.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -2228,6 +2586,8 @@ spec:
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
                   rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
+                - message: repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden
+                  rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
                 properties:
                   cert:
@@ -2267,6 +2627,20 @@ spec:
                   description:
                     maxLength: 1024
                     type: string
+                  labels:
+                    additionalProperties:
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                      type: string
+                    type: object
+                  managedBy:
+                    additionalProperties:
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                      type: string
+                    type: object
                   title:
                     maxLength: 256
                     minLength: 1
@@ -2342,7 +2716,7 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.aiGatewayRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
+          rule: '!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
     served: true
     storage: true
     subresources:
@@ -2356,7 +2730,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: aigatewaymcpservers.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -2434,6 +2808,8 @@ spec:
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
                   rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
+                - message: repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden
+                  rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
                 properties:
                   conversion-listener:
@@ -5569,7 +5945,7 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.aiGatewayRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
+          rule: '!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
     served: true
     storage: true
     subresources:
@@ -5583,7 +5959,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: aigatewaymodelproviders.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -5661,6 +6037,8 @@ spec:
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
                   rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
+                - message: repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden
+                  rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
                 properties:
                   anthropic:
@@ -8128,11 +8506,148 @@ spec:
                     - ollama
                     - openai
                     - sagemaker
+                    - typesafe
                     - vercel
                     - vllm
                     - xai
                     minLength: 1
                     type: string
+                  typesafe:
+                    properties:
+                      config:
+                        properties:
+                          auth:
+                            properties:
+                              headers:
+                                items:
+                                  properties:
+                                    name:
+                                      maxLength: 253
+                                      minLength: 1
+                                      type: string
+                                    value:
+                                      properties:
+                                        secretRef:
+                                          properties:
+                                            key:
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                            name:
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                            namespace:
+                                              maxLength: 253
+                                              type: string
+                                          required:
+                                          - key
+                                          - name
+                                          type: object
+                                        type:
+                                          default: inline
+                                          enum:
+                                          - inline
+                                          - secretRef
+                                          type: string
+                                        value:
+                                          maxLength: 4096
+                                          type: string
+                                      required:
+                                      - type
+                                      type: object
+                                      x-kubernetes-validations:
+                                      - message: value required when type=inline; secretRef required when type=secretRef
+                                        rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                                  required:
+                                  - name
+                                  type: object
+                                maxItems: 1
+                                type: array
+                              params:
+                                items:
+                                  properties:
+                                    location:
+                                      enum:
+                                      - body
+                                      - query
+                                      maxLength: 253
+                                      type: string
+                                    name:
+                                      maxLength: 253
+                                      minLength: 1
+                                      type: string
+                                    value:
+                                      properties:
+                                        secretRef:
+                                          properties:
+                                            key:
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                            name:
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                            namespace:
+                                              maxLength: 253
+                                              type: string
+                                          required:
+                                          - key
+                                          - name
+                                          type: object
+                                        type:
+                                          default: inline
+                                          enum:
+                                          - inline
+                                          - secretRef
+                                          type: string
+                                        value:
+                                          maxLength: 4096
+                                          type: string
+                                      required:
+                                      - type
+                                      type: object
+                                      x-kubernetes-validations:
+                                      - message: value required when type=inline; secretRef required when type=secretRef
+                                        rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                                  required:
+                                  - name
+                                  type: object
+                                maxItems: 1
+                                type: array
+                            type: object
+                        required:
+                        - auth
+                        type: object
+                      displayName:
+                        maxLength: 256
+                        minLength: 1
+                        type: string
+                      labels:
+                        additionalProperties:
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        type: object
+                      managedBy:
+                        additionalProperties:
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        type: object
+                      name:
+                        maxLength: 256
+                        minLength: 1
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
+                        type: string
+                    required:
+                    - config
+                    - displayName
+                    - name
+                    type: object
                   vercel:
                     properties:
                       config:
@@ -8611,7 +9126,7 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.aiGatewayRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
+          rule: '!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
     served: true
     storage: true
     subresources:
@@ -8625,7 +9140,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: aigatewaymodels.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -8703,6 +9218,8 @@ spec:
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
                   rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
+                - message: repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden
+                  rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
                 properties:
                   api:
@@ -9636,6 +10153,8 @@ spec:
                               - gemini
                               - huggingface
                               - openai
+                              - passthrough
+                              - typesafe
                               maxLength: 253
                               type: string
                           type: object
@@ -12106,11 +12625,22 @@ spec:
                                   - ollama
                                   - openai
                                   - sagemaker
+                                  - typesafe
                                   - vercel
                                   - vllm
                                   - xai
                                   minLength: 1
                                   type: string
+                                typesafe:
+                                  properties:
+                                    inputCost:
+                                      type: number
+                                    outputCost:
+                                      type: number
+                                    upstreamURL:
+                                      maxLength: 253
+                                      type: string
+                                  type: object
                                 vercel:
                                   properties:
                                     cacheReadCost:
@@ -13519,6 +14049,8 @@ spec:
                               - gemini
                               - huggingface
                               - openai
+                              - passthrough
+                              - typesafe
                               maxLength: 253
                               type: string
                           type: object
@@ -15989,11 +16521,22 @@ spec:
                                   - ollama
                                   - openai
                                   - sagemaker
+                                  - typesafe
                                   - vercel
                                   - vllm
                                   - xai
                                   minLength: 1
                                   type: string
+                                typesafe:
+                                  properties:
+                                    inputCost:
+                                      type: number
+                                    outputCost:
+                                      type: number
+                                    upstreamURL:
+                                      maxLength: 253
+                                      type: string
+                                  type: object
                                 vercel:
                                   properties:
                                     cacheReadCost:
@@ -16539,7 +17082,7 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.aiGatewayRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
+          rule: '!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
     served: true
     storage: true
     subresources:
@@ -16553,7 +17096,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: aigatewaypolicies.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -16631,6 +17174,8 @@ spec:
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
                   rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
+                - message: repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden
+                  rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
                 properties:
                   condition:
@@ -16670,6 +17215,21 @@ spec:
                     x-kubernetes-validations:
                     - message: value required when type=inline; secretRef required when type=secretRef
                       rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                  customPolicyRef:
+                    properties:
+                      kind:
+                        default: AIGatewayCustomPolicy
+                        enum:
+                        - AIGatewayCustomPolicy
+                        type: string
+                      name:
+                        minLength: 1
+                        type: string
+                      namespace:
+                        type: string
+                    required:
+                    - name
+                    type: object
                   displayName:
                     maxLength: 256
                     minLength: 1
@@ -16711,7 +17271,6 @@ spec:
                 - config
                 - displayName
                 - name
-                - type
                 type: object
             required:
             - aiGatewayRef
@@ -16780,7 +17339,9 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.aiGatewayRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
+          rule: '!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
+        - message: exactly one of spec.apiSpec.type and spec.apiSpec.customPolicyRef must be set
+          rule: '!has(self.spec) || !has(self.spec.apiSpec) || has(self.spec.apiSpec.type) != has(self.spec.apiSpec.customPolicyRef)'
     served: true
     storage: true
     subresources:
@@ -16794,7 +17355,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: aigatewaysnis.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -16872,6 +17433,8 @@ spec:
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
                   rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
+                - message: repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden
+                  rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
                 properties:
                   certificate:
@@ -16989,7 +17552,7 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.aiGatewayRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
+          rule: '!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
     served: true
     storage: true
     subresources:
@@ -17003,7 +17566,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: aigatewaydataplanes.aigateway.konghq.com
 spec:
   group: aigateway.konghq.com
@@ -21585,7 +22148,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: onpremaigateways.aigateway.konghq.com
 spec:
   group: aigateway.konghq.com
@@ -21686,7 +22249,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: eventgatewaybackendclusters.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -22024,7 +22587,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: eventgatewaydataplanecertificates.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -22225,7 +22788,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: eventgatewaylistenerpolicies.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -22635,7 +23198,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: eventgatewaylisteners.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -22823,7 +23386,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: eventgatewayschemaregistries.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -23083,7 +23646,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: eventgatewayvirtualclusterconsumepolicies.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -23686,7 +24249,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: eventgatewayvirtualclusterpolicies.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -23867,6 +24430,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -23896,6 +24460,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -23925,6 +24490,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -23954,6 +24520,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -23983,6 +24550,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -24012,6 +24580,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -24041,6 +24610,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -24070,6 +24640,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -24099,6 +24670,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -24128,6 +24700,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -24157,6 +24730,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -24186,6 +24760,37 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
+                                      type: array
+                                  required:
+                                  - rules
+                                  type: object
+                                txnOffsetCommit:
+                                  properties:
+                                    rules:
+                                      items:
+                                        properties:
+                                          action:
+                                            enum:
+                                            - reject
+                                            - passthrough
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          description:
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                          rule:
+                                            maxLength: 1000
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - action
+                                        - description
+                                        - rule
+                                        type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -24204,11 +24809,13 @@ spec:
                                   - offsetCommit
                                   - offsetFetch
                                   - produce
+                                  - txnOffsetCommit
                                   minLength: 1
                                   type: string
                               required:
                               - type
                               type: object
+                            maxItems: 100
                             type: array
                         required:
                         - requests
@@ -24364,7 +24971,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: eventgatewayvirtualclusterproducepolicies.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -24996,7 +25603,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: eventgatewayvirtualclusters.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -25539,7 +26146,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: ingressclassparameterses.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -25587,7 +26194,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: kongcacertificates.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -25815,7 +26422,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: kongcertificates.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -26073,7 +26680,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: kongclusterplugins.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -26290,7 +26897,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: kongconsumergroups.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -26486,7 +27093,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: kongconsumers.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -26702,7 +27309,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: kongcredentialacls.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -26876,7 +27483,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: kongcredentialapikeys.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -27050,7 +27657,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: kongcredentialbasicauths.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -27227,7 +27834,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: kongcredentialhmacs.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -27405,7 +28012,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: kongcredentialjwts.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -27603,7 +28210,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: kongcustomentities.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -27742,7 +28349,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: kongdataplaneclientcertificates.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -27936,7 +28543,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: kongkeys.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -28183,7 +28790,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: kongkeysets.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -28383,7 +28990,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: konglicenses.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -28522,7 +29129,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: kongpluginbindings.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -28839,7 +29446,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: kongplugins.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -29050,7 +29657,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: kongreferencegrants.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -29167,7 +29774,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: kongroutes.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -29457,7 +30064,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: kongservices.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -29734,7 +30341,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: kongsnis.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -29914,7 +30521,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: kongtargets.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -30107,7 +30714,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   labels:
     gateway.networking.k8s.io/policy: direct
   name: kongupstreampolicies.configuration.konghq.com
@@ -30461,7 +31068,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: kongupstreams.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -30858,7 +31465,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: kongvaults.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -31102,7 +31709,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: kegdataplanes.eventgateway.konghq.com
 spec:
   group: eventgateway.konghq.com
@@ -35711,7 +36318,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: aigateways.gateway-operator.konghq.com
 spec:
   group: gateway-operator.konghq.com
@@ -35971,7 +36578,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: dataplanemetricsextensions.gateway-operator.konghq.com
 spec:
   group: gateway-operator.konghq.com
@@ -36065,7 +36672,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: dataplanes.gateway-operator.konghq.com
 spec:
   group: gateway-operator.konghq.com
@@ -40514,6 +41121,21 @@ spec:
                             - Cluster
                             - Local
                             type: string
+                          ipFamilies:
+                            items:
+                              type: string
+                            maxItems: 2
+                            minItems: 1
+                            type: array
+                            x-kubernetes-validations:
+                            - message: each ipFamilies entry must be IPv4 or IPv6
+                              rule: self.all(f, f == 'IPv4' || f == 'IPv6')
+                          ipFamilyPolicy:
+                            enum:
+                            - SingleStack
+                            - PreferDualStack
+                            - RequireDualStack
+                            type: string
                           labels:
                             additionalProperties:
                               maxLength: 63
@@ -40825,7 +41447,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: dbbackedhybridcontrolplanes.gateway-operator.konghq.com
 spec:
   group: gateway-operator.konghq.com
@@ -40909,7 +41531,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: kongplugininstallations.gateway-operator.konghq.com
 spec:
   group: gateway-operator.konghq.com
@@ -41030,7 +41652,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: watchnamespacegrants.gateway-operator.konghq.com
 spec:
   group: gateway-operator.konghq.com
@@ -41089,7 +41711,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: konnectaigateways.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -41321,7 +41943,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: konnectapiauthconfigurations.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -41476,7 +42098,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: konnectcloudgatewaydataplanegroupconfigurations.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -41809,7 +42431,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: konnectcloudgatewaynetworks.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -42016,7 +42638,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: konnectcloudgatewaytransitgateways.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -42320,7 +42942,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: konnectconfigstores.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -42484,7 +43106,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: konnectconfigstoresyncs.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -42739,7 +43361,7 @@ spec:
                   - sourceFields
                   - storeKey
                   type: object
-                maxItems: 64
+                maxItems: 128
                 type: array
                 x-kubernetes-list-map-keys:
                 - storeKey
@@ -42782,8 +43404,8 @@ spec:
         x-kubernetes-validations:
         - message: spec.mode is immutable
           rule: self.spec.mode == oldSelf.spec.mode
-        - message: spec.configStoreRef.name is immutable
-          rule: self.spec.configStoreRef.name == oldSelf.spec.configStoreRef.name
+        - message: spec.configStoreRef is immutable
+          rule: self.spec.configStoreRef == oldSelf.spec.configStoreRef
     served: true
     storage: true
     subresources:
@@ -42797,7 +43419,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: konnecteventgateways.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -42983,7 +43605,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: mcpservers.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -43163,7 +43785,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: portalcustomdomains.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -43380,7 +44002,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: portalcustomizations.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -43708,7 +44330,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: portalemailconfigs.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -43880,7 +44502,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: portalidentityproviderrequests.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -44104,7 +44726,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: portalipallowlists.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -44271,7 +44893,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: portalpages.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -44348,8 +44970,6 @@ spec:
                     - type
                     type: object
                     x-kubernetes-validations:
-                    - message: cannot set parentPageIDRef
-                      rule: self == null
                     - message: when type is namespacedRef, namespacedRef must be set
                       rule: 'self.type == ''namespacedRef'' ? has(self.namespacedRef) : true'
                     - message: when type is namespacedRef, konnectID must not be set
@@ -44483,6 +45103,8 @@ spec:
         x-kubernetes-validations:
         - message: spec.portalRef is immutable when an entity is already Programmed
           rule: '!has(self.spec.portalRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.portalRef == self.spec.portalRef'
+        - message: parentPageIDRef must not reference the PortalPage itself
+          rule: '!has(self.spec.apiSpec.parentPageIDRef) || !has(self.spec.apiSpec.parentPageIDRef.namespacedRef) || self.spec.apiSpec.parentPageIDRef.namespacedRef.name != self.metadata.name'
     served: true
     storage: true
     subresources:
@@ -44496,7 +45118,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: portals.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -44730,7 +45352,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: portalteams.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -44911,7 +45533,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: mcpserverdataplanes.mcp.konghq.com
 spec:
   group: mcp.konghq.com
@@ -45491,7 +46113,7 @@ metadata:
     helm.sh/resource-policy: keep
     cert-manager.io/inject-ca-from: default/chartsnap-kong-operator-webhook-serving-cert
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: controlplanes.gateway-operator.konghq.com
 spec:
   conversion:
@@ -50009,7 +50631,7 @@ metadata:
     helm.sh/resource-policy: keep
     cert-manager.io/inject-ca-from: default/chartsnap-kong-operator-webhook-serving-cert
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: gatewayconfigurations.gateway-operator.konghq.com
 spec:
   conversion:
@@ -58452,6 +59074,21 @@ spec:
                                 - Cluster
                                 - Local
                                 type: string
+                              ipFamilies:
+                                items:
+                                  type: string
+                                maxItems: 2
+                                minItems: 1
+                                type: array
+                                x-kubernetes-validations:
+                                - message: each ipFamilies entry must be IPv4 or IPv6
+                                  rule: self.all(f, f == 'IPv4' || f == 'IPv6')
+                              ipFamilyPolicy:
+                                enum:
+                                - SingleStack
+                                - PreferDualStack
+                                - RequireDualStack
+                                type: string
                               labels:
                                 additionalProperties:
                                   maxLength: 63
@@ -63232,6 +63869,21 @@ spec:
                                 - Cluster
                                 - Local
                                 type: string
+                              ipFamilies:
+                                items:
+                                  type: string
+                                maxItems: 2
+                                minItems: 1
+                                type: array
+                                x-kubernetes-validations:
+                                - message: each ipFamilies entry must be IPv4 or IPv6
+                                  rule: self.all(f, f == 'IPv4' || f == 'IPv6')
+                              ipFamilyPolicy:
+                                enum:
+                                - SingleStack
+                                - PreferDualStack
+                                - RequireDualStack
+                                type: string
                               labels:
                                 additionalProperties:
                                   maxLength: 63
@@ -63462,7 +64114,7 @@ metadata:
   annotations:
     helm.sh/resource-policy: keep
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: konnectextensions.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -63985,7 +64637,7 @@ metadata:
     helm.sh/resource-policy: keep
     cert-manager.io/inject-ca-from: default/chartsnap-kong-operator-webhook-serving-cert
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: konnectgatewaycontrolplanes.konnect.konghq.com
 spec:
   conversion:
@@ -64532,6 +65184,7 @@ rules:
   - aigatewayconsumercredentials
   - aigatewayconsumergroups
   - aigatewayconsumers
+  - aigatewaycustompolicies
   - aigatewaymcpservers
   - aigatewaymodelproviders
   - aigatewaymodels
@@ -64547,31 +65200,41 @@ rules:
   - aiconfiguration.konghq.com
   resources:
   - aigatewayagents/finalizers
-  - aigatewayagents/status
   - aigatewayauthstrategies/finalizers
-  - aigatewayauthstrategies/status
   - aigatewaycacertificates/finalizers
-  - aigatewaycacertificates/status
   - aigatewaycertificates/finalizers
-  - aigatewaycertificates/status
   - aigatewayconsumercredentials/finalizers
   - aigatewayconsumercredentials/status
   - aigatewayconsumergroups/finalizers
-  - aigatewayconsumergroups/status
   - aigatewayconsumers/finalizers
-  - aigatewayconsumers/status
+  - aigatewaycustompolicies/finalizers
+  - aigatewaycustompolicies/status
   - aigatewaydataplanecertificates/finalizers
-  - aigatewaydataplanecertificates/status
   - aigatewaymcpservers/finalizers
-  - aigatewaymcpservers/status
   - aigatewaymodelproviders/finalizers
-  - aigatewaymodelproviders/status
   - aigatewaymodels/finalizers
   - aigatewaypolicies/finalizers
-  - aigatewaypolicies/status
   - aigatewaysnis/finalizers
+  verbs:
+  - patch
+  - update
+- apiGroups:
+  - aiconfiguration.konghq.com
+  resources:
+  - aigatewayagents/status
+  - aigatewayauthstrategies/status
+  - aigatewaycacertificates/status
+  - aigatewaycertificates/status
+  - aigatewayconsumergroups/status
+  - aigatewayconsumers/status
+  - aigatewaydataplanecertificates/status
+  - aigatewaymcpservers/status
+  - aigatewaymodelproviders/status
+  - aigatewaymodels/status
+  - aigatewaypolicies/status
   - aigatewaysnis/status
   verbs:
+  - get
   - patch
   - update
 - apiGroups:
@@ -64586,14 +65249,6 @@ rules:
   - patch
   - update
   - watch
-- apiGroups:
-  - aiconfiguration.konghq.com
-  resources:
-  - aigatewaymodels/status
-  verbs:
-  - get
-  - patch
-  - update
 - apiGroups:
   - aigateway.konghq.com
   resources:
@@ -65003,6 +65658,7 @@ rules:
   - konnectcloudgatewaynetworks
   - konnectcloudgatewaytransitgateways
   - konnectconfigstores
+  - konnectconfigstoresyncs
   - konnecteventgateways
   - portalcustomdomains
   - portalcustomizations
@@ -65033,6 +65689,7 @@ rules:
   - konnectcloudgatewaytransitgateways/status
   - konnectconfigstores/finalizers
   - konnectconfigstores/status
+  - konnectconfigstoresyncs/finalizers
   - konnecteventgateways/finalizers
   - konnecteventgateways/status
   - konnectextensions/finalizers
@@ -65057,6 +65714,14 @@ rules:
   - portalteams/finalizers
   - portalteams/status
   verbs:
+  - patch
+  - update
+- apiGroups:
+  - konnect.konghq.com
+  resources:
+  - konnectconfigstoresyncs/status
+  verbs:
+  - get
   - patch
   - update
 - apiGroups:
@@ -65365,9 +66030,9 @@ kind: Deployment
 metadata:
   labels:
     app.kubernetes.io/name: kong-operator
-    helm.sh/chart: kong-operator-1.4.0
+    helm.sh/chart: kong-operator-1.5.0-rapid.1
     app.kubernetes.io/instance: "chartsnap"
-    app.kubernetes.io/version: "2.3.0"
+    app.kubernetes.io/version: "2.4.0-rapid.2.0"
     app.kubernetes.io/component: ko
   name: chartsnap-kong-operator-controller-manager
   namespace: default
@@ -65393,12 +66058,12 @@ spec:
       labels:
         control-plane: controller-manager
         app.kubernetes.io/name: kong-operator
-        helm.sh/chart: kong-operator-1.4.0
+        helm.sh/chart: kong-operator-1.5.0-rapid.1
         app.kubernetes.io/instance: "chartsnap"
-        app.kubernetes.io/version: "2.3.0"
+        app.kubernetes.io/version: "2.4.0-rapid.2.0"
         app.kubernetes.io/component: ko
         app: chartsnap-kong-operator
-        version: "2.3.0"
+        version: "2.4.0-rapid.2.0"
     spec:
       containers:
       - name: manager
@@ -65423,7 +66088,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: docker.io/kong/kong-operator:2.3.0
+        image: docker.io/kong/kong-operator:2.4.0-rapid.2.0
         livenessProbe:
           httpGet:
             path: /healthz
@@ -65503,9 +66168,9 @@ metadata:
     cert-manager.io/secret-template: '{ "labels": { "konghq.com/secret" : "internal" } }'
   labels:
     app.kubernetes.io/name: kong-operator
-    helm.sh/chart: kong-operator-1.4.0
+    helm.sh/chart: kong-operator-1.5.0-rapid.1
     app.kubernetes.io/instance: "chartsnap"
-    app.kubernetes.io/version: "2.3.0"
+    app.kubernetes.io/version: "2.4.0-rapid.2.0"
     app.kubernetes.io/component: ko
   name: controlplane-configuration-validations
 webhooks:
@@ -65619,9 +66284,9 @@ kind: Certificate
 metadata:
   labels:
     app.kubernetes.io/name: kong-operator
-    helm.sh/chart: kong-operator-1.4.0
+    helm.sh/chart: kong-operator-1.5.0-rapid.1
     app.kubernetes.io/instance: "chartsnap"
-    app.kubernetes.io/version: "2.3.0"
+    app.kubernetes.io/version: "2.4.0-rapid.2.0"
     app.kubernetes.io/component: ko
   name: chartsnap-kong-operator-webhook-serving-cert
   namespace: default
@@ -65640,9 +66305,9 @@ kind: Certificate
 metadata:
   labels:
     app.kubernetes.io/name: kong-operator
-    helm.sh/chart: kong-operator-1.4.0
+    helm.sh/chart: kong-operator-1.5.0-rapid.1
     app.kubernetes.io/instance: "chartsnap"
-    app.kubernetes.io/version: "2.3.0"
+    app.kubernetes.io/version: "2.4.0-rapid.2.0"
     app.kubernetes.io/component: ko
   name: chartsnap-kong-operator-webhook-validating-serving-cert
   namespace: default
@@ -65661,9 +66326,9 @@ kind: Certificate
 metadata:
   labels:
     app.kubernetes.io/name: kong-operator
-    helm.sh/chart: kong-operator-1.4.0
+    helm.sh/chart: kong-operator-1.5.0-rapid.1
     app.kubernetes.io/instance: "chartsnap"
-    app.kubernetes.io/version: "2.3.0"
+    app.kubernetes.io/version: "2.4.0-rapid.2.0"
     app.kubernetes.io/component: ko
   name: kong-operator-ca
   namespace: default
@@ -65685,9 +66350,9 @@ kind: Issuer
 metadata:
   labels:
     app.kubernetes.io/name: kong-operator
-    helm.sh/chart: kong-operator-1.4.0
+    helm.sh/chart: kong-operator-1.5.0-rapid.1
     app.kubernetes.io/instance: "chartsnap"
-    app.kubernetes.io/version: "2.3.0"
+    app.kubernetes.io/version: "2.4.0-rapid.2.0"
     app.kubernetes.io/component: ko
   name: chartsnap-kong-operator-webhook-selfsigned-issuer
   namespace: default
@@ -65700,9 +66365,9 @@ kind: Issuer
 metadata:
   labels:
     app.kubernetes.io/name: kong-operator
-    helm.sh/chart: kong-operator-1.4.0
+    helm.sh/chart: kong-operator-1.5.0-rapid.1
     app.kubernetes.io/instance: "chartsnap"
-    app.kubernetes.io/version: "2.3.0"
+    app.kubernetes.io/version: "2.4.0-rapid.2.0"
     app.kubernetes.io/component: ko
   name: selfsigned-issuer
   namespace: default

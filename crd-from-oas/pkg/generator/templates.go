@@ -96,7 +96,7 @@ type {{.EntityName}}Spec struct {
 	Mirror *konnectv1alpha2.MirrorSpec ` + "`" + `json:"mirror,omitempty"` + "`" + `
 {{- end}}
 {{- if .ParentRef}}
-	// {{.ParentRefGoFieldName}} is the reference to the parent {{.SetParentIDEntityName}} object.
+	// {{.ParentRefGoFieldName}} is the reference to the parent {{if .ParentRefCustomTypeName}}AI Gateway (control plane){{else}}{{.SetParentIDEntityName}}{{end}} object.
 	//
 	// +required
 	{{.ParentRefGoFieldName}} {{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{objectRefTypeName}}{{end}} ` + "`" + `json:"{{.ParentRefJSONFieldName}},omitzero"` + "`" + `
@@ -120,6 +120,9 @@ type {{.EntityName}}Spec struct {
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
 	// +optional
+{{- range .APISpecValidations}}
+	// {{.}}
+{{- end}}
 {{- if .SupportsMirror}}
 	APISpec *{{.EntityName}}APISpec ` + "`" + `json:"apiSpec,omitempty"` + "`" + `
 {{- else}}
@@ -389,8 +392,8 @@ func (obj *{{$.EntityName}}) Set{{.EntityName}}ID(id string) {
 {{- if .RootRefDependency}}
 {{- if .ParentRef}}
 
-// Get{{.SetParentIDEntityName}}Ref returns the reference to the parent {{.SetParentIDEntityName}}.
-func (obj *{{.EntityName}}) Get{{.SetParentIDEntityName}}Ref() {{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{.RootRefTypeName}}{{end}} {
+// Get{{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{.SetParentIDEntityName}}Ref{{end}} returns the reference to the parent {{if .ParentRefCustomTypeName}}AI Gateway (control plane){{else}}{{.SetParentIDEntityName}}{{end}}.
+func (obj *{{.EntityName}}) Get{{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{.SetParentIDEntityName}}Ref{{end}}() {{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{.RootRefTypeName}}{{end}} {
 	return obj.Spec.{{.ParentRefGoFieldName}}
 }
 {{- if .ParentRefCustomTypeName}}
@@ -399,7 +402,7 @@ func (obj *{{.EntityName}}) Get{{.SetParentIDEntityName}}Ref() {{if .ParentRefCu
 // ObjectRef. The custom parent ref type's Group/Kind discriminator has no
 // ObjectRef representation, so only the namespaced reference is carried over.
 func (obj *{{.EntityName}}) GetParentRef() {{.ObjectRefTypeName}} {
-	return obj.Get{{.SetParentIDEntityName}}Ref().ToObjectRef()
+	return obj.Get{{.ParentRefCustomTypeName}}().ToObjectRef()
 }
 
 // SetParentRef sets the reference to the parent entity from a generic
@@ -407,6 +410,15 @@ func (obj *{{.EntityName}}) GetParentRef() {{.ObjectRefTypeName}} {
 // (Konnect): only the namespaced reference is carried over.
 func (obj *{{.EntityName}}) SetParentRef(ref {{.ObjectRefTypeName}}) {
 	obj.Spec.{{.ParentRefGoFieldName}} = {{.ParentRefCustomTypeName}}FromObjectRef(ref)
+}
+
+// SkipKonnectReconciliation reports whether the entity's parent reference
+// resolves to a parent the Konnect reconciler does not manage (an
+// OnPremAIGateway): such entities are handled by the on-prem controllers
+// where supported, or rejected at admission when the entity restricts its
+// parent kinds.
+func (obj *{{.EntityName}}) SkipKonnectReconciliation() bool {
+	return obj.Spec.{{.ParentRefGoFieldName}}.TargetsOnPremAIGateway()
 }
 {{- else}}
 
@@ -461,11 +473,15 @@ func (obj *{{.EntityName}}) SetParentID(id string) {
 
 // GetParentGVK returns the GroupVersionKind of the parent entity.
 func (obj *{{.EntityName}}) GetParentGVK() schema.GroupVersionKind {
+{{- if .ParentRefCustomTypeName}}
+	return obj.Spec.{{.ParentRefGoFieldName}}.ParentGVK()
+{{- else}}
 	return schema.GroupVersionKind{
 		Group:   "{{.ParentGroup}}",
 		Version: {{if .ParentEntityVersion}}"{{.ParentEntityVersion}}"{{else}}GroupVersion.Version{{end}},
 		Kind:    "{{.ParentKind}}",
 	}
+{{- end}}
 }
 
 // GetStatusConditionTypeParentRefValid returns the status condition type
@@ -706,6 +722,9 @@ var {{$.EntityName}}SDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 			"{{.}}",
 {{- end}}
 		},
+{{- if .Sensitive}}
+		Sensitive: true,
+{{- end}}
 	},
 {{- end}}
 }
@@ -720,9 +739,17 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return nil, fmt.Errorf("failed to decode {{$.EntityName}}APISpec: %w", err)
 	}
+	{{- if $.FreeformKeyFields}}
+	payload = flattenSDKUnionsExcept(payload, {{$.EntityName}}SDKOpsFreeformKeyFields)
+	{{- else}}
 	payload = flattenSDKUnions(payload)
-	{{- if $.SecretReferences}}
+	{{- end}}
+	{{- if $.DataSources}}
+	{{- if $.FreeformKeyFields}}
+	payload = flattenSensitiveDataExcept(payload, {{$.EntityName}}SDKOpsFreeformKeyFields)
+	{{- else}}
 	payload = flattenSensitiveData(payload)
+	{{- end}}
 	{{- end}}
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
@@ -765,139 +792,16 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 {{- end}}
 {{end}}
 {{- if .NeedsClient}}
-{{- if .SecretReferences}}
-func (obj *{{$.EntityName}}) sdkOpsAPISpec(ctx context.Context, cl client.Client) (*{{$.EntityName}}APISpec, error) {
-	if obj == nil {
-		return nil, fmt.Errorf("{{$.EntityName}} is nil")
-	}
-
-	apiSpec := obj.Spec.APISpec
-{{- range .SecretReferences}}
-{{- $ref := .}}
-	// Resolve {{.Path}}
-{{- if .IsSlice}}
-{{- range .PointerGuards}}
-	if apiSpec.{{.}} != nil {
-{{- end}}
-	for i := range apiSpec.{{$ref.SliceParentSelector}} {
-		src := apiSpec.{{$ref.SliceParentSelector}}[i]{{if $ref.SliceLeafField}}.{{$ref.SliceLeafField}}{{end}}
-		if src.Type == SensitiveDataSourceTypeSecretRef {
-			if src.SecretRef == nil {
-				return nil, fmt.Errorf("secretRef is nil for {{$ref.Path}}")
-			}
-			namespace := obj.GetNamespace()
-			if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
-				namespace = *src.SecretRef.Namespace
-			}
-{{- if eq $ref.ValueGoType "string"}}
-			var secret corev1.Secret
-			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
-				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
-			}
-			secretBytes, ok := secret.Data[src.SecretRef.Key]
-			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
-			}
-			resolved := string(secretBytes)
-{{- else}}
-			// valueFromSecretRef is hand-written for {{$ref.DedicatedTypeName}}
-			// and is NOT generated by crd-from-oas; see secretref_manual.go.
-			resolved, err := src.valueFromSecretRef(ctx, cl, namespace)
-			if err != nil {
-				return nil, fmt.Errorf("failed to resolve {{$ref.Path}}: %w", err)
-			}
-{{- end}}
-			apiSpec.{{$ref.SliceParentSelector}}[i]{{if $ref.SliceLeafField}}.{{$ref.SliceLeafField}}{{end}}.Value = &resolved
-		}
-	}
-{{- range $ref.PointerGuards}}
-	}
-{{- end}}
-{{- else}}
-{{- range .PointerGuards}}
-	if apiSpec.{{.}} != nil {
-{{- end}}
-	{
-		src := apiSpec.{{.GoFieldSelector}}
-		if src.Type == SensitiveDataSourceTypeSecretRef {
-			if src.SecretRef == nil {
-				return nil, fmt.Errorf("secretRef is nil for {{.Path}}")
-			}
-			namespace := obj.GetNamespace()
-			if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
-				namespace = *src.SecretRef.Namespace
-			}
-{{- if eq $ref.ValueGoType "string"}}
-			var secret corev1.Secret
-			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
-				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
-			}
-			secretBytes, ok := secret.Data[src.SecretRef.Key]
-			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
-			}
-			resolved := string(secretBytes)
-{{- else}}
-			// valueFromSecretRef is hand-written for {{$ref.DedicatedTypeName}}
-			// and is NOT generated by crd-from-oas; see secretref_manual.go.
-			resolved, err := src.valueFromSecretRef(ctx, cl, namespace)
-			if err != nil {
-				return nil, fmt.Errorf("failed to resolve {{.Path}}: %w", err)
-			}
-{{- end}}
-			apiSpec.{{.GoFieldSelector}}.Value = &resolved
-		}
-	}
-{{- range $ref.PointerGuards}}
-	}
-{{- end}}
-{{- end}}
-{{- end}}
-	return &apiSpec, nil
-}
-
-// GetSensitiveDataSecretRefs returns all Secret references used to populate sensitive SDK payload fields.
-func (obj *{{$.EntityName}}) GetSensitiveDataSecretRefs() []SensitiveDataSecretRef {
-	if obj == nil {
-		return nil
-	}
-	var refs []SensitiveDataSecretRef
-{{- range .SecretReferences}}
-{{- $ref := .}}
-{{- if .IsSlice}}
-{{- range .PointerGuards}}
-	if obj.Spec.APISpec.{{.}} != nil {
-{{- end}}
-	for _, item := range obj.Spec.APISpec.{{$ref.SliceParentSelector}} {
-		if item{{if $ref.SliceLeafField}}.{{$ref.SliceLeafField}}{{end}}.Type == SensitiveDataSourceTypeSecretRef && item{{if $ref.SliceLeafField}}.{{$ref.SliceLeafField}}{{end}}.SecretRef != nil {
-			refs = append(refs, *item{{if $ref.SliceLeafField}}.{{$ref.SliceLeafField}}{{end}}.SecretRef)
-		}
-	}
-{{- range $ref.PointerGuards}}
-	}
-{{- end}}
-{{- else}}
-{{- range .PointerGuards}}
-	if obj.Spec.APISpec.{{.}} != nil {
-{{- end}}
-	if obj.Spec.APISpec.{{.GoFieldSelector}}.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef != nil {
-		refs = append(refs, *obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef)
-	}
-{{- range .PointerGuards}}
-	}
-{{- end}}
-{{- end}}
-{{- end}}
-	return refs
-}
+{{- if .DataSources}}
+{{- template "sdkOpsDataSourceResolvers" $}}
 {{- end}}
 {{- template "sdkOpsReferenceResolvers" $}}
 {{range .Methods}}
 // {{.MethodName}} converts the {{$.EntityName}} to the SDK type
-// {{.ImportAlias}}.{{.TypeName}}{{if $.SecretReferences}}, resolving referenced Secrets{{end}}{{if $.References}}, resolving referenced CRs to Konnect IDs{{end}} via the provided client.
+// {{.ImportAlias}}.{{.TypeName}}{{if $.DataSources}}, resolving referenced {{template "sdkOpsDataSourceKinds" $}}{{end}}{{if $.References}}, resolving referenced CRs to Konnect IDs{{end}} via the provided client.
 func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Client) (*{{.ImportAlias}}.{{.TypeName}}, error) {
 {{- if $.References}}
-{{- if $.SecretReferences}}
+{{- if $.DataSources}}
 	spec, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {
 		return nil, err
@@ -917,12 +821,29 @@ func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Clie
 		payload = map[string]any{}
 	}
 {{- range $.References}}
-{{- if not .NestedRef}}
+{{- if .ObjectRefField}}
+	resolved{{.GoResolverName}}, err := resolve{{$.EntityName}}{{.GoResolverName}}(ctx, cl, obj)
+	if err != nil {
+		return nil, fmt.Errorf("resolving {{.Path}} reference: %w", err)
+	}
+	// A single ObjectRef resolves to at most one value; inject it as a plain
+	// string. An unset reference leaves the payload key absent.
+	if len(resolved{{.GoResolverName}}) > 0 {
+		payload["{{.SDKJSONFieldName}}"] = resolved{{.GoResolverName}}[0]
+	}
+{{- else if not .NestedRef}}
 	resolved{{.GoResolverName}}, err := resolve{{$.EntityName}}{{.GoResolverName}}(ctx, cl, obj)
 	if err != nil {
 		return nil, fmt.Errorf("resolving {{.Path}} references: %w", err)
 	}
-{{- if .DirectScalarRef}}
+{{- if .OptionalRef}}
+	// {{.Path}} has no Konnect counterpart: its resolved value is sent as
+	// {{.InjectIntoSDKJSONFieldName}}. An unset reference leaves {{.InjectIntoSDKJSONFieldName}} as set in the spec.
+	delete(payload, "{{.SDKJSONFieldName}}")
+	if len(resolved{{.GoResolverName}}) > 0 {
+		payload["{{.InjectIntoSDKJSONFieldName}}"] = resolved{{.GoResolverName}}[0]
+	}
+{{- else if .DirectScalarRef}}
 	payload["{{.SDKJSONFieldName}}"] = resolved{{.GoResolverName}}[0]
 {{- else}}
 	// Always set: an empty list must explicitly clear the field in Konnect.
@@ -992,18 +913,318 @@ func (obj *{{$.EntityName}}) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeName}},
 {{- end}}` + sdkOpsReferenceSharedDefines
 
 // sdkOpsReferenceSharedDefines holds the named templates shared between the
-// standard and root-union SDK-ops templates for CR-reference support:
-// nil-guarded accessors, per-reference resolvers, ResolveKonnectReferences,
-// and ACL-specific SDK payload injection.
+// standard and root-union SDK-ops templates for Secret/ConfigMap data source
+// resolution and CR-reference support: nil-guarded accessors, per-reference
+// resolvers, ResolveKonnectReferences, and ACL-specific SDK payload injection.
 const sdkOpsReferenceSharedDefines = `
+{{- define "sdkOpsDataSourceKinds"}}{{if $.HasConfigMapSourceRefs}}{{if $.HasSecretSourceRefs}}Secrets and ConfigMaps{{else}}ConfigMaps{{end}}{{else}}Secrets{{end}}{{end}}
+{{- define "sdkOpsDataSourceResolvers"}}
+func (obj *{{$.EntityName}}) sdkOpsAPISpec(ctx context.Context, cl client.Client) (*{{$.EntityName}}APISpec, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("{{$.EntityName}} is nil")
+	}
+
+	// Resolve against a deep copy: resolved values are written into the spec
+	// being walked, and union variants and slices are shared by reference, so
+	// a shallow copy would leak them into obj (e.g. the informer cache).
+	apiSpec := *obj.Spec.APISpec.DeepCopy()
+{{- range .DataSources}}
+{{- $ref := .}}
+	// Resolve {{.Path}}
+{{- if .IsSlice}}
+{{- range .PointerGuards}}
+	if apiSpec.{{.}} != nil {
+{{- end}}
+	for i := range apiSpec.{{$ref.SliceParentSelector}} {
+		src := apiSpec.{{$ref.SliceParentSelector}}[i]{{if $ref.SliceLeafField}}.{{$ref.SliceLeafField}}{{end}}
+{{- if $ref.IsConfigMap}}
+		if src.Type == ConfigMapDataSourceTypeConfigMapRef {
+			if src.ConfigMapRef == nil {
+				return nil, fmt.Errorf("configMapRef is nil for {{$ref.Path}}")
+			}
+			var configMap corev1.ConfigMap
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: obj.GetNamespace(), Name: src.ConfigMapRef.Name}, &configMap); err != nil {
+				return nil, fmt.Errorf("failed to fetch ConfigMap %s/%s: %w", obj.GetNamespace(), src.ConfigMapRef.Name, err)
+			}
+			resolved, ok := configMap.Data[src.ConfigMapRef.Key]
+			if !ok {
+				binaryValue, ok := configMap.BinaryData[src.ConfigMapRef.Key]
+				if !ok {
+					return nil, fmt.Errorf("configmap %s/%s is missing key %q", obj.GetNamespace(), src.ConfigMapRef.Name, src.ConfigMapRef.Key)
+				}
+				resolved = string(binaryValue)
+			}
+			apiSpec.{{$ref.SliceParentSelector}}[i]{{if $ref.SliceLeafField}}.{{$ref.SliceLeafField}}{{end}}.Value = &resolved
+		}
+{{- else}}
+		if src.Type == SensitiveDataSourceTypeSecretRef {
+			if src.SecretRef == nil {
+				return nil, fmt.Errorf("secretRef is nil for {{$ref.Path}}")
+			}
+			namespace := obj.GetNamespace()
+			if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+				namespace = *src.SecretRef.Namespace
+			}
+{{- if eq $ref.ValueGoType "string"}}
+			var secret corev1.Secret
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+			}
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
+			if !ok {
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+			}
+			resolved := string(secretBytes)
+{{- else}}
+			// valueFromSecretRef is hand-written for {{$ref.DedicatedTypeName}}
+			// and is NOT generated by crd-from-oas; see secretref_manual.go.
+			resolved, err := src.valueFromSecretRef(ctx, cl, namespace)
+			if err != nil {
+				return nil, fmt.Errorf("failed to resolve {{$ref.Path}}: %w", err)
+			}
+{{- end}}
+			apiSpec.{{$ref.SliceParentSelector}}[i]{{if $ref.SliceLeafField}}.{{$ref.SliceLeafField}}{{end}}.Value = &resolved
+		}
+{{- end}}
+	}
+{{- range $ref.PointerGuards}}
+	}
+{{- end}}
+{{- else}}
+{{- range .PointerGuards}}
+	if apiSpec.{{.}} != nil {
+{{- end}}
+	{
+		src := apiSpec.{{.GoFieldSelector}}
+{{- if $ref.IsConfigMap}}
+		if src.Type == ConfigMapDataSourceTypeConfigMapRef {
+			if src.ConfigMapRef == nil {
+				return nil, fmt.Errorf("configMapRef is nil for {{$ref.Path}}")
+			}
+			var configMap corev1.ConfigMap
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: obj.GetNamespace(), Name: src.ConfigMapRef.Name}, &configMap); err != nil {
+				return nil, fmt.Errorf("failed to fetch ConfigMap %s/%s: %w", obj.GetNamespace(), src.ConfigMapRef.Name, err)
+			}
+			resolved, ok := configMap.Data[src.ConfigMapRef.Key]
+			if !ok {
+				binaryValue, ok := configMap.BinaryData[src.ConfigMapRef.Key]
+				if !ok {
+					return nil, fmt.Errorf("configmap %s/%s is missing key %q", obj.GetNamespace(), src.ConfigMapRef.Name, src.ConfigMapRef.Key)
+				}
+				resolved = string(binaryValue)
+			}
+			apiSpec.{{$ref.GoFieldSelector}}.Value = &resolved
+		}
+{{- else}}
+		if src.Type == SensitiveDataSourceTypeSecretRef {
+			if src.SecretRef == nil {
+				return nil, fmt.Errorf("secretRef is nil for {{.Path}}")
+			}
+			namespace := obj.GetNamespace()
+			if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+				namespace = *src.SecretRef.Namespace
+			}
+{{- if eq $ref.ValueGoType "string"}}
+			var secret corev1.Secret
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+			}
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
+			if !ok {
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+			}
+			resolved := string(secretBytes)
+{{- else}}
+			// valueFromSecretRef is hand-written for {{$ref.DedicatedTypeName}}
+			// and is NOT generated by crd-from-oas; see secretref_manual.go.
+			resolved, err := src.valueFromSecretRef(ctx, cl, namespace)
+			if err != nil {
+				return nil, fmt.Errorf("failed to resolve {{.Path}}: %w", err)
+			}
+{{- end}}
+			apiSpec.{{.GoFieldSelector}}.Value = &resolved
+		}
+{{- end}}
+	}
+{{- range $ref.PointerGuards}}
+	}
+{{- end}}
+{{- end}}
+{{- end}}
+	return &apiSpec, nil
+}
+{{- if $.HasSecretSourceRefs}}
+
+// GetSensitiveDataSecretRefs returns all Secret references used to populate sensitive SDK payload fields.
+func (obj *{{$.EntityName}}) GetSensitiveDataSecretRefs() []SensitiveDataSecretRef {
+	if obj == nil {
+		return nil
+	}
+	var refs []SensitiveDataSecretRef
+{{- range .DataSources}}
+{{- $ref := .}}
+{{- if not .IsConfigMap}}
+{{- if .IsSlice}}
+{{- range .PointerGuards}}
+	if obj.Spec.APISpec.{{.}} != nil {
+{{- end}}
+	for _, item := range obj.Spec.APISpec.{{$ref.SliceParentSelector}} {
+		if item{{if $ref.SliceLeafField}}.{{$ref.SliceLeafField}}{{end}}.Type == SensitiveDataSourceTypeSecretRef && item{{if $ref.SliceLeafField}}.{{$ref.SliceLeafField}}{{end}}.SecretRef != nil {
+			refs = append(refs, *item{{if $ref.SliceLeafField}}.{{$ref.SliceLeafField}}{{end}}.SecretRef)
+		}
+	}
+{{- range $ref.PointerGuards}}
+	}
+{{- end}}
+{{- else}}
+{{- range .PointerGuards}}
+	if obj.Spec.APISpec.{{.}} != nil {
+{{- end}}
+	if obj.Spec.APISpec.{{.GoFieldSelector}}.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef != nil {
+		refs = append(refs, *obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef)
+	}
+{{- range .PointerGuards}}
+	}
+{{- end}}
+{{- end}}
+{{- end}}
+{{- end}}
+	return refs
+}
+{{- end}}
+{{- if $.HasConfigMapSourceRefs}}
+
+// GetConfigMapDataSourceRefs returns all ConfigMap references used to populate SDK payload fields.
+func (obj *{{$.EntityName}}) GetConfigMapDataSourceRefs() []ConfigMapDataSourceRef {
+	if obj == nil {
+		return nil
+	}
+	var refs []ConfigMapDataSourceRef
+{{- range .DataSources}}
+{{- $ref := .}}
+{{- if .IsConfigMap}}
+{{- if .IsSlice}}
+{{- range .PointerGuards}}
+	if obj.Spec.APISpec.{{.}} != nil {
+{{- end}}
+	for _, item := range obj.Spec.APISpec.{{$ref.SliceParentSelector}} {
+		if item{{if $ref.SliceLeafField}}.{{$ref.SliceLeafField}}{{end}}.Type == ConfigMapDataSourceTypeConfigMapRef && item{{if $ref.SliceLeafField}}.{{$ref.SliceLeafField}}{{end}}.ConfigMapRef != nil {
+			refs = append(refs, *item{{if $ref.SliceLeafField}}.{{$ref.SliceLeafField}}{{end}}.ConfigMapRef)
+		}
+	}
+{{- range $ref.PointerGuards}}
+	}
+{{- end}}
+{{- else}}
+{{- range .PointerGuards}}
+	if obj.Spec.APISpec.{{.}} != nil {
+{{- end}}
+	if obj.Spec.APISpec.{{.GoFieldSelector}}.Type == ConfigMapDataSourceTypeConfigMapRef && obj.Spec.APISpec.{{.GoFieldSelector}}.ConfigMapRef != nil {
+		refs = append(refs, *obj.Spec.APISpec.{{.GoFieldSelector}}.ConfigMapRef)
+	}
+{{- range .PointerGuards}}
+	}
+{{- end}}
+{{- end}}
+{{- end}}
+{{- end}}
+	return refs
+}
+{{- end}}
+{{- end}}
 {{- define "sdkOpsReferenceResolvers"}}
 {{- range .References}}
 {{- $ref := .}}
-{{- if .NestedRef}}
+{{- if .ObjectRefField}}
+// resolve{{$.EntityName}}{{.GoResolverName}} resolves the ObjectRef at {{.Path}}
+// to a Konnect {{if .ResolvesToName}}name{{else}}ID{{end}}.
+func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.Client, obj *{{$.EntityName}}) ([]string, error) {
+	ref := obj.Spec.APISpec.{{.GoFieldName}}
+	if ref == nil {
+		return nil, nil
+	}
+	switch ref.Type {
+	case {{$.ObjectRefTypePrefix}}ObjectRefTypeKonnectID:
+		if ref.KonnectID == nil {
+			return nil, fmt.Errorf("reference at {{.Path}} has type konnectID but no konnectID set")
+		}
+{{- if .SameTypeRef}}
+		// A same-type reference must not point at the object itself. The
+		// object's own Konnect ID is only known after it is programmed, so
+		// this cannot be rejected at admission time: guard here instead.
+		if id := obj.GetKonnectID(); id != "" && id == *ref.KonnectID {
+			return nil, ReferenceSelfError{Kind: "{{.DefaultKind}}", Namespace: obj.GetNamespace(), Name: obj.GetName()}
+		}
+{{- end}}
+		return []string{*ref.KonnectID}, nil
+	case {{$.ObjectRefTypePrefix}}ObjectRefTypeNamespacedRef:
+		if ref.NamespacedRef == nil {
+			return nil, fmt.Errorf("reference at {{.Path}} has type namespacedRef but no namespacedRef set")
+		}
+		ns := obj.GetNamespace()
+		if ref.NamespacedRef.Namespace != nil && *ref.NamespacedRef.Namespace != "" {
+			ns = *ref.NamespacedRef.Namespace
+		}
+		name := ref.NamespacedRef.Name
+{{- if not .SupportCrossNamespaceReference}}
+		if ns != obj.GetNamespace() {
+			return nil, ReferenceCrossNamespaceError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name, ReferrerNamespace: obj.GetNamespace()}
+		}
+{{- end}}
+{{- if .SameTypeRef}}
+		// Rejected at admission time by a CEL rule on the CRD; guard here as
+		// well so the resolver stays correct when validation is bypassed.
+		if ns == obj.GetNamespace() && name == obj.GetName() {
+			return nil, ReferenceSelfError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name}
+		}
+{{- end}}
+		var referenced {{.DefaultKind}}
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil, ReferenceNotFoundError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name, Err: err}
+			}
+			return nil, fmt.Errorf("failed to get referenced {{.DefaultKind}} %s/%s: %w", ns, name, err)
+		}
+{{- if .SameParentRefField}}
+		// Same-type references embed the referenced object's Konnect ID in a
+		// request scoped to the referrer's parent, so both objects must belong
+		// to the same parent.
+		if {{$.ObjectRefTypePrefix}}ObjectRefsDiffer(obj.Spec.{{.SameParentRefField}}, referenced.Spec.{{.SameParentRefField}}, obj.GetNamespace(), ns) {
+			return nil, ReferenceDifferentParentError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name, ParentKind: "{{.SameParentRefKind}}"}
+		}
+{{- end}}
+{{- if .ResolvesToName}}
+		if referenced.GetKonnectID() == "" {
+			return nil, ReferenceNotProgrammedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name}
+		}
+		return []string{referenced.GetKonnectName()}, nil
+{{- else}}
+		id := referenced.GetKonnectID()
+		if id == "" {
+			return nil, ReferenceNotProgrammedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name}
+		}
+		return []string{id}, nil
+{{- end}}
+	default:
+		return nil, fmt.Errorf("unsupported reference type %q at {{.Path}}", ref.Type)
+	}
+}
+{{- else}}
+{{- if or .NestedRef .OptionalRef}}
+{{- if .OptionalRef}}
+// RefsAt{{$.EntityName}}{{.GoResolverName}} returns the reference at {{.Path}},
+// or nil when it is unset.
+{{- else}}
 // RefsAt{{$.EntityName}}{{.GoResolverName}} returns the references at {{.Path}},
 // or nil when any ancestor is unset.
+{{- end}}
 func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) {{if .NestedArrayList}}[][]{{else}}[]{{end}}{{.TypeName}} {
-{{- if .NestedArrayScalar}}
+{{- if .OptionalRef}}
+	if obj.Spec.APISpec.{{.GoFieldName}}.Name == "" {
+		return nil
+	}
+	return []{{.TypeName}}{obj.Spec.APISpec.{{.GoFieldName}}}
+{{- else if .NestedArrayScalar}}
 {{- range .ArrayGuardExprs}}
 	if {{.}} == nil {
 		return nil
@@ -1141,6 +1362,15 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
 		}
+{{- if .OptionalRef}}
+		// The resolved value replaces {{.InjectInto}}: {{.DefaultKind}} objects
+		// being deleted must not gain new users, which could keep their deletion
+		// blocked.
+		if !referenced.GetDeletionTimestamp().IsZero() {
+			errs = append(errs, ReferenceBeingDeletedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
+			continue
+		}
+{{- end}}
 {{- if .ResolvesToName}}
 		if referenced.GetKonnectID() == "" {
 			errs = append(errs, ReferenceNotProgrammedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
@@ -1167,6 +1397,29 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 	return resolved, nil
 }
 {{- end}}
+{{- end}}
+{{- range .References}}
+{{- if .ReverseWatch}}
+
+// {{$.EntityName}}RefsTo{{.DefaultKind}} returns the keys of the {{.DefaultKind}}
+// objects obj references through {{.Path}}, with the default namespace applied.
+func {{$.EntityName}}RefsTo{{.DefaultKind}}(obj *{{$.EntityName}}) []client.ObjectKey {
+	var keys []client.ObjectKey
+	for _, ref := range {{.RefsExpr}} {
+		if ref.Kind != "" && ref.Kind != "{{.DefaultKind}}" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
+	}
+	return keys
+}
+
+{{- end}}
+{{- end}}
 {{- if $.References}}
 
 // ResolveKonnectReferences resolves every CR reference declared on the spec and
@@ -1189,6 +1442,23 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 	var checks []CrossNamespaceReferenceCheck
 	{{- range $.References}}
 	{{- if .SupportCrossNamespaceReference}}
+	{{- if .ObjectRefField}}
+	if ref := {{.RefsExpr}}; ref != nil && ref.Type == {{$.ObjectRefTypePrefix}}ObjectRefTypeNamespacedRef && ref.NamespacedRef != nil {
+		ns := obj.GetNamespace()
+		if ref.NamespacedRef.Namespace != nil && *ref.NamespacedRef.Namespace != "" {
+			ns = *ref.NamespacedRef.Namespace
+		}
+		if ns != obj.GetNamespace() {
+			checks = append(checks, CrossNamespaceReferenceCheck{
+				FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "{{$.EntityName}}"},
+				ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "{{.DefaultKind}}"},
+				FromNamespace: obj.GetNamespace(),
+				ToNamespace:   ns,
+				ToName:        ref.NamespacedRef.Name,
+			})
+		}
+	}
+	{{- else}}
 	{{- if .NestedArrayList}}
 	for _, refs := range {{.RefsExpr}} {
 		for _, ref := range refs {
@@ -1217,6 +1487,7 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 		}
 		{{- end}}
 	}
+	{{- end}}
 	{{- end}}
 	{{- end}}
 	return checks
@@ -1502,6 +1773,9 @@ var {{$.EntityName}}SDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 			"{{.}}",
 {{- end}}
 		},
+{{- if .Sensitive}}
+		Sensitive: true,
+{{- end}}
 	},
 {{- end}}
 }
@@ -1517,8 +1791,12 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error)
 	if err := json.Unmarshal(data, &rawPayload); err != nil {
 		return nil, fmt.Errorf("failed to decode {{$.EntityName}}APISpec: %w", err)
 	}
-	{{- if $.SecretReferences}}
+	{{- if $.DataSources}}
+	{{- if $.FreeformKeyFields}}
+	rawPayload = flattenSensitiveDataExcept(rawPayload, {{$.EntityName}}SDKOpsFreeformKeyFields)
+	{{- else}}
 	rawPayload = flattenSensitiveData(rawPayload)
+	{{- end}}
 	{{- end}}
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
@@ -1552,11 +1830,17 @@ func (s *{{$.EntityName}}APISpec) selectedSDKOpsPayload(payload map[string]any) 
 
 	var selected any
 	var variant string
+	{{- if $.FreeformKeyFields}}
+	variantJSON := ""
+	{{- end}}
 	switch s.{{$.UnionTypeName}}.Type {
 {{- range .Variants}}
 	case {{$.UnionTypeName}}Type{{.FieldName}}:
 		selected = payload["{{.JSONName}}"]
 		variant = "{{.FieldName}}"
+		{{- if $.FreeformKeyFields}}
+		variantJSON = "{{.JSONName}}"
+		{{- end}}
 {{- end}}
 	default:
 		return nil, "", fmt.Errorf("unsupported {{$.EntityName}} config type %q", s.{{$.UnionTypeName}}.Type)
@@ -1565,7 +1849,11 @@ func (s *{{$.EntityName}}APISpec) selectedSDKOpsPayload(payload map[string]any) 
 	if selected == nil {
 		return nil, "", fmt.Errorf("{{$.EntityName}} config payload missing for type %q", s.{{$.UnionTypeName}}.Type)
 	}
+	{{- if $.FreeformKeyFields}}
+	selected = flattenSDKUnionsExceptUnder(selected, {{$.EntityName}}SDKOpsFreeformKeyFields, variantJSON)
+	{{- else}}
 	selected = flattenSDKUnions(selected)
+	{{- end}}
 	if selectedMap, ok := selected.(map[string]any); ok {
 		if typeValue, ok := payload["type"]; ok {
 			if _, hasType := selectedMap["type"]; !hasType {
@@ -1716,141 +2004,18 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 }
 {{end}}
 {{- if .NeedsClient}}
-{{- if .SecretReferences}}
+{{- if .DataSources}}
 
-func (obj *{{$.EntityName}}) sdkOpsAPISpec(ctx context.Context, cl client.Client) (*{{$.EntityName}}APISpec, error) {
-	if obj == nil {
-		return nil, fmt.Errorf("{{$.EntityName}} is nil")
-	}
-
-	apiSpec := obj.Spec.APISpec
-{{- range .SecretReferences}}
-{{- $ref := .}}
-	// Resolve {{.Path}}
-{{- if .IsSlice}}
-{{- range .PointerGuards}}
-	if apiSpec.{{.}} != nil {
-{{- end}}
-	for i := range apiSpec.{{$ref.SliceParentSelector}} {
-		src := apiSpec.{{$ref.SliceParentSelector}}[i]{{if $ref.SliceLeafField}}.{{$ref.SliceLeafField}}{{end}}
-		if src.Type == SensitiveDataSourceTypeSecretRef {
-			if src.SecretRef == nil {
-				return nil, fmt.Errorf("secretRef is nil for {{$ref.Path}}")
-			}
-			namespace := obj.GetNamespace()
-			if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
-				namespace = *src.SecretRef.Namespace
-			}
-{{- if eq $ref.ValueGoType "string"}}
-			var secret corev1.Secret
-			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
-				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
-			}
-			secretBytes, ok := secret.Data[src.SecretRef.Key]
-			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
-			}
-			resolved := string(secretBytes)
-{{- else}}
-			// valueFromSecretRef is hand-written for {{$ref.DedicatedTypeName}}
-			// and is NOT generated by crd-from-oas; see secretref_manual.go.
-			resolved, err := src.valueFromSecretRef(ctx, cl, namespace)
-			if err != nil {
-				return nil, fmt.Errorf("failed to resolve {{$ref.Path}}: %w", err)
-			}
-{{- end}}
-			apiSpec.{{$ref.SliceParentSelector}}[i]{{if $ref.SliceLeafField}}.{{$ref.SliceLeafField}}{{end}}.Value = &resolved
-		}
-	}
-{{- range $ref.PointerGuards}}
-	}
-{{- end}}
-{{- else}}
-{{- range .PointerGuards}}
-	if apiSpec.{{.}} != nil {
-{{- end}}
-	{
-		src := apiSpec.{{.GoFieldSelector}}
-		if src.Type == SensitiveDataSourceTypeSecretRef {
-			if src.SecretRef == nil {
-				return nil, fmt.Errorf("secretRef is nil for {{.Path}}")
-			}
-			namespace := obj.GetNamespace()
-			if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
-				namespace = *src.SecretRef.Namespace
-			}
-{{- if eq $ref.ValueGoType "string"}}
-			var secret corev1.Secret
-			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
-				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
-			}
-			secretBytes, ok := secret.Data[src.SecretRef.Key]
-			if !ok {
-				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
-			}
-			resolved := string(secretBytes)
-{{- else}}
-			// valueFromSecretRef is hand-written for {{$ref.DedicatedTypeName}}
-			// and is NOT generated by crd-from-oas; see secretref_manual.go.
-			resolved, err := src.valueFromSecretRef(ctx, cl, namespace)
-			if err != nil {
-				return nil, fmt.Errorf("failed to resolve {{.Path}}: %w", err)
-			}
-{{- end}}
-			apiSpec.{{.GoFieldSelector}}.Value = &resolved
-		}
-	}
-{{- range $ref.PointerGuards}}
-	}
-{{- end}}
-{{- end}}
-{{- end}}
-	return &apiSpec, nil
-}
-
-// GetSensitiveDataSecretRefs returns all Secret references used to populate sensitive SDK payload fields.
-func (obj *{{$.EntityName}}) GetSensitiveDataSecretRefs() []SensitiveDataSecretRef {
-	if obj == nil {
-		return nil
-	}
-	var refs []SensitiveDataSecretRef
-{{- range .SecretReferences}}
-{{- $ref := .}}
-{{- if .IsSlice}}
-{{- range .PointerGuards}}
-	if obj.Spec.APISpec.{{.}} != nil {
-{{- end}}
-	for _, item := range obj.Spec.APISpec.{{$ref.SliceParentSelector}} {
-		if item{{if $ref.SliceLeafField}}.{{$ref.SliceLeafField}}{{end}}.Type == SensitiveDataSourceTypeSecretRef && item{{if $ref.SliceLeafField}}.{{$ref.SliceLeafField}}{{end}}.SecretRef != nil {
-			refs = append(refs, *item{{if $ref.SliceLeafField}}.{{$ref.SliceLeafField}}{{end}}.SecretRef)
-		}
-	}
-{{- range $ref.PointerGuards}}
-	}
-{{- end}}
-{{- else}}
-{{- range .PointerGuards}}
-	if obj.Spec.APISpec.{{.}} != nil {
-{{- end}}
-	if obj.Spec.APISpec.{{.GoFieldSelector}}.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef != nil {
-		refs = append(refs, *obj.Spec.APISpec.{{.GoFieldSelector}}.SecretRef)
-	}
-{{- range .PointerGuards}}
-	}
-{{- end}}
-{{- end}}
-{{- end}}
-	return refs
-}
+{{- template "sdkOpsDataSourceResolvers" $}}
 {{- end}}
 {{- template "sdkOpsReferenceResolvers" $}}
 {{range .Methods}}
 
 // {{.MethodName}} converts the {{$.EntityName}} to the SDK type
-// {{.ImportAlias}}.{{.TypeName}}, resolving referenced {{if $.References}}{{if $.SecretReferences}}Secrets and CRs{{else}}CRs{{end}}{{else}}Secrets{{end}} via the provided client.
+// {{.ImportAlias}}.{{.TypeName}}, resolving referenced {{if $.References}}{{if $.DataSources}}{{template "sdkOpsDataSourceKinds" $}} and CRs{{else}}CRs{{end}}{{else}}{{template "sdkOpsDataSourceKinds" $}}{{end}} via the provided client.
 func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Client) (*{{.ImportAlias}}.{{.TypeName}}, error) {
 {{- if $.References}}
-{{- if $.SecretReferences}}
+{{- if $.DataSources}}
 	spec, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {
 		return nil, err
@@ -1920,6 +2085,9 @@ const opsControllerTestTemplate = sharedGeneratedFilePreamble + `
 package ops
 
 import (
+{{- if .AssertsInjectInto}}
+	"encoding/json"
+{{- end}}
 	"errors"
 	"testing"
 
@@ -1930,6 +2098,9 @@ import (
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+{{- if .AssertsInjectInto}}
+	"sigs.k8s.io/controller-runtime/pkg/client"
+{{- end}}
 {{- if .NeedsFakeClient}}
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 {{- end}}
@@ -1998,6 +2169,25 @@ func TestCreate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 {{- end}}
 	require.NoError(t, err)
 {{- $reqBody := "expectedRequest"}}{{if and .Create.CreateFullyWrapped .Create.CreateBodyField}}{{$reqBody = printf "expectedRequest.%s" .Create.CreateBodyField}}{{end}}
+{{- if .AssertsInjectInto}}
+	{
+		// Additive references are resolved to the referenced object's Konnect
+		// key, sent in place of the reference.
+		data, err := json.Marshal({{$reqBody}})
+		require.NoError(t, err)
+		var body map[string]any
+		require.NoError(t, json.Unmarshal(data, &body))
+{{- range $i, $c := .InjectIntoChecks}}
+		var referenced{{$i}} {{$.APIAlias}}.{{$c.Kind}}
+		require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: "default", Name: "{{$c.RefName}}"}, &referenced{{$i}}))
+		require.NotEmpty(t, referenced{{$i}}.{{$c.KonnectGetter}}())
+		require.Equal(t, referenced{{$i}}.{{$c.KonnectGetter}}(), body["{{$c.TargetKey}}"])
+{{- end}}
+	}
+{{- end}}
+{{- if .Create.LabelsUnionTargets}}
+{{- template "labelsUnionInject" (labelsUnionInject "expectedRequest" .Create.LabelsUnionTargets $.Create.HasTags $.Create.LabelsPointer)}}
+{{- else}}
 {{- $labelsTarget := $reqBody}}{{if .Create.LabelsUnionField}}{{$labelsTarget = printf "%s.%s" $reqBody .Create.LabelsUnionField}}{{end}}
 {{- if .Create.HasTags}}
 	{{$labelsTarget}}.Tags = GenerateTagsForObject(obj, {{$labelsTarget}}.Tags...)
@@ -2006,6 +2196,7 @@ func TestCreate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$labelsTarget}}.Labels)
 {{- else}}
 	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabels(obj, {{$labelsTarget}}.Labels)
+{{- end}}
 {{- end}}
 {{- end}}
 {{- if .Create.CreateFullyWrapped}}
@@ -2085,6 +2276,9 @@ func TestCreate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 {{- end}}
 	require.NoError(t, err)
 {{- $reqBody := "expectedRequest"}}{{if and .Create.CreateFullyWrapped .Create.CreateBodyField}}{{$reqBody = printf "expectedRequest.%s" .Create.CreateBodyField}}{{end}}
+{{- if .Create.LabelsUnionTargets}}
+{{- template "labelsUnionInject" (labelsUnionInject "expectedRequest" .Create.LabelsUnionTargets $.Create.HasTags $.Create.LabelsPointer)}}
+{{- else}}
 {{- $labelsTarget := $reqBody}}{{if .Create.LabelsUnionField}}{{$labelsTarget = printf "%s.%s" $reqBody .Create.LabelsUnionField}}{{end}}
 {{- if .Create.HasTags}}
 	{{$labelsTarget}}.Tags = GenerateTagsForObject(obj, {{$labelsTarget}}.Tags...)
@@ -2093,6 +2287,7 @@ func TestCreate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$labelsTarget}}.Labels)
 {{- else}}
 	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabels(obj, {{$labelsTarget}}.Labels)
+{{- end}}
 {{- end}}
 {{- end}}
 {{- if .Create.CreateFullyWrapped}}
@@ -2243,6 +2438,9 @@ func TestUpdate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 	expectedRequest, err := obj.Spec.APISpec.{{.Update.UpdateReqMethod}}()
 {{- end}}
 	require.NoError(t, err)
+{{- if .Update.LabelsUnionTargets}}
+{{- template "labelsUnionInject" (labelsUnionInject "expectedRequest" .Update.LabelsUnionTargets $.Update.HasTags $.Update.LabelsPointer)}}
+{{- else}}
 {{- $labelsTarget := "expectedRequest"}}{{if .Update.LabelsFieldPath}}{{$labelsTarget = printf "expectedRequest.%s" .Update.LabelsFieldPath}}{{end}}
 {{- if .Update.HasTags}}
 	{{$labelsTarget}}.Tags = GenerateTagsForObject(obj, {{$labelsTarget}}.Tags...)
@@ -2251,6 +2449,7 @@ func TestUpdate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$labelsTarget}}.Labels)
 {{- else}}
 	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabels(obj, {{$labelsTarget}}.Labels)
+{{- end}}
 {{- end}}
 {{- end}}
 {{- if .Update.UpdateFullyWrapped}}
@@ -2320,6 +2519,9 @@ func TestUpdate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 	expectedRequest, err := obj.Spec.APISpec.{{.Update.UpdateReqMethod}}()
 {{- end}}
 	require.NoError(t, err)
+{{- if .Update.LabelsUnionTargets}}
+{{- template "labelsUnionInject" (labelsUnionInject "expectedRequest" .Update.LabelsUnionTargets $.Update.HasTags $.Update.LabelsPointer)}}
+{{- else}}
 {{- $labelsTarget := "expectedRequest"}}{{if .Update.LabelsFieldPath}}{{$labelsTarget = printf "expectedRequest.%s" .Update.LabelsFieldPath}}{{end}}
 {{- if .Update.HasTags}}
 	{{$labelsTarget}}.Tags = GenerateTagsForObject(obj, {{$labelsTarget}}.Tags...)
@@ -2328,6 +2530,7 @@ func TestUpdate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$labelsTarget}}.Labels)
 {{- else}}
 	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabels(obj, {{$labelsTarget}}.Labels)
+{{- end}}
 {{- end}}
 {{- end}}
 {{- if .Update.UpdateFullyWrapped}}
@@ -2595,10 +2798,17 @@ import (
 
 ` + sensitiveDataSourceStructType + `
 {{- end}}
+{{- if .HasConfigMapRefEntities}}
+
+` + configMapDataSourceType + `
+
+` + configMapDataSourceStructType + `
+{{- end}}
 
 ` + flattenSDKUnionsHelper + `
 
 ` + flattenSensitiveDataHelper + `
+` + flattenSensitiveDataExceptHelper + `
 
 ` + renameKeysToSDKHelper + `
 
@@ -2640,6 +2850,25 @@ import (
 	{{.APIAlias}} "{{.APIPackagePath}}"
 )
 `
+
+// labelsUnionInjectTemplate injects Kubernetes metadata labels/tags into each
+// member of a multi-member root-union request body, guarding every member as
+// only the selected one is set at runtime. Parsed alongside the ops and ops
+// test templates; invoked with the labelsUnionInject template func.
+const labelsUnionInjectTemplate = `{{define "labelsUnionInject"}}
+{{- $root := .Root}}
+{{- range .Targets}}
+	if {{if eq $root "req"}}{{.Guard}}{{else}}{{.ExpectedGuard}}{{end}} {
+{{- if $.HasTags}}
+		{{$root}}.{{.Path}}.Tags = GenerateTagsForObject(obj, {{$root}}.{{.Path}}.Tags...)
+{{- else if $.LabelsPointer}}
+		{{$root}}.{{.Path}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$root}}.{{.Path}}.Labels)
+{{- else}}
+		{{$root}}.{{.Path}}.Labels = WithKubernetesMetadataLabels(obj, {{$root}}.{{.Path}}.Labels)
+{{- end}}
+	}
+{{- end}}
+{{- end}}`
 
 // opsCreateFuncTemplate renders a single create<Entity> function body.
 // It is concatenated after the file header produced by opsPerEntityFileHeaderTemplate.
@@ -2704,6 +2933,9 @@ func create{{.Entity}}(
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
 {{- $reqBody := "req"}}{{if and .CreateFullyWrapped .CreateBodyField}}{{$reqBody = printf "req.%s" .CreateBodyField}}{{end}}
+{{- if .LabelsUnionTargets}}
+{{- template "labelsUnionInject" (labelsUnionInject "req" .LabelsUnionTargets $.HasTags $.LabelsPointer)}}
+{{- else}}
 {{- $labelsTarget := $reqBody}}{{if .LabelsUnionField}}{{$labelsTarget = printf "%s.%s" $reqBody .LabelsUnionField}}{{end}}
 {{- if .HasTags}}
 {{- if .LabelsUnionField}}
@@ -2724,6 +2956,7 @@ func create{{.Entity}}(
 {{- end}}
 {{- if .LabelsUnionField}}
 	}
+{{- end}}
 {{- end}}
 {{- end}}
 {{- if .CreateFullyWrapped}}
@@ -2846,6 +3079,9 @@ func update{{.Entity}}(
 	if err != nil {
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
 	}
+{{- if .LabelsUnionTargets}}
+{{- template "labelsUnionInject" (labelsUnionInject "req" .LabelsUnionTargets $.HasTags $.LabelsPointer)}}
+{{- else}}
 {{- $labelsTarget := "req"}}{{if .LabelsFieldPath}}{{$labelsTarget = printf "req.%s" .LabelsFieldPath}}{{end}}
 {{- if .HasTags}}
 {{- if .LabelsFieldGuard}}
@@ -2866,6 +3102,7 @@ func update{{.Entity}}(
 {{- end}}
 {{- if .LabelsFieldGuard}}
 	}
+{{- end}}
 {{- end}}
 {{- end}}
 {{- if .UpdateFullyWrapped}}
@@ -3392,6 +3629,14 @@ func get{{.Entity}}ForUID(
 		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 	}
 {{- else if .HasLabels}}
+{{- if .LabelsResponseVariantFields}}
+
+	// Without a UID every unlabeled Konnect entity would match below.
+	uid := string(obj.GetUID())
+	if uid == "" {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+{{- end}}
 
 	// TODO: pass a Filter to {{.ListSDKMethod}} (e.g. by name/labels) so we
 	// do not page through every entity in the tenant. Filter types and
@@ -3420,6 +3665,31 @@ func get{{.Entity}}ForUID(
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
+{{- if .LabelsResponseVariantFields}}
+
+	// List items are root unions whose wrapper exposes no GetID()/GetLabels():
+	// read them from whichever variant is set.
+	// TODO: only the first page of results is scanned. Tracked in
+	// https://github.com/Kong/kong-operator/issues/3987.
+	for _, entry := range {{.ListResponseItemsExpr}} {
+		var (
+			id     string
+			labels map[string]string
+		)
+		switch {
+		{{- range .LabelsResponseVariantFields}}
+		case entry.{{.}} != nil:
+			id, labels = entry.{{.}}.GetID(), entry.{{.}}.GetLabels()
+		{{- end}}
+		default:
+			continue
+		}
+		if id != "" && labels[KubernetesUIDLabelKey] == uid {
+			return id, nil
+		}
+	}
+{{- else}}
+
 	for _, entry := range {{.ListResponseItemsExpr}} {
 		if entry.GetLabels()[KubernetesUIDLabelKey] != string(obj.GetUID()) {
 			continue
@@ -3428,6 +3698,7 @@ func get{{.Entity}}ForUID(
 			return entry.GetID(), nil
 		}
 	}
+{{- end}}
 {{- else if .HasName}}
 
 	// TODO: {{.Entity}}'s Konnect list response lacks labels/tags so UID matching
@@ -3800,6 +4071,11 @@ type ReferenceNotFoundError = commonv1alpha1.ReferenceNotFoundError
 // no Konnect ID yet.
 type ReferenceNotProgrammedError = commonv1alpha1.ReferenceNotProgrammedError
 
+// ReferenceBeingDeletedError is returned when a referenced CR is being
+// deleted, for references that must not start using an object that is going
+// away.
+type ReferenceBeingDeletedError = commonv1alpha1.ReferenceBeingDeletedError
+
 // ReferenceCrossNamespaceError is returned when a reference points to another
 // namespace. Cross-namespace references are rejected until explicit
 // cross-namespace support and authorization checks are implemented.
@@ -3810,6 +4086,17 @@ type ReferenceCrossNamespaceError = commonv1alpha1.ReferenceCrossNamespaceError
 // within the same Konnect Gateway because Konnect only accepts policy and ACL
 // references from the same AI Gateway.
 type ReferenceDifferentGatewayError = commonv1alpha1.ReferenceDifferentGatewayError
+
+// ReferenceDifferentParentError is returned when a same-type reference (e.g.
+// PortalPage's parentPageIDRef) points to a CR whose parent reference differs
+// from the referrer's. Konnect scopes child entities under their parent, so
+// such a reference can never resolve to a usable ID.
+type ReferenceDifferentParentError = commonv1alpha1.ReferenceDifferentParentError
+
+// ReferenceSelfError is returned when a same-type reference (e.g. PortalPage's
+// parentPageIDRef) points at the referencing object itself. Such a reference
+// can never resolve to a usable ID.
+type ReferenceSelfError = commonv1alpha1.ReferenceSelfError
 {{range .RefTypes}}
 // {{.TypeName}} references {{.KindsSentence}} in the cluster. The referenced
 // object's Konnect {{.ResolvesTo}} is used where the Konnect API accepts it.

@@ -14,7 +14,7 @@ apiGroupVersions:
       # AI Gateway APIs
       - path: /v1/ai-gateways/{gatewayId}/data-plane-certificates
         name: AIGatewayDataPlaneCertificate
-        secretReferences:
+        dataSources:
           - path: spec.apiSpec.cert
             type: Secret
         ops:
@@ -44,7 +44,7 @@ apiGroupVersions:
 
       - path: /v1/ai-gateways/{gatewayId}/auth-strategies
         name: AIGatewayAuthStrategy
-        secretReferences:
+        dataSources:
           - path: spec.apiSpec.openid-connect.config.clientSecret
             type: Secret
         ops:
@@ -152,7 +152,7 @@ apiGroupVersions:
 
       - path: /v1/ai-gateways/{gatewayId}/model-providers
         name: AIGatewayModelProvider
-        secretReferences:
+        dataSources:
           # Basic-auth token: matches the 15 providers whose auth is a direct
           # (non-union) basic config; skipped for the 4 cloud providers below,
           # whose auth is itself a discriminated union.
@@ -537,7 +537,7 @@ apiGroupVersions:
       # write-only and sourced from a Secret; it is never echoed back in status.
       - path: /v1/ai-gateways/{gatewayId}/consumers/{consumerId}/credentials
         name: AIGatewayConsumerCredential
-        secretReferences:
+        dataSources:
           - path: spec.apiSpec.apiKey
             type: Secret
         ops:
@@ -568,9 +568,28 @@ apiGroupVersions:
 
       - path: /v1/ai-gateways/{gatewayId}/policies
         name: AIGatewayPolicy
-        secretReferences:
+        dataSources:
           - path: spec.apiSpec.config
             type: Secret
+        references:
+          # `type` takes a plugin name: a built-in plugin, or a custom policy's
+          # Konnect name. customPolicyRef lets a policy use an
+          # AIGatewayCustomPolicy declared in the cluster instead of copying
+          # its Konnect name into `type`; exactly one of the two is set.
+          - path: spec.apiSpec.customPolicyRef
+            kinds: [AIGatewayCustomPolicy]
+            resolvesTo: name
+            injectInto: type
+            # Konnect refuses to delete a custom policy while policies use it;
+            # the AIGatewayCustomPolicy controller watches the policies so a
+            # blocked deletion resumes as soon as the last one using it is gone.
+            reverseWatch: true
+            description: >-
+              CustomPolicyRef references the AIGatewayCustomPolicy this policy
+              uses, as an alternative to setting type to the custom policy's
+              Konnect name. The referenced custom policy must be programmed in
+              the same AI Gateway; its Konnect name is sent as the policy type.
+              Exactly one of type and customPolicyRef must be set.
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayPoliciesSDK
@@ -588,9 +607,61 @@ apiGroupVersions:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
 
+      - path: /v1/ai-gateways/{gatewayId}/custom-policies
+        name: AIGatewayCustomPolicy
+        # The Lua schema/handler sources can be provided inline or sourced from
+        # a ConfigMap key. The shared ConfigMapDataSource type bounds the inline
+        # value to 256KiB, since the OAS declares no maxLength for these fields
+        # and the generator's default string limit (253) would reject any
+        # realistic plugin.
+        dataSources:
+          - path: spec.apiSpec.installed.schema
+            type: ConfigMap
+          - path: spec.apiSpec.streaming.schema
+            type: ConfigMap
+          - path: spec.apiSpec.streaming.handler
+            type: ConfigMap
+        # The name is documented as immutable after creation, and so is the
+        # type: Konnect rejects an update switching between installed and
+        # streaming, so a type change requires recreating the object.
+        cel:
+          spec:
+            apiSpec:
+              _validations:
+                - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.type) || self.type == oldSelf.type\",message=\"type is immutable\""
+              installed:
+                name:
+                  _validations:
+                    - "+kubebuilder:validation:XValidation:rule=\"self == oldSelf\",message=\"name is immutable\""
+              streaming:
+                name:
+                  _validations:
+                    - "+kubebuilder:validation:XValidation:rule=\"self == oldSelf\",message=\"name is immutable\""
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayCustomPoliciesSDK
+            fieldName: AIGatewayCustomPolicies
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayCustomPolicyRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayCustomPolicyRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectAIGateway
+            group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayRef
+            typeName: AIGatewayRef
+            # Custom policies are Konnect-only: the on-prem AI Gateway
+            # controllers and config translator do not handle this entity, so
+            # an OnPremAIGateway ref would be accepted but never reconciled.
+            allowedKinds:
+              - KonnectAIGateway
+
       - path: /v1/ai-gateways/{gatewayId}/ca-certificates
         name: AIGatewayCACertificate
-        secretReferences:
+        dataSources:
           - path: spec.apiSpec.cert
             type: Secret
         ops:
@@ -612,7 +683,7 @@ apiGroupVersions:
 
       - path: /v1/ai-gateways/{gatewayId}/certificates
         name: AIGatewayCertificate
-        secretReferences:
+        dataSources:
           - path: spec.apiSpec.cert
             type: Secret
           - path: spec.apiSpec.key
@@ -681,7 +752,7 @@ apiGroupVersions:
       # Event Gateway APIs
       - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
         name: EventGatewayDataPlaneCertificate
-        secretReferences:
+        dataSources:
           - path: spec.apiSpec.certificate
             type: Secret
         ops:
@@ -708,7 +779,7 @@ apiGroupVersions:
             group: konnect.konghq.com
       - path: /v1/event-gateways/{gatewayId}/schema-registries
         name: EventGatewaySchemaRegistry
-        secretReferences:
+        dataSources:
           - path: spec.apiSpec.confluent.config.authentication.basic.password
             type: Secret
         ops:
@@ -741,7 +812,7 @@ apiGroupVersions:
             group: konnect.konghq.com
       - path: /v1/event-gateways/{gatewayId}/listeners/{eventGatewayListenerId}/policies
         name: EventGatewayListenerPolicy
-        secretReferences:
+        dataSources:
           - path: spec.apiSpec.tlsServer.config.certificates[].certificate
             type: Secret
           - path: spec.apiSpec.tlsServer.config.certificates[].key
@@ -809,7 +880,7 @@ apiGroupVersions:
           parentEntityGVK:
             kind: KonnectEventGateway
             group: konnect.konghq.com
-        secretReferences:
+        dataSources:
           - path: spec.apiSpec.tls.clientIdentity.certificate
             type: Secret
           - path: spec.apiSpec.tls.clientIdentity.key
@@ -1075,13 +1146,13 @@ apiGroupVersions:
           delete: {}
         reconciler: {}
       - path: /v3/portals/{portalId}/pages
-        cel:
-          spec:
-            apiSpec:
-              parentPageIDRef:
-                _validations:
-                  # TODO: https://github.com/Kong/kong-operator/issues/4008
-                  - "+kubebuilder:validation:XValidation:rule=\"self == null\",message=\"cannot set parentPageIDRef\""
+        references:
+          # Pages form a hierarchy within a portal: parentPageIDRef points at
+          # the parent PortalPage (same type) whose Konnect ID is sent as
+          # parent_page_id. https://github.com/Kong/kong-operator/issues/4008
+          - path: spec.apiSpec.parentPageIDRef
+            kinds: [PortalPage]
+            resolvesTo: id
         ops:
           getForUID:
             # Portal pages do not expose labels/tags in Konnect list responses;

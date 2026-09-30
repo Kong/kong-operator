@@ -141,7 +141,7 @@ func (g *Generator) generateEntityOpsFile(
 
 		// Render create function body.
 		if createData != nil {
-			createTmpl := template.Must(template.New("opscreatefunc").Parse(opsCreateFuncTemplate))
+			createTmpl := parseWithLabelsUnionInject("opscreatefunc", opsCreateFuncTemplate)
 			if err := createTmpl.Execute(&content, createData); err != nil {
 				return entityOpsFileResult{}, err
 			}
@@ -149,7 +149,7 @@ func (g *Generator) generateEntityOpsFile(
 
 		// Render update function body.
 		if updateData != nil {
-			updateTmpl := template.Must(template.New("opsupdatefunc").Parse(opsUpdateFuncTemplate))
+			updateTmpl := parseWithLabelsUnionInject("opsupdatefunc", opsUpdateFuncTemplate)
 			if err := updateTmpl.Execute(&content, updateData); err != nil {
 				return entityOpsFileResult{}, err
 			}
