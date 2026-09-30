@@ -685,6 +685,7 @@ func TestAIGatewayDataPlaneReconciler_OnPremAIGatewayAdminAPI(t *testing.T) {
 			ClusterCASecretNamespace: clusterCA.Namespace,
 			CertTTL:                  consts.DefaultCertTTL,
 			TypeConverter:            ssaProvider,
+			LicenseGetter:            shareddataplane.NewKongLicenseCacheGetter(mgr.GetClient()),
 		},
 		&crdschema.Reconciler{
 			Client:   mgr.GetClient(),
@@ -815,6 +816,22 @@ func TestAIGatewayDataPlaneReconciler_OnPremAIGatewayAdminAPI(t *testing.T) {
 			}
 			return len(certList.Items) > 0
 		}, waitTime, tickTime)
+
+		// The on-prem DataPlane consumes the operator-provided KongLicense, so
+		// its availability is reported even though no KongLicense exists in
+		// this environment.
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			current := &aigatewayv1alpha1.AIGatewayDataPlane{}
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(aigwdp), current)) {
+				return
+			}
+			cond := apimeta.FindStatusCondition(current.Status.Conditions, string(aigatewayv1alpha1.LicenseValidType))
+			if !assert.NotNil(ct, cond, "LicenseValid condition not set") {
+				return
+			}
+			assert.Equal(ct, metav1.ConditionFalse, cond.Status)
+			assert.Equal(ct, string(aigatewayv1alpha1.LicenseMissingReason), cond.Reason)
+		}, waitTime, tickTime)
 	})
 
 	t.Run("Konnect reference: no admin Service is provisioned", func(t *testing.T) {
@@ -842,6 +859,17 @@ func TestAIGatewayDataPlaneReconciler_OnPremAIGatewayAdminAPI(t *testing.T) {
 			return cl.Get(ctx, client.ObjectKey{
 				Name: aigwdp.Name + aigwdataplane.AdminServiceNameSuffix, Namespace: ns.Name,
 			}, svc) == nil
+		}, waitTime, tickTime)
+
+		// A Konnect-backed DataPlane is licensed by Konnect: the
+		// operator-provided KongLicense does not apply, so no license condition
+		// is reported for it (it would sit at False/LicenseMissing forever).
+		assert.Never(t, func() bool {
+			current := &aigatewayv1alpha1.AIGatewayDataPlane{}
+			if err := cl.Get(ctx, client.ObjectKeyFromObject(aigwdp), current); err != nil {
+				return false
+			}
+			return apimeta.FindStatusCondition(current.Status.Conditions, string(aigatewayv1alpha1.LicenseValidType)) != nil
 		}, waitTime, tickTime)
 	})
 }

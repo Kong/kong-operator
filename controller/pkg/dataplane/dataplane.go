@@ -548,14 +548,19 @@ func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Res
 	// ref.Name is empty when the DataPlane has no control plane reference
 	// configured; in that case resolution and Konnect certificate automation
 	// are skipped.
-	SetLicenseStatusCondition(
-		dp, r.LicenseGetter,
-		r.Config.Conditions.LicenseValidType,
-		r.Config.Conditions.LicenseValidReason,
-		r.Config.Conditions.LicenseMissingReason,
-	)
 	var cp ResolvedControlPlane
 	ref := r.Config.ControlPlaneRef(dp)
+	// A DataPlane backed by a Konnect control plane is licensed by Konnect: the
+	// operator-provided KongLicense does not apply to it, so no license
+	// condition is reported (it would sit at False/LicenseMissing forever).
+	if cpKindCfg, ok := r.Config.ControlPlaneKindConfig(ref.Kind); !ok || !cpKindCfg.IsKonnect {
+		SetLicenseStatusCondition(
+			dp, r.LicenseGetter,
+			r.Config.Conditions.LicenseValidType,
+			r.Config.Conditions.LicenseValidReason,
+			r.Config.Conditions.LicenseMissingReason,
+		)
+	}
 	if ref.Name != "" {
 		cp, err = r.resolveControlPlane(ctx, logger, dp, ref)
 		if err != nil {
