@@ -43301,6 +43301,21 @@ spec:
                             - Cluster
                             - Local
                             type: string
+                          ipFamilies:
+                            items:
+                              type: string
+                            maxItems: 2
+                            minItems: 1
+                            type: array
+                            x-kubernetes-validations:
+                            - message: each ipFamilies entry must be IPv4 or IPv6
+                              rule: self.all(f, f == 'IPv4' || f == 'IPv6')
+                          ipFamilyPolicy:
+                            enum:
+                            - SingleStack
+                            - PreferDualStack
+                            - RequireDualStack
+                            type: string
                           labels:
                             additionalProperties:
                               maxLength: 63
@@ -61330,6 +61345,21 @@ spec:
                                 - Cluster
                                 - Local
                                 type: string
+                              ipFamilies:
+                                items:
+                                  type: string
+                                maxItems: 2
+                                minItems: 1
+                                type: array
+                                x-kubernetes-validations:
+                                - message: each ipFamilies entry must be IPv4 or IPv6
+                                  rule: self.all(f, f == 'IPv4' || f == 'IPv6')
+                              ipFamilyPolicy:
+                                enum:
+                                - SingleStack
+                                - PreferDualStack
+                                - RequireDualStack
+                                type: string
                               labels:
                                 additionalProperties:
                                   maxLength: 63
@@ -66109,6 +66139,21 @@ spec:
                                 enum:
                                 - Cluster
                                 - Local
+                                type: string
+                              ipFamilies:
+                                items:
+                                  type: string
+                                maxItems: 2
+                                minItems: 1
+                                type: array
+                                x-kubernetes-validations:
+                                - message: each ipFamilies entry must be IPv4 or IPv6
+                                  rule: self.all(f, f == 'IPv4' || f == 'IPv6')
+                              ipFamilyPolicy:
+                                enum:
+                                - SingleStack
+                                - PreferDualStack
+                                - RequireDualStack
                                 type: string
                               labels:
                                 additionalProperties:
