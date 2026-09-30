@@ -349,9 +349,14 @@ func TestEnsureIngressServiceForDataPlaneIPFamily(t *testing.T) {
 		// included, since the fake client applies no defaulting).
 		existingPolicy    *corev1.IPFamilyPolicy
 		existingPolicySet bool
-		expectedResult    op.Result
-		expectedSvcPolicy *corev1.IPFamilyPolicy
-		expectedSvcIPs    []corev1.IPFamily
+		// existingFamilies and existingFamiliesSet control the ipFamilies of
+		// the existing Service before reconcile, e.g. to simulate the API
+		// server expanding a dual-policy Service with the secondary family.
+		existingFamilies    []corev1.IPFamily
+		existingFamiliesSet bool
+		expectedResult      op.Result
+		expectedSvcPolicy   *corev1.IPFamilyPolicy
+		expectedSvcIPs      []corev1.IPFamily
 	}{
 		{
 			name:              "should not update when the existing non-default ipFamilyPolicy equals the generated one",
@@ -419,6 +424,28 @@ func TestEnsureIngressServiceForDataPlaneIPFamily(t *testing.T) {
 			expectedSvcPolicy: new(corev1.IPFamilyPolicySingleStack),
 			expectedSvcIPs:    []corev1.IPFamily{corev1.IPv4Protocol},
 		},
+		{
+			name:                "should preserve the API-defaulted secondary ipFamily when the spec requests a dual policy with a single family",
+			ipFamily:            ipfamily.Dual,
+			dataplaneFamilies:   []corev1.IPFamily{corev1.IPv4Protocol},
+			dataplanePolicy:     new(corev1.IPFamilyPolicyPreferDualStack),
+			existingFamilies:    []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol},
+			existingFamiliesSet: true,
+			expectedResult:      op.Noop,
+			expectedSvcPolicy:   new(corev1.IPFamilyPolicyPreferDualStack),
+			expectedSvcIPs:      []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol},
+		},
+		{
+			name:                "should release the secondary ipFamily when the spec requests SingleStack with a single family",
+			ipFamily:            ipfamily.Dual,
+			dataplaneFamilies:   []corev1.IPFamily{corev1.IPv4Protocol},
+			dataplanePolicy:     new(corev1.IPFamilyPolicySingleStack),
+			existingFamilies:    []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol},
+			existingFamiliesSet: true,
+			expectedResult:      op.Updated,
+			expectedSvcPolicy:   new(corev1.IPFamilyPolicySingleStack),
+			expectedSvcIPs:      []corev1.IPFamily{corev1.IPv4Protocol},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -451,6 +478,10 @@ func TestEnsureIngressServiceForDataPlaneIPFamily(t *testing.T) {
 			require.NoError(t, fakeClient.Create(ctx, existingSvc))
 			if tc.existingPolicySet {
 				existingSvc.Spec.IPFamilyPolicy = tc.existingPolicy
+				require.NoError(t, fakeClient.Update(ctx, existingSvc))
+			}
+			if tc.existingFamiliesSet {
+				existingSvc.Spec.IPFamilies = tc.existingFamilies
 				require.NoError(t, fakeClient.Update(ctx, existingSvc))
 			}
 			require.NoError(t, fakeClient.Create(ctx, dataplane), "should create dataplane successfully")

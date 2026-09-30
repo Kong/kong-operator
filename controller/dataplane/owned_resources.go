@@ -419,7 +419,15 @@ func ensureIngressServiceForDataPlane(
 		// server defaults ipFamilies on existing Services (and they cannot be
 		// cleared afterwards), so clearing them here would fight with that
 		// defaulting (and churn the object).
-		if len(generatedService.Spec.IPFamilies) > 0 {
+		//
+		// Additionally, when the generated Service requests a dual-stack
+		// policy with a single ipFamilies entry, the API server expands it
+		// with the secondary family on create (e.g. ipFamilies [IPv4] with
+		// PreferDualStack becomes [IPv4, IPv6]).
+		ipFamiliesExpandedByAPIServer := len(generatedService.Spec.IPFamilies) == 1 &&
+			generatedService.Spec.IPFamilyPolicy != nil &&
+			*generatedService.Spec.IPFamilyPolicy != corev1.IPFamilyPolicySingleStack
+		if len(generatedService.Spec.IPFamilies) > 0 && !ipFamiliesExpandedByAPIServer {
 			existingService.Spec.IPFamilies = generatedService.Spec.IPFamilies
 			updated = true
 		}
