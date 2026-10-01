@@ -81,35 +81,108 @@ func TestDeleteEventGatewayDataPlaneCertificate(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// TestGetEventGatewayDataPlaneCertificateForUID covers the lookup of Event
+// Gateway data plane certificates, which have no labels in Konnect: the
+// certificate is matched by its (Secret-resolved) certificate, name and
+// description, so one with the same name but another certificate is never
+// matched.
 func TestGetEventGatewayDataPlaneCertificateForUID(t *testing.T) {
-	ctx := t.Context()
-	sdk := sdkmocks.NewMockEventGatewayDataPlaneCertificatesSDK(t)
-	cert := testEventGatewayDataPlaneCertificate()
+	inlineCert := testEventGatewayDataPlaneCertificate()
+	secretCert := testEventGatewayDataPlaneCertificate()
+	secretCert.Spec.APISpec.Certificate = configurationv1alpha1.SensitiveDataSource{
+		Type:      configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+		SecretRef: &configurationv1alpha1.SensitiveDataSecretRef{Name: "tls-secret", Key: "tls.crt"},
+	}
+	clWithSecret := fake.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		WithObjects(&corev1.Secret{
+			Name:      "tls-secret",
+			Namespace: "default",
+			Data:      map[string][]byte{"tls.crt": []byte("secret-cert\n")},
+		}).
+		Build()
+	entry := func(id, certificate string, obj *configurationv1alpha1.EventGatewayDataPlaneCertificate) sdkkonnectcomp.EventGatewayDataPlaneCertificate {
+		return sdkkonnectcomp.EventGatewayDataPlaneCertificate{
+			ID:          id,
+			Certificate: certificate,
+			Name:        new(obj.Spec.APISpec.Name),
+			Description: new(obj.Spec.APISpec.Description),
+		}
+	}
 
-	sdk.On("ListEventGatewayDataPlaneCertificates", mock.Anything, sdkkonnectops.ListEventGatewayDataPlaneCertificatesRequest{
-		GatewayID: "gateway-1",
-	}).
-		Return(&sdkkonnectops.ListEventGatewayDataPlaneCertificatesResponse{
-			ListEventGatewayDataPlaneCertificatesResponse: &sdkkonnectcomp.ListEventGatewayDataPlaneCertificatesResponse{
-				Data: []sdkkonnectcomp.EventGatewayDataPlaneCertificate{
-					{
-						ID:          "cert-other",
-						Certificate: "other-cert",
-					},
-					{
-						ID:          "cert-1",
-						Certificate: *cert.Spec.APISpec.Certificate.Value,
-						Name:        new(cert.Spec.APISpec.Name),
-						Description: new(cert.Spec.APISpec.Description),
-					},
-				},
+	testCases := []struct {
+		name       string
+		obj        *configurationv1alpha1.EventGatewayDataPlaneCertificate
+		entries    []sdkkonnectcomp.EventGatewayDataPlaneCertificate
+		noList     bool
+		expectedID string
+	}{
+		{
+			name: "matches the inline certificate, name and description",
+			obj:  inlineCert,
+			entries: []sdkkonnectcomp.EventGatewayDataPlaneCertificate{
+				{ID: "cert-other", Certificate: "other-cert"},
+				entry("cert-1", *inlineCert.Spec.APISpec.Certificate.Value, inlineCert),
 			},
-		}, nil).
-		Once()
+			expectedID: "cert-1",
+		},
+		{
+			name: "matches the certificate resolved from its Secret",
+			obj:  secretCert,
+			entries: []sdkkonnectcomp.EventGatewayDataPlaneCertificate{
+				entry("cert-1", "secret-cert", secretCert),
+			},
+			expectedID: "cert-1",
+		},
+		{
+			name: "does not match the same name and description with another certificate",
+			obj:  secretCert,
+			entries: []sdkkonnectcomp.EventGatewayDataPlaneCertificate{
+				entry("created-outside-the-operator", "another-cert", secretCert),
+			},
+		},
+		{
+			name:   "returns not found without listing when the certificate Secret is missing",
+			obj:    testEventGatewayDataPlaneCertificateWithMissingSecret(),
+			noList: true,
+		},
+	}
 
-	id, err := getEventGatewayDataPlaneCertificateForUID(ctx, sdk, cert)
-	require.NoError(t, err)
-	assert.Equal(t, "cert-1", id)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			sdk := sdkmocks.NewMockEventGatewayDataPlaneCertificatesSDK(t)
+			if !tc.noList {
+				sdk.On("ListEventGatewayDataPlaneCertificates", mock.Anything, sdkkonnectops.ListEventGatewayDataPlaneCertificatesRequest{
+					GatewayID: "gateway-1",
+				}).
+					Return(&sdkkonnectops.ListEventGatewayDataPlaneCertificatesResponse{
+						ListEventGatewayDataPlaneCertificatesResponse: &sdkkonnectcomp.ListEventGatewayDataPlaneCertificatesResponse{
+							Data: tc.entries,
+						},
+					}, nil).
+					Once()
+			}
+
+			id, err := getEventGatewayDataPlaneCertificateForUID(t.Context(), sdk, clWithSecret, tc.obj)
+			if tc.expectedID != "" {
+				require.NoError(t, err)
+				assert.Equal(t, tc.expectedID, id)
+				return
+			}
+			assert.Empty(t, id)
+			var notFound EntityWithMatchingUIDNotFoundError
+			require.ErrorAs(t, err, &notFound)
+		})
+	}
+}
+
+func testEventGatewayDataPlaneCertificateWithMissingSecret() *configurationv1alpha1.EventGatewayDataPlaneCertificate {
+	cert := testEventGatewayDataPlaneCertificate()
+	cert.Spec.APISpec.Certificate = configurationv1alpha1.SensitiveDataSource{
+		Type:      configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+		SecretRef: &configurationv1alpha1.SensitiveDataSecretRef{Name: "missing", Key: "tls.crt"},
+	}
+	return cert
 }
 
 func TestEventGatewayDataPlaneCertificate_ToCreateEventGatewayDataPlaneCertificateRequest_FromSecretRef(t *testing.T) {

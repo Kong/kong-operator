@@ -121,6 +121,20 @@ func TestEventGatewayVirtualClusterConsumePolicy(t *testing.T) {
 			CreateEventGatewayVirtualClusterConsumePolicy(
 				mock.Anything,
 				mock.MatchedBy(func(req sdkkonnectops.CreateEventGatewayVirtualClusterConsumePolicyRequest) bool {
+					// The operator adds its metadata labels (k8s-uid etc.), which
+					// depend on the created object, so check and strip them first.
+					if req.EventGatewayConsumePolicyCreate == nil || req.EventGatewayConsumePolicyCreate.EventGatewayModifyHeadersPolicyCreate == nil {
+						return false
+					}
+					union := *req.EventGatewayConsumePolicyCreate
+					variant := *union.EventGatewayModifyHeadersPolicyCreate
+					labels, ok := withoutOperatorLabels(variant.Labels, policy.GetUID())
+					if !ok {
+						return false
+					}
+					variant.Labels = labels
+					union.EventGatewayModifyHeadersPolicyCreate = &variant
+					req.EventGatewayConsumePolicyCreate = &union
 					return reflect.DeepEqual(req, *expectedCreateRequest)
 				}),
 			).
@@ -170,6 +184,20 @@ func TestEventGatewayVirtualClusterConsumePolicy(t *testing.T) {
 			UpdateEventGatewayVirtualClusterConsumePolicy(
 				mock.Anything,
 				mock.MatchedBy(func(req sdkkonnectops.UpdateEventGatewayVirtualClusterConsumePolicyRequest) bool {
+					// The operator adds its metadata labels (k8s-uid etc.), which
+					// depend on the created object, so check and strip them first.
+					if req.EventGatewayConsumePolicyUpdate == nil || req.EventGatewayConsumePolicyUpdate.EventGatewayModifyHeadersPolicy == nil {
+						return false
+					}
+					union := *req.EventGatewayConsumePolicyUpdate
+					variant := *union.EventGatewayModifyHeadersPolicy
+					labels, ok := withoutOperatorLabels(variant.Labels, policy.GetUID())
+					if !ok {
+						return false
+					}
+					variant.Labels = labels
+					union.EventGatewayModifyHeadersPolicy = &variant
+					req.EventGatewayConsumePolicyUpdate = &union
 					return reflect.DeepEqual(req, *expectedUpdateRequest)
 				}),
 			).

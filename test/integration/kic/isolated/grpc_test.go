@@ -37,11 +37,7 @@ func TestGRPCRouteEssentials(t *testing.T) {
 		New("essentials").
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyGatewayAPI).
 		WithLabel(testlabels.Kind, testlabels.KindGRPCRoute).
-		WithSetup("deploy kong addon into cluster", featureSetup(
-			withKongProxyEnvVars(map[string]string{
-				"PROXY_LISTEN": `0.0.0.0:8000 http2\, 0.0.0.0:8443 http2 ssl`,
-			}),
-		)).
+		WithSetup("deploy kong addon into cluster", featureSetup()).
 		Assess("deploying Gateway and example GRPC service (without konghq.com/protocol annotation) exposed via GRPCRoute over HTTP", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
 			cluster := GetClusterFromCtx(ctx)

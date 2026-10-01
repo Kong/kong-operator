@@ -1,0 +1,100 @@
+# Template for verifying that the operator recovers a lost Konnect ID: clear
+# the CR's status.id, as if a status write after the create had failed. The
+# operator creates the entity again, gets a conflict (the name is taken by its
+# own entity) and must find its entity by the k8s-uid label: the CR gets the
+# same Konnect ID back and Konnect still has exactly one entity with the CR's
+# UID.
+#
+# Required bindings:
+#   - cr_api_version, cr_kind, cr_resource: API version, kind and resource type of the CR.
+#   - cr_name: Name of the CR.
+#   - collection_path_jq: jq expression, evaluated against the CR, yielding the
+#     Konnect API path of the entity collection (see konnect_entity_of_resource.sh).
+#   - konnect_token, konnect_url: Konnect API token and host.
+#
+# Optional bindings (override with use.with.bindings):
+#   - has_uid_label: false for entities without labels in Konnect (matched by
+#     spec fields instead): the last check then only verifies the original
+#     entity still exists. Default: true.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: konnect-ownership-recover-lost-id
+spec:
+  bindings:
+    - name: has_uid_label
+      value: true
+  try:
+    - description: Record the Konnect entity before clearing status.id.
+      script:
+        env:
+          - name: RESOURCE_TYPE
+            value: ($cr_resource)
+          - name: RESOURCE_NAME
+            value: ($cr_name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: COLLECTION_PATH_JQ
+            value: ($collection_path_jq)
+        content: |
+          bash ../../common/scripts/konnect_entity_of_resource.sh
+        outputs:
+          - name: before
+            value: (json_parse($stdout))
+    - description: Clear status.id.
+      script:
+        env:
+          - name: RESOURCE_TYPE
+            value: ($cr_resource)
+          - name: RESOURCE_NAME
+            value: ($cr_name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: SUBRESOURCE
+            value: status
+          - name: FIELD_PATH
+            value: /status/id
+          - name: OP
+            value: remove
+        content: |
+          bash ../../common/scripts/patch_resource_field.sh
+        check:
+          ($error == null): true
+          (json_parse($stdout).value == null): true
+    - description: The CR gets the same Konnect ID back.
+      assert:
+        resource:
+          apiVersion: ($cr_api_version)
+          kind: ($cr_kind)
+          metadata:
+            name: ($cr_name)
+            namespace: ($namespace)
+          status:
+            id: ($before.id)
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+    - description: |
+        Konnect has exactly one entity with the CR's UID, the original one
+        (or, without labels, the original entity still exists).
+      script:
+        env:
+          - name: KONNECT_TOKEN
+            value: ($konnect_token)
+          - name: KONNECT_URL
+            value: ($konnect_url)
+          - name: API_PATH
+            value: ($before.collection_path)
+          - name: WANT_ID
+            value: ($before.id)
+          - name: WANT_UID
+            value: ($before.uid)
+          - name: HAS_UID_LABEL
+            value: (to_string($has_uid_label))
+          - name: EXPECTED_JQ
+            value: >-
+              if $ENV.HAS_UID_LABEL == "true"
+              then [(if type == "array" then . else .data end)[] | select(.labels["k8s-uid"] == $ENV.WANT_UID) | .id] == [$ENV.WANT_ID]
+              else [(if type == "array" then . else .data end)[] | .id] | index($ENV.WANT_ID) != null
+              end
+        content: |
+          bash ../../common/scripts/konnect_api_request.sh

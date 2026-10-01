@@ -52,6 +52,12 @@ func TestCreateEventGatewayListenerPolicy_UsesSDKOpsConversion(t *testing.T) {
 	obj.SetEventGatewayListenerID(eventGatewayListenerID)
 	expectedRequest, err := obj.ToCreateEventGatewayListenerPolicyRequest(ctx, cl)
 	require.NoError(t, err)
+	if expectedRequest.EventGatewayListenerPolicyCreate.EventGatewayTLSListenerPolicy != nil {
+		expectedRequest.EventGatewayListenerPolicyCreate.EventGatewayTLSListenerPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayListenerPolicyCreate.EventGatewayTLSListenerPolicy.Labels)
+	}
+	if expectedRequest.EventGatewayListenerPolicyCreate.ForwardToVirtualClusterPolicy != nil {
+		expectedRequest.EventGatewayListenerPolicyCreate.ForwardToVirtualClusterPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayListenerPolicyCreate.ForwardToVirtualClusterPolicy.Labels)
+	}
 	expectedRequest.GatewayID = gatewayID
 	expectedRequest.ListenerID = eventGatewayListenerID
 	expectedID := "eventgatewaylistenerpolicy-id"
@@ -85,6 +91,12 @@ func TestCreateEventGatewayListenerPolicy_PropagatesSDKError(t *testing.T) {
 	obj.SetEventGatewayListenerID(eventGatewayListenerID)
 	expectedRequest, err := obj.ToCreateEventGatewayListenerPolicyRequest(ctx, cl)
 	require.NoError(t, err)
+	if expectedRequest.EventGatewayListenerPolicyCreate.EventGatewayTLSListenerPolicy != nil {
+		expectedRequest.EventGatewayListenerPolicyCreate.EventGatewayTLSListenerPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayListenerPolicyCreate.EventGatewayTLSListenerPolicy.Labels)
+	}
+	if expectedRequest.EventGatewayListenerPolicyCreate.ForwardToVirtualClusterPolicy != nil {
+		expectedRequest.EventGatewayListenerPolicyCreate.ForwardToVirtualClusterPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayListenerPolicyCreate.ForwardToVirtualClusterPolicy.Labels)
+	}
 	expectedRequest.GatewayID = gatewayID
 	expectedRequest.ListenerID = eventGatewayListenerID
 	sdkErr := errors.New("sdk error")
@@ -115,6 +127,12 @@ func TestUpdateEventGatewayListenerPolicy_UsesSDKOpsConversion(t *testing.T) {
 	obj.SetKonnectID("eventgatewaylistenerpolicy-id")
 	expectedRequest, err := obj.ToUpdateEventGatewayListenerPolicyRequest(ctx, cl)
 	require.NoError(t, err)
+	if expectedRequest.EventGatewayListenerPolicyUpdate.EventGatewayTLSListenerSensitiveDataAwarePolicy != nil {
+		expectedRequest.EventGatewayListenerPolicyUpdate.EventGatewayTLSListenerSensitiveDataAwarePolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayListenerPolicyUpdate.EventGatewayTLSListenerSensitiveDataAwarePolicy.Labels)
+	}
+	if expectedRequest.EventGatewayListenerPolicyUpdate.ForwardToVirtualClusterPolicy != nil {
+		expectedRequest.EventGatewayListenerPolicyUpdate.ForwardToVirtualClusterPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayListenerPolicyUpdate.ForwardToVirtualClusterPolicy.Labels)
+	}
 	expectedRequest.GatewayID = gatewayID
 	expectedRequest.ListenerID = eventGatewayListenerID
 	expectedRequest.PolicyID = obj.GetKonnectStatus().GetKonnectID()
@@ -144,6 +162,12 @@ func TestUpdateEventGatewayListenerPolicy_PropagatesSDKError(t *testing.T) {
 	obj.SetKonnectID("eventgatewaylistenerpolicy-id")
 	expectedRequest, err := obj.ToUpdateEventGatewayListenerPolicyRequest(ctx, cl)
 	require.NoError(t, err)
+	if expectedRequest.EventGatewayListenerPolicyUpdate.EventGatewayTLSListenerSensitiveDataAwarePolicy != nil {
+		expectedRequest.EventGatewayListenerPolicyUpdate.EventGatewayTLSListenerSensitiveDataAwarePolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayListenerPolicyUpdate.EventGatewayTLSListenerSensitiveDataAwarePolicy.Labels)
+	}
+	if expectedRequest.EventGatewayListenerPolicyUpdate.ForwardToVirtualClusterPolicy != nil {
+		expectedRequest.EventGatewayListenerPolicyUpdate.ForwardToVirtualClusterPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayListenerPolicyUpdate.ForwardToVirtualClusterPolicy.Labels)
+	}
 	expectedRequest.GatewayID = gatewayID
 	expectedRequest.ListenerID = eventGatewayListenerID
 	expectedRequest.PolicyID = obj.GetKonnectStatus().GetKonnectID()

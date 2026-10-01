@@ -14,10 +14,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/adminapi"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/versions"
 	ingresserrors "github.com/kong/kong-operator/v2/ingress-controller/pkg/errors"
 	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
+	"github.com/kong/kong-operator/v2/internal/versions"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
@@ -137,7 +137,7 @@ func TestNewKongClientForWorkspace(t *testing.T) {
 		{
 			name:            "admin api is in too old version",
 			adminAPIReady:   true,
-			adminAPIVersion: "3.4.0",
+			adminAPIVersion: "3.5.0",
 			workspace:       "",
 			expectError:     adminapi.KongGatewayUnsupportedVersionError{},
 		},
@@ -145,7 +145,7 @@ func TestNewKongClientForWorkspace(t *testing.T) {
 			name:            "admin api is in supported OSS version",
 			adminAPIReady:   true,
 			workspace:       "",
-			adminAPIVersion: versions.KICv3VersionCutoff.String(),
+			adminAPIVersion: versions.MinimumDataPlaneVersion.String(),
 		},
 		{
 			name:            "admin api has malformed version",
@@ -166,26 +166,26 @@ func TestNewKongClientForWorkspace(t *testing.T) {
 			name:            "admin api has enterprise version",
 			adminAPIReady:   true,
 			workspace:       "",
-			adminAPIVersion: "3.4.1.2",
+			adminAPIVersion: "3.6.0.2",
 		},
 		{
 			name:            "admin api has enterprise version for workspace",
 			adminAPIReady:   true,
 			workspace:       workspace,
 			workspaceExists: true,
-			adminAPIVersion: "3.4.1.2",
+			adminAPIVersion: "3.6.0.2",
 		},
 		{
 			name:            "admin api has too old enterprise version",
 			adminAPIReady:   true,
-			adminAPIVersion: "3.4.0.2",
+			adminAPIVersion: "3.5.0.2",
 			workspace:       "",
 			expectError:     adminapi.KongGatewayUnsupportedVersionError{},
 		},
 		{
 			name:            "admin api has too old enterprise version for workspace",
 			adminAPIReady:   true,
-			adminAPIVersion: "3.4.0.2",
+			adminAPIVersion: "3.5.0.2",
 			workspace:       workspace,
 			workspaceExists: true,
 			expectError:     adminapi.KongGatewayUnsupportedVersionError{},

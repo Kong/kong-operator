@@ -54,6 +54,12 @@ func TestCreateAIGatewayModel_UsesSDKOpsConversion(t *testing.T) {
 	obj.SetGatewayID(parentID)
 	expectedRequest, err := obj.ToCreateAIGatewayModelRequest(ctx, cl)
 	require.NoError(t, err)
+	if expectedRequest.AIGatewayModelAPI != nil {
+		expectedRequest.AIGatewayModelAPI.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelAPI.Labels)
+	}
+	if expectedRequest.AIGatewayModelModel != nil {
+		expectedRequest.AIGatewayModelModel.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelModel.Labels)
+	}
 	expectedID := "aigatewaymodel-id"
 
 	sdk.EXPECT().
@@ -90,6 +96,12 @@ func TestCreateAIGatewayModel_PropagatesSDKError(t *testing.T) {
 	obj.SetGatewayID(parentID)
 	expectedRequest, err := obj.ToCreateAIGatewayModelRequest(ctx, cl)
 	require.NoError(t, err)
+	if expectedRequest.AIGatewayModelAPI != nil {
+		expectedRequest.AIGatewayModelAPI.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelAPI.Labels)
+	}
+	if expectedRequest.AIGatewayModelModel != nil {
+		expectedRequest.AIGatewayModelModel.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelModel.Labels)
+	}
 	sdkErr := errors.New("sdk error")
 
 	sdk.EXPECT().
@@ -121,6 +133,12 @@ func TestUpdateAIGatewayModel_UsesSDKOpsConversion(t *testing.T) {
 	obj.SetKonnectID("aigatewaymodel-id")
 	expectedRequest, err := obj.ToUpdateAIGatewayModelRequest(ctx, cl)
 	require.NoError(t, err)
+	if expectedRequest.AIGatewayModelAPI != nil {
+		expectedRequest.AIGatewayModelAPI.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelAPI.Labels)
+	}
+	if expectedRequest.AIGatewayModelModel != nil {
+		expectedRequest.AIGatewayModelModel.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelModel.Labels)
+	}
 
 	sdk.EXPECT().
 		UpdateAiGatewayModel(
@@ -153,6 +171,12 @@ func TestUpdateAIGatewayModel_PropagatesSDKError(t *testing.T) {
 	obj.SetKonnectID("aigatewaymodel-id")
 	expectedRequest, err := obj.ToUpdateAIGatewayModelRequest(ctx, cl)
 	require.NoError(t, err)
+	if expectedRequest.AIGatewayModelAPI != nil {
+		expectedRequest.AIGatewayModelAPI.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelAPI.Labels)
+	}
+	if expectedRequest.AIGatewayModelModel != nil {
+		expectedRequest.AIGatewayModelModel.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelModel.Labels)
+	}
 	sdkErr := errors.New("sdk error")
 
 	sdk.EXPECT().

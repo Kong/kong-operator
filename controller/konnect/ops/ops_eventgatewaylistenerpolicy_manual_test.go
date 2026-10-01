@@ -25,6 +25,8 @@ func TestCreateEventGatewayListenerPolicy(t *testing.T) {
 	require.NoError(t, err)
 	expectedRequest.GatewayID = "gateway-1"
 	expectedRequest.ListenerID = "listener-1"
+	createVariant := expectedRequest.EventGatewayListenerPolicyCreate.EventGatewayTLSListenerPolicy
+	createVariant.Labels = WithKubernetesMetadataLabels(policy, createVariant.Labels)
 
 	sdk.EXPECT().
 		CreateEventGatewayListenerPolicy(mock.Anything, *expectedRequest).
@@ -52,6 +54,8 @@ func TestUpdateEventGatewayListenerPolicy(t *testing.T) {
 	expectedRequest.GatewayID = "gateway-1"
 	expectedRequest.ListenerID = "listener-1"
 	expectedRequest.PolicyID = "listener-policy-1"
+	updateVariant := expectedRequest.EventGatewayListenerPolicyUpdate.EventGatewayTLSListenerSensitiveDataAwarePolicy
+	updateVariant.Labels = WithKubernetesMetadataLabels(policy, updateVariant.Labels)
 
 	sdk.EXPECT().
 		UpdateEventGatewayListenerPolicy(mock.Anything, *expectedRequest).
@@ -96,14 +100,17 @@ func TestGetEventGatewayListenerPolicyForUID(t *testing.T) {
 		Return(&sdkkonnectops.ListEventGatewayListenerPoliciesResponse{
 			ListEventGatewayListenerPoliciesResponse: []sdkkonnectcomp.EventGatewayListenerPolicy{
 				{
-					ID:   "other-policy",
-					Type: "forward_to_virtual_cluster",
-					Name: new("tls-policy"),
+					// Same type and name, but created for another object.
+					ID:     "other-policy",
+					Type:   "tls_server",
+					Name:   new("tls-policy"),
+					Labels: map[string]string{KubernetesUIDLabelKey: "other-uid"},
 				},
 				{
-					ID:   "listener-policy-1",
-					Type: "tls_server",
-					Name: new("tls-policy"),
+					ID:     "listener-policy-1",
+					Type:   "tls_server",
+					Name:   new("tls-policy"),
+					Labels: map[string]string{KubernetesUIDLabelKey: string(policy.GetUID())},
 				},
 			},
 		}, nil).

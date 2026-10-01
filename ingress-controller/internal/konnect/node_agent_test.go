@@ -15,8 +15,8 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/clients"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect/nodes"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/versions"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
+	"github.com/kong/kong-operator/v2/internal/versions"
 	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 )
 
@@ -27,7 +27,7 @@ const (
 
 var (
 	// testKongVersion matches enterprise version format.
-	testKongVersion = fmt.Sprintf("%s.0", versions.KICv3VersionCutoff)
+	testKongVersion = fmt.Sprintf("%s.0", versions.MinimumDataPlaneVersion)
 	// testKOUserAgent matches the current KO user agent.
 	testKOUserAgent = metadata.Metadata().UserAgent()
 )

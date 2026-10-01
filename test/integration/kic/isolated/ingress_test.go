@@ -43,11 +43,7 @@ func TestIngressGRPC(t *testing.T) {
 		New("essentials").
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyIngress).
 		WithLabel(testlabels.Kind, testlabels.KindIngress).
-		WithSetup("deploy kong addon into cluster", featureSetup(
-			withKongProxyEnvVars(map[string]string{
-				"PROXY_LISTEN": `0.0.0.0:8000 http2\, 0.0.0.0:8443 http2 ssl`,
-			}),
-		)).
+		WithSetup("deploy kong addon into cluster", featureSetup()).
 		WithSetup("deploying gRPC service exposed via Ingress", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
 			cluster := GetClusterFromCtx(ctx)

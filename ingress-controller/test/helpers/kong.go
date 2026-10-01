@@ -6,14 +6,14 @@ import (
 	"net/url"
 	"os"
 
-	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/semver/v4"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/adminapi"
 	dpconf "github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/config"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/manager/kongconfig"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/versions"
 	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/v2/internal/versions"
 )
 
 // GetKongRootConfig gets version and root configurations of Kong from / endpoint of the provided Admin API URL.
@@ -45,17 +45,17 @@ func GetKongVersion(ctx context.Context, proxyAdminURL *url.URL, kongTestPasswor
 }
 
 // ValidateMinimalSupportedKongVersion returns version of Kong Gateway running at the provided Admin API URL.
-// In case the version is below the minimal supported version versions.KICv3VersionCutoff (3.4.1), it returns an error.
+// In case the version is below the minimal supported version versions.MinimumDataPlaneVersion, it returns an error.
 func ValidateMinimalSupportedKongVersion(ctx context.Context, proxyAdminURL *url.URL, kongTestPassword string) (kong.Version, error) {
 	kongVersion, err := GetKongVersion(ctx, proxyAdminURL, kongTestPassword)
 	if err != nil {
 		return kong.Version{}, err
 	}
 	kongSemVersion := semver.Version{Major: kongVersion.Major(), Minor: kongVersion.Minor(), Patch: kongVersion.Patch()}
-	if kongSemVersion.LT(versions.KICv3VersionCutoff) {
+	if kongSemVersion.LT(versions.MinimumDataPlaneVersion) {
 		return kong.Version{}, TooOldKongGatewayError{
 			actualVersion:   kongSemVersion,
-			expectedVersion: versions.KICv3VersionCutoff,
+			expectedVersion: versions.MinimumDataPlaneVersion,
 		}
 	}
 	return kongVersion, nil
@@ -68,7 +68,7 @@ type TooOldKongGatewayError struct {
 
 func (e TooOldKongGatewayError) Error() string {
 	return fmt.Sprintf(
-		"version: %q is not supported by Kong Kubernetes Ingress Controller in version >=3.0.0, the lowest supported version is: %q",
+		"version: %q is not supported, the lowest supported version is: %q",
 		e.actualVersion, e.expectedVersion,
 	)
 }

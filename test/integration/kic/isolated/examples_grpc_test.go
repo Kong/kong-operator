@@ -50,9 +50,6 @@ func TestGRPCRouteExample(t *testing.T) {
 		WithLabel(testlabels.Kind, testlabels.KindGRPCRoute).
 		WithSetup("deploy kong addon into cluster", featureSetup(
 			withControllerManagerOpts(helpers.ControllerManagerOptAdditionalWatchNamespace("default")),
-			withKongProxyEnvVars(map[string]string{
-				"PROXY_LISTEN": `0.0.0.0:8000 http2\, 0.0.0.0:8443 http2 ssl`,
-			}),
 		)).
 		Assess("deploying to cluster works and deployed GRPC via HTTP responds", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			testGRPC(ctx, t, "gateway-grpcroute-via-http.yaml", ktfkong.DefaultProxyHTTPPort, "example-grpc-via-http.com", nil)

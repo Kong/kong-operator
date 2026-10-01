@@ -743,8 +743,8 @@ func (lt sensitiveLeafType) sensitiveGoTypeName() string {
 
 // isSensitiveMatchField returns true if the given getForUID objectField path
 // (e.g. "Spec.APISpec.Certificate") resolves to a SensitiveDataSource leaf
-// for the given entity, so the template can emit matchSensitiveDataSourceField
-// instead of matchStringField.
+// for the given entity: the generated lookup cannot resolve such a field, so
+// it is rejected as a match field.
 func (g *Generator) isSensitiveMatchField(entityName, objectField string) bool {
 	_, ok := g.sensitiveMatchFieldValueType(entityName, objectField)
 	return ok
