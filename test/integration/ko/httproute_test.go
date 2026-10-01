@@ -1,8 +1,9 @@
 package integration
 
 import (
-	"fmt"
+	"net"
 	"net/http"
+	"strconv"
 	"testing"
 	"time"
 
@@ -341,6 +342,10 @@ func TestHTTPRouteExpressionsRouterPortIsolation(t *testing.T) {
 		pathOnPort80   = "/on-80"
 		pathOnPort8080 = "/on-8080"
 	)
+	var (
+		baseURLPort80   = "http://" + net.JoinHostPort(gatewayIPAddress, strconv.Itoa(port80))
+		baseURLPort8080 = "http://" + net.JoinHostPort(gatewayIPAddress, strconv.Itoa(port8080))
+	)
 
 	t.Logf("creating an HTTPRoute attached to the %q listener (port 80), matching %s", listenerHTTPport80, pathOnPort80)
 	httpRoutePort80 := helpers.GenerateHTTPRoute(namespace.Name, gateway.Name, service.Name, func(h *gatewayv1.HTTPRoute) {
@@ -374,14 +379,14 @@ func TestHTTPRouteExpressionsRouterPortIsolation(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("the route attached to the port-80 listener should be reachable on port 80")
-	request := helpers.MustBuildRequest(t, ctx, http.MethodGet, fmt.Sprintf("http://%s:80%s", gatewayIPAddress, pathOnPort80), "")
+	request := helpers.MustBuildRequest(t, ctx, http.MethodGet, baseURLPort80+pathOnPort80, "")
 	require.Eventually(t,
 		testutils.GetResponseBodyContains(t, httpClient, request, "<title>httpbin.org</title>"),
 		waitTime, tickTime,
 	)
 
 	t.Logf("the route attached to the port-%d listener should be reachable on port %d", port8080, port8080)
-	request = helpers.MustBuildRequest(t, ctx, http.MethodGet, fmt.Sprintf("http://%s:%d%s", gatewayIPAddress, port8080, pathOnPort8080), "")
+	request = helpers.MustBuildRequest(t, ctx, http.MethodGet, baseURLPort8080+pathOnPort8080, "")
 	require.Eventually(t,
 		testutils.GetResponseBodyContains(t, httpClient, request, "<title>httpbin.org</title>"),
 		waitTime, tickTime,
@@ -389,13 +394,13 @@ func TestHTTPRouteExpressionsRouterPortIsolation(t *testing.T) {
 
 	t.Logf("the route attached to the port-%d listener must not be reachable on port 80 (no route overlap across listener ports)", port8080)
 	require.Eventually(t,
-		asserts.Expect404WithNoRouteFunc(t, ctx, fmt.Sprintf("http://%s:80%s", gatewayIPAddress, pathOnPort8080)),
+		asserts.Expect404WithNoRouteFunc(t, ctx, baseURLPort80+pathOnPort8080),
 		waitTime, tickTime,
 	)
 
 	t.Logf("the route attached to the port-80 listener must not be reachable on port %d (no route overlap across listener ports)", port8080)
 	require.Eventually(t,
-		asserts.Expect404WithNoRouteFunc(t, ctx, fmt.Sprintf("http://%s:%d%s", gatewayIPAddress, port8080, pathOnPort80)),
+		asserts.Expect404WithNoRouteFunc(t, ctx, baseURLPort8080+pathOnPort80),
 		waitTime, tickTime,
 	)
 }

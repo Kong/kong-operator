@@ -75,7 +75,7 @@ func TranslateHTTPRoutesToKongstateServices(
 	// https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.HTTPRouteRule
 	var ruleToMatchesWithPriorities splitHTTPRouteMatchesWithPrioritiesGroupedByRule
 	if options.ExpressionRoutes {
-		ruleToMatchesWithPriorities = groupHTTPRouteMatchesWithPrioritiesByRule(logger, routes)
+		ruleToMatchesWithPriorities = groupHTTPRouteMatchesWithPrioritiesByRule(logger, storer, routes)
 	} else {
 		ruleToMatchesWithPriorities = groupTraditionalHTTPRouteMatchesWithPrioritiesByRule(routes)
 	}
