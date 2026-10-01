@@ -115,6 +115,28 @@ func aiGatewayConsumerGroupFixture(name string) *aiconfigurationv1alpha1.AIGatew
 	}
 }
 
+func aiGatewayAuthStrategyFixture(name string) *aiconfigurationv1alpha1.AIGatewayAuthStrategy {
+	return &aiconfigurationv1alpha1.AIGatewayAuthStrategy{
+		Name: name, Namespace: "default",
+		Spec: aiconfigurationv1alpha1.AIGatewayAuthStrategySpec{
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				Group:         aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+				Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gw"},
+			},
+			APISpec: aiconfigurationv1alpha1.AIGatewayAuthStrategyAPISpec{
+				AIGatewayAuthStrategyConfig: &aiconfigurationv1alpha1.AIGatewayAuthStrategyConfig{
+					Type: aiconfigurationv1alpha1.AIGatewayAuthStrategyConfigTypeKeyAuth,
+					KeyAuth: &aiconfigurationv1alpha1.AIGatewayAuthStrategyKeyAuth{
+						Name:        aiconfigurationv1alpha1.AIGatewayEntityIdentifier(name),
+						DisplayName: name,
+					},
+				},
+			},
+		},
+	}
+}
+
 // TestBuildDocument covers listing, conversion and deterministic ordering: appendEntities sorts
 // by k8s object name so the rendered payload (and its hash, which drives the drift loop in
 // controller.go) doesn't flap across List calls that return in a different order.
@@ -135,9 +157,12 @@ func TestBuildDocument(t *testing.T) {
 	policyA := aiGatewayPolicyFixture("policy-a")
 	groupB := aiGatewayConsumerGroupFixture("group-b")
 	groupA := aiGatewayConsumerGroupFixture("group-a")
+	authStrategyB := aiGatewayAuthStrategyFixture("auth-strategy-b")
+	authStrategyA := aiGatewayAuthStrategyFixture("auth-strategy-a")
 
 	builder := fake.NewClientBuilder().WithScheme(scheme).
-		WithObjects(gw, modelB, modelA, providerB, providerA, policyB, policyA, groupB, groupA)
+		WithObjects(gw, modelB, modelA, providerB, providerA, policyB, policyA, groupB, groupA,
+			authStrategyB, authStrategyA)
 	for _, opt := range index.OptionsForAIGatewayModel() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
@@ -148,6 +173,9 @@ func TestBuildDocument(t *testing.T) {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	for _, opt := range index.OptionsForAIGatewayConsumerGroup() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayAuthStrategy() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	cl := builder.Build()
@@ -166,9 +194,12 @@ func TestBuildDocument(t *testing.T) {
 	require.Len(t, doc.ConsumerGroups, 2)
 	require.Equal(t, "group-a", doc.ConsumerGroups[0].Name)
 	require.Equal(t, "group-b", doc.ConsumerGroups[1].Name)
+	require.Len(t, doc.AuthStrategies, 2)
+	require.Equal(t, "auth-strategy-a", doc.AuthStrategies[0].Name)
+	require.Equal(t, "auth-strategy-b", doc.AuthStrategies[1].Name)
 
 	// Every entity translated successfully, so all statuses are reported as such.
-	require.Len(t, statuses, 8)
+	require.Len(t, statuses, 10)
 	for _, s := range statuses {
 		require.NoError(t, s.Err)
 	}
@@ -204,6 +235,9 @@ func TestBuildDocument_NoModels(t *testing.T) {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	for _, opt := range index.OptionsForAIGatewayConsumerGroup() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayAuthStrategy() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	cl := builder.Build()
@@ -245,6 +279,9 @@ func TestBuildDocument_PerEntityFailure(t *testing.T) {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	for _, opt := range index.OptionsForAIGatewayConsumerGroup() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayAuthStrategy() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	cl := builder.Build()

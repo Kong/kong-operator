@@ -174,5 +174,17 @@ func BuildDocument(
 	}
 	statuses = append(statuses, s...)
 
+	s, err = appendEntities(ctx, cl, gw, &aiconfigurationv1alpha1.AIGatewayAuthStrategyList{},
+		index.IndexFieldAIGatewayAuthStrategyOnOnPremAIGatewayRef, doc,
+		func(ctx context.Context, cl client.Client, a *aiconfigurationv1alpha1.AIGatewayAuthStrategy) (*aigw.AuthStrategy, error) {
+			return a.ToAIGWAuthStrategy(ctx, cl)
+		},
+		func(d *aigw.Document, a *aigw.AuthStrategy) { d.AuthStrategies = append(d.AuthStrategies, *a) },
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+	statuses = append(statuses, s...)
+
 	return doc, statuses, nil
 }

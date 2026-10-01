@@ -34,7 +34,7 @@ package v1alpha1
 // in aigatewaymodel_aigw_manual_test.go is the only drift detector between the two sides.
 //
 // Upstream asks for ai-deck-converter, non-blocking: aigw/doc.go is missing type aliases for
-// AuthStrategy, CACertificate, ModelAccess, and the three model-selector sub-configs
+// CACertificate, ModelAccess, and the three model-selector sub-configs
 // (ModelBodySelectorConfig, ModelHeaderSelectorConfig, ModelPathSelectorConfig).
 
 import (
