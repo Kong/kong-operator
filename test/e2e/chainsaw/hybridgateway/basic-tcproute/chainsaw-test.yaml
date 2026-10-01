@@ -156,7 +156,7 @@ spec:
               - name: EXPECTED_RESPONSE
                 value: Running on Pod
             content: |
-              bash ../../common/scripts/host_connectivity_test_tcp.sh
+              PROTOCOL=tcp bash ../../common/scripts/host_connectivity_test_l4.sh
 
   catch:
     - description: Capture debug snapshot

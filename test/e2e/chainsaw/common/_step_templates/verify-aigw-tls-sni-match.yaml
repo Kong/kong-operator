@@ -41,10 +41,10 @@ spec:
         env:
           - name: NAMESPACE
             value: ($namespace)
-          - name: AIGW_DP_NAME
-            value: ($aigw_dp_name)
+          - name: SERVICE_NAME
+            value: (join('', [($aigw_dp_name), '-ingress']))
         content: |
-          bash ../../common/scripts/aigw_dataplane_lb_address.sh
+          bash ../../common/scripts/service_lb_address.sh
         outputs:
           - name: lb_address
             value: (json_parse($stdout).address)

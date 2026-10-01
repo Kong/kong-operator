@@ -87,8 +87,8 @@ spec:
             env:
               - name: NAMESPACE
                 value: ($namespace)
-              - name: DP_SVC
-                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
               - name: ROUTE_PATH
                 value: /aigw11/chat
               - name: MODEL_ALIAS
@@ -96,7 +96,7 @@ spec:
               - name: EXPECT_HEADER
                 value: "Modified-By-Policy-Inline"
             content: |
-              bash ../../common/scripts/aigw_chat_completion_from_cluster.sh
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
     - name: Create-aigateway-policy-secretRef-config
       description: Create an AIGatewayPolicy resource with secretRef config that adds a custom header to the response of an API.
       bindings:
@@ -123,8 +123,8 @@ spec:
             env:
               - name: NAMESPACE
                 value: ($namespace)
-              - name: DP_SVC
-                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
               - name: ROUTE_PATH
                 value: /aigw11/chat
               - name: MODEL_ALIAS
@@ -132,7 +132,7 @@ spec:
               - name: EXPECT_HEADER
                 value: "Modified-By-Policy-Secretref"
             content: |
-              bash ../../common/scripts/aigw_chat_completion_from_cluster.sh
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
     - name: Update-secret-to-change-the-policy-config
       description: Update the secret referenced by the AIGatewayPolicy with secretRef config to change the custom header value in the response of an API.
       bindings:
@@ -148,8 +148,8 @@ spec:
             env:
               - name: NAMESPACE
                 value: ($namespace)
-              - name: DP_SVC
-                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
               - name: ROUTE_PATH
                 value: /aigw11/chat
               - name: MODEL_ALIAS
@@ -157,7 +157,7 @@ spec:
               - name: EXPECT_HEADER
                 value: "Modified-By-Policy-Secretref-Updated"
             content: |
-              bash ../../common/scripts/aigw_chat_completion_from_cluster.sh
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
     - name: Create-aigateway-policy-with-condition
       description: Create an AIGatewayPolicy resource with a `condition` gating its response-transformer config on the request path.
       bindings:
@@ -182,8 +182,8 @@ spec:
             env:
               - name: NAMESPACE
                 value: ($namespace)
-              - name: DP_SVC
-                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
               - name: ROUTE_PATH
                 value: /aigw11/chat
               - name: MODEL_ALIAS
@@ -191,7 +191,7 @@ spec:
               - name: EXPECT_HEADER
                 value: "Modified-By-Policy-Condition"
             content: |
-              bash ../../common/scripts/aigw_chat_completion_from_cluster.sh
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
     - name: Delete-aigateway-model-and-policies-and-wait-for-konnect-cleanup
       description: |
         Explicitly delete the AIGatewayModel first (it references both policies

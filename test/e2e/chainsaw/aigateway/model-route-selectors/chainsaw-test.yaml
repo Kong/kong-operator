@@ -77,8 +77,8 @@ spec:
             env:
               - name: NAMESPACE
                 value: ($namespace)
-              - name: DP_SVC
-                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
               - name: ROUTE_PATH
                 value: /model-route/headers/chat
               - name: MODEL_ALIAS
@@ -86,7 +86,7 @@ spec:
               - name: INCLUDE_BODY_MODEL
                 value: 'false'
             content: |
-              bash ../../common/scripts/aigw_chat_completion_from_cluster.sh
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
     - name: 7-Verify-headers-selector-rejects-non-matching-alias
       description: |
         A request carrying an alias absent from the selector's `values` never
@@ -97,8 +97,8 @@ spec:
             env:
               - name: NAMESPACE
                 value: ($namespace)
-              - name: DP_SVC
-                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
               - name: ROUTE_PATH
                 value: /model-route/headers/chat
               - name: MODEL_ALIAS
@@ -108,7 +108,7 @@ spec:
               - name: INCLUDE_BODY_MODEL
                 value: 'false'
             content: |
-              bash ../../common/scripts/aigw_chat_completion_from_cluster.sh
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
     - name: 8-Verify-body-selector-routes-matching-alias
       description: |
         A request carrying the configured body property alias is routed to
@@ -119,8 +119,8 @@ spec:
             env:
               - name: NAMESPACE
                 value: ($namespace)
-              - name: DP_SVC
-                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
               - name: ROUTE_PATH
                 value: /model-route/body/chat
               - name: MODEL_ALIAS
@@ -128,7 +128,7 @@ spec:
               - name: INCLUDE_HEADER
                 value: 'false'
             content: |
-              bash ../../common/scripts/aigw_chat_completion_from_cluster.sh
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
     - name: 9-Verify-no-selector-model-routes-via-format-default
       description: |
         A model with no `route.model` selector configured falls back to the
@@ -146,8 +146,8 @@ spec:
             env:
               - name: NAMESPACE
                 value: ($namespace)
-              - name: DP_SVC
-                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
               - name: ROUTE_PATH
                 value: /model-route/no-selector/chat
               - name: MODEL_ALIAS
@@ -155,7 +155,7 @@ spec:
               - name: INCLUDE_HEADER
                 value: 'false'
             content: |
-              bash ../../common/scripts/aigw_chat_completion_from_cluster.sh
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
     - name: 10-Verify-path-selector-routes-matching-alias
       description: |
         A request whose path segment matches the selector's `values` is
@@ -170,8 +170,8 @@ spec:
             env:
               - name: NAMESPACE
                 value: ($namespace)
-              - name: DP_SVC
-                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
               - name: ROUTE_PATH
                 value: /model-route/path/qwen2.5:0.5b/chat
               - name: MODEL_ALIAS
@@ -181,7 +181,7 @@ spec:
               - name: INCLUDE_BODY_MODEL
                 value: 'false'
             content: |
-              bash ../../common/scripts/aigw_chat_completion_from_cluster.sh
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
     - name: 11-Verify-body-selector-rejects-non-matching-alias
       description: |
         A request carrying a body property alias absent from the selector's
@@ -192,8 +192,8 @@ spec:
             env:
               - name: NAMESPACE
                 value: ($namespace)
-              - name: DP_SVC
-                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
               - name: ROUTE_PATH
                 value: /model-route/body/chat
               - name: MODEL_ALIAS
@@ -203,7 +203,7 @@ spec:
               - name: INCLUDE_HEADER
                 value: 'false'
             content: |
-              bash ../../common/scripts/aigw_chat_completion_from_cluster.sh
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
     - name: 12-Verify-path-selector-rejects-non-matching-alias
       description: |
         A request whose path segment is absent from the selector's `values`
@@ -214,8 +214,8 @@ spec:
             env:
               - name: NAMESPACE
                 value: ($namespace)
-              - name: DP_SVC
-                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
               - name: ROUTE_PATH
                 value: /model-route/path/path-alias-wrong/chat
               - name: MODEL_ALIAS
@@ -227,7 +227,7 @@ spec:
               - name: INCLUDE_BODY_MODEL
                 value: 'false'
             content: |
-              bash ../../common/scripts/aigw_chat_completion_from_cluster.sh
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
   catch:
     - description: Capture debug snapshot on test failure.
       script:

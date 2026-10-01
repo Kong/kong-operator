@@ -4,12 +4,11 @@
 #
 # Assumes ADDRESS is directly reachable from wherever this script runs: either
 # the chainsaw test-runner host (e.g. an external LoadBalancer address), or an
-# in-cluster curl Pod when piped through aigw_chat_completion_from_cluster.sh
-# (e.g. the ingress Service's cluster-DNS name), mirroring
-# aigw_agent_request.sh / aigw_agent_request_from_cluster.sh. Emits a JSON
-# result object to stdout (success or failure) and exits non-zero (failing
-# the chainsaw step) unless a matching response is observed within the retry
-# budget.
+# in-cluster curl Pod when piped through run_script_in_pod.sh
+# (e.g. the ingress Service's cluster-DNS name), mirroring aigw_agent_request.sh.
+# Emits a JSON result object to stdout (success or failure) and exits non-zero
+# (failing the chainsaw step) unless a matching response is observed within the
+# retry budget.
 #
 # Required env:
 #   ADDRESS       Host or IP to connect to (cluster-DNS name or external address).

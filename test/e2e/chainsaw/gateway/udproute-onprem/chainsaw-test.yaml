@@ -106,7 +106,7 @@ spec:
               - name: EXPECTED_RESPONSE
                 value: ($echo_older_name)
             content: |
-              bash ../../common/scripts/host_connectivity_test_udp.sh
+              PROTOCOL=udp bash ../../common/scripts/host_connectivity_test_l4.sh
 
     - name: Create-second-udproute
       description: |
@@ -156,7 +156,7 @@ spec:
               - name: EXPECTED_RESPONSE
                 value: ($echo_older_name)
             content: |
-              bash ../../common/scripts/host_connectivity_test_udp.sh
+              PROTOCOL=udp bash ../../common/scripts/host_connectivity_test_l4.sh
 
     - name: Verify-udp-traffic-reaches-third
       description: |
@@ -183,7 +183,7 @@ spec:
               - name: EXPECTED_RESPONSE
                 value: ($echo_third_name)
             content: |
-              bash ../../common/scripts/host_connectivity_test_udp.sh
+              PROTOCOL=udp bash ../../common/scripts/host_connectivity_test_l4.sh
 
     - name: Delete-winner-udproute
       description: |
@@ -226,7 +226,7 @@ spec:
               - name: EXPECTED_RESPONSE
                 value: ($echo_newer_name)
             content: |
-              bash ../../common/scripts/host_connectivity_test_udp.sh
+              PROTOCOL=udp bash ../../common/scripts/host_connectivity_test_l4.sh
 
     - name: Delete-loser-udproute
       description: Delete the same-listener loser and verify only the third route remains attached.
