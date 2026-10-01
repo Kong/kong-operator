@@ -18,6 +18,7 @@ package onpremconfig
 
 import (
 	"context"
+	"errors"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -78,22 +79,27 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	if r.ChangeNotifier == nil {
 		return ctrl.Result{}, nil
 	}
+	var errs []error
 	for _, notify := range secretRefNotifierFuncs {
-		notify(ctx, r.Client, req.NamespacedName, r.ChangeNotifier, r.Log)
+		if err := notify(ctx, r.Client, req.NamespacedName, r.ChangeNotifier, r.Log); err != nil {
+			errs = append(errs, err)
+		}
 	}
-	return ctrl.Result{}, nil
+	return ctrl.Result{}, errors.Join(errs...)
 }
 
 // secretRefNotifierFuncs holds one fan-out entry per configuration entity kind
-// that carries secretRefs. Kinds without a generated GetSensitiveDataSecretRefs
-// accessor have no Secrets to watch and are not listed here.
+// that both carries secretRefs and has an aiGatewayRef to notify through. Kinds
+// without a generated GetSensitiveDataSecretRefs accessor have no Secrets to
+// watch; AIGatewayConsumerCredential has the accessor but no aiGatewayRef, so
+// it has no entry here either.
 var secretRefNotifierFuncs = []func(
 	ctx context.Context,
 	cl client.Client,
 	secretNN types.NamespacedName,
 	cn *changenotifier.ChangeNotifier,
 	log logr.Logger,
-){
+) error{
 	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayAuthStrategyList],
 	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayCACertificateList],
 	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayCertificateList],
@@ -104,7 +110,8 @@ var secretRefNotifierFuncs = []func(
 
 // notifyEntitiesForSecret lists the entities of one kind in the Secret's namespace and
 // notifies the ChangeNotifier for every entity referencing the Secret, addressed to the
-// OnPremAIGateway the entity targets.
+// OnPremAIGateway the entity targets. It returns the List error so that Reconcile can
+// propagate it and the queue retries the Secret event.
 func notifyEntitiesForSecret[
 	TList interface {
 		GetItems() []T
@@ -126,7 +133,7 @@ func notifyEntitiesForSecret[
 	secretNN types.NamespacedName,
 	cn *changenotifier.ChangeNotifier,
 	log logr.Logger,
-) {
+) error {
 	var (
 		l    TList
 		lPtr TListPtr = &l
@@ -134,7 +141,7 @@ func notifyEntitiesForSecret[
 	if err := cl.List(ctx, lPtr, client.InNamespace(secretNN.Namespace)); err != nil {
 		log.Error(err, "Failed to list configuration entities referencing a Secret",
 			"secretNamespace", secretNN.Namespace, "secretName", secretNN.Name)
-		return
+		return err
 	}
 	items := lPtr.GetItems()
 	for i := range items {
@@ -158,4 +165,5 @@ func notifyEntitiesForSecret[
 			break
 		}
 	}
+	return nil
 }
