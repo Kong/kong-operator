@@ -99,6 +99,12 @@ func getAIGatewayAgentForUID(
 		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: GetOp}
 	}
 
+	// Without a UID every unlabeled Konnect entity would match below.
+	uid := string(obj.GetUID())
+	if uid == "" {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+
 	// TODO: pass a Filter to ListAiGatewayAgents (e.g. by name/labels) so we
 	// do not page through every entity in the tenant. Filter types and
 	// fields are entity-specific; derive from OpenAPI schema.
@@ -113,7 +119,7 @@ func getAIGatewayAgentForUID(
 	}
 
 	for _, entry := range resp.ListAIGatewayAgentsResponse.Data {
-		if entry.GetLabels()[KubernetesUIDLabelKey] != string(obj.GetUID()) {
+		if entry.GetLabels()[KubernetesUIDLabelKey] != uid {
 			continue
 		}
 		if entry.GetID() != "" {

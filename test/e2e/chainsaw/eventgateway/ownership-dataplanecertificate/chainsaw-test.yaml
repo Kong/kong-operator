@@ -1,0 +1,169 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-ownership-dataplanecertificate
+spec:
+  description: |
+    Konnect entity ownership - EventGatewayDataPlaneCertificate. Event Gateway
+    data plane certificates have no labels in Konnect, so the operator
+    identifies its entity by its certificate, name and description instead
+    of the k8s-uid label. Checks, against the real
+    Konnect API (see the common/_step_templates/konnect-ownership-*.yaml
+    templates):
+
+    - a lost status.id is recovered (by the spec fields) without creating
+      a second entity;
+    - an entity with the same name and description but another
+      certificate, created outside the operator, is not taken over (the
+      certificate is compared after resolving it from its Secret);
+    - deleting a CR that lost its status.id leaves no orphan entity.
+
+    Not checked, by design: a second CR, or an entity created outside the
+    operator, with the same name AND certificate matches the spec fields and
+    is taken over: without labels there is nothing else to tell them apart.
+
+    No data plane is needed.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: keg_cp_name
+      value: (join('-', [($test_name), 'keg']))
+    # The entity under test.
+    - name: cr_api_version
+      value: configuration.konghq.com/v1alpha1
+    - name: cr_kind
+      value: EventGatewayDataPlaneCertificate
+    - name: cr_resource
+      value: eventgatewaydataplanecertificates.configuration.konghq.com
+    - name: collection_path_jq
+      value: '"/v1/event-gateways/" + .status.gatewayID.id + "/data-plane-certificates"'
+    - name: cr_name
+      value: dataplane-certificate
+    - name: duplicate_cr_name
+      value: dataplane-certificate-duplicate
+    - name: foreign_cr_name
+      value: dataplane-certificate-foreign
+    - name: entity_name
+      value: ownership-dataplane-certificate
+    - name: foreign_entity_name
+      value: ownership-dataplane-certificate-foreign
+    - name: cr_spec
+      value:
+        gatewayRef:
+          type: namespacedRef
+          namespacedRef:
+            name: ($keg_cp_name)
+        apiSpec:
+          name: ($entity_name)
+          certificate:
+            type: secretRef
+            secretRef:
+              name: ownership-tls
+              key: tls.crt
+    - name: cr_spec_updated
+      value:
+        gatewayRef:
+          type: namespacedRef
+          namespacedRef:
+            name: ($keg_cp_name)
+        apiSpec:
+          name: ($entity_name)
+          certificate:
+            type: secretRef
+            secretRef:
+              name: ownership-tls
+              key: tls.crt
+    - name: foreign_cr_spec
+      value:
+        gatewayRef:
+          type: namespacedRef
+          namespacedRef:
+            name: ($keg_cp_name)
+        apiSpec:
+          name: ($foreign_entity_name)
+          description: ''
+          certificate:
+            type: secretRef
+            secretRef:
+              name: ownership-tls
+              key: tls.crt
+    - name: foreign_cr_spec_bumped
+      value:
+        gatewayRef:
+          type: namespacedRef
+          namespacedRef:
+            name: ($keg_cp_name)
+        apiSpec:
+          name: ($foreign_entity_name)
+          description: second
+          certificate:
+            type: secretRef
+            secretRef:
+              name: ownership-tls
+              key: tls.crt
+    - name: foreign_body
+      value: >-
+        (join('', ['{name: "', $foreign_entity_name, '", certificate: $ENV.SECRET_TLS_CRT}']))
+  steps:
+    - name: Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: Create-konnect-eventgateway
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectEventGateway.yaml
+    - name: Create-tls-secret-ownership-tls
+      bindings:
+        - name: sni_hostname
+          value: ownership.example.com
+        - name: cert_secret_name
+          value: ownership-tls
+        - name: cert_secret_namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
+    - name: Create-tls-secret-ownership-tls-foreign
+      bindings:
+        - name: sni_hostname
+          value: ownership-foreign.example.com
+        - name: cert_secret_name
+          value: ownership-tls-foreign
+        - name: cert_secret_namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
+
+    - name: Create-entity
+      use:
+        template: ../../common/_step_templates/konnect-ownership-apply-assert-entity.yaml
+    - name: Recover-lost-Konnect-ID
+      use:
+        template: ../../common/_step_templates/konnect-ownership-recover-lost-id.yaml
+        with:
+          bindings:
+            - name: has_uid_label
+              value: false
+    - name: Reject-entity-created-outside-the-operator
+      use:
+        template: ../../common/_step_templates/konnect-ownership-reject-foreign-entity.yaml
+        with:
+          bindings:
+            - name: foreign_secret_name
+              value: ownership-tls-foreign
+    - name: Delete-leaves-no-orphan-after-lost-Konnect-ID
+      use:
+        template: ../../common/_step_templates/konnect-ownership-no-orphan-after-lost-id.yaml

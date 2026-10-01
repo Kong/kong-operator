@@ -1,0 +1,209 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-ownership-listenerpolicy
+spec:
+  description: |
+    Konnect entity ownership - EventGatewayListenerPolicy. Checks, against the real Konnect API, how
+    the operator owns the Konnect entity behind the CR (see the
+    common/_step_templates/konnect-ownership-*.yaml templates):
+
+    - the entity carries the operator's labels (k8s-uid, managed-by, ...) and
+      the user's labels, and the operator's values win over k8s-uid /
+      managed-by set in the CR's spec; labels follow spec updates;
+    - a lost status.id is recovered through the k8s-uid label, without
+      creating a second entity;
+    - an entity with the same name created outside the operator, or by a
+      second CR, is never taken over;
+    - deleting a CR that lost its status.id leaves no orphan entity.
+
+    No data plane is needed.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: keg_cp_name
+      value: (join('-', [($test_name), 'keg']))
+    # The entity under test.
+    - name: cr_api_version
+      value: configuration.konghq.com/v1alpha1
+    - name: cr_kind
+      value: EventGatewayListenerPolicy
+    - name: cr_resource
+      value: eventgatewaylistenerpolicies.configuration.konghq.com
+    - name: collection_path_jq
+      value: '"/v1/event-gateways/" + .status.gatewayID.id + "/listeners/" + .status.eventGatewayListenerID.id + "/policies"'
+    - name: cr_name
+      value: listener-policy
+    - name: duplicate_cr_name
+      value: listener-policy-duplicate
+    - name: foreign_cr_name
+      value: listener-policy-foreign
+    - name: entity_name
+      value: ownership-listener-policy
+    - name: foreign_entity_name
+      value: ownership-listener-policy-foreign
+    - name: cr_spec
+      value:
+        eventGatewayListenerRef:
+          type: namespacedRef
+          namespacedRef:
+            name: ownership-listener
+        apiSpec:
+          type: forwardToVirtualCluster
+          forwardToVirtualCluster:
+            name: ($entity_name)
+            enabled: Enabled
+            config:
+              type: portMapping
+              portMapping:
+                bootstrapPort: at_start
+                advertisedHost: placeholder.invalid
+                destination:
+                  name: ownership-virtual-cluster
+            labels: {team: chainsaw, k8s-uid: not-the-real-uid, managed-by: someone-else}
+    - name: cr_spec_updated
+      value:
+        eventGatewayListenerRef:
+          type: namespacedRef
+          namespacedRef:
+            name: ownership-listener
+        apiSpec:
+          type: forwardToVirtualCluster
+          forwardToVirtualCluster:
+            name: ($entity_name)
+            enabled: Enabled
+            config:
+              type: portMapping
+              portMapping:
+                bootstrapPort: at_start
+                advertisedHost: placeholder.invalid
+                destination:
+                  name: ownership-virtual-cluster
+            labels: {team: chainsaw-updated, k8s-uid: not-the-real-uid, managed-by: someone-else}
+    - name: foreign_cr_spec
+      value:
+        eventGatewayListenerRef:
+          type: namespacedRef
+          namespacedRef:
+            name: ownership-listener
+        apiSpec:
+          type: forwardToVirtualCluster
+          forwardToVirtualCluster:
+            name: ($foreign_entity_name)
+            enabled: Enabled
+            config:
+              type: portMapping
+              portMapping:
+                bootstrapPort: at_start
+                advertisedHost: placeholder.invalid
+                destination:
+                  name: ownership-virtual-cluster
+            labels: {reconcile: first}
+    - name: foreign_cr_spec_bumped
+      value:
+        eventGatewayListenerRef:
+          type: namespacedRef
+          namespacedRef:
+            name: ownership-listener
+        apiSpec:
+          type: forwardToVirtualCluster
+          forwardToVirtualCluster:
+            name: ($foreign_entity_name)
+            enabled: Enabled
+            config:
+              type: portMapping
+              portMapping:
+                bootstrapPort: at_start
+                advertisedHost: placeholder.invalid
+                destination:
+                  name: ownership-virtual-cluster
+            labels: {reconcile: second}
+    - name: foreign_body
+      value: >-
+        (join('', ['{type: "forward_to_virtual_cluster", name: "', $foreign_entity_name, '", config: {type: "port_mapping", bootstrap_port: "at_start", advertised_host: "placeholder.invalid", destination: {name: "ownership-virtual-cluster"}}}']))
+  steps:
+    - name: Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: Create-konnect-eventgateway
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectEventGateway.yaml
+    - name: Create-backend-cluster
+      bindings:
+        - name: backend_cluster_name
+          value: ownership-backend-cluster
+      use:
+        template: ../../common/_step_templates/apply-assert-eventGatewayBackendCluster.yaml
+    - name: Create-virtual-cluster
+      bindings:
+        - name: backend_cluster_name
+          value: ownership-backend-cluster
+        - name: virtual_cluster_name
+          value: ownership-virtual-cluster
+        - name: dns_label
+          value: ownershipvc
+      use:
+        template: ../../common/_step_templates/apply-assert-eventGatewayVirtualCluster.yaml
+    - name: Create-listener
+      bindings:
+        - name: listener_name
+          value: ownership-listener
+        - name: listener_ports
+          value:
+            - '19092'
+      use:
+        template: ../../common/_step_templates/apply-assert-eventGatewayListener.yaml
+
+    - name: Create-entity
+      use:
+        template: ../../common/_step_templates/konnect-ownership-apply-assert-entity.yaml
+    - name: Assert-labels
+      bindings:
+        - name: user_label_value
+          value: chainsaw
+      use:
+        template: ../../common/_step_templates/konnect-ownership-assert-labels.yaml
+    - name: Update-entity
+      bindings:
+        - name: cr_spec
+          value: ($cr_spec_updated)
+      use:
+        template: ../../common/_step_templates/konnect-ownership-apply-assert-entity.yaml
+    - name: Assert-labels-after-update
+      bindings:
+        - name: user_label_value
+          value: chainsaw-updated
+      use:
+        template: ../../common/_step_templates/konnect-ownership-assert-labels.yaml
+    - name: Recover-lost-Konnect-ID
+      use:
+        template: ../../common/_step_templates/konnect-ownership-recover-lost-id.yaml
+    - name: Reject-entity-created-outside-the-operator
+      use:
+        template: ../../common/_step_templates/konnect-ownership-reject-foreign-entity.yaml
+    - name: Reject-duplicate-CR
+      bindings:
+        - name: cr_spec
+          value: ($cr_spec_updated)
+        - name: duplicate_cr_spec_bumped
+          value: ($cr_spec)
+      use:
+        template: ../../common/_step_templates/konnect-ownership-reject-duplicate-cr.yaml
+    - name: Delete-leaves-no-orphan-after-lost-Konnect-ID
+      use:
+        template: ../../common/_step_templates/konnect-ownership-no-orphan-after-lost-id.yaml

@@ -1,0 +1,192 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: aigateway-ownership-cacertificate
+spec:
+  description: |
+    Konnect entity ownership - AIGatewayCACertificate. Checks, against the real Konnect API, how
+    the operator owns the Konnect entity behind the CR (see the
+    common/_step_templates/konnect-ownership-*.yaml templates):
+
+    - the entity carries the operator's labels (k8s-uid, managed-by, ...) and
+      the user's labels, and the operator's values win over k8s-uid /
+      managed-by set in the CR's spec; labels follow spec updates;
+    - a lost status.id is recovered through the k8s-uid label, without
+      creating a second entity;
+    - an entity with the same name created outside the operator, or by a
+      second CR, is never taken over;
+    - deleting a CR that lost its status.id leaves no orphan entity.
+
+    The entity created outside the operator uses another certificate, so the
+    conflict is on the name only.
+
+    No data plane is needed.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: aigw_cp_namespace
+      value: ($namespace)
+    # The entity under test.
+    - name: cr_api_version
+      value: aiconfiguration.konghq.com/v1alpha1
+    - name: cr_kind
+      value: AIGatewayCACertificate
+    - name: cr_resource
+      value: aigatewaycacertificates.aiconfiguration.konghq.com
+    - name: collection_path_jq
+      value: '"/v1/ai-gateways/" + .status.gatewayID.id + "/ca-certificates"'
+    - name: cr_name
+      value: ca-certificate
+    - name: duplicate_cr_name
+      value: ca-certificate-duplicate
+    - name: foreign_cr_name
+      value: ca-certificate-foreign
+    - name: entity_name
+      value: ownership-ca-certificate
+    - name: foreign_entity_name
+      value: ownership-ca-certificate-foreign
+    - name: cr_spec
+      value:
+        aiGatewayRef:
+          namespacedRef:
+            name: ($aigw_cp_name)
+        apiSpec:
+          name: ($entity_name)
+          cert:
+            type: secretRef
+            secretRef:
+              name: ownership-tls
+              key: tls.crt
+          labels: {team: chainsaw, k8s-uid: not-the-real-uid, managed-by: someone-else}
+    - name: cr_spec_updated
+      value:
+        aiGatewayRef:
+          namespacedRef:
+            name: ($aigw_cp_name)
+        apiSpec:
+          name: ($entity_name)
+          cert:
+            type: secretRef
+            secretRef:
+              name: ownership-tls
+              key: tls.crt
+          labels: {team: chainsaw-updated, k8s-uid: not-the-real-uid, managed-by: someone-else}
+    - name: foreign_cr_spec
+      value:
+        aiGatewayRef:
+          namespacedRef:
+            name: ($aigw_cp_name)
+        apiSpec:
+          name: ($foreign_entity_name)
+          labels: {reconcile: first}
+          cert:
+            type: secretRef
+            secretRef:
+              name: ownership-tls-foreign
+              key: tls.crt
+    - name: foreign_cr_spec_bumped
+      value:
+        aiGatewayRef:
+          namespacedRef:
+            name: ($aigw_cp_name)
+        apiSpec:
+          name: ($foreign_entity_name)
+          labels: {reconcile: second}
+          cert:
+            type: secretRef
+            secretRef:
+              name: ownership-tls-foreign
+              key: tls.crt
+    - name: foreign_body
+      value: >-
+        (join('', ['{name: "', $foreign_entity_name, '", cert: $ENV.SECRET_TLS_CRT}']))
+  steps:
+    - name: Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: Create-konnect-aigateway
+      bindings:
+        - name: auth_name
+          value: ($konnect_auth_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
+    - name: Create-tls-secret-ownership-tls
+      bindings:
+        - name: sni_hostname
+          value: ownership.example.com
+        - name: cert_secret_name
+          value: ownership-tls
+        - name: cert_secret_namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
+    - name: Create-tls-secret-ownership-tls-foreign
+      bindings:
+        - name: sni_hostname
+          value: ownership-foreign.example.com
+        - name: cert_secret_name
+          value: ownership-tls-foreign
+        - name: cert_secret_namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
+
+    - name: Create-entity
+      use:
+        template: ../../common/_step_templates/konnect-ownership-apply-assert-entity.yaml
+    - name: Assert-labels
+      bindings:
+        - name: user_label_value
+          value: chainsaw
+      use:
+        template: ../../common/_step_templates/konnect-ownership-assert-labels.yaml
+    - name: Update-entity
+      bindings:
+        - name: cr_spec
+          value: ($cr_spec_updated)
+      use:
+        template: ../../common/_step_templates/konnect-ownership-apply-assert-entity.yaml
+    - name: Assert-labels-after-update
+      bindings:
+        - name: user_label_value
+          value: chainsaw-updated
+      use:
+        template: ../../common/_step_templates/konnect-ownership-assert-labels.yaml
+    - name: Recover-lost-Konnect-ID
+      use:
+        template: ../../common/_step_templates/konnect-ownership-recover-lost-id.yaml
+    - name: Reject-entity-created-outside-the-operator
+      use:
+        template: ../../common/_step_templates/konnect-ownership-reject-foreign-entity.yaml
+        with:
+          bindings:
+            - name: foreign_secret_name
+              value: ownership-tls-foreign
+    - name: Reject-duplicate-CR
+      bindings:
+        - name: cr_spec
+          value: ($cr_spec_updated)
+        - name: duplicate_cr_spec_bumped
+          value: ($cr_spec)
+      use:
+        template: ../../common/_step_templates/konnect-ownership-reject-duplicate-cr.yaml
+    - name: Delete-leaves-no-orphan-after-lost-Konnect-ID
+      use:
+        template: ../../common/_step_templates/konnect-ownership-no-orphan-after-lost-id.yaml

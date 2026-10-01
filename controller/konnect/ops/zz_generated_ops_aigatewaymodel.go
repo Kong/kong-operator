@@ -28,6 +28,12 @@ func createAIGatewayModel(
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
+	if req.AIGatewayModelAPI != nil {
+		req.AIGatewayModelAPI.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelAPI.Labels)
+	}
+	if req.AIGatewayModelModel != nil {
+		req.AIGatewayModelModel.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelModel.Labels)
+	}
 
 	resp, err := sdk.CreateAiGatewayModel(ctx, parentID, *req)
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, obj); errWrap != nil {
@@ -74,6 +80,12 @@ func updateAIGatewayModel(
 	if err != nil {
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
 	}
+	if req.AIGatewayModelAPI != nil {
+		req.AIGatewayModelAPI.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelAPI.Labels)
+	}
+	if req.AIGatewayModelModel != nil {
+		req.AIGatewayModelModel.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelModel.Labels)
+	}
 
 	_, err = sdk.UpdateAiGatewayModel(ctx, sdkkonnectops.UpdateAiGatewayModelRequest{
 		GatewayID:                   parentID,
@@ -104,4 +116,58 @@ func deleteAIGatewayModel(
 		return handleDeleteError(ctx, errWrap, obj)
 	}
 	return nil
+}
+
+func getAIGatewayModelForUID(
+	ctx context.Context,
+	sdk sdkkonnectgo.AIGatewayModelsSDK,
+	obj *aiconfigurationv1alpha1.AIGatewayModel,
+) (string, error) {
+	parentID := obj.GetGatewayID()
+	if parentID == "" {
+		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: GetOp}
+	}
+
+	// Without a UID every unlabeled Konnect entity would match below.
+	uid := string(obj.GetUID())
+	if uid == "" {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+
+	// TODO: pass a Filter to ListAiGatewayModels (e.g. by name/labels) so we
+	// do not page through every entity in the tenant. Filter types and
+	// fields are entity-specific; derive from OpenAPI schema.
+	resp, err := sdk.ListAiGatewayModels(ctx, sdkkonnectops.ListAiGatewayModelsRequest{
+		GatewayID: parentID,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+	}
+	if resp == nil || resp.ListAIGatewayModelsResponse == nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+	}
+
+	// List items are root unions whose wrapper exposes no GetID()/GetLabels():
+	// read them from whichever variant is set.
+	// TODO: only the first page of results is scanned. Tracked in
+	// https://github.com/Kong/kong-operator/issues/3987.
+	for _, entry := range resp.ListAIGatewayModelsResponse.Data {
+		var (
+			id     string
+			labels map[string]string
+		)
+		switch {
+		case entry.AIGatewayModelAIGatewayModelAPI != nil:
+			id, labels = entry.AIGatewayModelAIGatewayModelAPI.GetID(), entry.AIGatewayModelAIGatewayModelAPI.GetLabels()
+		case entry.AIGatewayModelAIGatewayModelModel != nil:
+			id, labels = entry.AIGatewayModelAIGatewayModelModel.GetID(), entry.AIGatewayModelAIGatewayModelModel.GetLabels()
+		default:
+			continue
+		}
+		if id != "" && labels[KubernetesUIDLabelKey] == uid {
+			return id, nil
+		}
+	}
+
+	return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 }

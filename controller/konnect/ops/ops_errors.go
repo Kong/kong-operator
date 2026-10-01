@@ -352,6 +352,45 @@ func ErrorIsCreateConflict(err error) bool {
 	return false
 }
 
+// errorIsNameMustBeUnique reports whether err is the 400 Bad Request that
+// Konnect returns when an entity's name is already taken, e.g.:
+//
+//	{
+//	  "status": 400,
+//	  "title": "Bad Request",
+//	  "detail": "Bad Request: name: must be unique",
+//	  "invalid_parameters": [{"field": "name", "reason": "must be unique", "source": "body"}]
+//	}
+//
+// Some Konnect APIs (e.g. Event Gateway policies) report a name conflict this
+// way instead of with a 409 Conflict.
+func errorIsNameMustBeUnique(err error) bool {
+	badRequest, ok := errors.AsType[*sdkkonnecterrs.BadRequestError](err)
+	if !ok {
+		return false
+	}
+	for _, p := range badRequest.InvalidParameters {
+		// The SDK decodes an invalid parameter into whichever union variant
+		// the JSON fits first (e.g. {"field", "reason"} lands in
+		// InvalidParameterDependentItem), so check all of them.
+		for _, v := range []interface {
+			GetField() string
+			GetReason() string
+		}{
+			p.InvalidParameterStandard,
+			p.InvalidParameterMinimumLength,
+			p.InvalidParameterMaximumLength,
+			p.InvalidParameterChoiceItem,
+			p.InvalidParameterDependentItem,
+		} {
+			if v.GetField() == "name" && v.GetReason() == "must be unique" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // SDKErrorIsConflict returns true if the provided SDKError indicates a conflict.
 // We currently handle two codes (as mapped in
 // https://grpc.io/docs/guides/status-codes/#the-full-list-of-status-codes)
