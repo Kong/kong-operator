@@ -17,6 +17,7 @@ import (
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/internal/versions"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
@@ -33,10 +34,11 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 	cl := integration.GetClients().MgrClient
 
 	originalDataPlaneImageName := helpers.GetDefaultDataPlaneBaseImage()
-	originalDataPlaneImageVersion := "3.3.0"
+	originalDataPlaneImageVersion := versions.MinimumDataPlaneVersion.String()
 	originalDataPlaneImage := fmt.Sprintf("%s:%s", originalDataPlaneImageName, originalDataPlaneImageVersion)
-
-	newDataPlaneImageVersion := "3.6.0"
+	// Hardcoded, because the OSS image is not published for versions newer than 3.9,
+	// so consts.DefaultDataPlaneTag (Enterprise) can't be used with it.
+	const newDataPlaneImageVersion = "3.9.3"
 	newDataPlaneImage := fmt.Sprintf("%s:%s", originalDataPlaneImageName, newDataPlaneImageVersion)
 
 	t.Log("deploying a GatewayConfiguration resource")
@@ -52,7 +54,7 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 								Containers: []corev1.Container{
 									{
 										Name:  consts.DataPlaneProxyContainerName,
-										Image: fmt.Sprintf("%s:%s", originalDataPlaneImageName, originalDataPlaneImageVersion),
+										Image: originalDataPlaneImage,
 										ReadinessProbe: &corev1.Probe{
 											InitialDelaySeconds: 1,
 											PeriodSeconds:       1,

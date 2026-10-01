@@ -49,7 +49,7 @@ func ListenValue(family ipfamily.IPFamily, port int, options ...string) (string,
 // given IP family. It returns an error for ipfamily.Auto and any
 // unrecognized family (see ListenValue).
 func KongDefaults(family ipfamily.IPFamily) (map[string]string, error) {
-	proxyListenHTTP, err := ListenValue(family, consts.DataPlaneProxyPort, "reuseport", "backlog=16384")
+	proxyListenHTTP, err := ListenValue(family, consts.DataPlaneProxyPort, "http2", "reuseport", "backlog=16384")
 	if err != nil {
 		return nil, err
 	}

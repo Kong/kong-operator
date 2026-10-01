@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/versions"
+	"github.com/kong/kong-operator/v2/internal/versions"
 )
 
 const mockConsumerError = `{
@@ -32,7 +32,7 @@ type AdminAPIHandler struct {
 	mux *http.ServeMux
 	t   *testing.T
 
-	// version is the version string returned by mocked Kong instance, default is set to versions.KICv3VersionCutoff (3.4.1).
+	// version is the version string returned by mocked Kong instance, default is set to versions.MinimumDataPlaneVersion.
 	version string
 
 	// ready is a flag that indicates whether the server should return a 200 OK or a 503 Service Unavailable.
@@ -92,7 +92,7 @@ func WithReady(ready bool) AdminAPIHandlerOpt {
 // If version is empty, the default version is used.
 func WithVersion(version string) AdminAPIHandlerOpt {
 	if version == "" {
-		version = versions.KICv3VersionCutoff.String()
+		version = versions.MinimumDataPlaneVersion.String()
 	}
 	return func(h *AdminAPIHandler) {
 		h.version = version
@@ -119,7 +119,7 @@ func WithConfigPostErrorOnlyOnFirstRequest() AdminAPIHandlerOpt {
 
 func NewAdminAPIHandler(t *testing.T, opts ...AdminAPIHandlerOpt) *AdminAPIHandler {
 	h := &AdminAPIHandler{
-		version: versions.KICv3VersionCutoff.String(),
+		version: versions.MinimumDataPlaneVersion.String(),
 		t:       t,
 		ready:   true,
 	}

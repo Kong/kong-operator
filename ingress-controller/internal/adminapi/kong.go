@@ -10,14 +10,14 @@ import (
 	"os"
 	"strings"
 
-	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
+	"github.com/kong/semver/v4"
 	"github.com/samber/lo"
 
 	tlsutil "github.com/kong/kong-operator/v2/ingress-controller/internal/util/tls"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/versions"
 	ingresserrors "github.com/kong/kong-operator/v2/ingress-controller/pkg/errors"
 	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/v2/internal/versions"
 	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 )
 
@@ -52,7 +52,7 @@ func NewKongAPIClient(adminURL string, kongAdminAPIConfig managercfg.AdminAPICli
 
 // NewKongClientForWorkspace returns a Kong API client for a given root API URL and workspace.
 // It ensures that the client is ready to be used by performing a status check, returns KongClientNotReadyError if not
-// or KongGatewayUnsupportedVersionError if it can't check Kong Gateway's version or it is not >= 3.4.1.
+// or KongGatewayUnsupportedVersionError if it can't check Kong Gateway's version or it is below versions.MinimumDataPlaneVersion.
 // If the workspace does not already exist, NewKongClientForWorkspace will create it.
 func NewKongClientForWorkspace(
 	ctx context.Context, adminURL string, wsName string, kongAdminAPIConfig managercfg.AdminAPIClientConfig, kongAdminToken string,
@@ -107,10 +107,10 @@ func NewKongClientForWorkspace(
 		return nil, KongGatewayUnsupportedVersionError{msg: fmt.Sprintf("invalid Kong version: %v", err)}
 	}
 	kongSemVersion := semver.Version{Major: kongVersion.Major(), Minor: kongVersion.Minor(), Patch: kongVersion.Patch()}
-	if kongSemVersion.LT(versions.KICv3VersionCutoff) {
+	if kongSemVersion.LT(versions.MinimumDataPlaneVersion) {
 		return nil, KongGatewayUnsupportedVersionError{msg: fmt.Sprintf(
-			"version: %q is not supported by Kong Kubernetes Ingress Controller in version >=3.0.0, the lowest supported version is: %q",
-			kongSemVersion, versions.KICv3VersionCutoff,
+			"version: %q is not supported, the lowest supported version is: %q",
+			kongSemVersion, versions.MinimumDataPlaneVersion,
 		)}
 	}
 
