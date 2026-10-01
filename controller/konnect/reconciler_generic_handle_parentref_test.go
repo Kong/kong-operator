@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -559,4 +560,118 @@ func TestHandleParentRef_PortalChildren(t *testing.T) {
 			})
 		}
 	}
+}
+
+// TestHandleParentRef_NotKonnectManagedParent covers the skip for parents outside the
+// Konnect reconciler's scope: an AIGatewayConsumer targeting an OnPremAIGateway never
+// gets a Konnect ID, so a credential referencing it must stop reconciliation without
+// erroring (and without keeping a stale parent-ref condition), instead of failing with
+// "does not have a Konnect ID yet" forever.
+func TestHandleParentRef_NotKonnectManagedParent(t *testing.T) {
+	const parentName = "ai-gw-consumer"
+
+	onPremConsumer := func() *aiconfigurationv1alpha1.AIGatewayConsumer {
+		return &aiconfigurationv1alpha1.AIGatewayConsumer{
+			Name: parentName, Namespace: "default",
+			Spec: aiconfigurationv1alpha1.AIGatewayConsumerSpec{
+				AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+					Group:         aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+					Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+					NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "onprem-gw"},
+				},
+			},
+		}
+	}
+
+	newCredential := func(mutators ...func(*aiconfigurationv1alpha1.AIGatewayConsumerCredential)) *aiconfigurationv1alpha1.AIGatewayConsumerCredential {
+		cred := &aiconfigurationv1alpha1.AIGatewayConsumerCredential{
+			Name: "cred", Namespace: "default",
+			Spec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialSpec{
+				AIGatewayConsumerRef: gatewayRef(parentName),
+			},
+		}
+		for _, m := range mutators {
+			m(cred)
+		}
+		return cred
+	}
+
+	handler := parentRefHandler[aiconfigurationv1alpha1.AIGatewayConsumer, *aiconfigurationv1alpha1.AIGatewayConsumer]{}
+
+	t.Run("on-prem parent skips reconciliation, clears stale condition and finalizer", func(t *testing.T) {
+		cred := newCredential(func(c *aiconfigurationv1alpha1.AIGatewayConsumerCredential) {
+			c.Finalizers = []string{KonnectCleanupFinalizer}
+			c.Status.Conditions = []metav1.Condition{{
+				Type:               c.GetStatusConditionTypeParentRefValid(),
+				Status:             metav1.ConditionFalse,
+				Reason:             "ParentRefInvalid",
+				Message:            "stale condition from before the parent became on-prem",
+				LastTransitionTime: metav1.Now(),
+			}}
+		})
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme.Get()).
+			WithStatusSubresource(cred).
+			WithObjects(onPremConsumer(), cred).
+			Build()
+
+		res, err := handler.handleParentRef(t.Context(), cl, cred)
+		require.Zero(t, res.RequeueAfter)
+		require.True(t, res.IsZero())
+
+		var notManagedErr ReferencedObjectNotKonnectManagedError
+		require.ErrorAs(t, err, &notManagedErr)
+		require.Equal(t, parentName, notManagedErr.Reference.Name)
+
+		// Mirror the real reconcile flow: handleRefResult consumes the sentinel and
+		// removes the cleanup finalizer.
+		stop, res, err := handleRefResult(t.Context(), cl, cred, res, err)
+		require.True(t, stop)
+		require.True(t, res.IsZero())
+		require.NoError(t, err)
+
+		updated := &aiconfigurationv1alpha1.AIGatewayConsumerCredential{}
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(cred), updated))
+		_, ok := k8sutils.GetCondition(
+			kcfgconsts.ConditionType(updated.GetStatusConditionTypeParentRefValid()),
+			updated,
+		)
+		require.False(t, ok, "stale parent-ref condition must be cleared")
+		require.Empty(t, updated.Finalizers, "cleanup finalizer must be removed")
+	})
+
+	t.Run("konnect parent without Konnect ID still reports invalid", func(t *testing.T) {
+		// Programmed-but-ID-less consumer: pins that the skip branch sits before the
+		// Konnect-ID check only for on-prem parents, not for Konnect ones.
+		consumer := &aiconfigurationv1alpha1.AIGatewayConsumer{
+			Name: parentName, Namespace: "default",
+			Status: aiconfigurationv1alpha1.AIGatewayConsumerStatus{
+				Conditions: []metav1.Condition{{
+					Type:               string(konnectv1alpha1.KonnectEntityProgrammedConditionType),
+					Status:             metav1.ConditionTrue,
+					Reason:             "Programmed",
+					LastTransitionTime: metav1.Now(),
+				}},
+			},
+		}
+		cred := newCredential()
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme.Get()).
+			WithStatusSubresource(cred).
+			WithObjects(consumer, cred).
+			Build()
+
+		_, err := handler.handleParentRef(t.Context(), cl, cred)
+		require.ErrorAs(t, err, new(ReferencedObjectIsInvalidError))
+
+		updated := &aiconfigurationv1alpha1.AIGatewayConsumerCredential{}
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(cred), updated))
+		cond, ok := k8sutils.GetCondition(
+			kcfgconsts.ConditionType(updated.GetStatusConditionTypeParentRefValid()),
+			updated,
+		)
+		require.True(t, ok)
+		assert.Equal(t, metav1.ConditionFalse, cond.Status)
+		assert.Equal(t, cred.GetStatusConditionReasonParentRefInvalid(), cond.Reason)
+	})
 }
