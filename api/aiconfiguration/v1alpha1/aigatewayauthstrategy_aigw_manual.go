@@ -62,7 +62,7 @@ func marshalAIGWAuthStrategyPayload(spec *AIGatewayAuthStrategyAPISpec) ([]byte,
 	}
 	variant, ok := payload[typeDiscriminator].(map[string]any)
 	if !ok {
-		return nil, fmt.Errorf("unsupported AIGatewayAuthStrategy config variant %q", typeDiscriminator)
+		return nil, fmt.Errorf("AIGatewayAuthStrategy config payload missing for type %q", typeDiscriminator)
 	}
 	// Konnect-only bookkeeping: no on-prem equivalent.
 	delete(variant, "managed_by")
