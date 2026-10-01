@@ -7,7 +7,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,7 +18,7 @@ import (
 
 func onPremAuthStrategyWithSecretRef(name, secretName string) *aiconfigurationv1alpha1.AIGatewayAuthStrategy {
 	return &aiconfigurationv1alpha1.AIGatewayAuthStrategy{
-		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: name},
+		Namespace: "default", Name: name,
 		Spec: aiconfigurationv1alpha1.AIGatewayAuthStrategySpec{
 			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
 				Group:         aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
@@ -86,11 +85,11 @@ func TestSecretReconcilerNotifiesReferencingEntities(t *testing.T) {
 		authStrategy,
 		konnectStrategy,
 		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: secretName},
+			Namespace: "default", Name: secretName,
 		},
 		// A Secret no entity references: reconciling it must not notify.
 		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "unrelated"},
+			Namespace: "default", Name: "unrelated",
 		},
 	)
 	r := &SecretReconciler{Client: cl, Log: logr.Discard(), ChangeNotifier: cn}
@@ -98,9 +97,7 @@ func TestSecretReconcilerNotifiesReferencingEntities(t *testing.T) {
 
 	// Reconciling the referenced Secret notifies the on-prem entity only, addressed
 	// to its parent OnPremAIGateway.
-	_, err := r.Reconcile(t.Context(), ctrl.Request{NamespacedName: types.NamespacedName{
-		Namespace: "default", Name: secretName,
-	}})
+	_, err := r.Reconcile(t.Context(), ctrl.Request{Namespace: "default", Name: secretName})
 	require.NoError(t, err)
 	change := waitForChange(t, ch)
 	strategy, ok := change.Object.(*aiconfigurationv1alpha1.AIGatewayAuthStrategy)
@@ -112,9 +109,7 @@ func TestSecretReconcilerNotifiesReferencingEntities(t *testing.T) {
 	requireNoChange(t, ch)
 
 	// Reconciling an unreferenced Secret notifies nothing.
-	_, err = r.Reconcile(t.Context(), ctrl.Request{NamespacedName: types.NamespacedName{
-		Namespace: "default", Name: "unrelated",
-	}})
+	_, err = r.Reconcile(t.Context(), ctrl.Request{Namespace: "default", Name: "unrelated"})
 	require.NoError(t, err)
 	requireNoChange(t, ch)
 }
@@ -128,9 +123,7 @@ func TestSecretReconcilerNotifiesOnSecretDeletion(t *testing.T) {
 	cl := newReconcilerClient(t, onPremAuthStrategyWithSecretRef("strat", "deleted-secret"))
 	r := &SecretReconciler{Client: cl, Log: logr.Discard(), ChangeNotifier: cn}
 
-	_, err := r.Reconcile(t.Context(), ctrl.Request{NamespacedName: types.NamespacedName{
-		Namespace: "default", Name: "deleted-secret",
-	}})
+	_, err := r.Reconcile(t.Context(), ctrl.Request{Namespace: "default", Name: "deleted-secret"})
 	require.NoError(t, err)
 
 	change := waitForChange(t, cn.NotifyChannel())
@@ -142,8 +135,6 @@ func TestSecretReconcilerWithoutChangeNotifierIsNoop(t *testing.T) {
 	cl := newReconcilerClient(t, onPremAuthStrategyWithSecretRef("strat", "secret"))
 	r := &SecretReconciler{Client: cl, Log: logr.Discard()}
 
-	_, err := r.Reconcile(t.Context(), ctrl.Request{NamespacedName: types.NamespacedName{
-		Namespace: "default", Name: "secret",
-	}})
+	_, err := r.Reconcile(t.Context(), ctrl.Request{Namespace: "default", Name: "secret"})
 	require.NoError(t, err)
 }
