@@ -31,10 +31,25 @@ import (
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
+// EntityStatus is the per-entity outcome of the document translation: Err is
+// nil for entities that were translated and included in the document, and the
+// conversion error for the ones that were not (they are excluded from the
+// document so that a single broken entity does not block the rest).
+type EntityStatus struct {
+	Obj client.Object
+	Err error
+}
+
 // appendEntities lists every entity of one kind pointing at the given OnPremAIGateway (via the
 // kind's generated OnOnPremAIGatewayRef index), sorts the items by namespace/name so the
 // rendered document (and the payload hash derived from it) doesn't flap across List calls that
 // return in a different order, converts each item and appends it to the document.
+//
+// A per-entity conversion failure does not abort the whole translation: the failing entity is
+// excluded from the document and reported in the returned statuses, so that the remaining
+// entities still render and get pushed (mirroring KIC's continue-on-error translation).
+// A failure to list the entities of a kind is a different beast: the whole kind's contribution
+// is missing from the document, so it aborts the translation (and no status is reported).
 //
 // convert and appendTo are the only kind-specific parts: the ToAIGW* method name and the
 // aigw.Document field the result lands in.
@@ -54,9 +69,9 @@ func appendEntities[Entity any, AIGWEntity any, List interface {
 	doc *aigw.Document,
 	convert func(context.Context, client.Client, *Entity) (AIGWEntity, error),
 	appendTo func(*aigw.Document, AIGWEntity),
-) error {
+) ([]EntityStatus, error) {
 	if err := cl.List(ctx, list, client.MatchingFields{indexField: gw.String()}); err != nil {
-		return fmt.Errorf("listing %T for %s: %w", list, gw, err)
+		return nil, fmt.Errorf("listing %T for %s: %w", list, gw, err)
 	}
 
 	items := list.GetItems()
@@ -68,19 +83,27 @@ func appendEntities[Entity any, AIGWEntity any, List interface {
 		)
 	})
 
+	statuses := make([]EntityStatus, 0, len(items))
 	for i := range items {
+		obj := any(&items[i]).(client.Object)
 		aigwEntity, err := convert(ctx, cl, &items[i])
 		if err != nil {
-			obj := any(&items[i]).(client.Object)
-			return fmt.Errorf("converting %T %s: %w", obj, client.ObjectKeyFromObject(obj), err)
+			statuses = append(statuses, EntityStatus{
+				Obj: obj,
+				Err: fmt.Errorf("converting %T %s: %w", obj, client.ObjectKeyFromObject(obj), err),
+			})
+			continue
 		}
 		appendTo(doc, aigwEntity)
+		statuses = append(statuses, EntityStatus{Obj: obj})
 	}
-	return nil
+	return statuses, nil
 }
 
 // BuildDocument assembles the aigw.Document for the given OnPremAIGateway, translating every
-// aiconfiguration entity kind pointing at it.
+// aiconfiguration entity kind pointing at it. Alongside the document it returns the per-entity
+// translation status (see EntityStatus), so that the caller can report each entity's outcome on
+// the entity's status.
 //
 // Entity kinds join here as they gain their own ToAIGW* conversion; until then the rendered
 // Document (and the dbless payload built from it) has dangling references and
@@ -92,51 +115,64 @@ func appendEntities[Entity any, AIGWEntity any, List interface {
 //
 // NOTE: This will either stay here or be moved to a separate package where translation
 // (building the document) will happen asynchronously as it's done for ingress-controller.
-func BuildDocument(ctx context.Context, cl client.Client, gw types.NamespacedName) (*aigw.Document, error) {
+func BuildDocument(
+	ctx context.Context,
+	cl client.Client,
+	gw types.NamespacedName,
+) (*aigw.Document, []EntityStatus, error) {
 	doc := &aigw.Document{}
+	var statuses []EntityStatus
 
 	// TODO: dedup the per-kind appendEntities blocks below, tracked in
 	// https://github.com/Kong/kong-operator/issues/5909.
 
-	if err := appendEntities(ctx, cl, gw, &aiconfigurationv1alpha1.AIGatewayModelList{},
+	s, err := appendEntities(ctx, cl, gw, &aiconfigurationv1alpha1.AIGatewayModelList{},
 		index.IndexFieldAIGatewayModelOnOnPremAIGatewayRef, doc,
 		func(ctx context.Context, cl client.Client, m *aiconfigurationv1alpha1.AIGatewayModel) (*aigw.Model, error) {
 			return m.ToAIGWModel(ctx, cl)
 		},
 		func(d *aigw.Document, m *aigw.Model) { d.Models = append(d.Models, *m) },
-	); err != nil {
-		return nil, err
+	)
+	if err != nil {
+		return nil, nil, err
 	}
+	statuses = append(statuses, s...)
 
-	if err := appendEntities(ctx, cl, gw, &aiconfigurationv1alpha1.AIGatewayModelProviderList{},
+	s, err = appendEntities(ctx, cl, gw, &aiconfigurationv1alpha1.AIGatewayModelProviderList{},
 		index.IndexFieldAIGatewayModelProviderOnOnPremAIGatewayRef, doc,
 		func(ctx context.Context, cl client.Client, p *aiconfigurationv1alpha1.AIGatewayModelProvider) (*aigw.Provider, error) {
 			return p.ToAIGWProvider(ctx, cl)
 		},
 		func(d *aigw.Document, p *aigw.Provider) { d.ModelProviders = append(d.ModelProviders, *p) },
-	); err != nil {
-		return nil, err
+	)
+	if err != nil {
+		return nil, nil, err
 	}
+	statuses = append(statuses, s...)
 
-	if err := appendEntities(ctx, cl, gw, &aiconfigurationv1alpha1.AIGatewayPolicyList{},
+	s, err = appendEntities(ctx, cl, gw, &aiconfigurationv1alpha1.AIGatewayPolicyList{},
 		index.IndexFieldAIGatewayPolicyOnOnPremAIGatewayRef, doc,
 		func(ctx context.Context, cl client.Client, p *aiconfigurationv1alpha1.AIGatewayPolicy) (*aigw.Policy, error) {
 			return p.ToAIGWPolicy(ctx, cl)
 		},
 		func(d *aigw.Document, p *aigw.Policy) { d.Policies = append(d.Policies, *p) },
-	); err != nil {
-		return nil, err
+	)
+	if err != nil {
+		return nil, nil, err
 	}
+	statuses = append(statuses, s...)
 
-	if err := appendEntities(ctx, cl, gw, &aiconfigurationv1alpha1.AIGatewayConsumerGroupList{},
+	s, err = appendEntities(ctx, cl, gw, &aiconfigurationv1alpha1.AIGatewayConsumerGroupList{},
 		index.IndexFieldAIGatewayConsumerGroupOnOnPremAIGatewayRef, doc,
 		func(ctx context.Context, cl client.Client, g *aiconfigurationv1alpha1.AIGatewayConsumerGroup) (*aigw.ConsumerGroup, error) {
 			return g.ToAIGWConsumerGroup(ctx, cl)
 		},
 		func(d *aigw.Document, g *aigw.ConsumerGroup) { d.ConsumerGroups = append(d.ConsumerGroups, *g) },
-	); err != nil {
-		return nil, err
+	)
+	if err != nil {
+		return nil, nil, err
 	}
+	statuses = append(statuses, s...)
 
-	return doc, nil
+	return doc, statuses, nil
 }

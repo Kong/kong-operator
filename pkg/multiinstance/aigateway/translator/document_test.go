@@ -152,7 +152,7 @@ func TestBuildDocument(t *testing.T) {
 	}
 	cl := builder.Build()
 
-	doc, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
 	require.NoError(t, err)
 	require.Len(t, doc.Models, 2)
 	require.Equal(t, "model-a", doc.Models[0].Name)
@@ -166,6 +166,12 @@ func TestBuildDocument(t *testing.T) {
 	require.Len(t, doc.ConsumerGroups, 2)
 	require.Equal(t, "group-a", doc.ConsumerGroups[0].Name)
 	require.Equal(t, "group-b", doc.ConsumerGroups[1].Name)
+
+	// Every entity translated successfully, so all statuses are reported as such.
+	require.Len(t, statuses, 8)
+	for _, s := range statuses {
+		require.NoError(t, s.Err)
+	}
 
 	// Non-strict rendering must not fail even once a dangling reference is introduced by the
 	// next slice - pinned here with a target that references a provider this test never creates.
@@ -202,10 +208,61 @@ func TestBuildDocument_NoModels(t *testing.T) {
 	}
 	cl := builder.Build()
 
-	doc, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
 	require.NoError(t, err)
+	require.Empty(t, statuses)
 	require.Empty(t, doc.Models)
 	require.Empty(t, doc.ModelProviders)
 	require.Empty(t, doc.Policies)
 	require.Empty(t, doc.ConsumerGroups)
+}
+
+// TestBuildDocument_PerEntityFailure covers the continue-on-error behaviour: a single broken
+// entity is excluded from the document and reported with its conversion error, while the
+// remaining entities still convert.
+func TestBuildDocument_PerEntityFailure(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	// A model without spec.apiSpec fails conversion deterministically.
+	broken := aiGatewayModelFixture("model-broken")
+	broken.Spec.APISpec = aiconfigurationv1alpha1.AIGatewayModelAPISpec{}
+	model := aiGatewayModelFixture("model-a")
+
+	builder := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(gw, broken, model)
+	for _, opt := range index.OptionsForAIGatewayModel() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayModelProvider() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayPolicy() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayConsumerGroup() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	cl := builder.Build()
+
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	require.NoError(t, err)
+
+	require.Len(t, doc.Models, 1)
+	require.Equal(t, "model-a", doc.Models[0].Name)
+
+	require.Len(t, statuses, 2)
+	failed := 0
+	for _, s := range statuses {
+		if s.Err != nil {
+			failed++
+			require.Equal(t, "model-broken", s.Obj.GetName())
+			require.Contains(t, s.Err.Error(), "spec.apiSpec is required")
+		}
+	}
+	require.Equal(t, 1, failed)
 }

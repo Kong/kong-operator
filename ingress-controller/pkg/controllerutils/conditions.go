@@ -11,3 +11,7 @@ var EnsureProgrammedCondition = internalutils.EnsureProgrammedCondition
 // WithUnknownMessage re-exports internalutils.WithUnknownMessage for use by
 // reconcilers living outside the ingress-controller module tree.
 var WithUnknownMessage = internalutils.WithUnknownMessage
+
+// WithFailedMessage re-exports internalutils.WithFailedMessage for use by
+// reconcilers living outside the ingress-controller module tree.
+var WithFailedMessage = internalutils.WithFailedMessage

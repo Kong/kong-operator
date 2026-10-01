@@ -34,12 +34,10 @@ import (
 
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/controllers"
-{{- if .ProgrammedCondition.UpdatesEnabled }}
+{{- if and .ConfigStatusNotificationsEnabled .ProgrammedCondition.UpdatesEnabled }}
 	ctrlutils "github.com/kong/kong-operator/v2/ingress-controller/pkg/controllerutils"
 {{- end}}
-{{- if .ConfigStatusNotificationsEnabled }}
-	"github.com/kong/kong-operator/v2/ingress-controller/pkg/status"
-{{- end}}
+"github.com/kong/kong-operator/v2/ingress-controller/pkg/status"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/changenotifier"
 
@@ -56,11 +54,9 @@ type {{.Kind}}Reconciler struct {
 
 	Log              logr.Logger
 	Scheme           *runtime.Scheme
-	DataplaneClient  controllers.DataPlane
 	CacheSyncTimeout time.Duration
-{{- if .ConfigStatusNotificationsEnabled }}
+	StatusClient     EntityStatusClient
 	StatusQueue      *status.Queue
-{{- end}}
 	ChangeNotifier   *changenotifier.ChangeNotifier
 	Cache            map[types.NamespacedName]types.NamespacedName
 }
@@ -119,12 +115,16 @@ func (r *{{.Kind}}Reconciler) SetCommonFields(
 	log logr.Logger,
 	cacheSyncTimeout time.Duration,
 	changeNotifier *changenotifier.ChangeNotifier,
+	statusClient EntityStatusClient,
+	statusQueue *status.Queue,
 ) {
 	r.Client = client
 	r.Scheme = scheme
 	r.Log = log
 	r.CacheSyncTimeout = cacheSyncTimeout
 	r.ChangeNotifier = changeNotifier
+	r.StatusClient = statusClient
+	r.StatusQueue = statusQueue
 }
 
 //+kubebuilder:rbac:groups={{.Group}},resources={{.Plural}},verbs={{ .RBACVerbs | join ";" }}
@@ -198,9 +198,10 @@ func (r *{{.Kind}}Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 {{- if .ConfigStatusNotificationsEnabled }}
 	// if status updates are enabled report the status for the object
-	if r.DataplaneClient != nil && r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+	if r.StatusClient != nil && r.StatusClient.AreKubernetesObjectReportsEnabled() {
+		var updateNeeded bool
 		{{- if .ProgrammedCondition.UpdatesEnabled }}
-		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
+		configurationStatus := r.StatusClient.KubernetesObjectConfigurationStatus(obj)
 		logger.Info("Updating programmed condition status", "configuration_status",configurationStatus)
 		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(
 			configurationStatus,
@@ -209,6 +210,7 @@ func (r *{{.Kind}}Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		{{- if .ProgrammedCondition.CustomUnknownMessage }}
 			ctrlutils.WithUnknownMessage("{{ .ProgrammedCondition.CustomUnknownMessage }}"),
 		{{- end }}
+			ctrlutils.WithFailedMessage(r.StatusClient.KubernetesObjectConfigurationStatusMessage(obj)),
 		)
 		obj.Status.Conditions = conditions
 		{{- end }}

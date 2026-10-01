@@ -24,8 +24,10 @@ limitations under the License.
 //
 // Entity status reuses the Programmed condition with on-prem semantics
 // ("included in the last successfully pushed configuration"): the generated
-// reconcilers report it through the DataplaneClient once the configuration push
-// machinery is wired. Until then no on-prem status is written.
+// reconcilers read the per-entity outcome of the instance's configuration
+// syncs (translation and push) through the EntityStatusClient implemented by
+// the instance's EntityStatusReporter, and turn it into the Programmed
+// condition.
 package onpremconfig
 
 import (
@@ -37,8 +39,25 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/status"
 	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/changenotifier"
 )
+
+// EntityStatusClient is the surface the generated configuration-entity
+// reconcilers use to report an entity's configuration status. It is
+// implemented by the instance's EntityStatusReporter, which records the
+// per-entity outcome of the configuration syncs (translation and push).
+//
+// It is the on-prem counterpart of KIC's controllers.DataPlaneStatusClient,
+// narrowed to what the on-prem reconcilers need (KIC's DataPlane interface
+// also carries the CRUD and listener surface used by the Kong reconcilers,
+// which has no meaning here).
+type EntityStatusClient interface {
+	AreKubernetesObjectReportsEnabled() bool
+	KubernetesObjectConfigurationStatus(obj client.Object) status.ConfigurationStatus
+	KubernetesObjectIsConfigured(obj client.Object) bool
+	KubernetesObjectConfigurationStatusMessage(obj client.Object) string
+}
 
 // Controllers wires the generated AI Gateway configuration-entity reconcilers.
 // Every supported kind is registered with the manager when it's set up.
@@ -48,6 +67,12 @@ type Controllers struct {
 	Log              logr.Logger
 	CacheSyncTimeout time.Duration
 	ChangeNotifier   *changenotifier.ChangeNotifier
+	// StatusClient provides the per-entity configuration status the
+	// reconcilers report on the entities' Programmed condition.
+	StatusClient EntityStatusClient
+	// StatusQueue re-triggers the reconcilers when the reported configuration
+	// status of entities changes.
+	StatusQueue *status.Queue
 }
 
 // commonFieldsReconciler is implemented by every generated configuration-entity
@@ -59,6 +84,8 @@ type commonFieldsReconciler interface {
 		logr.Logger,
 		time.Duration,
 		*changenotifier.ChangeNotifier,
+		EntityStatusClient,
+		*status.Queue,
 	)
 	SetupWithManager(ctrl.Manager) error
 }
@@ -79,7 +106,7 @@ func (cs *Controllers) SetupWithManager(_ context.Context, mgr ctrl.Manager) err
 		&AIGatewayPolicyReconciler{},
 		&AIGatewaySNIReconciler{},
 	} {
-		r.SetCommonFields(cs.Client, cs.Scheme, cs.Log, cs.CacheSyncTimeout, cs.ChangeNotifier)
+		r.SetCommonFields(cs.Client, cs.Scheme, cs.Log, cs.CacheSyncTimeout, cs.ChangeNotifier, cs.StatusClient, cs.StatusQueue)
 		if err := r.SetupWithManager(mgr); err != nil {
 			return err
 		}
