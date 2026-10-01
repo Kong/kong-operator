@@ -1411,9 +1411,17 @@ func setDataPlaneDeploymentListenPorts(
 		}
 	}
 
+	// listenerPortProtocol tracks the protocol of the listener the Kong port was assigned for,
+	// so listeners sharing a port and protocol (e.g. HTTP listeners that differ only by hostname)
+	// are served by the same Kong port instead of each getting its own, unreachable one.
+	listenerPortProtocol := map[int]gatewayv1.ProtocolType{}
 	for i, l := range listeners {
 		portNumber := int(l.Port)
+		if protocol, ok := listenerPortProtocol[portNumber]; ok && protocol == l.Protocol {
+			continue
+		}
 		assignPort(i, portNumber)
+		listenerPortProtocol[portNumber] = l.Protocol
 		switch l.Protocol {
 		case gatewayv1.HTTPProtocolType, gatewayv1.HTTPSProtocolType:
 			httpPorts = append(httpPorts, httpListenPort{

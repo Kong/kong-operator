@@ -1148,6 +1148,119 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 				9443: 9443,
 			},
 		},
+		{
+			name: "HTTP listeners sharing a known port reuse the same Kong port",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "listener-1",
+					Protocol: gatewayv1.HTTPProtocolType,
+					Port:     gatewayv1.PortNumber(80),
+					Hostname: new(gatewayv1.Hostname("very.specific.com")),
+				},
+				{
+					Name:     "listener-2",
+					Protocol: gatewayv1.HTTPProtocolType,
+					Port:     gatewayv1.PortNumber(80),
+					Hostname: new(gatewayv1.Hostname("*.wildcard.io")),
+				},
+				{
+					Name:     "listener-3",
+					Protocol: gatewayv1.HTTPProtocolType,
+					Port:     gatewayv1.PortNumber(80),
+					Hostname: new(gatewayv1.Hostname("*.anotherwildcard.io")),
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "80:16384",
+				},
+				{
+					Name:  "KONG_PROXY_LISTEN",
+					Value: "0.0.0.0:16384 http2 reuseport backlog=16384, [::]:16384 http2 reuseport backlog=16384",
+				},
+				{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "off",
+				},
+			},
+			expectedPortMap: map[int]int{
+				80: 16384,
+			},
+		},
+		{
+			name: "HTTP and HTTPS listeners sharing ports per protocol reuse the same Kong ports",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "http-a",
+					Protocol: gatewayv1.HTTPProtocolType,
+					Port:     gatewayv1.PortNumber(80),
+					Hostname: new(gatewayv1.Hostname("a.example.com")),
+				},
+				{
+					Name:     "https-a",
+					Protocol: gatewayv1.HTTPSProtocolType,
+					Port:     gatewayv1.PortNumber(443),
+					Hostname: new(gatewayv1.Hostname("a.example.com")),
+				},
+				{
+					Name:     "http-b",
+					Protocol: gatewayv1.HTTPProtocolType,
+					Port:     gatewayv1.PortNumber(80),
+					Hostname: new(gatewayv1.Hostname("b.example.com")),
+				},
+				{
+					Name:     "https-b",
+					Protocol: gatewayv1.HTTPSProtocolType,
+					Port:     gatewayv1.PortNumber(443),
+					Hostname: new(gatewayv1.Hostname("b.example.com")),
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "80:16384,443:16385",
+				},
+				{
+					Name:  "KONG_PROXY_LISTEN",
+					Value: "0.0.0.0:16384 http2 reuseport backlog=16384, [::]:16384 http2 reuseport backlog=16384,0.0.0.0:16385 http2 ssl reuseport backlog=16384, [::]:16385 http2 ssl reuseport backlog=16384",
+				},
+			},
+			expectedPortMap: map[int]int{
+				80:  16384,
+				443: 16385,
+			},
+		},
+		{
+			name: "HTTP listeners sharing a not known port reuse it as the Kong port",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "http-a",
+					Protocol: gatewayv1.HTTPProtocolType,
+					Port:     gatewayv1.PortNumber(8080),
+					Hostname: new(gatewayv1.Hostname("a.example.com")),
+				},
+				{
+					Name:     "http-b",
+					Protocol: gatewayv1.HTTPProtocolType,
+					Port:     gatewayv1.PortNumber(8080),
+					Hostname: new(gatewayv1.Hostname("b.example.com")),
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "8080:8080",
+				},
+				{
+					Name:  "KONG_PROXY_LISTEN",
+					Value: "0.0.0.0:8080 http2 reuseport backlog=16384, [::]:8080 http2 reuseport backlog=16384",
+				},
+			},
+			expectedPortMap: map[int]int{
+				8080: 8080,
+			},
+		},
 	}
 
 	for _, tc := range testCases {
