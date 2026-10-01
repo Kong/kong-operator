@@ -302,7 +302,11 @@ func (i *Instance) sendConfig(
 	pushed, err := i.sendConfigToDataPlanes(ctx, *gw, payload)
 	if err != nil {
 		// The push failed, so none of the entities included in the document was
-		// applied.
+		// applied. This is conservative by design: a failure on any single
+		// endpoint fails every entity, even though the other data planes got
+		// the config - the entities' Programmed condition reflects the
+		// gateway's configuration as a whole, and per-endpoint attribution is
+		// tracked on the gateway's DataPlanesConfigured condition instead.
 		i.statusReporter.Report(nil, append(failuresForAll(included, err), failures...))
 		return fmt.Errorf("sending configuration to data planes: %w", err)
 	}
@@ -501,6 +505,13 @@ forLoop:
 			if change.ParentNN == nil {
 				// TODO: handle nil gw
 				logger.Info("Change has no parent gateway reference, skipping")
+				continue
+			}
+			if *change.ParentNN != i.env.GatewayNN {
+				// The entity controllers watch every entity targeting any
+				// OnPremAIGateway: changes for entities targeting other
+				// gateways must not drive this instance's sync loop or its
+				// status reports - it only serves its own gateway.
 				continue
 			}
 

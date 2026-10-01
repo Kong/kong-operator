@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [Unreleased](#unreleased)
 - [v2.4.0-rapid.2.0](#v240-rapid20)
 - [v2.4.0-rapid.1](#v240-rapid1)
 - [v2.3.2](#v232)
@@ -66,6 +67,16 @@
 - [v0.2.0](#v020)
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
+
+## [Unreleased]
+
+### Changed
+
+- `Programmed` conditions set by the operator now preserve their
+  `LastTransitionTime` when the condition status does not change, and are
+  updated when only the condition message changes (e.g. a per-entity error
+  text changing while the condition stays `Failed`).
+  [#5930](https://github.com/Kong/kong-operator/pull/5930)
 
 ## [v2.4.0-rapid.2.0]
 

@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 
 	"github.com/kong/go-kong/kong"
@@ -158,6 +159,11 @@ func (i *Instance) sendConfigToDataPlanes(
 			delete(i.pushClients, key)
 		}
 	}
+
+	// Sort the failures so the joined message (reported on the gateway status,
+	// as an event, and on every entity's Programmed condition) is stable across
+	// retries - the endpoints come from a set, so their iteration order is not.
+	slices.Sort(failures)
 
 	if err := i.reportPushStatus(ctx, gwNN, endpoints.Len(), failures); err != nil {
 		// The push itself is what matters: a status patch failure must not fail
