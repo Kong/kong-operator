@@ -360,6 +360,7 @@ func (r *Reconciler) scheduleInstance(
 			// to the data planes' Admin API when pushing configuration.
 			AdminClientCertSecretNN: adminClientCertSecretNN,
 			TypeConverter:           r.TypeConverter,
+			SecretLabelSelector:     r.SecretLabelSelector,
 		},
 	)); err != nil {
 		return fmt.Errorf("failed to schedule instance: %w", err)

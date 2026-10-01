@@ -156,11 +156,11 @@ func TestAIGatewayAuthStrategy_ToAIGWAuthStrategy(t *testing.T) {
 	}
 }
 
-// TestAIGatewayAuthStrategy_ToAIGWAuthStrategy_StrictRoundTrip guards against a dropped or
-// renamed field: it decodes marshalAIGWAuthStrategyPayload's output with yaml.v3's
-// KnownFields(true), which errors on any key aigw.AuthStrategy doesn't recognize. See
-// aigatewaymodel_aigw_manual_test.go for the rationale. Both variants are covered: the
-// non-strict decode in ToAIGWAuthStrategy would silently drop a Konnect-only key from either.
+// TestAIGatewayAuthStrategy_ToAIGWAuthStrategy_StrictRoundTrip catches payload keys that
+// aigw.AuthStrategy does not recognize: it decodes marshalAIGWAuthStrategyPayload's output
+// with yaml.v3's KnownFields(true). The guard covers aigw.AuthStrategy's struct fields only:
+// Config is a map, so a renamed or Konnect-only key inside config passes undetected. See
+// aigatewaymodel_aigw_manual_test.go for the rationale. Both variants are covered.
 func TestAIGatewayAuthStrategy_ToAIGWAuthStrategy_StrictRoundTrip(t *testing.T) {
 	t.Parallel()
 
