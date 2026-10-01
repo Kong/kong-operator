@@ -217,8 +217,11 @@ func Create[
 // 400 Bad Request instead of a 409 Conflict. As with a 409, the entity may be
 // the object's own (e.g. created before its Konnect ID was persisted), so the
 // caller looks it up by the Kubernetes UID label.
-func isCreateNameConflict(e any, err error) bool {
-	switch e.(type) {
+func isCreateNameConflict[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](e TEnt, err error) bool {
+	switch any(e).(type) {
 	case *konnectv1alpha1.KonnectEventGateway,
 		*configurationv1alpha1.EventGatewayBackendCluster,
 		*configurationv1alpha1.EventGatewayListener,

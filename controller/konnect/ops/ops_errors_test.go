@@ -775,82 +775,100 @@ func TestIsCreateNameConflict(t *testing.T) {
 	}
 
 	tests := []struct {
-		name   string
-		entity any
-		err    func(t *testing.T) error
-		want   bool
+		name string
+		// isCreateNameConflict calls isCreateNameConflict with the entity type
+		// under test.
+		isCreateNameConflict func(err error) bool
+		err                  func(t *testing.T) error
+		want                 bool
 	}{
 		{
-			name:   "Event Gateway produce policy: name must be unique",
-			entity: &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{},
-			err:    func(t *testing.T) error { return badRequest(t, nameMustBeUniqueBody) },
-			want:   true,
+			name: "Event Gateway produce policy: name must be unique",
+			isCreateNameConflict: func(err error) bool {
+				return isCreateNameConflict(&configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{}, err)
+			},
+			err:  func(t *testing.T) error { return badRequest(t, nameMustBeUniqueBody) },
+			want: true,
 		},
 		{
-			name:   "Event Gateway listener policy: name must be unique",
-			entity: &configurationv1alpha1.EventGatewayListenerPolicy{},
-			err:    func(t *testing.T) error { return badRequest(t, nameMustBeUniqueBody) },
-			want:   true,
+			name: "Event Gateway listener policy: name must be unique",
+			isCreateNameConflict: func(err error) bool {
+				return isCreateNameConflict(&configurationv1alpha1.EventGatewayListenerPolicy{}, err)
+			},
+			err:  func(t *testing.T) error { return badRequest(t, nameMustBeUniqueBody) },
+			want: true,
 		},
 		{
-			name:   "Event Gateway: name must be unique",
-			entity: &konnectv1alpha1.KonnectEventGateway{},
-			err:    func(t *testing.T) error { return badRequest(t, nameMustBeUniqueBody) },
-			want:   true,
+			name:                 "Event Gateway: name must be unique",
+			isCreateNameConflict: func(err error) bool { return isCreateNameConflict(&konnectv1alpha1.KonnectEventGateway{}, err) },
+			err:                  func(t *testing.T) error { return badRequest(t, nameMustBeUniqueBody) },
+			want:                 true,
 		},
 		{
-			name:   "Event Gateway backend cluster: name must be unique",
-			entity: &configurationv1alpha1.EventGatewayBackendCluster{},
-			err:    func(t *testing.T) error { return badRequest(t, nameMustBeUniqueBody) },
-			want:   true,
+			name: "Event Gateway backend cluster: name must be unique",
+			isCreateNameConflict: func(err error) bool {
+				return isCreateNameConflict(&configurationv1alpha1.EventGatewayBackendCluster{}, err)
+			},
+			err:  func(t *testing.T) error { return badRequest(t, nameMustBeUniqueBody) },
+			want: true,
 		},
 		{
-			name:   "Event Gateway listener: name must be unique",
-			entity: &configurationv1alpha1.EventGatewayListener{},
-			err:    func(t *testing.T) error { return badRequest(t, nameMustBeUniqueBody) },
-			want:   true,
+			name:                 "Event Gateway listener: name must be unique",
+			isCreateNameConflict: func(err error) bool { return isCreateNameConflict(&configurationv1alpha1.EventGatewayListener{}, err) },
+			err:                  func(t *testing.T) error { return badRequest(t, nameMustBeUniqueBody) },
+			want:                 true,
 		},
 		{
-			name:   "Event Gateway virtual cluster: name must be unique",
-			entity: &configurationv1alpha1.EventGatewayVirtualCluster{},
-			err:    func(t *testing.T) error { return badRequest(t, nameMustBeUniqueBody) },
-			want:   true,
+			name: "Event Gateway virtual cluster: name must be unique",
+			isCreateNameConflict: func(err error) bool {
+				return isCreateNameConflict(&configurationv1alpha1.EventGatewayVirtualCluster{}, err)
+			},
+			err:  func(t *testing.T) error { return badRequest(t, nameMustBeUniqueBody) },
+			want: true,
 		},
 		{
-			name:   "Event Gateway schema registry: name must be unique",
-			entity: &configurationv1alpha1.EventGatewaySchemaRegistry{},
-			err:    func(t *testing.T) error { return badRequest(t, nameMustBeUniqueBody) },
-			want:   true,
+			name: "Event Gateway schema registry: name must be unique",
+			isCreateNameConflict: func(err error) bool {
+				return isCreateNameConflict(&configurationv1alpha1.EventGatewaySchemaRegistry{}, err)
+			},
+			err:  func(t *testing.T) error { return badRequest(t, nameMustBeUniqueBody) },
+			want: true,
 		},
 		{
-			name:   "Event Gateway data plane certificate: name must be unique",
-			entity: &configurationv1alpha1.EventGatewayDataPlaneCertificate{},
-			err:    func(t *testing.T) error { return badRequest(t, nameMustBeUniqueBody) },
-			want:   true,
+			name: "Event Gateway data plane certificate: name must be unique",
+			isCreateNameConflict: func(err error) bool {
+				return isCreateNameConflict(&configurationv1alpha1.EventGatewayDataPlaneCertificate{}, err)
+			},
+			err:  func(t *testing.T) error { return badRequest(t, nameMustBeUniqueBody) },
+			want: true,
 		},
 		{
-			name:   "Event Gateway produce policy: other bad request",
-			entity: &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{},
-			err:    func(t *testing.T) error { return badRequest(t, otherBadRequestBody) },
-			want:   false,
+			name: "Event Gateway produce policy: other bad request",
+			isCreateNameConflict: func(err error) bool {
+				return isCreateNameConflict(&configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{}, err)
+			},
+			err:  func(t *testing.T) error { return badRequest(t, otherBadRequestBody) },
+			want: false,
 		},
 		{
-			name:   "other entity type: name must be unique",
-			entity: &configurationv1alpha1.KongService{},
-			err:    func(t *testing.T) error { return badRequest(t, nameMustBeUniqueBody) },
-			want:   false,
+			name:                 "other entity type: name must be unique",
+			isCreateNameConflict: func(err error) bool { return isCreateNameConflict(&configurationv1alpha1.KongService{}, err) },
+			err:                  func(t *testing.T) error { return badRequest(t, nameMustBeUniqueBody) },
+			want:                 false,
 		},
 		{
-			name:   "Event Gateway produce policy: not a bad request",
-			entity: &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{},
-			err:    func(*testing.T) error { return errors.New("some other error") },
-			want:   false,
+			name: "Event Gateway produce policy: not a bad request",
+			isCreateNameConflict: func(err error) bool {
+				return isCreateNameConflict(&configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{}, err)
+			},
+			err:  func(*testing.T) error { return errors.New("some other error") },
+			want: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.want, isCreateNameConflict(tt.entity, tt.err(t)))
+			require.Equal(t, tt.want, tt.isCreateNameConflict(tt.err(t)))
 		})
 	}
 }
