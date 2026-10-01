@@ -31,3 +31,7 @@ spec:
             value: ($namespace)
         content: |
           bash ../../common/scripts/assert_no_kong_resource.sh
+        check:
+          # The script exits 0 with status "query_failed" when kubectl fails,
+          # so require an explicit success rather than relying on the exit code.
+          (json_parse($stdout).status): success
