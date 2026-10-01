@@ -93,8 +93,13 @@ func (i *Instance) sendConfigToDataPlanes(
 		log.Info(i.logger, "no Admin API endpoints discovered for the gateway, skipping configuration push",
 			"namespace", gwNN.Namespace, "name", gwNN.Name)
 		// Report anyway: the last push may have left DataPlanesConfigured=False
-		// behind, and nothing else clears it while the set is empty.
-		return false, i.reportPushStatus(ctx, gwNN, 0, nil)
+		// behind, and nothing else clears it while the set is empty. A reporting
+		// failure must not fail the sync: the push was skipped, and the next
+		// sync re-reports it.
+		if err := i.reportPushStatus(ctx, gwNN, 0, nil); err != nil {
+			log.Error(i.logger, err, "failed to report the configuration push result on the OnPremAIGateway status")
+		}
+		return false, nil
 	}
 
 	payload, err := yaml.YAMLToJSON(yamlPayload)

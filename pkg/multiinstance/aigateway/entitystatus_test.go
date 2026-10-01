@@ -102,4 +102,35 @@ func TestEntityStatusReporter_PublishesToQueue(t *testing.T) {
 		}
 	}
 	require.ElementsMatch(t, []string{"model-ok", "model-broken"}, names)
+
+	// An unchanged re-report publishes nothing: the reconcilers already hold
+	// up-to-date conditions, and republishing would make the entity
+	// reconciles notify the sync loop forever.
+	reporter.Report(
+		[]client.Object{okModel},
+		[]EntityFailure{{Obj: brokenModel, Err: errors.New("boom")}},
+	)
+	select {
+	case ev := <-events:
+		t.Fatalf("expected no event for an unchanged report, got %s", ev.Object.GetName())
+	default:
+	}
+
+	// A changed failure message republishes only the affected entity:
+	// brokenModel keeps its Failed status, so okModel must not be published.
+	reporter.Report(
+		[]client.Object{okModel},
+		[]EntityFailure{{Obj: brokenModel, Err: errors.New("boom: unresolved reference")}},
+	)
+	select {
+	case ev := <-events:
+		require.Equal(t, "model-broken", ev.Object.GetName())
+	default:
+		require.FailNow(t, "expected an event for the entity with the changed message")
+	}
+	select {
+	case ev := <-events:
+		t.Fatalf("expected no additional event, got %s", ev.Object.GetName())
+	default:
+	}
 }

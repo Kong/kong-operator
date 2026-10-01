@@ -90,6 +90,7 @@ func (r *EntityStatusReporter) Report(included []client.Object, failures []Entit
 	}
 
 	r.mu.Lock()
+	prevSet, prevMessages := r.set, r.failureMessages
 	r.set = set
 	r.failureMessages = failureMessages
 	r.mu.Unlock()
@@ -97,8 +98,19 @@ func (r *EntityStatusReporter) Report(included []client.Object, failures []Entit
 	// Notify the reconcilers only after the new set is in place: they read the
 	// set when handling the event. Publishing the objects themselves (not the
 	// message map) is enough - the reconciler re-fetches the entity and asks
-	// the reporter for its status and message.
+	// the reporter for its status and message. Publish only entities whose
+	// reported status or message changed: every entity reconcile notifies the
+	// sync loop, so an unconditional publish makes the loop re-sync every
+	// gateway forever.
 	for _, obj := range uniqueObjects(included, failures) {
+		changed := prevSet.Get(obj) != set.Get(obj)
+		key := statusKey(obj, obj.GetObjectKind().GroupVersionKind())
+		if prevMessages[key] != failureMessages[key] {
+			changed = true
+		}
+		if !changed {
+			continue
+		}
 		r.queue.Publish(obj)
 	}
 }
@@ -118,8 +130,8 @@ func (r *EntityStatusReporter) withGVK(obj client.Object) client.Object {
 }
 
 // uniqueObjects returns the deduplicated union of the included and failed
-// entities, so that an entity failing both translation and apply (or failing
-// for several reasons) is only published once.
+// entities. Current callers never list one entity in both slices; the dedup
+// keeps a future caller safe.
 func uniqueObjects(included []client.Object, failures []EntityFailure) []client.Object {
 	all := make([]client.Object, 0, len(included)+len(failures))
 	all = append(all, included...)
