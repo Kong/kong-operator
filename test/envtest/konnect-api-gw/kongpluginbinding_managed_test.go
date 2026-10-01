@@ -7,12 +7,12 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -180,6 +180,45 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			message,
 		)
 		require.NotNil(t, found)
+		return found
+	}
+
+	// waitForSingleSyncedKongPluginBinding waits until exactly one live (not being deleted)
+	// KongPluginBinding for the managed KongPlugin matches and it has been synced with Konnect.
+	// When several entities referencing the plugin are created at once, the KongPlugin
+	// reconciler can transiently create duplicated KongPluginBindings (stale cache) and
+	// then delete the extra ones. Waiting for a single synced binding makes sure the
+	// returned object is the one that survived the deduplication.
+	waitForSingleSyncedKongPluginBinding := func(
+		t *testing.T,
+		message string,
+		match func(*configurationv1alpha1.KongPluginBinding) bool,
+	) *configurationv1alpha1.KongPluginBinding {
+		t.Helper()
+
+		var found *configurationv1alpha1.KongPluginBinding
+		require.EventuallyWithT(t,
+			func(c *assert.CollectT) {
+				var list configurationv1alpha1.KongPluginBindingList
+				if !assert.NoError(c, clientNamespacedWithWatch.List(ctx, &list)) {
+					return
+				}
+
+				matching := lo.Filter(list.Items, func(kpb configurationv1alpha1.KongPluginBinding, _ int) bool {
+					return kpb.DeletionTimestamp.IsZero() &&
+						kpb.Spec.PluginReference.Name == rateLimitingkongPlugin.Name &&
+						match(&kpb)
+				})
+				if !assert.Len(c, matching, 1) {
+					return
+				}
+				found = matching[0].DeepCopy()
+				assert.NotEmpty(c, found.GetKonnectID())
+				assert.True(c, controllerutil.ContainsFinalizer(found, konnect.KonnectCleanupFinalizer))
+			},
+			consts.WaitTime, consts.TickTime,
+			message,
+		)
 		return found
 	}
 
@@ -356,7 +395,6 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		serviceID := uuid.NewString()
 		routeID := uuid.NewString()
 
-		wKongPluginBinding := envtest.SetupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		kongService := deploy.KongService(t, ctx, clientNamespaced,
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
@@ -374,56 +412,41 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		})
 		envtest.UpdateKongRouteStatusWithProgrammed(t, ctx, clientNamespaced, kongRoute, routeID, cp.GetKonnectStatus().GetKonnectID(), serviceID)
 
-		t.Logf("waiting for 2 KongPluginBindings to be created")
-		var kpbRoute, kpbService *configurationv1alpha1.KongPluginBinding
-		envtest.WatchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
-			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
-				if kpb.Spec.PluginReference.Name != rateLimitingkongPlugin.Name {
-					return false
-				}
+		matchRoute := func(kpb *configurationv1alpha1.KongPluginBinding) bool {
+			targets := kpb.Spec.Targets
+			return targets.RouteReference != nil &&
+				targets.RouteReference.Name == kongRoute.Name &&
+				targets.ServiceReference == nil
+		}
+		matchService := func(kpb *configurationv1alpha1.KongPluginBinding) bool {
+			targets := kpb.Spec.Targets
+			return targets.RouteReference == nil &&
+				targets.ServiceReference != nil &&
+				targets.ServiceReference.Name == kongService.Name
+		}
 
-				targets := kpb.Spec.Targets
-				if targets.RouteReference != nil &&
-					targets.RouteReference.Name == kongRoute.Name &&
-					targets.ServiceReference == nil {
-					kpbRoute = kpb
-				} else if targets.RouteReference == nil &&
-					targets.ServiceReference != nil &&
-					targets.ServiceReference.Name == kongService.Name {
-					kpbService = kpb
-				}
-				return kpbRoute != nil && kpbService != nil
-			},
-			"2 KongPluginBindings were not created",
-		)
+		t.Logf("waiting for 2 KongPluginBindings to be created")
+		kpbRoute := waitForSingleSyncedKongPluginBinding(t, "KongPluginBinding bound to Route was not created", matchRoute)
+		kpbService := waitForSingleSyncedKongPluginBinding(t, "KongPluginBinding bound to Service was not created", matchService)
 		t.Logf(
 			"checking that managed KongPlugin %s gets plugin-in-use finalizer added",
 			client.ObjectKeyFromObject(rateLimitingkongPlugin),
 		)
 		assertKongPluginContainsFinalizerInUse(t, true, "KongPlugin wasn't updated to get plugin-in-use finalizer added")
 
+		oldRouteUID, oldServiceUID := kpbRoute.UID, kpbService.UID
 		deleteKongPluginBinding(t, ctx, clientNamespaced, kpbRoute, kongRoute)
 		deleteKongPluginBinding(t, ctx, clientNamespaced, kpbService, kongService)
 
-		envtest.WatchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
+		kpbRoute = waitForSingleSyncedKongPluginBinding(t, "KongPluginBinding bound to Route was not recreated",
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
-				if kpb.Spec.PluginReference.Name != rateLimitingkongPlugin.Name {
-					return false
-				}
-
-				targets := kpb.Spec.Targets
-				if targets.RouteReference != nil &&
-					targets.RouteReference.Name == kongRoute.Name &&
-					targets.ServiceReference == nil {
-					kpbRoute = kpb
-				} else if targets.RouteReference == nil &&
-					targets.ServiceReference != nil &&
-					targets.ServiceReference.Name == kongService.Name {
-					kpbService = kpb
-				}
-				return kpbRoute != nil && kpbService != nil
+				return kpb.UID != oldRouteUID && matchRoute(kpb)
 			},
-			"2 KongPluginBindings were not recreated",
+		)
+		kpbService = waitForSingleSyncedKongPluginBinding(t, "KongPluginBinding bound to Service was not recreated",
+			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
+				return kpb.UID != oldServiceUID && matchService(kpb)
+			},
 		)
 
 		t.Logf(
@@ -475,7 +498,6 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			).
 			Maybe()
 
-		wKongPluginBinding := envtest.SetupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		kongService := deploy.KongService(t, ctx, clientNamespaced,
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
@@ -502,64 +524,45 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		})
 		envtest.UpdateKongConsumerStatusWithKonnectID(t, ctx, clientNamespaced, kongConsumer, consumerID, cp.GetKonnectStatus().GetKonnectID())
 
-		t.Logf("waiting for 2 KongPluginBindings to be created")
-		var kpbRoute, kpbService *configurationv1alpha1.KongPluginBinding
-		envtest.WatchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
-			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
-				if kpb.Spec.PluginReference.Name != rateLimitingkongPlugin.Name {
-					return false
-				}
+		matchRoute := func(kpb *configurationv1alpha1.KongPluginBinding) bool {
+			targets := kpb.Spec.Targets
+			return targets.RouteReference != nil &&
+				targets.RouteReference.Name == kongRoute.Name &&
+				targets.ServiceReference == nil &&
+				targets.ConsumerReference != nil &&
+				targets.ConsumerReference.Name == kongConsumer.Name
+		}
+		matchService := func(kpb *configurationv1alpha1.KongPluginBinding) bool {
+			targets := kpb.Spec.Targets
+			return targets.RouteReference == nil &&
+				targets.ServiceReference != nil &&
+				targets.ServiceReference.Name == kongService.Name &&
+				targets.ConsumerReference != nil &&
+				targets.ConsumerReference.Name == kongConsumer.Name
+		}
 
-				targets := kpb.Spec.Targets
-				if targets.RouteReference != nil &&
-					targets.RouteReference.Name == kongRoute.Name &&
-					targets.ConsumerReference != nil &&
-					targets.ConsumerReference.Name == kongConsumer.Name &&
-					targets.ServiceReference == nil {
-					kpbRoute = kpb
-				} else if targets.RouteReference == nil &&
-					targets.ServiceReference != nil &&
-					targets.ServiceReference.Name == kongService.Name &&
-					targets.ConsumerReference != nil &&
-					targets.ConsumerReference.Name == kongConsumer.Name {
-					kpbService = kpb
-				}
-				return kpbRoute != nil && kpbService != nil
-			},
-			"2 KongPluginBindings were not created",
-		)
+		t.Logf("waiting for 2 KongPluginBindings to be created")
+		kpbRoute := waitForSingleSyncedKongPluginBinding(t, "KongPluginBinding bound to Route was not created", matchRoute)
+		kpbService := waitForSingleSyncedKongPluginBinding(t, "KongPluginBinding bound to Service was not created", matchService)
 		t.Logf(
 			"checking that managed KongPlugin %s gets plugin-in-use finalizer added",
 			client.ObjectKeyFromObject(rateLimitingkongPlugin),
 		)
 		assertKongPluginContainsFinalizerInUse(t, true, "KongPlugin wasn't updated to get plugin-in-use finalizer added")
 
+		oldRouteUID, oldServiceUID := kpbRoute.UID, kpbService.UID
 		deleteKongPluginBinding(t, ctx, clientNamespaced, kpbRoute, kongRoute)
 		deleteKongPluginBinding(t, ctx, clientNamespaced, kpbService, kongService)
 
-		envtest.WatchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
+		kpbRoute = waitForSingleSyncedKongPluginBinding(t, "KongPluginBinding bound to Route was not recreated",
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
-				if kpb.Spec.PluginReference.Name != rateLimitingkongPlugin.Name {
-					return false
-				}
-
-				targets := kpb.Spec.Targets
-				if targets.RouteReference != nil &&
-					targets.RouteReference.Name == kongRoute.Name &&
-					targets.ConsumerReference != nil &&
-					targets.ConsumerReference.Name == kongConsumer.Name &&
-					targets.ServiceReference == nil {
-					kpbRoute = kpb
-				} else if targets.RouteReference == nil &&
-					targets.ServiceReference != nil &&
-					targets.ServiceReference.Name == kongService.Name &&
-					targets.ConsumerReference != nil &&
-					targets.ConsumerReference.Name == kongConsumer.Name {
-					kpbService = kpb
-				}
-				return kpbRoute != nil && kpbService != nil
+				return kpb.UID != oldRouteUID && matchRoute(kpb)
 			},
-			"2 KongPluginBindings were not recreated",
+		)
+		waitForSingleSyncedKongPluginBinding(t, "KongPluginBinding bound to Service was not recreated",
+			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
+				return kpb.UID != oldServiceUID && matchService(kpb)
+			},
 		)
 
 		t.Logf(
@@ -662,7 +665,6 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			).
 			Maybe()
 
-		wKongPluginBinding := envtest.SetupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		kongService := deploy.KongService(t, ctx, clientNamespaced,
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
@@ -689,64 +691,45 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		})
 		envtest.UpdateKongConsumerGroupStatusWithKonnectID(t, ctx, clientNamespaced, kongConsumerGroup, consumerGroupID, cp.GetKonnectStatus().GetKonnectID())
 
-		t.Logf("waiting for 2 KongPluginBindings to be created")
-		var kpbRoute, kpbService *configurationv1alpha1.KongPluginBinding
-		envtest.WatchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
-			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
-				if kpb.Spec.PluginReference.Name != rateLimitingkongPlugin.Name {
-					return false
-				}
+		matchRoute := func(kpb *configurationv1alpha1.KongPluginBinding) bool {
+			targets := kpb.Spec.Targets
+			return targets.RouteReference != nil &&
+				targets.RouteReference.Name == kongRoute.Name &&
+				targets.ServiceReference == nil &&
+				targets.ConsumerGroupReference != nil &&
+				targets.ConsumerGroupReference.Name == kongConsumerGroup.Name
+		}
+		matchService := func(kpb *configurationv1alpha1.KongPluginBinding) bool {
+			targets := kpb.Spec.Targets
+			return targets.RouteReference == nil &&
+				targets.ServiceReference != nil &&
+				targets.ServiceReference.Name == kongService.Name &&
+				targets.ConsumerGroupReference != nil &&
+				targets.ConsumerGroupReference.Name == kongConsumerGroup.Name
+		}
 
-				targets := kpb.Spec.Targets
-				if targets.RouteReference != nil &&
-					targets.RouteReference.Name == kongRoute.Name &&
-					targets.ConsumerGroupReference != nil &&
-					targets.ConsumerGroupReference.Name == kongConsumerGroup.Name &&
-					targets.ServiceReference == nil {
-					kpbRoute = kpb
-				} else if targets.RouteReference == nil &&
-					targets.ServiceReference != nil &&
-					targets.ServiceReference.Name == kongService.Name &&
-					targets.ConsumerGroupReference != nil &&
-					targets.ConsumerGroupReference.Name == kongConsumerGroup.Name {
-					kpbService = kpb
-				}
-				return kpbRoute != nil && kpbService != nil
-			},
-			"2 KongPluginBindings were not created",
-		)
+		t.Logf("waiting for 2 KongPluginBindings to be created")
+		kpbRoute := waitForSingleSyncedKongPluginBinding(t, "KongPluginBinding bound to Route was not created", matchRoute)
+		kpbService := waitForSingleSyncedKongPluginBinding(t, "KongPluginBinding bound to Service was not created", matchService)
 		t.Logf(
 			"checking that managed KongPlugin %s gets plugin-in-use finalizer added",
 			client.ObjectKeyFromObject(rateLimitingkongPlugin),
 		)
 		assertKongPluginContainsFinalizerInUse(t, true, "KongPlugin wasn't updated to get plugin-in-use finalizer added")
 
+		oldRouteUID, oldServiceUID := kpbRoute.UID, kpbService.UID
 		deleteKongPluginBinding(t, ctx, clientNamespaced, kpbRoute, kongRoute)
 		deleteKongPluginBinding(t, ctx, clientNamespaced, kpbService, kongService)
 
-		envtest.WatchFor(t, ctx, wKongPluginBinding, apiwatch.Added,
+		kpbRoute = waitForSingleSyncedKongPluginBinding(t, "KongPluginBinding bound to Route was not recreated",
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
-				if kpb.Spec.PluginReference.Name != rateLimitingkongPlugin.Name {
-					return false
-				}
-
-				targets := kpb.Spec.Targets
-				if targets.RouteReference != nil &&
-					targets.RouteReference.Name == kongRoute.Name &&
-					targets.ConsumerGroupReference != nil &&
-					targets.ConsumerGroupReference.Name == kongConsumerGroup.Name &&
-					targets.ServiceReference == nil {
-					kpbRoute = kpb
-				} else if targets.RouteReference == nil &&
-					targets.ServiceReference != nil &&
-					targets.ServiceReference.Name == kongService.Name &&
-					targets.ConsumerGroupReference != nil &&
-					targets.ConsumerGroupReference.Name == kongConsumerGroup.Name {
-					kpbService = kpb
-				}
-				return kpbRoute != nil && kpbService != nil
+				return kpb.UID != oldRouteUID && matchRoute(kpb)
 			},
-			"2 KongPluginBindings were not recreated",
+		)
+		waitForSingleSyncedKongPluginBinding(t, "KongPluginBinding bound to Service was not recreated",
+			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
+				return kpb.UID != oldServiceUID && matchService(kpb)
+			},
 		)
 
 		t.Logf(
