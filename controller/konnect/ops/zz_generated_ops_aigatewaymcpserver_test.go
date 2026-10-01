@@ -50,6 +50,21 @@ func TestCreateAIGatewayMCPServer_UsesSDKOpsConversion(t *testing.T) {
 	obj.SetGatewayID(parentID)
 	expectedRequest, err := obj.ToCreateAIGatewayMCPServerRequest(ctx, cl)
 	require.NoError(t, err)
+	if expectedRequest.AIGatewayMCPServerConversionOnly != nil {
+		expectedRequest.AIGatewayMCPServerConversionOnly.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayMCPServerConversionOnly.Labels)
+	}
+	if expectedRequest.AIGatewayMCPServerConversionListener != nil {
+		expectedRequest.AIGatewayMCPServerConversionListener.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayMCPServerConversionListener.Labels)
+	}
+	if expectedRequest.AIGatewayMCPServerListener != nil {
+		expectedRequest.AIGatewayMCPServerListener.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayMCPServerListener.Labels)
+	}
+	if expectedRequest.AIGatewayMCPServerPassthroughListener != nil {
+		expectedRequest.AIGatewayMCPServerPassthroughListener.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayMCPServerPassthroughListener.Labels)
+	}
+	if expectedRequest.AIGatewayMCPServerUpstreamServer != nil {
+		expectedRequest.AIGatewayMCPServerUpstreamServer.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayMCPServerUpstreamServer.Labels)
+	}
 	expectedID := "aigatewaymcpserver-id"
 
 	sdk.EXPECT().
@@ -82,6 +97,21 @@ func TestCreateAIGatewayMCPServer_PropagatesSDKError(t *testing.T) {
 	obj.SetGatewayID(parentID)
 	expectedRequest, err := obj.ToCreateAIGatewayMCPServerRequest(ctx, cl)
 	require.NoError(t, err)
+	if expectedRequest.AIGatewayMCPServerConversionOnly != nil {
+		expectedRequest.AIGatewayMCPServerConversionOnly.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayMCPServerConversionOnly.Labels)
+	}
+	if expectedRequest.AIGatewayMCPServerConversionListener != nil {
+		expectedRequest.AIGatewayMCPServerConversionListener.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayMCPServerConversionListener.Labels)
+	}
+	if expectedRequest.AIGatewayMCPServerListener != nil {
+		expectedRequest.AIGatewayMCPServerListener.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayMCPServerListener.Labels)
+	}
+	if expectedRequest.AIGatewayMCPServerPassthroughListener != nil {
+		expectedRequest.AIGatewayMCPServerPassthroughListener.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayMCPServerPassthroughListener.Labels)
+	}
+	if expectedRequest.AIGatewayMCPServerUpstreamServer != nil {
+		expectedRequest.AIGatewayMCPServerUpstreamServer.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayMCPServerUpstreamServer.Labels)
+	}
 	sdkErr := errors.New("sdk error")
 
 	sdk.EXPECT().
@@ -109,6 +139,21 @@ func TestUpdateAIGatewayMCPServer_UsesSDKOpsConversion(t *testing.T) {
 	obj.SetKonnectID("aigatewaymcpserver-id")
 	expectedRequest, err := obj.ToUpdateAIGatewayMCPServerRequest(ctx, cl)
 	require.NoError(t, err)
+	if expectedRequest.AIGatewayMCPServerConversionOnly != nil {
+		expectedRequest.AIGatewayMCPServerConversionOnly.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayMCPServerConversionOnly.Labels)
+	}
+	if expectedRequest.AIGatewayMCPServerConversionListener != nil {
+		expectedRequest.AIGatewayMCPServerConversionListener.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayMCPServerConversionListener.Labels)
+	}
+	if expectedRequest.AIGatewayMCPServerListener != nil {
+		expectedRequest.AIGatewayMCPServerListener.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayMCPServerListener.Labels)
+	}
+	if expectedRequest.AIGatewayMCPServerPassthroughListener != nil {
+		expectedRequest.AIGatewayMCPServerPassthroughListener.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayMCPServerPassthroughListener.Labels)
+	}
+	if expectedRequest.AIGatewayMCPServerUpstreamServer != nil {
+		expectedRequest.AIGatewayMCPServerUpstreamServer.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayMCPServerUpstreamServer.Labels)
+	}
 
 	sdk.EXPECT().
 		UpdateAiGatewayMcpServer(
@@ -137,6 +182,21 @@ func TestUpdateAIGatewayMCPServer_PropagatesSDKError(t *testing.T) {
 	obj.SetKonnectID("aigatewaymcpserver-id")
 	expectedRequest, err := obj.ToUpdateAIGatewayMCPServerRequest(ctx, cl)
 	require.NoError(t, err)
+	if expectedRequest.AIGatewayMCPServerConversionOnly != nil {
+		expectedRequest.AIGatewayMCPServerConversionOnly.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayMCPServerConversionOnly.Labels)
+	}
+	if expectedRequest.AIGatewayMCPServerConversionListener != nil {
+		expectedRequest.AIGatewayMCPServerConversionListener.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayMCPServerConversionListener.Labels)
+	}
+	if expectedRequest.AIGatewayMCPServerListener != nil {
+		expectedRequest.AIGatewayMCPServerListener.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayMCPServerListener.Labels)
+	}
+	if expectedRequest.AIGatewayMCPServerPassthroughListener != nil {
+		expectedRequest.AIGatewayMCPServerPassthroughListener.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayMCPServerPassthroughListener.Labels)
+	}
+	if expectedRequest.AIGatewayMCPServerUpstreamServer != nil {
+		expectedRequest.AIGatewayMCPServerUpstreamServer.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayMCPServerUpstreamServer.Labels)
+	}
 	sdkErr := errors.New("sdk error")
 
 	sdk.EXPECT().

@@ -26,6 +26,8 @@ func TestCreateEventGatewayVirtualClusterProducePolicy(t *testing.T) {
 	require.NoError(t, err)
 	expectedRequest.GatewayID = "gateway-1"
 	expectedRequest.VirtualClusterID = "virtual-cluster-1"
+	createVariant := expectedRequest.EventGatewayProducePolicyCreate.EventGatewayModifyHeadersPolicyCreate
+	createVariant.Labels = WithKubernetesMetadataLabels(policy, createVariant.Labels)
 
 	sdk.EXPECT().
 		CreateEventGatewayVirtualClusterProducePolicy(mock.Anything, *expectedRequest).
@@ -53,6 +55,8 @@ func TestUpdateEventGatewayVirtualClusterProducePolicy(t *testing.T) {
 	expectedRequest.GatewayID = "gateway-1"
 	expectedRequest.VirtualClusterID = "virtual-cluster-1"
 	expectedRequest.PolicyID = "produce-policy-1"
+	updateVariant := expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayModifyHeadersPolicy
+	updateVariant.Labels = WithKubernetesMetadataLabels(policy, updateVariant.Labels)
 
 	sdk.EXPECT().
 		UpdateEventGatewayVirtualClusterProducePolicy(mock.Anything, *expectedRequest).
@@ -89,11 +93,28 @@ func TestGetEventGatewayVirtualClusterProducePolicyForUID(t *testing.T) {
 	sdk := sdkmocks.NewMockEventGatewayVirtualClusterProducePoliciesSDK(t)
 	policy := testEventGatewayVirtualClusterProducePolicy()
 
-	id, err := getEventGatewayVirtualClusterProducePolicyForUID(ctx, sdk, policy)
-	require.Empty(t, id)
+	sdk.EXPECT().
+		ListEventGatewayVirtualClusterProducePolicies(mock.Anything, sdkkonnectops.ListEventGatewayVirtualClusterProducePoliciesRequest{
+			GatewayID:        "gateway-1",
+			VirtualClusterID: "virtual-cluster-1",
+		}).
+		Return(&sdkkonnectops.ListEventGatewayVirtualClusterProducePoliciesResponse{
+			ListProducePoliciesResponse: []sdkkonnectcomp.EventGatewayPolicy{
+				{
+					ID:     "other-policy",
+					Labels: map[string]string{KubernetesUIDLabelKey: "other-uid"},
+				},
+				{
+					ID:     "produce-policy-1",
+					Labels: map[string]string{KubernetesUIDLabelKey: string(policy.GetUID())},
+				},
+			},
+		}, nil).
+		Once()
 
-	var notFoundErr EntityWithMatchingUIDNotFoundError
-	require.ErrorAs(t, err, &notFoundErr)
+	id, err := getEventGatewayVirtualClusterProducePolicyForUID(ctx, sdk, policy)
+	require.NoError(t, err)
+	assert.Equal(t, "produce-policy-1", id)
 }
 
 func testEventGatewayVirtualClusterProducePolicy() *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy {

@@ -29,6 +29,18 @@ func createEventGatewayVirtualClusterProducePolicy(
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
+	if req.EventGatewayProducePolicyCreate != nil && req.EventGatewayProducePolicyCreate.EventGatewayModifyHeadersPolicyCreate != nil {
+		req.EventGatewayProducePolicyCreate.EventGatewayModifyHeadersPolicyCreate.Labels = WithKubernetesMetadataLabels(obj, req.EventGatewayProducePolicyCreate.EventGatewayModifyHeadersPolicyCreate.Labels)
+	}
+	if req.EventGatewayProducePolicyCreate != nil && req.EventGatewayProducePolicyCreate.EventGatewayProduceSchemaValidationPolicy != nil {
+		req.EventGatewayProducePolicyCreate.EventGatewayProduceSchemaValidationPolicy.Labels = WithKubernetesMetadataLabels(obj, req.EventGatewayProducePolicyCreate.EventGatewayProduceSchemaValidationPolicy.Labels)
+	}
+	if req.EventGatewayProducePolicyCreate != nil && req.EventGatewayProducePolicyCreate.EventGatewayEncryptPolicy != nil {
+		req.EventGatewayProducePolicyCreate.EventGatewayEncryptPolicy.Labels = WithKubernetesMetadataLabels(obj, req.EventGatewayProducePolicyCreate.EventGatewayEncryptPolicy.Labels)
+	}
+	if req.EventGatewayProducePolicyCreate != nil && req.EventGatewayProducePolicyCreate.EventGatewayParsedRecordEncryptFieldsPolicyCreate != nil {
+		req.EventGatewayProducePolicyCreate.EventGatewayParsedRecordEncryptFieldsPolicyCreate.Labels = WithKubernetesMetadataLabels(obj, req.EventGatewayProducePolicyCreate.EventGatewayParsedRecordEncryptFieldsPolicyCreate.Labels)
+	}
 	req.GatewayID = gatewayID
 	req.VirtualClusterID = virtualClusterID
 
@@ -61,6 +73,24 @@ func updateEventGatewayVirtualClusterProducePolicy(
 	req, err := obj.Spec.APISpec.ToUpdateEventGatewayVirtualClusterProducePolicyRequest()
 	if err != nil {
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
+	}
+	if req.EventGatewayProducePolicyUpdate != nil && req.EventGatewayProducePolicyUpdate.EventGatewayProduceSchemaValidationPolicy != nil {
+		req.EventGatewayProducePolicyUpdate.EventGatewayProduceSchemaValidationPolicy.Labels = WithKubernetesMetadataLabels(obj, req.EventGatewayProducePolicyUpdate.EventGatewayProduceSchemaValidationPolicy.Labels)
+	}
+	if req.EventGatewayProducePolicyUpdate != nil && req.EventGatewayProducePolicyUpdate.EventGatewayModifyHeadersPolicy != nil {
+		req.EventGatewayProducePolicyUpdate.EventGatewayModifyHeadersPolicy.Labels = WithKubernetesMetadataLabels(obj, req.EventGatewayProducePolicyUpdate.EventGatewayModifyHeadersPolicy.Labels)
+	}
+	if req.EventGatewayProducePolicyUpdate != nil && req.EventGatewayProducePolicyUpdate.EventGatewayEncryptPolicy != nil {
+		req.EventGatewayProducePolicyUpdate.EventGatewayEncryptPolicy.Labels = WithKubernetesMetadataLabels(obj, req.EventGatewayProducePolicyUpdate.EventGatewayEncryptPolicy.Labels)
+	}
+	if req.EventGatewayProducePolicyUpdate != nil && req.EventGatewayProducePolicyUpdate.EventGatewayParsedRecordEncryptFieldsPolicy != nil {
+		req.EventGatewayProducePolicyUpdate.EventGatewayParsedRecordEncryptFieldsPolicy.Labels = WithKubernetesMetadataLabels(obj, req.EventGatewayProducePolicyUpdate.EventGatewayParsedRecordEncryptFieldsPolicy.Labels)
+	}
+	if req.EventGatewayProducePolicyUpdate != nil && req.EventGatewayProducePolicyUpdate.EventGatewayParsedRecordTranscodeProducePolicy != nil {
+		req.EventGatewayProducePolicyUpdate.EventGatewayParsedRecordTranscodeProducePolicy.Labels = WithKubernetesMetadataLabels(obj, req.EventGatewayProducePolicyUpdate.EventGatewayParsedRecordTranscodeProducePolicy.Labels)
+	}
+	if req.EventGatewayProducePolicyUpdate != nil && req.EventGatewayProducePolicyUpdate.EventGatewayParsedRecordMaskFieldsProducePolicy != nil {
+		req.EventGatewayProducePolicyUpdate.EventGatewayParsedRecordMaskFieldsProducePolicy.Labels = WithKubernetesMetadataLabels(obj, req.EventGatewayProducePolicyUpdate.EventGatewayParsedRecordMaskFieldsProducePolicy.Labels)
 	}
 	req.GatewayID = gatewayID
 	req.VirtualClusterID = virtualClusterID
@@ -115,13 +145,34 @@ func getEventGatewayVirtualClusterProducePolicyForUID(
 		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "EventGatewayVirtualCluster", Op: GetOp}
 	}
 
-	// TODO: EventGatewayVirtualClusterProducePolicy's Konnect list response lacks labels/tags and no
-	// usable name field is available on the spec, so UID matching cannot be
-	// performed here. This can be revisited once Konnect exposes labels/tags
-	// on this type (tracked in
-	// https://github.com/Kong/kong-operator/issues/3987) or by customizing
-	// this function for a type-specific match strategy.
-	_ = obj
+	// Without a UID every unlabeled Konnect entity would match below.
+	uid := string(obj.GetUID())
+	if uid == "" {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+
+	// TODO: pass a Filter to ListEventGatewayVirtualClusterProducePolicies (e.g. by name/labels) so we
+	// do not page through every entity in the tenant. Filter types and
+	// fields are entity-specific; derive from OpenAPI schema.
+	resp, err := sdk.ListEventGatewayVirtualClusterProducePolicies(ctx, sdkkonnectops.ListEventGatewayVirtualClusterProducePoliciesRequest{
+		GatewayID:        gatewayID,
+		VirtualClusterID: virtualClusterID,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+	}
+	if resp == nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+	}
+
+	for _, entry := range resp.ListProducePoliciesResponse {
+		if entry.GetLabels()[KubernetesUIDLabelKey] != uid {
+			continue
+		}
+		if entry.GetID() != "" {
+			return entry.GetID(), nil
+		}
+	}
 
 	return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 }

@@ -1,6 +1,7 @@
 package ops
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"testing"
@@ -10,6 +11,9 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/stretchr/testify/require"
+
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
 
 func TestErrorIsForbiddenError(t *testing.T) {
@@ -755,4 +759,98 @@ func TestGetRetryAfterFromRateLimitError(t *testing.T) {
 			require.Equal(t, 60*time.Second, gotDuration)
 		})
 	})
+}
+
+func TestIsCreateNameConflict(t *testing.T) {
+	// Bodies returned by Konnect when creating an Event Gateway policy.
+	const (
+		nameMustBeUniqueBody = `{"type":"https://kongapi.info/konnect/bad-request","status":400,"title":"Bad Request","instance":"konnect:trace:1","detail":"Bad Request: name: must be unique","invalid_parameters":[{"field":"name","reason":"must be unique","source":"body"}]}`
+		otherBadRequestBody  = `{"type":"https://kongapi.info/konnect/bad-request","status":400,"title":"Bad Request","instance":"konnect:trace:2","detail":"Bad Request: config.actions.0 [discriminator]: discriminator property \"op\" has invalid value","invalid_parameters":[{"field":"config.actions.0","rule":"discriminator","reason":"discriminator property \"op\" has invalid value","source":""}]}`
+	)
+	badRequest := func(t *testing.T, body string) error {
+		var err sdkkonnecterrs.BadRequestError
+		require.NoError(t, json.Unmarshal([]byte(body), &err))
+		// Wrapped as the generated create functions do.
+		return FailedKonnectOpError[configurationv1alpha1.EventGatewayVirtualClusterProducePolicy]{Op: CreateOp, Err: &err}
+	}
+
+	tests := []struct {
+		name   string
+		entity any
+		err    func(t *testing.T) error
+		want   bool
+	}{
+		{
+			name:   "Event Gateway produce policy: name must be unique",
+			entity: &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{},
+			err:    func(t *testing.T) error { return badRequest(t, nameMustBeUniqueBody) },
+			want:   true,
+		},
+		{
+			name:   "Event Gateway listener policy: name must be unique",
+			entity: &configurationv1alpha1.EventGatewayListenerPolicy{},
+			err:    func(t *testing.T) error { return badRequest(t, nameMustBeUniqueBody) },
+			want:   true,
+		},
+		{
+			name:   "Event Gateway: name must be unique",
+			entity: &konnectv1alpha1.KonnectEventGateway{},
+			err:    func(t *testing.T) error { return badRequest(t, nameMustBeUniqueBody) },
+			want:   true,
+		},
+		{
+			name:   "Event Gateway backend cluster: name must be unique",
+			entity: &configurationv1alpha1.EventGatewayBackendCluster{},
+			err:    func(t *testing.T) error { return badRequest(t, nameMustBeUniqueBody) },
+			want:   true,
+		},
+		{
+			name:   "Event Gateway listener: name must be unique",
+			entity: &configurationv1alpha1.EventGatewayListener{},
+			err:    func(t *testing.T) error { return badRequest(t, nameMustBeUniqueBody) },
+			want:   true,
+		},
+		{
+			name:   "Event Gateway virtual cluster: name must be unique",
+			entity: &configurationv1alpha1.EventGatewayVirtualCluster{},
+			err:    func(t *testing.T) error { return badRequest(t, nameMustBeUniqueBody) },
+			want:   true,
+		},
+		{
+			name:   "Event Gateway schema registry: name must be unique",
+			entity: &configurationv1alpha1.EventGatewaySchemaRegistry{},
+			err:    func(t *testing.T) error { return badRequest(t, nameMustBeUniqueBody) },
+			want:   true,
+		},
+		{
+			name:   "Event Gateway data plane certificate: name must be unique",
+			entity: &configurationv1alpha1.EventGatewayDataPlaneCertificate{},
+			err:    func(t *testing.T) error { return badRequest(t, nameMustBeUniqueBody) },
+			want:   true,
+		},
+		{
+			name:   "Event Gateway produce policy: other bad request",
+			entity: &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{},
+			err:    func(t *testing.T) error { return badRequest(t, otherBadRequestBody) },
+			want:   false,
+		},
+		{
+			name:   "other entity type: name must be unique",
+			entity: &configurationv1alpha1.KongService{},
+			err:    func(t *testing.T) error { return badRequest(t, nameMustBeUniqueBody) },
+			want:   false,
+		},
+		{
+			name:   "Event Gateway produce policy: not a bad request",
+			entity: &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{},
+			err:    func(*testing.T) error { return errors.New("some other error") },
+			want:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, isCreateNameConflict(tt.entity, tt.err(t)))
+		})
+	}
 }

@@ -137,7 +137,7 @@ func Create[
 
 	var errGet error
 	switch {
-	case ErrorIsCreateConflict(err):
+	case ErrorIsCreateConflict(err), isCreateNameConflict(e, err):
 		// If there was a conflict on the create request, we can assume the entity already exists.
 		// We'll get its Konnect ID by listing all entities of its type filtered by the Kubernetes object UID.
 		var id string
@@ -212,6 +212,29 @@ func Create[
 	return e, err
 }
 
+// isCreateNameConflict reports whether a create failed because the entity's
+// name is already taken, for entity types whose Konnect API reports that as a
+// 400 Bad Request instead of a 409 Conflict. As with a 409, the entity may be
+// the object's own (e.g. created before its Konnect ID was persisted), so the
+// caller looks it up by the Kubernetes UID label.
+func isCreateNameConflict(e any, err error) bool {
+	switch e.(type) {
+	case *konnectv1alpha1.KonnectEventGateway,
+		*configurationv1alpha1.EventGatewayBackendCluster,
+		*configurationv1alpha1.EventGatewayListener,
+		*configurationv1alpha1.EventGatewayVirtualCluster,
+		*configurationv1alpha1.EventGatewaySchemaRegistry,
+		*configurationv1alpha1.EventGatewayDataPlaneCertificate,
+		*configurationv1alpha1.EventGatewayListenerPolicy,
+		*configurationv1alpha1.EventGatewayVirtualClusterPolicy,
+		*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy,
+		*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy:
+		return errorIsNameMustBeUnique(err)
+	default:
+		return false
+	}
+}
+
 // getKonnectIDForUID locates an existing Konnect entity that corresponds to the
 // given Kubernetes object and returns its Konnect ID. For most entity types the
 // lookup filters by the Kubernetes object UID tag; Cloud Gateway types that do
@@ -281,10 +304,16 @@ func getKonnectIDForUID[
 		return getKongCertificateForUID(ctx, sdk.GetCertificatesSDK(), ent)
 	case *configurationv1alpha1.KongCACertificate:
 		return getKongCACertificateForUID(ctx, sdk.GetCACertificatesSDK(), ent)
-	case *aiconfigurationv1alpha1.AIGatewayModel:
-		return getAIGatewayModelForUID(ctx, sdk.GetAIGatewayModelsSDK(), ent)
-	case *aiconfigurationv1alpha1.AIGatewayMCPServer:
-		return getAIGatewayMCPServerForUID(ctx, sdk.GetAIGatewayMCPServersSDK(), ent)
+	case *configurationv1alpha1.EventGatewayDataPlaneCertificate:
+		return getEventGatewayDataPlaneCertificateForUID(ctx, sdk.GetEventGatewayDataPlaneCertificatesSDK(), cl, ent)
+	case *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate:
+		id, err := getForUID(ctx, sdk, e)
+		if _, notFound := errors.AsType[EntityWithMatchingUIDNotFoundError](err); notFound {
+			// Certificates created before the operator labeled them never get
+			// a k8s-uid label: fall back to matching them by their content.
+			return getLegacyAIGatewayDataPlaneCertificateForUID(ctx, sdk.GetAIGatewayDataPlaneCertificatesSDK(), cl, ent)
+		}
+		return id, err
 
 	// ---------------------------------------------------------------------
 	// TODO: add other manually maintained Konnect types here

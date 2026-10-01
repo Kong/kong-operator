@@ -50,6 +50,66 @@ func TestCreateAIGatewayModelProvider_UsesSDKOpsConversion(t *testing.T) {
 	obj.SetGatewayID(parentID)
 	expectedRequest, err := obj.ToCreateAIGatewayModelProviderRequest(ctx, cl)
 	require.NoError(t, err)
+	if expectedRequest.AIGatewayModelProviderAnthropic != nil {
+		expectedRequest.AIGatewayModelProviderAnthropic.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderAnthropic.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderAzure != nil {
+		expectedRequest.AIGatewayModelProviderAzure.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderAzure.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderBedrock != nil {
+		expectedRequest.AIGatewayModelProviderBedrock.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderBedrock.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderCerebras != nil {
+		expectedRequest.AIGatewayModelProviderCerebras.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderCerebras.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderCohere != nil {
+		expectedRequest.AIGatewayModelProviderCohere.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderCohere.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderDashscope != nil {
+		expectedRequest.AIGatewayModelProviderDashscope.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderDashscope.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderDatabricks != nil {
+		expectedRequest.AIGatewayModelProviderDatabricks.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderDatabricks.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderDeepseek != nil {
+		expectedRequest.AIGatewayModelProviderDeepseek.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderDeepseek.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderGemini != nil {
+		expectedRequest.AIGatewayModelProviderGemini.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderGemini.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderHuggingface != nil {
+		expectedRequest.AIGatewayModelProviderHuggingface.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderHuggingface.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderKimi != nil {
+		expectedRequest.AIGatewayModelProviderKimi.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderKimi.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderLlama2 != nil {
+		expectedRequest.AIGatewayModelProviderLlama2.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderLlama2.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderMistral != nil {
+		expectedRequest.AIGatewayModelProviderMistral.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderMistral.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderOllama != nil {
+		expectedRequest.AIGatewayModelProviderOllama.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderOllama.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderOpenai != nil {
+		expectedRequest.AIGatewayModelProviderOpenai.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderOpenai.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderVercel != nil {
+		expectedRequest.AIGatewayModelProviderVercel.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderVercel.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderVllm != nil {
+		expectedRequest.AIGatewayModelProviderVllm.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderVllm.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderXai != nil {
+		expectedRequest.AIGatewayModelProviderXai.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderXai.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderSagemaker != nil {
+		expectedRequest.AIGatewayModelProviderSagemaker.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderSagemaker.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderTypesafe != nil {
+		expectedRequest.AIGatewayModelProviderTypesafe.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderTypesafe.Labels)
+	}
 	expectedID := "aigatewaymodelprovider-id"
 
 	sdk.EXPECT().
@@ -82,6 +142,66 @@ func TestCreateAIGatewayModelProvider_PropagatesSDKError(t *testing.T) {
 	obj.SetGatewayID(parentID)
 	expectedRequest, err := obj.ToCreateAIGatewayModelProviderRequest(ctx, cl)
 	require.NoError(t, err)
+	if expectedRequest.AIGatewayModelProviderAnthropic != nil {
+		expectedRequest.AIGatewayModelProviderAnthropic.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderAnthropic.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderAzure != nil {
+		expectedRequest.AIGatewayModelProviderAzure.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderAzure.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderBedrock != nil {
+		expectedRequest.AIGatewayModelProviderBedrock.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderBedrock.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderCerebras != nil {
+		expectedRequest.AIGatewayModelProviderCerebras.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderCerebras.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderCohere != nil {
+		expectedRequest.AIGatewayModelProviderCohere.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderCohere.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderDashscope != nil {
+		expectedRequest.AIGatewayModelProviderDashscope.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderDashscope.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderDatabricks != nil {
+		expectedRequest.AIGatewayModelProviderDatabricks.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderDatabricks.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderDeepseek != nil {
+		expectedRequest.AIGatewayModelProviderDeepseek.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderDeepseek.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderGemini != nil {
+		expectedRequest.AIGatewayModelProviderGemini.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderGemini.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderHuggingface != nil {
+		expectedRequest.AIGatewayModelProviderHuggingface.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderHuggingface.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderKimi != nil {
+		expectedRequest.AIGatewayModelProviderKimi.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderKimi.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderLlama2 != nil {
+		expectedRequest.AIGatewayModelProviderLlama2.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderLlama2.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderMistral != nil {
+		expectedRequest.AIGatewayModelProviderMistral.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderMistral.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderOllama != nil {
+		expectedRequest.AIGatewayModelProviderOllama.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderOllama.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderOpenai != nil {
+		expectedRequest.AIGatewayModelProviderOpenai.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderOpenai.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderVercel != nil {
+		expectedRequest.AIGatewayModelProviderVercel.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderVercel.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderVllm != nil {
+		expectedRequest.AIGatewayModelProviderVllm.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderVllm.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderXai != nil {
+		expectedRequest.AIGatewayModelProviderXai.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderXai.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderSagemaker != nil {
+		expectedRequest.AIGatewayModelProviderSagemaker.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderSagemaker.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderTypesafe != nil {
+		expectedRequest.AIGatewayModelProviderTypesafe.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderTypesafe.Labels)
+	}
 	sdkErr := errors.New("sdk error")
 
 	sdk.EXPECT().
@@ -109,6 +229,66 @@ func TestUpdateAIGatewayModelProvider_UsesSDKOpsConversion(t *testing.T) {
 	obj.SetKonnectID("aigatewaymodelprovider-id")
 	expectedRequest, err := obj.ToUpdateAIGatewayModelProviderRequest(ctx, cl)
 	require.NoError(t, err)
+	if expectedRequest.AIGatewayModelProviderAnthropic != nil {
+		expectedRequest.AIGatewayModelProviderAnthropic.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderAnthropic.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderAzure != nil {
+		expectedRequest.AIGatewayModelProviderAzure.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderAzure.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderBedrock != nil {
+		expectedRequest.AIGatewayModelProviderBedrock.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderBedrock.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderCerebras != nil {
+		expectedRequest.AIGatewayModelProviderCerebras.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderCerebras.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderCohere != nil {
+		expectedRequest.AIGatewayModelProviderCohere.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderCohere.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderDashscope != nil {
+		expectedRequest.AIGatewayModelProviderDashscope.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderDashscope.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderDatabricks != nil {
+		expectedRequest.AIGatewayModelProviderDatabricks.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderDatabricks.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderDeepseek != nil {
+		expectedRequest.AIGatewayModelProviderDeepseek.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderDeepseek.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderGemini != nil {
+		expectedRequest.AIGatewayModelProviderGemini.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderGemini.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderHuggingface != nil {
+		expectedRequest.AIGatewayModelProviderHuggingface.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderHuggingface.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderKimi != nil {
+		expectedRequest.AIGatewayModelProviderKimi.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderKimi.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderLlama2 != nil {
+		expectedRequest.AIGatewayModelProviderLlama2.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderLlama2.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderMistral != nil {
+		expectedRequest.AIGatewayModelProviderMistral.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderMistral.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderOllama != nil {
+		expectedRequest.AIGatewayModelProviderOllama.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderOllama.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderOpenai != nil {
+		expectedRequest.AIGatewayModelProviderOpenai.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderOpenai.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderVercel != nil {
+		expectedRequest.AIGatewayModelProviderVercel.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderVercel.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderVllm != nil {
+		expectedRequest.AIGatewayModelProviderVllm.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderVllm.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderXai != nil {
+		expectedRequest.AIGatewayModelProviderXai.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderXai.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderSagemaker != nil {
+		expectedRequest.AIGatewayModelProviderSagemaker.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderSagemaker.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderTypesafe != nil {
+		expectedRequest.AIGatewayModelProviderTypesafe.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderTypesafe.Labels)
+	}
 
 	sdk.EXPECT().
 		UpdateAiGatewayModelProvider(
@@ -137,6 +317,66 @@ func TestUpdateAIGatewayModelProvider_PropagatesSDKError(t *testing.T) {
 	obj.SetKonnectID("aigatewaymodelprovider-id")
 	expectedRequest, err := obj.ToUpdateAIGatewayModelProviderRequest(ctx, cl)
 	require.NoError(t, err)
+	if expectedRequest.AIGatewayModelProviderAnthropic != nil {
+		expectedRequest.AIGatewayModelProviderAnthropic.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderAnthropic.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderAzure != nil {
+		expectedRequest.AIGatewayModelProviderAzure.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderAzure.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderBedrock != nil {
+		expectedRequest.AIGatewayModelProviderBedrock.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderBedrock.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderCerebras != nil {
+		expectedRequest.AIGatewayModelProviderCerebras.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderCerebras.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderCohere != nil {
+		expectedRequest.AIGatewayModelProviderCohere.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderCohere.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderDashscope != nil {
+		expectedRequest.AIGatewayModelProviderDashscope.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderDashscope.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderDatabricks != nil {
+		expectedRequest.AIGatewayModelProviderDatabricks.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderDatabricks.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderDeepseek != nil {
+		expectedRequest.AIGatewayModelProviderDeepseek.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderDeepseek.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderGemini != nil {
+		expectedRequest.AIGatewayModelProviderGemini.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderGemini.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderHuggingface != nil {
+		expectedRequest.AIGatewayModelProviderHuggingface.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderHuggingface.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderKimi != nil {
+		expectedRequest.AIGatewayModelProviderKimi.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderKimi.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderLlama2 != nil {
+		expectedRequest.AIGatewayModelProviderLlama2.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderLlama2.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderMistral != nil {
+		expectedRequest.AIGatewayModelProviderMistral.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderMistral.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderOllama != nil {
+		expectedRequest.AIGatewayModelProviderOllama.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderOllama.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderOpenai != nil {
+		expectedRequest.AIGatewayModelProviderOpenai.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderOpenai.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderVercel != nil {
+		expectedRequest.AIGatewayModelProviderVercel.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderVercel.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderVllm != nil {
+		expectedRequest.AIGatewayModelProviderVllm.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderVllm.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderXai != nil {
+		expectedRequest.AIGatewayModelProviderXai.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderXai.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderSagemaker != nil {
+		expectedRequest.AIGatewayModelProviderSagemaker.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderSagemaker.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderTypesafe != nil {
+		expectedRequest.AIGatewayModelProviderTypesafe.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderTypesafe.Labels)
+	}
 	sdkErr := errors.New("sdk error")
 
 	sdk.EXPECT().

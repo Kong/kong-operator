@@ -1,0 +1,35 @@
+# Template for applying a Konnect entity CR, given its spec as a binding, and
+# waiting for it to be Programmed. Part of the konnect-ownership templates,
+# used by the */ownership-* tests to check how the operator owns the Konnect
+# entities behind its CRs.
+#
+# Required bindings:
+#   - cr_api_version: API version of the CR, e.g. aiconfiguration.konghq.com/v1alpha1.
+#   - cr_kind: Kind of the CR, e.g. AIGatewayConsumer.
+#   - cr_name: Name of the CR to apply.
+#   - cr_spec: The CR's spec (an object).
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: konnect-ownership-apply-assert-entity
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: ($cr_api_version)
+          kind: ($cr_kind)
+          metadata:
+            name: ($cr_name)
+            namespace: ($namespace)
+          spec: ($cr_spec)
+    - assert:
+        resource:
+          apiVersion: ($cr_api_version)
+          kind: ($cr_kind)
+          metadata:
+            name: ($cr_name)
+            namespace: ($namespace)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+            (id != null): true

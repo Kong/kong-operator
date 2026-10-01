@@ -68,6 +68,16 @@ func getAIGatewayDataPlaneCertificateForUID(
 	if parentID == "" {
 		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: GetOp}
 	}
+
+	// Without a UID every unlabeled Konnect entity would match below.
+	uid := string(obj.GetUID())
+	if uid == "" {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+
+	// TODO: pass a Filter to ListAiGatewayDataPlaneCertificates (e.g. by name/labels) so we
+	// do not page through every entity in the tenant. Filter types and
+	// fields are entity-specific; derive from OpenAPI schema.
 	resp, err := sdk.ListAiGatewayDataPlaneCertificates(ctx, sdkkonnectops.ListAiGatewayDataPlaneCertificatesRequest{
 		GatewayID: parentID,
 	})
@@ -78,31 +88,12 @@ func getAIGatewayDataPlaneCertificateForUID(
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
-	// TODO: only the first page of results is scanned. When the parent has more
-	// entries than the SDK's default page size, a matching entry on a later
-	// page is missed and getForUID returns NotFound. Tracked in
-	// https://github.com/Kong/kong-operator/issues/3987.
 	for _, entry := range resp.ListAIGatewayDataPlaneCertificatesResponse.Data {
-		if !matchSensitiveDataSourceField(obj.Spec.APISpec.Cert, entry.Cert) {
+		if entry.GetLabels()[KubernetesUIDLabelKey] != uid {
 			continue
 		}
-		if !matchStringField(obj.Spec.APISpec.Title, entry.Title) {
-			continue
-		}
-		if !matchStringField(obj.Spec.APISpec.Description, entry.Description) {
-			continue
-		}
-		switch id := any(entry.GetID()).(type) {
-		case string:
-			if id != "" {
-				return id, nil
-			}
-		case *string:
-			if id != nil && *id != "" {
-				return *id, nil
-			}
-		default:
-			return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
+		if entry.GetID() != "" {
+			return entry.GetID(), nil
 		}
 	}
 

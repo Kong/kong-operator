@@ -28,6 +28,66 @@ func createAIGatewayModelProvider(
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
+	if req.AIGatewayModelProviderAnthropic != nil {
+		req.AIGatewayModelProviderAnthropic.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderAnthropic.Labels)
+	}
+	if req.AIGatewayModelProviderAzure != nil {
+		req.AIGatewayModelProviderAzure.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderAzure.Labels)
+	}
+	if req.AIGatewayModelProviderBedrock != nil {
+		req.AIGatewayModelProviderBedrock.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderBedrock.Labels)
+	}
+	if req.AIGatewayModelProviderCerebras != nil {
+		req.AIGatewayModelProviderCerebras.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderCerebras.Labels)
+	}
+	if req.AIGatewayModelProviderCohere != nil {
+		req.AIGatewayModelProviderCohere.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderCohere.Labels)
+	}
+	if req.AIGatewayModelProviderDashscope != nil {
+		req.AIGatewayModelProviderDashscope.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderDashscope.Labels)
+	}
+	if req.AIGatewayModelProviderDatabricks != nil {
+		req.AIGatewayModelProviderDatabricks.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderDatabricks.Labels)
+	}
+	if req.AIGatewayModelProviderDeepseek != nil {
+		req.AIGatewayModelProviderDeepseek.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderDeepseek.Labels)
+	}
+	if req.AIGatewayModelProviderGemini != nil {
+		req.AIGatewayModelProviderGemini.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderGemini.Labels)
+	}
+	if req.AIGatewayModelProviderHuggingface != nil {
+		req.AIGatewayModelProviderHuggingface.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderHuggingface.Labels)
+	}
+	if req.AIGatewayModelProviderKimi != nil {
+		req.AIGatewayModelProviderKimi.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderKimi.Labels)
+	}
+	if req.AIGatewayModelProviderLlama2 != nil {
+		req.AIGatewayModelProviderLlama2.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderLlama2.Labels)
+	}
+	if req.AIGatewayModelProviderMistral != nil {
+		req.AIGatewayModelProviderMistral.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderMistral.Labels)
+	}
+	if req.AIGatewayModelProviderOllama != nil {
+		req.AIGatewayModelProviderOllama.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderOllama.Labels)
+	}
+	if req.AIGatewayModelProviderOpenai != nil {
+		req.AIGatewayModelProviderOpenai.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderOpenai.Labels)
+	}
+	if req.AIGatewayModelProviderVercel != nil {
+		req.AIGatewayModelProviderVercel.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderVercel.Labels)
+	}
+	if req.AIGatewayModelProviderVllm != nil {
+		req.AIGatewayModelProviderVllm.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderVllm.Labels)
+	}
+	if req.AIGatewayModelProviderXai != nil {
+		req.AIGatewayModelProviderXai.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderXai.Labels)
+	}
+	if req.AIGatewayModelProviderSagemaker != nil {
+		req.AIGatewayModelProviderSagemaker.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderSagemaker.Labels)
+	}
+	if req.AIGatewayModelProviderTypesafe != nil {
+		req.AIGatewayModelProviderTypesafe.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderTypesafe.Labels)
+	}
 
 	resp, err := sdk.CreateAiGatewayModelProvider(ctx, parentID, *req)
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, obj); errWrap != nil {
@@ -74,6 +134,66 @@ func updateAIGatewayModelProvider(
 	if err != nil {
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
 	}
+	if req.AIGatewayModelProviderAnthropic != nil {
+		req.AIGatewayModelProviderAnthropic.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderAnthropic.Labels)
+	}
+	if req.AIGatewayModelProviderAzure != nil {
+		req.AIGatewayModelProviderAzure.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderAzure.Labels)
+	}
+	if req.AIGatewayModelProviderBedrock != nil {
+		req.AIGatewayModelProviderBedrock.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderBedrock.Labels)
+	}
+	if req.AIGatewayModelProviderCerebras != nil {
+		req.AIGatewayModelProviderCerebras.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderCerebras.Labels)
+	}
+	if req.AIGatewayModelProviderCohere != nil {
+		req.AIGatewayModelProviderCohere.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderCohere.Labels)
+	}
+	if req.AIGatewayModelProviderDashscope != nil {
+		req.AIGatewayModelProviderDashscope.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderDashscope.Labels)
+	}
+	if req.AIGatewayModelProviderDatabricks != nil {
+		req.AIGatewayModelProviderDatabricks.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderDatabricks.Labels)
+	}
+	if req.AIGatewayModelProviderDeepseek != nil {
+		req.AIGatewayModelProviderDeepseek.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderDeepseek.Labels)
+	}
+	if req.AIGatewayModelProviderGemini != nil {
+		req.AIGatewayModelProviderGemini.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderGemini.Labels)
+	}
+	if req.AIGatewayModelProviderHuggingface != nil {
+		req.AIGatewayModelProviderHuggingface.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderHuggingface.Labels)
+	}
+	if req.AIGatewayModelProviderKimi != nil {
+		req.AIGatewayModelProviderKimi.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderKimi.Labels)
+	}
+	if req.AIGatewayModelProviderLlama2 != nil {
+		req.AIGatewayModelProviderLlama2.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderLlama2.Labels)
+	}
+	if req.AIGatewayModelProviderMistral != nil {
+		req.AIGatewayModelProviderMistral.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderMistral.Labels)
+	}
+	if req.AIGatewayModelProviderOllama != nil {
+		req.AIGatewayModelProviderOllama.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderOllama.Labels)
+	}
+	if req.AIGatewayModelProviderOpenai != nil {
+		req.AIGatewayModelProviderOpenai.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderOpenai.Labels)
+	}
+	if req.AIGatewayModelProviderVercel != nil {
+		req.AIGatewayModelProviderVercel.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderVercel.Labels)
+	}
+	if req.AIGatewayModelProviderVllm != nil {
+		req.AIGatewayModelProviderVllm.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderVllm.Labels)
+	}
+	if req.AIGatewayModelProviderXai != nil {
+		req.AIGatewayModelProviderXai.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderXai.Labels)
+	}
+	if req.AIGatewayModelProviderSagemaker != nil {
+		req.AIGatewayModelProviderSagemaker.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderSagemaker.Labels)
+	}
+	if req.AIGatewayModelProviderTypesafe != nil {
+		req.AIGatewayModelProviderTypesafe.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderTypesafe.Labels)
+	}
 
 	_, err = sdk.UpdateAiGatewayModelProvider(ctx, sdkkonnectops.UpdateAiGatewayModelProviderRequest{
 		GatewayID:                           parentID,
@@ -116,13 +236,82 @@ func getAIGatewayModelProviderForUID(
 		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: GetOp}
 	}
 
-	// TODO: AIGatewayModelProvider's Konnect list response lacks labels/tags and no
-	// usable name field is available on the spec, so UID matching cannot be
-	// performed here. This can be revisited once Konnect exposes labels/tags
-	// on this type (tracked in
-	// https://github.com/Kong/kong-operator/issues/3987) or by customizing
-	// this function for a type-specific match strategy.
-	_ = obj
+	// Without a UID every unlabeled Konnect entity would match below.
+	uid := string(obj.GetUID())
+	if uid == "" {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+
+	// TODO: pass a Filter to ListAiGatewayModelProviders (e.g. by name/labels) so we
+	// do not page through every entity in the tenant. Filter types and
+	// fields are entity-specific; derive from OpenAPI schema.
+	resp, err := sdk.ListAiGatewayModelProviders(ctx, sdkkonnectops.ListAiGatewayModelProvidersRequest{
+		GatewayID: parentID,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+	}
+	if resp == nil || resp.ListAIGatewayModelProvidersResponse == nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+	}
+
+	// List items are root unions whose wrapper exposes no GetID()/GetLabels():
+	// read them from whichever variant is set.
+	// TODO: only the first page of results is scanned. Tracked in
+	// https://github.com/Kong/kong-operator/issues/3987.
+	for _, entry := range resp.ListAIGatewayModelProvidersResponse.Data {
+		var (
+			id     string
+			labels map[string]string
+		)
+		switch {
+		case entry.AIGatewayModelProviderAIGatewayModelProviderAnthropic != nil:
+			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderAnthropic.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderAnthropic.GetLabels()
+		case entry.AIGatewayModelProviderAIGatewayModelProviderAzure != nil:
+			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderAzure.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderAzure.GetLabels()
+		case entry.AIGatewayModelProviderAIGatewayModelProviderBedrock != nil:
+			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderBedrock.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderBedrock.GetLabels()
+		case entry.AIGatewayModelProviderAIGatewayModelProviderCerebras != nil:
+			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderCerebras.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderCerebras.GetLabels()
+		case entry.AIGatewayModelProviderAIGatewayModelProviderCohere != nil:
+			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderCohere.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderCohere.GetLabels()
+		case entry.AIGatewayModelProviderAIGatewayModelProviderDashscope != nil:
+			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderDashscope.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderDashscope.GetLabels()
+		case entry.AIGatewayModelProviderAIGatewayModelProviderDatabricks != nil:
+			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderDatabricks.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderDatabricks.GetLabels()
+		case entry.AIGatewayModelProviderAIGatewayModelProviderDeepseek != nil:
+			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderDeepseek.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderDeepseek.GetLabels()
+		case entry.AIGatewayModelProviderAIGatewayModelProviderGemini != nil:
+			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderGemini.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderGemini.GetLabels()
+		case entry.AIGatewayModelProviderAIGatewayModelProviderHuggingface != nil:
+			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderHuggingface.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderHuggingface.GetLabels()
+		case entry.AIGatewayModelProviderAIGatewayModelProviderKimi != nil:
+			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderKimi.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderKimi.GetLabels()
+		case entry.AIGatewayModelProviderAIGatewayModelProviderLlama2 != nil:
+			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderLlama2.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderLlama2.GetLabels()
+		case entry.AIGatewayModelProviderAIGatewayModelProviderMistral != nil:
+			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderMistral.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderMistral.GetLabels()
+		case entry.AIGatewayModelProviderAIGatewayModelProviderOllama != nil:
+			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderOllama.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderOllama.GetLabels()
+		case entry.AIGatewayModelProviderAIGatewayModelProviderOpenai != nil:
+			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderOpenai.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderOpenai.GetLabels()
+		case entry.AIGatewayModelProviderAIGatewayModelProviderVercel != nil:
+			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderVercel.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderVercel.GetLabels()
+		case entry.AIGatewayModelProviderAIGatewayModelProviderVllm != nil:
+			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderVllm.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderVllm.GetLabels()
+		case entry.AIGatewayModelProviderAIGatewayModelProviderXai != nil:
+			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderXai.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderXai.GetLabels()
+		case entry.AIGatewayModelProviderAIGatewayModelProviderSagemaker != nil:
+			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderSagemaker.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderSagemaker.GetLabels()
+		case entry.AIGatewayModelProviderAIGatewayModelProviderTypesafe != nil:
+			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderTypesafe.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderTypesafe.GetLabels()
+		default:
+			continue
+		}
+		if id != "" && labels[KubernetesUIDLabelKey] == uid {
+			return id, nil
+		}
+	}
 
 	return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 }

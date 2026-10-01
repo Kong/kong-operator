@@ -5132,6 +5132,52 @@ func TestGenerateEntityOpsFile_GetForUIDSkipWhenUnsetRejectsNonStringFields(t *t
 	assert.Contains(t, err.Error(), "skipWhenUnset")
 }
 
+// TestGenerateEntityOpsFile_GetForUIDRejectsSecretSourcedMatchFields checks a
+// getForUID match field sourced from a Secret is rejected: the generated
+// lookup has no client to resolve the Secret, so it could not compare the
+// field and would match an entity with any value.
+func TestGenerateEntityOpsFile_GetForUIDRejectsSecretSourcedMatchFields(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"KonnectEventDataPlaneCertificate": {IsRoot: new(false), ParentEntityType: "KonnectEventGateway"},
+		},
+	})
+	// As recorded while generating the types for a Secret data source on
+	// spec.apiSpec.certificate.
+	g.entityDirectLeafValueTypes = map[string]map[string]sensitiveLeafType{
+		"KonnectEventDataPlaneCertificate": {"certificate": {ValueGoType: "string"}},
+	}
+
+	schema := &parser.Schema{
+		ListOperationID:        "list-event-gateway-data-plane-certificates",
+		ListTags:               []string{"EventGatewayDataPlaneCertificates"},
+		ListSuccessResponseRef: "ListEventGatewayDataPlaneCertificatesResponse",
+		Dependencies: []*parser.Dependency{
+			{ParamName: "gatewayId", EntityName: "KonnectEventGateway"},
+		},
+		Properties: []*parser.Property{
+			{Name: "certificate", Type: "string"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		GetForUID: &config.GetForUIDConfig{
+			MatchFields: []config.GetForUIDMatchField{
+				{ObjectField: "Spec.APISpec.Certificate", ResponseField: "Certificate"},
+			},
+		},
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.EventGatewayDataPlaneCertificatesSDK",
+			FieldName: "EventGatewayDataPlaneCertificates",
+		},
+	}
+
+	_, err := g.generateEntityOpsFile("KonnectEventDataPlaneCertificate", schema, opsConfig)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "sourced from a Secret")
+}
+
 func TestGenerateEntityOpsFile_GetForUIDUsesRootUnionCases(t *testing.T) {
 	g := NewGenerator(Config{
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",

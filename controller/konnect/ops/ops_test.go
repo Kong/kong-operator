@@ -17,6 +17,7 @@ import (
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	kcfgkonnect "github.com/kong/kong-operator/v2/api/konnect"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
@@ -218,6 +219,89 @@ func TestCreate(t *testing.T) {
 	}
 
 	testCreate(t, testCasesForKonnectGatewayControlPlane)
+
+	// Event Gateway policy APIs report a name conflict as a 400 Bad Request
+	// ("name: must be unique") instead of a 409 Conflict. It must be handled
+	// like a 409: the entity is looked up by the Kubernetes UID label.
+	nameMustBeUniqueErr := &sdkkonnecterrs.BadRequestError{
+		Status: 400,
+		Title:  "Bad Request",
+		Detail: "Bad Request: name: must be unique",
+		InvalidParameters: []sdkkonnectcomp.InvalidParameters{
+			{
+				InvalidParameterStandard: &sdkkonnectcomp.InvalidParameterStandard{
+					Field:  "name",
+					Reason: "must be unique",
+				},
+			},
+		},
+	}
+	listProducePolicies := func(sdk *sdkmocks.MockSDKWrapper, policies ...sdkkonnectcomp.EventGatewayPolicy) {
+		sdk.EventGatewayVirtualClusterProducePoliciesSDK.
+			EXPECT().
+			ListEventGatewayVirtualClusterProducePolicies(mock.Anything, sdkkonnectops.ListEventGatewayVirtualClusterProducePoliciesRequest{
+				GatewayID:        "gateway-1",
+				VirtualClusterID: "virtual-cluster-1",
+			}).
+			Return(&sdkkonnectops.ListEventGatewayVirtualClusterProducePoliciesResponse{
+				ListProducePoliciesResponse: policies,
+			}, nil).
+			Once()
+	}
+	testCasesForEventGatewayVirtualClusterProducePolicy := []createTestCase[
+		configurationv1alpha1.EventGatewayVirtualClusterProducePolicy,
+		*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy,
+	]{
+		{
+			name:   "name conflict (400) recovers the object's own policy by the Kubernetes UID label",
+			entity: testEventGatewayVirtualClusterProducePolicy(),
+			sdkFunc: func(t *testing.T, sdk *sdkmocks.MockSDKWrapper) *sdkmocks.MockSDKWrapper {
+				sdk.EventGatewayVirtualClusterProducePoliciesSDK.
+					EXPECT().
+					CreateEventGatewayVirtualClusterProducePolicy(mock.Anything, mock.Anything).
+					Return(nil, nameMustBeUniqueErr).
+					Once()
+				listProducePolicies(sdk, sdkkonnectcomp.EventGatewayPolicy{
+					ID:     "produce-policy-1",
+					Name:   new("add-header-1"),
+					Labels: map[string]string{KubernetesUIDLabelKey: "produce-policy-uid"},
+				})
+				return sdk
+			},
+			assertions: func(t *testing.T, ent *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy) {
+				assert.Equal(t, "produce-policy-1", ent.GetKonnectID())
+				require.Len(t, ent.Status.Conditions, 1)
+				assert.Equal(t, metav1.ConditionTrue, ent.Status.Conditions[0].Status)
+			},
+		},
+		{
+			name:   "name conflict (400) does not take over a same-named policy owned by another object",
+			entity: testEventGatewayVirtualClusterProducePolicy(),
+			sdkFunc: func(t *testing.T, sdk *sdkmocks.MockSDKWrapper) *sdkmocks.MockSDKWrapper {
+				sdk.EventGatewayVirtualClusterProducePoliciesSDK.
+					EXPECT().
+					CreateEventGatewayVirtualClusterProducePolicy(mock.Anything, mock.Anything).
+					Return(nil, nameMustBeUniqueErr).
+					Once()
+				listProducePolicies(sdk, sdkkonnectcomp.EventGatewayPolicy{
+					ID:     "owned-by-other-object",
+					Name:   new("add-header-1"),
+					Labels: map[string]string{KubernetesUIDLabelKey: "other-uid"},
+				})
+				return sdk
+			},
+			// As with any 4xx, the error is reported in the status condition only.
+			assertions: func(t *testing.T, ent *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy) {
+				assert.Empty(t, ent.GetKonnectID())
+				require.Len(t, ent.Status.Conditions, 1)
+				assert.Equal(t, metav1.ConditionFalse, ent.Status.Conditions[0].Status)
+				assert.EqualValues(t, kcfgkonnect.KonnectEntitiesFailedToCreateReason, ent.Status.Conditions[0].Reason)
+				assert.Contains(t, ent.Status.Conditions[0].Message, "must be unique")
+			},
+		},
+	}
+
+	testCreate(t, testCasesForEventGatewayVirtualClusterProducePolicy)
 }
 
 func TestUpdateAIGatewayConsumerCredential_NoopsBecauseImmutable(t *testing.T) {
