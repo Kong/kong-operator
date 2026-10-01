@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.4.0-rapid.2.0](#v240-rapid20)
 - [v2.4.0-rapid.1](#v240-rapid1)
 - [v2.3.2](#v232)
 - [v2.3.1](#v231)
@@ -66,7 +67,9 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## Unreleased
+## [v2.4.0-rapid.2.0]
+
+> Release date: 2026-09-30
 
 ### Added
 
@@ -166,6 +169,12 @@
   operator then could not find the entity it owns in Konnect, so it could not
   recover a lost entity ID or delete the entity when the object was deleted.
   [#5917](https://github.com/Kong/kong-operator/pull/5917)
+- AI Gateway configuration entities: free-form `config` (e.g. of an
+  `AIGatewayPolicy`) is now sent to Konnect verbatim. Previously, config whose
+  data looked like a discriminated union (such as a headroom compressor config
+  with `provider: headroom` next to a `headroom` block) was flattened, and
+  Konnect rejected it with "unknown field" errors.
+  [#5888](https://github.com/Kong/kong-operator/pull/5888)
 
 ## [v2.4.0-rapid.1]
 
@@ -3580,6 +3589,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.4.0-rapid.2.0]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.1..v2.4.0-rapid.2.0
 [v2.4.0-rapid.1]: https://github.com/Kong/kong-operator/compare/v2.3.1..v2.4.0-rapid.1
 [v2.3.2]: https://github.com/Kong/kong-operator/compare/v2.3.1..v2.3.2
 [v2.3.1]: https://github.com/Kong/kong-operator/compare/v2.3.0..v2.3.1
