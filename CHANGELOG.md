@@ -70,6 +70,14 @@
 
 ## [Unreleased]
 
+### Added
+
+- `--konnect-list-page-size` flag (default and maximum `100`): the page size
+  the operator requests when listing Konnect entities to find the Konnect
+  entity of an object, e.g. one whose Konnect ID was lost. It is a fallback in
+  case Konnect rejects the default; lower values mean more requests.
+  [#5961](https://github.com/Kong/kong-operator/pull/5961)
+
 ### Changed
 
 - On-prem AI Gateway: each `OnPremAIGateway`'s control plane instance now runs

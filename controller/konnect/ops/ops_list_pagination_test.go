@@ -14,7 +14,25 @@ import (
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
+
+// TestSetListPageSize is not parallel: it changes the page size the other
+// tests' lookups request, and restores it.
+func TestSetListPageSize(t *testing.T) {
+	original := listPageSize
+	t.Cleanup(func() { listPageSize = original })
+
+	for _, size := range []int64{0, -1, consts.MaxKonnectListPageSize + 1} {
+		require.Error(t, SetListPageSize(size), "size %d", size)
+		assert.Equal(t, original, listPageSize, "an invalid size must not change the page size")
+	}
+
+	require.NoError(t, SetListPageSize(20))
+	assert.Equal(t, int64(20), listPageSize)
+	require.NoError(t, SetListPageSize(consts.MaxKonnectListPageSize))
+	assert.Equal(t, int64(consts.MaxKonnectListPageSize), listPageSize)
+}
 
 func TestNextPageCursor(t *testing.T) {
 	testCases := []struct {
