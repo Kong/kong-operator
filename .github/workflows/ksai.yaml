@@ -65,6 +65,9 @@ jobs:
       id-token: write      # mint the GitHub OIDC token for federation
       checks: read         # read what CI said about the head
       statuses: read       # the older API a build may report through
+      # KSAI's implement and recover jobs dispatch runs with GITHUB_TOKEN; the App token it mints
+      # never asks for Actions, so this grant is still required.
+      actions: write
     with:
       trigger_phrase: ${{ vars.KSAI_TRIGGER_PHRASE }}
       runs_on: ubuntu-latest
@@ -109,8 +112,9 @@ jobs:
     permissions:
       contents: read       # download the action this call runs, which lives in a private repository
       pull-requests: write # dismiss an approval from somebody who contributed to the pull request
-      # No statuses: write: the status has to be posted with an App token, which needs
-      # "Statuses: write" on the App -- a grant to confirm before this lands.
+      # The called workflow posts the required status with GITHUB_TOKEN and takes no secret, so it
+      # cannot mint an App token. Dropping this needs a change in KSAI (see the PR notes).
+      statuses: write
     with:
       # The login KSAI's commits land under with push_as_app: true (the App's bot user).
       app_login: kong-k8s-team[bot]
