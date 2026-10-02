@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/Kong/ai-deck-converter/aigw"
 	"gopkg.in/yaml.v3"
@@ -19,7 +20,13 @@ import (
 // resolving spec.apiSpec.policies and spec.consumerGroups references to the referenced
 // entities' names and embedding the credentials referencing it (each with its secretRef
 // apiKey resolved).
-func (obj *AIGatewayConsumer) ToAIGWConsumer(ctx context.Context, cl client.Client) (*aigw.Consumer, error) {
+//
+// credIndexField is the field name of the AIGatewayConsumerCredential ->
+// AIGatewayConsumer index (internal/utils/index's
+// IndexFieldAIGatewayConsumerCredentialOnAIGatewayConsumerRef). It is passed in by the
+// caller (the on-prem translator) because this api package cannot import that package
+// without a cycle.
+func (obj *AIGatewayConsumer) ToAIGWConsumer(ctx context.Context, cl client.Client, credIndexField string) (*aigw.Consumer, error) {
 	data, err := obj.Spec.APISpec.marshalAIGWConsumerPayload()
 	if err != nil {
 		return nil, fmt.Errorf("marshaling AIGatewayConsumer %s/%s: %w", obj.Namespace, obj.Name, err)
@@ -36,7 +43,7 @@ func (obj *AIGatewayConsumer) ToAIGWConsumer(ctx context.Context, cl client.Clie
 	if consumer.ConsumerGroups, err = resolveEntityNames[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, consumerGroupNamespacedRefs(obj.Spec.ConsumerGroups)); err != nil {
 		return nil, fmt.Errorf("resolving AIGatewayConsumer %s/%s consumer groups: %w", obj.Namespace, obj.Name, err)
 	}
-	if consumer.Credentials, err = obj.aigwCredentials(ctx, cl); err != nil {
+	if consumer.Credentials, err = obj.aigwCredentials(ctx, cl, credIndexField); err != nil {
 		return nil, fmt.Errorf("resolving AIGatewayConsumer %s/%s credentials: %w", obj.Namespace, obj.Name, err)
 	}
 	return &consumer, nil
@@ -76,30 +83,32 @@ func consumerGroupNamespacedRefs(refs []AIGatewayConsumerGroupRef) []namespacedR
 // aigw.Credentials, sorted by k8s name so the rendered document (and the payload hash derived
 // from it) doesn't flap across List calls that return in a different order.
 //
-// The credentials are listed namespace-wide and filtered in Go rather than via the
-// aiGatewayConsumerCredentialOnAIGatewayConsumerRef index: that index's constant lives in
-// internal/utils/index, which this api package cannot import without a cycle.
-func (obj *AIGatewayConsumer) aigwCredentials(ctx context.Context, cl client.Client) ([]aigw.Credential, error) {
+// The credentials are listed via the credIndexField index (see ToAIGWConsumer), so only the
+// ones referencing this consumer are read from the cache. The index value is
+// "<refNamespace>/<refName>", with refNamespace defaulting to the credential's namespace —
+// mirroring resolveEntityNames's same-namespace rule for entity references.
+func (obj *AIGatewayConsumer) aigwCredentials(ctx context.Context, cl client.Client, credIndexField string) ([]aigw.Credential, error) {
 	var list AIGatewayConsumerCredentialList
-	if err := cl.List(ctx, &list, client.InNamespace(obj.Namespace)); err != nil {
+	if err := cl.List(ctx, &list,
+		client.InNamespace(obj.Namespace),
+		client.MatchingFields{credIndexField: obj.Namespace + "/" + obj.Name},
+	); err != nil {
 		return nil, fmt.Errorf("listing AIGatewayConsumerCredentials: %w", err)
 	}
 
 	slices.SortFunc(list.Items, func(a, b AIGatewayConsumerCredential) int {
-		return slices.Compare([]string{a.Namespace, a.Name}, []string{b.Namespace, b.Name})
+		return strings.Compare(a.Name, b.Name)
 	})
 
 	var creds []aigw.Credential
 	for i := range list.Items {
 		cred := &list.Items[i]
-		ref := cred.Spec.AIGatewayConsumerRef.NamespacedRef
-		if ref == nil ||
-			ref.Name != obj.Name ||
-			(ref.Namespace != nil && *ref.Namespace != "" && *ref.Namespace != obj.Namespace) {
-			continue
-		}
 		translated, err := cred.toAIGWCredential(ctx, cl)
 		if err != nil {
+			// A single broken credential intentionally fails the whole consumer: the
+			// translation's per-entity granularity is the consumer (the entity pointing at
+			// the gateway), so the consumer is excluded from the document with all its
+			// credentials and the error is reported on the consumer.
 			return nil, fmt.Errorf("translating AIGatewayConsumerCredential %s/%s: %w", cred.Namespace, cred.Name, err)
 		}
 		creds = append(creds, *translated)
@@ -118,7 +127,9 @@ func (obj *AIGatewayConsumerCredential) toAIGWCredential(ctx context.Context, cl
 
 	resolvedSpec, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {
-		return nil, err
+		// An existing-but-unlabelled Secret reads as not found through the operator's
+		// filtered cache: annotate the not-found error with the label requirement.
+		return nil, noteSecretLabelRequirement(err)
 	}
 	data, err := marshalAIGWConsumerCredentialPayload(resolvedSpec)
 	if err != nil {
