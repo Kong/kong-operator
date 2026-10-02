@@ -339,6 +339,13 @@ func (r *Reconciler) configFromSpec(
 }
 
 // scheduleInstance creates a new control plane instance and schedules it in the multi-instance manager.
+//
+// The instance runs its own controller-runtime manager hosting the configuration-entity
+// controllers and the SecretReconciler Secret watcher (controller/aigateway/onpremconfig),
+// with a Secret cache scoped to the gateway's namespace and mirroring the operator's
+// --secret-label-selector, so only Secrets carrying that selector label are read there
+// (user Secrets must carry it to be ingestible; the Admin API client certificate Secret
+// gets it from ensureAdminClientCertificateSecret).
 func (r *Reconciler) scheduleInstance(
 	logger logr.Logger,
 	mgrID manager.ID,
@@ -360,6 +367,7 @@ func (r *Reconciler) scheduleInstance(
 			// to the data planes' Admin API when pushing configuration.
 			AdminClientCertSecretNN: adminClientCertSecretNN,
 			TypeConverter:           r.TypeConverter,
+			SecretLabelSelector:     r.SecretLabelSelector,
 		},
 	)); err != nil {
 		return fmt.Errorf("failed to schedule instance: %w", err)

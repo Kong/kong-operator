@@ -8,8 +8,11 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
@@ -239,4 +242,55 @@ func TestSendConfig(t *testing.T) {
 		require.Empty(t, pending, "the skipped sync must still drop the gateway from pending")
 		require.Equal(t, status.ConfigurationStatusFailed, statusOf(instance, model))
 	})
+}
+
+// secretCacheCfg finds the cache config for corev1.Secret in opts.ByObject: its keys are
+// pointers to fresh zero objects, so the entry can't be looked up by a newly built key.
+func secretCacheCfg(opts cache.Options) (cache.ByObject, bool) {
+	for obj, cfg := range opts.ByObject {
+		if _, ok := obj.(*corev1.Secret); ok {
+			return cfg, true
+		}
+	}
+	return cache.ByObject{}, false
+}
+
+func TestCacheOpts(t *testing.T) {
+	t.Run("SecretLabelSelector configured: the Secret cache mirrors the operator label", func(t *testing.T) {
+		// The generated secretRef resolvers (e.g. AIGatewayAuthStrategy's oidc
+		// clientSecret) read user Secrets through the instance's cache-backed client,
+		// so the filter must accept operator-labeled Secrets, like the main manager.
+		i := Instance{env: Env{
+			GatewayNN:           types.NamespacedName{Namespace: "ns", Name: "gw"},
+			SecretLabelSelector: "app",
+		}}
+		opts := i.cacheOpts()
+		secretCfg, ok := secretCacheCfg(opts)
+		require.True(t, ok)
+		require.NotNil(t, secretCfg.Label)
+		require.True(t, secretCfg.Label.Matches(labels.Set{"app": "true"}))
+		require.True(t, secretCfg.Label.Matches(labels.Set{"app": "internal"}))
+		require.False(t, secretCfg.Label.Matches(labels.Set{"app": "other"}))
+		require.False(t, secretCfg.Label.Matches(labels.Set{}))
+	})
+
+	t.Run("SecretLabelSelector empty: no Secret label filter", func(t *testing.T) {
+		i := Instance{env: Env{GatewayNN: types.NamespacedName{Namespace: "ns", Name: "gw"}}}
+		opts := i.cacheOpts()
+		secretCfg, ok := secretCacheCfg(opts)
+		require.True(t, ok)
+		require.Nil(t, secretCfg.Label)
+	})
+
+	t.Run("namespace scoping of the other objects", func(t *testing.T) {
+		i := Instance{env: Env{GatewayNN: types.NamespacedName{Namespace: "ns", Name: "gw"}}}
+		opts := i.cacheOpts()
+		for _, obj := range opts.ByObject {
+			require.Equal(t, map[string]cache.Config{"ns": {}}, obj.Namespaces)
+		}
+		require.Len(t, opts.ByObject, 4)
+	})
+
+	// No gateway namespace: no per-object cache configuration at all.
+	require.Empty(t, (&Instance{}).cacheOpts().ByObject)
 }

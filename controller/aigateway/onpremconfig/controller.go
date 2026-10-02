@@ -111,5 +111,12 @@ func (cs *Controllers) SetupWithManager(_ context.Context, mgr ctrl.Manager) err
 			return err
 		}
 	}
-	return nil
+	// The Secret reconciler is not a configuration-entity reconciler: it watches the
+	// Secrets referenced by the entities' secretRefs so that updating a Secret
+	// re-renders the configuration without waiting for an unrelated entity event.
+	return (&SecretReconciler{
+		Client:         cs.Client,
+		Log:            cs.Log,
+		ChangeNotifier: cs.ChangeNotifier,
+	}).SetupWithManager(mgr)
 }

@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -58,6 +59,7 @@ func newReconcilerClient(t *testing.T, objs ...client.Object) client.Client {
 	scheme := runtime.NewScheme()
 	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
 	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
 	return fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).WithStatusSubresource(&aiconfigurationv1alpha1.AIGatewayModel{}).Build()
 }
 

@@ -32,7 +32,7 @@ func (obj *AIGatewayModelProvider) ToAIGWProvider(ctx context.Context, cl client
 	// the spec it walks, which would otherwise leak into the caller's object.
 	resolved, err := obj.DeepCopy().sdkOpsAPISpec(ctx, cl)
 	if err != nil {
-		return nil, fmt.Errorf("resolving AIGatewayModelProvider %s/%s secrets: %w", obj.Namespace, obj.Name, err)
+		return nil, fmt.Errorf("resolving AIGatewayModelProvider %s/%s secrets: %w", obj.Namespace, obj.Name, noteSecretLabelRequirement(err))
 	}
 
 	data, err := resolved.marshalAIGWProviderPayload()
