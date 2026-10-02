@@ -178,6 +178,69 @@ jobs:
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Generate source SBOM
+        # Blocking: the SBOMs are deliverables. DISABLE_SBOM_SCAN bypasses a known-bad upstream.
+        if: ${{ vars.DISABLE_SBOM_SCAN != 'true' }}
+        uses: Kong/public-shared-actions/security-actions/sca@5d8835e25221a4aa16e7a53ab6e97c7fb2528b7e # sca@6.0.3
+        with:
+          dir: '.'
+          asset_prefix: source
+
+      - uses: ./.github/actions/setup-mise
+        if: ${{ vars.DISABLE_SBOM_SCAN != 'true' }}
+        with:
+          # The backend prefix is required: a plain `syft` would not match the pinned entry.
+          install_args: github:anchore/syft
+
+      # syft and `imagetools inspect` read ~/.docker/config.json; anonymous Docker Hub pulls are
+      # rate limited, and this job is blocking. Pull-scoped on purpose: no push rights here.
+      - name: Log in to Docker Hub
+        if: ${{ vars.DISABLE_SBOM_SCAN != 'true' }}
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          username: ${{ vars.DOCKERHUB_PULL_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PULL_TOKEN_KO }}
+
+      # Subject is the index digest the tag resolves to, never the tag. Each file is per-platform,
+      # selected by `--platform`. Blocking: this job publishes the release, so a missing image
+      # SBOM must stop it rather than produce a release with an incomplete artifact set.
+      - name: Generate image SBOM
+        id: image_sbom
+        if: ${{ vars.DISABLE_SBOM_SCAN != 'true' }}
+        env:
+          IMAGE_NAME: ${{ vars.DOCKERHUB_IMAGE_NAME_KO }}
+          VERSION: ${{ needs.semver.outputs.version }}
+        run: |
+          set -euo pipefail
+          DIGEST="$(docker buildx imagetools inspect "docker.io/${IMAGE_NAME}:${VERSION}" --format '{{.Manifest.Digest}}')"
+          echo "resolved docker.io/${IMAGE_NAME}:${VERSION} to ${DIGEST}"
+
+          for arch in amd64 arm64; do
+            syft "registry:docker.io/${IMAGE_NAME}@${DIGEST}" \
+              --platform "linux/${arch}" \
+              -o "spdx-json=image-linux-${arch}-sbom.spdx.json" \
+              -o "cyclonedx-json=image-linux-${arch}-sbom.cyclonedx.json"
+          done
+
+      - name: Warn when the SBOMs are skipped
+        # Only reachable through the kill switch: a failure stops the job before this step.
+        if: ${{ steps.image_sbom.outcome == 'skipped' }}
+        run: echo "::warning::DISABLE_SBOM_SCAN is set; publishing the release without source and image SBOMs"
+
+      # A skipped producer leaves this set empty; nullglob keeps the glob from failing.
+      - name: Generate SBOM checksums
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=( *-sbom.*.json )
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "::warning::no SBOM files were produced; skipping SHA256SUMS"
+            exit 0
+          fi
+          sha256sum -- "${files[@]}" > SHA256SUMS
+
       - uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1.21.0
         with:
           body: |
@@ -200,6 +263,14 @@ jobs:
           # branches (e.g. 2.0.11 after 2.2.3). Only mark latest when the release commit
           # was explicitly tagged with [latest].
           makeLatest: ${{ needs.look_for_release.outputs.release_latest == 'true' && needs.look_for_release.outputs.release_type == 'release' }}
+          artifacts: |-
+            source-sbom.spdx.json
+            source-sbom.cyclonedx.json
+            image-linux-amd64-sbom.spdx.json
+            image-linux-amd64-sbom.cyclonedx.json
+            image-linux-arm64-sbom.spdx.json
+            image-linux-arm64-sbom.cyclonedx.json
+            SHA256SUMS
 
   create-release-branch:
     permissions:

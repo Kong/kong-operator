@@ -27,6 +27,78 @@ Thank you for helping to keep Kong secure.
 
 For more information on our security policies and guidelines, please visit the [Kong Vulnerability Disclosure](https://konghq.com/compliance/bug-bounty) page.
 
+## Verifying Released Images and SBOMs
+
+Kong Operator images are built, signed and attested by GitHub Actions with GitHub's OIDC identity, so
+a released image can be traced back to this repository, its commit and the workflow that produced it.
+
+Every release attaches to its GitHub Release page:
+
+- a **source SBOM** in SPDX (`source-sbom.spdx.json`) and CycloneDX (`source-sbom.cyclonedx.json`)
+- an **image SBOM** per platform: `image-linux-amd64-sbom.*.json` and `image-linux-arm64-sbom.*.json`
+- a `SHA256SUMS` covering all of the above
+
+The signature and the build provenance describe the **multi-arch index digest**, never a
+per-platform digest and never a tag. Collect it first ([`regctl`](https://github.com/regclient/regclient/blob/main/docs/install.md)
+is one way):
+
+```sh
+IMAGE=kong/kong-operator
+TAG=2.4.0
+IMAGE_DIGEST=$(regctl manifest digest "${IMAGE}:${TAG}")
+```
+
+### Verify the cosign signature
+
+Signatures are published to the public `kong/notary` Docker Hub repository, so point cosign at it:
+
+```sh
+export COSIGN_REPOSITORY=kong/notary
+cosign verify \
+   "${IMAGE}:${TAG}@${IMAGE_DIGEST}" \
+   --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
+   --certificate-identity-regexp='^https://github\.com/Kong/kong-operator/\.github/workflows/'
+```
+
+The GitHub owner is case-sensitive (`Kong/kong-operator`, not `kong/kong-operator`).
+
+### Verify the build provenance
+
+With [`slsa-verifier`](https://github.com/slsa-framework/slsa-verifier#installation):
+
+```sh
+slsa-verifier verify-image \
+   "${IMAGE}:${TAG}@${IMAGE_DIGEST}" \
+   --print-provenance \
+   --provenance-repository kong/notary \
+   --source-uri 'github.com/Kong/kong-operator'
+```
+
+Or with cosign, checking the identity of the generator that produced the attestation:
+
+```sh
+COSIGN_REPOSITORY=kong/notary cosign verify-attestation \
+   "${IMAGE}:${TAG}@${IMAGE_DIGEST}" \
+   --type='slsaprovenance' \
+   --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
+   --certificate-identity-regexp='^https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@refs/tags/v[0-9]+.[0-9]+.[0-9]+$'
+```
+
+### Verify the SBOM files
+
+Download the SBOMs and `SHA256SUMS` from the Release page, then check them:
+
+```sh
+sha256sum -c SHA256SUMS
+```
+
+`SHA256SUMS` proves the files were not corrupted in transit; it is not signed, so it does not prove who
+produced them. Authorship is carried by the image: the signature and the provenance above cover the
+index digest, and each image SBOM names the platform digest it describes.
+
+If a release publishes its signature and provenance next to the image rather than in `kong/notary`,
+omit `COSIGN_REPOSITORY` and `--provenance-repository`.
+
 ## Contact
 
 For any questions or further assistance, please contact us at [vulnerability@konghq.com](mailto:vulnerability@konghq.com).
