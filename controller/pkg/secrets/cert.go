@@ -238,9 +238,15 @@ func EnsureCertificate[
 		}
 		if cert.Subject.CommonName != subject {
 			// The existing certificate is for a different subject, renew it.
-			// NOTE: The pods will pick up the renewed certificate on their next
-			// restart, data planes only care that the certificate is signed by the
-			// trusted CA, not about the subject.
+			// NOTE: In-place renewal does not restart pods, so running pods keep
+			// serving the old certificate. This is safe for client certificates:
+			// peers only check that the certificate is signed by the trusted CA.
+			// It is not safe for the DataPlane Admin API server certificate: the
+			// ControlPlane validates its hostname against the SAN.
+			// This branch is unreachable today: the subject and the Secret's
+			// matching label both derive from the Admin service name, and owner
+			// names are immutable. A future change to subject derivation needs
+			// a rollout trigger here.
 			needsRenewal = true
 		}
 	}
