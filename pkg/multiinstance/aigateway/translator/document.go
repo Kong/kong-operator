@@ -86,6 +86,13 @@ func translateKind[
 			return nil, fmt.Errorf("listing %T for %s: %w", lPtr, gw, err)
 		}
 		items := lPtr.GetItems()
+		slices.SortFunc(items, func(a, b T) int {
+			aObj, bObj := any(&a).(metav1.Object), any(&b).(metav1.Object)
+			return cmp.Or(
+				cmp.Compare(aObj.GetNamespace(), bObj.GetNamespace()),
+				cmp.Compare(aObj.GetName(), bObj.GetName()),
+			)
+		})
 		statuses := make([]EntityStatus, 0, len(items))
 		for i := range items {
 			obj := any(&items[i]).(client.Object)
@@ -108,28 +115,16 @@ func translateKind[
 				continue
 			}
 
-			slices.SortFunc(items, func(a, b T) int {
-				aObj, bObj := any(&a).(metav1.Object), any(&b).(metav1.Object)
-				return cmp.Or(
-					cmp.Compare(aObj.GetNamespace(), bObj.GetNamespace()),
-					cmp.Compare(aObj.GetName(), bObj.GetName()),
-				)
-			})
-
-			statuses := make([]EntityStatus, 0, len(items))
-			for i := range items {
-				obj := any(&items[i]).(client.Object)
-				aigwEntity, err := convert(&items[i], ctx, cl)
-				if err != nil {
-					statuses = append(statuses, EntityStatus{
-						Obj: obj,
-						Err: fmt.Errorf("converting %T %s: %w", obj, client.ObjectKeyFromObject(obj), err),
-					})
-					continue
-				}
-				*dest = append(*dest, *aigwEntity)
-				statuses = append(statuses, EntityStatus{Obj: obj})
+			aigwEntity, err := convert(&items[i], ctx, cl)
+			if err != nil {
+				statuses = append(statuses, EntityStatus{
+					Obj: obj,
+					Err: fmt.Errorf("converting %T %s: %w", obj, client.ObjectKeyFromObject(obj), err),
+				})
+				continue
 			}
+			*dest = append(*dest, *aigwEntity)
+			statuses = append(statuses, EntityStatus{Obj: obj})
 		}
 		return statuses, nil
 	}
