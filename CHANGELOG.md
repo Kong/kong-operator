@@ -72,6 +72,17 @@
 
 ### Changed
 
+- On-prem AI Gateway: each `OnPremAIGateway`'s control plane instance now runs
+  a Secret watcher that re-renders the configuration when a Secret referenced
+  by a configuration entity's `secretRef` changes, instead of waiting for an
+  unrelated entity event. The instance's Secret cache mirrors the operator's
+  `--secret-label-selector` in the gateway's namespace, so only Secrets
+  carrying that selector label (e.g. `konghq.com/secret=true`) are read;
+  an existing but unlabeled Secret is reported as not found.
+  Cross-namespace references to the `OnPremAIGateway` (and, as before,
+  cross-namespace `secretRef`s) are now rejected with a per-entity error
+  instead of failing with a confusing not-found error.
+  [#5951](https://github.com/Kong/kong-operator/pull/5951)
 - `Programmed` conditions set by the operator now preserve their
   `LastTransitionTime` when the condition status does not change, and are
   updated when only the condition message changes (e.g. a per-entity error

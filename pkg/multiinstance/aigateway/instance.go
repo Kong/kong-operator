@@ -250,8 +250,10 @@ func (i *Instance) newCtrlManager() (ctrl.Manager, error) {
 	})
 }
 
-// cacheOpts scopes the instance manager's per-object caches. AIGatewayModels stay
-// cluster-wide: they may reference the gateway from any namespace. EndpointSlices,
+// cacheOpts scopes the instance manager's per-object caches. The configuration entities
+// (e.g. AIGatewayModels) stay cluster-wide: the translation lists them cluster-wide via
+// the OnOnPremAIGatewayRef field index, and cross-namespace references to the gateway are
+// rejected there (see the translator's appendEntities). EndpointSlices,
 // Secrets and the OnPremAIGateway itself are scoped to the gateway's namespace: the
 // onpremNamespacedRef is same-namespace and only objects in it are read there. Secrets
 // keep a label filter: the instance reads the Admin API client certificate Secret and,

@@ -7,6 +7,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 )
@@ -37,6 +38,20 @@ func rejectCrossNamespaceSecretRefs(entity crossNamespaceSecretRefChecker) error
 		}
 	}
 	return nil
+}
+
+// noteSecretLabelRequirement annotates a not-found Secret error with the operator's Secret
+// label requirement: the operator's caches only hold Secrets carrying the configured Secret
+// label selector (konghq.com/secret=true by default, see the --secret-label-selector flag),
+// so an existing but unlabeled Secret reads as not found.
+func noteSecretLabelRequirement(err error) error {
+	if !apierrors.IsNotFound(err) {
+		return err
+	}
+	return fmt.Errorf(
+		"%w (note: the operator only reads Secrets carrying its Secret label selector, konghq.com/secret=true by default)",
+		err,
+	)
 }
 
 // valueFromSecretRef converts a SecretRef to a JSON value by fetching the referenced Secret and extracting the specified key.

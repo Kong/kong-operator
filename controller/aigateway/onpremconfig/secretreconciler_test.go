@@ -72,6 +72,11 @@ func requireNoChange(t *testing.T, ch <-chan changenotifier.Change) {
 func TestSecretReconcilerNotifiesReferencingEntities(t *testing.T) {
 	const secretName = "client-secret"
 	authStrategy := onPremAuthStrategyWithSecretRef("strat", secretName)
+	// An entity whose secretRef points at a Secret of the same name in another namespace
+	// must not match the Secret in the entity's namespace.
+	crossNamespaceRefStrategy := onPremAuthStrategyWithSecretRef("cross-ns-ref-strat", secretName)
+	crossNamespaceRefStrategy.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect.Config.ClientSecret[0].
+		SecretRef.Namespace = new("other")
 	// An unrelated Konnect-targeted entity referencing the same Secret must be skipped.
 	konnectStrategy := onPremAuthStrategyWithSecretRef("konnect-strat", secretName)
 	konnectStrategy.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
@@ -83,6 +88,7 @@ func TestSecretReconcilerNotifiesReferencingEntities(t *testing.T) {
 	defer cn.Close()
 	cl := newReconcilerClient(t,
 		authStrategy,
+		crossNamespaceRefStrategy,
 		konnectStrategy,
 		&corev1.Secret{
 			Namespace: "default", Name: secretName,

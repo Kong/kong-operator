@@ -28,7 +28,7 @@ func (obj *AIGatewayPolicy) ToAIGWPolicy(ctx context.Context, cl client.Client) 
 	// APISpec (config is a value field), so the caller's object is not mutated.
 	resolved, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {
-		return nil, fmt.Errorf("resolving AIGatewayPolicy %s/%s secrets: %w", obj.Namespace, obj.Name, err)
+		return nil, fmt.Errorf("resolving AIGatewayPolicy %s/%s secrets: %w", obj.Namespace, obj.Name, noteSecretLabelRequirement(err))
 	}
 
 	data, err := resolved.marshalAIGWPolicyPayload()

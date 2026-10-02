@@ -303,3 +303,67 @@ func TestBuildDocument_PerEntityFailure(t *testing.T) {
 	}
 	require.Equal(t, 1, failed)
 }
+
+// TestBuildDocument_CrossNamespaceEntityRejected covers the same-namespace rule: an entity
+// referencing the OnPremAIGateway from another namespace is rejected with a per-entity error
+// (surfacing as the entity's Programmed condition) instead of failing later on its Secrets
+// being invisible to the gateway-namespace scoped cache.
+func TestBuildDocument_CrossNamespaceEntityRejected(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	// An AuthStrategy in another namespace explicitly targeting the gateway in "default":
+	// the field index matches it, so the translation must reject it explicitly.
+	crossNamespace := aiGatewayAuthStrategyFixture("cross-ns")
+	crossNamespace.Namespace = "other"
+	crossNamespace.Spec.AIGatewayRef.NamespacedRef = &commonv1alpha1.NamespacedRef{
+		Namespace: new("default"),
+		Name:      "gw",
+	}
+	sameNamespace := aiGatewayAuthStrategyFixture("same-ns")
+
+	builder := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(gw, crossNamespace, sameNamespace)
+	for _, opt := range index.OptionsForAIGatewayModel() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayModelProvider() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayPolicy() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayConsumerGroup() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayAuthStrategy() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	cl := builder.Build()
+
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	require.NoError(t, err)
+
+	require.Empty(t, doc.Models)
+	require.Empty(t, doc.ModelProviders)
+	require.Empty(t, doc.Policies)
+	require.Empty(t, doc.ConsumerGroups)
+	require.Len(t, doc.AuthStrategies, 1)
+	require.Equal(t, "same-ns", doc.AuthStrategies[0].Name)
+
+	require.Len(t, statuses, 2)
+	failed := 0
+	for _, s := range statuses {
+		if s.Err != nil {
+			failed++
+			require.Equal(t, "cross-ns", s.Obj.GetName())
+			require.Contains(t, s.Err.Error(),
+				"cross-namespace reference to OnPremAIGateway default/gw is not supported on-prem")
+		}
+	}
+	require.Equal(t, 1, failed)
+}

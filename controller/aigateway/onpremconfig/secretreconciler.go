@@ -151,7 +151,14 @@ func notifyEntitiesForSecret[
 			continue
 		}
 		for _, secretRef := range ent.GetSensitiveDataSecretRefs() {
-			if secretRef.Name != secretNN.Name || ent.GetNamespace() != secretNN.Namespace {
+			// Match on the secretRef's resolved namespace rather than the entity's: the List
+			// above is already scoped to the Secret's namespace, so comparing the entity's
+			// namespace here would never filter anything.
+			refNamespace := ent.GetNamespace()
+			if secretRef.Namespace != nil && *secretRef.Namespace != "" {
+				refNamespace = *secretRef.Namespace
+			}
+			if secretRef.Name != secretNN.Name || refNamespace != secretNN.Namespace {
 				continue
 			}
 			parent := types.NamespacedName{

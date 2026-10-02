@@ -28,7 +28,7 @@ func (obj *AIGatewayAuthStrategy) ToAIGWAuthStrategy(ctx context.Context, cl cli
 	// so the caller's object is not mutated.
 	resolved, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {
-		return nil, fmt.Errorf("resolving AIGatewayAuthStrategy %s/%s secrets: %w", obj.Namespace, obj.Name, err)
+		return nil, fmt.Errorf("resolving AIGatewayAuthStrategy %s/%s secrets: %w", obj.Namespace, obj.Name, noteSecretLabelRequirement(err))
 	}
 
 	data, err := marshalAIGWAuthStrategyPayload(resolved)
