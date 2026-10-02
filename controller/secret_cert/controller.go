@@ -114,6 +114,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, cert *corev1.Secret) (ctrl.R
 	}
 	// Delete the expiring Secret, which will trigger the creation
 	// of a new secret with renewed certs by the respective owner controllers (CP/DP).
+	//
+	// NOTE: The Secret is intentionally deleted (and not renewed in place): recreating
+	// it under a new generated name changes the owning workload's Deployment pod
+	// template (volume SecretName), which triggers a rolling restart - the mechanism
+	// that makes the pods load the renewed certificate, since Kong only reads
+	// certificates at startup. Renewing the Secret in place would leave the running
+	// pods serving the expiring certificate.
 	if err := r.Delete(ctx, cert); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to delete secret %s/%s: %w", cert.Namespace, cert.Name, err)
 	}
