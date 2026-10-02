@@ -6,7 +6,6 @@ on:
       - labeled
 
 permissions:
-  actions: write
   contents: read
 
 jobs:
@@ -14,9 +13,23 @@ jobs:
     if: ${{ github.event.label.name == 'ack_crd_breaking_change' }}
     runs-on: ubuntu-latest
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      # The rerun endpoint needs "Actions: write", which GITHUB_TOKEN is not granted here: the call
+      # goes through the App, so the App must hold that permission.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
+          private-key: ${{ secrets.GH_APP__KONG_K8S__PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            kong-operator
       - name: Rerun failed CRD breaking-change check
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail

@@ -18,7 +18,6 @@ If the troubleshooting section does not contain the answer to the problem you en
   - [ ] Make sure to add any changes to already supported resources (e.g. changing labels of managed `DataPlane`s) which might cause other resources (e.g. Pods) to be recreated.
 - [ ] Ensure that dependencies in `go.mod` reference released tags (no unreleased main snapshots).
 - [ ] Ensure that all generators have run properly (e.g. `make generate manifests`) so that updates to things like CRDs are handled for the release, double check that all manifests from `config/samples/` still work as intended.
-- [ ] Ensure GitHub PAT is still valid (see [GitHub PAT](#github-pat) below).
 - [ ] From [GitHub release action][release-action], start a new workflow run:
   - Set the `Use workflow from` to the release branch: e.g. `release/1.2.x`
     - If you want to release a major or minor version, set the `Use workflow from` to the `main` branch otherwise set it to the release branch (e.g. `release/1.2.x`).
@@ -68,15 +67,17 @@ The example consts to look for:
 
 - `DefaultDataPlaneTag`
 
-## GitHub PAT
+## GitHub App
 
-The release workflow uses @team-k8s-bot's GitHub PAT to create a GitHub release and PRs related to it.
-It's named `Github team k8s bot - PAT - Kong Operator CI` in 1password and is stored in `PAT_GITHUB`
-GitHub repository secret to give workflows access to it.
-It's always generated with 1-year expiration date.
+The release workflows authenticate as Kong's Team k8s GitHub App, minting a short-lived installation
+token in every job that needs one (`actions/create-github-app-token`, fed by the
+`GH_APP__KONG_K8S__APP_ID` variable and the `GH_APP__KONG_K8S__PRIVATE_KEY` secret). Release PRs, docs
+PRs, release branches and cherry-pick PRs are all created with that token: there is no personal access
+token involved, so nothing has to be rotated.
 
-If you find it's expired, make sure to generate a new one and update the `PAT_GITHUB` secret as well as its 1Pass item
-`Github team k8s bot - PAT - Kong Operator CI` for redundancy.
+Within the release flow the only step that still uses the built-in Actions token
+(`github-actions[bot]`) is the `publish-release` job of `release-bot`, which creates the GitHub release
+and its tag.
 
 ## Troubleshooting
 

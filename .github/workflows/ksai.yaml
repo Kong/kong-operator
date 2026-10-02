@@ -59,13 +59,15 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository)
     uses: Kong/ksai-public/.github/workflows/ksai.yml@7e3d012f9cd9297ad7e90c0335a3864feb15b8fd # v3.127.4
     permissions:
-      contents: write      # checked out by every command, and pushed by one that changes code
+      contents: read      # checked out by every command; pushes go through the App (push_as_app)
       issues: write        # every command answers with a comment, and reacts to the one that asked
       pull-requests: write # post reviews and maintain draft pull request plans
       id-token: write      # mint the GitHub OIDC token for federation
       checks: read         # read what CI said about the head
       statuses: read       # the older API a build may report through
-      actions: write       # old caller review dispatch, successor plan runs and test publication
+      # KSAI's implement and recover jobs dispatch runs with GITHUB_TOKEN; the App token it mints
+      # never asks for Actions, so this grant is still required.
+      actions: write
     with:
       trigger_phrase: ${{ vars.KSAI_TRIGGER_PHRASE }}
       runs_on: ubuntu-latest
@@ -74,9 +76,8 @@ jobs:
       service_account_id: svac_01RRiHX67AjG5bKDHhFHbwkF
       workspace_id: wrkspc_01G7dX83HGYMZDwLuJNPnA5T
       continuation_workflow: ksai.yaml
-      # This repository's App is read-only, so every write goes through GITHUB_TOKEN and posts as
-      # github-actions[bot], which is what the previous caller did.
-      push_as_app: false
+      # KSAI pushes and comments through the App, so the caller token needs no write scope of its own.
+      push_as_app: true
       clear_request: false
       pr: ${{ inputs.pr }}
       actor: ${{ inputs.actor }}
@@ -111,8 +112,9 @@ jobs:
     permissions:
       contents: read       # download the action this call runs, which lives in a private repository
       pull-requests: write # dismiss an approval from somebody who contributed to the pull request
-      statuses: write      # report the check the ruleset makes required
+      # The called workflow posts the required status with GITHUB_TOKEN and takes no secret, so it
+      # cannot mint an App token. Dropping this needs a change in KSAI (see the PR notes).
+      statuses: write
     with:
-      # The login `push_as_app: false` above makes KSAI commit under. A pull request carrying no
-      # commit of its own is reported green rather than held.
-      app_login: github-actions
+      # The login KSAI's commits land under with push_as_app: true (the App's bot user).
+      app_login: kong-k8s-team[bot]
