@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -172,10 +173,29 @@ func handleKonnectReferences[
 	ent TEnt,
 	resolver konnectReferenceResolver,
 ) (updated bool, isProblem bool, err error) {
+	// Snapshot before any condition mutation: the patch below must be computed
+	// against the pre-mutation state, otherwise the changed conditions array is
+	// never included in the patch.
+	old := ent.DeepCopyObject().(TEnt)
+
+	var refErr error
 	if grantErr := checkCrossNamespaceSiblingReferences(ctx, cl, crossNamespaceSiblingReferences(resolver)); grantErr != nil {
-		return setKonnectReferencesResolvedCondition(ent, grantErr)
+		refErr = grantErr
+	} else {
+		refErr = resolver.ResolveKonnectReferences(ctx, cl)
 	}
-	return setKonnectReferencesResolvedCondition(ent, resolver.ResolveKonnectReferences(ctx, cl))
+	updated, isProblem, err = setKonnectReferencesResolvedCondition(ent, refErr)
+	if updated {
+		// Persist the condition immediately, against the pre-mutation snapshot.
+		// The Programmed aggregate patch triggered by the caller can no-op when
+		// Programmed is already False with the same reason and message (e.g. it
+		// was persisted earlier by another path), which would otherwise leave
+		// this condition visible only in memory.
+		if err := cl.Status().Patch(ctx, ent, client.MergeFrom(old)); err != nil && !apierrors.IsNotFound(err) {
+			return updated, isProblem, fmt.Errorf("failed to persist KonnectReferencesResolved condition: %w", err)
+		}
+	}
+	return updated, isProblem, err
 }
 
 // checkCrossNamespaceSiblingReferences authorizes every check against
