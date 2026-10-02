@@ -1,6 +1,15 @@
+# BackendTLSPolicy: the Gateway serves plain HTTP, but Kong opens a TLS
+# connection to the `goecho` Service and validates the certificate it presents
+# against the CA in the referenced ConfigMap, expecting the name `goecho`.
+#
+# BackendTLSPolicy is a v1alpha3 Gateway API resource, so the ControlPlane
+# needs the `GatewayAlpha` feature gate, which is disabled by default.
+#
 # NOTE: when applied you'll be able to access the goecho service via the gateway with "goecho" hostname:
 # curl -H "Host: goecho" $PROXY
 ---
+# Certificate for `goecho`, signed by the CA below and mounted by the backend
+# Pod. Kong never reads it, so it needs no `konghq.com/secret` label.
 apiVersion: v1
 kind: Secret
 data:
@@ -10,6 +19,9 @@ metadata:
   name: goecho-tls
 type: Opaque
 ---
+# The `konghq.com/configmap` label is required: the operator runs the
+# ControlPlane with `--config-map-label-selector=konghq.com/configmap`, so
+# unlabelled ConfigMaps are never ingested.
 apiVersion: v1
 kind: ConfigMap
 data:
@@ -117,14 +129,41 @@ spec:
   sessionAffinity: None
   type: ClusterIP
 ---
+apiVersion: gateway-operator.konghq.com/v2beta1
+kind: GatewayConfiguration
+metadata:
+  name: kong
+  namespace: default
+spec:
+  controlPlaneOptions:
+    featureGates:
+    # Required for the BackendTLSPolicy (gateway.networking.k8s.io/v1alpha3)
+    # controller to run.
+    - name: GatewayAlpha
+      state: enabled
+  dataPlaneOptions:
+    deployment:
+      podTemplateSpec:
+        spec:
+          containers:
+          - name: proxy
+            # renovate: datasource=docker versioning=docker
+            image: kong/kong-gateway:3.16
+            readinessProbe:
+              initialDelaySeconds: 1
+              periodSeconds: 1
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: kong
-  annotations:
-    konghq.com/gatewayclass-unmanaged: "true"
 spec:
-  controllerName: konghq.com/kic-gateway-controller
+  controllerName: konghq.com/gateway-operator
+  parametersRef:
+    group: gateway-operator.konghq.com
+    kind: GatewayConfiguration
+    name: kong
+    namespace: default
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
@@ -157,4 +196,3 @@ spec:
     - path:
         type: PathPrefix
         value: /
----

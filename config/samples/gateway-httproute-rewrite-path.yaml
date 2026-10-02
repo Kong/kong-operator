@@ -1,3 +1,8 @@
+# HTTPRoute URLRewrite filter: ReplaceFullPath swaps the whole path for a fixed
+# one, ReplacePrefixMatch swaps only the part the rule matched and keeps the
+# rest. `konghq.com/strip-path` is deliberately not set: the filter already
+# decides what the upstream path looks like.
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -58,14 +63,35 @@ spec:
             requests:
               cpu: 10m
 ---
+apiVersion: gateway-operator.konghq.com/v2beta1
+kind: GatewayConfiguration
+metadata:
+  name: kong
+  namespace: default
+spec:
+  dataPlaneOptions:
+    deployment:
+      podTemplateSpec:
+        spec:
+          containers:
+          - name: proxy
+            # renovate: datasource=docker versioning=docker
+            image: kong/kong-gateway:3.16
+            readinessProbe:
+              initialDelaySeconds: 1
+              periodSeconds: 1
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: kong
-  annotations:
-    konghq.com/gatewayclass-unmanaged: "true"
 spec:
-  controllerName: konghq.com/kic-gateway-controller
+  controllerName: konghq.com/gateway-operator
+  parametersRef:
+    group: gateway-operator.konghq.com
+    kind: GatewayConfiguration
+    name: kong
+    namespace: default
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
@@ -74,9 +100,9 @@ metadata:
 spec:
   gatewayClassName: kong
   listeners:
-  - name: https
-    protocol: HTTPS
-    port: 443
+  - name: http
+    protocol: HTTP
+    port: 80
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
