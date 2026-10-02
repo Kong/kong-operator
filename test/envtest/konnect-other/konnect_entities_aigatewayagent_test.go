@@ -266,9 +266,10 @@ func TestAIGatewayAgent(t *testing.T) {
 			})
 
 		sdk.AIGatewayAgentsSDK.EXPECT().
-			ListAiGatewayAgents(mock.Anything, sdkkonnectops.ListAiGatewayAgentsRequest{
-				GatewayID: konnectAIGatewayID,
-			}).
+			ListAiGatewayAgents(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.ListAiGatewayAgentsRequest) bool {
+				// The first page of the parent's entities.
+				return req.GatewayID == konnectAIGatewayID && req.PageAfter == nil
+			})).
 			RunAndReturn(func(_ context.Context, _ sdkkonnectops.ListAiGatewayAgentsRequest, _ ...sdkkonnectops.Option) (*sdkkonnectops.ListAiGatewayAgentsResponse, error) {
 				return &sdkkonnectops.ListAiGatewayAgentsResponse{
 					ListAIGatewayAgentsResponse: &sdkkonnectcomp.ListAIGatewayAgentsResponse{

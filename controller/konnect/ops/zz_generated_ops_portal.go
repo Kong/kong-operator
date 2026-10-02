@@ -85,20 +85,30 @@ func getPortalForUID(
 	// TODO: pass a Filter to ListPortals (e.g. by name/labels) so we
 	// do not page through every entity in the tenant. Filter types and
 	// fields are entity-specific; derive from OpenAPI schema.
-	resp, err := sdk.ListPortals(ctx, sdkkonnectops.ListPortalsRequest{})
-	if err != nil {
-		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
-	}
-	if resp == nil || resp.ListPortalsResponse == nil {
-		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
-	}
-
-	for _, entry := range resp.ListPortalsResponse.Data {
-		if entry.GetLabels()[KubernetesUIDLabelKey] != uid {
-			continue
+	for pageNumber := int64(1); ; pageNumber++ {
+		resp, err := sdk.ListPortals(ctx, sdkkonnectops.ListPortalsRequest{
+			PageSize:   new(listPageSize),
+			PageNumber: new(pageNumber),
+		})
+		if err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
 		}
-		if entry.GetID() != "" {
-			return entry.GetID(), nil
+		if resp == nil || resp.ListPortalsResponse == nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+		}
+
+		for _, entry := range resp.ListPortalsResponse.Data {
+			if entry.GetLabels()[KubernetesUIDLabelKey] != uid {
+				continue
+			}
+			if entry.GetID() != "" {
+				return entry.GetID(), nil
+			}
+		}
+
+		meta := resp.ListPortalsResponse.GetMeta()
+		if !hasNextNumberedPage(pageNumber, meta.GetPage(), len(resp.ListPortalsResponse.Data)) {
+			break
 		}
 	}
 

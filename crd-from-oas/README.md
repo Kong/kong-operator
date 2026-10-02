@@ -97,6 +97,15 @@ Prefer the simplest option that the target API supports:
 - `ops.skipGetForUID: true` only when the generated matcher cannot express the
   lookup and the entity still needs a hand-written helper.
 
+The generated lookup lists every page of the collection, not just the first.
+The generator reads how each list method paginates from the SDK: cursor
+pagination (`page[size]` and `page[after]`, following the response's
+`meta.page.next`, which is a next-page URI or a bare cursor depending on the
+API) or page numbers (`page[size]` and `page[number]`, up to
+`meta.page.total`). Generation fails when the list request and response
+disagree on how they paginate, rather than generating a lookup that would only
+scan the first page.
+
 When `ops.getForUID` is needed, the available knobs are:
 
 - `matchFields`: field-by-field equality checks between the Kubernetes object
@@ -110,6 +119,7 @@ When `ops.getForUID` is needed, the available knobs are:
   adopting an arbitrary list entry.
 - `listItemsSource: slice`: use this when the SDK list response is a bare slice
   (`resp.<field>`) instead of the usual paginated `resp.<field>.Data` shape.
+  It is rejected for a list method that is paginated.
 - `rootUnion`: use this when the match depends on which root-union variant is
   selected in the CRD spec.
 

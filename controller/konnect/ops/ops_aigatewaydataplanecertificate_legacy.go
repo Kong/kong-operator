@@ -39,27 +39,44 @@ func getLegacyAIGatewayDataPlaneCertificateForUID(
 		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 	}
 
-	resp, err := sdk.ListAiGatewayDataPlaneCertificates(ctx, sdkkonnectops.ListAiGatewayDataPlaneCertificatesRequest{
-		GatewayID: parentID,
-	})
-	if err != nil {
-		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
-	}
-	if resp == nil || resp.ListAIGatewayDataPlaneCertificatesResponse == nil {
-		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
-	}
+	var pageAfter *string
+	// Cursors already requested, to detect a next-page cursor that does not
+	// advance (directly or through a longer cycle).
+	seenCursors := map[string]struct{}{}
+	for {
+		resp, err := sdk.ListAiGatewayDataPlaneCertificates(ctx, sdkkonnectops.ListAiGatewayDataPlaneCertificatesRequest{
+			GatewayID: parentID,
+			PageSize:  new(listPageSize),
+			PageAfter: pageAfter,
+		})
+		if err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+		}
+		if resp == nil || resp.ListAIGatewayDataPlaneCertificatesResponse == nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+		}
 
-	for _, entry := range resp.ListAIGatewayDataPlaneCertificatesResponse.Data {
-		if _, labeled := entry.GetLabels()[KubernetesUIDLabelKey]; labeled {
-			continue
+		for _, entry := range resp.ListAIGatewayDataPlaneCertificatesResponse.Data {
+			if _, labeled := entry.GetLabels()[KubernetesUIDLabelKey]; labeled {
+				continue
+			}
+			if strings.TrimSpace(entry.GetCert()) != strings.TrimSpace(want.GetCert()) ||
+				entry.GetTitle() != want.GetTitle() ||
+				stringValueGeneric(entry.GetDescription()) != stringValueGeneric(want.GetDescription()) {
+				continue
+			}
+			if entry.GetID() != "" {
+				return entry.GetID(), nil
+			}
 		}
-		if strings.TrimSpace(entry.GetCert()) != strings.TrimSpace(want.GetCert()) ||
-			entry.GetTitle() != want.GetTitle() ||
-			stringValueGeneric(entry.GetDescription()) != stringValueGeneric(want.GetDescription()) {
-			continue
+
+		meta := resp.ListAIGatewayDataPlaneCertificatesResponse.GetMeta()
+		page := meta.GetPage()
+		if pageAfter, err = nextPageCursor(page.GetNext(), seenCursors); err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
 		}
-		if entry.GetID() != "" {
-			return entry.GetID(), nil
+		if pageAfter == nil {
+			break
 		}
 	}
 

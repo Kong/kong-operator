@@ -78,7 +78,9 @@ func TestGetPortalTeamForUID(t *testing.T) {
 
 		sdk.EXPECT().
 			ListPortalTeams(mock.Anything, sdkkonnectops.ListPortalTeamsRequest{
-				PortalID: "portal-1",
+				PageSize:   new(listPageSize),
+				PageNumber: new(int64(1)),
+				PortalID:   "portal-1",
 			}).
 			Return(&sdkkonnectops.ListPortalTeamsResponse{
 				ListPortalTeamsResponse: &sdkkonnectcomp.ListPortalTeamsResponse{
@@ -105,7 +107,9 @@ func TestGetPortalTeamForUID(t *testing.T) {
 
 		sdk.EXPECT().
 			ListPortalTeams(mock.Anything, sdkkonnectops.ListPortalTeamsRequest{
-				PortalID: "portal-1",
+				PageSize:   new(listPageSize),
+				PageNumber: new(int64(1)),
+				PortalID:   "portal-1",
 			}).
 			Return(&sdkkonnectops.ListPortalTeamsResponse{
 				ListPortalTeamsResponse: &sdkkonnectcomp.ListPortalTeamsResponse{
@@ -133,7 +137,9 @@ func TestGetPortalTeamForUID(t *testing.T) {
 
 		sdk.EXPECT().
 			ListPortalTeams(mock.Anything, sdkkonnectops.ListPortalTeamsRequest{
-				PortalID: "portal-1",
+				PageSize:   new(listPageSize),
+				PageNumber: new(int64(1)),
+				PortalID:   "portal-1",
 			}).
 			Return(&sdkkonnectops.ListPortalTeamsResponse{
 				ListPortalTeamsResponse: &sdkkonnectcomp.ListPortalTeamsResponse{

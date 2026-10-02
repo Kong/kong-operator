@@ -26,8 +26,7 @@ MATCH_FIELD="${MATCH_FIELD:-name}"
 MATCH_VALUE="${MATCH_VALUE}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-LIST="$(METHOD=GET RETRY_COUNT=1 BODY='' EXPECTED_STATUS='' EXPECTED_JQ='' \
-  bash "${SCRIPT_DIR}/konnect_api_request.sh")"
+LIST="$(RETRY_COUNT=1 EXPECTED_JQ='' bash "${SCRIPT_DIR}/konnect_list_all_entities.sh")"
 IDS="$(jq -r --arg field "${MATCH_FIELD}" --arg value "${MATCH_VALUE}" '
   [(.body | if type == "array" then . else .data end)[]
     | select(.labels["k8s-uid"] == null and .[$field] == $value)

@@ -109,7 +109,7 @@ func TestGetKonnectIDForUID_AIGatewayDataPlaneCertificateLegacyFallback(t *testi
 	t.Run("deletion is not blocked when the certificate Secret is missing", func(t *testing.T) {
 		sdk := sdkmocks.NewMockSDKWrapperWithT(t)
 		sdk.AIGatewayDataPlaneCertificatesSDK.EXPECT().
-			ListAiGatewayDataPlaneCertificates(mock.Anything, sdkkonnectops.ListAiGatewayDataPlaneCertificatesRequest{GatewayID: gatewayID}).
+			ListAiGatewayDataPlaneCertificates(mock.Anything, sdkkonnectops.ListAiGatewayDataPlaneCertificatesRequest{GatewayID: gatewayID, PageSize: new(listPageSize)}).
 			Return(&sdkkonnectops.ListAiGatewayDataPlaneCertificatesResponse{
 				ListAIGatewayDataPlaneCertificatesResponse: &sdkkonnectcomp.ListAIGatewayDataPlaneCertificatesResponse{
 					Data: []sdkkonnectcomp.AIGatewayDataPlaneClientCertificate{cert("unlabeled-other", otherPEM, nil)},
@@ -128,7 +128,7 @@ func TestGetKonnectIDForUID_AIGatewayDataPlaneCertificateLegacyFallback(t *testi
 				listCalls = 2
 			}
 			sdk.AIGatewayDataPlaneCertificatesSDK.EXPECT().
-				ListAiGatewayDataPlaneCertificates(mock.Anything, sdkkonnectops.ListAiGatewayDataPlaneCertificatesRequest{GatewayID: gatewayID}).
+				ListAiGatewayDataPlaneCertificates(mock.Anything, sdkkonnectops.ListAiGatewayDataPlaneCertificatesRequest{GatewayID: gatewayID, PageSize: new(listPageSize)}).
 				Return(&sdkkonnectops.ListAiGatewayDataPlaneCertificatesResponse{
 					ListAIGatewayDataPlaneCertificatesResponse: &sdkkonnectcomp.ListAIGatewayDataPlaneCertificatesResponse{Data: tc.certs},
 				}, nil).

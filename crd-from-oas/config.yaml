@@ -1180,6 +1180,12 @@ apiGroupVersions:
             interface: github.com/Kong/sdk-konnect-go.ConfigStoresSDK
             fieldName: ConfigStores
           getForUID:
+            # TODO: the list response puts its cursor in top-level `next` and
+            # `offset`, not in `meta.page.next` as the Konnect spec (and so the
+            # SDK) says, so the generated lookup only sees the first page of
+            # config stores (100, the page size it requests). Drop this note
+            # once Konnect returns `meta.page.next` or the spec models
+            # `next`/`offset` (the generator would then need to support it).
             matchFields:
               - objectField: Spec.APISpec.Name
                 responseField: GetName()

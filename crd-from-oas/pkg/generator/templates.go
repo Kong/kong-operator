@@ -3435,6 +3435,7 @@ func get{{.Entity}}ForUID(
 	// getForUID implementation is added.
 	return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 {{- else if .UseUIDTagFilter}}
+{{- template "getForUIDPageLoopStart" .}}
 
 {{- if .GetForUIDFullyWrapped}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.GetForUIDWrappedType}}{
@@ -3442,17 +3443,20 @@ func get{{.Entity}}ForUID(
 		{{.SDKFieldName}}: {{.VarName}},
 		{{- end}}
 		Tags: new(UIDLabelForObject(obj)),
+		{{- template "getForUIDPageArgs" .}}
 	})
 {{- else if .Parents}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
 		Tags: new(UIDLabelForObject(obj)),
+		{{- template "getForUIDPageArgs" .}}
 	})
 {{- else if .ListCallStylePositional}}
-	resp, err := sdk.{{.ListSDKMethod}}(ctx, nil, nil)
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{template "getForUIDPositionalPageArgs" .}})
 {{- else}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		Tags: new(UIDLabelForObject(obj)),
+		{{- template "getForUIDPageArgs" .}}
 	})
 {{- end}}
 	if err != nil {
@@ -3476,24 +3480,30 @@ func get{{.Entity}}ForUID(
 			return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
 		}
 	}
+{{- template "getForUIDPageLoopEnd" .}}
 {{- else if .MatchFields}}
+{{- template "getForUIDPageLoopStart" .}}
 
 {{- if .GetForUIDFullyWrapped}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.GetForUIDWrappedType}}{
 		{{- range .Parents}}
 		{{.SDKFieldName}}: {{.VarName}},
 		{{- end}}
+		{{- template "getForUIDPageArgs" .}}
 	})
 {{- else if .ListCallPositionalWithParent}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, nil)
 {{- else if .Parents}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
+		{{- template "getForUIDPageArgs" .}}
 	})
 {{- else if .ListCallStylePositional}}
-	resp, err := sdk.{{.ListSDKMethod}}(ctx, nil, nil)
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{template "getForUIDPositionalPageArgs" .}})
 {{- else}}
-	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{})
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
+		{{- template "getForUIDPageArgs" .}}
+	})
 {{- end}}
 	if err != nil {
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
@@ -3510,10 +3520,6 @@ func get{{.Entity}}ForUID(
 	}
 {{- end}}
 
-	// TODO: only the first page of results is scanned. When the parent has more
-	// entries than the SDK's default page size, a matching entry on a later
-	// page is missed and getForUID returns NotFound. Tracked in
-	// https://github.com/Kong/kong-operator/issues/3987.
 	for _, entry := range {{.ListResponseItemsExpr}} {
 		{{- range .MatchFields}}
 		if !{{if .SliceMatch}}matchSliceField{{else if .SkipWhenUnset}}matchOptionalStringField{{else}}matchStringField{{end}}(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
@@ -3533,24 +3539,30 @@ func get{{.Entity}}ForUID(
 			return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
 		}
 	}
+{{- template "getForUIDPageLoopEnd" .}}
 {{- else if .RootUnion}}
+{{- template "getForUIDPageLoopStart" .}}
 
 {{- if .GetForUIDFullyWrapped}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.GetForUIDWrappedType}}{
 		{{- range .Parents}}
 		{{.SDKFieldName}}: {{.VarName}},
 		{{- end}}
+		{{- template "getForUIDPageArgs" .}}
 	})
 {{- else if .ListCallPositionalWithParent}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, nil)
 {{- else if .Parents}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
+		{{- template "getForUIDPageArgs" .}}
 	})
 {{- else if .ListCallStylePositional}}
-	resp, err := sdk.{{.ListSDKMethod}}(ctx, nil, nil)
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{template "getForUIDPositionalPageArgs" .}})
 {{- else}}
-	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{})
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
+		{{- template "getForUIDPageArgs" .}}
+	})
 {{- end}}
 	if err != nil {
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
@@ -3628,6 +3640,7 @@ func get{{.Entity}}ForUID(
 	default:
 		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 	}
+{{- template "getForUIDPageLoopEnd" .}}
 {{- else if .HasLabels}}
 
 	// Without a UID every unlabeled Konnect entity would match below.
@@ -3639,22 +3652,27 @@ func get{{.Entity}}ForUID(
 	// TODO: pass a Filter to {{.ListSDKMethod}} (e.g. by name/labels) so we
 	// do not page through every entity in the tenant. Filter types and
 	// fields are entity-specific; derive from OpenAPI schema.
+{{- template "getForUIDPageLoopStart" .}}
 {{- if .GetForUIDFullyWrapped}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.GetForUIDWrappedType}}{
 		{{- range .Parents}}
 		{{.SDKFieldName}}: {{.VarName}},
 		{{- end}}
+		{{- template "getForUIDPageArgs" .}}
 	})
 {{- else if .ListCallPositionalWithParent}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, nil)
 {{- else if .Parents}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
+		{{- template "getForUIDPageArgs" .}}
 	})
 {{- else if .ListCallStylePositional}}
-	resp, err := sdk.{{.ListSDKMethod}}(ctx, nil, nil)
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{template "getForUIDPositionalPageArgs" .}})
 {{- else}}
-	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{})
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
+		{{- template "getForUIDPageArgs" .}}
+	})
 {{- end}}
 	if err != nil {
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
@@ -3667,8 +3685,6 @@ func get{{.Entity}}ForUID(
 
 	// List items are root unions whose wrapper exposes no GetID()/GetLabels():
 	// read them from whichever variant is set.
-	// TODO: only the first page of results is scanned. Tracked in
-	// https://github.com/Kong/kong-operator/issues/3987.
 	for _, entry := range {{.ListResponseItemsExpr}} {
 		var (
 			id     string
@@ -3697,6 +3713,7 @@ func get{{.Entity}}ForUID(
 		}
 	}
 {{- end}}
+{{- template "getForUIDPageLoopEnd" .}}
 {{- else if .HasName}}
 
 	// TODO: {{.Entity}}'s Konnect list response lacks labels/tags so UID matching
@@ -3704,22 +3721,27 @@ func get{{.Entity}}ForUID(
 	// false positives when multiple entities share a name and cannot be
 	// improved here until Konnect exposes labels/tags on this type. Tracked in
 	// https://github.com/Kong/kong-operator/issues/3987
+{{- template "getForUIDPageLoopStart" .}}
 {{- if .GetForUIDFullyWrapped}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.GetForUIDWrappedType}}{
 		{{- range .Parents}}
 		{{.SDKFieldName}}: {{.VarName}},
 		{{- end}}
+		{{- template "getForUIDPageArgs" .}}
 	})
 {{- else if .ListCallPositionalWithParent}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, nil)
 {{- else if .Parents}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
+		{{- template "getForUIDPageArgs" .}}
 	})
 {{- else if .ListCallStylePositional}}
-	resp, err := sdk.{{.ListSDKMethod}}(ctx, nil, nil)
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{template "getForUIDPositionalPageArgs" .}})
 {{- else}}
-	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{})
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
+		{{- template "getForUIDPageArgs" .}}
+	})
 {{- end}}
 	if err != nil {
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
@@ -3739,6 +3761,7 @@ func get{{.Entity}}ForUID(
 		}
 		return *id, nil
 	}
+{{- template "getForUIDPageLoopEnd" .}}
 {{- else}}
 
 	// TODO: {{.Entity}}'s Konnect list response lacks labels/tags and no
@@ -3754,6 +3777,54 @@ func get{{.Entity}}ForUID(
 	return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 {{- end}}
 }
+{{- define "getForUIDPageLoopStart"}}
+{{- if eq .ListPagination "cursor"}}
+	var pageAfter *string
+	// Cursors already requested, to detect a next-page cursor that does not
+	// advance (directly or through a longer cycle).
+	seenCursors := map[string]struct{}{}
+	for {
+{{- else if eq .ListPagination "number"}}
+	for pageNumber := int64(1); ; pageNumber++ {
+{{- end}}
+{{- end}}
+{{- define "getForUIDPageLoopEnd"}}
+{{- if eq .ListPagination "cursor"}}
+
+	meta := resp.{{.ListResponseField}}.GetMeta()
+{{- if .ListMetaIsPage}}
+	if pageAfter, err = nextPageCursor(meta.GetNext(), seenCursors); err != nil {
+{{- else}}
+	page := meta.GetPage()
+	if pageAfter, err = nextPageCursor(page.GetNext(), seenCursors); err != nil {
+{{- end}}
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+	}
+	if pageAfter == nil {
+		break
+	}
+	}
+{{- else if eq .ListPagination "number"}}
+
+	meta := resp.{{.ListResponseField}}.GetMeta()
+	if !hasNextNumberedPage(pageNumber, meta.GetPage(), len({{.ListResponseItemsExpr}})) {
+		break
+	}
+	}
+{{- end}}
+{{- end}}
+{{- define "getForUIDPageArgs"}}
+{{- if eq .ListPagination "cursor"}}
+		PageSize:  new(listPageSize),
+		PageAfter: pageAfter,
+{{- else if eq .ListPagination "number"}}
+		PageSize:   new(listPageSize),
+		PageNumber: new(pageNumber),
+{{- end}}
+{{- end}}
+{{- define "getForUIDPositionalPageArgs"}}
+{{- if eq .ListPagination "number"}}new(listPageSize), new(pageNumber){{else}}nil, nil{{end}}
+{{- end}}
 `
 
 // opsGetForUIDDispatcherTemplate renders zz_generated_ops_getforuid.go.
