@@ -40,10 +40,15 @@ type EntityStatus struct {
 	Err error
 }
 
-// appendEntities lists every entity of one kind pointing at the given OnPremAIGateway (via the
-// kind's generated OnOnPremAIGatewayRef index), sorts the items by namespace/name so the
-// rendered document (and the payload hash derived from it) doesn't flap across List calls that
-// return in a different order, converts each item and appends it to the document.
+// translateKind returns a func that lists every entity of one kind pointing at the
+// given OnPremAIGateway (via the kind's generated OnOnPremAIGatewayRef index), sorts
+// the items by namespace/name so the rendered document (and the payload hash derived
+// from it) doesn't flap across List calls that return in a different order, converts
+// each item with convert and appends it to dest.
+//
+// Only TList is named at the call site: T is inferred from the list's GetItems and
+// TListPtr from the *TList core type (same pattern as
+// enqueueObjectForKonnectGatewayControlPlane in controller/konnect/watch.go).
 //
 // A per-entity conversion failure does not abort the whole translation: the failing entity is
 // excluded from the document and reported in the returned statuses, so that the remaining
@@ -51,71 +56,78 @@ type EntityStatus struct {
 // A failure to list the entities of a kind is a different beast: the whole kind's contribution
 // is missing from the document, so it aborts the translation (and no status is reported).
 //
-// convert and appendTo are the only kind-specific parts: the ToAIGW* method name and the
-// aigw.Document field the result lands in.
-//
-// Entity is the CRD entity's value type (as returned by the generated GetItems); its method
-// set lives on the pointer, hence the metav1.Object assertions below — infallible for every
-// aiconfiguration list item.
-func appendEntities[Entity any, AIGWEntity any, List interface {
-	client.ObjectList
-	GetItems() []Entity
-}](
-	ctx context.Context,
+// T's method set lives on the pointer, hence the metav1.Object assertions below — infallible
+// for every aiconfiguration list item.
+func translateKind[
+	TList interface {
+		GetItems() []T
+	},
+	TListPtr interface {
+		*TList
+		client.ObjectList
+		GetItems() []T
+	},
+	T any,
+	AIGWEntity any,
+](
 	cl client.Client,
 	gw types.NamespacedName,
-	list List,
 	indexField string,
-	doc *aigw.Document,
-	convert func(context.Context, client.Client, *Entity) (AIGWEntity, error),
-	appendTo func(*aigw.Document, AIGWEntity),
-) ([]EntityStatus, error) {
-	if err := cl.List(ctx, list, client.MatchingFields{indexField: gw.String()}); err != nil {
-		return nil, fmt.Errorf("listing %T for %s: %w", list, gw, err)
-	}
-
-	items := list.GetItems()
-	slices.SortFunc(items, func(a, b Entity) int {
-		aObj, bObj := any(&a).(metav1.Object), any(&b).(metav1.Object)
-		return cmp.Or(
-			cmp.Compare(aObj.GetNamespace(), bObj.GetNamespace()),
-			cmp.Compare(aObj.GetName(), bObj.GetName()),
+	convert func(*T, context.Context, client.Client) (*AIGWEntity, error),
+	dest *[]AIGWEntity,
+) func(context.Context) ([]EntityStatus, error) {
+	return func(ctx context.Context) ([]EntityStatus, error) {
+		var (
+			l    TList
+			lPtr TListPtr = &l
 		)
-	})
 
-	statuses := make([]EntityStatus, 0, len(items))
-	for i := range items {
-		obj := any(&items[i]).(client.Object)
-		// The OnOnPremAIGatewayRef index matches entities regardless of their namespace, but
-		// the on-prem path is same-namespace only (consistent with resolveEntityName's
-		// entity references and rejectCrossNamespaceSecretRefs): an entity in another
-		// namespace is listed here only to be rejected with a clear per-entity error,
-		// instead of failing later on its Secrets being invisible to the gateway-namespace
-		// scoped cache.
-		// TODO: support cross-namespace references, tracked in
-		// https://github.com/Kong/kong-operator/issues/5957.
-		if obj.GetNamespace() != gw.Namespace {
-			statuses = append(statuses, EntityStatus{
-				Obj: obj,
-				Err: fmt.Errorf(
-					"cross-namespace reference to OnPremAIGateway %s is not supported on-prem: the entity must live in the gateway's namespace %s",
-					gw, gw.Namespace,
-				),
-			})
-			continue
+		if err := cl.List(ctx, lPtr, client.MatchingFields{indexField: gw.String()}); err != nil {
+			return nil, fmt.Errorf("listing %T for %s: %w", lPtr, gw, err)
 		}
-		aigwEntity, err := convert(ctx, cl, &items[i])
-		if err != nil {
-			statuses = append(statuses, EntityStatus{
-				Obj: obj,
-				Err: fmt.Errorf("converting %T %s: %w", obj, client.ObjectKeyFromObject(obj), err),
-			})
-			continue
+		items := lPtr.GetItems()
+		slices.SortFunc(items, func(a, b T) int {
+			aObj, bObj := any(&a).(metav1.Object), any(&b).(metav1.Object)
+			return cmp.Or(
+				cmp.Compare(aObj.GetNamespace(), bObj.GetNamespace()),
+				cmp.Compare(aObj.GetName(), bObj.GetName()),
+			)
+		})
+		statuses := make([]EntityStatus, 0, len(items))
+		for i := range items {
+			obj := any(&items[i]).(client.Object)
+			// The OnOnPremAIGatewayRef index matches entities regardless of their namespace, but
+			// the on-prem path is same-namespace only (consistent with resolveEntityName's
+			// entity references and rejectCrossNamespaceSecretRefs): an entity in another
+			// namespace is listed here only to be rejected with a clear per-entity error,
+			// instead of failing later on its Secrets being invisible to the gateway-namespace
+			// scoped cache.
+			// TODO: support cross-namespace references, tracked in
+			// https://github.com/Kong/kong-operator/issues/5957.
+			if obj.GetNamespace() != gw.Namespace {
+				statuses = append(statuses, EntityStatus{
+					Obj: obj,
+					Err: fmt.Errorf(
+						"cross-namespace reference to OnPremAIGateway %s is not supported on-prem: the entity must live in the gateway's namespace %s",
+						gw, gw.Namespace,
+					),
+				})
+				continue
+			}
+
+			aigwEntity, err := convert(&items[i], ctx, cl)
+			if err != nil {
+				statuses = append(statuses, EntityStatus{
+					Obj: obj,
+					Err: fmt.Errorf("converting %T %s: %w", obj, client.ObjectKeyFromObject(obj), err),
+				})
+				continue
+			}
+			*dest = append(*dest, *aigwEntity)
+			statuses = append(statuses, EntityStatus{Obj: obj})
 		}
-		appendTo(doc, aigwEntity)
-		statuses = append(statuses, EntityStatus{Obj: obj})
+		return statuses, nil
 	}
-	return statuses, nil
 }
 
 // BuildDocument assembles the aigw.Document for the given OnPremAIGateway, translating every
@@ -141,68 +153,29 @@ func BuildDocument(
 	doc := &aigw.Document{}
 	var statuses []EntityStatus
 
-	// TODO: dedup the per-kind appendEntities blocks below, tracked in
-	// https://github.com/Kong/kong-operator/issues/5909.
-
-	s, err := appendEntities(ctx, cl, gw, &aiconfigurationv1alpha1.AIGatewayModelList{},
-		index.IndexFieldAIGatewayModelOnOnPremAIGatewayRef, doc,
-		func(ctx context.Context, cl client.Client, m *aiconfigurationv1alpha1.AIGatewayModel) (*aigw.Model, error) {
-			return m.ToAIGWModel(ctx, cl)
-		},
-		func(d *aigw.Document, m *aigw.Model) { d.Models = append(d.Models, *m) },
-	)
-	if err != nil {
-		return nil, nil, err
+	for _, translate := range []func(context.Context) ([]EntityStatus, error){
+		translateKind[aiconfigurationv1alpha1.AIGatewayModelList](
+			cl, gw, index.IndexFieldAIGatewayModelOnOnPremAIGatewayRef,
+			(*aiconfigurationv1alpha1.AIGatewayModel).ToAIGWModel, &doc.Models),
+		translateKind[aiconfigurationv1alpha1.AIGatewayModelProviderList](
+			cl, gw, index.IndexFieldAIGatewayModelProviderOnOnPremAIGatewayRef,
+			(*aiconfigurationv1alpha1.AIGatewayModelProvider).ToAIGWProvider, &doc.ModelProviders),
+		translateKind[aiconfigurationv1alpha1.AIGatewayPolicyList](
+			cl, gw, index.IndexFieldAIGatewayPolicyOnOnPremAIGatewayRef,
+			(*aiconfigurationv1alpha1.AIGatewayPolicy).ToAIGWPolicy, &doc.Policies),
+		translateKind[aiconfigurationv1alpha1.AIGatewayConsumerGroupList](
+			cl, gw, index.IndexFieldAIGatewayConsumerGroupOnOnPremAIGatewayRef,
+			(*aiconfigurationv1alpha1.AIGatewayConsumerGroup).ToAIGWConsumerGroup, &doc.ConsumerGroups),
+		translateKind[aiconfigurationv1alpha1.AIGatewayAuthStrategyList](
+			cl, gw, index.IndexFieldAIGatewayAuthStrategyOnOnPremAIGatewayRef,
+			(*aiconfigurationv1alpha1.AIGatewayAuthStrategy).ToAIGWAuthStrategy, &doc.AuthStrategies),
+	} {
+		s, err := translate(ctx)
+		if err != nil {
+			return nil, nil, err
+		}
+		statuses = append(statuses, s...)
 	}
-	statuses = append(statuses, s...)
-
-	s, err = appendEntities(ctx, cl, gw, &aiconfigurationv1alpha1.AIGatewayModelProviderList{},
-		index.IndexFieldAIGatewayModelProviderOnOnPremAIGatewayRef, doc,
-		func(ctx context.Context, cl client.Client, p *aiconfigurationv1alpha1.AIGatewayModelProvider) (*aigw.Provider, error) {
-			return p.ToAIGWProvider(ctx, cl)
-		},
-		func(d *aigw.Document, p *aigw.Provider) { d.ModelProviders = append(d.ModelProviders, *p) },
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-	statuses = append(statuses, s...)
-
-	s, err = appendEntities(ctx, cl, gw, &aiconfigurationv1alpha1.AIGatewayPolicyList{},
-		index.IndexFieldAIGatewayPolicyOnOnPremAIGatewayRef, doc,
-		func(ctx context.Context, cl client.Client, p *aiconfigurationv1alpha1.AIGatewayPolicy) (*aigw.Policy, error) {
-			return p.ToAIGWPolicy(ctx, cl)
-		},
-		func(d *aigw.Document, p *aigw.Policy) { d.Policies = append(d.Policies, *p) },
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-	statuses = append(statuses, s...)
-
-	s, err = appendEntities(ctx, cl, gw, &aiconfigurationv1alpha1.AIGatewayConsumerGroupList{},
-		index.IndexFieldAIGatewayConsumerGroupOnOnPremAIGatewayRef, doc,
-		func(ctx context.Context, cl client.Client, g *aiconfigurationv1alpha1.AIGatewayConsumerGroup) (*aigw.ConsumerGroup, error) {
-			return g.ToAIGWConsumerGroup(ctx, cl)
-		},
-		func(d *aigw.Document, g *aigw.ConsumerGroup) { d.ConsumerGroups = append(d.ConsumerGroups, *g) },
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-	statuses = append(statuses, s...)
-
-	s, err = appendEntities(ctx, cl, gw, &aiconfigurationv1alpha1.AIGatewayAuthStrategyList{},
-		index.IndexFieldAIGatewayAuthStrategyOnOnPremAIGatewayRef, doc,
-		func(ctx context.Context, cl client.Client, a *aiconfigurationv1alpha1.AIGatewayAuthStrategy) (*aigw.AuthStrategy, error) {
-			return a.ToAIGWAuthStrategy(ctx, cl)
-		},
-		func(d *aigw.Document, a *aigw.AuthStrategy) { d.AuthStrategies = append(d.AuthStrategies, *a) },
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-	statuses = append(statuses, s...)
 
 	return doc, statuses, nil
 }

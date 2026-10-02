@@ -193,6 +193,9 @@ func (r *AIGatewayMCPServerReconciler) Reconcile(ctx context.Context, req ctrl.R
 	}
 	// if status updates are enabled report the status for the object
 	if r.StatusClient != nil && r.StatusClient.AreKubernetesObjectReportsEnabled() {
+		// Declared unconditionally: when the ProgrammedCondition.UpdatesEnabled
+		// flag omits the assignment below, the update check still reads
+		// updateNeeded and must still compile.
 		var updateNeeded bool
 		configurationStatus := r.StatusClient.KubernetesObjectConfigurationStatus(obj)
 		logger.Info("Updating programmed condition status", "configuration_status", configurationStatus)

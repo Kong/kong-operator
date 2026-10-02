@@ -199,6 +199,9 @@ func (r *{{.Kind}}Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 {{- if .ConfigStatusNotificationsEnabled }}
 	// if status updates are enabled report the status for the object
 	if r.StatusClient != nil && r.StatusClient.AreKubernetesObjectReportsEnabled() {
+		// Declared unconditionally: when the ProgrammedCondition.UpdatesEnabled
+		// flag omits the assignment below, the update check still reads
+		// updateNeeded and must still compile.
 		var updateNeeded bool
 		{{- if .ProgrammedCondition.UpdatesEnabled }}
 		configurationStatus := r.StatusClient.KubernetesObjectConfigurationStatus(obj)
