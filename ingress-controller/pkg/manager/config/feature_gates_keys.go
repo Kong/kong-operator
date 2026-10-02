@@ -26,6 +26,13 @@ const (
 	// for configuring custom Kong entities that KIC does not support yet.
 	// Requires feature gate `FillIDs` to be enabled.
 	KongCustomEntityFeature = "KongCustomEntity"
+
+	// KongServiceV1Alpha1Feature is the name of the feature-gate for enabling KIC standalone support
+	// for the v1alpha1 Kong Gateway entity CRDs (KongService, KongRoute, KongUpstream, KongTarget,
+	// KongCertificate, KongCACertificate, KongSNI, KongPluginBinding).
+	// When enabled, these CRDs are translated directly to KongState (kong.*) and pushed via POST /config
+	// in db-less mode, without requiring a Konnect control plane.
+	KongServiceV1Alpha1Feature = "KongServiceV1Alpha1"
 )
 
 // GetFeatureGatesDefaults returns the default values for all feature gates.
@@ -40,5 +47,6 @@ func GetFeatureGatesDefaults() FeatureGates {
 		SanitizeKonnectConfigDumpsFeature: true,
 		FallbackConfigurationFeature:      false,
 		KongCustomEntityFeature:           true,
+		KongServiceV1Alpha1Feature:        false,
 	}
 }
