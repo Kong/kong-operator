@@ -669,13 +669,19 @@ func TestPortalPage(t *testing.T) {
 			}
 			expectedUpdateToB = req
 		}, consts.WaitTime, consts.TickTime)
+		// The number of update calls is reconcile-timing dependent: a reconcile
+		// triggered before the informer cache observes the status patch of the
+		// previous update re-issues an identical, idempotent update. Do not bound
+		// the expectation with .Once(); correctness is asserted by requiring the
+		// exact payload (via EventuallyAssertSDKExpectations below) while allowing
+		// any number of duplicate calls.
 		sdk.PortalPagesSDK.EXPECT().
 			UpdatePortalPage(mock.Anything, sdkkonnectops.UpdatePortalPageRequest{
 				PortalID:                portalID,
 				PageID:                  childID,
 				UpdatePortalPageRequest: *expectedUpdateToB,
 			}).
-			Return(&sdkkonnectops.UpdatePortalPageResponse{}, nil).Once()
+			Return(&sdkkonnectops.UpdatePortalPageResponse{}, nil)
 		require.NoError(t, clientNamespaced.Patch(ctx, childToB, client.MergeFrom(child)))
 		envtest.WatchFor(t, ctx, pageWatch, apiwatch.Modified,
 			envtest.AssertsAnd(
@@ -708,7 +714,7 @@ func TestPortalPage(t *testing.T) {
 				PageID:                  childID,
 				UpdatePortalPageRequest: *expectedUpdateCleared,
 			}).
-			Return(&sdkkonnectops.UpdatePortalPageResponse{}, nil).Once()
+			Return(&sdkkonnectops.UpdatePortalPageResponse{}, nil)
 		require.NoError(t, clientNamespaced.Patch(ctx, childCleared, client.MergeFrom(childToB)))
 		envtest.WatchFor(t, ctx, pageWatch, apiwatch.Modified,
 			envtest.AssertsAnd(
