@@ -16,7 +16,9 @@ permissions:
 
 jobs:
   analyze:
-    uses: ./.github/workflows/__govulncheck.yaml
+    # The upload stays in this file rather than in a reusable workflow: the SARIF-upload step and
+    # the security-events: write it needs have to sit together for the permission to be exempt.
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
@@ -26,8 +28,30 @@ jobs:
         - release/2.2.x
         - release/2.3.x
         - release/2.4.0-rapid.1.x
-    with:
-      ref: ${{ matrix.branch }}
     permissions:
       security-events: write
       contents: read
+    steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+      with:
+        egress-policy: audit
+    - name: Checkout repository
+      id: checkout
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        ref: ${{ matrix.branch }}
+
+    - uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f # v1.1.0
+      with:
+        repo-checkout: false
+        output-format: sarif
+        output-file: results_${{ steps.checkout.outputs.commit }}.sarif
+
+    - name: Upload SARIF file
+      uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+      with:
+        sarif_file: results_${{ steps.checkout.outputs.commit }}.sarif
+        ref: refs/heads/${{ matrix.branch }}
+        sha: ${{ steps.checkout.outputs.commit }}
+        category: govulncheck
