@@ -166,6 +166,15 @@ func BuildDocument(
 		translateKind[aiconfigurationv1alpha1.AIGatewayConsumerGroupList](
 			cl, gw, index.IndexFieldAIGatewayConsumerGroupOnOnPremAIGatewayRef,
 			(*aiconfigurationv1alpha1.AIGatewayConsumerGroup).ToAIGWConsumerGroup, &doc.ConsumerGroups),
+		translateKind[aiconfigurationv1alpha1.AIGatewayConsumerList](
+			cl, gw, index.IndexFieldAIGatewayConsumerOnOnPremAIGatewayRef,
+			// The consumer's credential lookup uses this package's index for
+			// AIGatewayConsumerCredential -> AIGatewayConsumer: the field name is passed in
+			// because the api package cannot import internal/utils/index without a cycle.
+			func(c *aiconfigurationv1alpha1.AIGatewayConsumer, ctx context.Context, cl client.Client) (*aigw.Consumer, error) {
+				return c.ToAIGWConsumer(ctx, cl, index.IndexFieldAIGatewayConsumerCredentialOnAIGatewayConsumerRef)
+			},
+			&doc.Consumers),
 		translateKind[aiconfigurationv1alpha1.AIGatewayAuthStrategyList](
 			cl, gw, index.IndexFieldAIGatewayAuthStrategyOnOnPremAIGatewayRef,
 			(*aiconfigurationv1alpha1.AIGatewayAuthStrategy).ToAIGWAuthStrategy, &doc.AuthStrategies),
