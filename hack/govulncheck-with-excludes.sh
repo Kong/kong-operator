@@ -10,25 +10,14 @@ set -Eeuo pipefail
 export PS4='+ ${BASH_SOURCE##*/}:${LINENO}: '
 trap 'echo "govulncheck-with-excludes.sh: error at line ${LINENO} (exit $?)" >&2' ERR
 
-excludeVulns="$(jq -nc '[
+# The advisories live in hack/govulncheck-exclusions.json, shared with the SARIF filter that the
+# code-scanning workflows apply, so both paths ignore the same ones.
+SCRIPT_ROOT="$(cd -- "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+readonly SCRIPT_ROOT
+EXCLUSIONS="${SCRIPT_ROOT}/hack/govulncheck-exclusions.json"
+readonly EXCLUSIONS
 
-  # Kubernetes kube-apiserver Vulnerable to Race Condition
-  # It is not relevant to us as we do not run kube-apiserver itself or import code that is affected by this vulnerability.
-  # https://github.com/kubernetes/kubernetes/issues/126587
-  "GO-2025-3547",
-
-  # Kubernetes GitRepo Volume Inadvertent Local Repository Access in k8s.io/kubernetes
-  # We do not use the GitRepo volume type.
-  # https://github.com/kubernetes/kubernetes/issues/130786
-  "GO-2025-3521",
-
-  # The golang.org/x/crypto/openpgp package is unsafe by design,
-  # has numerous known security issues, is not maintained, and should not be used.
-  # If you are required to interoperate with OpenPGP systems and need a maintained package,
-  # consider github.com/ProtonMail/go-crypto/openpgp which is a maintained fork that aims to be a drop-in replacement for this package.
-  "GO-2026-5932"
-
-]')"
+excludeVulns="$(jq -c 'map(.id)' "${EXCLUSIONS}")"
 export excludeVulns
 
 if out="$(${GOVULNCHECK} -scan "${SCAN}" -show color,verbose "$@")"; then
