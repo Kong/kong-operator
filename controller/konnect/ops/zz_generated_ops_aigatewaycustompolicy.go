@@ -137,35 +137,50 @@ func getAIGatewayCustomPolicyForUID(
 	// TODO: pass a Filter to ListAiGatewayCustomPolicies (e.g. by name/labels) so we
 	// do not page through every entity in the tenant. Filter types and
 	// fields are entity-specific; derive from OpenAPI schema.
-	resp, err := sdk.ListAiGatewayCustomPolicies(ctx, sdkkonnectops.ListAiGatewayCustomPoliciesRequest{
-		GatewayID: parentID,
-	})
-	if err != nil {
-		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
-	}
-	if resp == nil || resp.ListAIGatewayCustomPoliciesResponse == nil {
-		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
-	}
-
-	// List items are root unions whose wrapper exposes no GetID()/GetLabels():
-	// read them from whichever variant is set.
-	// TODO: only the first page of results is scanned. Tracked in
-	// https://github.com/Kong/kong-operator/issues/3987.
-	for _, entry := range resp.ListAIGatewayCustomPoliciesResponse.Data {
-		var (
-			id     string
-			labels map[string]string
-		)
-		switch {
-		case entry.AIGatewayCustomPolicyInstalled != nil:
-			id, labels = entry.AIGatewayCustomPolicyInstalled.GetID(), entry.AIGatewayCustomPolicyInstalled.GetLabels()
-		case entry.AIGatewayCustomPolicyStreaming != nil:
-			id, labels = entry.AIGatewayCustomPolicyStreaming.GetID(), entry.AIGatewayCustomPolicyStreaming.GetLabels()
-		default:
-			continue
+	var pageAfter *string
+	// Cursors already requested, to detect a next-page cursor that does not
+	// advance (directly or through a longer cycle).
+	seenCursors := map[string]struct{}{}
+	for {
+		resp, err := sdk.ListAiGatewayCustomPolicies(ctx, sdkkonnectops.ListAiGatewayCustomPoliciesRequest{
+			GatewayID: parentID,
+			PageSize:  new(listPageSize),
+			PageAfter: pageAfter,
+		})
+		if err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
 		}
-		if id != "" && labels[KubernetesUIDLabelKey] == uid {
-			return id, nil
+		if resp == nil || resp.ListAIGatewayCustomPoliciesResponse == nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+		}
+
+		// List items are root unions whose wrapper exposes no GetID()/GetLabels():
+		// read them from whichever variant is set.
+		for _, entry := range resp.ListAIGatewayCustomPoliciesResponse.Data {
+			var (
+				id     string
+				labels map[string]string
+			)
+			switch {
+			case entry.AIGatewayCustomPolicyInstalled != nil:
+				id, labels = entry.AIGatewayCustomPolicyInstalled.GetID(), entry.AIGatewayCustomPolicyInstalled.GetLabels()
+			case entry.AIGatewayCustomPolicyStreaming != nil:
+				id, labels = entry.AIGatewayCustomPolicyStreaming.GetID(), entry.AIGatewayCustomPolicyStreaming.GetLabels()
+			default:
+				continue
+			}
+			if id != "" && labels[KubernetesUIDLabelKey] == uid {
+				return id, nil
+			}
+		}
+
+		meta := resp.ListAIGatewayCustomPoliciesResponse.GetMeta()
+		page := meta.GetPage()
+		if pageAfter, err = nextPageCursor(page.GetNext(), seenCursors); err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+		}
+		if pageAfter == nil {
+			break
 		}
 	}
 

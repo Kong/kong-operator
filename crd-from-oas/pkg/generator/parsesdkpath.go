@@ -171,6 +171,29 @@ func sdkSliceFieldElemTypeName(importPath, typeName, fieldName string) (string, 
 	return "", false, nil
 }
 
+// sdkStructFieldTypeName returns the type name (without a pointer) of the
+// field fieldName on the SDK struct typeName in importPath. ok is false when
+// the type is not declared in the package, or has no such field.
+func sdkStructFieldTypeName(importPath, typeName, fieldName string) (string, bool, error) {
+	structType, ok, err := sdkStructType(importPath, typeName)
+	if err != nil || !ok {
+		return "", false, err
+	}
+	for _, field := range structType.Fields.List {
+		for _, name := range field.Names {
+			if name.Name != fieldName {
+				continue
+			}
+			fieldTypeName, _, err := sdkFieldTypeName(field.Type)
+			if err != nil {
+				return "", false, fmt.Errorf("field %q of type %q in %q: %w", fieldName, typeName, importPath, err)
+			}
+			return fieldTypeName, true, nil
+		}
+	}
+	return "", false, nil
+}
+
 // sdkStructType resolves typeName within importPath to its declared struct
 // type, using a per-package AST index built once and cached across calls
 // (see sdkTypeIndexCache). ok is false when the type is not declared in the

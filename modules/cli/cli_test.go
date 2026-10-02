@@ -162,6 +162,15 @@ func TestValidateKonnectSyncPeriod(t *testing.T) {
 	}
 }
 
+func TestValidateKonnectListPageSize(t *testing.T) {
+	for _, value := range []int64{1, 50, consts.MaxKonnectListPageSize} {
+		require.NoError(t, validateKonnectListPageSize(value), "size %d", value)
+	}
+	for _, value := range []int64{0, -1, consts.MaxKonnectListPageSize + 1} {
+		require.EqualError(t, validateKonnectListPageSize(value), "must be between 1 and 100", "size %d", value)
+	}
+}
+
 func TestParse(t *testing.T) {
 	testCases := []struct {
 		name        string
@@ -349,6 +358,26 @@ func TestParse(t *testing.T) {
 				return cfg
 			},
 		},
+		{
+			name: "konnect list page size env var is set",
+			envVars: map[string]string{
+				"KONG_OPERATOR_KONNECT_LIST_PAGE_SIZE": "50",
+			},
+			expectedCfg: func() manager.Config {
+				cfg := expectedDefaultCfg()
+				cfg.KonnectListPageSize = 50
+				return cfg
+			},
+		},
+		{
+			name: "konnect list page size flag is set",
+			args: []string{"--konnect-list-page-size=20"},
+			expectedCfg: func() manager.Config {
+				cfg := expectedDefaultCfg()
+				cfg.KonnectListPageSize = 20
+				return cfg
+			},
+		},
 	}
 
 	for _, tC := range testCases {
@@ -404,6 +433,7 @@ func expectedDefaultCfg() manager.Config {
 		FeatureGates:                             manager.FeatureGates{},
 		KonnectSyncPeriod:                        consts.DefaultKonnectSyncPeriod,
 		KonnectRequestTimeout:                    consts.DefaultKonnectRequestTimeout,
+		KonnectListPageSize:                      consts.DefaultKonnectListPageSize,
 		KongPluginInstallationControllerEnabled:  false,
 		LoggerOpts:                               &zap.Options{},
 		MaxConcurrentReconcilesKonnect:           consts.DefaultMaxConcurrentReconcilesKonnect,

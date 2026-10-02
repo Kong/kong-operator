@@ -361,7 +361,7 @@ func TestUnionVariantsGetForUID(t *testing.T) {
 			sdk := sdkmocks.NewMockAIGatewayAuthStrategiesSDK(t)
 			if uid != "" {
 				sdk.EXPECT().
-					ListAiGatewayAuthStrategies(mock.Anything, sdkkonnectops.ListAiGatewayAuthStrategiesRequest{GatewayID: gatewayID}).
+					ListAiGatewayAuthStrategies(mock.Anything, sdkkonnectops.ListAiGatewayAuthStrategiesRequest{GatewayID: gatewayID, PageSize: new(listPageSize)}).
 					Return(&sdkkonnectops.ListAiGatewayAuthStrategiesResponse{
 						ListAIGatewayAuthStrategiesResponse: &sdkkonnectcomp.ListAIGatewayAuthStrategiesResponse{Data: items},
 					}, nil).Once()
@@ -377,7 +377,7 @@ func TestUnionVariantsGetForUID(t *testing.T) {
 			sdk := sdkmocks.NewMockAIGatewayModelsSDK(t)
 			if uid != "" {
 				sdk.EXPECT().
-					ListAiGatewayModels(mock.Anything, sdkkonnectops.ListAiGatewayModelsRequest{GatewayID: gatewayID}).
+					ListAiGatewayModels(mock.Anything, sdkkonnectops.ListAiGatewayModelsRequest{GatewayID: gatewayID, PageSize: new(listPageSize)}).
 					Return(&sdkkonnectops.ListAiGatewayModelsResponse{
 						ListAIGatewayModelsResponse: &sdkkonnectcomp.ListAIGatewayModelsResponse{Data: items},
 					}, nil).Once()
@@ -393,7 +393,7 @@ func TestUnionVariantsGetForUID(t *testing.T) {
 			sdk := sdkmocks.NewMockAIGatewayModelProvidersSDK(t)
 			if uid != "" {
 				sdk.EXPECT().
-					ListAiGatewayModelProviders(mock.Anything, sdkkonnectops.ListAiGatewayModelProvidersRequest{GatewayID: gatewayID}).
+					ListAiGatewayModelProviders(mock.Anything, sdkkonnectops.ListAiGatewayModelProvidersRequest{GatewayID: gatewayID, PageSize: new(listPageSize)}).
 					Return(&sdkkonnectops.ListAiGatewayModelProvidersResponse{
 						ListAIGatewayModelProvidersResponse: &sdkkonnectcomp.ListAIGatewayModelProvidersResponse{Data: items},
 					}, nil).Once()
@@ -409,7 +409,7 @@ func TestUnionVariantsGetForUID(t *testing.T) {
 			sdk := sdkmocks.NewMockAIGatewayMCPServersSDK(t)
 			if uid != "" {
 				sdk.EXPECT().
-					ListAiGatewayMcpServers(mock.Anything, sdkkonnectops.ListAiGatewayMcpServersRequest{GatewayID: gatewayID}).
+					ListAiGatewayMcpServers(mock.Anything, sdkkonnectops.ListAiGatewayMcpServersRequest{GatewayID: gatewayID, PageSize: new(listPageSize)}).
 					Return(&sdkkonnectops.ListAiGatewayMcpServersResponse{
 						ListAIGatewayMCPServersResponse: &sdkkonnectcomp.ListAIGatewayMCPServersResponse{Data: items},
 					}, nil).Once()
@@ -425,7 +425,7 @@ func TestUnionVariantsGetForUID(t *testing.T) {
 			sdk := sdkmocks.NewMockAIGatewayCustomPoliciesSDK(t)
 			if uid != "" {
 				sdk.EXPECT().
-					ListAiGatewayCustomPolicies(mock.Anything, sdkkonnectops.ListAiGatewayCustomPoliciesRequest{GatewayID: gatewayID}).
+					ListAiGatewayCustomPolicies(mock.Anything, sdkkonnectops.ListAiGatewayCustomPoliciesRequest{GatewayID: gatewayID, PageSize: new(listPageSize)}).
 					Return(&sdkkonnectops.ListAiGatewayCustomPoliciesResponse{
 						ListAIGatewayCustomPoliciesResponse: &sdkkonnectcomp.ListAIGatewayCustomPoliciesResponse{Data: items},
 					}, nil).Once()

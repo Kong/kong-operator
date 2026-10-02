@@ -80,4 +80,4 @@ spec:
           - name: EXPECTED_JQ
             value: '[(if type == "array" then . else .data end)[] | select(.labels["k8s-uid"] == $ENV.WANT_UID)] | length == 0'
         content: |
-          bash ../../common/scripts/konnect_api_request.sh
+          bash ../../common/scripts/konnect_list_all_entities.sh

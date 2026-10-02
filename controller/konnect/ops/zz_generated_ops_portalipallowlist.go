@@ -91,35 +91,47 @@ func getPortalIPAllowListForUID(
 	if parentID == "" {
 		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "Portal", Op: GetOp}
 	}
-	resp, err := sdk.ListPortalIPAllowList(ctx, sdkkonnectops.ListPortalIPAllowListRequest{
-		PortalID: parentID,
-	})
-	if err != nil {
-		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
-	}
-	if resp == nil || resp.PortalSourceIPRestrictionPaginatedResponse == nil {
-		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
-	}
-
-	// TODO: only the first page of results is scanned. When the parent has more
-	// entries than the SDK's default page size, a matching entry on a later
-	// page is missed and getForUID returns NotFound. Tracked in
-	// https://github.com/Kong/kong-operator/issues/3987.
-	for _, entry := range resp.PortalSourceIPRestrictionPaginatedResponse.Data {
-		if !matchSliceField(obj.Spec.APISpec.AllowedIps, entry.AllowedIps) {
-			continue
+	var pageAfter *string
+	// Cursors already requested, to detect a next-page cursor that does not
+	// advance (directly or through a longer cycle).
+	seenCursors := map[string]struct{}{}
+	for {
+		resp, err := sdk.ListPortalIPAllowList(ctx, sdkkonnectops.ListPortalIPAllowListRequest{
+			PortalID:  parentID,
+			PageSize:  new(listPageSize),
+			PageAfter: pageAfter,
+		})
+		if err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
 		}
-		switch id := any(entry.GetID()).(type) {
-		case string:
-			if id != "" {
-				return id, nil
+		if resp == nil || resp.PortalSourceIPRestrictionPaginatedResponse == nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+		}
+
+		for _, entry := range resp.PortalSourceIPRestrictionPaginatedResponse.Data {
+			if !matchSliceField(obj.Spec.APISpec.AllowedIps, entry.AllowedIps) {
+				continue
 			}
-		case *string:
-			if id != nil && *id != "" {
-				return *id, nil
+			switch id := any(entry.GetID()).(type) {
+			case string:
+				if id != "" {
+					return id, nil
+				}
+			case *string:
+				if id != nil && *id != "" {
+					return *id, nil
+				}
+			default:
+				return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
 			}
-		default:
-			return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
+		}
+
+		meta := resp.PortalSourceIPRestrictionPaginatedResponse.GetMeta()
+		if pageAfter, err = nextPageCursor(meta.GetNext(), seenCursors); err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+		}
+		if pageAfter == nil {
+			break
 		}
 	}
 

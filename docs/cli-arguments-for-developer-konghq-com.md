@@ -204,6 +204,10 @@ rows:
     type: '`uint`'
     description: "Deprecated: Please use '--max-concurrent-reconciles-konnect-controller' instead."
     default: '`8`'
+  - flag: '`--konnect-list-page-size`'
+    type: '`int`'
+    description: "Page size requested when listing Konnect entities to find the Konnect entity of an object, e.g. one whose Konnect ID was lost or that is deleted without one. Must be between 1 and 100. Only lower it if Konnect rejects the default: a lower value means more requests."
+    default: '`100`'
   - flag: '`--konnect-request-timeout`'
     type: '`duration`'
     description: "Timeout for Konnect API requests."

@@ -245,71 +245,86 @@ func getAIGatewayModelProviderForUID(
 	// TODO: pass a Filter to ListAiGatewayModelProviders (e.g. by name/labels) so we
 	// do not page through every entity in the tenant. Filter types and
 	// fields are entity-specific; derive from OpenAPI schema.
-	resp, err := sdk.ListAiGatewayModelProviders(ctx, sdkkonnectops.ListAiGatewayModelProvidersRequest{
-		GatewayID: parentID,
-	})
-	if err != nil {
-		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
-	}
-	if resp == nil || resp.ListAIGatewayModelProvidersResponse == nil {
-		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
-	}
-
-	// List items are root unions whose wrapper exposes no GetID()/GetLabels():
-	// read them from whichever variant is set.
-	// TODO: only the first page of results is scanned. Tracked in
-	// https://github.com/Kong/kong-operator/issues/3987.
-	for _, entry := range resp.ListAIGatewayModelProvidersResponse.Data {
-		var (
-			id     string
-			labels map[string]string
-		)
-		switch {
-		case entry.AIGatewayModelProviderAIGatewayModelProviderAnthropic != nil:
-			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderAnthropic.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderAnthropic.GetLabels()
-		case entry.AIGatewayModelProviderAIGatewayModelProviderAzure != nil:
-			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderAzure.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderAzure.GetLabels()
-		case entry.AIGatewayModelProviderAIGatewayModelProviderBedrock != nil:
-			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderBedrock.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderBedrock.GetLabels()
-		case entry.AIGatewayModelProviderAIGatewayModelProviderCerebras != nil:
-			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderCerebras.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderCerebras.GetLabels()
-		case entry.AIGatewayModelProviderAIGatewayModelProviderCohere != nil:
-			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderCohere.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderCohere.GetLabels()
-		case entry.AIGatewayModelProviderAIGatewayModelProviderDashscope != nil:
-			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderDashscope.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderDashscope.GetLabels()
-		case entry.AIGatewayModelProviderAIGatewayModelProviderDatabricks != nil:
-			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderDatabricks.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderDatabricks.GetLabels()
-		case entry.AIGatewayModelProviderAIGatewayModelProviderDeepseek != nil:
-			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderDeepseek.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderDeepseek.GetLabels()
-		case entry.AIGatewayModelProviderAIGatewayModelProviderGemini != nil:
-			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderGemini.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderGemini.GetLabels()
-		case entry.AIGatewayModelProviderAIGatewayModelProviderHuggingface != nil:
-			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderHuggingface.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderHuggingface.GetLabels()
-		case entry.AIGatewayModelProviderAIGatewayModelProviderKimi != nil:
-			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderKimi.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderKimi.GetLabels()
-		case entry.AIGatewayModelProviderAIGatewayModelProviderLlama2 != nil:
-			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderLlama2.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderLlama2.GetLabels()
-		case entry.AIGatewayModelProviderAIGatewayModelProviderMistral != nil:
-			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderMistral.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderMistral.GetLabels()
-		case entry.AIGatewayModelProviderAIGatewayModelProviderOllama != nil:
-			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderOllama.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderOllama.GetLabels()
-		case entry.AIGatewayModelProviderAIGatewayModelProviderOpenai != nil:
-			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderOpenai.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderOpenai.GetLabels()
-		case entry.AIGatewayModelProviderAIGatewayModelProviderVercel != nil:
-			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderVercel.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderVercel.GetLabels()
-		case entry.AIGatewayModelProviderAIGatewayModelProviderVllm != nil:
-			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderVllm.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderVllm.GetLabels()
-		case entry.AIGatewayModelProviderAIGatewayModelProviderXai != nil:
-			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderXai.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderXai.GetLabels()
-		case entry.AIGatewayModelProviderAIGatewayModelProviderSagemaker != nil:
-			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderSagemaker.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderSagemaker.GetLabels()
-		case entry.AIGatewayModelProviderAIGatewayModelProviderTypesafe != nil:
-			id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderTypesafe.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderTypesafe.GetLabels()
-		default:
-			continue
+	var pageAfter *string
+	// Cursors already requested, to detect a next-page cursor that does not
+	// advance (directly or through a longer cycle).
+	seenCursors := map[string]struct{}{}
+	for {
+		resp, err := sdk.ListAiGatewayModelProviders(ctx, sdkkonnectops.ListAiGatewayModelProvidersRequest{
+			GatewayID: parentID,
+			PageSize:  new(listPageSize),
+			PageAfter: pageAfter,
+		})
+		if err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
 		}
-		if id != "" && labels[KubernetesUIDLabelKey] == uid {
-			return id, nil
+		if resp == nil || resp.ListAIGatewayModelProvidersResponse == nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+		}
+
+		// List items are root unions whose wrapper exposes no GetID()/GetLabels():
+		// read them from whichever variant is set.
+		for _, entry := range resp.ListAIGatewayModelProvidersResponse.Data {
+			var (
+				id     string
+				labels map[string]string
+			)
+			switch {
+			case entry.AIGatewayModelProviderAIGatewayModelProviderAnthropic != nil:
+				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderAnthropic.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderAnthropic.GetLabels()
+			case entry.AIGatewayModelProviderAIGatewayModelProviderAzure != nil:
+				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderAzure.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderAzure.GetLabels()
+			case entry.AIGatewayModelProviderAIGatewayModelProviderBedrock != nil:
+				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderBedrock.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderBedrock.GetLabels()
+			case entry.AIGatewayModelProviderAIGatewayModelProviderCerebras != nil:
+				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderCerebras.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderCerebras.GetLabels()
+			case entry.AIGatewayModelProviderAIGatewayModelProviderCohere != nil:
+				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderCohere.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderCohere.GetLabels()
+			case entry.AIGatewayModelProviderAIGatewayModelProviderDashscope != nil:
+				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderDashscope.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderDashscope.GetLabels()
+			case entry.AIGatewayModelProviderAIGatewayModelProviderDatabricks != nil:
+				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderDatabricks.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderDatabricks.GetLabels()
+			case entry.AIGatewayModelProviderAIGatewayModelProviderDeepseek != nil:
+				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderDeepseek.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderDeepseek.GetLabels()
+			case entry.AIGatewayModelProviderAIGatewayModelProviderGemini != nil:
+				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderGemini.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderGemini.GetLabels()
+			case entry.AIGatewayModelProviderAIGatewayModelProviderHuggingface != nil:
+				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderHuggingface.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderHuggingface.GetLabels()
+			case entry.AIGatewayModelProviderAIGatewayModelProviderKimi != nil:
+				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderKimi.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderKimi.GetLabels()
+			case entry.AIGatewayModelProviderAIGatewayModelProviderLlama2 != nil:
+				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderLlama2.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderLlama2.GetLabels()
+			case entry.AIGatewayModelProviderAIGatewayModelProviderMistral != nil:
+				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderMistral.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderMistral.GetLabels()
+			case entry.AIGatewayModelProviderAIGatewayModelProviderOllama != nil:
+				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderOllama.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderOllama.GetLabels()
+			case entry.AIGatewayModelProviderAIGatewayModelProviderOpenai != nil:
+				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderOpenai.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderOpenai.GetLabels()
+			case entry.AIGatewayModelProviderAIGatewayModelProviderVercel != nil:
+				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderVercel.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderVercel.GetLabels()
+			case entry.AIGatewayModelProviderAIGatewayModelProviderVllm != nil:
+				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderVllm.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderVllm.GetLabels()
+			case entry.AIGatewayModelProviderAIGatewayModelProviderXai != nil:
+				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderXai.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderXai.GetLabels()
+			case entry.AIGatewayModelProviderAIGatewayModelProviderSagemaker != nil:
+				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderSagemaker.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderSagemaker.GetLabels()
+			case entry.AIGatewayModelProviderAIGatewayModelProviderTypesafe != nil:
+				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderTypesafe.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderTypesafe.GetLabels()
+			default:
+				continue
+			}
+			if id != "" && labels[KubernetesUIDLabelKey] == uid {
+				return id, nil
+			}
+		}
+
+		meta := resp.ListAIGatewayModelProvidersResponse.GetMeta()
+		page := meta.GetPage()
+		if pageAfter, err = nextPageCursor(page.GetNext(), seenCursors); err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+		}
+		if pageAfter == nil {
+			break
 		}
 	}
 
