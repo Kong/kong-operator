@@ -125,7 +125,11 @@ func getPortalTeamForUID(
 		}
 
 		meta := resp.ListPortalTeamsResponse.GetMeta()
-		if !hasNextNumberedPage(pageNumber, meta.GetPage(), len(resp.ListPortalTeamsResponse.Data)) {
+		hasNext, err := hasNextNumberedPage(pageNumber, meta.GetPage(), len(resp.ListPortalTeamsResponse.Data))
+		if err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+		}
+		if !hasNext {
 			break
 		}
 	}

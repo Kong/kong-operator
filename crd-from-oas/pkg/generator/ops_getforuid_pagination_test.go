@@ -75,6 +75,20 @@ func TestResolveListPagination(t *testing.T) {
 			expectedErr:      `has meta "PaginatedMeta"`,
 		},
 		{
+			name:             "paginated response for a request without page parameters",
+			listMethod:       "ListPortalPages",
+			listResponseType: "ListPortalsResponse",
+			parents:          1,
+			expectedErr:      `is paginated (meta "PaginatedMeta") but list request "ListPortalPagesRequest" has no page parameters`,
+		},
+		{
+			name:               "not paginated, as the portal pages list",
+			listMethod:         "ListPortalPages",
+			listResponseType:   "ListPortalPagesResponse",
+			parents:            1,
+			expectedPagination: listPaginationNone,
+		},
+		{
 			name:             "positional with cursor pagination",
 			listMethod:       "ListEventGateways",
 			listResponseType: "ListEventGatewaysResponse",
@@ -156,7 +170,7 @@ func TestOpsGetForUIDFuncTemplate_Pagination(t *testing.T) {
 			contains: []string{
 				"for pageNumber := int64(1); ; pageNumber++ {",
 				"PageNumber: new(pageNumber),",
-				"hasNextNumberedPage(pageNumber, meta.GetPage(), len(resp.ListWidgetsResponse.Data))",
+				"hasNext, err := hasNextNumberedPage(pageNumber, meta.GetPage(), len(resp.ListWidgetsResponse.Data))",
 			},
 		},
 		{

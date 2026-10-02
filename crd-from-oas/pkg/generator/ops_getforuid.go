@@ -371,6 +371,16 @@ func resolveListPagination(listMethod, listResponseType string, positional bool,
 		pagination = style
 	}
 	if pagination == listPaginationNone {
+		// A request without page parameters can still return a paginated
+		// response (the server's default page size): reject it rather than
+		// generate a lookup that scans only the first page.
+		meta, ok, err := sdkStructFieldTypeName(componentsImportPath, listResponseType, "Meta")
+		if err != nil {
+			return "", false, fmt.Errorf("inspect list response %q: %w", listResponseType, err)
+		}
+		if ok && slices.Contains([]string{"CursorMeta", "CursorMetaPage", "PaginatedMeta"}, meta) {
+			return "", false, fmt.Errorf("list response %q is paginated (meta %q) but list request %q has no page parameters", listResponseType, meta, requestType)
+		}
 		return listPaginationNone, false, nil
 	}
 

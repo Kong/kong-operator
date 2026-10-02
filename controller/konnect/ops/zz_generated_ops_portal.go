@@ -107,7 +107,11 @@ func getPortalForUID(
 		}
 
 		meta := resp.ListPortalsResponse.GetMeta()
-		if !hasNextNumberedPage(pageNumber, meta.GetPage(), len(resp.ListPortalsResponse.Data)) {
+		hasNext, err := hasNextNumberedPage(pageNumber, meta.GetPage(), len(resp.ListPortalsResponse.Data))
+		if err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+		}
+		if !hasNext {
 			break
 		}
 	}

@@ -3807,7 +3807,11 @@ func get{{.Entity}}ForUID(
 {{- else if eq .ListPagination "number"}}
 
 	meta := resp.{{.ListResponseField}}.GetMeta()
-	if !hasNextNumberedPage(pageNumber, meta.GetPage(), len({{.ListResponseItemsExpr}})) {
+	hasNext, err := hasNextNumberedPage(pageNumber, meta.GetPage(), len({{.ListResponseItemsExpr}}))
+	if err != nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+	}
+	if !hasNext {
 		break
 	}
 	}

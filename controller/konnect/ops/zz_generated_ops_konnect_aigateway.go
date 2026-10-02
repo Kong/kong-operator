@@ -156,7 +156,11 @@ func getKonnectAIGatewayForUID(
 		}
 
 		meta := resp.ListAIGatewaysResponse.GetMeta()
-		if !hasNextNumberedPage(pageNumber, meta.GetPage(), len(resp.ListAIGatewaysResponse.Data)) {
+		hasNext, err := hasNextNumberedPage(pageNumber, meta.GetPage(), len(resp.ListAIGatewaysResponse.Data))
+		if err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+		}
+		if !hasNext {
 			break
 		}
 	}

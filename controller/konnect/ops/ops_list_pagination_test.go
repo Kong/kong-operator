@@ -1,6 +1,7 @@
 package ops
 
 import (
+	"fmt"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -95,6 +96,7 @@ func TestHasNextNumberedPage(t *testing.T) {
 		page       sdkkonnectcomp.PageMeta
 		items      int
 		expected   bool
+		expectErr  bool
 	}{
 		{
 			name:       "more items after the page",
@@ -126,13 +128,52 @@ func TestHasNextNumberedPage(t *testing.T) {
 			page:       sdkkonnectcomp.PageMeta{Number: 1, Total: 1000},
 			items:      10,
 		},
+		{
+			name:       "more items after the last page allowed",
+			pageNumber: maxListPages,
+			page:       sdkkonnectcomp.PageMeta{Number: maxListPages, Size: 1, Total: maxListPages + 1},
+			items:      1,
+			expectErr:  true,
+		},
+		{
+			name:       "last page allowed is the last page",
+			pageNumber: maxListPages,
+			page:       sdkkonnectcomp.PageMeta{Number: maxListPages, Size: 1, Total: maxListPages},
+			items:      1,
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.expected, hasNextNumberedPage(tc.pageNumber, tc.page, tc.items))
+			hasNext, err := hasNextNumberedPage(tc.pageNumber, tc.page, tc.items)
+			if tc.expectErr {
+				require.ErrorIs(t, err, errTooManyListPages)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.expected, hasNext)
 		})
 	}
+}
+
+func TestNextPageCursorStopsAfterMaxListPages(t *testing.T) {
+	seenCursors := map[string]struct{}{}
+	// The first page is requested without a cursor: maxListPages-1 cursors
+	// request pages 2 to maxListPages, which are allowed.
+	for i := range maxListPages - 1 {
+		cursor, err := nextPageCursor(new(fmt.Sprintf("cursor-%d", i)), seenCursors)
+		require.NoError(t, err, "cursor %d", i)
+		require.NotNil(t, cursor)
+	}
+	// One more cursor would request page maxListPages+1.
+	cursor, err := nextPageCursor(new("cursor-beyond"), seenCursors)
+	require.ErrorIs(t, err, errTooManyListPages)
+	assert.Nil(t, cursor)
+
+	// The last page needs no further cursor.
+	cursor, err = nextPageCursor(nil, seenCursors)
+	require.NoError(t, err)
+	assert.Nil(t, cursor)
 }
 
 // TestGetForUIDPagesThroughList covers lookups finding (or not) an entity
