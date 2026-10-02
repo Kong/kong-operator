@@ -212,6 +212,23 @@ func TestAIGatewayConsumer_ToAIGWConsumer(t *testing.T) {
 			})},
 			wantErr: "cross-namespace secretRef",
 		},
+		{
+			name: "credential referencing another consumer is not embedded",
+			obj: &AIGatewayConsumer{
+				Name: "sample-ai-gw-consumer-unrelated", Namespace: "default",
+				Spec: AIGatewayConsumerSpec{
+					APISpec: AIGatewayConsumerAPISpec{
+						Name:        "unrelated-consumer",
+						DisplayName: "Unrelated Consumer",
+						Type:        "oauth",
+					},
+				},
+			},
+			// Refs "sample-ai-gw-consumer", not the consumer above: filtered out by
+			// name before translation, so its secretRef's Secret is never needed.
+			objects: []runtime.Object{newConsumerCredential()},
+			want:    &aigw.Consumer{Name: "unrelated-consumer", DisplayName: "Unrelated Consumer", Type: "oauth"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -257,4 +274,34 @@ func TestAIGatewayConsumer_ToAIGWConsumer_StrictRoundTrip(t *testing.T) {
 	require.Equal(t, "sample-consumer", consumer.Name)
 	require.Equal(t, "Sample Consumer", consumer.DisplayName)
 	require.Nil(t, consumer.Policies)
+}
+
+// TestAIGatewayConsumerCredential_StrictRoundTrip guards against a dropped or
+// renamed field: it decodes marshalAIGWConsumerCredentialPayload's output with
+// yaml.v3's KnownFields(true), which errors on any key aigw.Credential doesn't
+// recognize. See aigatewaymodel_aigw_manual_test.go for the rationale.
+func TestAIGatewayConsumerCredential_StrictRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	spec := &AIGatewayConsumerCredentialAPISpec{
+		Name:        "cred-1",
+		DisplayName: "Cred 1",
+		Type:        "api-key",
+		Ttl:         3600,
+		Labels:      PublicLabels{"app": "test1"},
+		APIKey: SensitiveDataSource{
+			Type:  SensitiveDataSourceTypeInline,
+			Value: new("s3cr3t"),
+		},
+	}
+	data, err := marshalAIGWConsumerCredentialPayload(spec)
+	require.NoError(t, err)
+
+	dec := yaml.NewDecoder(bytes.NewReader(data))
+	dec.KnownFields(true)
+	var cred aigw.Credential
+	require.NoError(t, dec.Decode(&cred))
+
+	require.Equal(t, "cred-1", cred.Name)
+	require.Equal(t, "s3cr3t", cred.APIKey)
 }

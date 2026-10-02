@@ -51,8 +51,9 @@ func handleRefResult(
 
 		// The referenced parent is not Konnect-managed, so the entity is not either:
 		// stop without error and without touching Konnect. The cleanup finalizer is
-		// removed defensively: an entity in this state can never have been created
-		// in Konnect, and a stale finalizer would block its deletion forever.
+		// removed defensively: a stale finalizer would block the entity's deletion.
+		// An entity that previously reconciled under a Konnect parent (objects that
+		// predate the AIGatewayRef kind field) leaves its Konnect entity orphaned.
 		if _, ok := errors.AsType[ReferencedObjectNotKonnectManagedError](err); ok {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := cl.Update(ctx, ent); err != nil {
