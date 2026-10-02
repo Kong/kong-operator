@@ -30,6 +30,7 @@ import (
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager"
 	adminapi "github.com/kong/kong-operator/v2/internal/adminapi"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
@@ -115,6 +116,7 @@ func testPushInstance(t *testing.T, objs ...client.Object) *Instance {
 		testr.New(t),
 		Config{},
 		Env{
+			Scheme:                  managerscheme.Get(),
 			GatewayNN:               types.NamespacedName{Namespace: testGatewayNamespace, Name: testGatewayName},
 			AdminClientCertSecretNN: types.NamespacedName{Namespace: testGatewayNamespace, Name: "gw-admin-client-cert"},
 			TypeConverter:           newTestTypeConverter(),
@@ -125,12 +127,26 @@ func testPushInstance(t *testing.T, objs ...client.Object) *Instance {
 		Namespace: testGatewayNamespace,
 		Name:      testGatewayName,
 	})
-	cl := fake.NewClientBuilder().
+	// The translator lists the configuration entities by the OnOnPremAIGatewayRef
+	// field index, so the fake client must register the same indexes the real
+	// manager does.
+	builder := fake.NewClientBuilder().
 		WithScheme(managerscheme.Get()).
 		WithReturnManagedFields().
 		WithStatusSubresource(&aigatewayv1alpha1.OnPremAIGateway{}).
-		WithObjects(objs...).
-		Build()
+		WithObjects(objs...)
+	for _, opts := range [][]index.Option{
+		index.OptionsForAIGatewayModel(),
+		index.OptionsForAIGatewayModelProvider(),
+		index.OptionsForAIGatewayPolicy(),
+		index.OptionsForAIGatewayConsumerGroup(),
+		index.OptionsForAIGatewayAuthStrategy(),
+	} {
+		for _, opt := range opts {
+			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+		}
+	}
+	cl := builder.Build()
 	i.client = cl
 	i.eventRecorder = events.NewFakeRecorder(16)
 	return i
@@ -165,6 +181,15 @@ func getGatewayPushCondition(t *testing.T, instance *Instance) metav1.Condition 
 	return metav1.Condition{}
 }
 
+// requirePushed runs the push and asserts that it ran and succeeded:
+// pushed=true and no error.
+func requirePushed(t *testing.T, instance *Instance, gwNN types.NamespacedName, yamlPayload []byte) {
+	t.Helper()
+	pushed, err := instance.sendConfigToDataPlanes(context.Background(), gwNN, yamlPayload)
+	require.NoError(t, err)
+	require.True(t, pushed)
+}
+
 func TestSendConfigToDataPlanes(t *testing.T) {
 	ctx := context.Background()
 	gwNN := types.NamespacedName{Namespace: testGatewayNamespace, Name: testGatewayName}
@@ -177,7 +202,7 @@ func TestSendConfigToDataPlanes(t *testing.T) {
 		instance.newPushClient = factory.newPushClient
 		instance.setAdminAPIs(sets.New(adminAPI("https://10.0.0.1:8444"), adminAPI("https://10.0.0.2:8444")))
 
-		require.NoError(t, instance.sendConfigToDataPlanes(ctx, gwNN, yamlPayload))
+		requirePushed(t, instance, gwNN, yamlPayload)
 		require.Len(t, factory.built, 2)
 
 		// The payload must have been converted to JSON before the push.
@@ -201,8 +226,9 @@ func TestSendConfigToDataPlanes(t *testing.T) {
 		instance.newPushClient = factory.newPushClient
 		instance.setAdminAPIs(sets.New(adminAPI("https://10.0.0.1:8444"), adminAPI("https://10.0.0.2:8444")))
 
-		err := instance.sendConfigToDataPlanes(ctx, gwNN, yamlPayload)
+		pushed, err := instance.sendConfigToDataPlanes(ctx, gwNN, yamlPayload)
 		require.Error(t, err)
+		require.True(t, pushed)
 		require.Contains(t, err.Error(), "default/dp: connection refused")
 
 		// The healthy endpoint still got the payload.
@@ -232,7 +258,8 @@ func TestSendConfigToDataPlanes(t *testing.T) {
 		instance.newPushClient = factory.newPushClient
 		instance.setAdminAPIs(sets.New(adminAPI("https://10.0.0.1:8444")))
 
-		require.Error(t, instance.sendConfigToDataPlanes(ctx, gwNN, yamlPayload))
+		_, err := instance.sendConfigToDataPlanes(ctx, gwNN, yamlPayload)
+		require.Error(t, err)
 		first := getGatewayPushCondition(t, instance)
 
 		// The first failed push emits its Warning event; drain it.
@@ -245,7 +272,8 @@ func TestSendConfigToDataPlanes(t *testing.T) {
 
 		// The retry loop re-attempts the push on the next tick: the unchanged
 		// failure must not be reported as a change (no event, same timestamp).
-		require.Error(t, instance.sendConfigToDataPlanes(ctx, gwNN, yamlPayload))
+		_, err = instance.sendConfigToDataPlanes(ctx, gwNN, yamlPayload)
+		require.Error(t, err)
 		second := getGatewayPushCondition(t, instance)
 
 		require.Equal(t, first.LastTransitionTime, second.LastTransitionTime)
@@ -262,7 +290,9 @@ func TestSendConfigToDataPlanes(t *testing.T) {
 		instance.newPushClient = factory.newPushClient
 		instance.setAdminAPIs(sets.New[adminapi.DiscoveredAdminAPI]())
 
-		require.NoError(t, instance.sendConfigToDataPlanes(ctx, gwNN, yamlPayload))
+		pushed, err := instance.sendConfigToDataPlanes(ctx, gwNN, yamlPayload)
+		require.NoError(t, err)
+		require.False(t, pushed)
 		require.Empty(t, factory.built)
 	})
 
@@ -275,7 +305,7 @@ func TestSendConfigToDataPlanes(t *testing.T) {
 		instance.newPushClient = factory.newPushClient
 		instance.setAdminAPIs(sets.New(adminAPI("https://10.0.0.1:8444")))
 
-		err := instance.sendConfigToDataPlanes(ctx, gwNN, yamlPayload)
+		_, err := instance.sendConfigToDataPlanes(ctx, gwNN, yamlPayload)
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "missing required certificate material")
 		require.Empty(t, factory.built)
@@ -295,8 +325,8 @@ func TestSendConfigToDataPlanes(t *testing.T) {
 
 		// The first sync builds one client per endpoint; the retry loop re-runs
 		// the sync, so the second one must reuse the cached clients.
-		require.NoError(t, instance.sendConfigToDataPlanes(ctx, gwNN, yamlPayload))
-		require.NoError(t, instance.sendConfigToDataPlanes(ctx, gwNN, yamlPayload))
+		requirePushed(t, instance, gwNN, yamlPayload)
+		requirePushed(t, instance, gwNN, yamlPayload)
 		require.Len(t, factory.built, 2)
 		for addr, c := range factory.clients {
 			require.Len(t, c.payloads, 2, "expected exactly two pushes to %s", addr)
@@ -305,7 +335,7 @@ func TestSendConfigToDataPlanes(t *testing.T) {
 		// Endpoints no longer discovered get their cached clients pruned, and
 		// newly discovered ones get fresh clients.
 		instance.setAdminAPIs(sets.New(adminAPI("https://10.0.0.2:8444"), adminAPI("https://10.0.0.3:8444")))
-		require.NoError(t, instance.sendConfigToDataPlanes(ctx, gwNN, yamlPayload))
+		requirePushed(t, instance, gwNN, yamlPayload)
 		require.Len(t, factory.built, 3)
 		require.Len(t, instance.pushClients, 2)
 	})

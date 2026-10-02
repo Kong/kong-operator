@@ -72,8 +72,6 @@ func getForUID[
 		return getAIGatewaySNIForUID(ctx, sdk.GetAIGatewaySNIsSDK(), ent)
 	case *configurationv1alpha1.EventGatewayBackendCluster:
 		return getEventGatewayBackendClusterForUID(ctx, sdk.GetEventGatewayBackendClustersSDK(), ent)
-	case *configurationv1alpha1.EventGatewayDataPlaneCertificate:
-		return getEventGatewayDataPlaneCertificateForUID(ctx, sdk.GetEventGatewayDataPlaneCertificatesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayListener:
 		return getEventGatewayListenerForUID(ctx, sdk.GetEventGatewayListenersSDK(), ent)
 	case *configurationv1alpha1.EventGatewayListenerPolicy:

@@ -3398,7 +3398,7 @@ func get{{.Entity}}ForUID(
 	}
 {{- end}}
 {{- range .MatchFields}}
-	if !{{if .SliceMatch}}matchSliceField{{else if .SensitiveMatch}}matchSensitiveDataSourceField{{else if .SkipWhenUnset}}matchOptionalStringField{{else}}matchStringField{{end}}(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
+	if !{{if .SliceMatch}}matchSliceField{{else if .SkipWhenUnset}}matchOptionalStringField{{else}}matchStringField{{end}}(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
 		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 	}
 {{- end}}
@@ -3516,7 +3516,7 @@ func get{{.Entity}}ForUID(
 	// https://github.com/Kong/kong-operator/issues/3987.
 	for _, entry := range {{.ListResponseItemsExpr}} {
 		{{- range .MatchFields}}
-		if !{{if .SliceMatch}}matchSliceField{{else if .SensitiveMatch}}matchSensitiveDataSourceField{{else if .SkipWhenUnset}}matchOptionalStringField{{else}}matchStringField{{end}}(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
+		if !{{if .SliceMatch}}matchSliceField{{else if .SkipWhenUnset}}matchOptionalStringField{{else}}matchStringField{{end}}(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
 			continue
 		}
 		{{- end}}
@@ -3629,14 +3629,12 @@ func get{{.Entity}}ForUID(
 		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 	}
 {{- else if .HasLabels}}
-{{- if .LabelsResponseVariantFields}}
 
 	// Without a UID every unlabeled Konnect entity would match below.
 	uid := string(obj.GetUID())
 	if uid == "" {
 		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 	}
-{{- end}}
 
 	// TODO: pass a Filter to {{.ListSDKMethod}} (e.g. by name/labels) so we
 	// do not page through every entity in the tenant. Filter types and
@@ -3691,7 +3689,7 @@ func get{{.Entity}}ForUID(
 {{- else}}
 
 	for _, entry := range {{.ListResponseItemsExpr}} {
-		if entry.GetLabels()[KubernetesUIDLabelKey] != string(obj.GetUID()) {
+		if entry.GetLabels()[KubernetesUIDLabelKey] != uid {
 			continue
 		}
 		if entry.GetID() != "" {

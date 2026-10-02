@@ -101,6 +101,12 @@ func getEventGatewaySchemaRegistryForUID(
 		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectEventGateway", Op: GetOp}
 	}
 
+	// Without a UID every unlabeled Konnect entity would match below.
+	uid := string(obj.GetUID())
+	if uid == "" {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+
 	// TODO: pass a Filter to ListEventGatewaySchemaRegistries (e.g. by name/labels) so we
 	// do not page through every entity in the tenant. Filter types and
 	// fields are entity-specific; derive from OpenAPI schema.
@@ -115,7 +121,7 @@ func getEventGatewaySchemaRegistryForUID(
 	}
 
 	for _, entry := range resp.ListSchemaRegistriesResponse.Data {
-		if entry.GetLabels()[KubernetesUIDLabelKey] != string(obj.GetUID()) {
+		if entry.GetLabels()[KubernetesUIDLabelKey] != uid {
 			continue
 		}
 		if entry.GetID() != "" {

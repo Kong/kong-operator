@@ -1,0 +1,204 @@
+# Template for verifying that the operator does not take over a Konnect entity
+# it did not create: create an entity directly in Konnect, then apply a CR with
+# the same name. The operator's create gets a conflict and the conflict lookup
+# only matches the k8s-uid label, which the pre-created entity does not carry:
+# the CR must never be Programmed, the entity must stay untouched, and deleting
+# the CR must not delete it.
+#
+# Required bindings:
+#   - cr_api_version, cr_kind, cr_resource: API version, kind and resource type of the CR.
+#   - cr_name: Name of an existing, Programmed CR of the same kind and parent,
+#     used to resolve the Konnect collection path.
+#   - collection_path_jq: jq expression, evaluated against a CR, yielding the
+#     Konnect API path of the entity collection (see konnect_entity_of_resource.sh).
+#   - foreign_cr_name: Name of the CR to apply.
+#   - foreign_cr_spec: Its spec (an object), using the same name as foreign_body.
+#   - foreign_cr_spec_bumped: The same spec with a harmless change (e.g. a
+#     label value), applied afterwards to trigger another reconciliation.
+#   - foreign_entity_name: The Konnect name (see foreign_match_field) shared by
+#     foreign_body and foreign_cr_spec.
+#   - foreign_body: jq program (see konnect_api_request.sh BODY) building the
+#     body of the entity to create directly in Konnect.
+#   - konnect_token, konnect_url: Konnect API token and host.
+#
+# Optional bindings (override with use.with.bindings):
+#   - foreign_secret_name: Name of a Secret (in the test namespace) whose keys
+#     foreign_body can read, e.g. a certificate: each key is exported as
+#     $ENV.SECRET_<KEY> (see konnect_api_request_with_secret.sh). Default: none.
+#   - foreign_match_field: Field of the entity holding foreign_entity_name,
+#     used to clean up the pre-created entity. Default: name.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: konnect-ownership-reject-foreign-entity
+spec:
+  bindings:
+    - name: foreign_secret_name
+      value: ''
+    - name: foreign_match_field
+      value: name
+  try:
+    - script:
+        env:
+          - name: RESOURCE_TYPE
+            value: ($cr_resource)
+          - name: RESOURCE_NAME
+            value: ($cr_name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: COLLECTION_PATH_JQ
+            value: ($collection_path_jq)
+        content: |
+          bash ../../common/scripts/konnect_entity_of_resource.sh
+        outputs:
+          - name: primary
+            value: (json_parse($stdout))
+    - description: Create the entity directly in Konnect.
+      script:
+        env:
+          - name: KONNECT_TOKEN
+            value: ($konnect_token)
+          - name: KONNECT_URL
+            value: ($konnect_url)
+          - name: METHOD
+            value: POST
+          - name: API_PATH
+            value: ($primary.collection_path)
+          - name: BODY
+            value: ($foreign_body)
+          - name: EXPECTED_STATUS
+            value: "200,201"
+          - name: SECRET_NAME
+            value: ($foreign_secret_name)
+          - name: NAMESPACE
+            value: ($namespace)
+        content: |
+          bash ../../common/scripts/konnect_api_request_with_secret.sh
+        outputs:
+          - name: foreign_id
+            value: (json_parse($stdout).body.id)
+    - apply:
+        resource:
+          apiVersion: ($cr_api_version)
+          kind: ($cr_kind)
+          metadata:
+            name: ($foreign_cr_name)
+            namespace: ($namespace)
+          spec: ($foreign_cr_spec)
+    - description: Once reconciled, the CR is not Programmed and has no status.id.
+      script:
+        env:
+          - name: RESOURCE_TYPE
+            value: ($cr_resource)
+          - name: RESOURCE_NAME
+            value: ($foreign_cr_name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: JQ_CONDITION
+            # FailedToCreate proves the reconciliation attempted the create
+            # (and declined the existing entity), rather than stopping earlier.
+            value: &not_programmed >-
+              .status | (.id // "") == ""
+              and ([.conditions[]? | select(.type == "Programmed" and .status == "False" and .reason == "FailedToCreate")] | length) == 1
+        content: |
+          bash ../../common/scripts/wait_for_resource_reconciled.sh
+    - description: |
+        Change the CR's spec to trigger another reconciliation, so a late
+        takeover (on a later reconciliation) would show.
+      apply:
+        resource:
+          apiVersion: ($cr_api_version)
+          kind: ($cr_kind)
+          metadata:
+            name: ($foreign_cr_name)
+            namespace: ($namespace)
+          spec: ($foreign_cr_spec_bumped)
+    - description: Once reconciled again, the CR is still not Programmed and has no status.id.
+      script:
+        env:
+          - name: RESOURCE_TYPE
+            value: ($cr_resource)
+          - name: RESOURCE_NAME
+            value: ($foreign_cr_name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: JQ_CONDITION
+            value: *not_programmed
+        content: |
+          bash ../../common/scripts/wait_for_resource_reconciled.sh
+    - description: The pre-created entity keeps its ID and never gets a k8s-uid label.
+      script:
+        env:
+          - name: KONNECT_TOKEN
+            value: ($konnect_token)
+          - name: KONNECT_URL
+            value: ($konnect_url)
+          - name: API_PATH
+            value: (join('/', [$primary.collection_path, $foreign_id]))
+          - name: WANT_ID
+            value: ($foreign_id)
+          - name: EXPECTED_JQ
+            value: .id == $ENV.WANT_ID and .labels["k8s-uid"] == null
+        content: |
+          bash ../../common/scripts/konnect_api_request.sh
+    - delete:
+        ref:
+          apiVersion: ($cr_api_version)
+          kind: ($cr_kind)
+          name: ($foreign_cr_name)
+          namespace: ($namespace)
+    - error:
+        resource:
+          apiVersion: ($cr_api_version)
+          kind: ($cr_kind)
+          metadata:
+            name: ($foreign_cr_name)
+            namespace: ($namespace)
+    - description: Deleting the CR must leave the pre-created entity in Konnect.
+      script:
+        env:
+          - name: KONNECT_TOKEN
+            value: ($konnect_token)
+          - name: KONNECT_URL
+            value: ($konnect_url)
+          - name: API_PATH
+            value: (join('/', [$primary.collection_path, $foreign_id]))
+          - name: WANT_ID
+            value: ($foreign_id)
+          - name: EXPECTED_JQ
+            value: .id == $ENV.WANT_ID
+        content: |
+          bash ../../common/scripts/konnect_api_request.sh
+  finally:
+    - script:
+        env:
+          - name: RESOURCE_TYPE
+            value: ($cr_resource)
+          - name: RESOURCE_NAME
+            value: ($cr_name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: COLLECTION_PATH_JQ
+            value: ($collection_path_jq)
+          - name: REQUIRE_ID
+            value: "false"
+        content: |
+          bash ../../common/scripts/konnect_entity_of_resource.sh
+        outputs:
+          - name: collection
+            value: (json_parse($stdout).collection_path)
+    - description: Remove the pre-created entity from Konnect.
+      script:
+        env:
+          - name: KONNECT_TOKEN
+            value: ($konnect_token)
+          - name: KONNECT_URL
+            value: ($konnect_url)
+          - name: API_PATH
+            value: ($collection)
+          - name: MATCH_FIELD
+            value: ($foreign_match_field)
+          - name: MATCH_VALUE
+            value: ($foreign_entity_name)
+        content: |
+          bash ../../common/scripts/konnect_delete_unowned_entities.sh

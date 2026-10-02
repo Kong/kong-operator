@@ -2,14 +2,28 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
+
+// TestNoteSecretLabelRequirement pins the not-found gate: only not-found errors get the
+// Secret label selector hint (the operator's caches hold only labeled Secrets), other
+// errors pass through unchanged.
+func TestNoteSecretLabelRequirement(t *testing.T) {
+	notFound := apierrors.NewNotFound(corev1.Resource("secrets"), "client-secret")
+	err := noteSecretLabelRequirement(fmt.Errorf("failed to fetch Secret default/client-secret: %w", notFound))
+	require.ErrorContains(t, err, "konghq.com/secret=true")
+
+	other := fmt.Errorf("secret default/client-secret is missing key %q", "client-secret")
+	require.Equal(t, other.Error(), noteSecretLabelRequirement(other).Error())
+}
 
 func TestAIGatewayPolicyConfigDataSource_valueFromSecretRef(t *testing.T) {
 

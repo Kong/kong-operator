@@ -480,7 +480,8 @@ type OpSDKConfig struct {
 type GetForUIDConfig struct {
 	// ListItemsSource controls how generated getForUID code iterates the SDK list
 	// response payload. The default ("data") expects resp.<field>.Data; "slice"
-	// expects resp.<field> itself to be the item slice.
+	// expects resp.<field> itself to be the item slice. It can be set without
+	// MatchFields or RootUnion to keep the default match strategy (e.g. by labels).
 	ListItemsSource GetForUIDListItemsSource `yaml:"listItemsSource,omitempty"`
 	// MatchFields lists object/response field pairs that must all match for a
 	// list response item to be considered the same entity.
@@ -1111,8 +1112,12 @@ func (tc *TypeConfig) validate() error {
 					return err
 				}
 			}
-		} else if err := validateGetForUIDMatchFields("ops.getForUID.matchFields", tc.OpsGetForUID.MatchFields); err != nil {
-			return err
+		} else if len(tc.OpsGetForUID.MatchFields) > 0 || tc.OpsGetForUID.ListItemsSource == "" {
+			// A getForUID block that only sets listItemsSource keeps the default
+			// match strategy (e.g. by labels) and needs no matchFields.
+			if err := validateGetForUIDMatchFields("ops.getForUID.matchFields", tc.OpsGetForUID.MatchFields); err != nil {
+				return err
+			}
 		}
 	}
 	for i, f := range tc.OpsResponseStatusFields {

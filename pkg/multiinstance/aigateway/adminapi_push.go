@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 
 	"github.com/kong/go-kong/kong"
@@ -78,28 +79,39 @@ func pushClientCacheKey(
 // A failure on any endpoint does not prevent the remaining endpoints from being
 // pushed: the returned error only reports the failures, and the sync loop retries
 // them on the next tick (already-up-to-date endpoints no-op thanks to check_hash).
+// The first return value reports whether the push ran. It is false when the push
+// never started: no Admin API endpoints are discovered (a status reporting
+// failure there is only logged, and the function still returns a nil error), the
+// payload conversion fails, or the certificate material is missing. It is true
+// once the payload was offered to the endpoints
+// discovered at snapshot time, even when some or all of those sends fail.
 func (i *Instance) sendConfigToDataPlanes(
 	ctx context.Context,
 	gwNN types.NamespacedName,
 	yamlPayload []byte,
-) error {
+) (pushed bool, err error) {
 	endpoints := i.AdminAPIs()
 	if endpoints.Len() == 0 {
 		log.Info(i.logger, "no Admin API endpoints discovered for the gateway, skipping configuration push",
 			"namespace", gwNN.Namespace, "name", gwNN.Name)
 		// Report anyway: the last push may have left DataPlanesConfigured=False
-		// behind, and nothing else clears it while the set is empty.
-		return i.reportPushStatus(ctx, gwNN, 0, nil)
+		// behind, and nothing else clears it while the set is empty. A reporting
+		// failure must not fail the sync: the push was skipped, and the next
+		// sync re-reports it.
+		if err := i.reportPushStatus(ctx, gwNN, 0, nil); err != nil {
+			log.Error(i.logger, err, "failed to report the configuration push result on the OnPremAIGateway status")
+		}
+		return false, nil
 	}
 
 	payload, err := yaml.YAMLToJSON(yamlPayload)
 	if err != nil {
-		return i.failPush(ctx, gwNN, endpoints.Len(), fmt.Errorf("converting rendered configuration to JSON: %w", err))
+		return false, i.failPush(ctx, gwNN, endpoints.Len(), fmt.Errorf("converting rendered configuration to JSON: %w", err))
 	}
 
 	certPEM, keyPEM, caPEM, err := i.adminMTLSCertMaterial(ctx)
 	if err != nil {
-		return i.failPush(ctx, gwNN, endpoints.Len(), fmt.Errorf("loading Admin API mTLS client certificate: %w", err))
+		return false, i.failPush(ctx, gwNN, endpoints.Len(), fmt.Errorf("loading Admin API mTLS client certificate: %w", err))
 	}
 
 	var failures []string
@@ -148,6 +160,11 @@ func (i *Instance) sendConfigToDataPlanes(
 		}
 	}
 
+	// Sort the failures so the joined message (reported on the gateway status,
+	// as an event, and on every entity's Programmed condition) is stable across
+	// retries - the endpoints come from a set, so their iteration order is not.
+	slices.Sort(failures)
+
 	if err := i.reportPushStatus(ctx, gwNN, endpoints.Len(), failures); err != nil {
 		// The push itself is what matters: a status patch failure must not fail
 		// the sync (it would be retried together with the next push anyway), so
@@ -156,10 +173,10 @@ func (i *Instance) sendConfigToDataPlanes(
 	}
 
 	if len(failures) > 0 {
-		return fmt.Errorf("failed to push configuration to %d of %d Admin API endpoints: %s",
+		return true, fmt.Errorf("failed to push configuration to %d of %d Admin API endpoints: %s",
 			len(failures), endpoints.Len(), strings.Join(failures, "; "))
 	}
-	return nil
+	return true, nil
 }
 
 // failPush reports a push that failed before any endpoint could be contacted

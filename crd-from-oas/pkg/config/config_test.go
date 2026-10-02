@@ -527,6 +527,47 @@ apiGroupVersions:
 		assert.Contains(t, err.Error(), "ops.skipGetForUID and ops.getForUID are mutually exclusive")
 	})
 
+	t.Run("valid getForUID with only listItemsSource", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /services
+        ops:
+          getForUID:
+            listItemsSource: slice
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		cfg, err := LoadProjectConfig(path)
+		require.NoError(t, err)
+
+		konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
+		require.NotNil(t, konnect)
+		require.Len(t, konnect.Types, 1)
+		require.NotNil(t, konnect.Types[0].OpsGetForUID)
+		assert.Equal(t, GetForUIDListItemsSourceSlice, konnect.Types[0].OpsGetForUID.ListItemsSource)
+		assert.Empty(t, konnect.Types[0].OpsGetForUID.MatchFields)
+	})
+
+	t.Run("invalid empty getForUID", func(t *testing.T) {
+		content := `
+apiGroupVersions:
+  konnect.konghq.com/v1alpha1:
+    types:
+      - path: /services
+        ops:
+          getForUID: {}
+`
+		path := filepath.Join(t.TempDir(), "config.yaml")
+		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+		_, err := LoadProjectConfig(path)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "ops.getForUID.matchFields is required")
+	})
+
 	t.Run("invalid getForUID listItemsSource", func(t *testing.T) {
 		content := `
 apiGroupVersions:

@@ -90,10 +90,6 @@ type opsGetForUIDMatchFieldData struct {
 	// string/pointer, causing the template to emit matchSliceField instead of
 	// matchStringField.
 	SliceMatch bool
-	// SensitiveMatch is true when the object field is a SensitiveDataSource
-	// rather than a plain string, causing the template to emit
-	// matchSensitiveDataSourceField instead of matchStringField.
-	SensitiveMatch bool
 	// SkipWhenUnset is true when an empty object-side value must not block the
 	// match, causing the template to emit matchOptionalStringField instead of
 	// matchStringField.
@@ -198,28 +194,28 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 	if opsConfig != nil && opsConfig.GetForUID != nil {
 		matchFields = make([]opsGetForUIDMatchFieldData, 0, len(opsConfig.GetForUID.MatchFields))
 		for _, field := range opsConfig.GetForUID.MatchFields {
-			sensitive := g.isSensitiveMatchField(entityName, field.ObjectField)
-			if sensitive {
-				if valueGoType, ok := g.sensitiveMatchFieldValueType(entityName, field.ObjectField); ok && valueGoType != "string" {
-					return nil, fmt.Errorf(
-						"entity %q: getForUID.matchFields.objectField %q resolves to a non-string secret reference leaf (%s); matchSensitiveDataSourceField only supports string-valued SensitiveDataSource fields",
-						entityName, field.ObjectField, valueGoType,
-					)
-				}
+			if g.isSensitiveMatchField(entityName, field.ObjectField) {
+				// The generated lookup has no client to resolve a Secret, so it
+				// could not compare such a field and would match an entity with
+				// any value, e.g. one created outside the operator.
+				return nil, fmt.Errorf(
+					"entity %q: getForUID.matchFields.objectField %q is sourced from a Secret, which the generated lookup cannot resolve; "+
+						"set ops.skipGetForUID and write a lookup that resolves it",
+					entityName, field.ObjectField,
+				)
 			}
-			sliceMatch := !sensitive && isArrayMatchField(schema, field.ResponseField)
-			if field.SkipWhenUnset && (sensitive || sliceMatch) {
+			sliceMatch := isArrayMatchField(schema, field.ResponseField)
+			if field.SkipWhenUnset && sliceMatch {
 				return nil, fmt.Errorf(
 					"entity %q: getForUID.matchFields.objectField %q sets skipWhenUnset, which is only supported for plain string-like fields",
 					entityName, field.ObjectField,
 				)
 			}
 			matchFields = append(matchFields, opsGetForUIDMatchFieldData{
-				ObjectField:    field.ObjectField,
-				ResponseField:  field.ResponseField,
-				SliceMatch:     sliceMatch,
-				SensitiveMatch: sensitive,
-				SkipWhenUnset:  field.SkipWhenUnset,
+				ObjectField:   field.ObjectField,
+				ResponseField: field.ResponseField,
+				SliceMatch:    sliceMatch,
+				SkipWhenUnset: field.SkipWhenUnset,
 			})
 		}
 		if opsConfig.GetForUID.RootUnion != nil {

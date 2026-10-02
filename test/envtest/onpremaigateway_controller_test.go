@@ -179,10 +179,10 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 		assert.True(ct, k8sutils.HasConditionTrue(aigatewayv1alpha1.ReadyType, onprem))
 	}, waitTime, tickTime)
 
-	// The reconciler writes no status in this setup (DataplaneClient is unset), so an entity
-	// create triggers exactly one reconcile and one change notification, with no requeue
-	// after it. The log line carries no create/delete distinction, so the deletion check
-	// below only counts notifications logged after the delete.
+	// The reconcilers write the Programmed condition on the OnPremAIGateway status and
+	// requeue after each status update, so an entity create may trigger more than one
+	// reconcile. The log line carries no create/delete distinction, so the deletion
+	// check below only counts notifications logged after the delete.
 	countNotifications := func(name string, since time.Time) (n int) {
 		for _, entry := range logs.All() {
 			if entry.Time.After(since) &&

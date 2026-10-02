@@ -5,7 +5,7 @@ go 1.27.1
 require (
 	cloud.google.com/go/container v1.54.0
 	dario.cat/mergo v1.0.2
-	github.com/Kong/ai-deck-converter v0.19.4
+	github.com/Kong/ai-deck-converter v0.19.9-0.20261001144049-e51034bba812
 	github.com/Kong/sdk-konnect-go v0.71.0
 	github.com/avast/retry-go/v5 v5.0.0
 	github.com/blang/semver/v4 v4.0.0
@@ -17,7 +17,7 @@ require (
 	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/go-logr/logr v1.4.4
 	github.com/go-logr/zapr v1.3.0
-	github.com/goccy/go-json v0.10.6
+	github.com/goccy/go-json v0.11.1
 	github.com/gohugoio/hashstructure v1.1.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.22.1

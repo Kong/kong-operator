@@ -50,6 +50,12 @@ func TestCreateAIGatewayAuthStrategy_UsesSDKOpsConversion(t *testing.T) {
 	obj.SetGatewayID(parentID)
 	expectedRequest, err := obj.ToCreateAIGatewayAuthStrategyRequest(ctx, cl)
 	require.NoError(t, err)
+	if expectedRequest.AIGatewayAuthStrategyKeyAuth != nil {
+		expectedRequest.AIGatewayAuthStrategyKeyAuth.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayAuthStrategyKeyAuth.Labels)
+	}
+	if expectedRequest.AIGatewayAuthStrategyOpenIDConnect != nil {
+		expectedRequest.AIGatewayAuthStrategyOpenIDConnect.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayAuthStrategyOpenIDConnect.Labels)
+	}
 	expectedID := "aigatewayauthstrategy-id"
 
 	sdk.EXPECT().
@@ -82,6 +88,12 @@ func TestCreateAIGatewayAuthStrategy_PropagatesSDKError(t *testing.T) {
 	obj.SetGatewayID(parentID)
 	expectedRequest, err := obj.ToCreateAIGatewayAuthStrategyRequest(ctx, cl)
 	require.NoError(t, err)
+	if expectedRequest.AIGatewayAuthStrategyKeyAuth != nil {
+		expectedRequest.AIGatewayAuthStrategyKeyAuth.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayAuthStrategyKeyAuth.Labels)
+	}
+	if expectedRequest.AIGatewayAuthStrategyOpenIDConnect != nil {
+		expectedRequest.AIGatewayAuthStrategyOpenIDConnect.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayAuthStrategyOpenIDConnect.Labels)
+	}
 	sdkErr := errors.New("sdk error")
 
 	sdk.EXPECT().
@@ -109,6 +121,12 @@ func TestUpdateAIGatewayAuthStrategy_UsesSDKOpsConversion(t *testing.T) {
 	obj.SetKonnectID("aigatewayauthstrategy-id")
 	expectedRequest, err := obj.ToUpdateAIGatewayAuthStrategyRequest(ctx, cl)
 	require.NoError(t, err)
+	if expectedRequest.AIGatewayAuthStrategyKeyAuth != nil {
+		expectedRequest.AIGatewayAuthStrategyKeyAuth.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayAuthStrategyKeyAuth.Labels)
+	}
+	if expectedRequest.AIGatewayAuthStrategyOpenIDConnect != nil {
+		expectedRequest.AIGatewayAuthStrategyOpenIDConnect.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayAuthStrategyOpenIDConnect.Labels)
+	}
 
 	sdk.EXPECT().
 		UpdateAiGatewayAuthStrategy(
@@ -137,6 +155,12 @@ func TestUpdateAIGatewayAuthStrategy_PropagatesSDKError(t *testing.T) {
 	obj.SetKonnectID("aigatewayauthstrategy-id")
 	expectedRequest, err := obj.ToUpdateAIGatewayAuthStrategyRequest(ctx, cl)
 	require.NoError(t, err)
+	if expectedRequest.AIGatewayAuthStrategyKeyAuth != nil {
+		expectedRequest.AIGatewayAuthStrategyKeyAuth.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayAuthStrategyKeyAuth.Labels)
+	}
+	if expectedRequest.AIGatewayAuthStrategyOpenIDConnect != nil {
+		expectedRequest.AIGatewayAuthStrategyOpenIDConnect.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayAuthStrategyOpenIDConnect.Labels)
+	}
 	sdkErr := errors.New("sdk error")
 
 	sdk.EXPECT().

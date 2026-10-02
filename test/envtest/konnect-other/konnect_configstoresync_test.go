@@ -470,46 +470,42 @@ func TestKonnectConfigStoreSyncEnvtestOrphanRecreate(t *testing.T) {
 
 func TestKonnectConfigStoreSyncEnvtestConflictOrder(t *testing.T) {
 	t.Parallel()
-	for _, firstName := range []string{"a-first", "z-first"} {
-		t.Run(firstName, func(t *testing.T) {
-			e := newConfigStoreSyncEnvtest(t)
-			cert1, key1 := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA))
-			cert2, key2 := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA))
-			firstSecret := e.secret(t, "first-source", map[string][]byte{"tls.crt": cert1, "tls.key": key1})
-			secondSecret := e.secret(t, "second-source", map[string][]byte{"tls.crt": cert2, "tls.key": key2})
-			first := e.sync(t, firstName, firstSecret.Name, combinedSyncSpec("shared-key"))
-			e.waitReady(t, first, combinedHash(t, cert1, key1))
-			e.waitSettled(t)
+	// Creation timestamps have second precision, so both syncs may get the same
+	// timestamp and the tie is broken by name. Name the syncs so that creation
+	// order and name order agree; TestKonnectConfigStoreSyncConflictElection
+	// covers creation order beating name order with explicit timestamps.
+	e := newConfigStoreSyncEnvtest(t)
+	cert1, key1 := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA))
+	cert2, key2 := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA))
+	firstSecret := e.secret(t, "first-source", map[string][]byte{"tls.crt": cert1, "tls.key": key1})
+	secondSecret := e.secret(t, "second-source", map[string][]byte{"tls.crt": cert2, "tls.key": key2})
+	first := e.sync(t, "a-first", firstSecret.Name, combinedSyncSpec("shared-key"))
+	e.waitReady(t, first, combinedHash(t, cert1, key1))
+	e.waitSettled(t)
 
-			// Ensure the manager's *indexed cache*, not just the API server,
-			// sees the first owner's persisted status before creating the
-			// challenger. This makes the assertion independent of watch order.
-			require.Eventually(t, func() bool {
-				var listed konnectv1alpha1.KonnectConfigStoreSyncList
-				if err := e.cache.List(e.ctx, &listed, client.MatchingFields{
-					index.IndexFieldKonnectConfigStoreSyncOnStoreKey: e.storeID + "/shared-key",
-				}); err != nil {
-					return false
-				}
-				return len(listed.Items) == 1 && listed.Items[0].Name == first.Name
-			}, consts.WaitTime, consts.TickTime)
+	// Ensure the manager's *indexed cache*, not just the API server,
+	// sees the first owner's persisted status before creating the
+	// challenger. This makes the assertion independent of watch order.
+	require.Eventually(t, func() bool {
+		var listed konnectv1alpha1.KonnectConfigStoreSyncList
+		if err := e.cache.List(e.ctx, &listed, client.MatchingFields{
+			index.IndexFieldKonnectConfigStoreSyncOnStoreKey: e.storeID + "/shared-key",
+		}); err != nil {
+			return false
+		}
+		return len(listed.Items) == 1 && listed.Items[0].Name == first.Name
+	}, consts.WaitTime, consts.TickTime)
 
-			e.remote.ResetCalls()
-			secondName := "z-second"
-			if firstName == "z-first" {
-				secondName = "a-second" // name order must not beat creation time
-			}
-			second := e.sync(t, secondName, secondSecret.Name, combinedSyncSpec("shared-key"))
-			got := e.waitSync(t, second, konnectv1alpha1.KonnectConfigStoreSyncSyncedConditionType,
-				konnectv1alpha1.KonnectConfigStoreSyncSyncedReasonKeyConflict)
-			assert.Empty(t, got.Status.References)
-			assert.Empty(t, e.remote.MutatingCalls(), "losing sync may not overwrite the winner")
-			assertCombinedValue(t, e.value(t, "shared-key"), cert1, key1)
-			assert.Equal(t, metav1.ConditionTrue,
-				apimeta.FindStatusCondition(e.getSync(t, first).Status.Conditions,
-					konnectv1alpha1.KonnectConfigStoreSyncSyncedConditionType).Status)
-		})
-	}
+	e.remote.ResetCalls()
+	second := e.sync(t, "z-second", secondSecret.Name, combinedSyncSpec("shared-key"))
+	got := e.waitSync(t, second, konnectv1alpha1.KonnectConfigStoreSyncSyncedConditionType,
+		konnectv1alpha1.KonnectConfigStoreSyncSyncedReasonKeyConflict)
+	assert.Empty(t, got.Status.References)
+	assert.Empty(t, e.remote.MutatingCalls(), "losing sync may not overwrite the winner")
+	assertCombinedValue(t, e.value(t, "shared-key"), cert1, key1)
+	assert.Equal(t, metav1.ConditionTrue,
+		apimeta.FindStatusCondition(e.getSync(t, first).Status.Conditions,
+			konnectv1alpha1.KonnectConfigStoreSyncSyncedConditionType).Status)
 }
 
 func grantConfigStoreSyncReference(t *testing.T, e *configStoreSyncEnvtest, fromNS, toNS, kind, name string) *configurationv1alpha1.KongReferenceGrant {

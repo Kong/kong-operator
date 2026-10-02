@@ -129,15 +129,17 @@ spec:
     # Step 9: Verify KongSNI has not been created yet.
     - name: 9-assert-no-kongsni
       description: Verify no KongSNI exists before ReferenceGrant
-      try:
-        - script:
-            env:
-              - name: NAMESPACE
-                value: ($gateway_namespace)
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-            content: |
-              bash ../../common/scripts/assert_no_kongsni.sh
+      use:
+        template: ../../common/_step_templates/assert-no-kong-resource.yaml
+      bindings:
+        - name: resource_type
+          value: kongsnis.configuration.konghq.com
+        - name: gateway_name
+          value: ($gateway_name)
+        - name: gateway_namespace
+          value: ($gateway_namespace)
+        - name: namespace
+          value: ($gateway_namespace)
 
     # Step 10: Create ReferenceGrant to allow Gateway -> Secret cross-namespace reference.
     - name: 10-create-reference-grant

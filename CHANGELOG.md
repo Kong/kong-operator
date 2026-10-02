@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [Unreleased](#unreleased)
 - [v2.4.0-rapid.2.0](#v240-rapid20)
 - [v2.4.0-rapid.1](#v240-rapid1)
 - [v2.3.2](#v232)
@@ -66,6 +67,71 @@
 - [v0.2.0](#v020)
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
+
+## [Unreleased]
+
+### Changed
+
+- On-prem AI Gateway: each `OnPremAIGateway`'s control plane instance now runs
+  a Secret watcher that re-renders the configuration when a Secret referenced
+  by a configuration entity's `secretRef` changes, instead of waiting for an
+  unrelated entity event. The instance's Secret cache mirrors the operator's
+  `--secret-label-selector` in the gateway's namespace, so only Secrets
+  carrying that selector label (e.g. `konghq.com/secret=true`) are read;
+  an existing but unlabeled Secret is reported as not found.
+  Cross-namespace references to the `OnPremAIGateway` (and, as before,
+  cross-namespace `secretRef`s) are now rejected with a per-entity error
+  instead of failing with a confusing not-found error.
+  [#5951](https://github.com/Kong/kong-operator/pull/5951)
+- `Programmed` conditions set by the operator now preserve their
+  `LastTransitionTime` when the condition status does not change, and are
+  updated when only the condition message changes (e.g. a per-entity error
+  text changing while the condition stays `Failed`).
+  [#5930](https://github.com/Kong/kong-operator/pull/5930)
+- `DataPlane`: the default `KONG_PROXY_LISTEN` now enables `http2` on the
+  plain HTTP proxy, so gRPC over cleartext HTTP/2 (h2c), e.g. for `GRPCRoute`s
+  attached to `HTTP` listeners, works without overriding `KONG_PROXY_LISTEN`.
+  HTTP/1.1 is still served on the same port. **Existing `DataPlane` `Deployment`s
+  that use the default are rolled out on upgrade.**
+  The minimum supported `DataPlane` image version is raised from 3.4.1 to 3.6,
+  because Kong Gateway before 3.6 can't serve HTTP/1.1 and h2c on the same port.
+  The operator doesn't create or update `Deployment`s for `DataPlane`s with older
+  images. Kong Gateway versions older than 3.6 (previously 3.4.1) are no longer
+  supported by the operator and has to be upgraded.
+  [#5925](https://github.com/Kong/kong-operator/pull/5925)
+
+### Fixes
+
+- Konnect: the operator now adds its labels (`k8s-uid`, `managed-by`, ...) to
+  the Konnect entities of `AIGatewayAuthStrategy`, `AIGatewayModel`,
+  `AIGatewayModelProvider`, `AIGatewayMCPServer`, `EventGatewayListenerPolicy`,
+  `EventGatewayVirtualClusterPolicy`, `EventGatewayVirtualClusterProducePolicy`
+  and `EventGatewayVirtualClusterConsumePolicy`.
+  For `AIGatewayAuthStrategy`, `AIGatewayModelProvider` and the three
+  `EventGatewayVirtualCluster` policies, the operator could not find the
+  Konnect entity it owns, so it could not recover a lost entity ID or clean up
+  the entity. It now finds it by its `k8s-uid` label.
+  `AIGatewayModel`, `AIGatewayMCPServer`, `AIGatewayConsumer`,
+  `AIGatewayConsumerGroup`, `AIGatewayConsumerCredential`,
+  `AIGatewayDataPlaneCertificate` and `EventGatewayListenerPolicy` are also
+  found by their `k8s-uid` label now, instead of by name (or certificate and
+  title), which could match an entity with the same name that the operator did
+  not create.
+  For the Event Gateway entities (`KonnectEventGateway`, `EventGatewayBackendCluster`,
+  `EventGatewayListener`, `EventGatewayVirtualCluster`,
+  `EventGatewaySchemaRegistry`, `EventGatewayDataPlaneCertificate` and the
+  Event Gateway policies), a create rejected because the name is already taken
+  is now handled like a conflict: Konnect reports it as a 400 Bad Request
+  (`name: must be unique`) instead of a 409, so the operator previously never
+  looked up the entity it had already created.
+  `EventGatewayDataPlaneCertificate`s, which have no labels in Konnect, are
+  found by their certificate (resolved from its Secret), name and description,
+  so one with the same name but another certificate is never taken over.
+  Upgrading: Konnect entities created by earlier releases get the labels on
+  their next update. `AIGatewayDataPlaneCertificate`s, which Konnect cannot
+  update, keep being found by their certificate, title and description when
+  they carry no `k8s-uid` label.
+  [#5947](https://github.com/Kong/kong-operator/pull/5947)
 
 ## [v2.4.0-rapid.2.0]
 
@@ -3589,6 +3655,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[Unreleased]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.2.0..HEAD
 [v2.4.0-rapid.2.0]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.1..v2.4.0-rapid.2.0
 [v2.4.0-rapid.1]: https://github.com/Kong/kong-operator/compare/v2.3.1..v2.4.0-rapid.1
 [v2.3.2]: https://github.com/Kong/kong-operator/compare/v2.3.1..v2.3.2

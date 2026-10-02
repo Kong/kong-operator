@@ -31,6 +31,12 @@ func createEventGatewayListenerPolicy(
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
+	if req.EventGatewayListenerPolicyCreate.EventGatewayTLSListenerPolicy != nil {
+		req.EventGatewayListenerPolicyCreate.EventGatewayTLSListenerPolicy.Labels = WithKubernetesMetadataLabels(obj, req.EventGatewayListenerPolicyCreate.EventGatewayTLSListenerPolicy.Labels)
+	}
+	if req.EventGatewayListenerPolicyCreate.ForwardToVirtualClusterPolicy != nil {
+		req.EventGatewayListenerPolicyCreate.ForwardToVirtualClusterPolicy.Labels = WithKubernetesMetadataLabels(obj, req.EventGatewayListenerPolicyCreate.ForwardToVirtualClusterPolicy.Labels)
+	}
 	req.GatewayID = gatewayID
 	req.ListenerID = eventGatewayListenerID
 
@@ -64,6 +70,12 @@ func updateEventGatewayListenerPolicy(
 	req, err := obj.ToUpdateEventGatewayListenerPolicyRequest(ctx, cl)
 	if err != nil {
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
+	}
+	if req.EventGatewayListenerPolicyUpdate.EventGatewayTLSListenerSensitiveDataAwarePolicy != nil {
+		req.EventGatewayListenerPolicyUpdate.EventGatewayTLSListenerSensitiveDataAwarePolicy.Labels = WithKubernetesMetadataLabels(obj, req.EventGatewayListenerPolicyUpdate.EventGatewayTLSListenerSensitiveDataAwarePolicy.Labels)
+	}
+	if req.EventGatewayListenerPolicyUpdate.ForwardToVirtualClusterPolicy != nil {
+		req.EventGatewayListenerPolicyUpdate.ForwardToVirtualClusterPolicy.Labels = WithKubernetesMetadataLabels(obj, req.EventGatewayListenerPolicyUpdate.ForwardToVirtualClusterPolicy.Labels)
 	}
 	req.GatewayID = gatewayID
 	req.ListenerID = eventGatewayListenerID
@@ -117,6 +129,16 @@ func getEventGatewayListenerPolicyForUID(
 	if eventGatewayListenerID == "" {
 		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "EventGatewayListener", Op: GetOp}
 	}
+
+	// Without a UID every unlabeled Konnect entity would match below.
+	uid := string(obj.GetUID())
+	if uid == "" {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+
+	// TODO: pass a Filter to ListEventGatewayListenerPolicies (e.g. by name/labels) so we
+	// do not page through every entity in the tenant. Filter types and
+	// fields are entity-specific; derive from OpenAPI schema.
 	resp, err := sdk.ListEventGatewayListenerPolicies(ctx, sdkkonnectops.ListEventGatewayListenerPoliciesRequest{
 		GatewayID:  gatewayID,
 		ListenerID: eventGatewayListenerID,
@@ -128,64 +150,13 @@ func getEventGatewayListenerPolicyForUID(
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
-	unionField := obj.Spec.APISpec.EventGatewayListenerPolicyConfig
-	if unionField == nil {
-		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
-	}
-
-	switch unionField.Type {
-	case "tlsServer":
-		selected := unionField.EventGatewayTLSListen
-		if selected == nil {
-			return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	for _, entry := range resp.ListEventGatewayListenerPoliciesResponse {
+		if entry.GetLabels()[KubernetesUIDLabelKey] != uid {
+			continue
 		}
-		for _, entry := range resp.ListEventGatewayListenerPoliciesResponse {
-			if entry.GetType() != "tls_server" {
-				continue
-			}
-			if !matchStringField(selected.Name, entry.GetName()) {
-				continue
-			}
-			switch id := any(entry.GetID()).(type) {
-			case string:
-				if id != "" {
-					return id, nil
-				}
-			case *string:
-				if id != nil && *id != "" {
-					return *id, nil
-				}
-			default:
-				return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
-			}
+		if entry.GetID() != "" {
+			return entry.GetID(), nil
 		}
-	case "forwardToVirtualCluster":
-		selected := unionField.ForwardToVirtualClust
-		if selected == nil {
-			return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
-		}
-		for _, entry := range resp.ListEventGatewayListenerPoliciesResponse {
-			if entry.GetType() != "forward_to_virtual_cluster" {
-				continue
-			}
-			if !matchStringField(selected.Name, entry.GetName()) {
-				continue
-			}
-			switch id := any(entry.GetID()).(type) {
-			case string:
-				if id != "" {
-					return id, nil
-				}
-			case *string:
-				if id != nil && *id != "" {
-					return *id, nil
-				}
-			default:
-				return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
-			}
-		}
-	default:
-		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 	}
 
 	return "", EntityWithMatchingUIDNotFoundError{Entity: obj}

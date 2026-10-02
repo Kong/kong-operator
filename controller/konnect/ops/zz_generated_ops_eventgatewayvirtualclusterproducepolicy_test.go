@@ -49,6 +49,18 @@ func TestCreateEventGatewayVirtualClusterProducePolicy_UsesSDKOpsConversion(t *t
 	obj.SetVirtualClusterID(virtualClusterID)
 	expectedRequest, err := obj.Spec.APISpec.ToCreateEventGatewayVirtualClusterProducePolicyRequest()
 	require.NoError(t, err)
+	if expectedRequest.EventGatewayProducePolicyCreate != nil && expectedRequest.EventGatewayProducePolicyCreate.EventGatewayModifyHeadersPolicyCreate != nil {
+		expectedRequest.EventGatewayProducePolicyCreate.EventGatewayModifyHeadersPolicyCreate.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayProducePolicyCreate.EventGatewayModifyHeadersPolicyCreate.Labels)
+	}
+	if expectedRequest.EventGatewayProducePolicyCreate != nil && expectedRequest.EventGatewayProducePolicyCreate.EventGatewayProduceSchemaValidationPolicy != nil {
+		expectedRequest.EventGatewayProducePolicyCreate.EventGatewayProduceSchemaValidationPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayProducePolicyCreate.EventGatewayProduceSchemaValidationPolicy.Labels)
+	}
+	if expectedRequest.EventGatewayProducePolicyCreate != nil && expectedRequest.EventGatewayProducePolicyCreate.EventGatewayEncryptPolicy != nil {
+		expectedRequest.EventGatewayProducePolicyCreate.EventGatewayEncryptPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayProducePolicyCreate.EventGatewayEncryptPolicy.Labels)
+	}
+	if expectedRequest.EventGatewayProducePolicyCreate != nil && expectedRequest.EventGatewayProducePolicyCreate.EventGatewayParsedRecordEncryptFieldsPolicyCreate != nil {
+		expectedRequest.EventGatewayProducePolicyCreate.EventGatewayParsedRecordEncryptFieldsPolicyCreate.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayProducePolicyCreate.EventGatewayParsedRecordEncryptFieldsPolicyCreate.Labels)
+	}
 	expectedRequest.GatewayID = gatewayID
 	expectedRequest.VirtualClusterID = virtualClusterID
 	expectedID := "eventgatewayvirtualclusterproducepolicy-id"
@@ -81,6 +93,18 @@ func TestCreateEventGatewayVirtualClusterProducePolicy_PropagatesSDKError(t *tes
 	obj.SetVirtualClusterID(virtualClusterID)
 	expectedRequest, err := obj.Spec.APISpec.ToCreateEventGatewayVirtualClusterProducePolicyRequest()
 	require.NoError(t, err)
+	if expectedRequest.EventGatewayProducePolicyCreate != nil && expectedRequest.EventGatewayProducePolicyCreate.EventGatewayModifyHeadersPolicyCreate != nil {
+		expectedRequest.EventGatewayProducePolicyCreate.EventGatewayModifyHeadersPolicyCreate.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayProducePolicyCreate.EventGatewayModifyHeadersPolicyCreate.Labels)
+	}
+	if expectedRequest.EventGatewayProducePolicyCreate != nil && expectedRequest.EventGatewayProducePolicyCreate.EventGatewayProduceSchemaValidationPolicy != nil {
+		expectedRequest.EventGatewayProducePolicyCreate.EventGatewayProduceSchemaValidationPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayProducePolicyCreate.EventGatewayProduceSchemaValidationPolicy.Labels)
+	}
+	if expectedRequest.EventGatewayProducePolicyCreate != nil && expectedRequest.EventGatewayProducePolicyCreate.EventGatewayEncryptPolicy != nil {
+		expectedRequest.EventGatewayProducePolicyCreate.EventGatewayEncryptPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayProducePolicyCreate.EventGatewayEncryptPolicy.Labels)
+	}
+	if expectedRequest.EventGatewayProducePolicyCreate != nil && expectedRequest.EventGatewayProducePolicyCreate.EventGatewayParsedRecordEncryptFieldsPolicyCreate != nil {
+		expectedRequest.EventGatewayProducePolicyCreate.EventGatewayParsedRecordEncryptFieldsPolicyCreate.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayProducePolicyCreate.EventGatewayParsedRecordEncryptFieldsPolicyCreate.Labels)
+	}
 	expectedRequest.GatewayID = gatewayID
 	expectedRequest.VirtualClusterID = virtualClusterID
 	sdkErr := errors.New("sdk error")
@@ -110,6 +134,24 @@ func TestUpdateEventGatewayVirtualClusterProducePolicy_UsesSDKOpsConversion(t *t
 	obj.SetKonnectID("eventgatewayvirtualclusterproducepolicy-id")
 	expectedRequest, err := obj.Spec.APISpec.ToUpdateEventGatewayVirtualClusterProducePolicyRequest()
 	require.NoError(t, err)
+	if expectedRequest.EventGatewayProducePolicyUpdate != nil && expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayProduceSchemaValidationPolicy != nil {
+		expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayProduceSchemaValidationPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayProduceSchemaValidationPolicy.Labels)
+	}
+	if expectedRequest.EventGatewayProducePolicyUpdate != nil && expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayModifyHeadersPolicy != nil {
+		expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayModifyHeadersPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayModifyHeadersPolicy.Labels)
+	}
+	if expectedRequest.EventGatewayProducePolicyUpdate != nil && expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayEncryptPolicy != nil {
+		expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayEncryptPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayEncryptPolicy.Labels)
+	}
+	if expectedRequest.EventGatewayProducePolicyUpdate != nil && expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayParsedRecordEncryptFieldsPolicy != nil {
+		expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayParsedRecordEncryptFieldsPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayParsedRecordEncryptFieldsPolicy.Labels)
+	}
+	if expectedRequest.EventGatewayProducePolicyUpdate != nil && expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayParsedRecordTranscodeProducePolicy != nil {
+		expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayParsedRecordTranscodeProducePolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayParsedRecordTranscodeProducePolicy.Labels)
+	}
+	if expectedRequest.EventGatewayProducePolicyUpdate != nil && expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayParsedRecordMaskFieldsProducePolicy != nil {
+		expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayParsedRecordMaskFieldsProducePolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayParsedRecordMaskFieldsProducePolicy.Labels)
+	}
 	expectedRequest.GatewayID = gatewayID
 	expectedRequest.VirtualClusterID = virtualClusterID
 	expectedRequest.PolicyID = obj.GetKonnectStatus().GetKonnectID()
@@ -138,6 +180,24 @@ func TestUpdateEventGatewayVirtualClusterProducePolicy_PropagatesSDKError(t *tes
 	obj.SetKonnectID("eventgatewayvirtualclusterproducepolicy-id")
 	expectedRequest, err := obj.Spec.APISpec.ToUpdateEventGatewayVirtualClusterProducePolicyRequest()
 	require.NoError(t, err)
+	if expectedRequest.EventGatewayProducePolicyUpdate != nil && expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayProduceSchemaValidationPolicy != nil {
+		expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayProduceSchemaValidationPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayProduceSchemaValidationPolicy.Labels)
+	}
+	if expectedRequest.EventGatewayProducePolicyUpdate != nil && expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayModifyHeadersPolicy != nil {
+		expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayModifyHeadersPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayModifyHeadersPolicy.Labels)
+	}
+	if expectedRequest.EventGatewayProducePolicyUpdate != nil && expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayEncryptPolicy != nil {
+		expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayEncryptPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayEncryptPolicy.Labels)
+	}
+	if expectedRequest.EventGatewayProducePolicyUpdate != nil && expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayParsedRecordEncryptFieldsPolicy != nil {
+		expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayParsedRecordEncryptFieldsPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayParsedRecordEncryptFieldsPolicy.Labels)
+	}
+	if expectedRequest.EventGatewayProducePolicyUpdate != nil && expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayParsedRecordTranscodeProducePolicy != nil {
+		expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayParsedRecordTranscodeProducePolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayParsedRecordTranscodeProducePolicy.Labels)
+	}
+	if expectedRequest.EventGatewayProducePolicyUpdate != nil && expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayParsedRecordMaskFieldsProducePolicy != nil {
+		expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayParsedRecordMaskFieldsProducePolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayParsedRecordMaskFieldsProducePolicy.Labels)
+	}
 	expectedRequest.GatewayID = gatewayID
 	expectedRequest.VirtualClusterID = virtualClusterID
 	expectedRequest.PolicyID = obj.GetKonnectStatus().GetKonnectID()

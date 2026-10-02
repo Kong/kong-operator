@@ -21,8 +21,8 @@ github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c/go.mod h1:xomTg6
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/toml v1.4.0 h1:kuoIxZQy2WRRk1pttg9asf+WVv6tWQuBNVmK8+nqPr0=
 github.com/BurntSushi/toml v1.4.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
-github.com/Kong/ai-deck-converter v0.19.4 h1:RWl3gKyKDfuUfG3StX45elKTZx5KkGO1dXOCiylpfEU=
-github.com/Kong/ai-deck-converter v0.19.4/go.mod h1:tsirPu/2guK1tjGyBueqk82ULcY0LYsjvMSl+pbJE0I=
+github.com/Kong/ai-deck-converter v0.19.9-0.20261001144049-e51034bba812 h1:mz4msyghcRW7ALll+SqkBNCYtvwISjSTRrSXtutkydI=
+github.com/Kong/ai-deck-converter v0.19.9-0.20261001144049-e51034bba812/go.mod h1:tsirPu/2guK1tjGyBueqk82ULcY0LYsjvMSl+pbJE0I=
 github.com/Kong/go-diff v1.2.2 h1:KKKaqHc8IxuguFVIZMNt3bi6YuC/t9r7BGD8bOOpSgM=
 github.com/Kong/go-diff v1.2.2/go.mod h1:nlvdwVZQk3Rm+tbI0cDmKFrOjghtcZTrZBp+UruvvA8=
 github.com/Kong/gojsondiff v1.3.2 h1:qIOVq2mUXt+NXy8Be5gRUee9TP3Ve0MbQSafg9bXKZE=
@@ -265,8 +265,8 @@ github.com/go-task/slim-sprig/v3 v3.0.0 h1:sUs3vkvUymDpBKi3qH1YSqBQk9+9D/8M2mN1v
 github.com/go-task/slim-sprig/v3 v3.0.0/go.mod h1:W848ghGpv3Qj3dhTPRyJypKRiqCdHZiAzKg9hl15HA8=
 github.com/gobuffalo/flect v1.0.3 h1:xeWBM2nui+qnVvNM4S3foBhCAL2XgPU+a7FdpelbTq4=
 github.com/gobuffalo/flect v1.0.3/go.mod h1:A5msMlrHtLqh9umBSnvabjsMrCcCpAyzglnDvkbYKHs=
-github.com/goccy/go-json v0.10.6 h1:p8HrPJzOakx/mn/bQtjgNjdTcN+/S6FcG2CTtQOrHVU=
-github.com/goccy/go-json v0.10.6/go.mod h1:oq7eo15ShAhp70Anwd5lgX2pLfOS3QCiwU/PULtXL6M=
+github.com/goccy/go-json v0.11.1 h1:4FEh3QBVpTCIvrCDucNJU2LZYUM9sxxW5O0UuUhxumk=
+github.com/goccy/go-json v0.11.1/go.mod h1:z7UbbpDz59QAZPnhVSNOjPyprGnfWu/gT3J3EpeLXGU=
 github.com/gohugoio/hashstructure v1.1.0 h1:38yUfZBca6qXSbUpteLhjDGLNskclHaguFBYpjaRjf4=
 github.com/gohugoio/hashstructure v1.1.0/go.mod h1:Pz8dcwjZs6FBKWu9x/ZIChrTHIM175zfUJK0KLvC1z8=
 github.com/golang/protobuf v1.5.4 h1:i7eJL8qZTpSEXOPTxNKhASYpMn+8e5Q6AdndVa1dWek=

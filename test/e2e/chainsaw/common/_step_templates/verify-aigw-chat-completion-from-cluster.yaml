@@ -38,8 +38,8 @@ spec:
         env:
           - name: NAMESPACE
             value: ($namespace)
-          - name: DP_SVC
-            value: (join('', [($aigw_dp_name), '-ingress']))
+          - name: ADDRESS
+            value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
           - name: ROUTE_PATH
             value: ($route_path)
           - name: MODEL_ALIAS
@@ -53,4 +53,4 @@ spec:
           - name: REQUEST_HEADERS
             value: ($request_headers)
         content: |
-          bash ../../common/scripts/aigw_chat_completion_from_cluster.sh
+          bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh

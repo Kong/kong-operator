@@ -49,6 +49,12 @@ func TestCreateEventGatewayVirtualClusterPolicy_UsesSDKOpsConversion(t *testing.
 	obj.SetVirtualClusterID(virtualClusterID)
 	expectedRequest, err := obj.Spec.APISpec.ToCreateEventGatewayVirtualClusterClusterLevelPolicyRequest()
 	require.NoError(t, err)
+	if expectedRequest.EventGatewayClusterPolicyModify != nil && expectedRequest.EventGatewayClusterPolicyModify.EventGatewayACLsPolicy != nil {
+		expectedRequest.EventGatewayClusterPolicyModify.EventGatewayACLsPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayClusterPolicyModify.EventGatewayACLsPolicy.Labels)
+	}
+	if expectedRequest.EventGatewayClusterPolicyModify != nil && expectedRequest.EventGatewayClusterPolicyModify.EventGatewayRequestRuleValidatorPolicy != nil {
+		expectedRequest.EventGatewayClusterPolicyModify.EventGatewayRequestRuleValidatorPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayClusterPolicyModify.EventGatewayRequestRuleValidatorPolicy.Labels)
+	}
 	expectedRequest.GatewayID = gatewayID
 	expectedRequest.VirtualClusterID = virtualClusterID
 	expectedID := "eventgatewayvirtualclusterpolicy-id"
@@ -81,6 +87,12 @@ func TestCreateEventGatewayVirtualClusterPolicy_PropagatesSDKError(t *testing.T)
 	obj.SetVirtualClusterID(virtualClusterID)
 	expectedRequest, err := obj.Spec.APISpec.ToCreateEventGatewayVirtualClusterClusterLevelPolicyRequest()
 	require.NoError(t, err)
+	if expectedRequest.EventGatewayClusterPolicyModify != nil && expectedRequest.EventGatewayClusterPolicyModify.EventGatewayACLsPolicy != nil {
+		expectedRequest.EventGatewayClusterPolicyModify.EventGatewayACLsPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayClusterPolicyModify.EventGatewayACLsPolicy.Labels)
+	}
+	if expectedRequest.EventGatewayClusterPolicyModify != nil && expectedRequest.EventGatewayClusterPolicyModify.EventGatewayRequestRuleValidatorPolicy != nil {
+		expectedRequest.EventGatewayClusterPolicyModify.EventGatewayRequestRuleValidatorPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayClusterPolicyModify.EventGatewayRequestRuleValidatorPolicy.Labels)
+	}
 	expectedRequest.GatewayID = gatewayID
 	expectedRequest.VirtualClusterID = virtualClusterID
 	sdkErr := errors.New("sdk error")
@@ -110,6 +122,12 @@ func TestUpdateEventGatewayVirtualClusterPolicy_UsesSDKOpsConversion(t *testing.
 	obj.SetKonnectID("eventgatewayvirtualclusterpolicy-id")
 	expectedRequest, err := obj.Spec.APISpec.ToUpdateEventGatewayVirtualClusterClusterLevelPolicyRequest()
 	require.NoError(t, err)
+	if expectedRequest.EventGatewayClusterPolicyModify != nil && expectedRequest.EventGatewayClusterPolicyModify.EventGatewayACLsPolicy != nil {
+		expectedRequest.EventGatewayClusterPolicyModify.EventGatewayACLsPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayClusterPolicyModify.EventGatewayACLsPolicy.Labels)
+	}
+	if expectedRequest.EventGatewayClusterPolicyModify != nil && expectedRequest.EventGatewayClusterPolicyModify.EventGatewayRequestRuleValidatorPolicy != nil {
+		expectedRequest.EventGatewayClusterPolicyModify.EventGatewayRequestRuleValidatorPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayClusterPolicyModify.EventGatewayRequestRuleValidatorPolicy.Labels)
+	}
 	expectedRequest.GatewayID = gatewayID
 	expectedRequest.VirtualClusterID = virtualClusterID
 	expectedRequest.PolicyID = obj.GetKonnectStatus().GetKonnectID()
@@ -138,6 +156,12 @@ func TestUpdateEventGatewayVirtualClusterPolicy_PropagatesSDKError(t *testing.T)
 	obj.SetKonnectID("eventgatewayvirtualclusterpolicy-id")
 	expectedRequest, err := obj.Spec.APISpec.ToUpdateEventGatewayVirtualClusterClusterLevelPolicyRequest()
 	require.NoError(t, err)
+	if expectedRequest.EventGatewayClusterPolicyModify != nil && expectedRequest.EventGatewayClusterPolicyModify.EventGatewayACLsPolicy != nil {
+		expectedRequest.EventGatewayClusterPolicyModify.EventGatewayACLsPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayClusterPolicyModify.EventGatewayACLsPolicy.Labels)
+	}
+	if expectedRequest.EventGatewayClusterPolicyModify != nil && expectedRequest.EventGatewayClusterPolicyModify.EventGatewayRequestRuleValidatorPolicy != nil {
+		expectedRequest.EventGatewayClusterPolicyModify.EventGatewayRequestRuleValidatorPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayClusterPolicyModify.EventGatewayRequestRuleValidatorPolicy.Labels)
+	}
 	expectedRequest.GatewayID = gatewayID
 	expectedRequest.VirtualClusterID = virtualClusterID
 	expectedRequest.PolicyID = obj.GetKonnectStatus().GetKonnectID()

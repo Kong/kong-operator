@@ -36,23 +36,6 @@ func matchSliceField(want, got []string) bool {
 	return slices.Equal(want, got)
 }
 
-// matchSensitiveDataSourceField compares a SensitiveDataSource against a
-// string-like SDK response field. When the source is inline, the Value is
-// compared; when it is a secretRef (Value is nil), the comparison is skipped
-// and the function returns true so the field does not block a UID match.
-func matchSensitiveDataSourceField[TGot ~string | ~*string](
-	want interface {
-		GetValue() string
-	},
-	got TGot,
-) bool {
-	if want.GetValue() == "" {
-		// secretRef: resolved value is not available here — skip match.
-		return true
-	}
-	return want.GetValue() == stringValueGeneric(got)
-}
-
 func stringValueGeneric[
 	T ~string | ~*string,
 ](v T) string {
