@@ -377,6 +377,9 @@ func TestBuildDocument_CrossNamespaceEntityRejected(t *testing.T) {
 	for _, opt := range index.OptionsForAIGatewayAuthStrategy() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
+	for _, opt := range index.OptionsForAIGatewayConsumer() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
 	cl := builder.Build()
 
 	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
