@@ -220,6 +220,7 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 				additionalMatchingLabels client.MatchingLabels
 				expectedResult           op.Result
 				expectedError            error
+				expectedSecretName       string
 				objectList               client.ObjectList
 			}{
 				{
@@ -235,7 +236,7 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 					expectedError:            nil,
 				},
 				{
-					name:      "existing secret certificate gets deleted and re-created with it doesn't have the expected contents",
+					name:      "existing secret with a broken certificate gets renewed in place, keeping its name",
 					dataPlane: createDataPlane(NN{Name: "dp-1", Namespace: "ns"}, WithUUID(types.UID("1234"))),
 					subject:   "test-subject",
 					mtlsCASecretNN: NN{
@@ -243,6 +244,8 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 						Namespace: "ns",
 					},
 					additionalMatchingLabels: nil,
+					expectedResult:           op.Updated,
+					expectedSecretName:       "secret-1",
 					objectList: &corev1.SecretList{
 						Items: []corev1.Secret{
 							func() corev1.Secret {
@@ -264,8 +267,46 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 							}(),
 						},
 					},
-					expectedResult: op.Created,
-					expectedError:  nil,
+				},
+				{
+					name:      "existing secret with a certificate for a different subject gets renewed in place, keeping its name",
+					dataPlane: createDataPlane(NN{Name: "dp-1", Namespace: "ns"}, WithUUID(types.UID("1234"))),
+					subject:   "test-subject",
+					mtlsCASecretNN: NN{
+						Name:      "test-mtls-secret",
+						Namespace: "ns",
+					},
+					additionalMatchingLabels: nil,
+					expectedResult:           op.Updated,
+					expectedSecretName:       "secret-1",
+					objectList: &corev1.SecretList{
+						Items: []corev1.Secret{
+							func() corev1.Secret {
+								dp := createDataPlane(NN{Name: "dp-1", Namespace: "ns"}, WithUUID(types.UID("1234")))
+
+								labels := k8sresources.GetManagedLabelForOwner(dp)
+								cert, _ := certificate.MustGenerateCertPEMFormat(
+									certificate.WithCommonName("some-other-subject"),
+								)
+								return corev1.Secret{
+									Name:      "secret-1",
+									Namespace: "ns",
+									Labels:    labels,
+									Data: map[string][]byte{
+										"tls.crt": cert,
+										"tls.key": []byte("not-a-key-but-decodable-check-is-on-the-cert-only"),
+									},
+									OwnerReferences: []metav1.OwnerReference{
+										{
+											Kind:       "DataPlane",
+											APIVersion: operatorv1beta1.SchemeGroupVersion.Group + "/" + operatorv1beta1.SchemeGroupVersion.Version,
+											UID:        types.UID("1234"),
+										},
+									},
+								}
+							}(),
+						},
+					},
 				},
 				{
 					name:      "when more than 1 secret exists, secrets are reduced",
@@ -384,6 +425,18 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 					_, algorithm, err := ParsePrivateKey(tlsKeyPemBlock)
 					require.NoError(t, err)
 					require.Contains(t, strings.ToLower(algorithm.String()), keyType, "generated private key algorithm is not as expected")
+
+					if tc.expectedSecretName != "" {
+						// In-place renewal: the Secret name must be preserved, otherwise the
+						// owner's Deployment gets repointed to the new Secret name, which
+						// changes the pod template and triggers a needless rolling update.
+						require.Equal(t, tc.expectedSecretName, secret.Name, "renewed secret should keep its name")
+						certBlock, _ := pem.Decode(secret.Data["tls.crt"])
+						require.NotNil(t, certBlock)
+						parsedCert, err := x509.ParseCertificate(certBlock.Bytes)
+						require.NoError(t, err)
+						require.Equal(t, tc.subject, parsedCert.Subject.CommonName, "renewed certificate should be issued for the expected subject")
+					}
 				})
 			}
 		})
