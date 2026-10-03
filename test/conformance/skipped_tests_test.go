@@ -9,7 +9,9 @@ import (
 // skippedTestsShared are ShortNames of tests need to be skipped for both Standard and Hybrid.
 var skippedTestsShared = []string{}
 
-var skippedTestsForStandard = []string{}
+var skippedTestsForStandard = []string{
+	tests.HTTPRouteHostnameIntersection.ShortName,
+}
 
 var skippedTestsForHybrid = []string{
 

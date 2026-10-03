@@ -4,6 +4,7 @@ import (
 	"errors"
 	"maps"
 	"net/http"
+	"slices"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -54,6 +55,11 @@ func TestParseKongProxyListenEnv(t *testing.T) {
 					},
 				},
 			},
+		},
+		{
+			Name:            "off",
+			KongProxyListen: "off",
+			Expected:        kongListenConfig{},
 		},
 		{
 			Name:            "basic https",
@@ -676,12 +682,49 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 			expectedEnvs: []corev1.EnvVar{
 				{
 					Name:  "KONG_PORT_MAPS",
-					Value: "80:8000,443:8443",
+					Value: "80:16384,443:16385",
+				},
+				{
+					Name:  "KONG_PROXY_LISTEN",
+					Value: "0.0.0.0:16384 http2 reuseport backlog=16384, [::]:16384 http2 reuseport backlog=16384,0.0.0.0:16385 http2 ssl reuseport backlog=16384, [::]:16385 http2 ssl reuseport backlog=16384",
+				},
+				{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "off",
 				},
 			},
 			expectedPortMap: map[int]int{
-				80:  8000,
-				443: 8443,
+				80:  16384,
+				443: 16385,
+			},
+		},
+		{
+			name: "user-configured stream listen is disabled when there are no stream listeners",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "http",
+					Protocol: gatewayv1.HTTPProtocolType,
+					Port:     gatewayv1.PortNumber(8080),
+				},
+			},
+			existingEnv: []corev1.EnvVar{
+				{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:8899 ssl reuseport",
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "8080:8080",
+				},
+				{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "off",
+				},
+			},
+			expectedPortMap: map[int]int{
+				8080: 8080,
 			},
 		},
 		{
@@ -706,7 +749,11 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 			expectedEnvs: []corev1.EnvVar{
 				{
 					Name:  "KONG_PORT_MAPS",
-					Value: "80:8000,8899:8899,9999:9999",
+					Value: "80:16384,8899:8899,9999:9999",
+				},
+				{
+					Name:  "KONG_PROXY_LISTEN",
+					Value: "0.0.0.0:16384 http2 reuseport backlog=16384, [::]:16384 http2 reuseport backlog=16384",
 				},
 				{
 					Name:  "KONG_STREAM_LISTEN",
@@ -714,7 +761,7 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 				},
 			},
 			expectedPortMap: map[int]int{
-				80:   8000,
+				80:   16384,
 				8899: 8899,
 				9999: 9999,
 			},
@@ -735,23 +782,27 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 				{
 					Name:     "tls-2",
 					Protocol: gatewayv1.TLSProtocolType,
-					Port:     gatewayv1.PortNumber(8443),
+					Port:     gatewayv1.PortNumber(consts.DataPlaneAdminAPIPort),
 				},
 			},
 			expectedEnvs: []corev1.EnvVar{
 				{
 					Name:  "KONG_PORT_MAPS",
-					Value: "80:8000,7443:7443,8443:16384", // Should assign the first port in the assigned port interval
+					Value: "80:16384,7443:7443,8444:16385", // Should assign the next free port in the assigned port interval
 				},
 				{
 					Name:  "KONG_STREAM_LISTEN",
-					Value: "0.0.0.0:7443 ssl reuseport,[::]:7443 ssl reuseport,0.0.0.0:16384 ssl reuseport,[::]:16384 ssl reuseport",
+					Value: "0.0.0.0:7443 ssl reuseport,[::]:7443 ssl reuseport,0.0.0.0:16385 ssl reuseport,[::]:16385 ssl reuseport",
+				},
+				{
+					Name:  "KONG_PROXY_LISTEN",
+					Value: "0.0.0.0:16384 http2 reuseport backlog=16384, [::]:16384 http2 reuseport backlog=16384",
 				},
 			},
 			expectedPortMap: map[int]int{
-				80:   8000,
+				80:   16384,
 				7443: 7443,
-				8443: 16384,
+				8444: 16385,
 			},
 		},
 		{
@@ -771,16 +822,20 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 			expectedEnvs: []corev1.EnvVar{
 				{
 					Name:  "KONG_PORT_MAPS",
-					Value: "80:8000,445:16384", // Should assign the first port in the assigned port interval
+					Value: "80:16384,445:16385", // Should assign the next free port in the assigned port interval
 				},
 				{
 					Name:  "KONG_STREAM_LISTEN",
-					Value: "0.0.0.0:16384 ssl reuseport,[::]:16384 ssl reuseport",
+					Value: "0.0.0.0:16385 ssl reuseport,[::]:16385 ssl reuseport",
+				},
+				{
+					Name:  "KONG_PROXY_LISTEN",
+					Value: "0.0.0.0:16384 http2 reuseport backlog=16384, [::]:16384 http2 reuseport backlog=16384",
 				},
 			},
 			expectedPortMap: map[int]int{
-				80:  8000,
-				445: 16384,
+				80:  16384,
+				445: 16385,
 			},
 		},
 		{
@@ -985,7 +1040,11 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 			expectedEnvs: []corev1.EnvVar{
 				{
 					Name:  "KONG_PORT_MAPS",
-					Value: "80:8000,443:8443,8888:8888",
+					Value: "80:16384,443:16385,8888:8888",
+				},
+				{
+					Name:  "KONG_PROXY_LISTEN",
+					Value: "0.0.0.0:16384 http2 reuseport backlog=16384, [::]:16384 http2 reuseport backlog=16384,0.0.0.0:16385 http2 ssl reuseport backlog=16384, [::]:16385 http2 ssl reuseport backlog=16384",
 				},
 				{
 					// TCP listener: stream entry without `ssl`.
@@ -994,8 +1053,8 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 				},
 			},
 			expectedPortMap: map[int]int{
-				80:   8000,
-				443:  8443,
+				80:   16384,
+				443:  16385,
 				8888: 8888,
 			},
 		},
@@ -1014,12 +1073,49 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 					Value: "80:16384",
 				},
 				{
+					Name:  "KONG_PROXY_LISTEN",
+					Value: "off",
+				},
+				{
 					Name:  "KONG_STREAM_LISTEN",
 					Value: "0.0.0.0:16384 reuseport,[::]:16384 reuseport",
 				},
 			},
 			expectedPortMap: map[int]int{
 				80: 16384,
+			},
+		},
+		{
+			name: "TLS listener on the default HTTPS proxy port disables the default proxy listeners",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "tls",
+					Protocol: gatewayv1.TLSProtocolType,
+					Port:     gatewayv1.PortNumber(8443),
+				},
+			},
+			existingEnv: []corev1.EnvVar{
+				{
+					Name:  "KONG_PROXY_LISTEN",
+					Value: "0.0.0.0:8000 http2 reuseport backlog=16384, 0.0.0.0:8443 http2 ssl reuseport backlog=16384",
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "8443:8443",
+				},
+				{
+					Name:  "KONG_PROXY_LISTEN",
+					Value: "off",
+				},
+				{
+					Name:  "KONG_STREAM_LISTEN",
+					Value: "0.0.0.0:8443 ssl reuseport,[::]:8443 ssl reuseport",
+				},
+			},
+			expectedPortMap: map[int]int{
+				8443: 8443,
 			},
 		},
 		{
@@ -1072,7 +1168,7 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 					},
 				},
 			}
-			portMap, err := setDataPlaneDeploymentListenPorts(&opts, tc.listeners, ipfamily.Dual)
+			portMap, err := setDataPlaneDeploymentListenPorts(&opts, tc.listeners, ipfamily.Dual, false)
 			if tc.expectedError != nil {
 				require.EqualError(t, tc.expectedError, err.Error())
 				return
@@ -1138,8 +1234,7 @@ func TestSetDataPlaneDeploymentListenPorts_IPFamily(t *testing.T) {
 	} {
 		t.Run(tt.family.String(), func(t *testing.T) {
 			opts := newOpts("")
-
-			_, err := setDataPlaneDeploymentListenPorts(&opts, listeners, tt.family)
+			_, err := setDataPlaneDeploymentListenPorts(&opts, listeners, tt.family, false)
 			require.NoError(t, err)
 
 			container := k8sutils.GetPodContainerByName(&opts.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
@@ -1152,7 +1247,7 @@ func TestSetDataPlaneDeploymentListenPorts_IPFamily(t *testing.T) {
 		for _, family := range []ipfamily.IPFamily{ipfamily.Auto, "unknown"} {
 			opts := newOpts("")
 
-			_, err := setDataPlaneDeploymentListenPorts(&opts, listeners, family)
+			_, err := setDataPlaneDeploymentListenPorts(&opts, listeners, family, false)
 			require.Error(t, err, "family %q should not silently fall back to IPv4", family)
 		}
 	})
@@ -1169,7 +1264,7 @@ func TestSetDataPlaneDeploymentListenPorts_IPFamily(t *testing.T) {
 			t.Run(tt.family.String(), func(t *testing.T) {
 				opts := newOpts(":8899 ssl")
 
-				_, err := setDataPlaneDeploymentListenPorts(&opts, listeners, tt.family)
+				_, err := setDataPlaneDeploymentListenPorts(&opts, listeners, tt.family, false)
 				require.NoError(t, err)
 
 				container := k8sutils.GetPodContainerByName(&opts.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
@@ -1178,6 +1273,115 @@ func TestSetDataPlaneDeploymentListenPorts_IPFamily(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestSetDataPlaneDeploymentListenPorts_Hybrid(t *testing.T) {
+	newOpts := func(env ...corev1.EnvVar) operatorv1beta1.DataPlaneOptions {
+		return operatorv1beta1.DataPlaneOptions{
+			Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+				DeploymentOptions: operatorv1beta1.DeploymentOptions{
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{Name: consts.DataPlaneProxyContainerName, Env: env},
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+	listener := func(protocol gatewayv1.ProtocolType, port int) gwtypes.Listener {
+		return gwtypes.Listener{
+			Name:     "listener",
+			Protocol: protocol,
+			Port:     gatewayv1.PortNumber(port),
+		}
+	}
+
+	testCases := []struct {
+		name            string
+		listeners       []gwtypes.Listener
+		existingEnv     []corev1.EnvVar
+		expectedEnv     map[string]string
+		absentEnv       []string
+		expectedPortMap map[int]int
+	}{
+		{
+			name:      "stream only leaves KONG_PROXY_LISTEN unset to fall back to the defaults",
+			listeners: []gwtypes.Listener{listener(gatewayv1.TCPProtocolType, 9300)},
+			expectedEnv: map[string]string{
+				"KONG_STREAM_LISTEN": "0.0.0.0:9300 reuseport",
+				"KONG_PORT_MAPS":     "9300:9300",
+			},
+			absentEnv:       []string{"KONG_PROXY_LISTEN"},
+			expectedPortMap: map[int]int{9300: 9300},
+		},
+		{
+			name:      "stream only keeps user-configured KONG_PROXY_LISTEN",
+			listeners: []gwtypes.Listener{listener(gatewayv1.TCPProtocolType, 9300)},
+			existingEnv: []corev1.EnvVar{
+				{Name: "KONG_PROXY_LISTEN", Value: "0.0.0.0:8000"},
+			},
+			expectedEnv: map[string]string{
+				"KONG_PROXY_LISTEN":  "0.0.0.0:8000",
+				"KONG_STREAM_LISTEN": "0.0.0.0:9300 reuseport",
+			},
+			expectedPortMap: map[int]int{9300: 9300},
+		},
+		{
+			name:      "HTTP only sets KONG_PROXY_LISTEN and disables stream listen",
+			listeners: []gwtypes.Listener{listener(gatewayv1.HTTPProtocolType, 8080)},
+			expectedEnv: map[string]string{
+				"KONG_PROXY_LISTEN":  "0.0.0.0:8080 http2 reuseport backlog=16384",
+				"KONG_STREAM_LISTEN": "off",
+				"KONG_PORT_MAPS":     "8080:8080",
+			},
+			expectedPortMap: map[int]int{8080: 8080},
+		},
+		{
+			name: "stream listeners on the default proxy ports are remapped",
+			listeners: []gwtypes.Listener{
+				listener(gatewayv1.TCPProtocolType, 8000),
+				listener(gatewayv1.UDPProtocolType, 8443),
+			},
+			expectedEnv: map[string]string{
+				"KONG_STREAM_LISTEN": "0.0.0.0:16384 reuseport,0.0.0.0:16385 udp reuseport",
+				"KONG_PORT_MAPS":     "8000:16384,8443:16385",
+			},
+			absentEnv:       []string{"KONG_PROXY_LISTEN"},
+			expectedPortMap: map[int]int{8000: 16384, 8443: 16385},
+		},
+		{
+			name:      "HTTP listener on the default proxy port is remapped",
+			listeners: []gwtypes.Listener{listener(gatewayv1.HTTPProtocolType, 8000)},
+			expectedEnv: map[string]string{
+				"KONG_PROXY_LISTEN": "0.0.0.0:16384 http2 reuseport backlog=16384",
+				"KONG_PORT_MAPS":    "8000:16384",
+			},
+			expectedPortMap: map[int]int{8000: 16384},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			opts := newOpts(tc.existingEnv...)
+
+			portMap, err := setDataPlaneDeploymentListenPorts(&opts, tc.listeners, ipfamily.IPv4, true)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expectedPortMap, portMap)
+
+			container := k8sutils.GetPodContainerByName(&opts.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+			require.NotNil(t, container)
+			for name, value := range tc.expectedEnv {
+				assert.Equal(t, value, k8sutils.EnvValueByName(container.Env, name), name)
+			}
+			for _, name := range tc.absentEnv {
+				assert.False(t, slices.ContainsFunc(container.Env, func(e corev1.EnvVar) bool { return e.Name == name }),
+					"%s should not be set", name)
+			}
+		})
+	}
 }
 
 func TestSetDataPlaneIngressServicePorts(t *testing.T) {
@@ -1211,19 +1415,19 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 					Port:     gatewayv1.PortNumber(9443),
 				},
 			},
-			portMap: map[int]int{9443: 9443},
+			portMap: map[int]int{80: 16384, 443: 16385, 9443: 9443},
 			expectedPorts: []operatorv1beta1.DataPlaneServicePort{
 				{
 					Name:       "http",
 					Port:       80,
 					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(consts.DataPlaneProxyPort),
+					TargetPort: intstr.FromInt(16384),
 				},
 				{
 					Name:       "https",
 					Port:       443,
 					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(consts.DataPlaneProxySSLPort),
+					TargetPort: intstr.FromInt(16385),
 				},
 				{
 					Name:       "tls",
@@ -1247,13 +1451,13 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 					Port:     gatewayv1.PortNumber(8899),
 				},
 			},
-			portMap: map[int]int{8899: 8899},
+			portMap: map[int]int{80: 16384, 8899: 8899},
 			expectedPorts: []operatorv1beta1.DataPlaneServicePort{
 				{
 					Name:       "http",
 					Port:       80,
 					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(consts.DataPlaneProxyPort),
+					TargetPort: intstr.FromInt(16384),
 				},
 				{
 					Name:       "udp",
@@ -1283,19 +1487,20 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 					NodePort: int32(30080),
 				},
 			},
+			portMap: map[int]int{80: 16384, 443: 16385},
 			expectedPorts: []operatorv1beta1.DataPlaneServicePort{
 				{
 					Name:       "http",
 					Port:       80,
 					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(consts.DataPlaneProxyPort),
+					TargetPort: intstr.FromInt(16384),
 					NodePort:   int32(30080),
 				},
 				{
 					Name:       "https",
 					Port:       443,
 					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(consts.DataPlaneProxySSLPort),
+					TargetPort: intstr.FromInt(16385),
 				},
 			},
 		},
@@ -1326,12 +1531,19 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := setDataPlaneIngressServicePorts(&operatorv1beta1.DataPlaneOptions{}, tc.listeners, tc.listenersOptions, tc.portMap)
-			if tc.expectedError == nil {
-				require.NoError(t, err)
-			} else {
+			opts := &operatorv1beta1.DataPlaneOptions{}
+			err := setDataPlaneIngressServicePorts(opts, tc.listeners, tc.listenersOptions, tc.portMap)
+			if tc.expectedError != nil {
 				require.EqualError(t, err, tc.expectedError.Error())
+				return
 			}
+			require.NoError(t, err)
+
+			var ports []operatorv1beta1.DataPlaneServicePort
+			if opts.Network.Services != nil && opts.Network.Services.Ingress != nil {
+				ports = opts.Network.Services.Ingress.Ports
+			}
+			require.Equal(t, tc.expectedPorts, ports)
 		})
 	}
 }
@@ -4775,6 +4987,7 @@ func TestGatewayManagedLabelOnCreatedResources(t *testing.T) {
 	reconciler := &Reconciler{
 		Client:                fakeClient,
 		DefaultDataPlaneImage: consts.DefaultDataPlaneImage,
+		DataPlaneIPFamily:     ipfamily.Dual,
 	}
 	ctx := t.Context()
 	emptyGatewayConfig := &GatewayConfiguration{}
@@ -4906,8 +5119,36 @@ func TestGenerateDataPlaneNetworkPolicy(t *testing.T) {
 			name: "default DataPlane",
 			expectedIngressRules: []networkingv1.NetworkPolicyIngressRule{
 				defaultIngressRuleAdminAPI,
-				defaultIngressRuleProxy,
 				defaultIngressRuleMetrics,
+				defaultIngressRuleProxy,
+			},
+		},
+		{
+			name: "dataplane with proxy listen off and stream listen",
+			proxyContainerOptions: func(c *corev1.Container) {
+				c.Env = append(c.Env,
+					corev1.EnvVar{
+						Name:  "KONG_PROXY_LISTEN",
+						Value: "off",
+					},
+					corev1.EnvVar{
+						Name:  "KONG_STREAM_LISTEN",
+						Value: "0.0.0.0:8443 ssl reuseport",
+					},
+				)
+			},
+			// No proxy rule: a rule with an empty port list would allow all ingress traffic.
+			expectedIngressRules: []networkingv1.NetworkPolicyIngressRule{
+				defaultIngressRuleAdminAPI,
+				defaultIngressRuleMetrics,
+				{
+					Ports: []networkingv1.NetworkPolicyPort{
+						{
+							Protocol: &protocolTCP,
+							Port:     new(intstr.FromInt(8443)),
+						},
+					},
+				},
 			},
 		},
 		{
@@ -4920,8 +5161,8 @@ func TestGenerateDataPlaneNetworkPolicy(t *testing.T) {
 			},
 			expectedIngressRules: []networkingv1.NetworkPolicyIngressRule{
 				defaultIngressRuleAdminAPI,
-				defaultIngressRuleProxy,
 				defaultIngressRuleMetrics,
+				defaultIngressRuleProxy,
 				{
 					Ports: []networkingv1.NetworkPolicyPort{
 						{
@@ -4946,8 +5187,8 @@ func TestGenerateDataPlaneNetworkPolicy(t *testing.T) {
 			},
 			expectedIngressRules: []networkingv1.NetworkPolicyIngressRule{
 				defaultIngressRuleAdminAPI,
-				defaultIngressRuleProxy,
 				defaultIngressRuleMetrics,
+				defaultIngressRuleProxy,
 				{
 					Ports: []networkingv1.NetworkPolicyPort{
 						{
@@ -4970,8 +5211,8 @@ func TestGenerateDataPlaneNetworkPolicy(t *testing.T) {
 			// generateDataPlaneNetworkPolicy.
 			expectedIngressRules: []networkingv1.NetworkPolicyIngressRule{
 				defaultIngressRuleAdminAPI,
-				defaultIngressRuleProxy,
 				defaultIngressRuleMetrics,
+				defaultIngressRuleProxy,
 				{
 					Ports: []networkingv1.NetworkPolicyPort{
 						{
