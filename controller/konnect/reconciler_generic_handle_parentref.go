@@ -185,6 +185,24 @@ func (prh parentRefHandler[p, pPTr]) handleParentRef(
 		return ctrl.Result{}, err
 	}
 
+	// The parent may be outside the Konnect reconciler's scope entirely (e.g. an
+	// AIGatewayConsumer targeting an OnPremAIGateway). This entity is then not
+	// Konnect-managed either: clear any stale parent-ref condition and stop before
+	// any Konnect interaction. Returning the sentinel error (instead of a zero
+	// result) is what makes handleRefResult stop the reconciliation.
+	if skipper, ok := any(parent).(konnectReconciliationSkipper); ok && skipper.SkipKonnectReconciliation() {
+		if res, errStatus := patch.StatusWithoutCondition(
+			ctx, cl, obj,
+			string(consts.ConditionType(obj.GetStatusConditionTypeParentRefValid())),
+		); errStatus != nil || !res.IsZero() {
+			return res, errStatus
+		}
+		return ctrl.Result{}, ReferencedObjectNotKonnectManagedError{
+			Reference: nn,
+			TypeName:  parentType,
+		}
+	}
+
 	if delTimestamp := parent.GetDeletionTimestamp(); !delTimestamp.IsZero() {
 		msg := fmt.Sprintf("Referenced %s %s is being deleted", parentType, nn)
 		if res, errStatus := patch.StatusWithCondition(

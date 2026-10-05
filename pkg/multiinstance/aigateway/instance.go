@@ -94,7 +94,8 @@ type Env struct {
 	// SecretLabelSelector is the label key the operator's main manager caches Secrets
 	// by (see modules/manager config.SecretLabelSelector). The instance's own cache
 	// mirrors it, so Secrets the translation reads (e.g. AIGatewayAuthStrategy's oidc
-	// clientSecret) see the same set the main manager deems ingestible.
+	// clientSecret and consumer credential apiKeys) see the same set the main manager
+	// deems ingestible.
 	SecretLabelSelector string
 }
 
@@ -258,10 +259,10 @@ func (i *Instance) newCtrlManager() (ctrl.Manager, error) {
 // onpremNamespacedRef is same-namespace and only objects in it are read there. Secrets
 // keep a label filter: the instance reads the Admin API client certificate Secret and,
 // through the generated secretRef resolvers (e.g. AIGatewayAuthStrategy's oidc
-// clientSecret), user entity Secrets. Both match i.secretSelector(): user Secrets must
-// carry the operator's Secret label selector to be ingestible at all, and the Admin API
-// client certificate Secret carries it too (see the OnPremAIGateway controller's
-// ensureAdminClientCertificateSecret).
+// clientSecret and consumer credential apiKeys), user entity Secrets. Both match
+// i.secretSelector(): user Secrets must carry the operator's Secret label selector to
+// be ingestible at all, and the Admin API client certificate Secret carries it too (see
+// the OnPremAIGateway controller's ensureAdminClientCertificateSecret).
 func (i *Instance) cacheOpts() cache.Options {
 	opts := cache.Options{}
 	if i.env.GatewayNN.Namespace == "" {
@@ -431,6 +432,7 @@ func (i *Instance) Run(ctx context.Context) error {
 		index.OptionsForAIGatewayCACertificate(),
 		index.OptionsForAIGatewayCertificate(),
 		index.OptionsForAIGatewayConsumer(),
+		index.OptionsForAIGatewayConsumerCredential(),
 		index.OptionsForAIGatewayConsumerGroup(),
 		index.OptionsForAIGatewayDataPlaneCertificate(),
 		index.OptionsForAIGatewayMCPServer(),
