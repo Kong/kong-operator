@@ -7,6 +7,7 @@ package v1alpha1
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/Kong/ai-deck-converter/aigw"
@@ -30,13 +31,61 @@ func (obj *AIGatewaySNI) ToAIGWSNI(ctx context.Context, cl client.Client) (*aigw
 
 	// aigw.SNI.Certificate is the referenced certificate's entity name: the converter resolves
 	// SNIs against the certificates list by name (convertSNIs).
-	ref := obj.Spec.APISpec.Certificate
-	certName, err := resolveEntityName[AIGatewayCertificate](ctx, cl, obj.Namespace, ref.Namespace, ref.Name)
+	certName, err := resolveReferencedCertificate(ctx, cl, obj, obj.Spec.APISpec.Certificate)
 	if err != nil {
 		return nil, fmt.Errorf("resolving AIGatewaySNI %s/%s certificate: %w", obj.Namespace, obj.Name, err)
 	}
 	sni.Certificate = certName
 	return &sni, nil
+}
+
+// resolveReferencedCertificate resolves the SNI's certificate reference to the referenced
+// certificate's entity name (its spec name, i.e. GetKonnectName). Like resolveEntityName it
+// applies no Konnect-ID gate, but it also requires the certificate to target the same
+// OnPremAIGateway as the SNI: a certificate targeting another AI Gateway resolves by name, yet
+// translateKind never lists it into this gateway's document, so the converter would silently
+// drop the SNI from the pushed configuration instead of surfacing the mismatch on the SNI's
+// status.
+func resolveReferencedCertificate(ctx context.Context, cl client.Client, obj *AIGatewaySNI, ref AIGatewayCertificateRef) (string, error) {
+	ns := ref.Namespace
+	if ns == "" {
+		ns = obj.Namespace
+	}
+	if ns != obj.Namespace {
+		return "", fmt.Errorf("cross-namespace reference to %s/%s is not supported", ns, ref.Name)
+	}
+	var cert AIGatewayCertificate
+	if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &cert); err != nil {
+		return "", fmt.Errorf("getting referenced AIGatewayCertificate %s/%s: %w", ns, ref.Name, err)
+	}
+	objKey, ok := onPremAIGatewayRefKey(obj.Namespace, obj.Spec.AIGatewayRef)
+	if !ok {
+		return "", errors.New("the SNI does not target an OnPremAIGateway")
+	}
+	certKey, ok := onPremAIGatewayRefKey(cert.Namespace, cert.Spec.AIGatewayRef)
+	if !ok || certKey != objKey {
+		return "", fmt.Errorf(
+			"referenced AIGatewayCertificate %s/%s does not target the SNI's OnPremAIGateway %s",
+			ns, ref.Name, objKey,
+		)
+	}
+	return cert.GetKonnectName(), nil
+}
+
+// onPremAIGatewayRefKey renders an entity's AIGatewayRef as the ns/name key the
+// OnOnPremAIGatewayRef index lists entities under, with the unset Namespace defaulting to the
+// entity's own. The second return is false when the ref does not target an OnPremAIGateway at
+// all, so comparing two entities' keys is exactly the membership relation translateKind's
+// index uses to fill the document.
+func onPremAIGatewayRefKey(entityNamespace string, ref AIGatewayRef) (string, bool) {
+	if ref.NamespacedRef == nil || !ref.TargetsOnPremAIGateway() {
+		return "", false
+	}
+	ns := entityNamespace
+	if ref.NamespacedRef.Namespace != nil && *ref.NamespacedRef.Namespace != "" {
+		ns = *ref.NamespacedRef.Namespace
+	}
+	return ns + "/" + ref.NamespacedRef.Name, true
 }
 
 // marshalAIGWSNIPayload builds the aigw.SNI-shaped payload bytes. Shared by ToAIGWSNI and its

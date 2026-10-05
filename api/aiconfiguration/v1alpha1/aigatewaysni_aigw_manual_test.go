@@ -9,12 +9,14 @@ import (
 	yaml "gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
 // TestAIGatewaySNI_ToAIGWSNI covers the certificate reference resolution — deliberately
 // without any SetKonnectID on the referenced certificate, pinning that the on-prem
-// translation uses the name-only resolver (see resolveEntityName) — the certificate CR ref
-// strip, and the managed_by drop.
+// translation applies no Konnect-ID gate — the same-OnPremAIGateway membership check on the
+// referenced certificate, the certificate CR ref strip, and the managed_by drop.
 func TestAIGatewaySNI_ToAIGWSNI(t *testing.T) {
 	t.Parallel()
 
@@ -28,6 +30,11 @@ func TestAIGatewaySNI_ToAIGWSNI(t *testing.T) {
 		return &AIGatewayCertificate{
 			Name: "ai-gw-cert", Namespace: "default",
 			Spec: AIGatewayCertificateSpec{
+				AIGatewayRef: AIGatewayRef{
+					Group:         AIGatewayRefGroupOnPrem,
+					Kind:          AIGatewayRefKindOnPrem,
+					NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gw"},
+				},
 				APISpec: AIGatewayCertificateAPISpec{
 					Name: "aigw-cert",
 				},
@@ -46,6 +53,11 @@ func TestAIGatewaySNI_ToAIGWSNI(t *testing.T) {
 			obj: &AIGatewaySNI{
 				Name: "sample-ai-gw-sni", Namespace: "default",
 				Spec: AIGatewaySNISpec{
+					AIGatewayRef: AIGatewayRef{
+						Group:         AIGatewayRefGroupOnPrem,
+						Kind:          AIGatewayRefKindOnPrem,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gw"},
+					},
 					APISpec: AIGatewaySNIAPISpec{
 						Name:        "api-example-com",
 						DisplayName: "api.example.com",
@@ -69,6 +81,11 @@ func TestAIGatewaySNI_ToAIGWSNI(t *testing.T) {
 			obj: &AIGatewaySNI{
 				Name: "sample-ai-gw-sni-dangling", Namespace: "default",
 				Spec: AIGatewaySNISpec{
+					AIGatewayRef: AIGatewayRef{
+						Group:         AIGatewayRefGroupOnPrem,
+						Kind:          AIGatewayRefKindOnPrem,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gw"},
+					},
 					APISpec: AIGatewaySNIAPISpec{
 						Name:        "dangling-sni",
 						DisplayName: "Dangling SNI",
@@ -84,6 +101,11 @@ func TestAIGatewaySNI_ToAIGWSNI(t *testing.T) {
 			obj: &AIGatewaySNI{
 				Name: "sample-ai-gw-sni-cross-ns", Namespace: "default",
 				Spec: AIGatewaySNISpec{
+					AIGatewayRef: AIGatewayRef{
+						Group:         AIGatewayRefGroupOnPrem,
+						Kind:          AIGatewayRefKindOnPrem,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gw"},
+					},
 					APISpec: AIGatewaySNIAPISpec{
 						Name:        "cross-ns-sni",
 						DisplayName: "Cross NS SNI",
@@ -93,6 +115,26 @@ func TestAIGatewaySNI_ToAIGWSNI(t *testing.T) {
 				},
 			},
 			wantErr: "cross-namespace reference",
+		},
+		{
+			name: "certificate targeting a different OnPremAIGateway rejected",
+			obj: &AIGatewaySNI{
+				Name: "sample-ai-gw-sni-other-gw", Namespace: "default",
+				Spec: AIGatewaySNISpec{
+					AIGatewayRef: AIGatewayRef{
+						Group:         AIGatewayRefGroupOnPrem,
+						Kind:          AIGatewayRefKindOnPrem,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "other-gw"},
+					},
+					APISpec: AIGatewaySNIAPISpec{
+						Name:        "other-gw-sni",
+						DisplayName: "Other GW SNI",
+						Hostname:    new(AIGatewayHostname("other.example.com")),
+						Certificate: AIGatewayCertificateRef{Name: "ai-gw-cert"},
+					},
+				},
+			},
+			wantErr: "does not target the SNI's OnPremAIGateway",
 		},
 	}
 
