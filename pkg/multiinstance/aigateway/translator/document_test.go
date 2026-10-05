@@ -433,6 +433,87 @@ func TestBuildDocument_PerEntityFailure(t *testing.T) {
 	require.Equal(t, 1, failed)
 }
 
+// TestBuildDocument_SNIFailsWhenReferencedCertificateFails covers the cross-entity dependency:
+// a certificate that fails its own translation is excluded from the document, and the SNI
+// referencing it must fail too (instead of reporting success while the converter drops it from
+// the pushed payload for the dangling reference).
+func TestBuildDocument_SNIFailsWhenReferencedCertificateFails(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	// A certificate whose cert comes from a Secret that does not exist fails its own
+	// translation; the healthy pair proves the SNI failure stays per-entity.
+	brokenCert := aiGatewayCertificateFixture("cert-broken")
+	brokenCert.Spec.APISpec.Cert = aiconfigurationv1alpha1.SensitiveDataSource{
+		Type:      aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+		SecretRef: &aiconfigurationv1alpha1.SensitiveDataSecretRef{Name: "missing-secret", Key: "tls.crt"},
+	}
+	healthyCert := aiGatewayCertificateFixture("cert-healthy")
+	sniBroken := aiGatewaySNIFixture("sni-broken", "cert-broken")
+	sniHealthy := aiGatewaySNIFixture("sni-healthy", "cert-healthy")
+
+	builder := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(gw, brokenCert, healthyCert, sniBroken, sniHealthy)
+	for _, opt := range index.OptionsForAIGatewayModel() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayModelProvider() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayPolicy() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayConsumerGroup() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayAuthStrategy() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayConsumerCredential() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayConsumer() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayCertificate() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewaySNI() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	cl := builder.Build()
+
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	require.NoError(t, err)
+
+	require.Len(t, doc.Certificates, 1)
+	require.Equal(t, "cert-healthy", doc.Certificates[0].Name)
+	require.Len(t, doc.SNIs, 1)
+	require.Equal(t, "sni-healthy", doc.SNIs[0].Name)
+	require.Equal(t, "cert-healthy", doc.SNIs[0].Certificate)
+
+	require.Len(t, statuses, 4)
+	failed := 0
+	for _, s := range statuses {
+		if s.Err != nil {
+			failed++
+			switch name := s.Obj.GetName(); name {
+			case "cert-broken":
+				require.Contains(t, s.Err.Error(), "missing-secret")
+			case "sni-broken":
+				require.Contains(t, s.Err.Error(), "its own translation failed")
+			default:
+				t.Errorf("unexpected failed entity %s: %v", name, s.Err)
+			}
+		}
+	}
+	require.Equal(t, 2, failed)
+}
+
 // TestBuildDocument_CrossNamespaceEntityRejected covers the same-namespace rule: an entity
 // referencing the OnPremAIGateway from another namespace is rejected with a per-entity error
 // (surfacing as the entity's Programmed condition) instead of failing later on its Secrets

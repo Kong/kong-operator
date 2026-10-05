@@ -22,8 +22,7 @@ func (obj *AIGatewayCertificate) ToAIGWCertificate(ctx context.Context, cl clien
 		return nil, fmt.Errorf("AIGatewayCertificate %s/%s: %w", obj.Namespace, obj.Name, err)
 	}
 
-	// Resolve the cert/key/certAlt/keyAlt secretRefs. sdkOpsAPISpec resolves into a copy of the
-	// APISpec, so the caller's object is not mutated.
+	// sdkOpsAPISpec resolves into a copy of the APISpec, so the caller's object is not mutated.
 	resolved, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {
 		return nil, fmt.Errorf("resolving AIGatewayCertificate %s/%s secrets: %w", obj.Namespace, obj.Name, noteSecretLabelRequirement(err))

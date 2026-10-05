@@ -185,3 +185,29 @@ func TestAIGatewaySNI_ToAIGWSNI_StrictRoundTrip(t *testing.T) {
 	require.Equal(t, aigw.Labels{"app": "test1"}, sni.Labels)
 	require.Empty(t, sni.Certificate)
 }
+
+// TestOnPremAIGatewayRefKey covers the ns/name key rendering that the SNI's certificate
+// membership check compares against: the generated index extractor's branch for an
+// explicit-namespace ref (the ref's namespace wins over the entity's own) has no other test.
+func TestOnPremAIGatewayRefKey(t *testing.T) {
+	t.Parallel()
+
+	ref := AIGatewayRef{
+		Group:         AIGatewayRefGroupOnPrem,
+		Kind:          AIGatewayRefKindOnPrem,
+		NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gw"},
+	}
+	key, ok := onPremAIGatewayRefKey("default", ref)
+	require.True(t, ok)
+	require.Equal(t, "default/gw", key)
+
+	// The explicit-namespace branch must agree with the generated index extractors: the ref's
+	// namespace wins over the entity's own.
+	ref.NamespacedRef.Namespace = new("default")
+	key, ok = onPremAIGatewayRefKey("other", ref)
+	require.True(t, ok)
+	require.Equal(t, "default/gw", key)
+
+	_, ok = onPremAIGatewayRefKey("default", AIGatewayRef{})
+	require.False(t, ok)
+}
