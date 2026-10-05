@@ -562,6 +562,8 @@ func TestBuildDocument_CredentialChangeRerender(t *testing.T) {
 		index.OptionsForAIGatewayConsumer(),
 		index.OptionsForAIGatewayConsumerCredential(),
 		index.OptionsForAIGatewayAuthStrategy(),
+		index.OptionsForAIGatewayCertificate(),
+		index.OptionsForAIGatewaySNI(),
 	} {
 		for _, opt := range opts {
 			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
