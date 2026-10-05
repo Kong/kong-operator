@@ -19,6 +19,10 @@ import (
 // spec.apiSpec.certificate reference to the referenced certificate's entity name. It carries
 // no secretRefs, so unlike AIGatewayCertificate it needs no secret-resolution step.
 func (obj *AIGatewaySNI) ToAIGWSNI(ctx context.Context, cl client.Client) (*aigw.SNI, error) {
+	if obj.Spec.APISpec.Name == "" {
+		return nil, fmt.Errorf("AIGatewaySNI %s/%s: spec.apiSpec is required", obj.Namespace, obj.Name)
+	}
+
 	data, err := obj.Spec.APISpec.marshalAIGWSNIPayload()
 	if err != nil {
 		return nil, fmt.Errorf("marshaling AIGatewaySNI %s/%s: %w", obj.Namespace, obj.Name, err)

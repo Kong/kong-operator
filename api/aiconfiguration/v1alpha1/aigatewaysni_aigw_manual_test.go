@@ -77,6 +77,13 @@ func TestAIGatewaySNI_ToAIGWSNI(t *testing.T) {
 			},
 		},
 		{
+			name: "unset spec.apiSpec rejected",
+			obj: &AIGatewaySNI{
+				Name: "sample-ai-gw-sni-no-apispec", Namespace: "default",
+			},
+			wantErr: "spec.apiSpec is required",
+		},
+		{
 			name: "dangling certificate reference",
 			obj: &AIGatewaySNI{
 				Name: "sample-ai-gw-sni-dangling", Namespace: "default",
@@ -207,6 +214,14 @@ func TestOnPremAIGatewayRefKey(t *testing.T) {
 	key, ok = onPremAIGatewayRefKey("other", ref)
 	require.True(t, ok)
 	require.Equal(t, "default/gw", key)
+
+	// A non-nil NamespacedRef whose Group and Kind stay at the Konnect default must not
+	// resolve either: this is the half of the false branch the zero ref short-circuits past,
+	// and the half resolveReferencedCertificate's certKey check hits for a certificate
+	// targeting a KonnectAIGateway.
+	konnectRef := AIGatewayRef{NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gw"}}
+	_, ok = onPremAIGatewayRefKey("default", konnectRef)
+	require.False(t, ok)
 
 	_, ok = onPremAIGatewayRefKey("default", AIGatewayRef{})
 	require.False(t, ok)

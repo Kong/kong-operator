@@ -157,6 +157,9 @@ func BuildDocument(
 	// certificate's existence and same-gateway membership, so without this a certificate that
 	// failed its own translation (e.g. a missing or unlabeled secretRef Secret) would leave its
 	// SNI reporting success while the converter drops the SNI from the pushed payload.
+	// The same silent-drop class remains for the pre-existing existence-only resolvers
+	// (consumer->policy, model->provider): a referenced entity excluded for its own failed
+	// translation still lets the referencing entity report success.
 	translatedCertificates := make(map[string]struct{})
 
 	for _, translate := range []func(context.Context) ([]EntityStatus, error){

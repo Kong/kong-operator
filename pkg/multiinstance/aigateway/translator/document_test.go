@@ -443,6 +443,7 @@ func TestBuildDocument_SNIFailsWhenReferencedCertificateFails(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
 	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
 
 	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
 	// A certificate whose cert comes from a Secret that does not exist fails its own

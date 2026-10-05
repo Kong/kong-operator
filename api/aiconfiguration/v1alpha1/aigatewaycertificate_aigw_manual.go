@@ -18,6 +18,10 @@ import (
 // resolving the cert/key/certAlt/keyAlt secretRefs. It carries no entity references, so unlike
 // e.g. AIGatewaySNI it needs no entity-name resolution.
 func (obj *AIGatewayCertificate) ToAIGWCertificate(ctx context.Context, cl client.Client) (*aigw.Certificate, error) {
+	if obj.Spec.APISpec.Name == "" {
+		return nil, fmt.Errorf("AIGatewayCertificate %s/%s: spec.apiSpec is required", obj.Namespace, obj.Name)
+	}
+
 	if err := rejectCrossNamespaceSecretRefs(obj); err != nil {
 		return nil, fmt.Errorf("AIGatewayCertificate %s/%s: %w", obj.Namespace, obj.Name, err)
 	}

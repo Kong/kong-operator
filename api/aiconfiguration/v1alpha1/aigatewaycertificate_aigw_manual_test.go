@@ -112,6 +112,13 @@ func TestAIGatewayCertificate_ToAIGWCertificate(t *testing.T) {
 			wantErr: "cross-namespace secretRef",
 		},
 		{
+			name: "unset spec.apiSpec rejected",
+			obj: &AIGatewayCertificate{
+				Name: "sample-ai-gw-cert-no-apispec", Namespace: "default",
+			},
+			wantErr: "spec.apiSpec is required",
+		},
+		{
 			name: "missing secret",
 			obj: &AIGatewayCertificate{
 				Name: "sample-ai-gw-cert-missing-secret", Namespace: "default",
