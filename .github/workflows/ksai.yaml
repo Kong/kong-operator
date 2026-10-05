@@ -57,7 +57,7 @@ jobs:
       github.event.pull_request.draft == true &&
       github.event.pull_request.user.type == 'Bot' &&
       github.event.pull_request.head.repo.full_name == github.repository)
-    uses: Kong/ksai-public/.github/workflows/ksai.yml@7e3d012f9cd9297ad7e90c0335a3864feb15b8fd # v3.127.4
+    uses: Kong/ksai-public/.github/workflows/ksai.yml@86e9e205e61e0284e06261139334c9bbd2db9191 # v3.135.6
     permissions:
       contents: write      # checked out by every command, and pushed by one that changes code
       issues: write        # every command answers with a comment, and reacts to the one that asked
