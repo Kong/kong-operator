@@ -180,6 +180,31 @@ func aiGatewayCertificateFixture(name string) *aiconfigurationv1alpha1.AIGateway
 	}
 }
 
+func aiGatewayCustomPolicyFixture(name string) *aiconfigurationv1alpha1.AIGatewayCustomPolicy {
+	return &aiconfigurationv1alpha1.AIGatewayCustomPolicy{
+		Name: name, Namespace: "default",
+		Spec: aiconfigurationv1alpha1.AIGatewayCustomPolicySpec{
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				Group:         aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+				Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gw"},
+			},
+			APISpec: aiconfigurationv1alpha1.AIGatewayCustomPolicyAPISpec{
+				AIGatewayCustomPolicyConfig: &aiconfigurationv1alpha1.AIGatewayCustomPolicyConfig{
+					Type: aiconfigurationv1alpha1.AIGatewayCustomPolicyConfigTypeInstalled,
+					Installed: &aiconfigurationv1alpha1.CreateAIGatewayCustomPolicyInstalledRequest{
+						Name: aiconfigurationv1alpha1.AIGatewayEntityIdentifier(name),
+						Schema: aiconfigurationv1alpha1.ConfigMapDataSource{
+							Type:  aiconfigurationv1alpha1.ConfigMapDataSourceTypeInline,
+							Value: new("return { name = \"" + name + "\" }"),
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 func aiGatewaySNIFixture(name, certName string) *aiconfigurationv1alpha1.AIGatewaySNI {
 	return &aiconfigurationv1alpha1.AIGatewaySNI{
 		Name: name, Namespace: "default",
@@ -229,10 +254,13 @@ func TestBuildDocument(t *testing.T) {
 	certA := aiGatewayCertificateFixture("cert-a")
 	sniB := aiGatewaySNIFixture("sni-b", "cert-b")
 	sniA := aiGatewaySNIFixture("sni-a", "cert-a")
+	customPolicyB := aiGatewayCustomPolicyFixture("custom-policy-b")
+	customPolicyA := aiGatewayCustomPolicyFixture("custom-policy-a")
 
 	builder := fake.NewClientBuilder().WithScheme(scheme).
 		WithObjects(gw, modelB, modelA, providerB, providerA, policyB, policyA, groupB, groupA,
-			authStrategyB, authStrategyA, consumerB, consumerA, certB, certA, sniB, sniA)
+			authStrategyB, authStrategyA, consumerB, consumerA, certB, certA, sniB, sniA,
+			customPolicyB, customPolicyA)
 	for _, opt := range index.OptionsForAIGatewayModel() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
@@ -258,6 +286,9 @@ func TestBuildDocument(t *testing.T) {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	for _, opt := range index.OptionsForAIGatewaySNI() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayCustomPolicy() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	cl := builder.Build()
@@ -290,9 +321,12 @@ func TestBuildDocument(t *testing.T) {
 	require.Equal(t, "cert-a", doc.SNIs[0].Certificate)
 	require.Equal(t, "sni-b", doc.SNIs[1].Name)
 	require.Equal(t, "cert-b", doc.SNIs[1].Certificate)
+	require.Len(t, doc.CustomPolicies, 2)
+	require.Equal(t, "custom-policy-a", doc.CustomPolicies[0].Name)
+	require.Equal(t, "custom-policy-b", doc.CustomPolicies[1].Name)
 
 	// Every entity translated successfully, so all statuses are reported as such.
-	require.Len(t, statuses, 16)
+	require.Len(t, statuses, 18)
 	for _, s := range statuses {
 		require.NoError(t, s.Err)
 	}
@@ -353,6 +387,9 @@ func TestBuildDocument_NoModels(t *testing.T) {
 	for _, opt := range index.OptionsForAIGatewaySNI() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
+	for _, opt := range index.OptionsForAIGatewayCustomPolicy() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
 	cl := builder.Build()
 
 	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
@@ -366,6 +403,7 @@ func TestBuildDocument_NoModels(t *testing.T) {
 	require.Empty(t, doc.Consumers)
 	require.Empty(t, doc.Certificates)
 	require.Empty(t, doc.SNIs)
+	require.Empty(t, doc.CustomPolicies)
 }
 
 // TestBuildDocument_PerEntityFailure covers the continue-on-error behaviour: a single broken
@@ -411,6 +449,9 @@ func TestBuildDocument_PerEntityFailure(t *testing.T) {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	for _, opt := range index.OptionsForAIGatewaySNI() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayCustomPolicy() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	cl := builder.Build()
@@ -566,6 +607,9 @@ func TestBuildDocument_CrossNamespaceEntityRejected(t *testing.T) {
 	for _, opt := range index.OptionsForAIGatewaySNI() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
+	for _, opt := range index.OptionsForAIGatewayCustomPolicy() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
 	cl := builder.Build()
 
 	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
@@ -578,6 +622,7 @@ func TestBuildDocument_CrossNamespaceEntityRejected(t *testing.T) {
 	require.Empty(t, doc.Consumers)
 	require.Empty(t, doc.Certificates)
 	require.Empty(t, doc.SNIs)
+	require.Empty(t, doc.CustomPolicies)
 	require.Len(t, doc.AuthStrategies, 1)
 	require.Equal(t, "same-ns", doc.AuthStrategies[0].Name)
 
@@ -646,6 +691,7 @@ func TestBuildDocument_CredentialChangeRerender(t *testing.T) {
 		index.OptionsForAIGatewayAuthStrategy(),
 		index.OptionsForAIGatewayCertificate(),
 		index.OptionsForAIGatewaySNI(),
+		index.OptionsForAIGatewayCustomPolicy(),
 	} {
 		for _, opt := range opts {
 			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
