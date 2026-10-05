@@ -18,7 +18,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 20) }}
     env:
-      CRD_BREAKING_CHANGES_BASE_SHA: ${{ github.event.pull_request.base.sha || '' }}
       ACK_CRD_BREAKING_CHANGE_LABEL: ack_crd_breaking_change
     strategy:
       fail-fast: false
