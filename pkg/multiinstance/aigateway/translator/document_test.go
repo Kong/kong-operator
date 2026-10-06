@@ -366,6 +366,10 @@ func TestBuildDocument(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, sniPayload)
 	require.Empty(t, sniWarnings)
+	// The CA certificates must reach the rendered payload: the converter must
+	// not silently drop a kind the document carries.
+	require.Contains(t, string(sniPayload), "ca-cert-a")
+	require.Contains(t, string(sniPayload), "ca-cert-b")
 
 	// Non-strict rendering must not fail even once a dangling reference is introduced by the
 	// next slice - pinned here with a target that references a provider this test never creates.
