@@ -116,8 +116,9 @@ sha256sum -c SHA256SUMS
 ```
 
 `SHA256SUMS` proves the files were not corrupted in transit; it is not signed, so it does not prove who
-produced them. Authorship is carried by the image: the signature and the provenance above cover the
-index digest, and each image SBOM names the platform digest it describes.
+produced them. Authorship is carried by the image: the signature, the provenance and the SBOM
+attestations all cover the index digest, and the CycloneDX image SBOM names the platform digest it
+describes (`metadata.component.version`).
 
 ## Contact
 
