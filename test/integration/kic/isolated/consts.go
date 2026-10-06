@@ -3,5 +3,5 @@ package isolated
 import "fmt"
 
 func examplesManifestPath(manifestName string) string {
-	return fmt.Sprintf("../../../examples/%s", manifestName)
+	return fmt.Sprintf("../../../../ingress-controller/examples/%s", manifestName)
 }

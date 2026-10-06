@@ -619,7 +619,9 @@ tune.inotify: ## Raise host fs.inotify limits to avoid "too many open files" in 
 .PHONY: test
 test: test.unit
 
-UNIT_TEST_PATHS := ./api/... ./controller/... ./internal/... ./pkg/... ./modules/... ./ingress-controller/internal/... ./ingress-controller/pkg/... ./test/helpers/...
+UNIT_TEST_PATHS := ./api/... ./controller/... ./internal/... ./pkg/... ./modules/... ./ingress-controller/internal/... ./ingress-controller/pkg/... ./test/helpers/... \
+	./test/mocks/sdkmocks ./scripts/apitypes-funcs \
+	./ingress-controller/test/helpers ./ingress-controller/test/mocks ./ingress-controller/test/kongintegration/containers
 UNIT_TEST_PATHS_CRD_GEN := ./pkg/...
 
 .PHONY: _test.unit
@@ -824,6 +826,8 @@ PKG_LIST_KIC = ./ingress-controller/pkg/...,./ingress-controller/internal/...
 # -json which enables the problematic branch in go toolchain (that writes to os.Stderr).
 #
 # Related issue: https://github.com/Kong/kubernetes-ingress-controller/issues/3754
+KIC_INTEGRATION_TEST_PATH ?= ./test/integration/kic
+
 .PHONY: _test.integration-kic
 _test.integration-kic: mise
 	TEST_KONG_HELM_CHART_VERSION="$(TEST_KONG_HELM_CHART_VERSION)" \
@@ -838,7 +842,7 @@ _test.integration-kic: mise
 	-covermode=atomic \
 	-coverpkg=$(PKG_LIST_KIC) \
 	-coverprofile=$(COVERAGE_OUT) \
-	./test/integration/kic
+	$(KIC_INTEGRATION_TEST_PATH)
 
 .PHONY: test.integration-kic.dbless
 test.integration-kic.dbless:
@@ -854,6 +858,25 @@ test.integration-kic.postgres:
 
 .PHONY: test.integration-kic
 test.integration-kic: test.integration-kic.dbless test.integration-kic.postgres
+
+# The isolated suite is a separate package with its own TestMain and test
+# environment, so it's run on its own rather than together with the kic suite.
+.PHONY: test.integration-kic-isolated.dbless
+test.integration-kic-isolated.dbless:
+	@$(MAKE) _test.integration-kic \
+		DBMODE=off \
+		KIC_INTEGRATION_TEST_PATH=./test/integration/kic/isolated \
+		COVERAGE_OUT=coverage.integration.kic-isolated.out
+
+.PHONY: test.integration-kic-isolated.postgres
+test.integration-kic-isolated.postgres:
+	@$(MAKE) _test.integration-kic \
+		DBMODE=postgres \
+		KIC_INTEGRATION_TEST_PATH=./test/integration/kic/isolated \
+		COVERAGE_OUT=coverage.integration.kic-isolated.out
+
+.PHONY: test.integration-kic-isolated
+test.integration-kic-isolated: test.integration-kic-isolated.dbless test.integration-kic-isolated.postgres
 
 .PHONY: _test.e2e
 _test.e2e: gotestsum

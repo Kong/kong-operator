@@ -1,5 +1,3 @@
-//go:build integration_tests
-
 package isolated
 
 import (
@@ -156,12 +154,10 @@ func TestCustomEntityExample(t *testing.T) {
 			svc := corev1.Service{}
 			require.NoError(t, r.Get(ctx, serviceName, ingressNamespace, &svc))
 			alterService := &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        alterServiceName,
-					Namespace:   ingressNamespace,
-					Labels:      svc.Labels,
-					Annotations: svc.Annotations,
-				},
+				Name:        alterServiceName,
+				Namespace:   ingressNamespace,
+				Labels:      svc.Labels,
+				Annotations: svc.Annotations,
 			}
 			alterService.Spec = *svc.Spec.DeepCopy()
 			alterService.Spec.ClusterIP = ""
@@ -172,12 +168,10 @@ func TestCustomEntityExample(t *testing.T) {
 			ingress := netv1.Ingress{}
 			require.NoError(t, r.Get(ctx, ingressName, ingressNamespace, &ingress))
 			alterIngress := &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        alterIngressName,
-					Namespace:   ingressNamespace,
-					Labels:      ingress.Labels,
-					Annotations: ingress.Annotations,
-				},
+				Name:        alterIngressName,
+				Namespace:   ingressNamespace,
+				Labels:      ingress.Labels,
+				Annotations: ingress.Annotations,
 			}
 			alterIngress.Spec = *ingress.Spec.DeepCopy()
 			for i := range alterIngress.Spec.Rules {
