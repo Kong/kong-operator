@@ -2,6 +2,7 @@ package konnect
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"sort"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/v2/api/konnect"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -362,4 +364,22 @@ func sanitizeCert(cert string) string {
 	newCert := strings.TrimSuffix(cert, "\n")
 	newCert = strings.ReplaceAll(newCert, "\r", "")
 	return newCert
+}
+
+// dataPlaneClientCertificateName returns the name of the KongDataPlaneClientCertificate registering certData.
+// It is the KonnectExtension name, unless an existing KongDataPlaneClientCertificate with that name registers
+// another certificate (spec.cert is immutable): then a digest of certData is appended, so that both can exist
+// until the new one is programmed.
+func dataPlaneClientCertificateName(
+	extName string,
+	existing []configurationv1alpha1.KongDataPlaneClientCertificate,
+	certData string,
+) string {
+	for _, c := range existing {
+		if c.Name == extName && sanitizeCert(c.Spec.Cert) != sanitizeCert(certData) {
+			digest := sha256.Sum256([]byte(sanitizeCert(certData)))
+			return fmt.Sprintf("%s-%x", extName, digest[:4])
+		}
+	}
+	return extName
 }
