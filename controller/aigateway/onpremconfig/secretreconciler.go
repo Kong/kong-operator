@@ -22,6 +22,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -91,8 +92,9 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 // secretRefNotifierFuncs holds one fan-out entry per configuration entity kind
 // that both carries secretRefs and has an aiGatewayRef to notify through. Kinds
 // without a generated GetSensitiveDataSecretRefs accessor have no Secrets to
-// watch; AIGatewayConsumerCredential has the accessor but no aiGatewayRef, so
-// it has no entry here either.
+// watch. AIGatewayConsumerCredential has the accessor but no aiGatewayRef — its
+// credentials are rendered inside the parent consumer's document — so it is
+// handled by notifyConsumersForCredentialSecrets instead.
 var secretRefNotifierFuncs = []func(
 	ctx context.Context,
 	cl client.Client,
@@ -106,6 +108,81 @@ var secretRefNotifierFuncs = []func(
 	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateList],
 	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayModelProviderList],
 	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayPolicyList],
+	notifyConsumersForCredentialSecrets,
+}
+
+// notifyConsumersForCredentialSecrets notifies the parent AIGatewayConsumer of every
+// AIGatewayConsumerCredential in the Secret's namespace whose secretRefs reference the
+// Secret. The credential itself has no aiGatewayRef and no reconciler: its rendered
+// form is embedded in the parent consumer's document, so the consumer is what must
+// re-render and report the resolved (or dangling) credential Secret on its status.
+//
+// Like the SecretReconciler itself, cross-namespace secretRefs are not resolved here
+// beyond the refNamespace matching rule: they are rejected by the on-prem translation,
+// and when they gain support (https://github.com/Kong/kong-operator/issues/5908) the
+// reference namespace resolution must follow suit.
+func notifyConsumersForCredentialSecrets(
+	ctx context.Context,
+	cl client.Client,
+	secretNN types.NamespacedName,
+	cn *changenotifier.ChangeNotifier,
+	log logr.Logger,
+) error {
+	var list aiconfigurationv1alpha1.AIGatewayConsumerCredentialList
+	if err := cl.List(ctx, &list, client.InNamespace(secretNN.Namespace)); err != nil {
+		log.Error(err, "Failed to list AIGatewayConsumerCredentials referencing a Secret",
+			"secretNamespace", secretNN.Namespace, "secretName", secretNN.Name)
+		return err
+	}
+	for i := range list.Items {
+		cred := &list.Items[i]
+		consumerRef := cred.Spec.AIGatewayConsumerRef
+		if consumerRef.NamespacedRef == nil {
+			continue
+		}
+		for _, secretRef := range cred.GetSensitiveDataSecretRefs() {
+			// Same refNamespace resolution as notifyEntitiesForSecret: explicit
+			// secretRef.Namespace wins, else the credential's namespace.
+			refNamespace := cred.GetNamespace()
+			if secretRef.Namespace != nil && *secretRef.Namespace != "" {
+				refNamespace = *secretRef.Namespace
+			}
+			if secretRef.Name != secretNN.Name || refNamespace != secretNN.Namespace {
+				continue
+			}
+			consumerNN := types.NamespacedName{
+				Namespace: cred.GetNamespace(),
+				Name:      consumerRef.NamespacedRef.Name,
+			}
+			if consumerRef.NamespacedRef.Namespace != nil && *consumerRef.NamespacedRef.Namespace != "" {
+				consumerNN.Namespace = *consumerRef.NamespacedRef.Namespace
+			}
+			var consumer aiconfigurationv1alpha1.AIGatewayConsumer
+			if err := cl.Get(ctx, consumerNN, &consumer); err != nil {
+				// The consumer is gone: nothing to notify.
+				if apierrors.IsNotFound(err) {
+					break
+				}
+				log.Error(err, "Failed to fetch AIGatewayConsumer referenced by an AIGatewayConsumerCredential",
+					"consumerNamespace", consumerNN.Namespace, "consumerName", consumerNN.Name)
+				return err
+			}
+			ref := consumer.GetAIGatewayRef()
+			if ref.NamespacedRef == nil || !ref.TargetsOnPremAIGateway() {
+				break
+			}
+			parent := types.NamespacedName{
+				Namespace: consumer.GetNamespace(),
+				Name:      ref.NamespacedRef.Name,
+			}
+			if ref.NamespacedRef.Namespace != nil && *ref.NamespacedRef.Namespace != "" {
+				parent.Namespace = *ref.NamespacedRef.Namespace
+			}
+			cn.NotifyChange(ctx, &parent, &consumer)
+			break
+		}
+	}
+	return nil
 }
 
 // notifyEntitiesForSecret lists the entities of one kind in the Secret's namespace and

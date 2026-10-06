@@ -144,3 +144,94 @@ func TestSecretReconcilerWithoutChangeNotifierIsNoop(t *testing.T) {
 	_, err := r.Reconcile(t.Context(), ctrl.Request{Namespace: "default", Name: "secret"})
 	require.NoError(t, err)
 }
+
+func onPremConsumer(name, gatewayName string) *aiconfigurationv1alpha1.AIGatewayConsumer {
+	return &aiconfigurationv1alpha1.AIGatewayConsumer{
+		Namespace: "default", Name: name,
+		Spec: aiconfigurationv1alpha1.AIGatewayConsumerSpec{
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				Group:         aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+				Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: gatewayName},
+			},
+		},
+	}
+}
+
+func consumerCredential(name, consumerName, secretName string) *aiconfigurationv1alpha1.AIGatewayConsumerCredential {
+	return &aiconfigurationv1alpha1.AIGatewayConsumerCredential{
+		Namespace: "default", Name: name,
+		Spec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialSpec{
+			AIGatewayConsumerRef: commonv1alpha1.ObjectRef{
+				Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: consumerName},
+			},
+			APISpec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialAPISpec{
+				APIKey: aiconfigurationv1alpha1.SensitiveDataSource{
+					Type: aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+					SecretRef: &aiconfigurationv1alpha1.SensitiveDataSecretRef{
+						Name: secretName,
+						Key:  "key",
+					},
+				},
+			},
+		},
+	}
+}
+
+// A credential's Secret is rendered inside its parent consumer's document, so a change
+// to it must notify the consumer, addressed to the consumer's OnPremAIGateway.
+func TestSecretReconcilerNotifiesConsumerForCredentialSecret(t *testing.T) {
+	const secretName = "consumer-api-key"
+	consumer := onPremConsumer("consumer", "gw")
+	// A credential whose consumer targets Konnect must be skipped.
+	konnectConsumer := onPremConsumer("konnect-consumer", "konnect-gw")
+	konnectConsumer.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
+		Kind:          aiconfigurationv1alpha1.AIGatewayRefKindKonnect,
+		NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "konnect-gw"},
+	}
+
+	cn := changenotifier.New()
+	defer cn.Close()
+	cl := newReconcilerClient(t,
+		consumer,
+		konnectConsumer,
+		consumerCredential("cred", "consumer", secretName),
+		consumerCredential("konnect-cred", "konnect-consumer", secretName),
+	)
+	r := &SecretReconciler{Client: cl, Log: logr.Discard(), ChangeNotifier: cn}
+	ch := cn.NotifyChannel()
+
+	_, err := r.Reconcile(t.Context(), ctrl.Request{Namespace: "default", Name: secretName})
+	require.NoError(t, err)
+	change := waitForChange(t, ch)
+	consumerObj, ok := change.Object.(*aiconfigurationv1alpha1.AIGatewayConsumer)
+	require.True(t, ok)
+	require.Equal(t, "default/consumer", client.ObjectKeyFromObject(consumerObj).String())
+	require.NotNil(t, change.ParentNN)
+	require.Equal(t, types.NamespacedName{Namespace: "default", Name: "gw"}, *change.ParentNN)
+
+	requireNoChange(t, ch)
+
+	// Reconciling an unreferenced Secret notifies nothing.
+	_, err = r.Reconcile(t.Context(), ctrl.Request{Namespace: "default", Name: "unrelated"})
+	require.NoError(t, err)
+	requireNoChange(t, ch)
+}
+
+func TestSecretReconcilerNotifiesConsumerOnCredentialSecretDeletion(t *testing.T) {
+	cn := changenotifier.New()
+	defer cn.Close()
+	cl := newReconcilerClient(t,
+		onPremConsumer("consumer", "gw"),
+		consumerCredential("cred", "consumer", "deleted-secret"),
+	)
+	r := &SecretReconciler{Client: cl, Log: logr.Discard(), ChangeNotifier: cn}
+
+	_, err := r.Reconcile(t.Context(), ctrl.Request{Namespace: "default", Name: "deleted-secret"})
+	require.NoError(t, err)
+
+	change := waitForChange(t, cn.NotifyChannel())
+	require.Equal(t, "consumer", change.Object.GetName())
+	require.Equal(t, types.NamespacedName{Namespace: "default", Name: "gw"}, *change.ParentNN)
+}
