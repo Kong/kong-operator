@@ -533,12 +533,35 @@ jobs:
         with:
           name: digest-image-linux-${{ matrix.arch }}.sha256
 
+      # `imagetools inspect` and the scanners below read ~/.docker/config.json; anonymous Docker Hub
+      # pulls are rate limited.
+      - name: Log in to the Container registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ${{ inputs.registry }}
+          username: ${{ inputs.username }}
+          password: ${{ secrets.dockerhub-token }}
+
+      # The build pushes a single platform with buildx attestations, so the digest it reports is an
+      # index whose one image child is that platform. Syft resolves an index against the runner's
+      # platform, so on the amd64 runner the arm64 scan looks for a linux/amd64 child and finds none
+      # (run 37463155262). Scan the child manifest the build actually produced.
       - name: Set the scanned image reference
         env:
           REGISTRY: ${{ inputs.registry }}
           IMAGE_NAME: ${{ inputs.image-name }}
           ARCH: ${{ matrix.arch }}
-        run: echo "IMAGE=${REGISTRY}/${IMAGE_NAME}@$(cat "digest-image-linux-${ARCH}.sha256")" >> "$GITHUB_ENV"
+        run: |
+          set -euo pipefail
+          index_digest="$(cat "digest-image-linux-${ARCH}.sha256")"
+          child_digest="$(docker buildx imagetools inspect "${REGISTRY}/${IMAGE_NAME}@${index_digest}" --raw \
+            | jq -r --arg arch "${ARCH}" \
+              '[.manifests[] | select(.platform.os == "linux" and .platform.architecture == $arch) | .digest] | .[0] // ""')"
+          if [ -z "${child_digest}" ]; then
+            echo "::error::no linux/${ARCH} child manifest in ${REGISTRY}/${IMAGE_NAME}@${index_digest}"
+            exit 1
+          fi
+          echo "IMAGE=${REGISTRY}/${IMAGE_NAME}@${child_digest}" >> "$GITHUB_ENV"
 
       # SBOM (Syft), vulnerabilities (Grype, SARIF) and CIS (Trivy) in a single pass, one artifact
       # per report named "<asset_prefix>-<kind>" — the same artifact contract sca uses, and what
