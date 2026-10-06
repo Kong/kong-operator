@@ -80,6 +80,13 @@
 
 ### Changed
 
+- On-prem AI Gateway: `AIGatewayCertificate` and `AIGatewaySNI` configuration
+  entities are now translated into the pushed configuration document, enabling
+  TLS certificate/SNI matching configuration for on-prem AI Gateway data
+  planes. An SNI's `certificate` reference resolves to the referenced
+  certificate's entity name in the same namespace; the referenced certificate
+  must target the same `OnPremAIGateway` as the SNI.
+
 - On-prem AI Gateway: each `OnPremAIGateway`'s control plane instance now runs
   a Secret watcher that re-renders the configuration when a Secret referenced
   by a configuration entity's `secretRef` changes, instead of waiting for an
