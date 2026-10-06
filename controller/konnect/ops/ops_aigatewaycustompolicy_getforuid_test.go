@@ -22,6 +22,7 @@ func TestGetAIGatewayCustomPolicyForUID(t *testing.T) {
 
 		sdk.EXPECT().
 			ListAiGatewayCustomPolicies(mock.Anything, sdkkonnectops.ListAiGatewayCustomPoliciesRequest{
+				PageSize:  new(listPageSize),
 				GatewayID: "gateway-1",
 			}).
 			Return(&sdkkonnectops.ListAiGatewayCustomPoliciesResponse{
@@ -72,6 +73,7 @@ func TestGetAIGatewayCustomPolicyForUID(t *testing.T) {
 
 		sdk.EXPECT().
 			ListAiGatewayCustomPolicies(mock.Anything, sdkkonnectops.ListAiGatewayCustomPoliciesRequest{
+				PageSize:  new(listPageSize),
 				GatewayID: "gateway-1",
 			}).
 			Return(&sdkkonnectops.ListAiGatewayCustomPoliciesResponse{
@@ -104,6 +106,7 @@ func TestGetAIGatewayCustomPolicyForUID(t *testing.T) {
 
 		sdk.EXPECT().
 			ListAiGatewayCustomPolicies(mock.Anything, sdkkonnectops.ListAiGatewayCustomPoliciesRequest{
+				PageSize:  new(listPageSize),
 				GatewayID: "gateway-1",
 			}).
 			Return(&sdkkonnectops.ListAiGatewayCustomPoliciesResponse{

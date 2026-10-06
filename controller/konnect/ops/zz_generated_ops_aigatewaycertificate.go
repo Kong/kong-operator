@@ -108,22 +108,39 @@ func getAIGatewayCertificateForUID(
 	// TODO: pass a Filter to ListAiGatewayCertificates (e.g. by name/labels) so we
 	// do not page through every entity in the tenant. Filter types and
 	// fields are entity-specific; derive from OpenAPI schema.
-	resp, err := sdk.ListAiGatewayCertificates(ctx, sdkkonnectops.ListAiGatewayCertificatesRequest{
-		GatewayID: parentID,
-	})
-	if err != nil {
-		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
-	}
-	if resp == nil || resp.ListAIGatewayCertificatesResponse == nil {
-		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
-	}
-
-	for _, entry := range resp.ListAIGatewayCertificatesResponse.Data {
-		if entry.GetLabels()[KubernetesUIDLabelKey] != uid {
-			continue
+	var pageAfter *string
+	// Cursors already requested, to detect a next-page cursor that does not
+	// advance (directly or through a longer cycle).
+	seenCursors := map[string]struct{}{}
+	for {
+		resp, err := sdk.ListAiGatewayCertificates(ctx, sdkkonnectops.ListAiGatewayCertificatesRequest{
+			GatewayID: parentID,
+			PageSize:  new(listPageSize),
+			PageAfter: pageAfter,
+		})
+		if err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
 		}
-		if entry.GetID() != "" {
-			return entry.GetID(), nil
+		if resp == nil || resp.ListAIGatewayCertificatesResponse == nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+		}
+
+		for _, entry := range resp.ListAIGatewayCertificatesResponse.Data {
+			if entry.GetLabels()[KubernetesUIDLabelKey] != uid {
+				continue
+			}
+			if entry.GetID() != "" {
+				return entry.GetID(), nil
+			}
+		}
+
+		meta := resp.ListAIGatewayCertificatesResponse.GetMeta()
+		page := meta.GetPage()
+		if pageAfter, err = nextPageCursor(page.GetNext(), seenCursors); err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+		}
+		if pageAfter == nil {
+			break
 		}
 	}
 

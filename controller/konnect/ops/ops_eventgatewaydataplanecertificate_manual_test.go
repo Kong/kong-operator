@@ -153,6 +153,7 @@ func TestGetEventGatewayDataPlaneCertificateForUID(t *testing.T) {
 			sdk := sdkmocks.NewMockEventGatewayDataPlaneCertificatesSDK(t)
 			if !tc.noList {
 				sdk.On("ListEventGatewayDataPlaneCertificates", mock.Anything, sdkkonnectops.ListEventGatewayDataPlaneCertificatesRequest{
+					PageSize:  new(listPageSize),
 					GatewayID: "gateway-1",
 				}).
 					Return(&sdkkonnectops.ListEventGatewayDataPlaneCertificatesResponse{

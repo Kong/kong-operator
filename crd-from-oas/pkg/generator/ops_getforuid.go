@@ -2,6 +2,7 @@ package generator
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/config"
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/parser"
@@ -45,6 +46,12 @@ type opsGetForUIDFuncData struct {
 	// ListCallStylePositional indicates the SDK list method takes positional
 	// (pageSize *int64, pageNumber *int64) args instead of a request struct.
 	ListCallStylePositional bool
+	// ListPagination is how the SDK list method pages its results (one of the
+	// listPagination* constants), so the generated lookup requests every page.
+	ListPagination string
+	// ListMetaIsPage is true when, with cursor pagination, the list response's
+	// meta is the page itself (meta.next) rather than holding it (meta.page.next).
+	ListMetaIsPage bool
 	// ListCallPositionalWithParent is true when the SDK list method uses
 	// positional args and the entity has a single parent, so the generated
 	// call passes the parent ID as the first positional argument.
@@ -251,6 +258,29 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 		}
 	}
 
+	listPositional := opsConfig != nil && opsConfig.ListCallStylePositional
+	useUIDTagFilter := opsConfig != nil && opsConfig.UseUIDTagFilter
+	// Mirrors the branches of opsGetForUIDFuncTemplate that list entities:
+	// singletons are read with a get, and with no match strategy nothing is
+	// listed. The pagination is resolved either way, so that a lookup listing
+	// entities never scans only the first page because this mirror is off;
+	// only a lookup listing nothing may have a list method without a request
+	// type (e.g. one made up for a type with no list endpoint).
+	listsEntities := !isParentScopedSingleton(schema) && !isSingletonNoID(schema) &&
+		(useUIDTagFilter || len(matchFields) > 0 || rootUnion != nil || hasLabels || hasName)
+	listPagination, listMetaIsPage, err := resolveListPagination(listMethod, listResponseField, listPositional, len(parents))
+	if err != nil {
+		if listsEntities {
+			return nil, fmt.Errorf("entity %q: %w", entityName, err)
+		}
+		listPagination, listMetaIsPage = listPaginationNone, false
+	}
+	if opsConfig != nil && opsConfig.GetForUID != nil &&
+		opsConfig.GetForUID.ListItemsSource == config.GetForUIDListItemsSourceSlice &&
+		listPagination != listPaginationNone {
+		return nil, fmt.Errorf("entity %q: getForUID.listItemsSource %q is not supported for a paginated list method", entityName, config.GetForUIDListItemsSourceSlice)
+	}
+
 	var labelsResponseVariantFields []string
 	usesLabelsMatch := hasLabels && !isParentScopedSingleton(schema) &&
 		(opsConfig == nil || (!opsConfig.UseUIDTagFilter && len(matchFields) == 0 && rootUnion == nil))
@@ -264,30 +294,113 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 	}
 
 	return &opsGetForUIDFuncData{
-		Entity:                  entityName,
-		APIAlias:                g.config.APIGroupPackageAlias,
-		ListSDKInterface:        listInterface,
-		ListSDKMethod:           listMethod,
-		ListResponseField:       listResponseField,
-		ListResponseItemsExpr:   listResponseItemsExpr,
-		ListResponseNilCheck:    listResponseNilCheck,
-		Parents:                 parents,
-		GetForUIDFullyWrapped:   getForUIDFullyWrapped,
-		GetForUIDWrappedType:    getForUIDWrappedType,
-		ParentIDField:           parentIDField,
-		ListCallStylePositional: opsConfig != nil && opsConfig.ListCallStylePositional,
-		ListCallPositionalWithParent: opsConfig != nil && opsConfig.ListCallStylePositional &&
-			len(parents) == 1,
-		HasLabels:                   hasLabels,
-		LabelsResponseVariantFields: labelsResponseVariantFields,
-		UseUIDTagFilter:             opsConfig != nil && opsConfig.UseUIDTagFilter,
-		MatchFields:                 matchFields,
-		AllMatchFieldsSkipWhenUnset: allMatchFieldsSkipWhenUnset(matchFields),
-		RootUnion:                   rootUnion,
-		HasName:                     hasName,
-		SingletonByParent:           isParentScopedSingleton(schema),
-		SingletonNoID:               isSingletonNoID(schema),
+		Entity:                       entityName,
+		APIAlias:                     g.config.APIGroupPackageAlias,
+		ListSDKInterface:             listInterface,
+		ListSDKMethod:                listMethod,
+		ListResponseField:            listResponseField,
+		ListResponseItemsExpr:        listResponseItemsExpr,
+		ListResponseNilCheck:         listResponseNilCheck,
+		Parents:                      parents,
+		GetForUIDFullyWrapped:        getForUIDFullyWrapped,
+		GetForUIDWrappedType:         getForUIDWrappedType,
+		ParentIDField:                parentIDField,
+		ListCallStylePositional:      listPositional,
+		ListCallPositionalWithParent: listPositional && len(parents) == 1,
+		ListPagination:               listPagination,
+		ListMetaIsPage:               listMetaIsPage,
+		HasLabels:                    hasLabels,
+		LabelsResponseVariantFields:  labelsResponseVariantFields,
+		UseUIDTagFilter:              useUIDTagFilter,
+		MatchFields:                  matchFields,
+		AllMatchFieldsSkipWhenUnset:  allMatchFieldsSkipWhenUnset(matchFields),
+		RootUnion:                    rootUnion,
+		HasName:                      hasName,
+		SingletonByParent:            isParentScopedSingleton(schema),
+		SingletonNoID:                isSingletonNoID(schema),
 	}, nil
+}
+
+// Pagination styles of Konnect list methods.
+const (
+	// listPaginationNone: the list method returns every item in one response.
+	listPaginationNone = ""
+	// listPaginationCursor: the request takes page[size] and page[after], and
+	// the response's meta.page.next links to the next page.
+	listPaginationCursor = "cursor"
+	// listPaginationNumber: the request takes page[size] and page[number], and
+	// the response's meta.page holds the total number of items.
+	listPaginationNumber = "number"
+)
+
+// resolveListPagination returns how the SDK list method listMethod pages its
+// results, read from its request struct (which declares the page parameters
+// even when the method takes them as positional arguments) and its response
+// type listResponseType, and, for cursor pagination, whether the response's
+// meta is the page itself rather than holding it. It errors when the request
+// and response disagree or when the generated lookup could not pass the page
+// parameters, so that a lookup never silently scans only the first page.
+func resolveListPagination(listMethod, listResponseType string, positional bool, parents int) (string, bool, error) {
+	const (
+		operationsImportPath = "github.com/Kong/sdk-konnect-go/models/operations"
+		componentsImportPath = "github.com/Kong/sdk-konnect-go/models/components"
+	)
+	requestType := listMethod + "Request"
+	if _, ok, err := sdkStructType(operationsImportPath, requestType); err != nil {
+		return "", false, fmt.Errorf("inspect list request %q: %w", requestType, err)
+	} else if !ok {
+		if positional {
+			// A positional list method may have no request struct, e.g. one
+			// taking only a parent ID and a filter: it has no page parameters.
+			return listPaginationNone, false, nil
+		}
+		return "", false, fmt.Errorf("list request type %q not found in %q", requestType, operationsImportPath)
+	}
+	var pagination string
+	for field, style := range map[string]string{"PageAfter": listPaginationCursor, "PageNumber": listPaginationNumber} {
+		has, err := sdkStructHasField(operationsImportPath, requestType, field)
+		if err != nil {
+			return "", false, fmt.Errorf("inspect list request %q: %w", requestType, err)
+		}
+		if !has {
+			continue
+		}
+		if pagination != listPaginationNone {
+			return "", false, fmt.Errorf("list request %q declares both PageAfter and PageNumber", requestType)
+		}
+		pagination = style
+	}
+	if pagination == listPaginationNone {
+		// A request without page parameters can still return a paginated
+		// response (the server's default page size): reject it rather than
+		// generate a lookup that scans only the first page.
+		meta, ok, err := sdkStructFieldTypeName(componentsImportPath, listResponseType, "Meta")
+		if err != nil {
+			return "", false, fmt.Errorf("inspect list response %q: %w", listResponseType, err)
+		}
+		if ok && slices.Contains([]string{"CursorMeta", "CursorMetaPage", "PaginatedMeta"}, meta) {
+			return "", false, fmt.Errorf("list response %q is paginated (meta %q) but list request %q has no page parameters", listResponseType, meta, requestType)
+		}
+		return listPaginationNone, false, nil
+	}
+
+	// The response's meta holds the page (CursorMeta, PaginatedMeta), or, for
+	// some cursor-paginated endpoints, is the page itself (CursorMetaPage).
+	wantMeta := map[string][]string{
+		listPaginationCursor: {"CursorMeta", "CursorMetaPage"},
+		listPaginationNumber: {"PaginatedMeta"},
+	}[pagination]
+	meta, ok, err := sdkStructFieldTypeName(componentsImportPath, listResponseType, "Meta")
+	if err != nil {
+		return "", false, fmt.Errorf("inspect list response %q: %w", listResponseType, err)
+	}
+	if !ok || !slices.Contains(wantMeta, meta) {
+		return "", false, fmt.Errorf("list response %q of paginated list request %q has meta %q, want one of %q", listResponseType, requestType, meta, wantMeta)
+	}
+	if positional && (parents > 0 || pagination != listPaginationNumber) {
+		return "", false, fmt.Errorf("paginated positional list method %q is only supported with page[size] and page[number] and no parent", listMethod)
+	}
+	return pagination, meta == "CursorMetaPage", nil
 }
 
 // allMatchFieldsSkipWhenUnset reports whether every match field is optional

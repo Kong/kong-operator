@@ -42,6 +42,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	"github.com/kong/kong-operator/v2/controller/konnect/ops"
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstance"
@@ -122,6 +123,10 @@ type Config struct {
 	KongPluginInstallationControllerEnabled bool
 	KonnectSyncPeriod                       time.Duration
 	KonnectRequestTimeout                   time.Duration
+	// KonnectListPageSize is the page size requested when listing Konnect
+	// entities page by page, e.g. to find an entity by its Kubernetes UID.
+	// 0 means consts.DefaultKonnectListPageSize.
+	KonnectListPageSize int64
 	// TODO: remove this a couple of versions after 2.1 release
 	// TODO: https://github.com/Kong/kong-operator/issues/2768
 	KonnectControllerMaxConcurrentReconciles uint
@@ -195,6 +200,7 @@ func DefaultConfig() Config {
 		ValidatingWebhookEnabled:      true,
 		KonnectSyncPeriod:             consts.DefaultKonnectSyncPeriod,
 		KonnectRequestTimeout:         consts.DefaultKonnectRequestTimeout,
+		KonnectListPageSize:           consts.DefaultKonnectListPageSize,
 		CertTTL:                       consts.DefaultCertTTL,
 		CertExpirationMargin:          consts.DefaultCertExpirationMargin,
 	}
@@ -235,6 +241,12 @@ func Run(
 	if cfg.ControllerName != "" {
 		setupLog.Info(fmt.Sprintf("custom controller name provided: %s", cfg.ControllerName))
 		vars.SetControllerName(cfg.ControllerName)
+	}
+
+	if cfg.KonnectListPageSize != 0 {
+		if err := ops.SetListPageSize(cfg.KonnectListPageSize); err != nil {
+			return err
+		}
 	}
 
 	if cfg.LeaderElection {

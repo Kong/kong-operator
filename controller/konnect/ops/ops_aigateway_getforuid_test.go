@@ -57,7 +57,7 @@ func TestGetAIGatewayEntityForUID(t *testing.T) {
 				}
 				if uid != "" {
 					sdk.EXPECT().
-						ListAiGatewayConsumers(mock.Anything, sdkkonnectops.ListAiGatewayConsumersRequest{GatewayID: gatewayID}).
+						ListAiGatewayConsumers(mock.Anything, sdkkonnectops.ListAiGatewayConsumersRequest{GatewayID: gatewayID, PageSize: new(listPageSize)}).
 						Return(&sdkkonnectops.ListAiGatewayConsumersResponse{
 							ListAIGatewayConsumersResponse: &sdkkonnectcomp.ListAIGatewayConsumersResponse{Data: data},
 						}, nil).
@@ -79,7 +79,7 @@ func TestGetAIGatewayEntityForUID(t *testing.T) {
 				}
 				if uid != "" {
 					sdk.EXPECT().
-						ListAiGatewayConsumerGroups(mock.Anything, sdkkonnectops.ListAiGatewayConsumerGroupsRequest{GatewayID: gatewayID}).
+						ListAiGatewayConsumerGroups(mock.Anything, sdkkonnectops.ListAiGatewayConsumerGroupsRequest{GatewayID: gatewayID, PageSize: new(listPageSize)}).
 						Return(&sdkkonnectops.ListAiGatewayConsumerGroupsResponse{
 							ListAIGatewayConsumerGroupsResponse: &sdkkonnectcomp.ListAIGatewayConsumerGroupsResponse{Data: data},
 						}, nil).
@@ -102,6 +102,7 @@ func TestGetAIGatewayEntityForUID(t *testing.T) {
 				if uid != "" {
 					sdk.EXPECT().
 						ListAiGatewayConsumerCredentials(mock.Anything, sdkkonnectops.ListAiGatewayConsumerCredentialsRequest{
+							PageSize:   new(listPageSize),
 							GatewayID:  gatewayID,
 							ConsumerID: consumerID,
 						}).
@@ -129,7 +130,7 @@ func TestGetAIGatewayEntityForUID(t *testing.T) {
 				}
 				if uid != "" {
 					sdk.EXPECT().
-						ListAiGatewayDataPlaneCertificates(mock.Anything, sdkkonnectops.ListAiGatewayDataPlaneCertificatesRequest{GatewayID: gatewayID}).
+						ListAiGatewayDataPlaneCertificates(mock.Anything, sdkkonnectops.ListAiGatewayDataPlaneCertificatesRequest{GatewayID: gatewayID, PageSize: new(listPageSize)}).
 						Return(&sdkkonnectops.ListAiGatewayDataPlaneCertificatesResponse{
 							ListAIGatewayDataPlaneCertificatesResponse: &sdkkonnectcomp.ListAIGatewayDataPlaneCertificatesResponse{Data: data},
 						}, nil).
