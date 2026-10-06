@@ -434,6 +434,7 @@ func (i *Instance) Run(ctx context.Context) error {
 		index.OptionsForAIGatewayConsumer(),
 		index.OptionsForAIGatewayConsumerCredential(),
 		index.OptionsForAIGatewayConsumerGroup(),
+		index.OptionsForAIGatewayCustomPolicy(),
 		index.OptionsForAIGatewayDataPlaneCertificate(),
 		index.OptionsForAIGatewayMCPServer(),
 		index.OptionsForAIGatewayModel(),

@@ -172,6 +172,9 @@ func BuildDocument(
 		translateKind[aiconfigurationv1alpha1.AIGatewayPolicyList](
 			cl, gw, index.IndexFieldAIGatewayPolicyOnOnPremAIGatewayRef,
 			(*aiconfigurationv1alpha1.AIGatewayPolicy).ToAIGWPolicy, &doc.Policies),
+		translateKind[aiconfigurationv1alpha1.AIGatewayCustomPolicyList](
+			cl, gw, index.IndexFieldAIGatewayCustomPolicyOnOnPremAIGatewayRef,
+			(*aiconfigurationv1alpha1.AIGatewayCustomPolicy).ToAIGWCustomPolicy, &doc.CustomPolicies),
 		translateKind[aiconfigurationv1alpha1.AIGatewayConsumerGroupList](
 			cl, gw, index.IndexFieldAIGatewayConsumerGroupOnOnPremAIGatewayRef,
 			(*aiconfigurationv1alpha1.AIGatewayConsumerGroup).ToAIGWConsumerGroup, &doc.ConsumerGroups),

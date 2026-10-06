@@ -99,6 +99,7 @@ func (cs *Controllers) SetupWithManager(_ context.Context, mgr ctrl.Manager) err
 		&AIGatewayCertificateReconciler{},
 		&AIGatewayConsumerReconciler{},
 		&AIGatewayConsumerGroupReconciler{},
+		&AIGatewayCustomPolicyReconciler{},
 		&AIGatewayDataPlaneCertificateReconciler{},
 		&AIGatewayMCPServerReconciler{},
 		&AIGatewayModelReconciler{},
