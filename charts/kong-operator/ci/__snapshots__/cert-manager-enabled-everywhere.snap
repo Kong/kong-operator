@@ -65208,7 +65208,6 @@ rules:
   - aigatewayconsumergroups/finalizers
   - aigatewayconsumers/finalizers
   - aigatewaycustompolicies/finalizers
-  - aigatewaycustompolicies/status
   - aigatewaydataplanecertificates/finalizers
   - aigatewaymcpservers/finalizers
   - aigatewaymodelproviders/finalizers
@@ -65227,6 +65226,7 @@ rules:
   - aigatewaycertificates/status
   - aigatewayconsumergroups/status
   - aigatewayconsumers/status
+  - aigatewaycustompolicies/status
   - aigatewaydataplanecertificates/status
   - aigatewaymcpservers/status
   - aigatewaymodelproviders/status
