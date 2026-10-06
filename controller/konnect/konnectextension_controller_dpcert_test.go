@@ -1,6 +1,7 @@
 package konnect
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -34,6 +35,18 @@ func dpCertTestProgrammedStatus(id string) configurationv1alpha1.KongDataPlaneCl
 			ControlPlaneID: "control-plane-id",
 		},
 		Conditions: []metav1.Condition{{Type: konnectv1alpha1.KonnectEntityProgrammedConditionType, Status: metav1.ConditionTrue}},
+	}
+}
+
+// dpCertTestObject returns a programmed KongDataPlaneClientCertificate owned by the test KonnectExtension.
+func dpCertTestObject(name, cert string) *configurationv1alpha1.KongDataPlaneClientCertificate {
+	return &configurationv1alpha1.KongDataPlaneClientCertificate{
+		Name: name, Namespace: dpCertTestNamespace,
+		OwnerReferences: []metav1.OwnerReference{{
+			APIVersion: konnectv1alpha2.GroupVersion.String(), Kind: "KonnectExtension", Name: dpCertTestExtName, UID: types.UID(dpCertTestExtName),
+		}},
+		Spec:   configurationv1alpha1.KongDataPlaneClientCertificateSpec{KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{Cert: cert}},
+		Status: dpCertTestProgrammedStatus("konnect-id-" + name),
 	}
 }
 
@@ -127,6 +140,8 @@ func TestDataPlaneClientCertificateName(t *testing.T) {
 	assert.Equal(t, "ext", dataPlaneClientCertificateName("ext", existing("other", "old"), "cert"))
 	assert.Equal(t, "ext", dataPlaneClientCertificateName("ext", existing("ext", "cert\n"), "cert"),
 		"the object registering the same certificate keeps the extension name")
+	assert.Equal(t, "ext", dataPlaneClientCertificateName("ext", existing("ext", "cert\n\n"), "cert\n\n"),
+		"also when the certificate ends with a blank line")
 
 	replacement := dataPlaneClientCertificateName("ext", existing("ext", "old"), "cert")
 	assert.NotEqual(t, "ext", replacement, "an object registering another certificate holds the extension name")
@@ -138,32 +153,28 @@ func TestDataPlaneClientCertificateName(t *testing.T) {
 
 // A certificate is registered once, also while its KongDataPlaneClientCertificate is not programmed yet.
 func TestKonnectExtensionRegistersCertificateOnce(t *testing.T) {
-	r, ext := dpCertTestReconciler(t, "cert-v1")
-	for range 10 {
-		var current konnectv1alpha2.KonnectExtension
-		require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(ext), &current))
-		_, err := r.Reconcile(t.Context(), &current)
-		require.NoError(t, err)
-	}
+	for _, cert := range []string{"cert-v1", "cert-v1\n", "cert-v1\n\n"} {
+		t.Run(fmt.Sprintf("%q", cert), func(t *testing.T) {
+			r, ext := dpCertTestReconciler(t, cert)
+			for range 10 {
+				var current konnectv1alpha2.KonnectExtension
+				require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(ext), &current))
+				_, err := r.Reconcile(t.Context(), &current)
+				require.NoError(t, err)
+			}
 
-	certs := dpCertTestList(t, r.Client)
-	require.Len(t, certs, 1)
-	require.Contains(t, certs, dpCertTestExtName)
-	assert.Equal(t, "cert-v1", certs[dpCertTestExtName].Spec.Cert)
+			certs := dpCertTestList(t, r.Client)
+			require.Len(t, certs, 1)
+			require.Contains(t, certs, dpCertTestExtName)
+			assert.Equal(t, cert, certs[dpCertTestExtName].Spec.Cert)
+		})
+	}
 }
 
 // When the certificate in the Secret changes, the new one is registered next to the one registered
 // before, which is deleted only once the new one is programmed.
 func TestKonnectExtensionReplacesRegisteredCertificate(t *testing.T) {
-	previous := &configurationv1alpha1.KongDataPlaneClientCertificate{
-		Name: dpCertTestExtName, Namespace: dpCertTestNamespace,
-		OwnerReferences: []metav1.OwnerReference{{
-			APIVersion: konnectv1alpha2.GroupVersion.String(), Kind: "KonnectExtension", Name: dpCertTestExtName, UID: types.UID(dpCertTestExtName),
-		}},
-		Spec:   configurationv1alpha1.KongDataPlaneClientCertificateSpec{KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{Cert: "cert-v1"}},
-		Status: dpCertTestProgrammedStatus("konnect-id-v1"),
-	}
-	r, ext := dpCertTestReconciler(t, "cert-v2", previous)
+	r, ext := dpCertTestReconciler(t, "cert-v2", dpCertTestObject(dpCertTestExtName, "cert-v1"))
 
 	var sawBoth bool
 	for round := range 40 {
@@ -197,5 +208,54 @@ func TestKonnectExtensionReplacesRegisteredCertificate(t *testing.T) {
 	for name, c := range certs {
 		assert.NotEqual(t, dpCertTestExtName, name)
 		assert.Equal(t, "cert-v2", c.Spec.Cert)
+	}
+}
+
+// When the certificate in the Secret changes back to one whose object is being deleted, the object
+// registering the other certificate stays until that deletion is complete and the certificate has
+// been registered again; the extension must never be left without a registered certificate.
+func TestKonnectExtensionKeepsRegisteredCertificateWhilePreviousIsDeleting(t *testing.T) {
+	now := metav1.Now()
+	deleting := dpCertTestObject(dpCertTestExtName, "cert-a")
+	deleting.DeletionTimestamp = &now
+	deleting.Finalizers = []string{"test/hold"}
+	r, ext := dpCertTestReconciler(t, "cert-a", deleting, dpCertTestObject(dpCertTestExtName+"-b", "cert-b"))
+
+	reconcile := func() {
+		t.Helper()
+		var current konnectv1alpha2.KonnectExtension
+		require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(ext), &current))
+		_, err := r.Reconcile(t.Context(), &current)
+		require.NoError(t, err)
+	}
+
+	for range 20 {
+		reconcile()
+		certs := dpCertTestList(t, r.Client)
+		assert.Contains(t, certs, dpCertTestExtName+"-b", "the registered certificate stays while the other object is being deleted")
+	}
+
+	// Complete the deletion, then let the certificate be registered again.
+	held := dpCertTestList(t, r.Client)[dpCertTestExtName]
+	held.Finalizers = nil
+	require.NoError(t, r.Update(t.Context(), &held))
+	for round := range 40 {
+		reconcile()
+		certs := dpCertTestList(t, r.Client)
+		require.NotEmpty(t, certs, "a certificate is always registered")
+		if round%4 == 3 {
+			for name, c := range certs {
+				if c.Status.Konnect == nil || c.Status.Konnect.ID == "" {
+					c.Status = dpCertTestProgrammedStatus("konnect-id-" + name)
+					require.NoError(t, r.Status().Update(t.Context(), &c))
+				}
+			}
+		}
+	}
+
+	certs := dpCertTestList(t, r.Client)
+	require.Len(t, certs, 1)
+	for _, c := range certs {
+		assert.Equal(t, "cert-a", c.Spec.Cert)
 	}
 }
