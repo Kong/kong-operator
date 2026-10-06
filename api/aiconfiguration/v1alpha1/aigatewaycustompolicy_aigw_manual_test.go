@@ -185,35 +185,69 @@ func TestAIGatewayCustomPolicy_ToAIGWCustomPolicy(t *testing.T) {
 // TestAIGatewayCustomPolicy_ToAIGWCustomPolicy_StrictRoundTrip guards against a dropped or
 // renamed field: it decodes marshalAIGWCustomPolicyPayload's output with yaml.v3's
 // KnownFields(true), which errors on any key aigw.CustomPolicy doesn't recognize. See
-// aigatewaymodel_aigw_manual_test.go for the rationale.
+// aigatewaymodel_aigw_manual_test.go for the rationale. Both variants are covered, so a
+// future installed-only key with no aigw.CustomPolicy equivalent fails here too.
 func TestAIGatewayCustomPolicy_ToAIGWCustomPolicy_StrictRoundTrip(t *testing.T) {
 	t.Parallel()
 
-	spec := &AIGatewayCustomPolicyAPISpec{
-		AIGatewayCustomPolicyConfig: &AIGatewayCustomPolicyConfig{
-			Type: AIGatewayCustomPolicyConfigTypeStreaming,
-			Streaming: &CreateAIGatewayCustomPolicyStreamingRequest{
-				Name:        "my-streaming-policy",
-				DisplayName: "My Streaming Policy",
-				Labels:      PublicLabels{"app": "test1"},
-				ManagedBy:   ManagedBy{"kong-operator": "true"},
-				Schema:      inlineConfigMapDataSource("return { name = \"my-policy\" }"),
-				Handler:     inlineConfigMapDataSource("local kong = kong"),
+	tests := map[string]struct {
+		spec *AIGatewayCustomPolicyAPISpec
+		want aigw.CustomPolicy
+	}{
+		"installed": {
+			spec: &AIGatewayCustomPolicyAPISpec{
+				AIGatewayCustomPolicyConfig: &AIGatewayCustomPolicyConfig{
+					Type: AIGatewayCustomPolicyConfigTypeInstalled,
+					Installed: &CreateAIGatewayCustomPolicyInstalledRequest{
+						Name:        "my-installed-policy",
+						DisplayName: "My Installed Policy",
+						Labels:      PublicLabels{"app": "test1"},
+						ManagedBy:   ManagedBy{"kong-operator": "true"},
+						Schema:      inlineConfigMapDataSource("return { name = \"my-policy\" }"),
+					},
+				},
+			},
+			want: aigw.CustomPolicy{
+				Type:   "installed",
+				Name:   "my-installed-policy",
+				Schema: "return { name = \"my-policy\" }",
+			},
+		},
+		"streaming": {
+			spec: &AIGatewayCustomPolicyAPISpec{
+				AIGatewayCustomPolicyConfig: &AIGatewayCustomPolicyConfig{
+					Type: AIGatewayCustomPolicyConfigTypeStreaming,
+					Streaming: &CreateAIGatewayCustomPolicyStreamingRequest{
+						Name:        "my-streaming-policy",
+						DisplayName: "My Streaming Policy",
+						Labels:      PublicLabels{"app": "test1"},
+						ManagedBy:   ManagedBy{"kong-operator": "true"},
+						Schema:      inlineConfigMapDataSource("return { name = \"my-policy\" }"),
+						Handler:     inlineConfigMapDataSource("local kong = kong"),
+					},
+				},
+			},
+			want: aigw.CustomPolicy{
+				Type:    "streaming",
+				Name:    "my-streaming-policy",
+				Schema:  "return { name = \"my-policy\" }",
+				Handler: "local kong = kong",
 			},
 		},
 	}
-	data, err := spec.marshalAIGWCustomPolicyPayload()
-	require.NoError(t, err)
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-	dec := yaml.NewDecoder(bytes.NewReader(data))
-	dec.KnownFields(true)
-	var policy aigw.CustomPolicy
-	require.NoError(t, dec.Decode(&policy))
+			data, err := tt.spec.marshalAIGWCustomPolicyPayload()
+			require.NoError(t, err)
 
-	require.Equal(t, aigw.CustomPolicy{
-		Type:    "streaming",
-		Name:    "my-streaming-policy",
-		Schema:  "return { name = \"my-policy\" }",
-		Handler: "local kong = kong",
-	}, policy)
+			dec := yaml.NewDecoder(bytes.NewReader(data))
+			dec.KnownFields(true)
+			var policy aigw.CustomPolicy
+			require.NoError(t, dec.Decode(&policy))
+
+			require.Equal(t, tt.want, policy)
+		})
+	}
 }

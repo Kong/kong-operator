@@ -80,6 +80,11 @@
 
 ### Changed
 
+- On-prem AI Gateway: `AIGatewayCustomPolicy` configuration entities
+  referencing an `OnPremAIGateway` are now translated into the pushed
+  configuration document. The entity gains an on-prem reconciler, and
+  `spec.aiGatewayRef.kind` now accepts `OnPremAIGateway`.
+  [#5967](https://github.com/Kong/kong-operator/pull/5967)
 - On-prem AI Gateway: `AIGatewayCertificate` and `AIGatewaySNI` configuration
   entities are now translated into the pushed configuration document, enabling
   TLS certificate/SNI matching configuration for on-prem AI Gateway data
