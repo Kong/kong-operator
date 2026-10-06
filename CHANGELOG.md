@@ -140,6 +140,10 @@
   config gained the new upstream plugin fields. Existing CRs with an empty
   `openid-connect.config.issuer` are rejected by the CRD schema.
   [#6002](https://github.com/Kong/kong-operator/pull/6002)
+- On-prem AI Gateway: `AIGatewayAgent` configuration entities
+  referencing an `OnPremAIGateway` are now translated into the pushed
+  configuration document.
+  [#5984](https://github.com/Kong/kong-operator/pull/5984)
 - On-prem AI Gateway: `AIGatewayCustomPolicy` configuration entities
   referencing an `OnPremAIGateway` are now translated into the pushed
   configuration document. The entity gains an on-prem reconciler, and

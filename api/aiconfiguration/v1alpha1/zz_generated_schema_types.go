@@ -5,7 +5,6 @@ package v1alpha1
 import (
 	"encoding/json"
 	"fmt"
-
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
@@ -2509,95 +2508,6 @@ type AIGatewayAuthStrategyKeyAuth struct {
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-}
-
-// AIGatewayAuthStrategyKeyAuthConfig Configuration for the key-auth auth
-// strategy.
-// For advanced use cases, additional config properties can be sent in the
-// request body.
-// See: https://developer.konghq.com/plugins/key-auth/reference/ for the list of
-// properties
-type AIGatewayAuthStrategyKeyAuthConfig struct {
-	// An optional boolean value telling the plugin to show or hide the credential
-	// from the upstream service.
-	// If true, the plugin strips the credential from the request.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	HideCredentials string `json:"hideCredentials,omitzero"`
-	// If enabled, reads the request body.
-	// Supported MIME types: application/www-form-urlencoded, application/json, and
-	// multipart/form-data.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	KeyInBody string `json:"keyInBody,omitzero"`
-	// If enabled (default), the plugin reads the request header and tries to find
-	// the key in it.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	KeyInHeader string `json:"keyInHeader,omitzero"`
-	// If enabled (default), the plugin reads the query parameter in the request
-	// and tries to find the key in it.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	KeyInQuery string `json:"keyInQuery,omitzero"`
-	// An array of strings containing the names of the keys to look for in the
-	// request.
-	//
-	//
-	// +optional
-	KeyNames []string `json:"keyNames,omitempty"`
-	// Authenticate against Kong Identity instead of local credentials.
-	// Mutually exclusive with identity realms.
-	//
-	//
-	// +optional
-	Principals AIGatewayAuthStrategyKeyAuthConfigPrincipals `json:"principals,omitzero"`
-	// When authentication fails the plugin sends `WWW-Authenticate` header with
-	// `realm` attribute value.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Realm string `json:"realm,omitzero"`
-	// A boolean value that indicates whether the plugin should run (and try to
-	// authenticate) on `OPTIONS` preflight requests.
-	// If set to `false`, then `OPTIONS` requests are always allowed.
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	RunOnPreflight string `json:"runOnPreflight,omitzero"`
-}
-
-// AIGatewayAuthStrategyKeyAuthConfigPrincipals Authenticate against Kong
-// Identity instead of local credentials.
-// Mutually exclusive with identity realms.
-type AIGatewayAuthStrategyKeyAuthConfigPrincipals struct {
-	// The Kong Identity directory instance to authenticate against.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9_-]+$`
-	Directory string `json:"directory,omitzero"`
-	// When true, authenticate against Kong Identity instead of local credentials.
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Enabled string `json:"enabled,omitzero"`
-	// When true (default), reject the request if no matching principal is found in
-	// Kong Identity.
-	// When false, allow the request to continue unauthenticated instead.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	ErrorOnMiss string `json:"errorOnMiss,omitzero"`
 }
 
 // AIGatewayAuthStrategyOpenIDConnect Configuration for an auth strategy.
