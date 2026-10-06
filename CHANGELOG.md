@@ -155,6 +155,14 @@
   reported.
   [#5961](https://github.com/Kong/kong-operator/pull/5961)
 
+- On-prem AI Gateway: `AIGatewayConsumer`s referenced by an `OnPremAIGateway`
+  are now rendered into the on-prem document, with their
+  `AIGatewayConsumerCredential`s embedded and their `secretRef` api keys
+  resolved from Secrets. Previously the reconciliation failed for every
+  referenced consumer and credential with a "does not have a Konnect ID yet"
+  error.
+  [#5954](https://github.com/Kong/kong-operator/pull/5954)
+
 ## [v2.4.0-rapid.2.0]
 
 > Release date: 2026-09-30
