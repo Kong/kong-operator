@@ -152,6 +152,15 @@ func BuildDocument(
 ) (*aigw.Document, []EntityStatus, error) {
 	doc := &aigw.Document{}
 	var statuses []EntityStatus
+	// Entity names of the certificates that translated successfully, checked when translating
+	// the SNIs referencing them: resolveReferencedCertificate only checks the referenced
+	// certificate's existence and same-gateway membership, so without this a certificate that
+	// failed its own translation (e.g. a missing or unlabeled secretRef Secret) would leave its
+	// SNI reporting success while the converter drops the SNI from the pushed payload.
+	// The same silent-drop class remains for the pre-existing existence-only resolvers
+	// (consumer->policy, model->provider): a referenced entity excluded for its own failed
+	// translation still lets the referencing entity report success.
+	translatedCertificates := make(map[string]struct{})
 
 	for _, translate := range []func(context.Context) ([]EntityStatus, error){
 		translateKind[aiconfigurationv1alpha1.AIGatewayModelList](
@@ -178,6 +187,33 @@ func BuildDocument(
 		translateKind[aiconfigurationv1alpha1.AIGatewayAuthStrategyList](
 			cl, gw, index.IndexFieldAIGatewayAuthStrategyOnOnPremAIGatewayRef,
 			(*aiconfigurationv1alpha1.AIGatewayAuthStrategy).ToAIGWAuthStrategy, &doc.AuthStrategies),
+		translateKind[aiconfigurationv1alpha1.AIGatewayCertificateList](
+			cl, gw, index.IndexFieldAIGatewayCertificateOnOnPremAIGatewayRef,
+			func(c *aiconfigurationv1alpha1.AIGatewayCertificate, ctx context.Context, cl client.Client) (*aigw.Certificate, error) {
+				cert, err := c.ToAIGWCertificate(ctx, cl)
+				if err != nil {
+					return nil, err
+				}
+				translatedCertificates[c.GetKonnectName()] = struct{}{}
+				return cert, nil
+			},
+			&doc.Certificates),
+		translateKind[aiconfigurationv1alpha1.AIGatewaySNIList](
+			cl, gw, index.IndexFieldAIGatewaySNIOnOnPremAIGatewayRef,
+			func(s *aiconfigurationv1alpha1.AIGatewaySNI, ctx context.Context, cl client.Client) (*aigw.SNI, error) {
+				sni, err := s.ToAIGWSNI(ctx, cl)
+				if err != nil {
+					return nil, err
+				}
+				if _, ok := translatedCertificates[sni.Certificate]; !ok {
+					return nil, fmt.Errorf(
+						"referenced AIGatewayCertificate %q was excluded from the document: its own translation failed",
+						sni.Certificate,
+					)
+				}
+				return sni, nil
+			},
+			&doc.SNIs),
 	} {
 		s, err := translate(ctx)
 		if err != nil {
