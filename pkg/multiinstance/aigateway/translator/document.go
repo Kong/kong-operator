@@ -190,6 +190,9 @@ func BuildDocument(
 		translateKind[aiconfigurationv1alpha1.AIGatewayAuthStrategyList](
 			cl, gw, index.IndexFieldAIGatewayAuthStrategyOnOnPremAIGatewayRef,
 			(*aiconfigurationv1alpha1.AIGatewayAuthStrategy).ToAIGWAuthStrategy, &doc.AuthStrategies),
+		translateKind[aiconfigurationv1alpha1.AIGatewayCACertificateList](
+			cl, gw, index.IndexFieldAIGatewayCACertificateOnOnPremAIGatewayRef,
+			(*aiconfigurationv1alpha1.AIGatewayCACertificate).ToAIGWCACertificate, &doc.CACertificates),
 		translateKind[aiconfigurationv1alpha1.AIGatewayCertificateList](
 			cl, gw, index.IndexFieldAIGatewayCertificateOnOnPremAIGatewayRef,
 			func(c *aiconfigurationv1alpha1.AIGatewayCertificate, ctx context.Context, cl client.Client) (*aigw.Certificate, error) {
