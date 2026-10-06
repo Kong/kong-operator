@@ -17628,6 +17628,7 @@ spec:
                     properties:
                       name:
                         maxLength: 253
+                        minLength: 1
                         type: string
                     required:
                     - name
@@ -32001,6 +32002,7 @@ spec:
                     properties:
                       name:
                         maxLength: 253
+                        minLength: 1
                         type: string
                     required:
                     - name

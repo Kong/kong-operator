@@ -31,6 +31,8 @@ type certificateOptions struct {
 	IPAddresses       []net.IP
 	CATrue            bool
 	Expired           bool
+	NotBefore         time.Time
+	NotAfter          time.Time
 	MaxPathLen        int
 	ParentCertificate *tls.Certificate
 	KeyType           KeyType
@@ -76,6 +78,17 @@ func WithCATrue() certificateOption {
 func WithAlreadyExpired() certificateOption {
 	return func(opts certificateOptions) certificateOptions {
 		opts.Expired = true
+		return opts
+	}
+}
+
+// WithValidity sets the certificate validity period explicitly. A zero
+// notBefore or notAfter keeps the default for that bound. It takes precedence
+// over WithAlreadyExpired.
+func WithValidity(notBefore, notAfter time.Time) certificateOption {
+	return func(opts certificateOptions) certificateOptions {
+		opts.NotBefore = notBefore
+		opts.NotAfter = notAfter
 		return opts
 	}
 }
@@ -137,6 +150,12 @@ func MustGenerateCert(options ...certificateOption) tls.Certificate {
 	if certOptions.Expired {
 		notBefore = notBefore.AddDate(-2, 0, 0)
 		notAfter = notAfter.AddDate(-2, 0, 0)
+	}
+	if !certOptions.NotBefore.IsZero() {
+		notBefore = certOptions.NotBefore
+	}
+	if !certOptions.NotAfter.IsZero() {
+		notAfter = certOptions.NotAfter
 	}
 
 	// Create a self-signed X.509 certificate.

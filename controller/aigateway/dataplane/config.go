@@ -629,11 +629,12 @@ func cleanupStaleCertificates(
 func extraWatches(blder *builder.Builder, mgr ctrl.Manager) *builder.Builder {
 	return blder.Watches(
 		&corev1.Secret{},
-		handler.EnqueueRequestsFromMapFunc(shareddataplane.EnqueueDataPlanesForCertificateSecret(
+		handler.EnqueueRequestsFromMapFunc(shareddataplane.EnqueueDataPlanesByIndex(
 			mgr.GetClient(),
 			func() client.ObjectList { return &aigatewayv1alpha1.AIGatewayDataPlaneList{} },
 			index.IndexFieldAIGatewayDataPlaneOnCertificateSecret,
 			"AIGatewayDataPlane",
+			"Secret",
 		)),
 	)
 }

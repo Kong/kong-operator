@@ -26,32 +26,34 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// EnqueueDataPlanesForControlPlane returns a MapFunc that enqueues reconcile
-// requests for all DataPlanes in the same namespace whose control plane
-// reference matches the changed control plane object.
-func EnqueueDataPlanesForControlPlane(
+// EnqueueDataPlanesByIndex returns a MapFunc that enqueues reconcile requests
+// for all DataPlanes whose refIndexField index entry ("namespace/name")
+// matches the changed object. It backs both the control plane watches and the
+// watch on manually-referenced certificate Secrets: operator-owned
+// certificate Secrets are already covered by Owns(&corev1.Secret{}), but a
+// user-owned one is only tied to its DataPlanes through that index. refKind
+// is the changed object's kind, used in logs.
+func EnqueueDataPlanesByIndex(
 	cl client.Client,
 	newObjectList func() client.ObjectList,
-	controlPlaneRefIndexField string,
+	refIndexField string,
 	kind string,
-	controlPlaneKind string,
+	refKind string,
 ) handler.MapFunc {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		cp := obj
-
 		dpList := newObjectList()
 		if err := cl.List(ctx, dpList,
-			client.MatchingFields{controlPlaneRefIndexField: cp.GetNamespace() + "/" + cp.GetName()},
+			client.MatchingFields{refIndexField: obj.GetNamespace() + "/" + obj.GetName()},
 		); err != nil {
-			ctrl.LoggerFrom(ctx).Error(err, "failed to list "+kind+"s for "+controlPlaneKind,
-				controlPlaneKind, cp.GetName())
+			ctrl.LoggerFrom(ctx).Error(err, "failed to list "+kind+"s for "+refKind,
+				refKind, obj.GetName())
 			return nil
 		}
 
 		items, err := meta.ExtractList(dpList)
 		if err != nil {
-			ctrl.LoggerFrom(ctx).Error(err, "failed to extract "+kind+" list items for "+controlPlaneKind,
-				controlPlaneKind, cp.GetName())
+			ctrl.LoggerFrom(ctx).Error(err, "failed to extract "+kind+" list items for "+refKind,
+				refKind, obj.GetName())
 			return nil
 		}
 
@@ -67,20 +69,4 @@ func EnqueueDataPlanesForControlPlane(
 		}
 		return requests
 	}
-}
-
-// EnqueueDataPlanesForCertificateSecret returns a MapFunc that enqueues
-// reconcile requests for all DataPlanes in the same namespace as the changed
-// Secret whose manual certificate Secret reference (indexed under
-// secretRefIndexField as "namespace/name") resolves to it. Operator-owned
-// (automatically-provisioned) certificate Secrets are already covered by the
-// controller's Owns(&corev1.Secret{}); this watch exists solely so edits to a
-// manually-referenced, user-owned Secret also trigger a reconcile.
-func EnqueueDataPlanesForCertificateSecret(
-	cl client.Client,
-	newObjectList func() client.ObjectList,
-	secretRefIndexField string,
-	kind string,
-) handler.MapFunc {
-	return EnqueueDataPlanesForControlPlane(cl, newObjectList, secretRefIndexField, kind, "Secret")
 }

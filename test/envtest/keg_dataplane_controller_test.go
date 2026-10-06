@@ -1261,7 +1261,7 @@ func TestKEGDataPlaneReconciler_ManualCertificateSecret(t *testing.T) {
 		}
 		return ""
 	}
-	listAutomaticSecrets := func(ct *assert.CollectT, egdp *eventgatewayv1alpha1.KegDataPlane) []corev1.Secret {
+	listAutomaticSecrets := func(ct assert.TestingT, egdp *eventgatewayv1alpha1.KegDataPlane) []corev1.Secret {
 		var secretList corev1.SecretList
 		if !assert.NoError(ct, cl.List(ctx, &secretList, client.InNamespace(ns.Name),
 			client.MatchingLabels{consts.SecretKEGDataPlaneCertificateLabel: "true"},
@@ -1294,10 +1294,9 @@ func TestKEGDataPlaneReconciler_ManualCertificateSecret(t *testing.T) {
 		assert.Equal(t, userSecret.Name, certVolumeSecretName(deploy))
 		assert.NotEmpty(t, deploy.Spec.Template.Annotations[consts.KEGDataPlaneCertificateChecksumAnnotation])
 
-		assert.Never(t, func() bool {
-			ct := &assert.CollectT{}
-			return len(listAutomaticSecrets(ct, egdp)) > 0
-		}, waitTime, tickTime)
+		// The certificate is resolved before the Deployment is built, so an
+		// automatic Secret would already exist by now.
+		assert.Empty(t, listAutomaticSecrets(t, egdp), "no automatic certificate Secret may be provisioned")
 	})
 
 	t.Run("missing Secret sets SecretRefNotFound, creating it unblocks the reconcile", func(t *testing.T) {

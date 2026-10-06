@@ -14,7 +14,7 @@ metadata:
   namespace: default
   labels:
     konghq.com/secret: "true"
-type: Opaque
+type: kubernetes.io/tls
 stringData:
   tls.crt: |
     -----BEGIN CERTIFICATE-----

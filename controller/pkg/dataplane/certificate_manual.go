@@ -42,6 +42,37 @@ import (
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
+// certificateClockSkewAllowance is how far in the future a manually-provided
+// certificate's NotBefore may be and still be accepted. Issuers such as
+// cert-manager set NotBefore to the issuance time, so a freshly issued
+// certificate must not be rejected just because the operator's clock is
+// slightly behind the issuer's.
+const certificateClockSkewAllowance = 5 * time.Minute
+
+// maxCertificateRequeue caps the delays derived from a certificate's validity
+// period. Far-future dates (e.g. a NotAfter of 9999-12-31) would otherwise
+// overflow [time.Duration], and the cap also re-validates long-lived
+// certificates at least once a day.
+const maxCertificateRequeue = 24 * time.Hour
+
+// RequeueAfterError is returned by certificate resolution when the
+// certificate can't be used yet but will become usable on its own at a known
+// time (e.g. a certificate whose NotBefore is in the future). The shared
+// reconciler requeues the DataPlane after After instead of retrying with
+// error backoff; the reason is surfaced through a status condition.
+type RequeueAfterError struct {
+	// After is the delay after which the DataPlane should be reconciled again.
+	After time.Duration
+	// Err describes why the certificate can't be used yet.
+	Err error
+}
+
+// Error returns the reason the certificate can't be used yet.
+func (e *RequeueAfterError) Error() string { return e.Err.Error() }
+
+// Unwrap returns the underlying reason the certificate can't be used yet.
+func (e *RequeueAfterError) Unwrap() error { return e.Err }
+
 // CertificateChecksum computes a stable checksum of a certificate Secret's
 // tls.crt and tls.key content, used to trigger a Deployment rollout when a
 // manually-referenced Secret is edited in place.
@@ -177,6 +208,11 @@ func GetManualCertificateSecret(
 			Message:            fmt.Sprintf("%s: %v", conds.SecretInvalidMessage, err),
 			ObservedGeneration: dp.GetGeneration(),
 		})
+		// A certificate that isn't valid yet becomes usable on its own:
+		// requeue for that moment, as no watch event will fire for it.
+		if notYetValid, ok := errors.AsType[*RequeueAfterError](err); ok {
+			return op.Noop, nil, notYetValid
+		}
 		return op.Noop, nil, nil
 	}
 
@@ -192,25 +228,68 @@ func GetManualCertificateSecret(
 
 // validateManualCertificate checks that the Secret holds a usable mTLS client
 // certificate: PEM-encoded tls.crt and tls.key that form a matching X.509 key
-// pair, with a leaf certificate that has not expired as of now.
+// pair, with a leaf certificate that is valid as of now. A NotBefore up to
+// certificateClockSkewAllowance in the future is tolerated; one further in the
+// future yields a *RequeueAfterError carrying the delay until it is accepted.
 func validateManualCertificate(secret *corev1.Secret, now time.Time) error {
 	if !secrets.IsTLSSecretValid(secret) {
 		return errors.New("tls.crt and tls.key must both be present and PEM-encoded")
 	}
-	pair, err := tls.X509KeyPair(secret.Data[corev1.TLSCertKey], secret.Data[corev1.TLSPrivateKeyKey])
+	leaf, err := parseLeafCertificate(secret)
 	if err != nil {
-		return fmt.Errorf("tls.crt and tls.key do not form a valid key pair: %w", err)
-	}
-	leaf := pair.Leaf
-	if leaf == nil {
-		if leaf, err = x509.ParseCertificate(pair.Certificate[0]); err != nil {
-			return fmt.Errorf("failed to parse tls.crt: %w", err)
-		}
+		return err
 	}
 	if now.After(leaf.NotAfter) {
 		return fmt.Errorf("certificate expired at %s", leaf.NotAfter.UTC().Format(time.RFC3339))
 	}
+	if acceptableFrom := leaf.NotBefore.Add(-certificateClockSkewAllowance); now.Before(acceptableFrom) {
+		return &RequeueAfterError{
+			After: min(acceptableFrom.Sub(now), maxCertificateRequeue),
+			Err:   fmt.Errorf("certificate not valid before %s", leaf.NotBefore.UTC().Format(time.RFC3339)),
+		}
+	}
 	return nil
+}
+
+// parseLeafCertificate parses the Secret's tls.crt/tls.key as an X.509 key
+// pair and returns its leaf certificate.
+func parseLeafCertificate(secret *corev1.Secret) (*x509.Certificate, error) {
+	pair, err := tls.X509KeyPair(secret.Data[corev1.TLSCertKey], secret.Data[corev1.TLSPrivateKeyKey])
+	if err != nil {
+		return nil, fmt.Errorf("tls.crt and tls.key do not form a valid key pair: %w", err)
+	}
+	if pair.Leaf != nil {
+		return pair.Leaf, nil
+	}
+	leaf, err := x509.ParseCertificate(pair.Certificate[0])
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse tls.crt: %w", err)
+	}
+	return leaf, nil
+}
+
+// manualCertificateExpiryRequeue returns the delay after which the DataPlane
+// must be reconciled again so that a user-owned certificate Secret's expiry
+// is detected and reported (at most maxCertificateRequeue), or 0 when no such
+// requeue is needed. Secret changes trigger a reconcile through the Secret
+// watch, but the passage of time doesn't. Operator-provisioned Secrets are not
+// validated, so they never need it.
+func manualCertificateExpiryRequeue(secret *corev1.Secret, now time.Time) time.Duration {
+	if secret == nil || secret.Labels[consts.SecretProvisioningLabelKey] == consts.SecretProvisioningAutomaticLabelValue {
+		return 0
+	}
+	leaf, err := parseLeafCertificate(secret)
+	if err != nil || !now.Before(leaf.NotAfter) {
+		return 0
+	}
+	// Requeue just past NotAfter, so the certificate is already expired when
+	// it is validated again. The cap is applied first, so the extra second
+	// can't overflow.
+	untilExpiry := leaf.NotAfter.Sub(now)
+	if untilExpiry >= maxCertificateRequeue {
+		return maxCertificateRequeue
+	}
+	return untilExpiry + time.Second
 }
 
 // CleanupStaleAutomaticCertificateSecret deletes the operator-provisioned

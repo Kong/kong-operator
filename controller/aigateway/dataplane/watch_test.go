@@ -97,11 +97,12 @@ func Test_certificateSecretWatch(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			mapFunc := shareddataplane.EnqueueDataPlanesForCertificateSecret(
+			mapFunc := shareddataplane.EnqueueDataPlanesByIndex(
 				tc.cl,
 				func() client.ObjectList { return &aigatewayv1alpha1.AIGatewayDataPlaneList{} },
 				index.IndexFieldAIGatewayDataPlaneOnCertificateSecret,
 				"AIGatewayDataPlane",
+				"Secret",
 			)
 			requests := mapFunc(t.Context(), tc.obj)
 			if tc.wantNil {

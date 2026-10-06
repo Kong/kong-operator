@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -75,7 +76,13 @@ func manualCertSecret(valid bool) *corev1.Secret {
 		s.Data = map[string][]byte{"tls.crt": []byte("not-a-cert")}
 		return s
 	}
-	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("user cert"))
+	// Valid for a year: the expected requeue for a valid certificate is the
+	// 24h cap (see maxCertificateRequeue in controller/pkg/dataplane).
+	now := time.Now()
+	cert, key := certificate.MustGenerateCertPEMFormat(
+		certificate.WithCommonName("user cert"),
+		certificate.WithValidity(now.Add(-time.Hour), now.AddDate(1, 0, 0)),
+	)
 	s.Data = map[string][]byte{"tls.crt": cert, "tls.key": key}
 	return s
 }

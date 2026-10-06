@@ -1,6 +1,7 @@
 package crdsvalidation_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -397,6 +398,41 @@ func TestAIGatewayDataPlane(t *testing.T) {
 					}
 					return dp
 				}(),
+			},
+			{
+				Name: "Manual with empty secretRef name - invalid (omitted by the typed client)",
+				TestObject: func() *aigatewayv1alpha1.AIGatewayDataPlane {
+					dp := validDataPlane(ns.Name)
+					dp.Spec.CertificateSecret = &aigatewayv1alpha1.CertificateSecret{
+						Provisioning: new(aigatewayv1alpha1.ManualCertificateProvisioning),
+						SecretRef:    &aigatewayv1alpha1.SecretRef{Name: ""},
+					}
+					return dp
+				}(),
+				ExpectedErrorMessage: new("spec.certificateSecret.secretRef.name: Required value"),
+			},
+			{
+				Name: "Manual with a 253-character secretRef name - valid",
+				TestObject: func() *aigatewayv1alpha1.AIGatewayDataPlane {
+					dp := validDataPlane(ns.Name)
+					dp.Spec.CertificateSecret = &aigatewayv1alpha1.CertificateSecret{
+						Provisioning: new(aigatewayv1alpha1.ManualCertificateProvisioning),
+						SecretRef:    &aigatewayv1alpha1.SecretRef{Name: strings.Repeat("a", 253)},
+					}
+					return dp
+				}(),
+			},
+			{
+				Name: "Manual with a 254-character secretRef name - invalid",
+				TestObject: func() *aigatewayv1alpha1.AIGatewayDataPlane {
+					dp := validDataPlane(ns.Name)
+					dp.Spec.CertificateSecret = &aigatewayv1alpha1.CertificateSecret{
+						Provisioning: new(aigatewayv1alpha1.ManualCertificateProvisioning),
+						SecretRef:    &aigatewayv1alpha1.SecretRef{Name: strings.Repeat("a", 254)},
+					}
+					return dp
+				}(),
+				ExpectedErrorMessage: new("spec.certificateSecret.secretRef.name: Too long"),
 			},
 			{
 				Name: "Manual without secretRef - invalid",

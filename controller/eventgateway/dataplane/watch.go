@@ -35,11 +35,12 @@ import (
 func extraWatches(blder *builder.Builder, mgr ctrl.Manager) *builder.Builder {
 	return blder.Watches(
 		&corev1.Secret{},
-		handler.EnqueueRequestsFromMapFunc(shareddataplane.EnqueueDataPlanesForCertificateSecret(
+		handler.EnqueueRequestsFromMapFunc(shareddataplane.EnqueueDataPlanesByIndex(
 			mgr.GetClient(),
 			func() client.ObjectList { return &eventgatewayv1alpha1.KegDataPlaneList{} },
 			index.IndexFieldKegDataPlaneOnCertificateSecret,
 			"KegDataPlane",
+			"Secret",
 		)),
 	)
 }

@@ -192,7 +192,13 @@ func manualCertSecret(valid bool) *corev1.Secret {
 		s.Data = map[string][]byte{"tls.crt": []byte("not-a-cert")}
 		return s
 	}
-	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("user cert"))
+	// Valid for a year: the expected requeue for a valid certificate is the
+	// 24h cap (see maxCertificateRequeue in controller/pkg/dataplane).
+	now := time.Now()
+	cert, key := certificate.MustGenerateCertPEMFormat(
+		certificate.WithCommonName("user cert"),
+		certificate.WithValidity(now.Add(-time.Hour), now.AddDate(1, 0, 0)),
+	)
 	s.Data = map[string][]byte{"tls.crt": cert, "tls.key": key}
 	return s
 }
@@ -298,7 +304,11 @@ func TestReconciler_Reconcile(t *testing.T) {
 		// Only the result of the final call is checked. Defaults to 1.
 		reconcileCount int
 		wantResult     ctrl.Result
-		wantErr        bool
+		// wantRequeueAfter, when non-zero, is the RequeueAfter the final
+		// reconcile is expected to return (within a few seconds), derived
+		// from the user-owned certificate's validity period.
+		wantRequeueAfter time.Duration
+		wantErr          bool
 		// betweenReconciles runs after each intermediate reconcile (i.e. every
 		// call except the last), before the next one. Used to seed state that
 		// depends on what a previous reconcile actually produced (e.g. marking
@@ -491,6 +501,33 @@ func TestReconciler_Reconcile(t *testing.T) {
 			},
 		},
 		{
+			// A certificate that becomes valid on its own needs no error backoff:
+			// the reconcile requeues for the moment it is accepted.
+			name: "Manual certificate: not yet valid secret, no error, requeued, no Deployment",
+			objects: func() []client.Object {
+				secret := manualCertSecret(true)
+				secret.Data[corev1.TLSCertKey], secret.Data[corev1.TLSPrivateKeyKey] = certificate.MustGenerateCertPEMFormat(
+					certificate.WithCommonName("user cert"), certificate.WithValidity(time.Now().Add(time.Hour), time.Now().Add(2*time.Hour)),
+				)
+				return []client.Object{newReconcileEGDPManualCert(), newProgrammedKEG(), secret}
+			}(),
+			wantResult:       ctrl.Result{},
+			wantRequeueAfter: 55 * time.Minute, // NotBefore (+1h) minus the 5m clock skew allowance
+			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
+				t.Helper()
+				egdp := getEGDP(t, cl)
+				assertCondition(t, egdp,
+					eventgatewayv1alpha1.CertificateProvisionedType,
+					metav1.ConditionFalse,
+					eventgatewayv1alpha1.CertificateSecretInvalidReason,
+				)
+				err := cl.Get(t.Context(), types.NamespacedName{
+					Namespace: reconcileTestNS, Name: reconcileTestDPName,
+				}, &appsv1.Deployment{})
+				assert.True(t, apierrors.IsNotFound(err))
+			},
+		},
+		{
 			name: "Manual certificate: operator-provisioned secret is rejected and kept",
 			objects: func() []client.Object {
 				egdp := newReconcileEGDPManualCert()
@@ -532,6 +569,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 			reconcileCount:    2,
 			betweenReconciles: markManualCertProgrammed,
 			wantResult:        ctrl.Result{},
+			wantRequeueAfter:  24 * time.Hour, // manualCertSecret is valid for a year: capped at 24h
 			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
 				t.Helper()
 				egdp := getEGDP(t, cl)
@@ -654,6 +692,10 @@ func TestReconciler_Reconcile(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
+			if tc.wantRequeueAfter != 0 {
+				assert.InDelta(t, tc.wantRequeueAfter.Seconds(), result.RequeueAfter.Seconds(), 5)
+				result.RequeueAfter = tc.wantResult.RequeueAfter
+			}
 			assert.Equal(t, tc.wantResult, result)
 
 			if tc.assertFn != nil {

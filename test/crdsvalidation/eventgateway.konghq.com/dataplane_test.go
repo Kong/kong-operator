@@ -1,6 +1,7 @@
 package crdsvalidation_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -391,6 +392,71 @@ func TestEventGatewayDataPlane(t *testing.T) {
 					}
 					return dp
 				}(),
+			},
+			{
+				Name: "Manual with empty secretRef name - invalid (omitted by the typed client)",
+				TestObject: func() *eventgatewayv1alpha1.KegDataPlane {
+					dp := validDataPlane(ns.Name)
+					dp.Spec.CertificateSecret = &eventgatewayv1alpha1.CertificateSecret{
+						Provisioning: new(eventgatewayv1alpha1.ManualCertificateProvisioning),
+						SecretRef:    &eventgatewayv1alpha1.SecretRef{Name: ""},
+					}
+					return dp
+				}(),
+				ExpectedErrorMessage: new("spec.certificateSecret.secretRef.name: Required value"),
+			},
+			{
+				Name: "Manual with a 253-character secretRef name - valid",
+				TestObject: func() *eventgatewayv1alpha1.KegDataPlane {
+					dp := validDataPlane(ns.Name)
+					dp.Spec.CertificateSecret = &eventgatewayv1alpha1.CertificateSecret{
+						Provisioning: new(eventgatewayv1alpha1.ManualCertificateProvisioning),
+						SecretRef:    &eventgatewayv1alpha1.SecretRef{Name: strings.Repeat("a", 253)},
+					}
+					return dp
+				}(),
+			},
+			{
+				Name: "Manual with a 254-character secretRef name - invalid",
+				TestObject: func() *eventgatewayv1alpha1.KegDataPlane {
+					dp := validDataPlane(ns.Name)
+					dp.Spec.CertificateSecret = &eventgatewayv1alpha1.CertificateSecret{
+						Provisioning: new(eventgatewayv1alpha1.ManualCertificateProvisioning),
+						SecretRef:    &eventgatewayv1alpha1.SecretRef{Name: strings.Repeat("a", 254)},
+					}
+					return dp
+				}(),
+				ExpectedErrorMessage: new("spec.certificateSecret.secretRef.name: Too long"),
+			},
+			{
+				Name: "switching Manual to Automatic while keeping secretRef - invalid",
+				TestObject: func() *eventgatewayv1alpha1.KegDataPlane {
+					dp := validDataPlane(ns.Name)
+					dp.Spec.CertificateSecret = &eventgatewayv1alpha1.CertificateSecret{
+						Provisioning: new(eventgatewayv1alpha1.ManualCertificateProvisioning),
+						SecretRef:    &eventgatewayv1alpha1.SecretRef{Name: "user-cert"},
+					}
+					return dp
+				}(),
+				Update: func(dp *eventgatewayv1alpha1.KegDataPlane) {
+					dp.Spec.CertificateSecret.Provisioning = new(eventgatewayv1alpha1.AutomaticCertificateProvisioning)
+				},
+				ExpectedUpdateErrorMessage: new("secretRef must not be set when provisioning is Automatic"),
+			},
+			{
+				Name: "switching Manual to Automatic and removing secretRef - valid",
+				TestObject: func() *eventgatewayv1alpha1.KegDataPlane {
+					dp := validDataPlane(ns.Name)
+					dp.Spec.CertificateSecret = &eventgatewayv1alpha1.CertificateSecret{
+						Provisioning: new(eventgatewayv1alpha1.ManualCertificateProvisioning),
+						SecretRef:    &eventgatewayv1alpha1.SecretRef{Name: "user-cert"},
+					}
+					return dp
+				}(),
+				Update: func(dp *eventgatewayv1alpha1.KegDataPlane) {
+					dp.Spec.CertificateSecret.Provisioning = new(eventgatewayv1alpha1.AutomaticCertificateProvisioning)
+					dp.Spec.CertificateSecret.SecretRef = nil
+				},
 			},
 			{
 				Name: "Manual without secretRef - invalid",

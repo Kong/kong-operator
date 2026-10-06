@@ -94,7 +94,8 @@ type KegDataPlaneSpec struct {
 	// If left unset, it defaults to Automatic (operator-managed).
 	//
 	// When Provisioning is Manual, SecretRef must point to an existing Secret
-	// of type kubernetes.io/tls (tls.crt + tls.key) that the operator will use
+	// holding tls.crt and tls.key (typically of type kubernetes.io/tls, but the
+	// type isn't enforced) that the operator will use
 	// as-is: it will never create, modify, rotate, or delete it. The Secret
 	// must live in this KegDataPlane's own namespace and must carry the operator's
 	// secret label selector (default "konghq.com/secret: \"true\"",
@@ -104,8 +105,9 @@ type KegDataPlaneSpec struct {
 	// Deployment has rolled onto the Manual one; switching back to Automatic
 	// later provisions a new one rather than reusing the deleted one.
 	//
-	// The referenced Secret must hold a matching, unexpired certificate and
-	// key, and must not be an operator-provisioned Secret (one labeled
+	// The referenced Secret must hold a matching certificate and key that are
+	// currently valid (a NotBefore up to 5 minutes in the future is tolerated
+	// for clock skew), and must not be an operator-provisioned Secret (one labeled
 	// "gateway.konghq.com/secret-provisioning: automatic"); otherwise
 	// CertificateProvisioned goes False with reason InvalidSecret or
 	// SecretRefOperatorManaged. Deleting the referenced Secret while it is in
@@ -160,6 +162,7 @@ type SecretRef struct {
 	// Name is the name of the referenced Secret.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	Name string `json:"name,omitempty"`
 }

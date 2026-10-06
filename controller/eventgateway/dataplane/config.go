@@ -80,8 +80,9 @@ var config = shareddataplane.Config[
 		ref := egdp.Spec.ControlPlaneRef.KonnectNamespacedRef
 		if ref == nil {
 			// The CRD schema requires konnectNamespacedRef, so this shouldn't
-			// happen. Returning an empty ref makes the KegDataPlane reconcile
-			// as if it had no control plane reference configured.
+			// happen. Returning an empty ref skips control plane resolution;
+			// buildContainer then refuses to build a Deployment without a
+			// resolved KonnectEventGateway, instead of panicking.
 			return shareddataplane.ControlPlaneRef{}
 		}
 		return shareddataplane.ControlPlaneRef{

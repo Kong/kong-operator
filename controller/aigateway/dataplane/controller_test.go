@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -420,7 +421,11 @@ func TestReconciler_Reconcile(t *testing.T) {
 		// Only the result of the final call is checked. Defaults to 1.
 		reconcileCount int
 		wantResult     ctrl.Result
-		wantErr        bool
+		// wantRequeueAfter, when non-zero, is the RequeueAfter the final
+		// reconcile is expected to return (within a few seconds), derived
+		// from the user-owned certificate's validity period.
+		wantRequeueAfter time.Duration
+		wantErr          bool
 		// betweenReconciles runs after each intermediate reconcile (i.e. every
 		// call except the last), before the next one. Used to seed state that
 		// depends on what a previous reconcile actually produced (e.g. marking
@@ -999,6 +1004,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 			reconcileCount:    2,
 			betweenReconciles: markManualCertProgrammed,
 			wantResult:        ctrl.Result{},
+			wantRequeueAfter:  24 * time.Hour, // manualCertSecret is valid for a year: capped at 24h
 			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
 				t.Helper()
 				aigwdp := getAIGWDP(t, cl)
@@ -1101,6 +1107,10 @@ func TestReconciler_Reconcile(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
+			if tc.wantRequeueAfter != 0 {
+				assert.InDelta(t, tc.wantRequeueAfter.Seconds(), result.RequeueAfter.Seconds(), 5)
+				result.RequeueAfter = tc.wantResult.RequeueAfter
+			}
 			assert.Equal(t, tc.wantResult, result)
 
 			if tc.assertFn != nil {

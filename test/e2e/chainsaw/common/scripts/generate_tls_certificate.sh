@@ -10,10 +10,14 @@ set -o pipefail
 #   EXPIRED: (optional) When "true", generate a certificate whose validity period
 #            ended in the past (2020-01-01 to 2020-01-02), to exercise expired
 #            certificate handling.
+#   NOT_YET_VALID: (optional) When "true", generate a certificate whose validity
+#            period starts in the future (2099-01-01 to 2099-12-31), to exercise
+#            not-yet-valid certificate handling.
 
 HOSTNAME="${HOSTNAME}"
 SANS="${SANS:-}"
 EXPIRED="${EXPIRED:-false}"
+NOT_YET_VALID="${NOT_YET_VALID:-false}"
 
 tmp_dir=$(mktemp -d)
 tmp_key="${tmp_dir}/tls.key"
@@ -41,13 +45,18 @@ generate_valid() {
     -addext "subjectAltName = ${SAN_LIST}"
 }
 
-# generate_expired self-signs a certificate with an explicit validity period in
-# the past. `openssl req -x509` can't set past dates before OpenSSL 3.4, so this
-# uses `openssl ca -selfsign`, which supports -startdate/-enddate on every
-# OpenSSL version.
-generate_expired() {
-  touch "${tmp_dir}/index.txt"
-  echo 01 > "${tmp_dir}/serial"
+# generate_with_dates self-signs a certificate valid from $1 to $2 (YYYYMMDDHHMMSSZ).
+# `openssl req -x509` can't set explicit dates before OpenSSL 3.4, so this uses
+# `openssl ca -selfsign`, which supports -startdate/-enddate on every OpenSSL
+# version.
+generate_with_dates() {
+  local start_date="$1" end_date="$2"
+  # errexit is disabled inside the $(...) this runs in, so every step returns
+  # explicitly on failure. The certificate's extensions come from an explicit
+  # [v3_ext] section (rather than copy_extensions), which makes LibreSSL issue
+  # an X.509 v3 certificate too.
+  touch "${tmp_dir}/index.txt" || return 1
+  echo 01 > "${tmp_dir}/serial" || return 1
   printf '%s\n' \
     '[ca]' \
     'default_ca = CA_default' \
@@ -58,28 +67,40 @@ generate_expired() {
     "new_certs_dir = ${tmp_dir}" \
     'default_md = sha256' \
     'policy = policy_any' \
-    'copy_extensions = copy' \
     'unique_subject = no' \
     '[policy_any]' \
     'commonName = supplied' \
-    > "${tmp_dir}/ca.cnf"
+    '[v3_ext]' \
+    'basicConstraints = CA:FALSE' \
+    "subjectAltName = ${SAN_LIST}" \
+    > "${tmp_dir}/ca.cnf" || return 1
   openssl req -new -nodes -newkey rsa:2048 \
     -keyout "$tmp_key" \
     -out "${tmp_dir}/req.csr" \
-    -subj "/CN=${HOSTNAME}" \
-    -addext "subjectAltName = ${SAN_LIST}" &&
+    -subj "/CN=${HOSTNAME}" || return 1
   openssl ca -batch -notext -selfsign \
     -config "${tmp_dir}/ca.cnf" \
+    -extensions v3_ext \
     -keyfile "$tmp_key" \
     -in "${tmp_dir}/req.csr" \
     -out "$tmp_crt" \
-    -startdate 20200101000000Z \
-    -enddate 20200102000000Z
+    -startdate "$start_date" \
+    -enddate "$end_date"
+}
+
+generate_expired() {
+  generate_with_dates 20200101000000Z 20200102000000Z
+}
+
+generate_not_yet_valid() {
+  generate_with_dates 20990101000000Z 20991231000000Z
 }
 
 generate=generate_valid
 if [[ "$EXPIRED" == "true" ]]; then
   generate=generate_expired
+elif [[ "$NOT_YET_VALID" == "true" ]]; then
+  generate=generate_not_yet_valid
 fi
 
 # Redirect logs to stderr (>&2) so stdout stays pure JSON.
