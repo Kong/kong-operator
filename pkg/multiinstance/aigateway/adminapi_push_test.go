@@ -141,6 +141,7 @@ func testPushInstance(t *testing.T, objs ...client.Object) *Instance {
 		index.OptionsForAIGatewayPolicy(),
 		index.OptionsForAIGatewayConsumerGroup(),
 		index.OptionsForAIGatewayAuthStrategy(),
+		index.OptionsForAIGatewayConsumer(),
 	} {
 		for _, opt := range opts {
 			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)

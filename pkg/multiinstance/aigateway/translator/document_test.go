@@ -22,6 +22,7 @@ import (
 	"github.com/Kong/ai-deck-converter/aigw"
 	"github.com/Kong/ai-deck-converter/convert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -137,6 +138,24 @@ func aiGatewayAuthStrategyFixture(name string) *aiconfigurationv1alpha1.AIGatewa
 	}
 }
 
+func aiGatewayConsumerFixture(name string) *aiconfigurationv1alpha1.AIGatewayConsumer {
+	return &aiconfigurationv1alpha1.AIGatewayConsumer{
+		Name: name, Namespace: "default",
+		Spec: aiconfigurationv1alpha1.AIGatewayConsumerSpec{
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				Group:         aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+				Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gw"},
+			},
+			APISpec: aiconfigurationv1alpha1.AIGatewayConsumerAPISpec{
+				Name:        aiconfigurationv1alpha1.AIGatewayEntityIdentifier(name),
+				DisplayName: name,
+				Type:        "api-key",
+			},
+		},
+	}
+}
+
 // TestBuildDocument covers listing, conversion and deterministic ordering: translateKind sorts
 // by k8s object name so the rendered payload (and its hash, which drives the drift loop in
 // controller.go) doesn't flap across List calls that return in a different order.
@@ -159,10 +178,12 @@ func TestBuildDocument(t *testing.T) {
 	groupA := aiGatewayConsumerGroupFixture("group-a")
 	authStrategyB := aiGatewayAuthStrategyFixture("auth-strategy-b")
 	authStrategyA := aiGatewayAuthStrategyFixture("auth-strategy-a")
+	consumerB := aiGatewayConsumerFixture("consumer-b")
+	consumerA := aiGatewayConsumerFixture("consumer-a")
 
 	builder := fake.NewClientBuilder().WithScheme(scheme).
 		WithObjects(gw, modelB, modelA, providerB, providerA, policyB, policyA, groupB, groupA,
-			authStrategyB, authStrategyA)
+			authStrategyB, authStrategyA, consumerB, consumerA)
 	for _, opt := range index.OptionsForAIGatewayModel() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
@@ -176,6 +197,12 @@ func TestBuildDocument(t *testing.T) {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	for _, opt := range index.OptionsForAIGatewayAuthStrategy() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayConsumerCredential() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayConsumer() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	cl := builder.Build()
@@ -197,9 +224,12 @@ func TestBuildDocument(t *testing.T) {
 	require.Len(t, doc.AuthStrategies, 2)
 	require.Equal(t, "auth-strategy-a", doc.AuthStrategies[0].Name)
 	require.Equal(t, "auth-strategy-b", doc.AuthStrategies[1].Name)
+	require.Len(t, doc.Consumers, 2)
+	require.Equal(t, "consumer-a", doc.Consumers[0].Name)
+	require.Equal(t, "consumer-b", doc.Consumers[1].Name)
 
 	// Every entity translated successfully, so all statuses are reported as such.
-	require.Len(t, statuses, 10)
+	require.Len(t, statuses, 12)
 	for _, s := range statuses {
 		require.NoError(t, s.Err)
 	}
@@ -240,6 +270,12 @@ func TestBuildDocument_NoModels(t *testing.T) {
 	for _, opt := range index.OptionsForAIGatewayAuthStrategy() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
+	for _, opt := range index.OptionsForAIGatewayConsumerCredential() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayConsumer() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
 	cl := builder.Build()
 
 	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
@@ -249,6 +285,8 @@ func TestBuildDocument_NoModels(t *testing.T) {
 	require.Empty(t, doc.ModelProviders)
 	require.Empty(t, doc.Policies)
 	require.Empty(t, doc.ConsumerGroups)
+	require.Empty(t, doc.AuthStrategies)
+	require.Empty(t, doc.Consumers)
 }
 
 // TestBuildDocument_PerEntityFailure covers the continue-on-error behaviour: a single broken
@@ -282,6 +320,12 @@ func TestBuildDocument_PerEntityFailure(t *testing.T) {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	for _, opt := range index.OptionsForAIGatewayAuthStrategy() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayConsumerCredential() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayConsumer() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	cl := builder.Build()
@@ -343,6 +387,12 @@ func TestBuildDocument_CrossNamespaceEntityRejected(t *testing.T) {
 	for _, opt := range index.OptionsForAIGatewayAuthStrategy() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
+	for _, opt := range index.OptionsForAIGatewayConsumerCredential() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayConsumer() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
 	cl := builder.Build()
 
 	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
@@ -366,4 +416,81 @@ func TestBuildDocument_CrossNamespaceEntityRejected(t *testing.T) {
 		}
 	}
 	require.Equal(t, 1, failed)
+}
+
+// TestBuildDocument_CredentialChangeRerender pins the credential -> document flow: the
+// rendered consumer embeds its credentials' secret-resolved api keys, so a change to the
+// backing Secret changes the rendered document (and, in production, the payload hash that
+// drives the push loop).
+func TestBuildDocument_CredentialChangeRerender(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	consumer := aiGatewayConsumerFixture("consumer-a")
+	credential := &aiconfigurationv1alpha1.AIGatewayConsumerCredential{
+		Name: "cred-a", Namespace: "default",
+		Spec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialSpec{
+			AIGatewayConsumerRef: commonv1alpha1.ObjectRef{
+				Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "consumer-a"},
+			},
+			APISpec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialAPISpec{
+				Name:        "cred-1",
+				DisplayName: "Cred 1",
+				Type:        "api-key",
+				APIKey: aiconfigurationv1alpha1.SensitiveDataSource{
+					Type: aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+					SecretRef: &aiconfigurationv1alpha1.SensitiveDataSecretRef{
+						Name: "consumer-api-key",
+						Key:  "key",
+					},
+				},
+			},
+		},
+	}
+	secret := &corev1.Secret{
+		Name: "consumer-api-key", Namespace: "default",
+		Data: map[string][]byte{"key": []byte("s3cr3t")},
+	}
+
+	builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gw, consumer, credential, secret)
+	// BuildDocument lists every configuration-entity kind, so every kind's index is needed.
+	for _, opts := range [][]index.Option{
+		index.OptionsForAIGatewayModel(),
+		index.OptionsForAIGatewayModelProvider(),
+		index.OptionsForAIGatewayPolicy(),
+		index.OptionsForAIGatewayConsumerGroup(),
+		index.OptionsForAIGatewayConsumer(),
+		index.OptionsForAIGatewayConsumerCredential(),
+		index.OptionsForAIGatewayAuthStrategy(),
+	} {
+		for _, opt := range opts {
+			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+		}
+	}
+	cl := builder.Build()
+
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	require.NoError(t, err)
+	require.Len(t, statuses, 1)
+	require.NoError(t, statuses[0].Err)
+	require.Len(t, doc.Consumers, 1)
+	require.Len(t, doc.Consumers[0].Credentials, 1)
+	require.Equal(t, "s3cr3t", doc.Consumers[0].Credentials[0].APIKey)
+
+	// Rotate the Secret's key value: the re-rendered document must reflect it.
+	secret.Data["key"] = []byte("n3w-s3cr3t")
+	require.NoError(t, cl.Update(t.Context(), secret))
+
+	doc, statuses, err = BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	require.NoError(t, err)
+	require.Len(t, statuses, 1)
+	require.NoError(t, statuses[0].Err)
+	require.Len(t, doc.Consumers, 1)
+	require.Equal(t, "n3w-s3cr3t", doc.Consumers[0].Credentials[0].APIKey)
 }
