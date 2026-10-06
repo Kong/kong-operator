@@ -38,6 +38,9 @@ Every release attaches to its GitHub Release page:
 - an **image SBOM** per platform: `image-linux-amd64-sbom.*.json` and `image-linux-arm64-sbom.*.json`
 - a `SHA256SUMS` covering all of the above
 
+The same reports are also attached to the image as attestations (see *Verify the SBOM, vulnerability
+and CIS attestations*), so they do not depend on the Release assets staying around.
+
 The signature and the build provenance describe the **multi-arch index digest**, never a
 per-platform digest and never a tag. Collect it first ([`regctl`](https://github.com/regclient/regclient/blob/main/docs/install.md)
 is one way):
@@ -50,10 +53,10 @@ IMAGE_DIGEST=$(regctl manifest digest "${IMAGE}:${TAG}")
 
 ### Verify the cosign signature
 
-Signatures are published to the public `kong/notary` Docker Hub repository, so point cosign at it:
+The signature is an OCI 1.1 referrer of the image, attached in the image's own repository, so cosign
+finds it with no extra configuration:
 
 ```sh
-export COSIGN_REPOSITORY=kong/notary
 cosign verify \
    "${IMAGE}:${TAG}@${IMAGE_DIGEST}" \
    --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
@@ -70,18 +73,38 @@ With [`slsa-verifier`](https://github.com/slsa-framework/slsa-verifier#installat
 slsa-verifier verify-image \
    "${IMAGE}:${TAG}@${IMAGE_DIGEST}" \
    --print-provenance \
-   --provenance-repository kong/notary \
    --source-uri 'github.com/Kong/kong-operator'
 ```
 
 Or with cosign, checking the identity of the generator that produced the attestation:
 
 ```sh
-COSIGN_REPOSITORY=kong/notary cosign verify-attestation \
+cosign verify-attestation \
    "${IMAGE}:${TAG}@${IMAGE_DIGEST}" \
    --type='slsaprovenance' \
    --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
    --certificate-identity-regexp='^https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@refs/tags/v[0-9]+.[0-9]+.[0-9]+$'
+```
+
+### Verify the SBOM, vulnerability and CIS attestations
+
+The reports behind the Release assets are also published as attestations on the image itself, one per
+predicate type. `cosign tree` lists what is attached; the types are:
+
+| Predicate type | Report |
+|---|---|
+| `cyclonedx`, `spdxjson` | source SBOM |
+| `https://cyclonedx.org/bom/image/<arch>`, `https://spdx.dev/Document/image/<arch>` | image SBOM, per platform |
+| `https://cosign.sigstore.dev/sarif/vuln/source`, `https://cosign.sigstore.dev/sarif/vuln/image/<arch>` | Grype vulnerability report |
+| `https://cisecurity.org/docker/<arch>` | CIS Docker benchmark report |
+| `https://konghq.com/build-metadata` | workflow and runner context of the build |
+
+```sh
+cosign verify-attestation \
+   "${IMAGE}:${TAG}@${IMAGE_DIGEST}" \
+   --type='cyclonedx' \
+   --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
+   --certificate-identity-regexp='^https://github\.com/Kong/kong-operator/\.github/workflows/'
 ```
 
 ### Verify the SBOM files
@@ -95,9 +118,6 @@ sha256sum -c SHA256SUMS
 `SHA256SUMS` proves the files were not corrupted in transit; it is not signed, so it does not prove who
 produced them. Authorship is carried by the image: the signature and the provenance above cover the
 index digest, and each image SBOM names the platform digest it describes.
-
-If a release publishes its signature and provenance next to the image rather than in `kong/notary`,
-omit `COSIGN_REPOSITORY` and `--provenance-repository`.
 
 ## Contact
 

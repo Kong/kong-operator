@@ -53,4 +53,3 @@ jobs:
       release-type: ${{ inputs.release_type }}
       regenerate-manifests: true
       release-issue-number: ${{ inputs.release_issue_number }}
-      notary-repository: ${{ vars.DOCKERHUB_NOTARY_REPOSITORY }}
