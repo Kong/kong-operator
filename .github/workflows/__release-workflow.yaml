@@ -118,7 +118,8 @@ jobs:
       minor: ${{ steps.semver_parser.outputs.minor }}
       patch: ${{ steps.semver_parser.outputs.patch }}
       prerelease: ${{ steps.semver_parser.outputs.prerelease }}
-      # NOTE: true for N.M.P with P != 0 and for rapid patches (e.g. 2.4.0-rapid.1.1).
+      # NOTE: true for N.M.P with P != 0 and for rapid patches (e.g. 2.4.0-rapid.2.1).
+      # The first release of a rapid line (e.g. 2.4.0-rapid.2.0) is not a patch.
       is-patch: ${{ steps.release-kind.outputs.is-patch }}
     runs-on: ubuntu-latest
     steps:
@@ -160,13 +161,30 @@ jobs:
           input_string: ${{ inputs.tag }}
           version_extractor_regex: 'v(.*)$'
 
+      # NOTE: rapid releases must use the N.M.0-rapid.K.P form: rapid.K.0 starts
+      # the rapid line K, rapid.K.P with P > 0 patches it. rapid.K is rejected so
+      # that each rapid line has a single spelling. The rapid prefix is matched
+      # case-insensitively so that e.g. Rapid.2 is rejected rather than released
+      # as a plain prerelease.
+      - name: Validate rapid release version format
+        env:
+          TAG: ${{ inputs.tag }}
+          PATCH: ${{ steps.semver_parser.outputs.patch }}
+          PRERELEASE: ${{ steps.semver_parser.outputs.prerelease }}
+        run: |
+          if [[ "${PRERELEASE,,}" == rapid* ]] && [[ "$PATCH" != "0" || ! "$PRERELEASE" =~ ^rapid\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Invalid rapid release version: $TAG"
+            echo "Rapid releases must use the N.M.0-rapid.K.P form, e.g. v2.4.0-rapid.2.0 or v2.4.0-rapid.2.1"
+            exit 1
+          fi
+
       - name: Determine whether this is a patch release
         id: release-kind
         env:
           PATCH: ${{ steps.semver_parser.outputs.patch }}
           PRERELEASE: ${{ steps.semver_parser.outputs.prerelease }}
         run: |
-          if [[ "$PATCH" != "0" || "$PRERELEASE" =~ ^rapid\.[0-9]+\.[0-9]+$ ]]; then
+          if [[ "$PATCH" != "0" || "$PRERELEASE" =~ ^rapid\.[0-9]+\.[1-9][0-9]*$ ]]; then
             echo "is-patch=true" >> "$GITHUB_OUTPUT"
           else
             echo "is-patch=false" >> "$GITHUB_OUTPUT"
@@ -180,8 +198,11 @@ jobs:
     secrets:
       dockerhub-token: ${{ secrets.dockerhub-push-token }}
       gh-pat: ${{ needs.github-app-token.outputs.token }}
+    # NOTE: needs semver so that a tag rejected there (e.g. a malformed rapid
+    # version) does not get images pushed.
     needs:
     - github-app-token
+    - semver
     with:
       registry: ${{ inputs.registry }}
       username: ${{ inputs.dockerhub-push-username }}

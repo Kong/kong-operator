@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.1
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: aigatewaypolicies.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -223,21 +223,6 @@ spec:
                     required:
                     - name
                     type: object
-                  datastores:
-                    description: Names of the Datastores this policy references.
-                    items:
-                      description: AIGatewayDatastoreRef A reference to an existing
-                        datastore
-                      properties:
-                        name:
-                          description: An immutable user-defined identifier for this
-                            resource.
-                          maxLength: 255
-                          minLength: 2
-                          pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
-                          type: string
-                      type: object
-                    type: array
                   displayName:
                     description: The display name for this policy instance.
                     maxLength: 256

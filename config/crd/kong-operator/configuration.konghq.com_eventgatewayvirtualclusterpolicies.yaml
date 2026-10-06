@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.1
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: eventgatewayvirtualclusterpolicies.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -226,6 +226,7 @@ spec:
                               A request type can occur more than
                               once in this list. Every entry for the type applies, in list order.
                               Requests of a type that is not in this list are not validated.
+                              A maximum of 100 entries are allowed.
                             items:
                               description: |-
                                 EventGatewayRequestRules represents a union type for EventGatewayRequestRules.
@@ -239,6 +240,7 @@ spec:
                                         Every rule in this list is evaluated independently against each quota
                                         operation in the request.
                                         A rule that evaluates to `false` runs its action.
+                                        A maximum of 10 rules are allowed.
                                       items:
                                         description: EventGatewayAlterClientQuotasRule
                                           is a type alias.
@@ -280,6 +282,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -292,6 +295,7 @@ spec:
                                         Every rule in this list is evaluated independently against each resource in
                                         the request.
                                         A rule that evaluates to `false` runs its action.
+                                        A maximum of 10 rules are allowed.
                                       items:
                                         description: EventGatewayAlterConfigsRule
                                           is a type alias.
@@ -333,6 +337,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -345,6 +350,7 @@ spec:
                                         Every rule in this list is evaluated independently against each credential
                                         in the request.
                                         A rule that evaluates to `false` runs its action.
+                                        A maximum of 10 rules are allowed.
                                       items:
                                         description: EventGatewayAlterUserScramCredentialsRule
                                           is a type alias.
@@ -386,6 +392,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -397,6 +404,7 @@ spec:
                                       description: |-
                                         Every rule in this list is evaluated independently against the request.
                                         A rule that evaluates to `false` runs its action.
+                                        A maximum of 10 rules are allowed.
                                       items:
                                         description: EventGatewayConsumerGroupHeartbeatRule
                                           is a type alias.
@@ -438,6 +446,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -450,6 +459,7 @@ spec:
                                         Every rule in this list is evaluated independently against each topic in the
                                         request.
                                         A rule that evaluates to `false` runs its action.
+                                        A maximum of 10 rules are allowed.
                                       items:
                                         description: EventGatewayCreatePartitionsRule
                                           is a type alias.
@@ -491,6 +501,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -503,6 +514,7 @@ spec:
                                         Every rule in this list is evaluated independently against each topic in the
                                         request.
                                         A rule that evaluates to `false` runs its action.
+                                        A maximum of 10 rules are allowed.
                                       items:
                                         description: EventGatewayCreateTopicsRule
                                           is a type alias.
@@ -544,6 +556,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -555,6 +568,7 @@ spec:
                                       description: |-
                                         Every rule in this list is evaluated independently against the request.
                                         A rule that evaluates to `false` runs its action.
+                                        A maximum of 10 rules are allowed.
                                       items:
                                         description: EventGatewayFetchRule is a type
                                           alias.
@@ -596,6 +610,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -608,6 +623,7 @@ spec:
                                         Every rule in this list is evaluated independently against each
                                         configuration entry in the request.
                                         A rule that evaluates to `false` runs its action.
+                                        A maximum of 10 rules are allowed.
                                       items:
                                         description: EventGatewayIncrementalAlterConfigsRule
                                           is a type alias.
@@ -649,6 +665,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -660,6 +677,7 @@ spec:
                                       description: |-
                                         Every rule in this list is evaluated independently against the request.
                                         A rule that evaluates to `false` runs its action.
+                                        A maximum of 10 rules are allowed.
                                       items:
                                         description: EventGatewayJoinGroupRule is
                                           a type alias.
@@ -701,6 +719,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -712,6 +731,7 @@ spec:
                                       description: |-
                                         Every rule in this list is evaluated independently against the request.
                                         A rule that evaluates to `false` runs its action.
+                                        A maximum of 10 rules are allowed.
                                       items:
                                         description: EventGatewayOffsetCommitRule
                                           is a type alias.
@@ -753,6 +773,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -764,6 +785,7 @@ spec:
                                       description: |-
                                         Every rule in this list is evaluated independently against the request.
                                         A rule that evaluates to `false` runs its action.
+                                        A maximum of 10 rules are allowed.
                                       items:
                                         description: EventGatewayOffsetFetchRule is
                                           a type alias.
@@ -805,6 +827,7 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -816,6 +839,7 @@ spec:
                                       description: |-
                                         Every rule in this list is evaluated independently against the request.
                                         A rule that evaluates to `false` runs its action.
+                                        A maximum of 10 rules are allowed.
                                       items:
                                         description: EventGatewayProduceRule is a
                                           type alias.
@@ -857,6 +881,61 @@ spec:
                                         - description
                                         - rule
                                         type: object
+                                      maxItems: 10
+                                      type: array
+                                  required:
+                                  - rules
+                                  type: object
+                                txnOffsetCommit:
+                                  description: TxnOffsetCommit configuration.
+                                  properties:
+                                    rules:
+                                      description: |-
+                                        Every rule in this list is evaluated independently against the request.
+                                        A rule that evaluates to `false` runs its action.
+                                        A maximum of 10 rules are allowed.
+                                      items:
+                                        description: EventGatewayTxnOffsetCommitRule
+                                          is a type alias.
+                                        properties:
+                                          action:
+                                            description: |-
+                                              What to do when a rule evaluates to `false`.
+
+                                              `reject` fails the request with the `POLICY_VIOLATION` error code.
+                                              `passthrough` lets the request continue, but logs the violation in the same
+                                              way as `reject`.
+                                            enum:
+                                            - reject
+                                            - passthrough
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          description:
+                                            description: |-
+                                              An explanation of the rule.
+                                              Event Gateway writes this text to the logs when the request
+                                              violates the rule, because the rule expression alone does not show the
+                                              intent.
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                          rule:
+                                            description: |-
+                                              A boolean expression that describes the valid state of the request.
+                                              The action runs when the expression evaluates to `false`.
+                                              An expression that cannot be evaluated, for example because a value has an
+                                              unexpected
+                                              format, also counts as `false`.
+                                            maxLength: 1000
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - action
+                                        - description
+                                        - rule
+                                        type: object
+                                      maxItems: 10
                                       type: array
                                   required:
                                   - rules
@@ -876,11 +955,13 @@ spec:
                                   - offsetCommit
                                   - offsetFetch
                                   - produce
+                                  - txnOffsetCommit
                                   minLength: 1
                                   type: string
                               required:
                               - type
                               type: object
+                            maxItems: 100
                             type: array
                         required:
                         - requests

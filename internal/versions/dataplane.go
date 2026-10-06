@@ -4,9 +4,9 @@ import (
 	"github.com/kong/semver/v4"
 )
 
-// minimumDataPlaneVersion indicates the bare minimum version of the
+// MinimumDataPlaneVersion indicates the bare minimum version of the
 // DataPlane component that the operator will support.
-var minimumDataPlaneVersion = semver.MustParse("3.0.0")
+var MinimumDataPlaneVersion = semver.MustParse("3.6.0")
 
 // IsDataPlaneImageVersionSupported is a helper intended to validate the
 // DataPlane image and indicate if the operator can support it.
@@ -22,5 +22,5 @@ func IsDataPlaneImageVersionSupported(image string) (bool, error) {
 		return false, err
 	}
 
-	return imageVersion.GE(minimumDataPlaneVersion), nil
+	return imageVersion.GE(MinimumDataPlaneVersion), nil
 }

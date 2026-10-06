@@ -49,6 +49,44 @@ func removeStatusCondition(dp k8sutils.ConditionsAware, condType string) {
 	dp.SetConditions(conditions)
 }
 
+// LicenseMissingMessage is the message used when no enabled KongLicense is
+// available and the gateway runs without a license.
+const LicenseMissingMessage = "No enabled KongLicense resource found; the gateway will run without a license"
+
+// SetLicenseStatusCondition sets the license condition on dp based on the
+// effective license provided by getter. It is a no-op when getter is nil or
+// condType is empty (license reporting disabled). The condition never gates
+// the Ready condition; see ensureReadyStatus.
+// ponytail: no license validation is wired yet, so LicenseInvalidReason never
+// fires; wire a ValidatorFunc into the KongLicense reconciler and map
+// GetValidatedLicense().IsValid here when validation is needed.
+func SetLicenseStatusCondition(
+	dp k8sutils.ConditionsAndGenerationAware,
+	getter LicenseGetter,
+	condType, validReason, missingReason string,
+) {
+	if getter == nil || condType == "" {
+		return
+	}
+	if _, ok := getter.GetLicense().Get(); !ok {
+		setStatusCondition(dp, metav1.Condition{
+			Type:               condType,
+			Status:             metav1.ConditionFalse,
+			Reason:             missingReason,
+			Message:            LicenseMissingMessage,
+			ObservedGeneration: dp.GetGeneration(),
+		})
+		return
+	}
+	setStatusCondition(dp, metav1.Condition{
+		Type:               condType,
+		Status:             metav1.ConditionTrue,
+		Reason:             validReason,
+		Message:            "License applied",
+		ObservedGeneration: dp.GetGeneration(),
+	})
+}
+
 // ensureReadyStatus computes the Ready condition for a DataPlane.
 // It first checks whether any non-Ready condition is False; if so it sets
 // Ready=False immediately without fetching the Deployment. Otherwise it reads
@@ -61,7 +99,12 @@ func (r *Reconciler[T, Cert]) ensureReadyStatus(
 	dp T,
 ) error {
 	for _, c := range dp.GetConditions() {
-		if c.Type != r.Config.Conditions.ReadyType && c.Status == metav1.ConditionFalse {
+		// The license condition must not gate readiness: a missing or invalid
+		// license is reported in its own condition (LicenseValidType) while the
+		// gateway keeps running.
+		if c.Type != r.Config.Conditions.ReadyType &&
+			c.Type != r.Config.Conditions.LicenseValidType &&
+			c.Status == metav1.ConditionFalse {
 			setStatusCondition(dp, metav1.Condition{
 				Type:               r.Config.Conditions.ReadyType,
 				Status:             metav1.ConditionFalse,
@@ -105,7 +148,16 @@ func (r *Reconciler[T, Cert]) ensureReadyStatus(
 			ObservedGeneration: dp.GetGeneration(),
 		})
 	} else {
-		k8sutils.SetReadyWithGeneration(dp, dp.GetGeneration())
+		// NOTE: SetReadyWithGeneration is intentionally not used here: it
+		// re-checks every condition via AreAllConditionsHaveTrueStatus and
+		// has no way to skip the informational license condition, which
+		// must not gate readiness (see the loop above).
+		setStatusCondition(dp, metav1.Condition{
+			Type:               r.Config.Conditions.ReadyType,
+			Status:             metav1.ConditionTrue,
+			Reason:             r.Config.Conditions.ResourceReadyReason,
+			ObservedGeneration: dp.GetGeneration(),
+		})
 	}
 
 	return nil

@@ -26,6 +26,10 @@ The mock provides:
 
   Both routes forward to Ollama's `/v1/chat/completions`; the model is chosen by the request
   body, so either provider can serve either model.
+- **A mock Headroom compressor** for the `ai-prompt-compressor` policy's `headroom` provider, on
+  route `/headroom/v1/compress` of the same Kong proxy. A `pre-function` answers in place of a
+  real Headroom: `401` unless `X-Headroom-Proxy-Token` is `test-headroom-token`, otherwise the
+  request body handed back uncompressed.
 
 In CI the fixtures are applied by the `aigateway` matrix job in
 `.github/workflows/__e2e_chainsaw_tests.yaml`.

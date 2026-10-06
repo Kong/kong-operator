@@ -155,6 +155,21 @@ func (e ReferencedObjectIsInvalidError) Error() string {
 	return fmt.Sprintf("referenced object %s is invalid: %v", e.Reference, e.Msg)
 }
 
+// ReferencedObjectNotKonnectManagedError is an error type that is returned when
+// the referenced parent object is not managed by the Konnect reconciler (e.g. an
+// AIGatewayConsumer targeting an OnPremAIGateway). The entity referencing it is
+// not Konnect-managed either, and its reconciliation stops without error.
+type ReferencedObjectNotKonnectManagedError struct {
+	Reference types.NamespacedName
+	TypeName  string
+}
+
+// Error implements the error interface.
+func (e ReferencedObjectNotKonnectManagedError) Error() string {
+	return fmt.Sprintf("referenced object %s is not managed by the Konnect reconciler (%s), so this entity is not Konnect-managed either",
+		e.Reference, e.TypeName)
+}
+
 // ReferencedSecretDoesNotExistError is an error type that is returned when
 // a Konnect entity references a Secret which does not exist.
 type ReferencedSecretDoesNotExistError struct {

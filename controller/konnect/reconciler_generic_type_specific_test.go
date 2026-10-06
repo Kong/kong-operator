@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -15,6 +16,7 @@ import (
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
@@ -433,6 +435,38 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		require.True(t, ok, "expected KonnectReferencesResolved condition to be set")
 		assert.Equal(t, metav1.ConditionFalse, cond.Status)
 		assert.Equal(t, configurationv1alpha1.KonnectReferencesResolvedReasonNotFound, cond.Reason, "grant check passed, so the resolver's own error must surface")
+	})
+
+	t.Run("condition is persisted when Programmed=False was already set", func(t *testing.T) {
+		// Regression: the Programmed aggregate patch triggered by the caller
+		// no-ops when Programmed is already False with the same reason and
+		// message (e.g. it was persisted earlier by another path), which used
+		// to leave KonnectReferencesResolved visible only in memory.
+		ent := agent.DeepCopy()
+		meta.SetStatusCondition(&ent.Status.Conditions, metav1.Condition{
+			Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
+			Status:             metav1.ConditionFalse,
+			Reason:             konnectv1alpha1.KonnectEntityProgrammedReasonConditionWithStatusFalseExists,
+			Message:            "Some conditions have status set to False",
+			ObservedGeneration: ent.GetGeneration(),
+		})
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme.Get()).
+			WithObjects(ent.DeepCopy()).
+			WithStatusSubresource(ent.DeepCopy()).
+			Build()
+
+		updated, isProblem, err := handleKonnectReferences(t.Context(), cl, ent, ent)
+		require.NoError(t, err)
+		require.True(t, isProblem)
+		require.True(t, updated)
+
+		var persisted aiconfigurationv1alpha1.AIGatewayAgent
+		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(ent), &persisted))
+		cond, ok := getKonnectReferencesResolvedCondition(persisted.Status.Conditions)
+		require.True(t, ok, "expected KonnectReferencesResolved condition to be persisted on the object")
+		assert.Equal(t, metav1.ConditionFalse, cond.Status)
+		assert.Equal(t, configurationv1alpha1.KonnectReferencesResolvedReasonNotFound, cond.Reason)
 	})
 }
 

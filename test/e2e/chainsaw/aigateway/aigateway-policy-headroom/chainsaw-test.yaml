@@ -1,0 +1,231 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: aigateway-policy-headroom
+spec:
+  description: |
+    Konnect AIGateway - ai-prompt-compressor policy with the headroom provider.
+
+    The policy config, read from a Secret, holds `provider: headroom` next to
+    a nested `headroom` block: free-form config that looks like a
+    discriminated union, which the SDK union flattening used to rewrite
+    (hoisting the nested block into config) before Konnect rejected it with
+    "unknown field" errors. The config must reach Konnect verbatim.
+
+    The policy is then exercised on the data plane against the mock Headroom
+    on the shared kong-mock, which only accepts the proxy_token
+    test-headroom-token: requests succeed with the right token, fail once the
+    Secret carries a wrong one (stop_on_error), and recover when it is
+    restored. Konnect only accepts the headroom provider on a 2.2 control
+    plane.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: aigw_cp_namespace
+      value: ($namespace)
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+  steps:
+    - name: Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: Create-konnect-aigateway
+      description: |
+        The ai-prompt-compressor headroom provider needs a 2.2 runtime.
+      bindings:
+        - name: auth_name
+          value: ($konnect_auth_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
+        with:
+          bindings:
+            - name: min_runtime_version
+              value: "2.2"
+            - name: runtime_auto_upgrade
+              value: Enabled
+    - name: Create-aigateway-dataplane
+      bindings:
+        - name: namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+    - name: Create-headroom-policy-secret
+      description: |
+        Create the Secret holding the headroom ai-prompt-compressor policy
+        config, with the proxy_token the mock Headroom accepts.
+      bindings:
+        - name: aigw_policy_secretref_name
+          value: (join('-', [($test_name), 'policy-headroom-secret']))
+        - name: headroom_proxy_token
+          value: test-headroom-token
+      try:
+        - apply:
+            file: 01-secret-for-headroom-policy.yaml
+    - name: Create-aigateway-policy-headroom-compressor
+      description: |
+        Create an ai-prompt-compressor AIGatewayPolicy whose config, read from
+        the Secret, holds `provider: headroom` next to a nested `headroom`
+        block: the shape that the SDK union flattening used to rewrite
+        (hoisting the nested block into config) before Konnect rejected it
+        with "unknown field" errors.
+      bindings:
+        - name: aigw_policy_name
+          value: (join('-', [($test_name), 'policy-headroom']))
+        - name: api_spec
+          value:
+            name: (join('-', [($test_name), 'policy-headroom']))
+            displayName: AIGateway Policy Headroom Compressor
+            type: ai-prompt-compressor
+            enabled: Enabled
+            global: Disabled
+            config:
+              type: secretRef
+              secretRef:
+                name: (join('-', [($test_name), 'policy-headroom-secret']))
+                key: config
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayPolicy.yaml
+    - name: Verify-headroom-policy-config-on-konnect
+      description: |
+        Konnect stores the config verbatim: the nested `headroom` block stays
+        nested, none of its fields are hoisted into config, and proxy_token
+        carries the Secret's value.
+      bindings:
+        - name: aigw_policy_name
+          value: (join('-', [($test_name), 'policy-headroom']))
+      try:
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: konnectaigateways.konnect.konghq.com
+              - name: RESOURCE_NAME
+                value: ($aigw_cp_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: FIELD
+                value: .status.id
+            content: |
+              bash ../../common/scripts/get_resource_field.sh
+            outputs:
+              - name: gateway_id
+                value: (json_parse($stdout).value)
+        - script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: API_PATH
+                value: (join('', ['/v1/ai-gateways/', $gateway_id, '/policies/', $aigw_policy_name]))
+              - name: EXPECTED_JQ
+                value: >-
+                  .type == "ai-prompt-compressor"
+                  and .config.provider == "headroom"
+                  and .config.compressor_url == "http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/headroom/v1/compress"
+                  and .config.stop_on_error == true
+                  and .config.headroom.proxy_token == "test-headroom-token"
+                  and .config.headroom.ssl_verify == false
+                  and .config.headroom.session_id_headers == ["x-session-id"]
+                  and (.config | has("proxy_token") or has("ssl_verify") or has("session_id_headers") | not)
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh
+    - name: Create-model-referencing-the-headroom-policy
+      bindings:
+        - name: aigw_policy_name
+          value: (join('-', [($test_name), 'policy-headroom']))
+      try:
+        - apply:
+            file: 02-model.yaml
+    - name: Verify-headroom-compressor-is-applied
+      description: |
+        Chat completions succeed through the model with the headroom policy
+        attached. On its own this does not prove the policy runs (the data
+        plane may not have picked it up yet); the wrong-token steps below do.
+      bindings:
+        - name: route_path
+          value: /aigw11/chat
+        - name: model_alias
+          value: qwen2.5:0.5b
+      use:
+        template: ../../common/_step_templates/verify-aigw-chat-completion-from-cluster.yaml
+    - name: Update-headroom-secret-with-a-wrong-proxy-token
+      description: |
+        Put a proxy_token the mock Headroom rejects into the Secret. The
+        operator has to push the new config to Konnect and the data plane has
+        to pick it up.
+      bindings:
+        - name: aigw_policy_secretref_name
+          value: (join('-', [($test_name), 'policy-headroom-secret']))
+        - name: headroom_proxy_token
+          value: wrong-headroom-token
+      try:
+        - apply:
+            file: 01-secret-for-headroom-policy.yaml
+    - name: Verify-headroom-compressor-rejects-the-wrong-proxy-token
+      description: |
+        With the wrong token the mock Headroom answers 401, and stop_on_error
+        makes the data plane fail the chat request. This proves the data plane
+        actually calls Headroom with the token read from the Secret, rather
+        than skipping the policy.
+      bindings:
+        - name: route_path
+          value: /aigw11/chat
+        - name: model_alias
+          value: qwen2.5:0.5b
+      use:
+        template: ../../common/_step_templates/verify-aigw-chat-completion-from-cluster.yaml
+        with:
+          bindings:
+            - name: expected_success
+              value: 'false'
+    - name: Restore-headroom-secret-with-the-right-proxy-token
+      bindings:
+        - name: aigw_policy_secretref_name
+          value: (join('-', [($test_name), 'policy-headroom-secret']))
+        - name: headroom_proxy_token
+          value: test-headroom-token
+      try:
+        - apply:
+            file: 01-secret-for-headroom-policy.yaml
+    - name: Verify-headroom-compressor-recovers-with-the-right-proxy-token
+      description: |
+        Chat completions succeed again once the right token is back, ruling
+        out that the previous failure came from anything but the token.
+      bindings:
+        - name: route_path
+          value: /aigw11/chat
+        - name: model_alias
+          value: qwen2.5:0.5b
+      use:
+        template: ../../common/_step_templates/verify-aigw-chat-completion-from-cluster.yaml
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: aigateway-policy-headroom
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

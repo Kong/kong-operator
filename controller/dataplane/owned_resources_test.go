@@ -17,6 +17,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/builder"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	k8sreduce "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/reduce"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
@@ -329,6 +330,174 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 				actualValue := svc.Labels[k]
 				require.Equalf(t, v, actualValue, "should have label %s:%s in service", k, v)
 			}
+		})
+	}
+}
+
+func TestEnsureIngressServiceForDataPlaneIPFamily(t *testing.T) {
+	testCases := []struct {
+		name string
+		// operator's IP family, fed to IPFamilyPolicyServiceOpt.
+		ipFamily ipfamily.IPFamily
+		// ipFamilyPolicy set in the DataPlane spec (nil = not set).
+		dataplanePolicy *corev1.IPFamilyPolicy
+		// ipFamilies set in the DataPlane spec (nil = not set).
+		dataplaneFamilies []corev1.IPFamily
+		// existingPolicy and existingPolicySet control the ipFamilyPolicy of
+		// the existing Service before reconcile: existingPolicySet=false leaves
+		// the Service as generated; true sets it to existingPolicy (nil
+		// included, since the fake client applies no defaulting).
+		existingPolicy    *corev1.IPFamilyPolicy
+		existingPolicySet bool
+		// existingFamilies and existingFamiliesSet control the ipFamilies of
+		// the existing Service before reconcile, e.g. to simulate the API
+		// server expanding a dual-policy Service with the secondary family.
+		existingFamilies    []corev1.IPFamily
+		existingFamiliesSet bool
+		expectedResult      op.Result
+		expectedSvcPolicy   *corev1.IPFamilyPolicy
+		expectedSvcIPs      []corev1.IPFamily
+	}{
+		{
+			name:              "should not update when the existing non-default ipFamilyPolicy equals the generated one",
+			dataplanePolicy:   new(corev1.IPFamilyPolicyPreferDualStack),
+			expectedResult:    op.Noop,
+			expectedSvcPolicy: new(corev1.IPFamilyPolicyPreferDualStack),
+		},
+		{
+			name:              "should leave the existing ipFamilyPolicy untouched when the generated Service sets no policy",
+			existingPolicy:    new(corev1.IPFamilyPolicyRequireDualStack),
+			existingPolicySet: true,
+			expectedResult:    op.Noop,
+			expectedSvcPolicy: new(corev1.IPFamilyPolicyRequireDualStack),
+		},
+		{
+			name:              "should update ipFamilyPolicy when changed in the DataPlane spec",
+			dataplanePolicy:   new(corev1.IPFamilyPolicyPreferDualStack),
+			existingPolicy:    new(corev1.IPFamilyPolicyRequireDualStack),
+			existingPolicySet: true,
+			expectedResult:    op.Updated,
+			expectedSvcPolicy: new(corev1.IPFamilyPolicyPreferDualStack),
+		},
+		{
+			name:              "should not update when ipFamilyPolicy is unset in both the DataPlane spec and the Service",
+			existingPolicySet: true,
+			expectedResult:    op.Noop,
+		},
+		{
+			name:              "should apply ipFamilyPolicy when set in the DataPlane spec and unset on the Service",
+			dataplanePolicy:   new(corev1.IPFamilyPolicyPreferDualStack),
+			existingPolicySet: true,
+			expectedResult:    op.Updated,
+			expectedSvcPolicy: new(corev1.IPFamilyPolicyPreferDualStack),
+		},
+		{
+			name:              "should apply the dual operator default to an existing single-stack Service",
+			ipFamily:          ipfamily.Dual,
+			existingPolicySet: true,
+			expectedResult:    op.Updated,
+			expectedSvcPolicy: new(corev1.IPFamilyPolicyPreferDualStack),
+		},
+		{
+			name:              "should not churn when the dual operator default is already applied",
+			ipFamily:          ipfamily.Dual,
+			existingPolicy:    new(corev1.IPFamilyPolicyPreferDualStack),
+			existingPolicySet: true,
+			expectedResult:    op.Noop,
+			expectedSvcPolicy: new(corev1.IPFamilyPolicyPreferDualStack),
+		},
+		{
+			name:              "should sync user-set ipFamilies without churn when already applied",
+			ipFamily:          ipfamily.Dual,
+			dataplaneFamilies: []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol},
+			existingPolicy:    new(corev1.IPFamilyPolicyPreferDualStack),
+			existingPolicySet: true,
+			expectedResult:    op.Noop,
+			expectedSvcPolicy: new(corev1.IPFamilyPolicyPreferDualStack),
+			expectedSvcIPs:    []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol},
+		},
+		{
+			name:              "should apply a single user-set ipFamilies entry as SingleStack on a dual cluster",
+			ipFamily:          ipfamily.Dual,
+			dataplaneFamilies: []corev1.IPFamily{corev1.IPv4Protocol},
+			expectedResult:    op.Noop,
+			expectedSvcPolicy: new(corev1.IPFamilyPolicySingleStack),
+			expectedSvcIPs:    []corev1.IPFamily{corev1.IPv4Protocol},
+		},
+		{
+			name:                "should preserve the API-defaulted secondary ipFamily when the spec requests a dual policy with a single family",
+			ipFamily:            ipfamily.Dual,
+			dataplaneFamilies:   []corev1.IPFamily{corev1.IPv4Protocol},
+			dataplanePolicy:     new(corev1.IPFamilyPolicyPreferDualStack),
+			existingFamilies:    []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol},
+			existingFamiliesSet: true,
+			expectedResult:      op.Noop,
+			expectedSvcPolicy:   new(corev1.IPFamilyPolicyPreferDualStack),
+			expectedSvcIPs:      []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol},
+		},
+		{
+			name:                "should release the secondary ipFamily when the spec requests SingleStack with a single family",
+			ipFamily:            ipfamily.Dual,
+			dataplaneFamilies:   []corev1.IPFamily{corev1.IPv4Protocol},
+			dataplanePolicy:     new(corev1.IPFamilyPolicySingleStack),
+			existingFamilies:    []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol},
+			existingFamiliesSet: true,
+			expectedResult:      op.Updated,
+			expectedSvcPolicy:   new(corev1.IPFamilyPolicySingleStack),
+			expectedSvcIPs:      []corev1.IPFamily{corev1.IPv4Protocol},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dataplane := builder.
+				NewDataPlaneBuilder().
+				WithObjectMeta(metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "dp-1",
+				}).
+				Build()
+			dataplane.Spec.Network = operatorv1beta1.DataPlaneNetworkOptions{
+				Services: &operatorv1beta1.DataPlaneServices{
+					Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+						IPFamilies:     tc.dataplaneFamilies,
+						IPFamilyPolicy: tc.dataplanePolicy,
+					},
+				},
+			}
+
+			fakeClient := fakectrlruntimeclient.
+				NewClientBuilder().
+				WithScheme(scheme.Scheme).
+				Build()
+
+			ctx := t.Context()
+			existingSvc, err := k8sresources.GenerateNewIngressServiceForDataPlane(dataplane)
+			require.NoError(t, err)
+			k8sutils.SetOwnerForObject(existingSvc, dataplane)
+			require.NoError(t, fakeClient.Create(ctx, existingSvc))
+			if tc.existingPolicySet {
+				existingSvc.Spec.IPFamilyPolicy = tc.existingPolicy
+				require.NoError(t, fakeClient.Update(ctx, existingSvc))
+			}
+			if tc.existingFamiliesSet {
+				existingSvc.Spec.IPFamilies = tc.existingFamilies
+				require.NoError(t, fakeClient.Update(ctx, existingSvc))
+			}
+			require.NoError(t, fakeClient.Create(ctx, dataplane), "should create dataplane successfully")
+
+			res, svc, err := ensureIngressServiceForDataPlane(
+				ctx,
+				logr.Discard(),
+				fakeClient,
+				dataplane,
+				nil,
+				k8sresources.IPFamilyPolicyServiceOpt(tc.ipFamily),
+			)
+			require.NoError(t, err)
+			require.Equal(t, tc.expectedResult, res)
+			require.Equal(t, tc.expectedSvcPolicy, svc.Spec.IPFamilyPolicy)
+			require.Equal(t, tc.expectedSvcIPs, svc.Spec.IPFamilies)
 		})
 	}
 }

@@ -9,10 +9,8 @@ import (
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -242,31 +240,20 @@ func TestKonnectConfigStore(t *testing.T) {
 		t.Log("Simulating the user removing the entries: the delete now succeeds and the CR is cleaned up")
 		blocked.Store(false)
 		// Trigger an immediate reconcile instead of waiting for the blocked-deletion
-		// requeue. Retry on conflict: the controller may patch the status concurrently.
+		// requeue. Use a merge patch without resourceVersion (client.MergeFrom, not
+		// MergeFromWithOptimisticLock): the controller patches the status concurrently
+		// and the manager's cached client can serve a stale object, so a Get+Update
+		// would keep hitting conflicts.
 		// A concurrent reconcile may also have finished the deletion already; that is
 		// the goal state, so tolerate NotFound.
-		require.NoError(t, retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			if err := clientNamespaced.Get(ctx, client.ObjectKeyFromObject(configStore), configStore); err != nil {
-				if apierrors.IsNotFound(err) {
-					return nil
-				}
-				return err
-			}
-			if configStore.Annotations == nil {
-				configStore.Annotations = make(map[string]string)
-			}
-			configStore.Annotations["gateway-operator.konghq.com/reconcile-after-secret-removal"] = "true"
-			if err := clientNamespaced.Update(ctx, configStore); err != nil {
-				if apierrors.IsNotFound(err) {
-					// The cached Get above can still return the object
-					// after it is gone from the API server, so the
-					// Update can still hit NotFound.
-					return nil
-				}
-				return err
-			}
-			return nil
-		}))
+		configStoreOld := configStore.DeepCopy()
+		if configStore.Annotations == nil {
+			configStore.Annotations = make(map[string]string)
+		}
+		configStore.Annotations["gateway-operator.konghq.com/reconcile-after-secret-removal"] = "true"
+		require.NoError(t, client.IgnoreNotFound(
+			clientNamespaced.Patch(ctx, configStore, client.MergeFrom(configStoreOld)),
+		))
 		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, configStore, consts.WaitTime, consts.TickTime)
 		envtest.EventuallyAssertSDKExpectations(t, sdk.ConfigStoresSDK, consts.WaitTime, consts.TickTime)
 		envtest.EventuallyAssertSDKExpectations(t, sdk.ConfigStoreSecretsSDK, consts.WaitTime, consts.TickTime)

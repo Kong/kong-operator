@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	dpconf "github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/config"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/versions"
 )
 
 func TestRoot(t *testing.T) {
@@ -31,7 +30,7 @@ func TestValidateRoots(t *testing.T) {
 			configStr:            dblessConfigJSON3_4_1,
 			expectedDBMode:       dpconf.DBModeOff,
 			expectedRouterFlavor: dpconf.RouterFlavorTraditionalCompatible,
-			expectedKongVersion:  versions.KICv3VersionCutoff.String(),
+			expectedKongVersion:  "3.4.1",
 		},
 	}
 

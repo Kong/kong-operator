@@ -160,7 +160,7 @@ spec:
               - name: EXPECTED_RESPONSE
                 value: ($echo_deployment_name)
             content: |
-              bash ../../common/scripts/host_connectivity_test_udp.sh
+              PROTOCOL=udp bash ../../common/scripts/host_connectivity_test_l4.sh
 
     - name: Create-echo-service-second
       description: Create and assert a second echo service to back the losing UDPRoute.
@@ -209,7 +209,7 @@ spec:
               - name: EXPECTED_RESPONSE
                 value: ($echo_deployment_name)
             content: |
-              bash ../../common/scripts/host_connectivity_test_udp.sh
+              PROTOCOL=udp bash ../../common/scripts/host_connectivity_test_l4.sh
 
     - name: Delete-winning-udproute
       description: |
@@ -251,7 +251,7 @@ spec:
               - name: EXPECTED_RESPONSE
                 value: ($second_echo_deployment_name)
             content: |
-              bash ../../common/scripts/host_connectivity_test_udp.sh
+              PROTOCOL=udp bash ../../common/scripts/host_connectivity_test_l4.sh
 
   catch:
     - description: Capture debug snapshot

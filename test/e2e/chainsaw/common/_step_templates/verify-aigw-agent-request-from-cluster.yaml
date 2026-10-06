@@ -27,18 +27,28 @@
 #     expected to eventually work, 'false' if it's expected to be (or become, e.g.
 #     after revoking a credential) permanently rejected. See aigw_agent_request.sh
 #     for how this flips its retry-until-match loop.
+#
+# Optional bindings (override with use.with.bindings):
+#   - expected_header: Response header that must be present, or '' (default).
+#   - expected_header_value: Exact value expected_header must have, or ''
+#     (default) for any value.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
 metadata:
   name: verify-aigw-agent-request-from-cluster
 spec:
+  bindings:
+    - name: expected_header
+      value: ''
+    - name: expected_header_value
+      value: ''
   try:
     - script:
         env:
           - name: NAMESPACE
             value: ($namespace)
-          - name: DP_SVC
-            value: (join('', [($aigw_dp_name), '-ingress']))
+          - name: ADDRESS
+            value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
           - name: METHOD
             value: ($method)
           - name: ROUTE_PATH
@@ -63,6 +73,10 @@ spec:
             value: ($expected_json_id)
           - name: EXPECTED_JSON_RESULT_TEXT
             value: ($expected_json_result_text)
+          - name: EXPECTED_HEADER
+            value: ($expected_header)
+          - name: EXPECTED_HEADER_VALUE
+            value: ($expected_header_value)
           - name: OIDC_TOKEN_URL
             value: ($oidc_token_url)
           - name: OIDC_CLIENT_ID
@@ -74,6 +88,6 @@ spec:
           - name: EXPECTED_SUCCESS
             value: ($expected_success)
         content: |
-          bash ../../common/scripts/aigw_agent_request_from_cluster.sh
+          bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_agent_request.sh
         check:
           (json_parse($stdout).success == `true`): true

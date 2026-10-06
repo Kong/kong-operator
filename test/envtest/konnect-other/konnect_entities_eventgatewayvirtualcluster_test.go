@@ -223,9 +223,10 @@ func TestEventGatewayVirtualCluster(t *testing.T) {
 			})
 
 		sdk.EventGatewayVirtualClustersSDK.EXPECT().
-			ListEventGatewayVirtualClusters(mock.Anything, sdkkonnectops.ListEventGatewayVirtualClustersRequest{
-				GatewayID: expectedParentGateway,
-			}).
+			ListEventGatewayVirtualClusters(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.ListEventGatewayVirtualClustersRequest) bool {
+				// The first page of the parent's entities.
+				return req.GatewayID == expectedParentGateway && req.PageAfter == nil
+			})).
 			RunAndReturn(func(_ context.Context, _ sdkkonnectops.ListEventGatewayVirtualClustersRequest, _ ...sdkkonnectops.Option) (*sdkkonnectops.ListEventGatewayVirtualClustersResponse, error) {
 				return &sdkkonnectops.ListEventGatewayVirtualClustersResponse{
 					ListVirtualClustersResponse: &sdkkonnectcomp.ListVirtualClustersResponse{

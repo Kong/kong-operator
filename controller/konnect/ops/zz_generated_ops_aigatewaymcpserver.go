@@ -28,6 +28,21 @@ func createAIGatewayMCPServer(
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
+	if req.AIGatewayMCPServerConversionOnly != nil {
+		req.AIGatewayMCPServerConversionOnly.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayMCPServerConversionOnly.Labels)
+	}
+	if req.AIGatewayMCPServerConversionListener != nil {
+		req.AIGatewayMCPServerConversionListener.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayMCPServerConversionListener.Labels)
+	}
+	if req.AIGatewayMCPServerListener != nil {
+		req.AIGatewayMCPServerListener.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayMCPServerListener.Labels)
+	}
+	if req.AIGatewayMCPServerPassthroughListener != nil {
+		req.AIGatewayMCPServerPassthroughListener.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayMCPServerPassthroughListener.Labels)
+	}
+	if req.AIGatewayMCPServerUpstreamServer != nil {
+		req.AIGatewayMCPServerUpstreamServer.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayMCPServerUpstreamServer.Labels)
+	}
 
 	resp, err := sdk.CreateAiGatewayMcpServer(ctx, parentID, *req)
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, obj); errWrap != nil {
@@ -74,6 +89,21 @@ func updateAIGatewayMCPServer(
 	if err != nil {
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
 	}
+	if req.AIGatewayMCPServerConversionOnly != nil {
+		req.AIGatewayMCPServerConversionOnly.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayMCPServerConversionOnly.Labels)
+	}
+	if req.AIGatewayMCPServerConversionListener != nil {
+		req.AIGatewayMCPServerConversionListener.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayMCPServerConversionListener.Labels)
+	}
+	if req.AIGatewayMCPServerListener != nil {
+		req.AIGatewayMCPServerListener.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayMCPServerListener.Labels)
+	}
+	if req.AIGatewayMCPServerPassthroughListener != nil {
+		req.AIGatewayMCPServerPassthroughListener.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayMCPServerPassthroughListener.Labels)
+	}
+	if req.AIGatewayMCPServerUpstreamServer != nil {
+		req.AIGatewayMCPServerUpstreamServer.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayMCPServerUpstreamServer.Labels)
+	}
 
 	_, err = sdk.UpdateAiGatewayMcpServer(ctx, sdkkonnectops.UpdateAiGatewayMcpServerRequest{
 		GatewayID:                       parentID,
@@ -104,4 +134,79 @@ func deleteAIGatewayMCPServer(
 		return handleDeleteError(ctx, errWrap, obj)
 	}
 	return nil
+}
+
+func getAIGatewayMCPServerForUID(
+	ctx context.Context,
+	sdk sdkkonnectgo.AIGatewayMCPServersSDK,
+	obj *aiconfigurationv1alpha1.AIGatewayMCPServer,
+) (string, error) {
+	parentID := obj.GetGatewayID()
+	if parentID == "" {
+		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: GetOp}
+	}
+
+	// Without a UID every unlabeled Konnect entity would match below.
+	uid := string(obj.GetUID())
+	if uid == "" {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+
+	// TODO: pass a Filter to ListAiGatewayMcpServers (e.g. by name/labels) so we
+	// do not page through every entity in the tenant. Filter types and
+	// fields are entity-specific; derive from OpenAPI schema.
+	var pageAfter *string
+	// Cursors already requested, to detect a next-page cursor that does not
+	// advance (directly or through a longer cycle).
+	seenCursors := map[string]struct{}{}
+	for {
+		resp, err := sdk.ListAiGatewayMcpServers(ctx, sdkkonnectops.ListAiGatewayMcpServersRequest{
+			GatewayID: parentID,
+			PageSize:  new(listPageSize),
+			PageAfter: pageAfter,
+		})
+		if err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+		}
+		if resp == nil || resp.ListAIGatewayMCPServersResponse == nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+		}
+
+		// List items are root unions whose wrapper exposes no GetID()/GetLabels():
+		// read them from whichever variant is set.
+		for _, entry := range resp.ListAIGatewayMCPServersResponse.Data {
+			var (
+				id     string
+				labels map[string]string
+			)
+			switch {
+			case entry.AIGatewayMCPServerConversionOnlyResponse != nil:
+				id, labels = entry.AIGatewayMCPServerConversionOnlyResponse.GetID(), entry.AIGatewayMCPServerConversionOnlyResponse.GetLabels()
+			case entry.AIGatewayMCPServerConversionListenerResponse != nil:
+				id, labels = entry.AIGatewayMCPServerConversionListenerResponse.GetID(), entry.AIGatewayMCPServerConversionListenerResponse.GetLabels()
+			case entry.AIGatewayMCPServerListenerResponse != nil:
+				id, labels = entry.AIGatewayMCPServerListenerResponse.GetID(), entry.AIGatewayMCPServerListenerResponse.GetLabels()
+			case entry.AIGatewayMCPServerPassthroughListenerResponse != nil:
+				id, labels = entry.AIGatewayMCPServerPassthroughListenerResponse.GetID(), entry.AIGatewayMCPServerPassthroughListenerResponse.GetLabels()
+			case entry.AIGatewayMCPServerUpstreamServerResponse != nil:
+				id, labels = entry.AIGatewayMCPServerUpstreamServerResponse.GetID(), entry.AIGatewayMCPServerUpstreamServerResponse.GetLabels()
+			default:
+				continue
+			}
+			if id != "" && labels[KubernetesUIDLabelKey] == uid {
+				return id, nil
+			}
+		}
+
+		meta := resp.ListAIGatewayMCPServersResponse.GetMeta()
+		page := meta.GetPage()
+		if pageAfter, err = nextPageCursor(page.GetNext(), seenCursors); err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+		}
+		if pageAfter == nil {
+			break
+		}
+	}
+
+	return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 }

@@ -401,6 +401,37 @@ func ensureIngressServiceForDataPlane(
 			updated = true
 		}
 
+		// Overwrite only when the generated Service sets a policy: the API
+		// server adopts the previous policy of an existing Service when the
+		// field is removed from the update, so writing nil never takes effect
+		// and would re-fire a no-op patch on every reconcile (see
+		// setDataPlaneIngressServiceIPFamilies). A previously applied policy
+		// can therefore not be reverted by removing it from the DataPlane
+		// spec; users can change it by setting an explicit one.
+		if generatedService.Spec.IPFamilyPolicy != nil &&
+			(existingService.Spec.IPFamilyPolicy == nil ||
+				*existingService.Spec.IPFamilyPolicy != *generatedService.Spec.IPFamilyPolicy) {
+			existingService.Spec.IPFamilyPolicy = generatedService.Spec.IPFamilyPolicy
+			updated = true
+		}
+
+		// Only copy ipFamilies when the generated Service sets them: the API
+		// server defaults ipFamilies on existing Services (and they cannot be
+		// cleared afterwards), so clearing them here would fight with that
+		// defaulting (and churn the object).
+		//
+		// Additionally, when the generated Service requests a dual-stack
+		// policy with a single ipFamilies entry, the API server expands it
+		// with the secondary family on create (e.g. ipFamilies [IPv4] with
+		// PreferDualStack becomes [IPv4, IPv6]).
+		ipFamiliesExpandedByAPIServer := len(generatedService.Spec.IPFamilies) == 1 &&
+			generatedService.Spec.IPFamilyPolicy != nil &&
+			*generatedService.Spec.IPFamilyPolicy != corev1.IPFamilyPolicySingleStack
+		if len(generatedService.Spec.IPFamilies) > 0 && !ipFamiliesExpandedByAPIServer {
+			existingService.Spec.IPFamilies = generatedService.Spec.IPFamilies
+			updated = true
+		}
+
 		if updated {
 			res, existingService, err := patch.ApplyPatchIfNotEmpty(ctx, cl, logger, existingService, old, updated)
 			if err != nil {

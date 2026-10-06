@@ -121,8 +121,8 @@ spec:
             env:
               - name: NAMESPACE
                 value: ($namespace)
-              - name: DP_SVC
-                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
               - name: ROUTE_PATH
                 value: /aigw11/chat
               - name: MODEL_ALIAS
@@ -130,7 +130,7 @@ spec:
               - name: EXPECT_HEADER
                 value: X-Kong-LLM-Model
             content: |
-              bash ../../common/scripts/aigw_chat_completion_from_cluster.sh
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
   catch:
     - description: Capture debug snapshot on test failure.
       script:

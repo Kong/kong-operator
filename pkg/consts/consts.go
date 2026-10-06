@@ -172,6 +172,18 @@ const (
 	// DefaultKonnectRequestTimeout is the default timeout for requests to Konnect API.
 	DefaultKonnectRequestTimeout = 10 * time.Second
 
+	// DefaultKonnectListPageSize is the default page size requested when listing
+	// Konnect entities to find the Konnect entity of an object, e.g. by its
+	// Kubernetes UID. It is the largest one accepted (MaxKonnectListPageSize),
+	// and also Konnect's default page size: for an endpoint whose next page the
+	// SDK cannot see (e.g. config stores, whose cursor is not in
+	// meta.page.next as the spec says), the lookup then scans as many entities
+	// as without a page size.
+	DefaultKonnectListPageSize = 100
+	// MaxKonnectListPageSize is the largest page size every Konnect list
+	// endpoint the operator lists accepts (e.g. portals reject a larger one).
+	MaxKonnectListPageSize = 100
+
 	// DefaultMaxConcurrentReconcilesKonnect is the default max concurrent
 	// reconciles for Konnect entities controllers.
 	DefaultMaxConcurrentReconcilesKonnect = uint(8)

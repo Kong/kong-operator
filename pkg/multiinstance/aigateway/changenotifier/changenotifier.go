@@ -43,6 +43,12 @@ func (c *ChangeNotifier) NotifyChannel() <-chan Change {
 }
 
 // NotifyChange sends a change notification for the given AI Gateway instance.
+//
+// The notifier stores a snapshot of the object: the caller keeps owning (and
+// mutating) the object afterwards. The generated configuration-entity
+// reconcilers, for example, update the entity's status after notifying, and
+// the status update's response decoding rewrites the object's fields, which
+// would race with the consumer's reads if the object were shared.
 func (c *ChangeNotifier) NotifyChange(
 	ctx context.Context,
 	parent *types.NamespacedName,
@@ -51,14 +57,23 @@ func (c *ChangeNotifier) NotifyChange(
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
+	// Snapshot once, before either send: the caller is free to mutate the
+	// object as soon as this call returns, so the channel must never carry it.
+	snapshot, ok := obj.DeepCopyObject().(client.Object)
+	if !ok {
+		// Unreachable for every client.Object implementation.
+		snapshot = obj
+	}
+	change := Change{
+		ID:       snapshot.GetUID(),
+		ParentNN: parent,
+		Object:   snapshot,
+	}
+
 	select {
 	case <-ctx.Done():
 	// TODO: consider adding debouncing.
-	case c.ch <- Change{
-		ID:       obj.GetUID(),
-		ParentNN: parent,
-		Object:   obj,
-	}:
+	case c.ch <- change:
 	case <-c.closedCh:
 	default:
 		// The buffer is full: evict the oldest buffered change to admit this one, so that
@@ -71,11 +86,7 @@ func (c *ChangeNotifier) NotifyChange(
 		default:
 		}
 		select {
-		case c.ch <- Change{
-			ID:       obj.GetUID(),
-			ParentNN: parent,
-			Object:   obj,
-		}:
+		case c.ch <- change:
 		default:
 		}
 	}

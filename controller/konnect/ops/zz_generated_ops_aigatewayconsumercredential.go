@@ -86,36 +86,50 @@ func getAIGatewayConsumerCredentialForUID(
 	if consumerID == "" {
 		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "AIGatewayConsumer", Op: GetOp}
 	}
-	resp, err := sdk.ListAiGatewayConsumerCredentials(ctx, sdkkonnectops.ListAiGatewayConsumerCredentialsRequest{
-		GatewayID:  gatewayID,
-		ConsumerID: consumerID,
-	})
-	if err != nil {
-		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
-	}
-	if resp == nil || resp.ListAIGatewayConsumerCredentialsResponse == nil {
-		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+
+	// Without a UID every unlabeled Konnect entity would match below.
+	uid := string(obj.GetUID())
+	if uid == "" {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 	}
 
-	// TODO: only the first page of results is scanned. When the parent has more
-	// entries than the SDK's default page size, a matching entry on a later
-	// page is missed and getForUID returns NotFound. Tracked in
-	// https://github.com/Kong/kong-operator/issues/3987.
-	for _, entry := range resp.ListAIGatewayConsumerCredentialsResponse.Data {
-		if !matchStringField(obj.Spec.APISpec.Name, entry.GetName()) {
-			continue
+	// TODO: pass a Filter to ListAiGatewayConsumerCredentials (e.g. by name/labels) so we
+	// do not page through every entity in the tenant. Filter types and
+	// fields are entity-specific; derive from OpenAPI schema.
+	var pageAfter *string
+	// Cursors already requested, to detect a next-page cursor that does not
+	// advance (directly or through a longer cycle).
+	seenCursors := map[string]struct{}{}
+	for {
+		resp, err := sdk.ListAiGatewayConsumerCredentials(ctx, sdkkonnectops.ListAiGatewayConsumerCredentialsRequest{
+			GatewayID:  gatewayID,
+			ConsumerID: consumerID,
+			PageSize:   new(listPageSize),
+			PageAfter:  pageAfter,
+		})
+		if err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
 		}
-		switch id := any(entry.GetID()).(type) {
-		case string:
-			if id != "" {
-				return id, nil
+		if resp == nil || resp.ListAIGatewayConsumerCredentialsResponse == nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+		}
+
+		for _, entry := range resp.ListAIGatewayConsumerCredentialsResponse.Data {
+			if entry.GetLabels()[KubernetesUIDLabelKey] != uid {
+				continue
 			}
-		case *string:
-			if id != nil && *id != "" {
-				return *id, nil
+			if entry.GetID() != "" {
+				return entry.GetID(), nil
 			}
-		default:
-			return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
+		}
+
+		meta := resp.ListAIGatewayConsumerCredentialsResponse.GetMeta()
+		page := meta.GetPage()
+		if pageAfter, err = nextPageCursor(page.GetNext(), seenCursors); err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+		}
+		if pageAfter == nil {
+			break
 		}
 	}
 

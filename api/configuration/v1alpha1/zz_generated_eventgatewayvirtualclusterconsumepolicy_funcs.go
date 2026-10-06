@@ -39,10 +39,6 @@ func (obj *EventGatewayVirtualClusterConsumePolicy) GetKonnectName() string {
 		if obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordDecryptFieldsPolicyCreate != nil {
 			return string(obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordDecryptFieldsPolicyCreate.Name)
 		}
-	case EventGatewayVirtualClusterConsumePolicyConfigTypeParsedRecordMaskFieldsConsumePolicyCreate:
-		if obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordMaskFieldsConsumePolicyCreate != nil {
-			return string(obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordMaskFieldsConsumePolicyCreate.Name)
-		}
 	case EventGatewayVirtualClusterConsumePolicyConfigTypeModifyHeadersPolicyCreate:
 		if obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ModifyHeadersPolicyCreate != nil {
 			return string(obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ModifyHeadersPolicyCreate.Name)
@@ -54,10 +50,6 @@ func (obj *EventGatewayVirtualClusterConsumePolicy) GetKonnectName() string {
 	case EventGatewayVirtualClusterConsumePolicyConfigTypeSkipRecordPolicyCreate:
 		if obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.SkipRecordPolicyCreate != nil {
 			return string(obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.SkipRecordPolicyCreate.Name)
-		}
-	case EventGatewayVirtualClusterConsumePolicyConfigTypeParsedRecordTranscodeConsumePolicyCreate:
-		if obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordTranscodeConsumePolicyCreate != nil {
-			return string(obj.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig.ParsedRecordTranscodeConsumePolicyCreate.Name)
 		}
 	}
 	return ""

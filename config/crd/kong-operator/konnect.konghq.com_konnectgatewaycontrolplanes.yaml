@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.1
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: konnectgatewaycontrolplanes.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -428,14 +428,6 @@ spec:
                       Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.
 
                       Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_".
-                    type: object
-                  managed_by:
-                    additionalProperties:
-                      type: string
-                    description: |-
-                      Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).
-
-                      Keys must be 1–63 characters long and start with an alphanumeric character.
                     type: object
                   name:
                     description: The name of the control plane.

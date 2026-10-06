@@ -2,6 +2,8 @@
 
 ## Table of Contents
 
+- [Unreleased](#unreleased)
+- [v2.4.0-rapid.2.0](#v240-rapid20)
 - [v2.4.0-rapid.1](#v240-rapid1)
 - [v2.3.2](#v232)
 - [v2.3.1](#v231)
@@ -66,10 +68,125 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## Unreleased
+## [Unreleased]
 
 ### Added
 
+- `--konnect-list-page-size` flag (default and maximum `100`): the page size
+  the operator requests when listing Konnect entities to find the Konnect
+  entity of an object, e.g. one whose Konnect ID was lost. It is a fallback in
+  case Konnect rejects the default; lower values mean more requests.
+  [#5961](https://github.com/Kong/kong-operator/pull/5961)
+
+### Changed
+
+- On-prem AI Gateway: `AIGatewayCertificate` and `AIGatewaySNI` configuration
+  entities are now translated into the pushed configuration document, enabling
+  TLS certificate/SNI matching configuration for on-prem AI Gateway data
+  planes. An SNI's `certificate` reference resolves to the referenced
+  certificate's entity name in the same namespace; the referenced certificate
+  must target the same `OnPremAIGateway` as the SNI.
+
+- On-prem AI Gateway: each `OnPremAIGateway`'s control plane instance now runs
+  a Secret watcher that re-renders the configuration when a Secret referenced
+  by a configuration entity's `secretRef` changes, instead of waiting for an
+  unrelated entity event. The instance's Secret cache mirrors the operator's
+  `--secret-label-selector` in the gateway's namespace, so only Secrets
+  carrying that selector label (e.g. `konghq.com/secret=true`) are read;
+  an existing but unlabeled Secret is reported as not found.
+  Cross-namespace references to the `OnPremAIGateway` (and, as before,
+  cross-namespace `secretRef`s) are now rejected with a per-entity error
+  instead of failing with a confusing not-found error.
+  [#5951](https://github.com/Kong/kong-operator/pull/5951)
+- `Programmed` conditions set by the operator now preserve their
+  `LastTransitionTime` when the condition status does not change, and are
+  updated when only the condition message changes (e.g. a per-entity error
+  text changing while the condition stays `Failed`).
+  [#5930](https://github.com/Kong/kong-operator/pull/5930)
+- `DataPlane`: the default `KONG_PROXY_LISTEN` now enables `http2` on the
+  plain HTTP proxy, so gRPC over cleartext HTTP/2 (h2c), e.g. for `GRPCRoute`s
+  attached to `HTTP` listeners, works without overriding `KONG_PROXY_LISTEN`.
+  HTTP/1.1 is still served on the same port. **Existing `DataPlane` `Deployment`s
+  that use the default are rolled out on upgrade.**
+  The minimum supported `DataPlane` image version is raised from 3.4.1 to 3.6,
+  because Kong Gateway before 3.6 can't serve HTTP/1.1 and h2c on the same port.
+  The operator doesn't create or update `Deployment`s for `DataPlane`s with older
+  images. Kong Gateway versions older than 3.6 (previously 3.4.1) are no longer
+  supported by the operator and has to be upgraded.
+  [#5925](https://github.com/Kong/kong-operator/pull/5925)
+
+### Fixes
+
+- Konnect: the operator now adds its labels (`k8s-uid`, `managed-by`, ...) to
+  the Konnect entities of `AIGatewayAuthStrategy`, `AIGatewayModel`,
+  `AIGatewayModelProvider`, `AIGatewayMCPServer`, `EventGatewayListenerPolicy`,
+  `EventGatewayVirtualClusterPolicy`, `EventGatewayVirtualClusterProducePolicy`
+  and `EventGatewayVirtualClusterConsumePolicy`.
+  For `AIGatewayAuthStrategy`, `AIGatewayModelProvider` and the three
+  `EventGatewayVirtualCluster` policies, the operator could not find the
+  Konnect entity it owns, so it could not recover a lost entity ID or clean up
+  the entity. It now finds it by its `k8s-uid` label.
+  `AIGatewayModel`, `AIGatewayMCPServer`, `AIGatewayConsumer`,
+  `AIGatewayConsumerGroup`, `AIGatewayConsumerCredential`,
+  `AIGatewayDataPlaneCertificate` and `EventGatewayListenerPolicy` are also
+  found by their `k8s-uid` label now, instead of by name (or certificate and
+  title), which could match an entity with the same name that the operator did
+  not create.
+  For the Event Gateway entities (`KonnectEventGateway`, `EventGatewayBackendCluster`,
+  `EventGatewayListener`, `EventGatewayVirtualCluster`,
+  `EventGatewaySchemaRegistry`, `EventGatewayDataPlaneCertificate` and the
+  Event Gateway policies), a create rejected because the name is already taken
+  is now handled like a conflict: Konnect reports it as a 400 Bad Request
+  (`name: must be unique`) instead of a 409, so the operator previously never
+  looked up the entity it had already created.
+  `EventGatewayDataPlaneCertificate`s, which have no labels in Konnect, are
+  found by their certificate (resolved from its Secret), name and description,
+  so one with the same name but another certificate is never taken over.
+  Upgrading: Konnect entities created by earlier releases get the labels on
+  their next update. `AIGatewayDataPlaneCertificate`s, which Konnect cannot
+  update, keep being found by their certificate, title and description when
+  they carry no `k8s-uid` label.
+  [#5947](https://github.com/Kong/kong-operator/pull/5947)
+- Konnect: when looking up the existing Konnect entity of an AI Gateway, Event
+  Gateway or Portal object (to recover a lost entity ID, or to delete an
+  object without one), the operator now goes through every page of the
+  Konnect list instead of only the first one. An entity listed after the
+  first page (e.g. with more than 20 Event Gateways in an organization) was
+  not found, so the object kept failing to be created, or its entity was left
+  behind in Konnect when the object was deleted.
+  [#5961](https://github.com/Kong/kong-operator/pull/5961)
+- Konnect: when the deletion of an `AIGatewayCustomPolicy` is blocked by
+  `AIGatewayPolicy` objects still using it, the operator now names them even
+  when the AI Gateway has more than one page of policies. Before, it failed
+  to read the second page of policies, so the blocking objects were not
+  reported.
+  [#5961](https://github.com/Kong/kong-operator/pull/5961)
+
+- On-prem AI Gateway: `AIGatewayConsumer`s referenced by an `OnPremAIGateway`
+  are now rendered into the on-prem document, with their
+  `AIGatewayConsumerCredential`s embedded and their `secretRef` api keys
+  resolved from Secrets. Previously the reconciliation failed for every
+  referenced consumer and credential with a "does not have a Konnect ID yet"
+  error.
+  [#5954](https://github.com/Kong/kong-operator/pull/5954)
+
+## [v2.4.0-rapid.2.0]
+
+> Release date: 2026-09-30
+
+### Added
+
+- `DataPlane`: added `ipFamilies` and `ipFamilyPolicy` to
+  `spec.network.services.ingress`. The requested setting to these fields must be
+  supported by the cluster. When the operator's IP family is dual and both fields
+  are unset, the ingress Service defaults to `PreferDualStack`.
+  [#5797](https://github.com/Kong/kong-operator/pull/5797)
+- `KongLicense` is now handled for the on-prem AI Gateway: the operator picks
+  the newest enabled `KongLicense` and propagates it to `AIGatewayDataPlane`
+  gateway pods via the `KONG_LICENSE_DATA` environment variable. License
+  availability is reported on the `AIGatewayDataPlane` and `OnPremAIGateway`
+  status via a new `LicenseValid` condition, which does not gate `Ready`.
+  [#5912](https://github.com/Kong/kong-operator/issues/5912)
 - The on-prem AI Gateway control plane instances now dynamically discover the
   Admin API endpoints of all `AIGatewayDataPlane`s that reference the gateway
   via `spec.controlPlaneRef.type: onpremNamespacedRef` (through their Admin
@@ -118,7 +235,7 @@
   provided inline (`type: inline` with `value`) or read from a key of a
   `ConfigMap` in the same namespace (`type: configMapRef` with
   `configMapRef.name` and `configMapRef.key`). The `ConfigMap` must match the
-  operator's `--configmap-label-selector` (`konghq.com/configmap: "true"` by
+  operator's `--config-map-label-selector` (`konghq.com/configmap: "true"` by
   default). The `ConfigMapRefValid` condition reports missing `ConfigMap`s or
   keys. Changes to a referenced `ConfigMap` are applied to Konnect on the next
   sync (`--konnect-sync-period`).
@@ -148,6 +265,19 @@
   plane instances served the same ingress class and sent configuration to the
   same `DataPlane`.
   [#5855](https://github.com/Kong/kong-operator/pull/5855)
+- Konnect: labels set in an entity's spec can no longer override the labels
+  the operator adds to Konnect entities (`k8s-name`, `k8s-namespace`, `k8s-uid`,
+  `k8s-generation`, `k8s-kind`, `k8s-group`, `k8s-version` and `managed-by`).
+  Previously, a spec label such as `k8s-uid` replaced the operator's value. The
+  operator then could not find the entity it owns in Konnect, so it could not
+  recover a lost entity ID or delete the entity when the object was deleted.
+  [#5917](https://github.com/Kong/kong-operator/pull/5917)
+- AI Gateway configuration entities: free-form `config` (e.g. of an
+  `AIGatewayPolicy`) is now sent to Konnect verbatim. Previously, config whose
+  data looked like a discriminated union (such as a headroom compressor config
+  with `provider: headroom` next to a `headroom` block) was flattened, and
+  Konnect rejected it with "unknown field" errors.
+  [#5888](https://github.com/Kong/kong-operator/pull/5888)
 
 ## [v2.4.0-rapid.1]
 
@@ -3562,6 +3692,8 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[Unreleased]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.2.0..HEAD
+[v2.4.0-rapid.2.0]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.1..v2.4.0-rapid.2.0
 [v2.4.0-rapid.1]: https://github.com/Kong/kong-operator/compare/v2.3.1..v2.4.0-rapid.1
 [v2.3.2]: https://github.com/Kong/kong-operator/compare/v2.3.1..v2.3.2
 [v2.3.1]: https://github.com/Kong/kong-operator/compare/v2.3.0..v2.3.1

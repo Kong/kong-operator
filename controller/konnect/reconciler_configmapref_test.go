@@ -100,7 +100,7 @@ func TestHandleConfigMapRef(t *testing.T) {
 			obj:           policy(fromConfigMap("handler.lua")),
 			wantStop:      true,
 			wantCondition: new(metav1.ConditionFalse),
-			wantMessage:   "ConfigMap default/lua not found: if it exists, it is not matched by --configmap-label-selector (konghq.com/configmap=true by default)",
+			wantMessage:   "ConfigMap default/lua not found: if it exists, it is not matched by --config-map-label-selector (konghq.com/configmap=true by default)",
 		},
 		{
 			name:          "missing key stops",

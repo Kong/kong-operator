@@ -19,7 +19,9 @@ package onprem
 import (
 	"context"
 
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
@@ -42,5 +44,26 @@ func mapAIGatewayDataPlaneToOnPremAIGateway(_ context.Context, obj client.Object
 			Namespace: dp.Namespace,
 			Name:      ref.Name,
 		},
+	}
+}
+
+// enqueueAllOnPremAIGateways returns a MapFunc that enqueues reconcile
+// requests for all OnPremAIGateways. KongLicense is cluster-scoped, so a
+// change to it affects every gateway; no index is needed for that fan-out.
+func enqueueAllOnPremAIGateways(cl client.Client) handler.MapFunc {
+	return func(ctx context.Context, _ client.Object) []reconcile.Request {
+		gatewayList := &aigatewayv1alpha1.OnPremAIGatewayList{}
+		if err := cl.List(ctx, gatewayList); err != nil {
+			ctrl.LoggerFrom(ctx).Error(err, "failed to list OnPremAIGateways for KongLicense")
+			return nil
+		}
+
+		requests := make([]reconcile.Request, 0, len(gatewayList.Items))
+		for i := range gatewayList.Items {
+			requests = append(requests, reconcile.Request{
+				NamespacedName: client.ObjectKeyFromObject(&gatewayList.Items[i]),
+			})
+		}
+		return requests
 	}
 }

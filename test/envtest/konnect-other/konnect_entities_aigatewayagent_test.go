@@ -88,6 +88,17 @@ func TestAIGatewayAgent(t *testing.T) {
 				},
 			}, nil)
 
+		// A reconcile running on a stale cache right after creation can reach
+		// ops.Update with the unchanged spec. Absorb it: the real update below
+		// carries updatedDisplayName and is asserted by its own expectation.
+		sdk.AIGatewayAgentsSDK.EXPECT().
+			UpdateAiGatewayAgent(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.UpdateAiGatewayAgentRequest) bool {
+				return req.AgentIDOrName == agentID &&
+					req.UpdateAIGatewayAgentRequest.DisplayName == initialDisplayName
+			})).
+			Return(&sdkkonnectops.UpdateAiGatewayAgentResponse{}, nil).
+			Maybe()
+
 		t.Log("Creating AIGatewayAgent")
 		agent := deploy.AIGatewayAgent(t, ctx, clientNamespaced, gateway, func(o client.Object) {
 			a, ok := o.(*aiconfigurationv1alpha1.AIGatewayAgent)
@@ -225,6 +236,15 @@ func TestAIGatewayAgent(t *testing.T) {
 				AIGatewayAgent: &sdkkonnectcomp.AIGatewayAgent{ID: agentID},
 			}, nil)
 
+		// A reconcile running on a stale cache right after creation can reach
+		// ops.Update with the unchanged spec.
+		sdk.AIGatewayAgentsSDK.EXPECT().
+			UpdateAiGatewayAgent(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.UpdateAiGatewayAgentRequest) bool {
+				return req.AgentIDOrName == agentID
+			})).
+			Return(&sdkkonnectops.UpdateAiGatewayAgentResponse{}, nil).
+			Maybe()
+
 		t.Log("Programming the referenced consumer group by setting its Konnect ID")
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
 			if !assert.NoError(ct, clientNamespaced.Get(ctx, client.ObjectKeyFromObject(consumerGroup), consumerGroup)) {
@@ -265,10 +285,20 @@ func TestAIGatewayAgent(t *testing.T) {
 				Body:       consts.ErrBodyDataConstraintError,
 			})
 
+		// A reconcile running on a stale cache right after creation can reach
+		// ops.Update with the unchanged spec.
 		sdk.AIGatewayAgentsSDK.EXPECT().
-			ListAiGatewayAgents(mock.Anything, sdkkonnectops.ListAiGatewayAgentsRequest{
-				GatewayID: konnectAIGatewayID,
-			}).
+			UpdateAiGatewayAgent(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.UpdateAiGatewayAgentRequest) bool {
+				return req.AgentIDOrName == agentID
+			})).
+			Return(&sdkkonnectops.UpdateAiGatewayAgentResponse{}, nil).
+			Maybe()
+
+		sdk.AIGatewayAgentsSDK.EXPECT().
+			ListAiGatewayAgents(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.ListAiGatewayAgentsRequest) bool {
+				// The first page of the parent's entities.
+				return req.GatewayID == konnectAIGatewayID && req.PageAfter == nil
+			})).
 			RunAndReturn(func(_ context.Context, _ sdkkonnectops.ListAiGatewayAgentsRequest, _ ...sdkkonnectops.Option) (*sdkkonnectops.ListAiGatewayAgentsResponse, error) {
 				return &sdkkonnectops.ListAiGatewayAgentsResponse{
 					ListAIGatewayAgentsResponse: &sdkkonnectcomp.ListAIGatewayAgentsResponse{

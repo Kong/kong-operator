@@ -79,6 +79,7 @@ func TestGetEventGatewayVirtualClusterForUID(t *testing.T) {
 
 	sdk.EXPECT().
 		ListEventGatewayVirtualClusters(mock.Anything, sdkkonnectops.ListEventGatewayVirtualClustersRequest{
+			PageSize:  new(listPageSize),
 			GatewayID: "gateway-1",
 		}).
 		Return(&sdkkonnectops.ListEventGatewayVirtualClustersResponse{

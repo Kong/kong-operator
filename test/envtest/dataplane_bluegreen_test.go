@@ -14,6 +14,7 @@ import (
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/v2/controller/dataplane"
 	secretcert "github.com/kong/kong-operator/v2/controller/secret_cert"
+	"github.com/kong/kong-operator/v2/internal/versions"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/pkg/ipfamily"
@@ -54,6 +55,11 @@ func TestDataPlaneBlueGreen(t *testing.T) {
 		secretCertReconciler,
 	)
 
+	var (
+		originalImage = consts.DefaultDataPlaneBaseImage + ":" + versions.MinimumDataPlaneVersion.String()
+		upgradedImage = consts.DefaultDataPlaneBaseImage + ":" + consts.DefaultDataPlaneTag
+	)
+
 	dp := &operatorv1beta1.DataPlane{
 		Name:      "dp-bluegreen-reconcile",
 		Namespace: ns.Name,
@@ -74,7 +80,7 @@ func TestDataPlaneBlueGreen(t *testing.T) {
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{{
 									Name:  consts.DataPlaneProxyContainerName,
-									Image: consts.DefaultDataPlaneBaseImage + ":3.2",
+									Image: originalImage,
 								}},
 							},
 						},
@@ -85,7 +91,6 @@ func TestDataPlaneBlueGreen(t *testing.T) {
 	}
 	require.NoError(t, mgr.GetClient().Create(ctx, dp))
 
-	var ingressService corev1.Service
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
 		var services corev1.ServiceList
 		require.NoError(ct, mgr.GetClient().List(ctx, &services,
@@ -97,11 +102,11 @@ func TestDataPlaneBlueGreen(t *testing.T) {
 			},
 		))
 		require.Len(ct, services.Items, 1)
-		ingressService = services.Items[0]
-	}, waitTime, tickTime)
 
-	ingressService.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{{IP: "6.7.8.9"}}
-	require.NoError(t, mgr.GetClient().Status().Update(ctx, &ingressService))
+		ingressService := services.Items[0]
+		ingressService.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{{IP: "6.7.8.9"}}
+		require.NoError(ct, mgr.GetClient().Status().Update(ctx, &ingressService))
+	}, waitTime, tickTime)
 
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
 		var deploymentList appsv1.DeploymentList
@@ -116,6 +121,10 @@ func TestDataPlaneBlueGreen(t *testing.T) {
 		require.Len(ct, deploymentList.Items, 1)
 
 		liveDeployment := deploymentList.Items[0]
+		liveProxy := k8sutils.GetPodContainerByName(&liveDeployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
+		require.NotNil(ct, liveProxy)
+		require.Equal(ct, originalImage, liveProxy.Image)
+
 		liveDeployment.Status = appsv1.DeploymentStatus{
 			AvailableReplicas: 1,
 			ReadyReplicas:     1,
@@ -136,10 +145,11 @@ func TestDataPlaneBlueGreen(t *testing.T) {
 	dataplaneName := client.ObjectKeyFromObject(dp)
 	require.Eventually(t,
 		testutils.DataPlaneUpdateEventually(t, ctx, dataplaneName, mgr.GetClient(), func(dp *operatorv1beta1.DataPlane) {
-			dp.Spec.Deployment.PodTemplateSpec.Spec.Containers = append(
-				dp.Spec.Deployment.PodTemplateSpec.Spec.Containers,
-				corev1.Container{Name: "proxy-rollout-trigger", Image: consts.DefaultDataPlaneBaseImage + ":3.3"},
-			)
+			proxy := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+			if !assert.NotNil(t, proxy) {
+				return
+			}
+			proxy.Image = upgradedImage
 		}),
 		waitTime, tickTime)
 
@@ -156,6 +166,10 @@ func TestDataPlaneBlueGreen(t *testing.T) {
 		require.Len(ct, previewDeployments.Items, 1)
 
 		previewDeployment := previewDeployments.Items[0]
+		previewProxy := k8sutils.GetPodContainerByName(&previewDeployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
+		require.NotNil(ct, previewProxy)
+		require.Equal(ct, upgradedImage, previewProxy.Image)
+
 		previewDeployment.Status = appsv1.DeploymentStatus{
 			AvailableReplicas: 1,
 			ReadyReplicas:     1,
@@ -176,7 +190,12 @@ func TestDataPlaneBlueGreen(t *testing.T) {
 		))
 		require.Len(ct, liveDeployments.Items, 1)
 
+		// With BreakBeforePromotion the live Deployment keeps the original image until promoted.
 		liveDeployment := liveDeployments.Items[0]
+		liveProxy := k8sutils.GetPodContainerByName(&liveDeployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
+		require.NotNil(ct, liveProxy)
+		require.Equal(ct, originalImage, liveProxy.Image)
+
 		liveDeployment.Status = appsv1.DeploymentStatus{
 			AvailableReplicas: 0,
 			ReadyReplicas:     0,

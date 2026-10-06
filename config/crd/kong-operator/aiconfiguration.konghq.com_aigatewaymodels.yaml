@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.1
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
   name: aigatewaymodels.aiconfiguration.konghq.com
 spec:
   group: aiconfiguration.konghq.com
@@ -750,15 +750,6 @@ spec:
                                               videoOutputS3URI:
                                                 description: S3 URI for storing video
                                                   generation outputs.
-                                                maxLength: 253
-                                                type: string
-                                              vpcEndpoint:
-                                                description: |-
-                                                  Hostname of an AWS PrivateLink VPC endpoint to use instead of the public
-                                                  Bedrock endpoint.
-                                                  Ignored if `upstream_url` is set.
-
-                                                  **Requires a minimum runtime version of `2.3`**.
                                                 maxLength: 253
                                                 type: string
                                             type: object
@@ -1665,21 +1656,6 @@ spec:
                         required:
                         - route
                         type: object
-                      datastores:
-                        description: Names of the Datastores this model references.
-                        items:
-                          description: AIGatewayDatastoreRef A reference to an existing
-                            datastore
-                          properties:
-                            name:
-                              description: An immutable user-defined identifier for
-                                this resource.
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
-                              type: string
-                          type: object
-                        type: array
                       displayName:
                         description: The display name for this model instance.
                         maxLength: 256
@@ -1699,7 +1675,12 @@ spec:
                             supported by this model.
                           properties:
                             type:
-                              description: The format type.
+                              description: |-
+                                The format type.
+
+                                **`passthrough` requires a minimum runtime version of `2.2`**.
+
+                                **`typesafe` requires a minimum runtime version of `2.2`**.
                               enum:
                               - anthropic
                               - bedrock
@@ -2551,15 +2532,6 @@ spec:
                                     videoOutputS3URI:
                                       description: S3 URI for storing video generation
                                         outputs.
-                                      maxLength: 253
-                                      type: string
-                                    vpcEndpoint:
-                                      description: |-
-                                        Hostname of an AWS PrivateLink VPC endpoint to use instead of the public
-                                        Bedrock endpoint.
-                                        Ignored if `upstream_url` is set.
-
-                                        **Requires a minimum runtime version of `2.3`**.
                                       maxLength: 253
                                       type: string
                                   type: object
@@ -7197,15 +7169,6 @@ spec:
                                                   generation outputs.
                                                 maxLength: 253
                                                 type: string
-                                              vpcEndpoint:
-                                                description: |-
-                                                  Hostname of an AWS PrivateLink VPC endpoint to use instead of the public
-                                                  Bedrock endpoint.
-                                                  Ignored if `upstream_url` is set.
-
-                                                  **Requires a minimum runtime version of `2.3`**.
-                                                maxLength: 253
-                                                type: string
                                             type: object
                                           gemini:
                                             description: Gemini configuration.
@@ -8122,21 +8085,6 @@ spec:
                         required:
                         - route
                         type: object
-                      datastores:
-                        description: Names of the Datastores this model references.
-                        items:
-                          description: AIGatewayDatastoreRef A reference to an existing
-                            datastore
-                          properties:
-                            name:
-                              description: An immutable user-defined identifier for
-                                this resource.
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
-                              type: string
-                          type: object
-                        type: array
                       displayName:
                         description: The display name for this model instance.
                         maxLength: 256
@@ -8156,7 +8104,12 @@ spec:
                             supported by this model.
                           properties:
                             type:
-                              description: The format type.
+                              description: |-
+                                The format type.
+
+                                **`passthrough` requires a minimum runtime version of `2.2`**.
+
+                                **`typesafe` requires a minimum runtime version of `2.2`**.
                               enum:
                               - anthropic
                               - bedrock
@@ -9008,15 +8961,6 @@ spec:
                                     videoOutputS3URI:
                                       description: S3 URI for storing video generation
                                         outputs.
-                                      maxLength: 253
-                                      type: string
-                                    vpcEndpoint:
-                                      description: |-
-                                        Hostname of an AWS PrivateLink VPC endpoint to use instead of the public
-                                        Bedrock endpoint.
-                                        Ignored if `upstream_url` is set.
-
-                                        **Requires a minimum runtime version of `2.3`**.
                                       maxLength: 253
                                       type: string
                                   type: object

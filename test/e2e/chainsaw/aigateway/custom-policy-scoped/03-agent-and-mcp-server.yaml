@@ -1,0 +1,70 @@
+# An HTTP AIGatewayAgent and a conversion-listener AIGatewayMCPServer, both
+# backed by the go-echo Service, each with the given policy attached.
+# Required bindings:
+#   - namespace: Namespace of the resources.
+#   - aigw_cp_name: Name of the KonnectAIGateway (same namespace).
+#   - echo_deployment_name: Name of the go-echo Service.
+#   - agent_name, agent_route_path, agent_policy_name: The agent, its route
+#     path and the AIGatewayPolicy attached to it.
+#   - mcp_server_name, mcp_route_path, mcp_policy_name: The MCP server, its
+#     route path and the AIGatewayPolicy attached to it.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayAgent
+metadata:
+  name: ($agent_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    name: ($agent_name)
+    displayName: ($agent_name)
+    type: http
+    enabled: Enabled
+    policies:
+      - name: ($agent_policy_name)
+    config:
+      url: (join('', ['http://', ($echo_deployment_name), '.', ($namespace), '.svc.cluster.local:1027']))
+      route:
+        paths:
+          - ($agent_route_path)
+        methods:
+          - GET
+          - POST
+        protocols:
+          - http
+          - https
+        stripPath: Enabled
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayMCPServer
+metadata:
+  name: ($mcp_server_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: conversion-listener
+    conversion-listener:
+      name: ($mcp_server_name)
+      displayName: ($mcp_server_name)
+      enabled: Enabled
+      policies:
+        - name: ($mcp_policy_name)
+      config:
+        url: (join('', ['http://', ($echo_deployment_name), '.', ($namespace), '.svc.cluster.local:1027']))
+        route:
+          paths:
+            - ($mcp_route_path)
+          methods:
+            - GET
+            - POST
+      tools:
+        - name: ping
+          description: Ping the go-echo backend
+          method: GET
+          path: /

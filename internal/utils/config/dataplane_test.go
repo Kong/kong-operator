@@ -77,6 +77,31 @@ func TestKongDefaults(t *testing.T) {
 		require.Error(t, err)
 	})
 
+	t.Run("enables http2 on both proxy listens per IP family", func(t *testing.T) {
+		for _, tc := range []struct {
+			family ipfamily.IPFamily
+			want   string
+		}{
+			{
+				family: ipfamily.IPv4,
+				want:   "0.0.0.0:8000 http2 reuseport backlog=16384, 0.0.0.0:8443 http2 ssl reuseport backlog=16384",
+			},
+			{
+				family: ipfamily.IPv6,
+				want:   "[::]:8000 http2 reuseport backlog=16384, [::]:8443 http2 ssl reuseport backlog=16384",
+			},
+			{
+				family: ipfamily.Dual,
+				want: "0.0.0.0:8000 http2 reuseport backlog=16384, [::]:8000 http2 reuseport backlog=16384, " +
+					"0.0.0.0:8443 http2 ssl reuseport backlog=16384, [::]:8443 http2 ssl reuseport backlog=16384",
+			},
+		} {
+			defaults, err := KongDefaults(tc.family)
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, defaults["KONG_PROXY_LISTEN"], "family %q", tc.family)
+		}
+	})
+
 	t.Run("sets the DNS order to prefer AAAA for IPv6 and Dual", func(t *testing.T) {
 		for _, tc := range []struct {
 			family       ipfamily.IPFamily

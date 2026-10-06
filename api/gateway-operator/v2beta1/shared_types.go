@@ -365,4 +365,40 @@ type ServiceOptions struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Cluster;Local
 	InternalTrafficPolicy *corev1.ServiceInternalTrafficPolicy `json:"internalTrafficPolicy,omitempty"`
+
+	// IPFamilies specifies the IP families (e.g. IPv4, IPv6) the Service should
+	// use. If unset, the Kubernetes API server default applies: the primary
+	// family of the cluster, or both families when the operator defaults
+	// ipFamilyPolicy to PreferDualStack (see below). On dual-stack clusters,
+	// set this to ["IPv4", "IPv6"] (typically along with ipFamilyPolicy) to
+	// expose the DataPlane over both address families.
+	//
+	// More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=2
+	// +kubebuilder:validation:XValidation:message="each ipFamilies entry must be IPv4 or IPv6",rule="self.all(f, f == 'IPv4' || f == 'IPv6')"
+	IPFamilies []corev1.IPFamily `json:"ipFamilies,omitempty"`
+
+	// IPFamilyPolicy specifies the dual-stack policy of the Service (e.g.
+	// SingleStack, PreferDualStack, RequireDualStack). If unset, the Kubernetes
+	// API server default (SingleStack) applies, except for the following
+	// operator defaults on dual-stack clusters (i.e. when the operator's IP
+	// family is dual, e.g. configured via the --ip-family flag):
+	//
+	//   - neither ipFamilyPolicy nor ipFamilies is set: the Service defaults
+	//     to PreferDualStack, so that the DataPlane is exposed over both
+	//     address families.
+	//   - ipFamilies names a single family: the Service stays single-stack
+	//     (SingleStack).
+	//   - ipFamilies names both families: the Service defaults to
+	//     PreferDualStack, as the Kubernetes API server requires a dual-stack
+	//     policy when two families are specified.
+	//
+	// More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=SingleStack;PreferDualStack;RequireDualStack
+	IPFamilyPolicy *corev1.IPFamilyPolicy `json:"ipFamilyPolicy,omitempty"`
 }

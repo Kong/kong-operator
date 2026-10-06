@@ -99,23 +99,47 @@ func getKonnectEventGatewayForUID(
 	obj *konnectv1alpha1.KonnectEventGateway,
 ) (string, error) {
 
+	// Without a UID every unlabeled Konnect entity would match below.
+	uid := string(obj.GetUID())
+	if uid == "" {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+
 	// TODO: pass a Filter to ListEventGateways (e.g. by name/labels) so we
 	// do not page through every entity in the tenant. Filter types and
 	// fields are entity-specific; derive from OpenAPI schema.
-	resp, err := sdk.ListEventGateways(ctx, sdkkonnectops.ListEventGatewaysRequest{})
-	if err != nil {
-		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
-	}
-	if resp == nil || resp.ListEventGatewaysResponse == nil {
-		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
-	}
-
-	for _, entry := range resp.ListEventGatewaysResponse.Data {
-		if entry.GetLabels()[KubernetesUIDLabelKey] != string(obj.GetUID()) {
-			continue
+	var pageAfter *string
+	// Cursors already requested, to detect a next-page cursor that does not
+	// advance (directly or through a longer cycle).
+	seenCursors := map[string]struct{}{}
+	for {
+		resp, err := sdk.ListEventGateways(ctx, sdkkonnectops.ListEventGatewaysRequest{
+			PageSize:  new(listPageSize),
+			PageAfter: pageAfter,
+		})
+		if err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
 		}
-		if entry.GetID() != "" {
-			return entry.GetID(), nil
+		if resp == nil || resp.ListEventGatewaysResponse == nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+		}
+
+		for _, entry := range resp.ListEventGatewaysResponse.Data {
+			if entry.GetLabels()[KubernetesUIDLabelKey] != uid {
+				continue
+			}
+			if entry.GetID() != "" {
+				return entry.GetID(), nil
+			}
+		}
+
+		meta := resp.ListEventGatewaysResponse.GetMeta()
+		page := meta.GetPage()
+		if pageAfter, err = nextPageCursor(page.GetNext(), seenCursors); err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+		}
+		if pageAfter == nil {
+			break
 		}
 	}
 

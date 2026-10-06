@@ -85,6 +85,12 @@ const (
 	// EnvKongNginxAdminSSLVerifyClient is the AI Gateway environment variable enabling
 	// client certificate verification on the Admin API listener.
 	EnvKongNginxAdminSSLVerifyClient = "KONG_NGINX_ADMIN_SSL_VERIFY_CLIENT"
+	// EnvKongLicenseData is the AI Gateway environment variable carrying the raw
+	// Kong Enterprise license JSON, propagated from the KongLicense resource.
+	// A value supplied via a PodTemplateSpec overlay does not win over this env
+	// var: DeploymentConfig.ReassertEnvVars drops the overlay's conflicting
+	// entry before MergeObjects (see owned_deployment.go).
+	EnvKongLicenseData = "KONG_LICENSE_DATA"
 )
 
 // requiredEnvVars returns the environment variables required to boot the

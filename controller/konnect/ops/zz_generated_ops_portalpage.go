@@ -106,10 +106,6 @@ func getPortalPageForUID(
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
-	// TODO: only the first page of results is scanned. When the parent has more
-	// entries than the SDK's default page size, a matching entry on a later
-	// page is missed and getForUID returns NotFound. Tracked in
-	// https://github.com/Kong/kong-operator/issues/3987.
 	for _, entry := range resp.ListPortalPagesResponse.Data {
 		if !matchStringField(obj.Spec.APISpec.Slug, entry.GetSlug()) {
 			continue

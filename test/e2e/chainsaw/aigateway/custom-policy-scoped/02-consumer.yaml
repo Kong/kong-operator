@@ -1,0 +1,23 @@
+# An api-key AIGatewayConsumer with the given policies attached, enrolled in
+# the given consumer groups.
+# Required bindings:
+#   - namespace: Namespace of the AIGatewayConsumer.
+#   - aigw_cp_name: Name of the KonnectAIGateway (same namespace).
+#   - consumer_name: Name of the AIGatewayConsumer (also its Konnect name).
+#   - consumer_policies: The consumer's policies, e.g. [{name: my-policy}], or [].
+#   - consumer_groups: The consumer's groups, e.g. [{name: my-group}], or [].
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayConsumer
+metadata:
+  name: ($consumer_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    name: ($consumer_name)
+    displayName: ($consumer_name)
+    type: api-key
+    policies: ($consumer_policies)
+  consumerGroups: ($consumer_groups)

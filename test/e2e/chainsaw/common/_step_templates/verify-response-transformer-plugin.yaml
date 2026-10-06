@@ -39,6 +39,6 @@ spec:
           - name: HOST
             value: ($host_header)
         content: |
-          bash ../../common/scripts/verify_response_transformer_header.sh
+          bash ../../common/scripts/verify_response_header.sh
         check:
           (json_parse($stdout).success): true

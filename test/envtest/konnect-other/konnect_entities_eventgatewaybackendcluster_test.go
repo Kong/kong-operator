@@ -182,9 +182,10 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 			})
 
 		sdk.EventGatewayBackendClustersSDK.EXPECT().
-			ListEventGatewayBackendClusters(mock.Anything, sdkkonnectops.ListEventGatewayBackendClustersRequest{
-				GatewayID: eventGatewayID,
-			}).
+			ListEventGatewayBackendClusters(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.ListEventGatewayBackendClustersRequest) bool {
+				// The first page of the parent's entities.
+				return req.GatewayID == eventGatewayID && req.PageAfter == nil
+			})).
 			RunAndReturn(func(_ context.Context, _ sdkkonnectops.ListEventGatewayBackendClustersRequest, _ ...sdkkonnectops.Option) (*sdkkonnectops.ListEventGatewayBackendClustersResponse, error) {
 				return &sdkkonnectops.ListEventGatewayBackendClustersResponse{
 					ListBackendClustersResponse: &sdkkonnectcomp.ListBackendClustersResponse{

@@ -52,72 +52,6 @@ const (
 	AIGatewayRuntimeAutoUpgradeDisabled AIGatewayRuntimeAutoUpgrade = "Disabled"
 )
 
-// AISettings is a type alias.
-type AISettings struct {
-	// Is AI enabled?
-	//
-	// +required
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Enabled string `json:"enabled,omitzero"`
-	// AI features configuration.
-	// When top-level `enabled` is false, every feature toggle here is
-	// automatically reset to false.
-	//
-	// +required
-	Features AISettingsFeatures `json:"features,omitzero"`
-}
-
-// AISettingsFeatures AI features configuration.
-// When top-level `enabled` is false, every feature toggle here is automatically
-// reset to false.
-type AISettingsFeatures struct {
-	// AI Search config
-	//
-	// +optional
-	AISearch AISettingsFeaturesAISearch `json:"aiSearch,omitzero"`
-	// AI Features config
-	//
-	// +required
-	McpServer AISettingsFeaturesMcpServer `json:"mcpServer,omitzero"`
-	// Portal Agent config
-	//
-	// +optional
-	PortalAgent AISettingsFeaturesPortalAgent `json:"portalAgent,omitzero"`
-}
-
-// AISettingsFeaturesAISearch AI Search config
-type AISettingsFeaturesAISearch struct {
-	// Whether AI Search is enabled or not
-	//
-	// +required
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Enabled string `json:"enabled,omitzero"`
-}
-
-// AISettingsFeaturesMcpServer AI Features config
-type AISettingsFeaturesMcpServer struct {
-	// Whether the MCP Server is enabled or not
-	//
-	// +required
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Enabled string `json:"enabled,omitzero"`
-	// Whether write operations are enabled or not for the Portal MCP Server
-	// enabled
-	//
-	// +required
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	WriteOperationsEnabled string `json:"writeOperationsEnabled,omitzero"`
-}
-
-// AISettingsFeaturesPortalAgent Portal Agent config
-type AISettingsFeaturesPortalAgent struct {
-	// Whether the Portal Agent is enabled or not
-	//
-	// +required
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Enabled string `json:"enabled,omitzero"`
-}
-
 // CreatePortalCustomDomainSSL is a type alias.
 type CreatePortalCustomDomainSSL map[string]string
 
@@ -222,19 +156,6 @@ type LabelsUpdateValue string
 // Keys must be of length 1-63 characters, and cannot start with "kong",
 // "konnect", "mesh", "kic", or "_".
 type LabelsUpdate map[string]LabelsUpdateValue
-
-// ManagedByValue is the value type for ManagedBy.
-//
-// +kubebuilder:validation:MinLength=1
-// +kubebuilder:validation:MaxLength=63
-// +kubebuilder:validation:Pattern=`^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$`
-type ManagedByValue string
-
-// ManagedBy Stores information about what manages this entity, such as the tool
-// or system responsible for its lifecycle (for example, `terraform`).
-//
-// Keys must be 1–63 characters long and start with an alphanumeric character.
-type ManagedBy map[string]ManagedByValue
 
 // MinRuntimeVersion The minimum runtime version supported by the API.
 // This is the lowest version of the data plane

@@ -46,7 +46,7 @@ spec:
           - name: POD_NAMESPACE
             value: ($namespace)
         content: |
-          bash ../../common/scripts/pod_connectivity_test_with_hostname_tls_check.sh
+          bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/host_connectivity_test_with_hostname_tls_check.sh
         check:
           (to_string(json_parse($stdout).http_status) == '200'): true
           (to_string(json_parse($stdout).certificate_match) == 'true'): true

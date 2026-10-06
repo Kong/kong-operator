@@ -20,6 +20,7 @@ import (
 
 	kcfgdataplane "github.com/kong/kong-operator/v2/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	"github.com/kong/kong-operator/v2/internal/versions"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
@@ -90,7 +91,7 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 		})
 	})
 
-	dataplaneImageToPatch := helpers.GetDefaultDataPlaneBaseImage() + ":3.4"
+	dataplaneImageToPatch := helpers.GetDefaultDataPlaneBaseImage() + ":" + versions.MinimumDataPlaneVersion.String()
 
 	t.Run("after patching", func(t *testing.T) {
 		patchDataPlaneImage(ctx, t, dataplane, integration.GetClients().MgrClient, dataplaneImageToPatch)
@@ -291,7 +292,7 @@ func TestDataPlaneBlueGreenHorizontalScaling(t *testing.T) {
 	t.Logf("verifying DataPlane %s gets marked ready", dataplane.Name)
 	require.Eventually(t, testutils.DataPlaneIsReady(t, ctx, dataplaneName, integration.GetClients().OperatorClient), waitTime, tickTime)
 
-	dataplaneImageToPatch := helpers.GetDefaultDataPlaneBaseImage() + ":3.4"
+	dataplaneImageToPatch := helpers.GetDefaultDataPlaneBaseImage() + ":" + versions.MinimumDataPlaneVersion.String()
 	patchDataPlaneImage(ctx, t, dataplane, integration.GetClients().MgrClient, dataplaneImageToPatch)
 	var previewDeployment appsv1.Deployment
 	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &previewDeployment, dataplanePreviewDeploymentLabels(), clients), waitTime, tickTime)
@@ -384,7 +385,7 @@ func TestDataPlaneBlueGreenResourcesNotDeletedUntilOwnerIsRemoved(t *testing.T) 
 	require.NotNil(t, liveTLSSecret)
 
 	t.Log("patching dataplane with another dataplane image to trigger rollout")
-	dataplaneImageToPatch := helpers.GetDefaultDataPlaneBaseImage() + ":3.4"
+	dataplaneImageToPatch := helpers.GetDefaultDataPlaneBaseImage() + ":" + versions.MinimumDataPlaneVersion.String()
 	patchDataPlaneImage(ctx, t, dataplane, integration.GetClients().MgrClient, dataplaneImageToPatch)
 
 	t.Log("ensuring all preview dependent resources are created")

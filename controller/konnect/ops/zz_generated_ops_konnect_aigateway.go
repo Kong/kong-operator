@@ -128,23 +128,40 @@ func getKonnectAIGatewayForUID(
 	obj *konnectv1alpha1.KonnectAIGateway,
 ) (string, error) {
 
+	// Without a UID every unlabeled Konnect entity would match below.
+	uid := string(obj.GetUID())
+	if uid == "" {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+
 	// TODO: pass a Filter to ListAiGateways (e.g. by name/labels) so we
 	// do not page through every entity in the tenant. Filter types and
 	// fields are entity-specific; derive from OpenAPI schema.
-	resp, err := sdk.ListAiGateways(ctx, nil, nil)
-	if err != nil {
-		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
-	}
-	if resp == nil || resp.ListAIGatewaysResponse == nil {
-		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
-	}
-
-	for _, entry := range resp.ListAIGatewaysResponse.Data {
-		if entry.GetLabels()[KubernetesUIDLabelKey] != string(obj.GetUID()) {
-			continue
+	for pageNumber := int64(1); ; pageNumber++ {
+		resp, err := sdk.ListAiGateways(ctx, new(listPageSize), new(pageNumber))
+		if err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
 		}
-		if entry.GetID() != "" {
-			return entry.GetID(), nil
+		if resp == nil || resp.ListAIGatewaysResponse == nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+		}
+
+		for _, entry := range resp.ListAIGatewaysResponse.Data {
+			if entry.GetLabels()[KubernetesUIDLabelKey] != uid {
+				continue
+			}
+			if entry.GetID() != "" {
+				return entry.GetID(), nil
+			}
+		}
+
+		meta := resp.ListAIGatewaysResponse.GetMeta()
+		hasNext, err := hasNextNumberedPage(pageNumber, meta.GetPage(), len(resp.ListAIGatewaysResponse.Data))
+		if err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+		}
+		if !hasNext {
+			break
 		}
 	}
 

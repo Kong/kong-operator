@@ -1,0 +1,83 @@
+# Template for verifying that deleting a CR leaves no orphan in Konnect even
+# when the CR has lost its Konnect ID: clear status.id and delete the CR at the
+# same time, and check nothing is left behind in Konnect.
+#
+# This checks the outcome only, not the operator path that produces it: the
+# two changes race (see delete_resource_with_cleared_konnect_id.sh), so the
+# operator either finds the entity by the k8s-uid label at deletion time, or
+# first recovers the ID and then deletes by ID. The delete-time k8s-uid lookup
+# itself is covered deterministically by ops.TestDelete.
+#
+# Required bindings:
+#   - cr_api_version, cr_kind, cr_resource: API version, kind and resource type of the CR.
+#   - cr_name: Name of the CR.
+#   - collection_path_jq: jq expression, evaluated against the CR, yielding the
+#     Konnect API path of the entity collection (see konnect_entity_of_resource.sh).
+#   - konnect_token, konnect_url: Konnect API token and host.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: konnect-ownership-no-orphan-after-lost-id
+spec:
+  try:
+    - script:
+        env:
+          - name: RESOURCE_TYPE
+            value: ($cr_resource)
+          - name: RESOURCE_NAME
+            value: ($cr_name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: COLLECTION_PATH_JQ
+            value: ($collection_path_jq)
+        content: |
+          bash ../../common/scripts/konnect_entity_of_resource.sh
+        outputs:
+          - name: entity
+            value: (json_parse($stdout))
+    - description: Clear status.id and delete the CR concurrently.
+      script:
+        env:
+          - name: RESOURCE_TYPE
+            value: ($cr_resource)
+          - name: RESOURCE_NAME
+            value: ($cr_name)
+          - name: NAMESPACE
+            value: ($namespace)
+        content: |
+          bash ../../common/scripts/delete_resource_with_cleared_konnect_id.sh
+    - error:
+        resource:
+          apiVersion: ($cr_api_version)
+          kind: ($cr_kind)
+          metadata:
+            name: ($cr_name)
+            namespace: ($namespace)
+    - description: The entity is gone from Konnect.
+      script:
+        env:
+          - name: KONNECT_TOKEN
+            value: ($konnect_token)
+          - name: KONNECT_URL
+            value: ($konnect_url)
+          - name: API_PATH
+            value: ($entity.entity_path)
+          - name: EXPECTED_STATUS
+            value: "404"
+        content: |
+          bash ../../common/scripts/konnect_api_request.sh
+    - description: No entity with the CR's UID is left in the collection.
+      script:
+        env:
+          - name: KONNECT_TOKEN
+            value: ($konnect_token)
+          - name: KONNECT_URL
+            value: ($konnect_url)
+          - name: API_PATH
+            value: ($entity.collection_path)
+          - name: WANT_UID
+            value: ($entity.uid)
+          - name: EXPECTED_JQ
+            value: '[(if type == "array" then . else .data end)[] | select(.labels["k8s-uid"] == $ENV.WANT_UID)] | length == 0'
+        content: |
+          bash ../../common/scripts/konnect_list_all_entities.sh

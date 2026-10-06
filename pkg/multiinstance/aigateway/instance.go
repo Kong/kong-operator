@@ -15,6 +15,7 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/managedfields"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -31,6 +32,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	adminapi "github.com/kong/kong-operator/v2/internal/adminapi"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
+	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/changenotifier"
 	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/translator"
@@ -88,6 +90,13 @@ type Env struct {
 
 	// TypeConverter is the SSA type converter used to patch the OnPremAIGateway status.
 	TypeConverter managedfields.TypeConverter
+
+	// SecretLabelSelector is the label key the operator's main manager caches Secrets
+	// by (see modules/manager config.SecretLabelSelector). The instance's own cache
+	// mirrors it, so Secrets the translation reads (e.g. AIGatewayAuthStrategy's oidc
+	// clientSecret and consumer credential apiKeys) see the same set the main manager
+	// deems ingestible.
+	SecretLabelSelector string
 }
 
 // Instance is a single on-prem AI Gateway control plane instance. It runs its own
@@ -124,6 +133,11 @@ type Instance struct {
 	// loop would otherwise repeat on every sync. Only the sync loop goroutine
 	// touches it, so no locking.
 	pushClients map[string]pusher
+
+	// statusReporter records the per-entity outcome of the configuration syncs
+	// (translation and push) and serves it to the configuration-entity
+	// reconcilers, which turn it into the entities' Programmed conditions.
+	statusReporter *EntityStatusReporter
 }
 
 var _ instances.Instance = &Instance{}
@@ -136,12 +150,13 @@ func NewInstance(
 	env Env,
 ) *Instance {
 	return &Instance{
-		id:            id,
-		logger:        logger.WithValues("instanceID", id.String()),
-		env:           env,
-		cfg:           cfg,
-		cn:            changenotifier.New(),
-		newPushClient: newMTLSClientAdapter,
+		id:             id,
+		logger:         logger.WithValues("instanceID", id.String()),
+		env:            env,
+		cfg:            cfg,
+		cn:             changenotifier.New(),
+		newPushClient:  newMTLSClientAdapter,
+		statusReporter: NewEntityStatusReporter(env.Scheme),
 	}
 }
 
@@ -236,13 +251,18 @@ func (i *Instance) newCtrlManager() (ctrl.Manager, error) {
 	})
 }
 
-// cacheOpts scopes the instance manager's per-object caches. AIGatewayModels stay
-// cluster-wide: they may reference the gateway from any namespace. EndpointSlices,
-// AIGatewayDataPlanes, the Admin API client certificate Secret and the OnPremAIGateway
-// itself are scoped to the gateway's namespace: the onpremNamespacedRef is
-// same-namespace and only objects in it are read there. The Secret cache is further
-// bounded to the Admin API client certificate Secrets by label, as those are the only
-// Secrets the instance reads.
+// cacheOpts scopes the instance manager's per-object caches. The configuration entities
+// (e.g. AIGatewayModels) stay cluster-wide: the translation lists them cluster-wide via
+// the OnOnPremAIGatewayRef field index, and cross-namespace references to the gateway are
+// rejected there (see the translator's appendEntities). EndpointSlices,
+// Secrets and the OnPremAIGateway itself are scoped to the gateway's namespace: the
+// onpremNamespacedRef is same-namespace and only objects in it are read there. Secrets
+// keep a label filter: the instance reads the Admin API client certificate Secret and,
+// through the generated secretRef resolvers (e.g. AIGatewayAuthStrategy's oidc
+// clientSecret and consumer credential apiKeys), user entity Secrets. Both match
+// i.secretSelector(): user Secrets must carry the operator's Secret label selector to
+// be ingestible at all, and the Admin API client certificate Secret carries it too (see
+// the OnPremAIGateway controller's ensureAdminClientCertificateSecret).
 func (i *Instance) cacheOpts() cache.Options {
 	opts := cache.Options{}
 	if i.env.GatewayNN.Namespace == "" {
@@ -253,18 +273,31 @@ func (i *Instance) cacheOpts() cache.Options {
 		&discoveryv1.EndpointSlice{}:            {Namespaces: namespaces},
 		&aigatewayv1alpha1.AIGatewayDataPlane{}: {Namespaces: namespaces},
 		&aigatewayv1alpha1.OnPremAIGateway{}:    {Namespaces: namespaces},
-		&corev1.Secret{}:                        {Namespaces: namespaces, Label: adminClientCertSecretSelector()},
+		&corev1.Secret{}:                        {Namespaces: namespaces, Label: i.secretSelector()},
 	}
 	return opts
 }
 
-// adminClientCertSecretSelector matches the OnPremAIGateway Admin API client
-// certificate Secrets - the only Secrets the instance reads - so unrelated
-// Secrets in the gateway namespace stay out of the instance's cache.
-func adminClientCertSecretSelector() labels.Selector {
-	return labels.SelectorFromSet(labels.Set{
-		consts.SecretOnPremAIGatewayAdminClientCertificateLabel: "true",
-	})
+// secretSelector mirrors the main manager's Secret cache filter (modules/manager's
+// setByObjectFor): Secrets must carry the configured label key with value "true" or
+// "internal". When no selector is configured, no label filter is applied, exactly
+// like the main manager's cache.
+func (i *Instance) secretSelector() labels.Selector {
+	if i.env.SecretLabelSelector == "" {
+		return nil
+	}
+	req, err := labels.NewRequirement(
+		i.env.SecretLabelSelector,
+		selection.In,
+		[]string{mgrconfig.LabelValueForSelectorTrue, mgrconfig.LabelValueForSelectorInternal},
+	)
+	if err != nil {
+		// The label key comes from operator configuration; an invalid key means a
+		// broken deployment, but returning a never-matching selector keeps the
+		// manager startable instead of crashing it here.
+		return labels.Nothing()
+	}
+	return labels.NewSelector().Add(*req)
 }
 
 func (i *Instance) sendConfig(
@@ -276,18 +309,43 @@ func (i *Instance) sendConfig(
 		return fmt.Errorf("nil gateway reference")
 	}
 
-	doc, err := translator.BuildDocument(ctx, i.client, *gw)
+	doc, entityStatuses, err := translator.BuildDocument(ctx, i.client, *gw)
 	if err != nil {
+		// A failure to list the entities of a kind aborts the translation, and
+		// no per-entity status is reported for that sync: the sync loop retries
+		// it on the next tick.
 		return fmt.Errorf("building configuration document: %w", err)
 	}
+	included, failures := splitEntityStatuses(entityStatuses)
+
 	payload, warnings, err := convert.ConvertDocumentToDBLessYAML(doc, convert.Options{Strict: false})
 	if err != nil {
+		// The rendered payload is broken, so nothing gets pushed: every entity
+		// included in the document failed to be applied.
+		i.statusReporter.Report(nil, append(failuresForAll(included, err), failures...))
 		return fmt.Errorf("rendering dbless configuration: %w", err)
 	}
 
-	if err := i.sendConfigToDataPlanes(ctx, *gw, payload); err != nil {
+	pushed, err := i.sendConfigToDataPlanes(ctx, *gw, payload)
+	if err != nil {
+		// The push failed, so none of the entities included in the document was
+		// applied. This is conservative by design: a failure on any single
+		// endpoint fails every entity, even though the other data planes got
+		// the config - the entities' Programmed condition reflects the
+		// gateway's configuration as a whole, and per-endpoint attribution is
+		// tracked on the gateway's DataPlanesConfigured condition instead.
+		i.statusReporter.Report(nil, append(failuresForAll(included, err), failures...))
 		return fmt.Errorf("sending configuration to data planes: %w", err)
 	}
+	if !pushed {
+		// The push was skipped: no Admin API endpoints are discovered, so
+		// nothing was applied. Report the entities as failed instead of
+		// succeeded.
+		err := fmt.Errorf("no Admin API endpoints discovered; configuration not pushed")
+		i.statusReporter.Report(nil, append(failuresForAll(included, err), failures...))
+		return nil
+	}
+	i.statusReporter.Report(included, failures)
 
 	for _, w := range warnings {
 		// TODO: https://github.com/Kong/kong-operator/issues/5664
@@ -297,6 +355,31 @@ func (i *Instance) sendConfig(
 	}
 	return nil
 
+}
+
+// splitEntityStatuses splits the translation statuses into the entities that
+// were successfully translated (and thus included in the document) and the
+// failed ones.
+func splitEntityStatuses(statuses []translator.EntityStatus) (included []client.Object, failures []EntityFailure) {
+	for _, s := range statuses {
+		if s.Err != nil {
+			failures = append(failures, EntityFailure{Obj: s.Obj, Err: s.Err})
+			continue
+		}
+		included = append(included, s.Obj)
+	}
+	return included, failures
+}
+
+// failuresForAll turns every provided entity into a failure caused by the
+// given error, used when a failure of the sync as a whole (rendering, push)
+// applies to all the entities that were part of the document.
+func failuresForAll(objs []client.Object, err error) []EntityFailure {
+	failures := make([]EntityFailure, 0, len(objs))
+	for _, obj := range objs {
+		failures = append(failures, EntityFailure{Obj: obj, Err: err})
+	}
+	return failures
 }
 
 // syncPending re-renders the configuration for every gateway with pending changes and removes
@@ -349,6 +432,7 @@ func (i *Instance) Run(ctx context.Context) error {
 		index.OptionsForAIGatewayCACertificate(),
 		index.OptionsForAIGatewayCertificate(),
 		index.OptionsForAIGatewayConsumer(),
+		index.OptionsForAIGatewayConsumerCredential(),
 		index.OptionsForAIGatewayConsumerGroup(),
 		index.OptionsForAIGatewayDataPlaneCertificate(),
 		index.OptionsForAIGatewayMCPServer(),
@@ -365,13 +449,17 @@ func (i *Instance) Run(ctx context.Context) error {
 	}
 
 	// The configuration-entity controllers run on the instance's own manager and feed the
-	// instance's own ChangeNotifier.
+	// instance's own ChangeNotifier. The statusReporter serves them the per-entity
+	// translation/push outcome, which they turn into the entities' Programmed conditions,
+	// and its queue re-triggers them when the reported status changes.
 	cs := &aigwonpremconfig.Controllers{
 		Client:           mgr.GetClient(),
 		Scheme:           i.env.Scheme,
 		Log:              i.logger,
 		CacheSyncTimeout: i.env.CacheSyncTimeout,
 		ChangeNotifier:   i.cn,
+		StatusClient:     i.statusReporter,
+		StatusQueue:      i.statusReporter.Queue(),
 	}
 	if err := cs.SetupWithManager(ctx, mgr); err != nil {
 		return fmt.Errorf("setting up configuration-entity controllers: %w", err)
@@ -445,6 +533,13 @@ forLoop:
 			if change.ParentNN == nil {
 				// TODO: handle nil gw
 				logger.Info("Change has no parent gateway reference, skipping")
+				continue
+			}
+			if *change.ParentNN != i.env.GatewayNN {
+				// The entity controllers watch every entity targeting any
+				// OnPremAIGateway: changes for entities targeting other
+				// gateways must not drive this instance's sync loop or its
+				// status reports - it only serves its own gateway.
 				continue
 			}
 

@@ -94,35 +94,48 @@ func getKonnectConfigStoreForUID(
 	if parentID == "" {
 		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectGatewayControlPlane", Op: GetOp}
 	}
-	resp, err := sdk.ListConfigStores(ctx, sdkkonnectops.ListConfigStoresRequest{
-		ControlPlaneID: parentID,
-	})
-	if err != nil {
-		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
-	}
-	if resp == nil || resp.ListConfigStoresResponse == nil {
-		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
-	}
-
-	// TODO: only the first page of results is scanned. When the parent has more
-	// entries than the SDK's default page size, a matching entry on a later
-	// page is missed and getForUID returns NotFound. Tracked in
-	// https://github.com/Kong/kong-operator/issues/3987.
-	for _, entry := range resp.ListConfigStoresResponse.Data {
-		if !matchStringField(obj.Spec.APISpec.Name, entry.GetName()) {
-			continue
+	var pageAfter *string
+	// Cursors already requested, to detect a next-page cursor that does not
+	// advance (directly or through a longer cycle).
+	seenCursors := map[string]struct{}{}
+	for {
+		resp, err := sdk.ListConfigStores(ctx, sdkkonnectops.ListConfigStoresRequest{
+			ControlPlaneID: parentID,
+			PageSize:       new(listPageSize),
+			PageAfter:      pageAfter,
+		})
+		if err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
 		}
-		switch id := any(entry.GetID()).(type) {
-		case string:
-			if id != "" {
-				return id, nil
+		if resp == nil || resp.ListConfigStoresResponse == nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+		}
+
+		for _, entry := range resp.ListConfigStoresResponse.Data {
+			if !matchStringField(obj.Spec.APISpec.Name, entry.GetName()) {
+				continue
 			}
-		case *string:
-			if id != nil && *id != "" {
-				return *id, nil
+			switch id := any(entry.GetID()).(type) {
+			case string:
+				if id != "" {
+					return id, nil
+				}
+			case *string:
+				if id != nil && *id != "" {
+					return *id, nil
+				}
+			default:
+				return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
 			}
-		default:
-			return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
+		}
+
+		meta := resp.ListConfigStoresResponse.GetMeta()
+		page := meta.GetPage()
+		if pageAfter, err = nextPageCursor(page.GetNext(), seenCursors); err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+		}
+		if pageAfter == nil {
+			break
 		}
 	}
 
