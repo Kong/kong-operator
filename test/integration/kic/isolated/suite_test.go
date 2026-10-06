@@ -19,6 +19,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/e2e-framework/klient/conf"
 	"sigs.k8s.io/e2e-framework/pkg/env"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
@@ -29,6 +30,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/testenv"
 	testutils "github.com/kong/kong-operator/v2/ingress-controller/test/util"
+	kotest "github.com/kong/kong-operator/v2/test"
 	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
 )
@@ -116,6 +118,25 @@ func TestMain(m *testing.M) {
 		helpers.ExitOnErr(ctx, fmt.Errorf("failed to prepare cluster for running the controller manager: %w", err))
 	}
 
+	// Apply a KongLicense shared by all tests, as the kic suite does. KongLicense is
+	// cluster-scoped, so every test's controller manager programs it into its Kong.
+	// Only for Kong Enterprise: when recovering from a sync error, the controller adds
+	// the license to the last valid config regardless of the Kong edition, and Kong OSS
+	// rejects config with a license in it.
+	cleanupKongLicense := func() error { return nil }
+	switch {
+	case !testenv.KongEnterpriseImageUsed():
+		fmt.Println("INFO: Kong Enterprise not used, skipping KongLicense creation")
+	case kotest.KongLicenseData() == "":
+		fmt.Println("INFO: KONG_LICENSE_DATA not set, skipping KongLicense creation")
+	default:
+		fmt.Println("INFO: applying KongLicense")
+		mgrClient, err := client.New(env.Cluster().Config(), client.Options{Scheme: scheme.Get()})
+		helpers.ExitOnErr(ctx, err)
+		cleanupKongLicense, err = helpers.CreateKongLicense(ctx, mgrClient, "kic-isolated-integration-license-")
+		helpers.ExitOnErr(ctx, err)
+	}
+
 	ctx = SetClusterInCtx(ctx, env.Cluster())
 	ctx = SetRunIDInCtx(ctx, runID)
 	tenv = tenv.WithContext(ctx)
@@ -140,6 +161,10 @@ func TestMain(m *testing.M) {
 	defer func() {
 		os.Exit(code)
 	}()
+
+	if err := cleanupKongLicense(); err != nil {
+		fmt.Printf("WARN: %s\n", err)
+	}
 
 	if testenv.IsCI() {
 		fmt.Printf("INFO: running in ephemeral CI environment, skipping cluster %s teardown\n", env.Cluster().Name())
