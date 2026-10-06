@@ -351,6 +351,73 @@ func TestEventGatewayDataPlane(t *testing.T) {
 		}.RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("certificateSecret provisioning validation", func(t *testing.T) {
+		common.TestCasesGroup[*eventgatewayv1alpha1.KegDataPlane]{
+			{
+				Name:       "certificateSecret unset - valid (defaults to Automatic)",
+				TestObject: validDataPlane(ns.Name),
+				Assert: func(t *testing.T, dp *eventgatewayv1alpha1.KegDataPlane) {
+					// provisioning's default only applies once certificateSecret itself is
+					// present; omitting certificateSecret entirely must not make the API
+					// server materialize it just to fill in the nested default.
+					assert.Nil(t, dp.Spec.CertificateSecret)
+				},
+			},
+			{
+				Name: "certificateSecret set with provisioning absent - valid (defaults to Automatic)",
+				TestObject: func() *eventgatewayv1alpha1.KegDataPlane {
+					dp := validDataPlane(ns.Name)
+					dp.Spec.CertificateSecret = &eventgatewayv1alpha1.CertificateSecret{}
+					return dp
+				}(),
+			},
+			{
+				Name: "Automatic without secretRef - valid",
+				TestObject: func() *eventgatewayv1alpha1.KegDataPlane {
+					dp := validDataPlane(ns.Name)
+					dp.Spec.CertificateSecret = &eventgatewayv1alpha1.CertificateSecret{
+						Provisioning: new(eventgatewayv1alpha1.AutomaticCertificateProvisioning),
+					}
+					return dp
+				}(),
+			},
+			{
+				Name: "Manual with secretRef - valid",
+				TestObject: func() *eventgatewayv1alpha1.KegDataPlane {
+					dp := validDataPlane(ns.Name)
+					dp.Spec.CertificateSecret = &eventgatewayv1alpha1.CertificateSecret{
+						Provisioning: new(eventgatewayv1alpha1.ManualCertificateProvisioning),
+						SecretRef:    &eventgatewayv1alpha1.SecretRef{Name: "user-cert"},
+					}
+					return dp
+				}(),
+			},
+			{
+				Name: "Manual without secretRef - invalid",
+				TestObject: func() *eventgatewayv1alpha1.KegDataPlane {
+					dp := validDataPlane(ns.Name)
+					dp.Spec.CertificateSecret = &eventgatewayv1alpha1.CertificateSecret{
+						Provisioning: new(eventgatewayv1alpha1.ManualCertificateProvisioning),
+					}
+					return dp
+				}(),
+				ExpectedErrorMessage: new("secretRef must be set when provisioning is Manual"),
+			},
+			{
+				Name: "Automatic with secretRef - invalid",
+				TestObject: func() *eventgatewayv1alpha1.KegDataPlane {
+					dp := validDataPlane(ns.Name)
+					dp.Spec.CertificateSecret = &eventgatewayv1alpha1.CertificateSecret{
+						Provisioning: new(eventgatewayv1alpha1.AutomaticCertificateProvisioning),
+						SecretRef:    &eventgatewayv1alpha1.SecretRef{Name: "user-cert"},
+					}
+					return dp
+				}(),
+				ExpectedErrorMessage: new("secretRef must not be set when provisioning is Automatic"),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("status defaults", func(t *testing.T) {
 		common.TestCasesGroup[*eventgatewayv1alpha1.KegDataPlane]{
 			{

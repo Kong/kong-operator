@@ -68,3 +68,19 @@ func EnqueueDataPlanesForControlPlane(
 		return requests
 	}
 }
+
+// EnqueueDataPlanesForCertificateSecret returns a MapFunc that enqueues
+// reconcile requests for all DataPlanes in the same namespace as the changed
+// Secret whose manual certificate Secret reference (indexed under
+// secretRefIndexField as "namespace/name") resolves to it. Operator-owned
+// (automatically-provisioned) certificate Secrets are already covered by the
+// controller's Owns(&corev1.Secret{}); this watch exists solely so edits to a
+// manually-referenced, user-owned Secret also trigger a reconcile.
+func EnqueueDataPlanesForCertificateSecret(
+	cl client.Client,
+	newObjectList func() client.ObjectList,
+	secretRefIndexField string,
+	kind string,
+) handler.MapFunc {
+	return EnqueueDataPlanesForControlPlane(cl, newObjectList, secretRefIndexField, kind, "Secret")
+}

@@ -19,7 +19,6 @@ package dataplane
 import (
 	"context"
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -42,6 +41,7 @@ import (
 	"github.com/kong/kong-operator/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	shareddataplane "github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	pkgconsts "github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
@@ -62,30 +62,6 @@ const (
 
 	reconcileTestOnPremCPName = "my-onprem-aigwcp"
 )
-
-func TestCertEntityName(t *testing.T) {
-	const checksum = "abcdef1234567890"
-
-	t.Run("short name remains readable", func(t *testing.T) {
-		aigwdp := newReconcileAIGWDP()
-		assert.Equal(t, aigwdp.Name+"-abcdef1234", certEntityName(aigwdp, checksum))
-	})
-
-	t.Run("truncated names remain distinct", func(t *testing.T) {
-		commonPrefix := strings.Repeat("a", 252)
-		first := newReconcileAIGWDP()
-		first.Name = commonPrefix + "a"
-		second := newReconcileAIGWDP()
-		second.Name = commonPrefix + "b"
-
-		firstCertName := certEntityName(first, checksum)
-		secondCertName := certEntityName(second, checksum)
-
-		assert.NotEqual(t, firstCertName, secondCertName)
-		assert.LessOrEqual(t, len(firstCertName), 253)
-		assert.LessOrEqual(t, len(secondCertName), 253)
-	})
-}
 
 // caSecret builds the cluster CA Secret used across Reconcile tests.
 func caSecret() *corev1.Secret {
@@ -335,7 +311,7 @@ func drainEvents(recorder *events.FakeRecorder) []string {
 
 // markGeneratedCertProgrammed finds the automatically-generated mTLS
 // certificate Secret and creates a Programmed=True AIGatewayDataPlaneCertificate
-// for it, named exactly as the real reconciler would name it (certEntityName
+// for it, named exactly as the real reconciler would name it (shareddataplane.CertEntityName
 // is checksum-derived, so the name can't be known statically ahead of the
 // Secret actually being generated). Safe to call more than once: it's a
 // no-op once the CR already exists.
@@ -350,7 +326,7 @@ func markGeneratedCertProgrammed(t *testing.T, cl client.Client) {
 	require.Len(t, secrets.Items, 1, "expected exactly one automatically-generated certificate Secret")
 	secret := &secrets.Items[0]
 
-	certName := certEntityName(newReconcileAIGWDP(), certificateChecksum(secret))
+	certName := shareddataplane.CertEntityName(newReconcileAIGWDP().Name, shareddataplane.CertificateChecksum(secret))
 	existing := &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}
 	if err := cl.Get(t.Context(), types.NamespacedName{Namespace: reconcileTestNS, Name: certName}, existing); err == nil {
 		return
@@ -394,7 +370,7 @@ func markManualCertProgrammed(t *testing.T, cl client.Client) {
 		Namespace: reconcileTestNS, Name: manualCertSecretName,
 	}, secret))
 
-	certName := certEntityName(newReconcileAIGWDP(), certificateChecksum(secret))
+	certName := shareddataplane.CertEntityName(newReconcileAIGWDP().Name, shareddataplane.CertificateChecksum(secret))
 	cert := &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}
 	if err := cl.Get(t.Context(), types.NamespacedName{Namespace: reconcileTestNS, Name: certName}, cert); err != nil {
 		require.True(t, apierrors.IsNotFound(err))
@@ -1175,7 +1151,7 @@ func TestReconciler_KonnectCertificateBlueGreenRotation(t *testing.T) {
 		drainEvents(recorder)
 	}
 	certNameFor := func(secret *corev1.Secret) string {
-		return certEntityName(newReconcileAIGWDP(), certificateChecksum(secret))
+		return shareddataplane.CertEntityName(newReconcileAIGWDP().Name, shareddataplane.CertificateChecksum(secret))
 	}
 	certExists := func(name string) bool {
 		t.Helper()
@@ -1211,7 +1187,7 @@ func TestReconciler_KonnectCertificateBlueGreenRotation(t *testing.T) {
 	reconcile()
 	deploy := &appsv1.Deployment{}
 	require.NoError(t, base.Get(ctx, types.NamespacedName{Namespace: reconcileTestNS, Name: reconcileTestDPName}, deploy))
-	assert.Equal(t, certificateChecksum(secretV1), deploy.Spec.Template.Annotations[pkgconsts.AIGatewayDataPlaneCertificateChecksumAnnotation])
+	assert.Equal(t, shareddataplane.CertificateChecksum(secretV1), deploy.Spec.Template.Annotations[pkgconsts.AIGatewayDataPlaneCertificateChecksumAnnotation])
 
 	// Rotate the Secret's content in place (same name, new cert material):
 	// exactly the "cert-manager renewed it" scenario the design targets.
@@ -1231,7 +1207,7 @@ func TestReconciler_KonnectCertificateBlueGreenRotation(t *testing.T) {
 	assert.True(t, certExists(certAName), "old certificate must survive while the new one isn't Programmed yet")
 	assert.True(t, certExists(certBName))
 	require.NoError(t, base.Get(ctx, types.NamespacedName{Namespace: reconcileTestNS, Name: reconcileTestDPName}, deploy))
-	assert.Equal(t, certificateChecksum(secretV1), deploy.Spec.Template.Annotations[pkgconsts.AIGatewayDataPlaneCertificateChecksumAnnotation],
+	assert.Equal(t, shareddataplane.CertificateChecksum(secretV1), deploy.Spec.Template.Annotations[pkgconsts.AIGatewayDataPlaneCertificateChecksumAnnotation],
 		"deployment must not roll to V2 before its certificate is Programmed on Konnect")
 
 	// 4th reconcile: cert B Programmed -> Deployment rolls to V2. Cert A must
@@ -1241,7 +1217,7 @@ func TestReconciler_KonnectCertificateBlueGreenRotation(t *testing.T) {
 	markCertProgrammed(certBName)
 	reconcile()
 	require.NoError(t, base.Get(ctx, types.NamespacedName{Namespace: reconcileTestNS, Name: reconcileTestDPName}, deploy))
-	assert.Equal(t, certificateChecksum(secretV2), deploy.Spec.Template.Annotations[pkgconsts.AIGatewayDataPlaneCertificateChecksumAnnotation])
+	assert.Equal(t, shareddataplane.CertificateChecksum(secretV2), deploy.Spec.Template.Annotations[pkgconsts.AIGatewayDataPlaneCertificateChecksumAnnotation])
 	assert.True(t, certExists(certBName))
 	assert.True(t, certExists(certAName),
 		"old certificate must still exist right after the spec changes: the fake Deployment's status is never populated, so rollout is never reported complete")

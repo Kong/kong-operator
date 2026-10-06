@@ -197,10 +197,7 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 		}, waitTime, tickTime)
 
 		// EventGatewayDataPlaneCertificate should be created.
-		require.EventuallyWithT(t, func(ct *assert.CollectT) {
-			cert := &configurationv1alpha1.EventGatewayDataPlaneCertificate{}
-			assert.NoError(ct, cl.Get(ctx, client.ObjectKey{Name: egdp.Name, Namespace: ns.Name}, cert))
-		}, waitTime, tickTime)
+		waitForKEGCertificate(t, ctx, cl, egdp)
 
 		// KonnectCertificateRegistered should be False/NotProgrammed.
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
@@ -249,10 +246,7 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 		require.NoError(t, cl.Create(ctx, egdp))
 
 		// Wait for EventGatewayDataPlaneCertificate to be created, then simulate Konnect programming it.
-		konnectCert := &configurationv1alpha1.EventGatewayDataPlaneCertificate{}
-		require.EventuallyWithT(t, func(ct *assert.CollectT) {
-			assert.NoError(ct, cl.Get(ctx, client.ObjectKey{Name: egdp.Name, Namespace: ns.Name}, konnectCert))
-		}, waitTime, tickTime)
+		konnectCert := waitForKEGCertificate(t, ctx, cl, egdp)
 
 		updateEventGatewayDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, konnectCert)
 
@@ -329,10 +323,7 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 		}
 		require.NoError(t, cl.Create(ctx, egdp))
 
-		konnectCert := &configurationv1alpha1.EventGatewayDataPlaneCertificate{}
-		require.EventuallyWithT(t, func(ct *assert.CollectT) {
-			assert.NoError(ct, cl.Get(ctx, client.ObjectKey{Name: egdp.Name, Namespace: ns.Name}, konnectCert))
-		}, waitTime, tickTime)
+		konnectCert := waitForKEGCertificate(t, ctx, cl, egdp)
 		updateEventGatewayDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, konnectCert)
 
 		// Wait for the happy state.
@@ -391,10 +382,7 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 		}
 		require.NoError(t, cl.Create(ctx, egdp))
 
-		konnectCert := &configurationv1alpha1.EventGatewayDataPlaneCertificate{}
-		require.EventuallyWithT(t, func(ct *assert.CollectT) {
-			assert.NoError(ct, cl.Get(ctx, client.ObjectKey{Name: egdp.Name, Namespace: ns.Name}, konnectCert))
-		}, waitTime, tickTime)
+		konnectCert := waitForKEGCertificate(t, ctx, cl, egdp)
 		updateEventGatewayDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, konnectCert)
 
 		// Wait for Deployment to exist.
@@ -954,13 +942,41 @@ func setupProgrammedKEGDP(
 	}
 	require.NoError(t, cl.Create(ctx, egdp))
 
-	konnectCert := &configurationv1alpha1.EventGatewayDataPlaneCertificate{}
-	require.EventuallyWithT(t, func(ct *assert.CollectT) {
-		assert.NoError(ct, cl.Get(ctx, client.ObjectKey{Name: egdpName, Namespace: ns}, konnectCert))
-	}, waitTime, tickTime)
+	konnectCert := waitForKEGCertificate(t, ctx, cl, egdp)
 	updateEventGatewayDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, konnectCert)
 
 	return egdp
+}
+
+// waitForKEGCertificate waits for exactly one EventGatewayDataPlaneCertificate
+// controlled by the given KegDataPlane and returns it. The CR's name is
+// derived from the mTLS certificate Secret's content checksum (see
+// shareddataplane.CertEntityName), so it can't be looked up by a fixed name.
+func waitForKEGCertificate(t *testing.T, ctx context.Context, cl client.Client, egdp *eventgatewayv1alpha1.KegDataPlane) *configurationv1alpha1.EventGatewayDataPlaneCertificate {
+	t.Helper()
+	var certs []configurationv1alpha1.EventGatewayDataPlaneCertificate
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		certs = listKEGCertificates(ct, ctx, cl, egdp)
+		assert.Len(ct, certs, 1)
+	}, waitTime, tickTime)
+	require.Len(t, certs, 1)
+	return &certs[0]
+}
+
+// listKEGCertificates lists the EventGatewayDataPlaneCertificates controlled
+// by the given KegDataPlane.
+func listKEGCertificates(ct *assert.CollectT, ctx context.Context, cl client.Client, egdp *eventgatewayv1alpha1.KegDataPlane) []configurationv1alpha1.EventGatewayDataPlaneCertificate {
+	var certList configurationv1alpha1.EventGatewayDataPlaneCertificateList
+	if !assert.NoError(ct, cl.List(ctx, &certList, client.InNamespace(egdp.Namespace))) {
+		return nil
+	}
+	var owned []configurationv1alpha1.EventGatewayDataPlaneCertificate
+	for _, c := range certList.Items {
+		if metav1.IsControlledBy(&c, egdp) {
+			owned = append(owned, c)
+		}
+	}
+	return owned
 }
 
 // waitForKEGDeployment waits for exactly one Deployment owned by the given
@@ -1181,5 +1197,262 @@ func TestKEGDataPlaneReconciler_HPA(t *testing.T) {
 			}
 			assert.Equal(ct, int32(10), hpa.Spec.MaxReplicas)
 		}, waitTime, tickTime)
+	})
+}
+
+// TestKEGDataPlaneReconciler_ManualCertificateSecret verifies manual mTLS
+// certificate provisioning for KegDataPlane: a user-owned Secret referenced
+// via spec.certificateSecret is validated, registered with Konnect and
+// mounted as-is, in-place edits to it roll the Deployment onto a newly
+// registered certificate, and switching from Automatic to Manual removes the
+// operator-provisioned Secret once the rollout completed.
+func TestKEGDataPlaneReconciler_ManualCertificateSecret(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+
+	clusterCA := createKEGClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "keg-cluster-ca")
+
+	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, kegCRDGroups)
+	require.NoError(t, err)
+
+	StartReconcilers(ctx, t, mgr, logs,
+		&egdataplane.Reconciler{
+			Client:                   mgr.GetClient(),
+			ClusterCASecretName:      clusterCA.Name,
+			ClusterCASecretNamespace: clusterCA.Namespace,
+			CertTTL:                  consts.DefaultCertTTL,
+			TypeConverter:            ssaProvider,
+		},
+		&crdschema.Reconciler{
+			Client:   mgr.GetClient(),
+			Provider: ssaProvider,
+		},
+	)
+
+	cl := mgr.GetClient()
+
+	createUserSecret := func(t *testing.T, name string) *corev1.Secret {
+		t.Helper()
+		cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName(name))
+		secret := &corev1.Secret{
+			Name: name, Namespace: ns.Name,
+			Type: corev1.SecretTypeTLS,
+			Data: map[string][]byte{"tls.crt": cert, "tls.key": key},
+		}
+		require.NoError(t, cl.Create(ctx, secret))
+		return secret
+	}
+	manualSpec := func(secretName string) eventgatewayv1alpha1.KegDataPlaneSpec {
+		return eventgatewayv1alpha1.KegDataPlaneSpec{
+			CertificateSecret: &eventgatewayv1alpha1.CertificateSecret{
+				Provisioning: new(eventgatewayv1alpha1.ManualCertificateProvisioning),
+				SecretRef:    &eventgatewayv1alpha1.SecretRef{Name: secretName},
+			},
+		}
+	}
+	certVolumeSecretName := func(deploy appsv1.Deployment) string {
+		for _, v := range deploy.Spec.Template.Spec.Volumes {
+			if v.Name == egdataplane.KonnectCertVolumeName && v.Secret != nil {
+				return v.Secret.SecretName
+			}
+		}
+		return ""
+	}
+	listAutomaticSecrets := func(ct *assert.CollectT, egdp *eventgatewayv1alpha1.KegDataPlane) []corev1.Secret {
+		var secretList corev1.SecretList
+		if !assert.NoError(ct, cl.List(ctx, &secretList, client.InNamespace(ns.Name),
+			client.MatchingLabels{consts.SecretKEGDataPlaneCertificateLabel: "true"},
+		)) {
+			return nil
+		}
+		var owned []corev1.Secret
+		for _, s := range secretList.Items {
+			if metav1.IsControlledBy(&s, egdp) {
+				owned = append(owned, s)
+			}
+		}
+		return owned
+	}
+
+	t.Run("valid Secret is mounted as-is, no automatic Secret is provisioned", func(t *testing.T) {
+		t.Parallel()
+
+		userSecret := createUserSecret(t, "user-cert-valid")
+		egdp := setupProgrammedKEGDP(t, ctx, cl, ns.Name,
+			"kep-manual-valid", "konnect-id-manual-valid", "egdp-manual-valid",
+			manualSpec(userSecret.Name),
+		)
+
+		konnectCert := waitForKEGCertificate(t, ctx, cl, egdp)
+		require.NotNil(t, konnectCert.Spec.APISpec.Certificate.SecretRef)
+		assert.Equal(t, userSecret.Name, konnectCert.Spec.APISpec.Certificate.SecretRef.Name)
+
+		deploy := waitForKEGDeployment(t, ctx, cl, ns.Name, egdp.Name)
+		assert.Equal(t, userSecret.Name, certVolumeSecretName(deploy))
+		assert.NotEmpty(t, deploy.Spec.Template.Annotations[consts.KEGDataPlaneCertificateChecksumAnnotation])
+
+		assert.Never(t, func() bool {
+			ct := &assert.CollectT{}
+			return len(listAutomaticSecrets(ct, egdp)) > 0
+		}, waitTime, tickTime)
+	})
+
+	t.Run("missing Secret sets SecretRefNotFound, creating it unblocks the reconcile", func(t *testing.T) {
+		t.Parallel()
+
+		kep := &konnectv1alpha1.KonnectEventGateway{Name: "kep-manual-missing", Namespace: ns.Name}
+		require.NoError(t, cl.Create(ctx, kep))
+		UpdateKonnectEventGatewayStatusWithProgrammed(t, ctx, cl, kep, "konnect-id-manual-missing")
+
+		spec := manualSpec("user-cert-missing")
+		spec.ControlPlaneRef = eventgatewayv1alpha1.ControlPlaneRef{
+			Type:                 eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
+			KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{Name: kep.Name},
+		}
+		egdp := &eventgatewayv1alpha1.KegDataPlane{Name: "egdp-manual-missing", Namespace: ns.Name, Spec: spec}
+		require.NoError(t, cl.Create(ctx, egdp))
+
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			current := &eventgatewayv1alpha1.KegDataPlane{}
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(egdp), current)) {
+				return
+			}
+			cond := apimeta.FindStatusCondition(current.Status.Conditions, string(eventgatewayv1alpha1.CertificateProvisionedType))
+			if !assert.NotNil(ct, cond) {
+				return
+			}
+			assert.Equal(ct, metav1.ConditionFalse, cond.Status)
+			assert.Equal(ct, string(eventgatewayv1alpha1.CertificateSecretRefNotFoundReason), cond.Reason)
+		}, waitTime, tickTime)
+
+		// Creating the referenced Secret must re-trigger the reconcile via the
+		// Secret watch, without touching the KegDataPlane.
+		createUserSecret(t, "user-cert-missing")
+		konnectCert := waitForKEGCertificate(t, ctx, cl, egdp)
+		assert.Equal(t, "user-cert-missing", konnectCert.Spec.APISpec.Certificate.SecretRef.Name)
+	})
+
+	t.Run("in-place Secret rotation registers a new certificate and removes the old one after rollout", func(t *testing.T) {
+		t.Parallel()
+
+		userSecret := createUserSecret(t, "user-cert-rotating")
+		egdp := setupProgrammedKEGDP(t, ctx, cl, ns.Name,
+			"kep-manual-rotation", "konnect-id-manual-rotation", "egdp-manual-rotation",
+			manualSpec(userSecret.Name),
+		)
+
+		certA := waitForKEGCertificate(t, ctx, cl, egdp)
+		deploy := waitForKEGDeployment(t, ctx, cl, ns.Name, egdp.Name)
+		checksumV1 := deploy.Spec.Template.Annotations[consts.KEGDataPlaneCertificateChecksumAnnotation]
+		require.NotEmpty(t, checksumV1)
+		setDeploymentRolloutStatus(t, ctx, cl, ns.Name, deploy.Name)
+
+		certV2, keyV2 := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("user-cert-rotating-v2"))
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(userSecret), userSecret)) {
+				return
+			}
+			userSecret.Data = map[string][]byte{"tls.crt": certV2, "tls.key": keyV2}
+			assert.NoError(ct, cl.Update(ctx, userSecret))
+		}, waitTime, tickTime)
+
+		// A new certificate (B) appears alongside A.
+		var certB *configurationv1alpha1.EventGatewayDataPlaneCertificate
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			for _, c := range listKEGCertificates(ct, ctx, cl, egdp) {
+				if c.Name != certA.Name {
+					certB = &c
+				}
+			}
+			assert.NotNil(ct, certB)
+		}, waitTime, tickTime)
+		require.NotNil(t, certB)
+		assert.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(certA), &configurationv1alpha1.EventGatewayDataPlaneCertificate{}),
+			"old certificate must still exist once the new one is merely registered")
+
+		updateEventGatewayDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, certB)
+
+		// The Deployment rolls onto the new certificate.
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			var d appsv1.Deployment
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(&deploy), &d)) {
+				return
+			}
+			cs := d.Spec.Template.Annotations[consts.KEGDataPlaneCertificateChecksumAnnotation]
+			assert.NotEmpty(ct, cs)
+			assert.NotEqual(ct, checksumV1, cs)
+		}, waitTime, tickTime)
+
+		// The rollout isn't reported complete yet: A must survive.
+		assert.Never(t, func() bool {
+			return apierrors.IsNotFound(cl.Get(ctx, client.ObjectKeyFromObject(certA), &configurationv1alpha1.EventGatewayDataPlaneCertificate{}))
+		}, waitTime, tickTime, "old certificate must not be removed before the rollout to the new one is confirmed complete")
+
+		setDeploymentRolloutStatus(t, ctx, cl, ns.Name, deploy.Name)
+
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			assert.True(ct, apierrors.IsNotFound(
+				cl.Get(ctx, client.ObjectKeyFromObject(certA), &configurationv1alpha1.EventGatewayDataPlaneCertificate{})))
+		}, waitTime, tickTime)
+		assert.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(certB), &configurationv1alpha1.EventGatewayDataPlaneCertificate{}))
+	})
+
+	t.Run("switching from Automatic to Manual removes the automatic Secret after rollout", func(t *testing.T) {
+		t.Parallel()
+
+		egdp := setupProgrammedKEGDP(t, ctx, cl, ns.Name,
+			"kep-auto-to-manual", "konnect-id-auto-to-manual", "egdp-auto-to-manual",
+			eventgatewayv1alpha1.KegDataPlaneSpec{},
+		)
+		deploy := waitForKEGDeployment(t, ctx, cl, ns.Name, egdp.Name)
+		setDeploymentRolloutStatus(t, ctx, cl, ns.Name, deploy.Name)
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			assert.Len(ct, listAutomaticSecrets(ct, egdp), 1)
+		}, waitTime, tickTime)
+
+		userSecret := createUserSecret(t, "user-cert-auto-to-manual")
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(egdp), egdp)) {
+				return
+			}
+			egdp.Spec.CertificateSecret = manualSpec(userSecret.Name).CertificateSecret
+			assert.NoError(ct, cl.Update(ctx, egdp))
+		}, waitTime, tickTime)
+
+		// A certificate for the manual Secret is registered; program it.
+		var manualCert *configurationv1alpha1.EventGatewayDataPlaneCertificate
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			for _, c := range listKEGCertificates(ct, ctx, cl, egdp) {
+				if c.Spec.APISpec.Certificate.SecretRef != nil && c.Spec.APISpec.Certificate.SecretRef.Name == userSecret.Name {
+					manualCert = &c
+				}
+			}
+			assert.NotNil(ct, manualCert)
+		}, waitTime, tickTime)
+		require.NotNil(t, manualCert)
+		updateEventGatewayDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, manualCert)
+
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			var d appsv1.Deployment
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(&deploy), &d)) {
+				return
+			}
+			assert.Equal(ct, userSecret.Name, certVolumeSecretName(d))
+		}, waitTime, tickTime)
+		setDeploymentRolloutStatus(t, ctx, cl, ns.Name, deploy.Name)
+
+		// The operator-provisioned Secret and the old certificate are removed;
+		// the user-owned Secret is untouched.
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			assert.Empty(ct, listAutomaticSecrets(ct, egdp))
+			certs := listKEGCertificates(ct, ctx, cl, egdp)
+			if assert.Len(ct, certs, 1) {
+				assert.Equal(ct, manualCert.Name, certs[0].Name)
+			}
+		}, waitTime, tickTime)
+		assert.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(userSecret), &corev1.Secret{}))
 	})
 }

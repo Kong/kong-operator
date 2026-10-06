@@ -75,19 +75,8 @@ func newTestCertSecret() *corev1.Secret {
 	}
 }
 
-func Test_certEntityName(t *testing.T) {
-	aigwdp := newTestAIGWDP()
-
-	name1 := certEntityName(aigwdp, "abcdef1234567890")
-	name2 := certEntityName(aigwdp, "1234567890abcdef")
-
-	assert.NotEqual(t, name1, name2, "different checksums must produce different names")
-	assert.Equal(t, name1, certEntityName(aigwdp, "abcdef1234567890"), "must be deterministic for the same inputs")
-	assert.Contains(t, name1, aigwdp.Name, "name must remain traceable to the owning AIGatewayDataPlane")
-}
-
 func TestEnsureKonnectCertificate(t *testing.T) {
-	certName := certEntityName(newTestAIGWDP(), certificateChecksum(newTestCertSecret()))
+	certName := CertEntityName(newTestAIGWDP().Name, CertificateChecksum(newTestCertSecret()))
 
 	tests := []struct {
 		name         string
@@ -269,11 +258,11 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 			}
 
 			if tc.preCall {
-				_, err := r.ensureKonnectCertificate(t.Context(), logr.Discard(), aigwdp, resolvedTestCP(aigwcp), certSecret, certificateChecksum(certSecret))
+				_, err := r.ensureKonnectCertificate(t.Context(), logr.Discard(), aigwdp, resolvedTestCP(aigwcp), certSecret, CertificateChecksum(certSecret))
 				require.NoError(t, err)
 			}
 
-			programmed, err := r.ensureKonnectCertificate(t.Context(), logr.Discard(), aigwdp, resolvedTestCP(aigwcp), certSecret, certificateChecksum(certSecret))
+			programmed, err := r.ensureKonnectCertificate(t.Context(), logr.Discard(), aigwdp, resolvedTestCP(aigwcp), certSecret, CertificateChecksum(certSecret))
 
 			if tc.wantErrContains != "" {
 				require.Error(t, err)

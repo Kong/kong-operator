@@ -41,8 +41,10 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	shareddataplane "github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	pkgconsts "github.com/kong/kong-operator/v2/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
@@ -179,34 +181,106 @@ func drainEvents(recorder *events.FakeRecorder) []string {
 	}
 }
 
-// newProgrammedKonnectCert builds an EventGatewayDataPlaneCertificate with Programmed=True,
-// modelling the state after the Konnect controller has registered it.
-func newProgrammedKonnectCert() *configurationv1alpha1.EventGatewayDataPlaneCertificate {
-	return &configurationv1alpha1.EventGatewayDataPlaneCertificate{
-		Namespace: reconcileTestNS, Name: reconcileTestDPName,
-		Spec: configurationv1alpha1.EventGatewayDataPlaneCertificateSpec{
-			GatewayRef: commonv1alpha1.ObjectRef{
-				Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
-				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: reconcileTestKEGName},
-			},
-			APISpec: configurationv1alpha1.EventGatewayDataPlaneCertificateAPISpec{
-				Certificate: configurationv1alpha1.SensitiveDataSource{
-					Type:      configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
-					SecretRef: &configurationv1alpha1.SensitiveDataSecretRef{Name: reconcileTestDPName, Key: corev1.TLSCertKey},
+const manualCertSecretName = "user-provided-cert"
+
+// manualCertSecret builds a valid or invalid manually-referenced TLS Secret.
+func manualCertSecret(valid bool) *corev1.Secret {
+	s := &corev1.Secret{
+		Namespace: reconcileTestNS, Name: manualCertSecretName,
+	}
+	if !valid {
+		s.Data = map[string][]byte{"tls.crt": []byte("not-a-cert")}
+		return s
+	}
+	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("user cert"))
+	s.Data = map[string][]byte{"tls.crt": cert, "tls.key": key}
+	return s
+}
+
+// newReconcileEGDPManualCert builds a KegDataPlane referencing
+// manualCertSecretName via Manual provisioning.
+func newReconcileEGDPManualCert() *eventgatewayv1alpha1.KegDataPlane {
+	egdp := newReconcileEGDP()
+	egdp.Spec.CertificateSecret = &eventgatewayv1alpha1.CertificateSecret{
+		Provisioning: new(eventgatewayv1alpha1.ManualCertificateProvisioning),
+		SecretRef:    &eventgatewayv1alpha1.SecretRef{Name: manualCertSecretName},
+	}
+	return egdp
+}
+
+// certNameFor returns the EventGatewayDataPlaneCertificate name the
+// reconciler derives for the given certificate Secret.
+func certNameFor(secret *corev1.Secret) string {
+	return shareddataplane.CertEntityName(reconcileTestDPName, shareddataplane.CertificateChecksum(secret))
+}
+
+// markCertProgrammedForSecret creates (or, if the reconciler already created
+// it, marks) a Programmed=True EventGatewayDataPlaneCertificate for secret,
+// named exactly as the real reconciler would name it (the name is
+// checksum-derived, so it can't be known statically ahead of the Secret
+// existing). Safe to call more than once.
+func markCertProgrammedForSecret(t *testing.T, cl client.Client, secret *corev1.Secret) {
+	t.Helper()
+
+	certName := certNameFor(secret)
+	cert := &configurationv1alpha1.EventGatewayDataPlaneCertificate{}
+	if err := cl.Get(t.Context(), types.NamespacedName{Namespace: reconcileTestNS, Name: certName}, cert); err != nil {
+		require.True(t, apierrors.IsNotFound(err))
+		cert = &configurationv1alpha1.EventGatewayDataPlaneCertificate{
+			Namespace: reconcileTestNS, Name: certName,
+			Spec: configurationv1alpha1.EventGatewayDataPlaneCertificateSpec{
+				GatewayRef: commonv1alpha1.ObjectRef{
+					Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+					NamespacedRef: &commonv1alpha1.NamespacedRef{Name: reconcileTestKEGName},
+				},
+				APISpec: configurationv1alpha1.EventGatewayDataPlaneCertificateAPISpec{
+					Certificate: configurationv1alpha1.SensitiveDataSource{
+						Type:      configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+						SecretRef: &configurationv1alpha1.SensitiveDataSecretRef{Name: secret.Name, Key: corev1.TLSCertKey},
+					},
+					Name: certName,
 				},
 			},
-		},
-		Status: configurationv1alpha1.EventGatewayDataPlaneCertificateStatus{
-			Conditions: []metav1.Condition{
-				{
-					Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
-					Status:             metav1.ConditionTrue,
-					Reason:             "Programmed",
-					LastTransitionTime: metav1.NewTime(time.Now()),
-				},
-			},
+		}
+		require.NoError(t, cl.Create(t.Context(), cert))
+	}
+	if apimeta.IsStatusConditionTrue(cert.Status.Conditions, konnectv1alpha1.KonnectEntityProgrammedConditionType) {
+		return
+	}
+	cert.Status.Conditions = []metav1.Condition{
+		{
+			Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
+			Status: metav1.ConditionTrue,
+			Reason: "Programmed",
 		},
 	}
+	require.NoError(t, cl.Status().Update(t.Context(), cert))
+}
+
+// markGeneratedCertProgrammed marks the EventGatewayDataPlaneCertificate for
+// the automatically-generated mTLS certificate Secret as Programmed.
+func markGeneratedCertProgrammed(t *testing.T, cl client.Client) {
+	t.Helper()
+
+	var secrets corev1.SecretList
+	require.NoError(t, cl.List(t.Context(), &secrets,
+		client.InNamespace(reconcileTestNS),
+		client.MatchingLabels{pkgconsts.SecretKEGDataPlaneCertificateLabel: "true"},
+	))
+	require.Len(t, secrets.Items, 1, "expected exactly one automatically-generated certificate Secret")
+	markCertProgrammedForSecret(t, cl, &secrets.Items[0])
+}
+
+// markManualCertProgrammed marks the EventGatewayDataPlaneCertificate for
+// the manually-referenced certificate Secret as Programmed.
+func markManualCertProgrammed(t *testing.T, cl client.Client) {
+	t.Helper()
+
+	secret := &corev1.Secret{}
+	require.NoError(t, cl.Get(t.Context(), types.NamespacedName{
+		Namespace: reconcileTestNS, Name: manualCertSecretName,
+	}, secret))
+	markCertProgrammedForSecret(t, cl, secret)
 }
 
 // -----------------------------------------------------------------
@@ -225,6 +299,12 @@ func TestReconciler_Reconcile(t *testing.T) {
 		reconcileCount int
 		wantResult     ctrl.Result
 		wantErr        bool
+		// betweenReconciles runs after each intermediate reconcile (i.e. every
+		// call except the last), before the next one. Used to seed state that
+		// depends on what a previous reconcile actually produced (e.g. marking
+		// the real, checksum-named EventGatewayDataPlaneCertificate as
+		// Programmed once the certificate Secret exists).
+		betweenReconciles func(t *testing.T, cl client.Client)
 		// assertFn runs after all reconcile calls to check cluster state.
 		assertFn func(t *testing.T, cl client.Client, recorder *events.FakeRecorder)
 	}{
@@ -320,12 +400,13 @@ func TestReconciler_Reconcile(t *testing.T) {
 				newReconcileEGDP(),
 				newProgrammedKEG(),
 				caSecret(),
-				newProgrammedKonnectCert(),
 			},
 			// 1st reconcile: cert Secret created → returns early (owned Secret watch triggers next reconcile).
+			// betweenReconciles marks the resulting (checksum-named) EventGatewayDataPlaneCertificate as Programmed.
 			// 2nd reconcile: cert Secret + programmed EventGatewayDataPlaneCertificate present → Deployment + Service created.
-			reconcileCount: 2,
-			wantResult:     ctrl.Result{},
+			reconcileCount:    2,
+			betweenReconciles: markGeneratedCertProgrammed,
+			wantResult:        ctrl.Result{},
 			assertFn: func(t *testing.T, cl client.Client, recorder *events.FakeRecorder) {
 				t.Helper()
 
@@ -367,16 +448,150 @@ func TestReconciler_Reconcile(t *testing.T) {
 			},
 		},
 		{
+			name: "Manual certificate: referenced secret not found, no error, no Deployment",
+			objects: []client.Object{
+				newReconcileEGDPManualCert(),
+				newProgrammedKEG(),
+			},
+			wantResult: ctrl.Result{},
+			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
+				t.Helper()
+				egdp := getEGDP(t, cl)
+				assertCondition(t, egdp,
+					eventgatewayv1alpha1.CertificateProvisionedType,
+					metav1.ConditionFalse,
+					eventgatewayv1alpha1.CertificateSecretRefNotFoundReason,
+				)
+				err := cl.Get(t.Context(), types.NamespacedName{
+					Namespace: reconcileTestNS, Name: reconcileTestDPName,
+				}, &appsv1.Deployment{})
+				assert.True(t, apierrors.IsNotFound(err))
+			},
+		},
+		{
+			name: "Manual certificate: referenced secret invalid, no error, no Deployment",
+			objects: []client.Object{
+				newReconcileEGDPManualCert(),
+				newProgrammedKEG(),
+				manualCertSecret(false),
+			},
+			wantResult: ctrl.Result{},
+			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
+				t.Helper()
+				egdp := getEGDP(t, cl)
+				assertCondition(t, egdp,
+					eventgatewayv1alpha1.CertificateProvisionedType,
+					metav1.ConditionFalse,
+					eventgatewayv1alpha1.CertificateSecretInvalidReason,
+				)
+				err := cl.Get(t.Context(), types.NamespacedName{
+					Namespace: reconcileTestNS, Name: reconcileTestDPName,
+				}, &appsv1.Deployment{})
+				assert.True(t, apierrors.IsNotFound(err))
+			},
+		},
+		{
+			name: "Manual certificate: operator-provisioned secret is rejected and kept",
+			objects: func() []client.Object {
+				egdp := newReconcileEGDPManualCert()
+				secret := manualCertSecret(true)
+				secret.Labels = map[string]string{
+					pkgconsts.SecretProvisioningLabelKey:         pkgconsts.SecretProvisioningAutomaticLabelValue,
+					pkgconsts.SecretKEGDataPlaneCertificateLabel: "true",
+				}
+				k8sutils.SetOwnerForObject(secret, egdp)
+				return []client.Object{egdp, newProgrammedKEG(), secret}
+			}(),
+			wantResult: ctrl.Result{},
+			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
+				t.Helper()
+				egdp := getEGDP(t, cl)
+				assertCondition(t, egdp,
+					eventgatewayv1alpha1.CertificateProvisionedType,
+					metav1.ConditionFalse,
+					eventgatewayv1alpha1.CertificateSecretRefOperatorManagedReason,
+				)
+				err := cl.Get(t.Context(), types.NamespacedName{
+					Namespace: reconcileTestNS, Name: reconcileTestDPName,
+				}, &appsv1.Deployment{})
+				assert.True(t, apierrors.IsNotFound(err))
+				require.NoError(t, cl.Get(t.Context(), types.NamespacedName{
+					Namespace: reconcileTestNS, Name: manualCertSecretName,
+				}, &corev1.Secret{}), "the operator-provisioned Secret must not be deleted")
+			},
+		},
+		{
+			name: "Manual certificate: valid secret, Deployment mounts it directly, no automatic secret",
+			objects: []client.Object{
+				newReconcileEGDPManualCert(),
+				newProgrammedKEG(),
+				manualCertSecret(true),
+			},
+			// 1st reconcile: registers the cert entity, not yet Programmed. 2nd
+			// (after betweenReconciles marks it Programmed): Deployment created.
+			reconcileCount:    2,
+			betweenReconciles: markManualCertProgrammed,
+			wantResult:        ctrl.Result{},
+			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
+				t.Helper()
+				egdp := getEGDP(t, cl)
+				assertCondition(t, egdp,
+					eventgatewayv1alpha1.CertificateProvisionedType,
+					metav1.ConditionTrue,
+					eventgatewayv1alpha1.CertificateProvisionedReason,
+				)
+
+				secret := &corev1.Secret{}
+				require.NoError(t, cl.Get(t.Context(), types.NamespacedName{
+					Namespace: reconcileTestNS, Name: manualCertSecretName,
+				}, secret))
+
+				// The certificate entity references the manual Secret.
+				cert := &configurationv1alpha1.EventGatewayDataPlaneCertificate{}
+				require.NoError(t, cl.Get(t.Context(), types.NamespacedName{
+					Namespace: reconcileTestNS, Name: certNameFor(secret),
+				}, cert))
+				require.NotNil(t, cert.Spec.APISpec.Certificate.SecretRef)
+				assert.Equal(t, manualCertSecretName, cert.Spec.APISpec.Certificate.SecretRef.Name)
+				assert.Equal(t, map[string]string{
+					pkgconsts.GatewayOperatorManagedByLabel:          pkgconsts.KEGDataPlaneManagedByLabelValue,
+					pkgconsts.GatewayOperatorManagedByNameLabel:      reconcileTestDPName,
+					pkgconsts.GatewayOperatorManagedByNamespaceLabel: reconcileTestNS,
+				}, cert.Labels)
+
+				deploy := &appsv1.Deployment{}
+				require.NoError(t, cl.Get(t.Context(), types.NamespacedName{
+					Namespace: reconcileTestNS, Name: reconcileTestDPName,
+				}, deploy))
+				var certVolume *corev1.Volume
+				for i := range deploy.Spec.Template.Spec.Volumes {
+					if deploy.Spec.Template.Spec.Volumes[i].Name == KonnectCertVolumeName {
+						certVolume = &deploy.Spec.Template.Spec.Volumes[i]
+					}
+				}
+				require.NotNil(t, certVolume)
+				require.NotNil(t, certVolume.Secret)
+				assert.Equal(t, manualCertSecretName, certVolume.Secret.SecretName)
+				assert.Equal(t, shareddataplane.CertificateChecksum(secret),
+					deploy.Spec.Template.Annotations[pkgconsts.KEGDataPlaneCertificateChecksumAnnotation])
+
+				// No automatic certificate Secret should have been created.
+				secretList := &corev1.SecretList{}
+				require.NoError(t, cl.List(t.Context(), secretList, client.InNamespace(reconcileTestNS)))
+				assert.Len(t, secretList.Items, 1, "only the manually-referenced Secret should exist")
+			},
+		},
+		{
 			name: "idempotency: third reconcile is noop, no create events",
 			objects: []client.Object{
 				newReconcileEGDP(),
 				newProgrammedKEG(),
 				caSecret(),
-				newProgrammedKonnectCert(),
 			},
 			// 1st: cert Secret created. 2nd: Deployment+Service created. 3rd: everything exists → noop.
-			reconcileCount: 3,
-			wantResult:     ctrl.Result{},
+			reconcileCount:    3,
+			betweenReconciles: markGeneratedCertProgrammed,
+			wantResult:        ctrl.Result{},
 			assertFn: func(t *testing.T, cl client.Client, recorder *events.FakeRecorder) {
 				t.Helper()
 				events := drainEvents(recorder)
@@ -425,6 +640,9 @@ func TestReconciler_Reconcile(t *testing.T) {
 				if i < count-1 {
 					require.NoError(t, err, "intermediate reconcile %d should not error", i+1)
 					drainEvents(recorder)
+					if tc.betweenReconciles != nil {
+						tc.betweenReconciles(t, base)
+					}
 				}
 			}
 
@@ -443,4 +661,88 @@ func TestReconciler_Reconcile(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestReconciler_KonnectCertificateBlueGreenRotation verifies that when the
+// manually-referenced mTLS certificate Secret is updated in place, the
+// operator registers the new certificate as a SEPARATE
+// EventGatewayDataPlaneCertificate rather than overwriting the previous one,
+// keeps the previous one registered while the new one isn't Programmed yet,
+// and only then rolls the Deployment (via the checksum annotation).
+func TestReconciler_KonnectCertificateBlueGreenRotation(t *testing.T) {
+	scheme := managerscheme.Get()
+	ctx := t.Context()
+
+	egdp := newReconcileEGDPManualCert()
+	secretV1 := manualCertSecret(true)
+
+	base := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(egdp, newProgrammedKEG(), secretV1).
+		WithStatusSubresource(egdp, &configurationv1alpha1.EventGatewayDataPlaneCertificate{}).
+		Build()
+	recorder := events.NewFakeRecorder(30)
+	r := newTestReconciler(base, recorder)
+
+	reconcile := func() {
+		t.Helper()
+		current := &eventgatewayv1alpha1.KegDataPlane{}
+		require.NoError(t, r.Get(ctx, types.NamespacedName{Namespace: reconcileTestNS, Name: reconcileTestDPName}, current))
+		_, err := r.Reconcile(ctx, current)
+		require.NoError(t, err)
+		drainEvents(recorder)
+	}
+	certExists := func(name string) bool {
+		t.Helper()
+		err := base.Get(ctx, types.NamespacedName{Namespace: reconcileTestNS, Name: name}, &configurationv1alpha1.EventGatewayDataPlaneCertificate{})
+		if err != nil && !apierrors.IsNotFound(err) {
+			require.NoError(t, err)
+		}
+		return err == nil
+	}
+	deploymentChecksum := func() string {
+		t.Helper()
+		deploy := &appsv1.Deployment{}
+		require.NoError(t, base.Get(ctx, types.NamespacedName{Namespace: reconcileTestNS, Name: reconcileTestDPName}, deploy))
+		return deploy.Spec.Template.Annotations[pkgconsts.KEGDataPlaneCertificateChecksumAnnotation]
+	}
+
+	certAName := certNameFor(secretV1)
+
+	// 1st reconcile: registers the cert entity for V1; not yet Programmed, so
+	// no Deployment exists yet.
+	reconcile()
+	assert.True(t, certExists(certAName))
+	assert.True(t, apierrors.IsNotFound(
+		base.Get(ctx, types.NamespacedName{Namespace: reconcileTestNS, Name: reconcileTestDPName}, &appsv1.Deployment{})))
+
+	// 2nd reconcile: cert A Programmed -> Deployment created, mounting secretV1.
+	markCertProgrammedForSecret(t, base, secretV1)
+	reconcile()
+	assert.Equal(t, shareddataplane.CertificateChecksum(secretV1), deploymentChecksum())
+
+	// Rotate the Secret's content in place (same name, new cert material).
+	existing := &corev1.Secret{}
+	require.NoError(t, base.Get(ctx, types.NamespacedName{Namespace: reconcileTestNS, Name: manualCertSecretName}, existing))
+	existing.Data = manualCertSecret(true).Data
+	require.NoError(t, base.Update(ctx, existing))
+	certBName := certNameFor(existing)
+	require.NotEqual(t, certAName, certBName, "test secrets must produce different checksums")
+
+	// 3rd reconcile: cert B registered but not Programmed: the Deployment
+	// must not roll yet, and cert A must remain.
+	reconcile()
+	assert.True(t, certExists(certAName), "old certificate must survive while the new one isn't Programmed yet")
+	assert.True(t, certExists(certBName))
+	assert.Equal(t, shareddataplane.CertificateChecksum(secretV1), deploymentChecksum(),
+		"deployment must not roll to V2 before its certificate is Programmed on Konnect")
+
+	// 4th reconcile: cert B Programmed -> Deployment rolls to V2. Cert A is
+	// kept until the rollout is reported complete, which the fake client
+	// never does.
+	markCertProgrammedForSecret(t, base, existing)
+	reconcile()
+	assert.Equal(t, shareddataplane.CertificateChecksum(existing), deploymentChecksum())
+	assert.True(t, certExists(certBName))
+	assert.True(t, certExists(certAName))
 }

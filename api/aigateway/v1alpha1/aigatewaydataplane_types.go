@@ -117,6 +117,14 @@ type AIGatewayDataPlaneSpec struct {
 	// Deployment has rolled onto the Manual one; switching back to Automatic
 	// later provisions a new one rather than reusing the deleted one.
 	//
+	// The referenced Secret must hold a matching, unexpired certificate and
+	// key, and must not be an operator-provisioned Secret (one labeled
+	// "gateway.konghq.com/secret-provisioning: automatic"); otherwise
+	// CertificateProvisioned goes False with reason InvalidSecret or
+	// SecretRefOperatorManaged. Deleting the referenced Secret while it is in
+	// use leaves running Pods untouched but prevents new ones from starting
+	// until the Secret is recreated or the reference is changed.
+	//
 	// +optional
 	CertificateSecret *CertificateSecret `json:"certificateSecret,omitempty"`
 

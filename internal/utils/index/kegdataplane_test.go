@@ -70,9 +70,61 @@ func TestKegDataPlaneKonnectNamespacedRef(t *testing.T) {
 
 func TestOptionsForKegDataPlane(t *testing.T) {
 	options := OptionsForKegDataPlane()
-	require.Len(t, options, 1)
-	opt := options[0]
-	require.IsType(t, &eventgatewayv1alpha1.KegDataPlane{}, opt.Object)
-	require.Equal(t, IndexFieldKegDataPlaneOnKonnectEventGateway, opt.Field)
-	require.NotNil(t, opt.ExtractValueFn)
+	require.Len(t, options, 2)
+	fields := []string{IndexFieldKegDataPlaneOnKonnectEventGateway, IndexFieldKegDataPlaneOnCertificateSecret}
+	for i, opt := range options {
+		require.IsType(t, &eventgatewayv1alpha1.KegDataPlane{}, opt.Object)
+		require.Equal(t, fields[i], opt.Field)
+		require.NotNil(t, opt.ExtractValueFn)
+	}
+}
+
+func TestKegDataPlaneCertificateSecretRef(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    client.Object
+		expected []string
+	}{
+		{
+			name:     "returns nil for non-KegDataPlane object",
+			input:    &corev1.ConfigMap{},
+			expected: nil,
+		},
+		{
+			name:     "returns nil when certificateSecret is not set",
+			input:    &eventgatewayv1alpha1.KegDataPlane{Namespace: "default"},
+			expected: nil,
+		},
+		{
+			name: "returns nil when secretRef is not set",
+			input: &eventgatewayv1alpha1.KegDataPlane{
+				Namespace: "default",
+				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
+					CertificateSecret: &eventgatewayv1alpha1.CertificateSecret{
+						Provisioning: new(eventgatewayv1alpha1.AutomaticCertificateProvisioning),
+					},
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "returns namespace/name when secretRef is set",
+			input: &eventgatewayv1alpha1.KegDataPlane{
+				Namespace: "default",
+				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
+					CertificateSecret: &eventgatewayv1alpha1.CertificateSecret{
+						Provisioning: new(eventgatewayv1alpha1.ManualCertificateProvisioning),
+						SecretRef:    &eventgatewayv1alpha1.SecretRef{Name: "user-cert"},
+					},
+				},
+			},
+			expected: []string{"default/user-cert"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, kegDataPlaneCertificateSecretRef(tt.input))
+		})
+	}
 }
