@@ -523,7 +523,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnect
 			// cert-content filtering, not the CR name, so this is backward compatible:
 			// pre-existing CRs named after the Secret are still found via the owner index.
 			dpCert := konnectresource.GenerateKongDataPlaneClientCertificate(
-				ext.Name,
+				dataPlaneClientCertificateName(ext.Name, dpCertificates.Items, string(certificateSecret.Data[consts.TLSCRT])),
 				certificateSecret.Namespace,
 				&ext.Spec.Konnect.ControlPlane.Ref,
 				string(certificateSecret.Data[consts.TLSCRT]),
@@ -711,6 +711,23 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnect
 				return res, err
 			}
 			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+		}
+
+		// An object that is being deleted still reports its Konnect ID while its certificate is
+		// removed from Konnect: wait for it to be gone before retiring anything else.
+		if !dpCert.DeletionTimestamp.IsZero() {
+			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+		}
+
+		// The current certificate is programmed: delete the KongDataPlaneClientCertificates
+		// that still register a previous one.
+		for i := range dpCertificates.Items {
+			c := &dpCertificates.Items[i]
+			if c.DeletionTimestamp.IsZero() && c.Spec.Cert != "" && sanitizeCert(c.Spec.Cert) != certDataStr {
+				if err := r.Delete(ctx, c); client.IgnoreNotFound(err) != nil {
+					return ctrl.Result{}, err
+				}
+			}
 		}
 	}
 
