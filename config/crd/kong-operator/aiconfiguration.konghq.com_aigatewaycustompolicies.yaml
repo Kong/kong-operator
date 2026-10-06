@@ -507,9 +507,9 @@ spec:
           rule: '!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions)
             || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
             == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
-        - message: 'spec.aiGatewayRef.kind must be one of: KonnectAIGateway'
+        - message: 'spec.aiGatewayRef.kind must be one of: KonnectAIGateway, OnPremAIGateway'
           rule: '!has(self.spec.aiGatewayRef) || !has(self.spec.aiGatewayRef.kind)
-            || self.spec.aiGatewayRef.kind in [''KonnectAIGateway'']'
+            || self.spec.aiGatewayRef.kind in [''KonnectAIGateway'', ''OnPremAIGateway'']'
     served: true
     storage: true
     subresources:
