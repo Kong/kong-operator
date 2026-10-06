@@ -140,6 +140,14 @@ func notifyConsumersForCredentialSecrets(
 		if consumerRef.NamespacedRef == nil {
 			continue
 		}
+		// The translation only renders credentials living in the consumer's namespace
+		// (aigwCredentials lists via the index in the consumer's namespace), so a
+		// credential pointing at a consumer in another namespace never becomes part of
+		// that consumer's document: notifying it would only waste a fetch and a
+		// notification.
+		if refNS := consumerRef.NamespacedRef.Namespace; refNS != nil && *refNS != "" && *refNS != cred.GetNamespace() {
+			continue
+		}
 		for _, secretRef := range cred.GetSensitiveDataSecretRefs() {
 			// Same refNamespace resolution as notifyEntitiesForSecret: explicit
 			// secretRef.Namespace wins, else the credential's namespace.

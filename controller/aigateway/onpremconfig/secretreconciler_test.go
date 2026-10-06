@@ -235,3 +235,28 @@ func TestSecretReconcilerNotifiesConsumerOnCredentialSecretDeletion(t *testing.T
 	require.Equal(t, "consumer", change.Object.GetName())
 	require.Equal(t, types.NamespacedName{Namespace: "default", Name: "gw"}, *change.ParentNN)
 }
+
+// Credentials that can never render into a consumer's document must be skipped without
+// error and without a notification: a konnectID-type consumerRef has no NamespacedRef
+// to resolve, and a consumerRef to a consumer that no longer exists has nothing to
+// notify (the credential dangles until the consumer reappears or is removed).
+func TestSecretReconcilerSkipsUnnotifiableCredentialRefs(t *testing.T) {
+	const secretName = "consumer-api-key"
+	konnectIDRefCred := consumerCredential("konnect-id-cred", "irrelevant", secretName)
+	konnectIDRefCred.Spec.AIGatewayConsumerRef = commonv1alpha1.ObjectRef{
+		Type:      commonv1alpha1.ObjectRefTypeKonnectID,
+		KonnectID: new("d9d95f9f-eb20-43be-93ce-60117d41d75d"),
+	}
+
+	cn := changenotifier.New()
+	defer cn.Close()
+	cl := newReconcilerClient(t,
+		konnectIDRefCred,
+		consumerCredential("dangling-cred", "missing-consumer", secretName),
+	)
+	r := &SecretReconciler{Client: cl, Log: logr.Discard(), ChangeNotifier: cn}
+
+	_, err := r.Reconcile(t.Context(), ctrl.Request{Namespace: "default", Name: secretName})
+	require.NoError(t, err)
+	requireNoChange(t, cn.NotifyChannel())
+}
