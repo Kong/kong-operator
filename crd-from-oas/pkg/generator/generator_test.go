@@ -4435,9 +4435,13 @@ func TestGenerateSchemaTypes_MapWithValueTypes(t *testing.T) {
 	assert.Contains(t, content, "type LabelsUpdateValue string")
 	assert.Contains(t, content, "type LabelsUpdate map[string]LabelsUpdateValue")
 
-	// No CEL XValidation rules or MaxProperties on the type (goes on the field)
+	// MaxProperties goes on the map type declaration: field-level markers on
+	// named map types are rejected by controller-gen (the field schema has no
+	// `type:` when field markers are applied) and silently dropped. Only
+	// Labels declares maxProperties, so only its declaration carries it.
+	assert.Contains(t, content, "// +kubebuilder:validation:MaxProperties=50\ntype Labels map[string]LabelsValue")
+	assert.NotContains(t, content, "MaxProperties=50\ntype LabelsUpdate")
 	assert.NotContains(t, content, "XValidation")
-	assert.NotContains(t, content, "MaxProperties")
 }
 
 func TestGenerateSchemaTypes_NoValueTypeForNonMapTypes(t *testing.T) {

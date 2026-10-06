@@ -91,7 +91,6 @@ type EventGatewayBackendClusterAPISpec struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels Labels `json:"labels,omitzero"`
 
 	// The interval at which metadata is updated in seconds.

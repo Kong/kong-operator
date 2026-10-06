@@ -2252,6 +2252,15 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 				fmt.Fprintf(&body, "type %s %s\n\n", valueTypeName, valueBaseType)
 
 				body.WriteString(comment)
+				// Map size constraints must live on the named map type, not on the
+				// fields using it: controller-gen applies field markers before the
+				// named type's schema is collapsed into the field (field schema still
+				// has no `type:` at that point), so MaxProperties/MinProperties on the
+				// field are rejected ("must apply maxproperties to an object") and
+				// silently dropped.
+				if schema.MaxProperties != nil {
+					fmt.Fprintf(&body, "//\n// %s\n", markerValidationMaxProperties(int(*schema.MaxProperties)))
+				}
 				fmt.Fprintf(&body, "type %s map[string]%s\n\n", refName, valueTypeName)
 
 			case schema.Type == "array" && schema.Items != nil && isInlineObjectWithProperties(schema.Items):

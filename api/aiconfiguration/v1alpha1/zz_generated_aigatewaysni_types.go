@@ -87,7 +87,6 @@ type AIGatewaySNIAPISpec struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 
 	// Stores information about what manages this entity, such as the tool or
@@ -98,7 +97,6 @@ type AIGatewaySNIAPISpec struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 
 	// The name for this SNI. This value is immutable after creation.

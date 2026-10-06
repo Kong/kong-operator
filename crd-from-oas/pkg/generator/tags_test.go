@@ -285,7 +285,12 @@ func TestKubebuilderTags_MapType(t *testing.T) {
 			},
 		},
 		{
-			name: "map ref field with MaxProperties",
+			name: "map ref field with MaxProperties gets no field-level marker",
+			// Properties referencing a named map type must not carry a
+			// field-level MaxProperties marker: controller-gen rejects it
+			// (the field schema has no `type:` when field markers are
+			// applied) and silently drops it. The constraint is emitted on
+			// the named type declaration instead.
 			prop: &parser.Property{
 				Name:          "labels",
 				Type:          "object",
@@ -301,7 +306,6 @@ func TestKubebuilderTags_MapType(t *testing.T) {
 			},
 			expected: []string{
 				"+optional",
-				"+kubebuilder:validation:MaxProperties=50",
 			},
 		},
 		{

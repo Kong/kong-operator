@@ -2487,7 +2487,6 @@ type AIGatewayAuthStrategyKeyAuth struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -2497,7 +2496,6 @@ type AIGatewayAuthStrategyKeyAuth struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this auth strategy instance, used as a
 	// stable human-readable reference.
@@ -2532,7 +2530,6 @@ type AIGatewayAuthStrategyOpenIDConnect struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -2542,7 +2539,6 @@ type AIGatewayAuthStrategyOpenIDConnect struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this auth strategy instance, used as a
 	// stable human-readable reference.
@@ -3122,7 +3118,6 @@ type AIGatewayMCPServerConversionListener struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -3132,7 +3127,6 @@ type AIGatewayMCPServerConversionListener struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this MCP server, used as a stable
 	// human-readable reference.
@@ -3396,7 +3390,6 @@ type AIGatewayMCPServerConversionOnly struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -3406,7 +3399,6 @@ type AIGatewayMCPServerConversionOnly struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this MCP server, used as a stable
 	// human-readable reference.
@@ -3459,7 +3451,6 @@ type AIGatewayMCPServerListener struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -3469,7 +3460,6 @@ type AIGatewayMCPServerListener struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this MCP server, used as a stable
 	// human-readable reference.
@@ -3835,7 +3825,6 @@ type AIGatewayMCPServerPassthroughListener struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -3845,7 +3834,6 @@ type AIGatewayMCPServerPassthroughListener struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this MCP server, used as a stable
 	// human-readable reference.
@@ -4216,7 +4204,6 @@ type AIGatewayMCPServerUpstreamServer struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -4226,7 +4213,6 @@ type AIGatewayMCPServerUpstreamServer struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this MCP server, used as a stable
 	// human-readable reference.
@@ -5138,7 +5124,6 @@ type AIGatewayModelAPI struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -5148,7 +5133,6 @@ type AIGatewayModelAPI struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model, used as a stable
 	// human-readable reference.
@@ -6684,7 +6668,6 @@ type AIGatewayModelModel struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -6694,7 +6677,6 @@ type AIGatewayModelModel struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model, used as a stable
 	// human-readable reference.
@@ -7017,7 +6999,6 @@ type AIGatewayModelProviderAnthropic struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -7027,7 +7008,6 @@ type AIGatewayModelProviderAnthropic struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -7071,7 +7051,6 @@ type AIGatewayModelProviderAzure struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -7081,7 +7060,6 @@ type AIGatewayModelProviderAzure struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -7279,7 +7257,6 @@ type AIGatewayModelProviderBedrock struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -7289,7 +7266,6 @@ type AIGatewayModelProviderBedrock struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -7449,7 +7425,6 @@ type AIGatewayModelProviderCerebras struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -7459,7 +7434,6 @@ type AIGatewayModelProviderCerebras struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -7503,7 +7477,6 @@ type AIGatewayModelProviderCohere struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -7513,7 +7486,6 @@ type AIGatewayModelProviderCohere struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -7878,7 +7850,6 @@ type AIGatewayModelProviderDashscope struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -7888,7 +7859,6 @@ type AIGatewayModelProviderDashscope struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -7933,7 +7903,6 @@ type AIGatewayModelProviderDatabricks struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -7943,7 +7912,6 @@ type AIGatewayModelProviderDatabricks struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -7987,7 +7955,6 @@ type AIGatewayModelProviderDeepseek struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -7997,7 +7964,6 @@ type AIGatewayModelProviderDeepseek struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -8041,7 +8007,6 @@ type AIGatewayModelProviderGemini struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -8051,7 +8016,6 @@ type AIGatewayModelProviderGemini struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -8212,7 +8176,6 @@ type AIGatewayModelProviderHuggingface struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -8222,7 +8185,6 @@ type AIGatewayModelProviderHuggingface struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -8266,7 +8228,6 @@ type AIGatewayModelProviderKimi struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -8276,7 +8237,6 @@ type AIGatewayModelProviderKimi struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -8320,7 +8280,6 @@ type AIGatewayModelProviderLlama2 struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -8330,7 +8289,6 @@ type AIGatewayModelProviderLlama2 struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -8374,7 +8332,6 @@ type AIGatewayModelProviderMistral struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -8384,7 +8341,6 @@ type AIGatewayModelProviderMistral struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -8428,7 +8384,6 @@ type AIGatewayModelProviderOllama struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -8438,7 +8393,6 @@ type AIGatewayModelProviderOllama struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -8482,7 +8436,6 @@ type AIGatewayModelProviderOpenai struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -8492,7 +8445,6 @@ type AIGatewayModelProviderOpenai struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -8540,7 +8492,6 @@ type AIGatewayModelProviderSagemaker struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -8550,7 +8501,6 @@ type AIGatewayModelProviderSagemaker struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -8710,7 +8660,6 @@ type AIGatewayModelProviderTypesafe struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -8720,7 +8669,6 @@ type AIGatewayModelProviderTypesafe struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -8764,7 +8712,6 @@ type AIGatewayModelProviderVercel struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -8774,7 +8721,6 @@ type AIGatewayModelProviderVercel struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -8818,7 +8764,6 @@ type AIGatewayModelProviderVllm struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -8828,7 +8773,6 @@ type AIGatewayModelProviderVllm struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -8872,7 +8816,6 @@ type AIGatewayModelProviderXai struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -8882,7 +8825,6 @@ type AIGatewayModelProviderXai struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -13499,7 +13441,6 @@ type CreateAIGatewayCustomPolicyInstalledRequest struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -13509,7 +13450,6 @@ type CreateAIGatewayCustomPolicyInstalledRequest struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this custom policy, used as a stable
 	// human-readable reference.
@@ -13551,7 +13491,6 @@ type CreateAIGatewayCustomPolicyStreamingRequest struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -13561,7 +13500,6 @@ type CreateAIGatewayCustomPolicyStreamingRequest struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this custom policy, used as a stable
 	// human-readable reference.
@@ -13613,6 +13551,8 @@ type ManagedByValue string
 // or system responsible for its lifecycle (for example, `terraform`).
 //
 // Keys must be 1–63 characters long and start with an alphanumeric character.
+//
+// +kubebuilder:validation:MaxProperties=5
 type ManagedBy map[string]ManagedByValue
 
 // PublicLabelsValue is the value type for PublicLabels.
@@ -13629,4 +13569,6 @@ type PublicLabelsValue string
 //
 // Keys must be of length 1-63 characters, and cannot start with "kong",
 // "konnect", "mesh", "kic", or "_".
+//
+// +kubebuilder:validation:MaxProperties=50
 type PublicLabels map[string]PublicLabelsValue

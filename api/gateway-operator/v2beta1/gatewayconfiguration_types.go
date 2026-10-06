@@ -286,6 +286,7 @@ type GatewayConfigurationListenerOptions struct {
 	// Name is the name of the Listener.
 	//
 	// +required
+	// +kubebuilder:validation:Type=string
 	// +kubebuilder:validation:MinLength=1
 	Name gatewayv1.SectionName `json:"name"`
 

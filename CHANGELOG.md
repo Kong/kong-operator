@@ -70,6 +70,18 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- CRDs generated from the Konnect OpenAPI spec now enforce the `maxProperties`
+  constraint of shared label map types (`labels` accept at most 50 entries,
+  `managedBy` at most 5). The constraint was previously emitted on the fields
+  using the named map types, which controller-gen rejects and silently drops;
+  it is now emitted on the type declarations
+  (`Labels`, `LabelsUpdate`, `PublicLabels`, ...).
+  This is considered a breaking change but it has been enforced on a different
+  level before this change so net enforcement is not stricter than before.
+  [#5983](https://github.com/Kong/kong-operator/pull/5983)
+
 ### Added
 
 - `--konnect-list-page-size` flag (default and maximum `100`): the page size

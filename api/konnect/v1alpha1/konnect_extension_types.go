@@ -117,7 +117,7 @@ type KonnectExtensionDataPlane struct {
 	// Labels is a set of labels that will be applied to the Konnect DataPlane.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxItems=5
+	// +kubebuilder:validation:MaxProperties=5
 	// +kubebuilder:validation:XValidation:rule="self.all(key, key.matches('^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'))",message="keys must match the pattern '^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'."
 	// +kubebuilder:validation:XValidation:rule="self.all(key, !(key.startsWith('kong') || key.startsWith('konnect') || key.startsWith('insomnia') || key.startsWith('mesh') || key.startsWith('kic') || key.startsWith('_')))",message="keys must not start with 'kong', 'konnect', 'insomnia', 'mesh', 'kic', or '_'."
 	// +kubebuilder:validation:XValidation:rule="self.all(key, size(key) > 0 && size(key) < 64)",message="Too long: may not be more than 63 bytes"
