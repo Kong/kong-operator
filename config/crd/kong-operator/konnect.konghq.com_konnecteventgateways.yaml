@@ -81,6 +81,7 @@ spec:
 
                       Keys must be of length 1-63 characters, and cannot start with "kong",
                       "konnect", "mesh", "kic", or "_".
+                    maxProperties: 50
                     type: object
                   minRuntimeVersion:
                     description: |-
@@ -142,6 +143,7 @@ spec:
                           ID is the ID of the existing Konnect entity to mirror. It can be set
                           only when source is Mirror.
                         maxLength: 36
+                        minLength: 1
                         pattern: ^[0-9a-f]{8}(?:\-[0-9a-f]{4}){3}-[0-9a-f]{12}$
                         type: string
                     required:

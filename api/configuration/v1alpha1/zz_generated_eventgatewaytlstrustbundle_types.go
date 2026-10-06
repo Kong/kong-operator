@@ -74,7 +74,6 @@ type EventGatewayTLSTrustBundleAPISpec struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels Labels `json:"labels,omitzero"`
 
 	// The unique name of the TLS trust bundle.

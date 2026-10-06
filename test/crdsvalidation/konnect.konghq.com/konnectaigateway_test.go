@@ -1,6 +1,7 @@
 package crdsvalidation_test
 
 import (
+	"fmt"
 	"testing"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -133,6 +134,49 @@ func TestKonnectAIGateway(t *testing.T) {
 					obj.Spec.Source = new(commonv1alpha1.EntitySourceMirror)
 				},
 				ExpectedUpdateErrorMessage: new("spec.source is immutable"),
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("labels constraints", func(t *testing.T) {
+		labels := func(n int) map[string]konnectv1alpha1.PublicLabelsValue {
+			out := make(map[string]konnectv1alpha1.PublicLabelsValue, n)
+			for i := range n {
+				out[fmt.Sprintf("label%02d", i)] = konnectv1alpha1.PublicLabelsValue("value")
+			}
+			return out
+		}
+
+		common.TestCasesGroup[*konnectv1alpha1.KonnectAIGateway]{
+			{
+				Name: "up to 50 labels is allowed",
+				TestObject: &konnectv1alpha1.KonnectAIGateway{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: konnectv1alpha1.KonnectAIGatewaySpec{
+						KonnectConfiguration: validKonnectConfiguration,
+						APISpec: &konnectv1alpha1.KonnectAIGatewayAPISpec{
+							DisplayName: "my-ai-gw",
+							Name:        "my-ai-gw",
+							Labels:      labels(50),
+						},
+					},
+				},
+			},
+			{
+				Name: "more than 50 labels is rejected",
+				TestObject: &konnectv1alpha1.KonnectAIGateway{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: konnectv1alpha1.KonnectAIGatewaySpec{
+						KonnectConfiguration: validKonnectConfiguration,
+						APISpec: &konnectv1alpha1.KonnectAIGatewayAPISpec{
+							DisplayName: "my-ai-gw",
+							Name:        "my-ai-gw",
+							Labels:      labels(51),
+						},
+					},
+				},
+				ExpectedErrorMessage: new("spec.apiSpec.labels: Too many: 51: must have at most 50 items"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

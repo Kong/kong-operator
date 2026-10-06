@@ -200,6 +200,7 @@ spec:
 
                           Keys must be of length 1-63 characters, and cannot start with "kong",
                           "konnect", "mesh", "kic", or "_".
+                        maxProperties: 50
                         type: object
                       name:
                         description: A unique user-defined name of the policy.
@@ -989,6 +990,7 @@ spec:
 
                           Keys must be of length 1-63 characters, and cannot start with "kong",
                           "konnect", "mesh", "kic", or "_".
+                        maxProperties: 50
                         type: object
                       name:
                         description: A unique user-defined name of the policy.

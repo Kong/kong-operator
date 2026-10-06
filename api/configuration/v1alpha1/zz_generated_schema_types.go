@@ -703,7 +703,6 @@ type EventGatewayACLsPolicy struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels Labels `json:"labels,omitzero"`
 	// A unique user-defined name of the policy.
 	//
@@ -906,7 +905,6 @@ type EventGatewayConsumeSchemaValidationPolicy struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels Labels `json:"labels,omitzero"`
 	// A unique user-defined name of the policy.
 	//
@@ -1555,7 +1553,6 @@ type EventGatewayDecryptPolicy struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels Labels `json:"labels,omitzero"`
 	// A unique user-defined name of the policy.
 	//
@@ -1764,7 +1761,6 @@ type EventGatewayEncryptPolicy struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels Labels `json:"labels,omitzero"`
 	// A unique user-defined name of the policy.
 	//
@@ -2195,7 +2191,6 @@ type EventGatewayModifyHeadersPolicyCreate struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels Labels `json:"labels,omitzero"`
 	// A unique user-defined name of the policy.
 	//
@@ -2386,7 +2381,6 @@ type EventGatewayParsedRecordDecryptFieldsPolicyCreate struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels Labels `json:"labels,omitzero"`
 	// A unique user-defined name of the policy.
 	//
@@ -2589,7 +2583,6 @@ type EventGatewayParsedRecordEncryptFieldsPolicyCreate struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels Labels `json:"labels,omitzero"`
 	// A unique user-defined name of the policy.
 	//
@@ -2935,7 +2928,6 @@ type EventGatewayProduceSchemaValidationPolicy struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels Labels `json:"labels,omitzero"`
 	// A unique user-defined name of the policy.
 	//
@@ -3687,7 +3679,6 @@ type EventGatewayRequestRuleValidatorPolicy struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels Labels `json:"labels,omitzero"`
 	// A unique user-defined name of the policy.
 	//
@@ -4080,7 +4071,6 @@ type EventGatewaySkipRecordPolicyCreate struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels Labels `json:"labels,omitzero"`
 	// A unique user-defined name of the policy.
 	//
@@ -4122,7 +4112,6 @@ type EventGatewayTLSListenerPolicy struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels Labels `json:"labels,omitzero"`
 	// A unique user-defined name of the policy.
 	//
@@ -4510,7 +4499,6 @@ type ForwardToVirtualClusterPolicy struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels Labels `json:"labels,omitzero"`
 	// A unique user-defined name of the policy.
 	//
@@ -4662,6 +4650,8 @@ type LabelsValue string
 //
 // Keys must be of length 1-63 characters, and cannot start with "kong",
 // "konnect", "mesh", "kic", or "_".
+//
+// +kubebuilder:validation:MaxProperties=50
 type Labels map[string]LabelsValue
 
 // NamespaceExactAllowListItem is a type alias.
@@ -4821,7 +4811,6 @@ type SchemaRegistryConfluent struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels Labels `json:"labels,omitzero"`
 	// The unique name of the schema registry.
 	//

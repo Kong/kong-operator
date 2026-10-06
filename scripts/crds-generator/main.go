@@ -2,13 +2,16 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"github.com/samber/lo"
+	"golang.org/x/tools/go/packages"
 	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"sigs.k8s.io/controller-tools/pkg/crd"
 	"sigs.k8s.io/controller-tools/pkg/genall"
@@ -88,7 +91,6 @@ func main() {
 
 		// common types
 		"github.com/kong/kong-operator/v2/api/common/v1alpha1",
-		"github.com/kong/kong-operator/v2/crd-from-oas/api/konnect/v1alpha1",
 	)
 	if err != nil {
 		log.Fatalf("failed to load package roots: %s", err)
@@ -148,6 +150,12 @@ func main() {
 		// Prevent the top level metadata for the CRD to be generated regardless of the intention in the arguments
 		crd.FixTopLevelMetadata(crdRaw)
 
+		for i := range crdRaw.Spec.Versions {
+			if err := simplifyAllOf(crdRaw.Spec.Versions[i].Schema.OpenAPIV3Schema); err != nil {
+				log.Fatalf("failed to simplify schema of %s %s: %s", groupKind.Group, crdRaw.Spec.Versions[i].Name, err)
+			}
+		}
+
 		channels := channelsFromAnnotations(crdRaw)
 		if len(channels) == 0 {
 			continue
@@ -164,6 +172,17 @@ func main() {
 				log.Fatalf("failed to write CRD: %s", err)
 			}
 		}
+	}
+
+	// Fail on parser errors and on schema/marker errors (e.g. validation
+	// markers that could not be applied to a schema, reported as
+	// packages.UnknownError). Without this, such errors are silently swallowed
+	// and the generated CRDs quietly miss the corresponding validation.
+	// TypeError kind is filtered out: it also collects benign type-check
+	// noise from partially loaded packages (e.g. "undefined: X" for files
+	// whose imports the loader does not need for CRD generation).
+	if loader.PrintErrors(roots, packages.TypeError) {
+		log.Fatalf("errors occurred while generating CRDs")
 	}
 
 	// For each channel, generate a kustomize file that includes all CRDs for that channel.
@@ -249,4 +268,172 @@ func addVersion(version string) func(obj map[string]any) error {
 		annotations.(map[string]any)[VersionAnnotation] = version
 		return nil
 	}
+}
+
+// simplifyAllOf removes duplicate identical entries from the allOf, anyOf and
+// oneOf lists of the given schema and, when exactly one allOf entry remains,
+// hoists it into the parent schema unless it conflicts with it.
+//
+// controller-tools hoists field-level validation markers that collide with the
+// markers of the field's named type into allOf, even when both values are
+// equal (flattenAllOfInto compares pointer-typed marker values by identity).
+// Duplicate conjuncts are redundant, so they are dropped here to keep the
+// generated schemas free of duplicated constraints.
+func simplifyAllOf(props *apiext.JSONSchemaProps) error {
+	if props == nil {
+		return nil
+	}
+
+	props.AllOf = dedupeSchemas(props.AllOf)
+	props.AnyOf = dedupeSchemas(props.AnyOf)
+	props.OneOf = dedupeSchemas(props.OneOf)
+
+	if len(props.AllOf) == 1 {
+		merged, ok, err := hoistSingleAllOf(*props, props.AllOf[0])
+		if err != nil {
+			return err
+		}
+		if ok {
+			*props = merged
+			// The hoisted entry may have brought nested schemas (properties,
+			// items, ...) with their own duplicate allOf entries, so keep
+			// simplifying the merged schema.
+			return simplifyAllOf(props)
+		}
+	}
+
+	for i := range props.AllOf {
+		if err := simplifyAllOf(&props.AllOf[i]); err != nil {
+			return err
+		}
+	}
+	for i := range props.AnyOf {
+		if err := simplifyAllOf(&props.AnyOf[i]); err != nil {
+			return err
+		}
+	}
+	for i := range props.OneOf {
+		if err := simplifyAllOf(&props.OneOf[i]); err != nil {
+			return err
+		}
+	}
+	if props.Not != nil {
+		if err := simplifyAllOf(props.Not); err != nil {
+			return err
+		}
+	}
+	if props.Items != nil {
+		if props.Items.Schema != nil {
+			if err := simplifyAllOf(props.Items.Schema); err != nil {
+				return err
+			}
+		}
+		for i := range props.Items.JSONSchemas {
+			if err := simplifyAllOf(&props.Items.JSONSchemas[i]); err != nil {
+				return err
+			}
+		}
+	}
+	if props.AdditionalProperties != nil && props.AdditionalProperties.Schema != nil {
+		if err := simplifyAllOf(props.AdditionalProperties.Schema); err != nil {
+			return err
+		}
+	}
+	for name := range props.Properties {
+		prop := props.Properties[name]
+		if err := simplifyAllOf(&prop); err != nil {
+			return err
+		}
+		props.Properties[name] = prop
+	}
+
+	return nil
+}
+
+// dedupeSchemas removes entries from in that are deep-equal to an earlier
+// entry. The order of the remaining entries is preserved.
+func dedupeSchemas(in []apiext.JSONSchemaProps) []apiext.JSONSchemaProps {
+	out := make([]apiext.JSONSchemaProps, 0, len(in))
+	for _, schema := range in {
+		duplicate := false
+		for _, prev := range out {
+			if reflect.DeepEqual(prev, schema) {
+				duplicate = true
+				break
+			}
+		}
+		if !duplicate {
+			out = append(out, schema)
+		}
+	}
+	return out
+}
+
+// hoistSingleAllOf merges the single remaining allOf entry of parent into
+// parent itself. Fields that the parent does not set are moved up, fields
+// equal to the parent's are dropped. If the entry conflicts with the parent,
+// hoisting is refused and the allOf is kept.
+func hoistSingleAllOf(parent apiext.JSONSchemaProps, entry apiext.JSONSchemaProps) (apiext.JSONSchemaProps, bool, error) {
+	parentMap, err := schemaToMap(parent)
+	if err != nil {
+		return apiext.JSONSchemaProps{}, false, fmt.Errorf("failed to serialize parent schema: %w", err)
+	}
+
+	entryMap, err := schemaToMap(entry)
+	if err != nil {
+		return apiext.JSONSchemaProps{}, false, fmt.Errorf("failed to serialize allOf entry: %w", err)
+	}
+
+	// The entry is being consumed, so the parent's allOf key is dropped.
+	delete(parentMap, "allOf")
+
+	for key, entryVal := range entryMap {
+		parentVal, exists := parentMap[key]
+		switch {
+		case !exists:
+			parentMap[key] = entryVal
+		case reflect.DeepEqual(parentVal, entryVal):
+			// Same value, drop the entry's copy.
+		default:
+			// Real conflict between the parent and the entry.
+			return apiext.JSONSchemaProps{}, false, nil
+		}
+	}
+
+	merged, err := mapToSchema(parentMap)
+	if err != nil {
+		return apiext.JSONSchemaProps{}, false, fmt.Errorf("failed to deserialize merged schema: %w", err)
+	}
+
+	return merged, true, nil
+}
+
+// schemaToMap converts a schema to a generic map via JSON round-trip.
+func schemaToMap(schema apiext.JSONSchemaProps) (map[string]any, error) {
+	data, err := json.Marshal(schema)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal schema: %w", err)
+	}
+
+	var out map[string]any
+	if err := json.Unmarshal(data, &out); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal schema: %w", err)
+	}
+
+	return out, nil
+}
+
+// mapToSchema converts a generic map back to a schema via JSON round-trip.
+func mapToSchema(in map[string]any) (apiext.JSONSchemaProps, error) {
+	data, err := json.Marshal(in)
+	if err != nil {
+		return apiext.JSONSchemaProps{}, fmt.Errorf("failed to marshal schema map: %w", err)
+	}
+
+	var out apiext.JSONSchemaProps
+	if err := json.Unmarshal(data, &out); err != nil {
+		return apiext.JSONSchemaProps{}, fmt.Errorf("failed to unmarshal schema map: %w", err)
+	}
+
+	return out, nil
 }

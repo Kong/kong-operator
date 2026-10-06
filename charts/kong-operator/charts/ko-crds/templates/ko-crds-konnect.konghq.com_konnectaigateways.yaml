@@ -72,6 +72,7 @@ spec:
                       minLength: 1
                       pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
                       type: string
+                    maxProperties: 50
                     type: object
                   minRuntimeVersion:
                     maxLength: 253
@@ -134,6 +135,7 @@ spec:
                     properties:
                       id:
                         maxLength: 36
+                        minLength: 1
                         pattern: ^[0-9a-f]{8}(?:\-[0-9a-f]{4}){3}-[0-9a-f]{12}$
                         type: string
                     required:
