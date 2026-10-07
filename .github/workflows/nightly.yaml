@@ -203,7 +203,12 @@ jobs:
           DIGEST: ${{ needs.build-push-images.outputs.index_digest }}
         run: |
           set -euo pipefail
+          missing=""
           while IFS=, read -r predicate type; do
+            if [ ! -f "security-reports/${predicate}" ]; then
+              missing="${missing} ${predicate}"
+              continue
+            fi
             echo "Attesting ${predicate} as ${type}"
             cosign attest --yes --new-bundle-format=true \
               --predicate "security-reports/${predicate}" \
@@ -225,4 +230,8 @@ jobs:
           image-linux-arm64-cis-report.json,https://cisecurity.org/docker/arm64
           run-info.json,https://konghq.com/build-metadata
           EOF
+          if [ -n "${missing}" ]; then
+            echo "::error::reports missing, nothing to attest for:${missing}"
+            exit 1
+          fi
           cosign tree "${IMAGE}@${DIGEST}"
