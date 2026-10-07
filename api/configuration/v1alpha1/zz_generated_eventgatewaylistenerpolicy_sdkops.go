@@ -5,9 +5,11 @@ package v1alpha1
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -213,15 +215,10 @@ func (s *EventGatewayListenerPolicyAPISpec) selectedSDKOpsPayload(payload map[st
 	return data, variant, nil
 }
 
-// ToCreateEventGatewayListenerPolicyRequest converts the EventGatewayListenerPolicyAPISpec to the SDK type
-// sdkkonnectoper.CreateEventGatewayListenerPolicyRequest using JSON marshal/unmarshal.
-// Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes
-// object references) are naturally excluded because they have different JSON names.
-func (s *EventGatewayListenerPolicyAPISpec) ToCreateEventGatewayListenerPolicyRequest() (*sdkkonnectoper.CreateEventGatewayListenerPolicyRequest, error) {
-	payload, err := s.marshalSDKOpsPayload()
-	if err != nil {
-		return nil, err
-	}
+// toCreateEventGatewayListenerPolicyRequestFromPayload builds the SDK request from an already-computed
+// SDK payload map, so resolved CR references can be injected into the payload
+// between computation and conversion.
+func (s *EventGatewayListenerPolicyAPISpec) toCreateEventGatewayListenerPolicyRequestFromPayload(payload map[string]any) (*sdkkonnectoper.CreateEventGatewayListenerPolicyRequest, error) {
 	data, variant, err := s.selectedSDKOpsPayload(payload)
 	if err != nil {
 		return nil, err
@@ -251,15 +248,10 @@ func (s *EventGatewayListenerPolicyAPISpec) ToCreateEventGatewayListenerPolicyRe
 	}
 }
 
-// ToUpdateEventGatewayListenerPolicyRequest converts the EventGatewayListenerPolicyAPISpec to the SDK type
-// sdkkonnectoper.UpdateEventGatewayListenerPolicyRequest using JSON marshal/unmarshal.
-// Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes
-// object references) are naturally excluded because they have different JSON names.
-func (s *EventGatewayListenerPolicyAPISpec) ToUpdateEventGatewayListenerPolicyRequest() (*sdkkonnectoper.UpdateEventGatewayListenerPolicyRequest, error) {
-	payload, err := s.marshalSDKOpsPayload()
-	if err != nil {
-		return nil, err
-	}
+// toUpdateEventGatewayListenerPolicyRequestFromPayload builds the SDK request from an already-computed
+// SDK payload map, so resolved CR references can be injected into the payload
+// between computation and conversion.
+func (s *EventGatewayListenerPolicyAPISpec) toUpdateEventGatewayListenerPolicyRequestFromPayload(payload map[string]any) (*sdkkonnectoper.UpdateEventGatewayListenerPolicyRequest, error) {
 	data, variant, err := s.selectedSDKOpsPayload(payload)
 	if err != nil {
 		return nil, err
@@ -368,22 +360,228 @@ func (obj *EventGatewayListenerPolicy) GetSensitiveDataSecretRefs() []SensitiveD
 	return refs
 }
 
+// RefsAtEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrustBundles returns the references at spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles,
+// or nil when any ancestor is unset.
+func RefsAtEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrustBundles(obj *EventGatewayListenerPolicy) []EventGatewayTLSTrustBundleRef {
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen == nil {
+		return nil
+	}
+	var refs []EventGatewayTLSTrustBundleRef
+	for i := range obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.ClientAuthentication.TLSTrustBundles {
+		if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.ClientAuthentication.TLSTrustBundles[i].NamespacedRef == nil {
+			continue
+		}
+		refs = append(refs, *obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.ClientAuthentication.TLSTrustBundles[i].NamespacedRef)
+	}
+	return refs
+}
+
+// resolveEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrustBundles resolves the CR references in spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles
+// to Konnect IDs.
+func resolveEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrustBundles(ctx context.Context, cl client.Client, obj *EventGatewayListenerPolicy) ([]string, error) {
+	refs := RefsAtEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrustBundles(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewayTLSTrustBundle"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		if ns != obj.GetNamespace() {
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
+		}
+		var referenced EventGatewayTLSTrustBundle
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "EventGatewayTLSTrustBundle", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced EventGatewayTLSTrustBundle %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "EventGatewayTLSTrustBundle", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		// EventGatewayTLSTrustBundle objects being deleted must not gain new users, which
+		// could keep their deletion blocked: a referrer not created in Konnect
+		// yet can't use them, while existing ones keep syncing until they drop
+		// the reference.
+		if !referenced.GetDeletionTimestamp().IsZero() && obj.GetKonnectID() == "" {
+			errs = append(errs, ReferenceBeingDeletedError{Kind: "EventGatewayTLSTrustBundle", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		id := referenced.GetKonnectID()
+		if id == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "EventGatewayTLSTrustBundle", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, id)
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// EventGatewayListenerPolicyRefsToEventGatewayTLSTrustBundle returns the keys of the EventGatewayTLSTrustBundle
+// objects obj references through spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles, with the default namespace applied.
+func EventGatewayListenerPolicyRefsToEventGatewayTLSTrustBundle(obj *EventGatewayListenerPolicy) []client.ObjectKey {
+	var keys []client.ObjectKey
+	for _, ref := range RefsAtEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrustBundles(obj) {
+		if ref.Kind != "" && ref.Kind != "EventGatewayTLSTrustBundle" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
+	}
+	return keys
+}
+
+// ResolveKonnectReferences resolves every CR reference declared on the spec and
+// returns the joined resolution errors, or nil when all references resolve.
+func (obj *EventGatewayListenerPolicy) ResolveKonnectReferences(ctx context.Context, cl client.Client) error {
+	var errs []error
+	if _, err := resolveEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrustBundles(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
+}
+
+// CrossNamespaceSiblingReferences returns every cross-namespace sibling
+// reference declared on obj's spec whose SupportCrossNamespaceReference is
+// enabled, for callers to authorize against KongReferenceGrant before
+// calling ResolveKonnectReferences.
+func (obj *EventGatewayListenerPolicy) CrossNamespaceSiblingReferences() []CrossNamespaceReferenceCheck {
+	var checks []CrossNamespaceReferenceCheck
+	return checks
+}
+
 // ToCreateEventGatewayListenerPolicyRequest converts the EventGatewayListenerPolicy to the SDK type
-// sdkkonnectoper.CreateEventGatewayListenerPolicyRequest, resolving referenced Secrets via the provided client.
+// sdkkonnectoper.CreateEventGatewayListenerPolicyRequest, resolving referenced Secrets and CRs via the provided client.
 func (obj *EventGatewayListenerPolicy) ToCreateEventGatewayListenerPolicyRequest(ctx context.Context, cl client.Client) (*sdkkonnectoper.CreateEventGatewayListenerPolicyRequest, error) {
 	spec, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {
 		return nil, err
 	}
-	return spec.ToCreateEventGatewayListenerPolicyRequest()
+	payload, err := spec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, err
+	}
+	// spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles may carry CR references: replace each reference object set to
+	// "namespaced_ref" in the SDK payload with one wrapping its resolved
+	// Konnect value under "id", leaving reference objects set by
+	// Konnect ID or name untouched. A nil CRD ancestor pointer means that part
+	// of the config wasn't set, so the payload is left untouched.
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen != nil {
+		tlsServer, _ := payload["tls_server"].(map[string]any)
+		// Only existing reference objects are rewritten: nothing to do without it.
+		if tlsServer != nil {
+			config, _ := tlsServer["config"].(map[string]any)
+			// Only existing reference objects are rewritten: nothing to do without it.
+			if config != nil {
+				clientAuthentication, _ := config["client_authentication"].(map[string]any)
+				// Only existing reference objects are rewritten: nothing to do without it.
+				if clientAuthentication != nil {
+					resolvedTLSServerConfigClientAuthenticationTLSTrustBundles, err := resolveEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrustBundles(ctx, cl, obj)
+					if err != nil {
+						return nil, fmt.Errorf("resolving spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles references: %w", err)
+					}
+					if arr, ok := clientAuthentication["tls_trust_bundles"].([]any); ok {
+						ri := 0
+						for i, e := range arr {
+							el, ok := e.(map[string]any)
+							if !ok {
+								continue
+							}
+							if _, has := el["namespaced_ref"]; !has {
+								continue
+							}
+							if ri >= len(resolvedTLSServerConfigClientAuthenticationTLSTrustBundles) {
+								return nil, fmt.Errorf("resolving spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles references: more references set than the %d resolved", len(resolvedTLSServerConfigClientAuthenticationTLSTrustBundles))
+							}
+							arr[i] = map[string]any{"id": resolvedTLSServerConfigClientAuthenticationTLSTrustBundles[ri]}
+							ri++
+						}
+					}
+					config["client_authentication"] = clientAuthentication
+				}
+				tlsServer["config"] = config
+			}
+			payload["tls_server"] = tlsServer
+		}
+	}
+	return spec.toCreateEventGatewayListenerPolicyRequestFromPayload(payload)
 }
 
 // ToUpdateEventGatewayListenerPolicyRequest converts the EventGatewayListenerPolicy to the SDK type
-// sdkkonnectoper.UpdateEventGatewayListenerPolicyRequest, resolving referenced Secrets via the provided client.
+// sdkkonnectoper.UpdateEventGatewayListenerPolicyRequest, resolving referenced Secrets and CRs via the provided client.
 func (obj *EventGatewayListenerPolicy) ToUpdateEventGatewayListenerPolicyRequest(ctx context.Context, cl client.Client) (*sdkkonnectoper.UpdateEventGatewayListenerPolicyRequest, error) {
 	spec, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {
 		return nil, err
 	}
-	return spec.ToUpdateEventGatewayListenerPolicyRequest()
+	payload, err := spec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, err
+	}
+	// spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles may carry CR references: replace each reference object set to
+	// "namespaced_ref" in the SDK payload with one wrapping its resolved
+	// Konnect value under "id", leaving reference objects set by
+	// Konnect ID or name untouched. A nil CRD ancestor pointer means that part
+	// of the config wasn't set, so the payload is left untouched.
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen != nil {
+		tlsServer, _ := payload["tls_server"].(map[string]any)
+		// Only existing reference objects are rewritten: nothing to do without it.
+		if tlsServer != nil {
+			config, _ := tlsServer["config"].(map[string]any)
+			// Only existing reference objects are rewritten: nothing to do without it.
+			if config != nil {
+				clientAuthentication, _ := config["client_authentication"].(map[string]any)
+				// Only existing reference objects are rewritten: nothing to do without it.
+				if clientAuthentication != nil {
+					resolvedTLSServerConfigClientAuthenticationTLSTrustBundles, err := resolveEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrustBundles(ctx, cl, obj)
+					if err != nil {
+						return nil, fmt.Errorf("resolving spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles references: %w", err)
+					}
+					if arr, ok := clientAuthentication["tls_trust_bundles"].([]any); ok {
+						ri := 0
+						for i, e := range arr {
+							el, ok := e.(map[string]any)
+							if !ok {
+								continue
+							}
+							if _, has := el["namespaced_ref"]; !has {
+								continue
+							}
+							if ri >= len(resolvedTLSServerConfigClientAuthenticationTLSTrustBundles) {
+								return nil, fmt.Errorf("resolving spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles references: more references set than the %d resolved", len(resolvedTLSServerConfigClientAuthenticationTLSTrustBundles))
+							}
+							arr[i] = map[string]any{"id": resolvedTLSServerConfigClientAuthenticationTLSTrustBundles[ri]}
+							ri++
+						}
+					}
+					config["client_authentication"] = clientAuthentication
+				}
+				tlsServer["config"] = config
+			}
+			payload["tls_server"] = tlsServer
+		}
+	}
+	return spec.toUpdateEventGatewayListenerPolicyRequestFromPayload(payload)
 }

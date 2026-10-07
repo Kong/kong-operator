@@ -21,7 +21,7 @@ func TestRequireUnionMembersMetadataField(t *testing.T) {
 }
 
 func TestResolveUpdateLabelsFieldPath_MultiMemberUnion(t *testing.T) {
-	path, targets, err := resolveUpdateLabelsFieldPath(
+	path, guard, targets, err := resolveUpdateLabelsFieldPath(
 		"AIGatewayCustomPolicy",
 		&updateOpCallShape{
 			ReqImportPath: sdkComponentsImportPath,
@@ -32,6 +32,7 @@ func TestResolveUpdateLabelsFieldPath_MultiMemberUnion(t *testing.T) {
 	)
 	require.NoError(t, err)
 	assert.Empty(t, path)
+	assert.Empty(t, guard)
 	assert.Equal(t, []labelsUnionTarget{
 		{
 			Path:          "UpdateAIGatewayCustomPolicyInstalledRequest",
@@ -119,4 +120,24 @@ func TestNewLabelsUnionTarget(t *testing.T) {
 			assert.Equal(t, tc.want, newLabelsUnionTarget(tc.bodyField, tc.bodyPointer, "Member"))
 		})
 	}
+}
+
+func TestResolveUpdateLabelsFieldPath_FullyWrappedStructBody(t *testing.T) {
+	// UpdateEventGatewayTLSTrustBundleRequest wraps a struct-typed (non-pointer),
+	// non-union body: labels are reached through the body field, which must not
+	// be nil-checked as that would not compile.
+	path, guard, targets, err := resolveUpdateLabelsFieldPath(
+		"EventGatewayTLSTrustBundle",
+		&updateOpCallShape{
+			ReqImportPath: "github.com/Kong/sdk-konnect-go/models/operations",
+			ReqType:       "UpdateEventGatewayTLSTrustBundleRequest",
+			FullyWrapped:  true,
+		},
+		true,
+		false,
+	)
+	require.NoError(t, err)
+	assert.Equal(t, "UpdateTLSTrustBundleRequest", path)
+	assert.Empty(t, guard)
+	assert.Empty(t, targets)
 }

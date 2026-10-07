@@ -748,6 +748,24 @@ apiGroupVersions:
           parentEntityGVK:
             kind: KonnectEventGateway
             group: konnect.konghq.com
+      - path: /v1/event-gateways/{gatewayId}/tls-trust-bundles
+        name: EventGatewayTLSTrustBundle
+        dataSources:
+          - path: spec.apiSpec.config.trustedCa
+            type: Secret
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.EventGatewayTLSTrustBundlesSDK
+            fieldName: EventGatewayTLSTrustBundles
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateTLSTrustBundleRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayTLSTrustBundleRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectEventGateway
+            group: konnect.konghq.com
       - path: /v1/event-gateways/{gatewayId}/listeners
         name: EventGatewayListener
         ops:
@@ -765,6 +783,26 @@ apiGroupVersions:
             group: konnect.konghq.com
       - path: /v1/event-gateways/{gatewayId}/listeners/{eventGatewayListenerId}/policies
         name: EventGatewayListenerPolicy
+        references:
+          # Additive: Konnect trust bundle IDs/names keep working; namespacedRef
+          # references an EventGatewayTLSTrustBundle in the cluster instead. It
+          # resolves to the Konnect ID, which is how Konnect binds the bundle, so
+          # renaming a trust bundle can't rebind the policy to another bundle.
+          - path: spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles
+            kinds: [EventGatewayTLSTrustBundle]
+            resolvesTo: id
+            unionMember: namespacedRef
+            # Konnect allows deleting a trust bundle used by listener policies,
+            # leaving them referencing a missing trust bundle (failing their
+            # next update), so the operator blocks the deletion while Konnect
+            # listener policies reference it (see
+            # deleteEventGatewayTLSTrustBundleGuarded). The
+            # EventGatewayTLSTrustBundle controller watches the policies so the
+            # deletion is retried as soon as one referencing it through
+            # namespacedRef is deleted (otherwise on the periodic retry of a
+            # blocked deletion), and a trust bundle being deleted is not
+            # resolved for policies not created in Konnect yet.
+            reverseWatch: true
         dataSources:
           - path: spec.apiSpec.tlsServer.config.certificates[].certificate
             type: Secret

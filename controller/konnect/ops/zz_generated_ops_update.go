@@ -66,6 +66,8 @@ func UpdateGeneratedOps[
 		return updateEventGatewayListenerPolicy(ctx, cl, sdk.GetEventGatewayListenerPoliciesSDK(), ent)
 	case *configurationv1alpha1.EventGatewaySchemaRegistry:
 		return updateEventGatewaySchemaRegistry(ctx, cl, sdk.GetEventGatewaySchemaRegistriesSDK(), ent)
+	case *configurationv1alpha1.EventGatewayTLSTrustBundle:
+		return updateEventGatewayTLSTrustBundle(ctx, cl, sdk.GetEventGatewayTLSTrustBundlesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualCluster:
 		return updateEventGatewayVirtualCluster(ctx, sdk.GetEventGatewayVirtualClustersSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy:

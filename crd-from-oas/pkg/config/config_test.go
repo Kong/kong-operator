@@ -1354,6 +1354,30 @@ func TestReferenceConfigValidation(t *testing.T) {
 			wantErr: "supportCrossNamespaceReference is not supported with injectInto",
 		},
 		{
+			name: "unionMember accepted",
+			cfg: base(func(rc *ReferenceConfig) {
+				rc.Path = "spec.apiSpec.config.trustBundles"
+				rc.UnionMember = "namespacedRef"
+			}),
+		},
+		{
+			name: "unionMember that is not a lowerCamelCase field name rejected",
+			cfg: base(func(rc *ReferenceConfig) {
+				rc.Path = "spec.apiSpec.config.trustBundles"
+				rc.UnionMember = "namespaced_ref"
+			}),
+			wantErr: "unionMember must be a lowerCamelCase JSON field name",
+		},
+		{
+			name: "unionMember with injectInto rejected",
+			cfg: base(func(rc *ReferenceConfig) {
+				rc.Path = "spec.apiSpec.customPolicyRef"
+				rc.InjectInto = "type"
+				rc.UnionMember = "namespacedRef"
+			}),
+			wantErr: "unionMember and injectInto are mutually exclusive",
+		},
+		{
 			name: "reverseWatch on a single-kind reference accepted",
 			cfg:  base(func(rc *ReferenceConfig) { rc.ReverseWatch = true }),
 		},
