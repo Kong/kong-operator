@@ -108,7 +108,9 @@
   its plain name, e.g.  route path `~/path/(?<model_name>[^/]+)` with
   `pathParam: ~model_name`).
   Existing values without the prefix are rejected by the CRD schema and by
-  Konnect alike.
+  Konnect alike. On-prem translation strips the `~` prefix, because the
+  rendered `ai-model-selector` plugin looks the PCRE capture group up by its
+  plain name.
 - `AIGatewayMCPServer`: conversion-tool and upstream-tool `name` entries
   must now match `^[A-Za-z0-9._-]+$` and be at most 128 characters.
   Existing entries outside these bounds are rejected by the CRD schema.
