@@ -6,8 +6,11 @@ package v1alpha1
 
 import (
 	"context"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
+	"time"
 
 	"github.com/Kong/ai-deck-converter/aigw"
 	"gopkg.in/yaml.v3"
@@ -41,7 +44,48 @@ func (obj *AIGatewayCACertificate) ToAIGWCACertificate(ctx context.Context, cl c
 	if err := yaml.Unmarshal(data, &caCert); err != nil {
 		return nil, fmt.Errorf("decoding AIGatewayCACertificate %s/%s as aigw.CACertificate: %w", obj.Namespace, obj.Name, err)
 	}
+	if err := validateCACertPEM(caCert.Cert); err != nil {
+		return nil, fmt.Errorf("AIGatewayCACertificate %s/%s: invalid cert: %w", obj.Namespace, obj.Name, err)
+	}
 	return &caCert, nil
+}
+
+// validateCACertPEM checks the cert against what Kong's ca_certificates schema rejects at push
+// time: an unparsable or expired cert there fails the whole DB-less push, so it is caught here
+// instead, turning a bad CR into a per-entity translation error. Bundles with more than one
+// certificate are allowed (a legitimate trust-store shape), but every certificate in the bundle
+// must parse and be within its validity window.
+func validateCACertPEM(cert string) error {
+	var (
+		rest   = []byte(cert)
+		parsed int
+		now    = time.Now()
+	)
+	for {
+		block, next := pem.Decode(rest)
+		if block == nil {
+			break
+		}
+		rest = next
+		if block.Type != "CERTIFICATE" {
+			return fmt.Errorf("PEM block of type %q is not a CERTIFICATE", block.Type)
+		}
+		parsedCert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return fmt.Errorf("parsing certificate: %w", err)
+		}
+		if now.Before(parsedCert.NotBefore) {
+			return fmt.Errorf("certificate %q is not valid before %s", parsedCert.Subject, parsedCert.NotBefore.Format(time.RFC3339))
+		}
+		if now.After(parsedCert.NotAfter) {
+			return fmt.Errorf("certificate %q expired on %s", parsedCert.Subject, parsedCert.NotAfter.Format(time.RFC3339))
+		}
+		parsed++
+	}
+	if parsed == 0 {
+		return fmt.Errorf("no PEM-encoded CERTIFICATE block found")
+	}
+	return nil
 }
 
 // marshalAIGWCACertificatePayload builds the aigw.CACertificate-shaped payload bytes. Shared by

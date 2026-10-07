@@ -2,7 +2,15 @@ package v1alpha1
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
+	"math/big"
 	"testing"
+	"time"
 
 	"github.com/Kong/ai-deck-converter/aigw"
 	"github.com/stretchr/testify/require"
@@ -12,14 +20,38 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-// TestAIGatewayCACertificate_ToAIGWCertificate covers the cert secretRef resolution, the
-// managed_by drop, and the cross-namespace secretRef rejection.
-func TestAIGatewayCACertificate_ToAIGWCertificate(t *testing.T) {
+// genCACertPEM returns a self-signed CA certificate PEM with the given validity window.
+func genCACertPEM(t *testing.T, notBefore, notAfter time.Time) string {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	template := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "test-ca"},
+		NotBefore:             notBefore,
+		NotAfter:              notAfter,
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+	}
+	der, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
+	require.NoError(t, err)
+	return string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}))
+}
+
+// TestAIGatewayCACertificate_ToAIGWCACertificate covers the cert secretRef resolution, the
+// managed_by drop, the cross-namespace secretRef rejection, and the cert validation that
+// keeps an unparsable or expired cert from failing the whole DB-less push.
+func TestAIGatewayCACertificate_ToAIGWCACertificate(t *testing.T) {
 	t.Parallel()
 
 	scheme := runtime.NewScheme()
 	require.NoError(t, AddToScheme(scheme))
 	require.NoError(t, corev1.AddToScheme(scheme))
+
+	now := time.Now()
+	validCert := genCACertPEM(t, now.Add(-time.Hour), now.AddDate(1, 0, 0))
+	expiredCert := genCACertPEM(t, now.AddDate(-2, 0, 0), now.AddDate(-1, 0, 0))
+	notYetValidCert := genCACertPEM(t, now.Add(time.Hour), now.AddDate(2, 0, 0))
 
 	// newReferencedSecret returns a fresh object per subtest: the fake client's tracker
 	// mutates the objects it's given (SetResourceVersion on Build), so parallel subtests
@@ -28,7 +60,7 @@ func TestAIGatewayCACertificate_ToAIGWCertificate(t *testing.T) {
 		return &corev1.Secret{
 			Name: "ca-secret", Namespace: "default",
 			Data: map[string][]byte{
-				"ca.crt": []byte("-----BEGIN CERTIFICATE-----"),
+				"ca.crt": []byte(validCert),
 			},
 		}
 	}
@@ -49,13 +81,13 @@ func TestAIGatewayCACertificate_ToAIGWCertificate(t *testing.T) {
 						Name:      "ca-cert",
 						Labels:    PublicLabels{"app": "test1", "env": "test"},
 						ManagedBy: ManagedBy{"kong-operator": "true"},
-						Cert:      SensitiveDataSource{Type: SensitiveDataSourceTypeInline, Value: new("-----BEGIN CERTIFICATE-----")},
+						Cert:      SensitiveDataSource{Type: SensitiveDataSourceTypeInline, Value: new(validCert)},
 					},
 				},
 			},
 			want: &aigw.CACertificate{
 				Name:   "ca-cert",
-				Cert:   "-----BEGIN CERTIFICATE-----",
+				Cert:   validCert,
 				Labels: aigw.Labels{"app": "test1", "env": "test"},
 			},
 		},
@@ -73,7 +105,7 @@ func TestAIGatewayCACertificate_ToAIGWCertificate(t *testing.T) {
 			objects: []runtime.Object{newReferencedSecret()},
 			want: &aigw.CACertificate{
 				Name: "ca-cert-from-secret",
-				Cert: "-----BEGIN CERTIFICATE-----",
+				Cert: validCert,
 			},
 		},
 		{
@@ -116,6 +148,58 @@ func TestAIGatewayCACertificate_ToAIGWCertificate(t *testing.T) {
 			},
 			wantErr: "does-not-exist",
 		},
+		{
+			name: "unparsable cert rejected",
+			obj: &AIGatewayCACertificate{
+				Name: "sample-ai-gw-ca-cert-unparsable", Namespace: "default",
+				Spec: AIGatewayCACertificateSpec{
+					APISpec: AIGatewayCACertificateAPISpec{
+						Name: "unparsable-ca-cert",
+						Cert: SensitiveDataSource{Type: SensitiveDataSourceTypeInline, Value: new("-----BEGIN CERTIFICATE-----\nnot-a-certificate\n-----END CERTIFICATE-----\n")},
+					},
+				},
+			},
+			wantErr: "invalid cert",
+		},
+		{
+			name: "cert without any PEM block rejected",
+			obj: &AIGatewayCACertificate{
+				Name: "sample-ai-gw-ca-cert-no-pem", Namespace: "default",
+				Spec: AIGatewayCACertificateSpec{
+					APISpec: AIGatewayCACertificateAPISpec{
+						Name: "no-pem-ca-cert",
+						Cert: SensitiveDataSource{Type: SensitiveDataSourceTypeInline, Value: new("not a PEM at all")},
+					},
+				},
+			},
+			wantErr: "no PEM-encoded CERTIFICATE block found",
+		},
+		{
+			name: "expired cert rejected",
+			obj: &AIGatewayCACertificate{
+				Name: "sample-ai-gw-ca-cert-expired", Namespace: "default",
+				Spec: AIGatewayCACertificateSpec{
+					APISpec: AIGatewayCACertificateAPISpec{
+						Name: "expired-ca-cert",
+						Cert: SensitiveDataSource{Type: SensitiveDataSourceTypeInline, Value: new(expiredCert)},
+					},
+				},
+			},
+			wantErr: "expired",
+		},
+		{
+			name: "not yet valid cert rejected",
+			obj: &AIGatewayCACertificate{
+				Name: "sample-ai-gw-ca-cert-not-yet-valid", Namespace: "default",
+				Spec: AIGatewayCACertificateSpec{
+					APISpec: AIGatewayCACertificateAPISpec{
+						Name: "not-yet-valid-ca-cert",
+						Cert: SensitiveDataSource{Type: SensitiveDataSourceTypeInline, Value: new(notYetValidCert)},
+					},
+				},
+			},
+			wantErr: "not valid before",
+		},
 	}
 
 	for _, tt := range tests {
@@ -134,11 +218,11 @@ func TestAIGatewayCACertificate_ToAIGWCertificate(t *testing.T) {
 	}
 }
 
-// TestAIGatewayCACertificate_ToAIGWCertificate_StrictRoundTrip guards against a dropped or
+// TestAIGatewayCACertificate_ToAIGWCACertificate_StrictRoundTrip guards against a dropped or
 // renamed field: it decodes marshalAIGWCACertificatePayload's output with yaml.v3's
 // KnownFields(true), which errors on any key aigw.CACertificate doesn't recognize. See
 // aigatewaymodel_aigw_manual_test.go for the rationale.
-func TestAIGatewayCACertificate_ToAIGWCertificate_StrictRoundTrip(t *testing.T) {
+func TestAIGatewayCACertificate_ToAIGWCACertificate_StrictRoundTrip(t *testing.T) {
 	t.Parallel()
 
 	spec := &AIGatewayCACertificateAPISpec{

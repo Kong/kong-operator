@@ -17,11 +17,20 @@ limitations under the License.
 package translator
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
+	"math/big"
 	"testing"
+	"time"
 
 	"github.com/Kong/ai-deck-converter/aigw"
 	"github.com/Kong/ai-deck-converter/convert"
 	"github.com/stretchr/testify/require"
+	yaml "gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -156,7 +165,28 @@ func aiGatewayConsumerFixture(name string) *aiconfigurationv1alpha1.AIGatewayCon
 	}
 }
 
-func aiGatewayCACertificateFixture(name string) *aiconfigurationv1alpha1.AIGatewayCACertificate {
+// genCACertPEM returns a self-signed CA certificate PEM, valid from an hour ago for a year.
+// ToAIGWCACertificate validates the cert (parse + validity window), so fixtures need real
+// certificates; each call generates a fresh key, so two calls yield distinct cert content.
+func genCACertPEM(t *testing.T) string {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	now := time.Now()
+	template := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "test-ca"},
+		NotBefore:             now.Add(-time.Hour),
+		NotAfter:              now.AddDate(1, 0, 0),
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+	}
+	der, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
+	require.NoError(t, err)
+	return string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}))
+}
+
+func aiGatewayCACertificateFixture(name, cert string) *aiconfigurationv1alpha1.AIGatewayCACertificate {
 	return &aiconfigurationv1alpha1.AIGatewayCACertificate{
 		Name: name, Namespace: "default",
 		Spec: aiconfigurationv1alpha1.AIGatewayCACertificateSpec{
@@ -169,7 +199,7 @@ func aiGatewayCACertificateFixture(name string) *aiconfigurationv1alpha1.AIGatew
 				Name: aiconfigurationv1alpha1.AIGatewayEntityIdentifier(name),
 				Cert: aiconfigurationv1alpha1.SensitiveDataSource{
 					Type:  aiconfigurationv1alpha1.SensitiveDataSourceTypeInline,
-					Value: new("-----BEGIN CERTIFICATE-----"),
+					Value: new(cert),
 				},
 			},
 		},
@@ -272,8 +302,8 @@ func TestBuildDocument(t *testing.T) {
 	consumerA := aiGatewayConsumerFixture("consumer-a")
 	certB := aiGatewayCertificateFixture("cert-b")
 	certA := aiGatewayCertificateFixture("cert-a")
-	caCertB := aiGatewayCACertificateFixture("ca-cert-b")
-	caCertA := aiGatewayCACertificateFixture("ca-cert-a")
+	caCertB := aiGatewayCACertificateFixture("ca-cert-b", genCACertPEM(t))
+	caCertA := aiGatewayCACertificateFixture("ca-cert-a", genCACertPEM(t))
 	sniB := aiGatewaySNIFixture("sni-b", "cert-b")
 	sniA := aiGatewaySNIFixture("sni-a", "cert-a")
 	customPolicyB := aiGatewayCustomPolicyFixture("custom-policy-b")
@@ -366,10 +396,27 @@ func TestBuildDocument(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, sniPayload)
 	require.Empty(t, sniWarnings)
-	// The CA certificates must reach the rendered payload: the converter must
-	// not silently drop a kind the document carries.
-	require.Contains(t, string(sniPayload), "ca-cert-a")
-	require.Contains(t, string(sniPayload), "ca-cert-b")
+	// The CA certificates must reach the rendered payload with unique IDs: the converter
+	// derives each entity ID from the cert content, so a tag-only match wouldn't catch an
+	// ID collision. Parse the payload and check the rendered ca_certificates themselves.
+	var dblessConfig struct {
+		CACertificates []struct {
+			ID   string   `yaml:"id"`
+			Tags []string `yaml:"tags"`
+		} `yaml:"ca_certificates"`
+	}
+	require.NoError(t, yaml.Unmarshal(sniPayload, &dblessConfig))
+	require.Len(t, dblessConfig.CACertificates, 2)
+	tags := make([]string, 0, 2)
+	for i, caCert := range dblessConfig.CACertificates {
+		require.NotEmpty(t, caCert.ID, "ca_certificates[%d] has no ID", i)
+		if i > 0 {
+			require.NotEqual(t, dblessConfig.CACertificates[0].ID, caCert.ID, "duplicate CA certificate ID")
+		}
+		tags = append(tags, caCert.Tags...)
+	}
+	require.Contains(t, tags, "ai-gateway-name:ca-cert-a")
+	require.Contains(t, tags, "ai-gateway-name:ca-cert-b")
 
 	// Non-strict rendering must not fail even once a dangling reference is introduced by the
 	// next slice - pinned here with a target that references a provider this test never creates.
@@ -459,7 +506,7 @@ func TestBuildDocument_PerEntityFailure(t *testing.T) {
 	model := aiGatewayModelFixture("model-a")
 	// The same for a CA certificate: proves the per-kind failure isolation is not
 	// model-specific.
-	brokenCACert := aiGatewayCACertificateFixture("ca-cert-broken")
+	brokenCACert := aiGatewayCACertificateFixture("ca-cert-broken", "")
 	brokenCACert.Spec.APISpec = aiconfigurationv1alpha1.AIGatewayCACertificateAPISpec{}
 
 	builder := fake.NewClientBuilder().WithScheme(scheme).
@@ -520,6 +567,62 @@ func TestBuildDocument_PerEntityFailure(t *testing.T) {
 		}
 	}
 	require.Equal(t, 2, failed)
+}
+
+// TestBuildDocument_CACertificateDuplicateContent covers the duplicate-PEM rule: the converter
+// derives the rendered CA certificate entity ID from the cert content, so two CRs sharing one
+// PEM would render two entries with the same ID and fail the whole push. The first CR
+// (namespace/name order) wins; the duplicate is reported per-entity and excluded.
+func TestBuildDocument_CACertificateDuplicateContent(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	sharedPEM := genCACertPEM(t)
+	caCertA := aiGatewayCACertificateFixture("ca-cert-a", sharedPEM)
+	caCertB := aiGatewayCACertificateFixture("ca-cert-b", sharedPEM)
+
+	builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gw, caCertA, caCertB)
+	// BuildDocument lists every configuration-entity kind, so every kind's index is needed.
+	for _, opts := range [][]index.Option{
+		index.OptionsForAIGatewayModel(),
+		index.OptionsForAIGatewayModelProvider(),
+		index.OptionsForAIGatewayPolicy(),
+		index.OptionsForAIGatewayConsumerGroup(),
+		index.OptionsForAIGatewayConsumer(),
+		index.OptionsForAIGatewayConsumerCredential(),
+		index.OptionsForAIGatewayAuthStrategy(),
+		index.OptionsForAIGatewayCACertificate(),
+		index.OptionsForAIGatewayCertificate(),
+		index.OptionsForAIGatewaySNI(),
+		index.OptionsForAIGatewayCustomPolicy(),
+	} {
+		for _, opt := range opts {
+			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+		}
+	}
+	cl := builder.Build()
+
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	require.NoError(t, err)
+
+	require.Len(t, doc.CACertificates, 1)
+	require.Equal(t, "ca-cert-a", doc.CACertificates[0].Name)
+
+	require.Len(t, statuses, 2)
+	failed := 0
+	for _, s := range statuses {
+		if s.Err != nil {
+			failed++
+			require.Equal(t, "ca-cert-b", s.Obj.GetName())
+			require.ErrorContains(t, s.Err, "duplicate CA certificate content")
+			require.ErrorContains(t, s.Err, "ca-cert-a")
+		}
+	}
+	require.Equal(t, 1, failed)
 }
 
 // TestBuildDocument_SNIFailsWhenReferencedCertificateFails covers the cross-entity dependency:
