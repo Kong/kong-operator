@@ -490,13 +490,10 @@ func (obj *EventGatewayListenerPolicy) ToCreateEventGatewayListenerPolicyRequest
 	// of the config wasn't set, so the payload is left untouched.
 	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen != nil {
 		tlsServer, _ := payload["tls_server"].(map[string]any)
-		// Only existing reference objects are rewritten: nothing to do without it.
 		if tlsServer != nil {
 			config, _ := tlsServer["config"].(map[string]any)
-			// Only existing reference objects are rewritten: nothing to do without it.
 			if config != nil {
 				clientAuthentication, _ := config["client_authentication"].(map[string]any)
-				// Only existing reference objects are rewritten: nothing to do without it.
 				if clientAuthentication != nil {
 					resolvedTLSServerConfigClientAuthenticationTLSTrustBundles, err := resolveEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrustBundles(ctx, cl, obj)
 					if err != nil {
@@ -547,13 +544,10 @@ func (obj *EventGatewayListenerPolicy) ToUpdateEventGatewayListenerPolicyRequest
 	// of the config wasn't set, so the payload is left untouched.
 	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig != nil && obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen != nil {
 		tlsServer, _ := payload["tls_server"].(map[string]any)
-		// Only existing reference objects are rewritten: nothing to do without it.
 		if tlsServer != nil {
 			config, _ := tlsServer["config"].(map[string]any)
-			// Only existing reference objects are rewritten: nothing to do without it.
 			if config != nil {
 				clientAuthentication, _ := config["client_authentication"].(map[string]any)
-				// Only existing reference objects are rewritten: nothing to do without it.
 				if clientAuthentication != nil {
 					resolvedTLSServerConfigClientAuthenticationTLSTrustBundles, err := resolveEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrustBundles(ctx, cl, obj)
 					if err != nil {

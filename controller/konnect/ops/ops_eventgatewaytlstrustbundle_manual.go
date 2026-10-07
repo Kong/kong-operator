@@ -93,7 +93,8 @@ func deleteEventGatewayTLSTrustBundleGuarded(
 ) error {
 	gatewayID, id := obj.GetGatewayID(), obj.GetKonnectID()
 	if gatewayID == "" || id == "" {
-		// Nothing to look up: the generated delete reports the missing ID.
+		// Nothing to look up: the generated delete reports the missing gateway
+		// ID (ops.Delete recovers a missing Konnect ID before calling this).
 		return deleteEventGatewayTLSTrustBundle(ctx, trustBundlesSDK, obj)
 	}
 	resp, err := trustBundlesSDK.GetEventGatewayTLSTrustBundle(ctx, gatewayID, id)

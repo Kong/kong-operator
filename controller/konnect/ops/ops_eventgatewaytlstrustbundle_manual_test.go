@@ -5,9 +5,11 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
@@ -398,4 +400,42 @@ func TestDeleteEventGatewayTLSTrustBundleGuarded(t *testing.T) {
 		_, isBlocked := errors.AsType[DeletionBlockedError](err)
 		assert.True(t, isBlocked, "expected a DeletionBlockedError, got %v", err)
 	})
+}
+
+// TestListenerPoliciesTrustBundleRefsWithRealSDK checks, against the real SDK
+// client, the contract the guard relies on: the SDK drops a listener policy's
+// config when decoding the list response (it models it as an empty struct),
+// and restores the raw response body after decoding it, so the TLS trust
+// bundle references can still be read from it. If an SDK upgrade breaks
+// this, the guard would fail closed (deletions stay blocked); this test
+// catches it first.
+func TestListenerPoliciesTrustBundleRefsWithRealSDK(t *testing.T) {
+	t.Parallel()
+
+	const body = `[` +
+		`{"id":"policy-a-id","name":"tls-a","type":"tls_server","config":{"client_authentication":{"mode":"required","tls_trust_bundles":[{"id":"trust-bundle-id"},{"name":"client-ca"}]}}},` +
+		`{"id":"policy-b-id","name":"forward","type":"forward_to_virtual_cluster","config":{"type":"port_mapping"}}` +
+		`]`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/v1/event-gateways/gateway-1/listeners/listener-1/policies" {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, body)
+	}))
+	t.Cleanup(srv.Close)
+
+	sdk := sdkkonnectgo.New(
+		sdkkonnectgo.WithServerURL(srv.URL),
+		sdkkonnectgo.WithSecurity(sdkkonnectcomp.Security{PersonalAccessToken: new("token")}),
+	)
+
+	policies, err := listenerPoliciesTrustBundleRefs(t.Context(), sdk.EventGatewayListenerPolicies, "gateway-1", "listener-1")
+	require.NoError(t, err)
+	require.Len(t, policies, 2)
+	assert.Equal(t, "policy-a-id", policies[0].ID)
+	assert.True(t, policies[0].usesTrustBundle("trust-bundle-id", ""), "reference by ID must be read from the raw body")
+	assert.True(t, policies[0].usesTrustBundle("", "client-ca"), "reference by name must be read from the raw body")
+	assert.False(t, policies[1].usesTrustBundle("trust-bundle-id", "client-ca"))
 }

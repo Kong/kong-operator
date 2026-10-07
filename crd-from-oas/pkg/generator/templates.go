@@ -1556,7 +1556,6 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 {{- range .ParentNavs}}
 		{{.Var}}, _ := {{.Parent}}["{{.Key}}"].(map[string]any)
 {{- if .Optional}}
-		// Only existing reference objects are rewritten: nothing to do without it.
 		if {{.Var}} != nil {
 {{- else}}
 		if {{.Var}} == nil {
