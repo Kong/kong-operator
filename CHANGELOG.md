@@ -112,6 +112,9 @@
 - `AIGatewayMCPServer`: conversion-tool and upstream-tool `name` entries
   must now match `^[A-Za-z0-9._-]+$` and be at most 128 characters.
   Existing entries outside these bounds are rejected by the CRD schema.
+- `AIGatewayModel`: target `config` fields gained bounds: `temperature` 0-5,
+  `topK` at most 500 (was 2147483646), `topP` 0-1, cost fields at least 0.
+  Existing values outside these bounds are rejected by the CRD schema.
 - On-prem AI Gateway: `AIGatewayCustomPolicy` configuration entities
   referencing an `OnPremAIGateway` are now translated into the pushed
   configuration document. The entity gains an on-prem reconciler, and
