@@ -140,7 +140,7 @@ spec:
         target's name. The X-Kong-LLM-Model header is deliberately omitted
         (INCLUDE_HEADER: 'false') so this exercises the format-default
         fallback alone. Runs before the pathParam steps below so it still
-        executes even while pathParam routing is broken.
+        executes even if pathParam routing is broken.
       try:
         - script:
             env:

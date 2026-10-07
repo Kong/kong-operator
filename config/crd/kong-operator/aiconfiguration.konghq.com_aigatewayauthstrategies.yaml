@@ -212,6 +212,21 @@ spec:
                                 - Disabled
                                 type: string
                             type: object
+                          realm:
+                            description: |-
+                              When authentication fails the plugin sends `WWW-Authenticate` header with
+                              `realm` attribute value.
+                            maxLength: 253
+                            type: string
+                          runOnPreflight:
+                            description: |-
+                              A boolean value that indicates whether the plugin should run (and try to
+                              authenticate) on `OPTIONS` preflight requests.
+                              If set to `false`, then `OPTIONS` requests are always allowed.
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
                         type: object
                       displayName:
                         description: The display name for this auth strategy instance.

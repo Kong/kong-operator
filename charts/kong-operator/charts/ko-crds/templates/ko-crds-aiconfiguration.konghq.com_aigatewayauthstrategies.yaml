@@ -138,6 +138,14 @@ spec:
                                 - Disabled
                                 type: string
                             type: object
+                          realm:
+                            maxLength: 253
+                            type: string
+                          runOnPreflight:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
                         type: object
                       displayName:
                         maxLength: 256

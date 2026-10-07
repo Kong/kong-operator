@@ -102,6 +102,13 @@
 
 ### Changed
 
+- `AIGatewayModel`: `spec.apiSpec.{api,model}.config.route.model.pathParam`
+  must now start with `~` (pattern `^~.+$`) (the `~` signals that the route
+  path is a dynamic regex path; the capture group in the path regex keeps
+  its plain name, e.g.  route path `~/path/(?<model_name>[^/]+)` with
+  `pathParam: ~model_name`).
+  Existing values without the prefix are rejected by the CRD schema and by
+  Konnect alike.
 - On-prem AI Gateway: `AIGatewayCustomPolicy` configuration entities
   referencing an `OnPremAIGateway` are now translated into the pushed
   configuration document. The entity gains an on-prem reconciler, and
