@@ -76,15 +76,9 @@ slsa-verifier verify-image \
    --source-uri 'github.com/Kong/kong-operator'
 ```
 
-Or with cosign, checking the identity of the generator that produced the attestation:
-
-```sh
-cosign verify-attestation \
-   "${IMAGE}:${TAG}@${IMAGE_DIGEST}" \
-   --type='slsaprovenance' \
-   --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
-   --certificate-identity-regexp='^https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@refs/tags/v[0-9]+.[0-9]+.[0-9]+$'
-```
+The provenance is signed by the generator and published in the same repository as the image, as the
+`sha256-<index digest>.att` tag. `cosign verify-attestation` reads the referrers only and does not see
+that tag, so `slsa-verifier` above is the supported command.
 
 ### Verify the SBOM, vulnerability and CIS attestations
 

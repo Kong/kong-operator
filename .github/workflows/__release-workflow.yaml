@@ -418,19 +418,16 @@ jobs:
             echo "::error::no attestations found on ${IMAGE}@${DIGEST}: refusing to release an unattested image."
             exit 1
           fi
-          # The signature and the reports are signed by this repository; the SLSA provenance is
-          # signed by the generator that produced it, so it needs the generator's identity.
+          # The provenance is signed by the generator and lives in the legacy .att tag that cosign's
+          # verify path does not read; its job gates this one and consumers use slsa-verifier.
           for type in ${types}; do
             case "${type}" in
               https://sigstore.dev/cosign/sign/v1) continue ;;
-              https://slsa.dev/*)
-                identity='^https://github\.com/slsa-framework/slsa-github-generator/\.github/workflows/generator_container_slsa3\.yml@refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$' ;;
-              *)
-                identity="^https://github\.com/${GITHUB_REPOSITORY}/\.github/workflows/" ;;
+              https://slsa.dev/*) continue ;;
             esac
             echo "Verifying attestation of type: ${type}"
             cosign verify-attestation --type "${type}" \
-              --certificate-identity-regexp "${identity}" \
+              --certificate-identity-regexp "^https://github\.com/${GITHUB_REPOSITORY}/\.github/workflows/" \
               --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
               "${IMAGE}@${DIGEST}" > /dev/null
           done
