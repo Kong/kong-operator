@@ -143,6 +143,7 @@ func testPushInstance(t *testing.T, objs ...client.Object) *Instance {
 		index.OptionsForAIGatewayAuthStrategy(),
 		index.OptionsForAIGatewayConsumer(),
 		index.OptionsForAIGatewayCertificate(),
+		index.OptionsForAIGatewayCACertificate(),
 		index.OptionsForAIGatewaySNI(),
 		index.OptionsForAIGatewayCustomPolicy(),
 	} {
