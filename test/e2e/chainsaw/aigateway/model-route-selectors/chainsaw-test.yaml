@@ -7,13 +7,12 @@ spec:
     AIGatewayModel route selectors. Stands up a Konnect AIGateway
     control plane, a shared OpenAI-compatible provider, and four AIGatewayModel
     resources - one per `config.route.model` selector type (headers, body, path)
-    plus one with no selector configured at all - then drives real
-    chat-completions traffic to verify each selector type routes requests to
-    the correct target based on its configured alias `values`, that a
-    non-matching alias is consistently rejected, and that the model with no
-    selector configured falls back to the format's default selector (the
-    request body's "model" field for `openai`) as documented on
-    `AIGatewayModelSelectorConfig`.
+    plus one with no selector configured at all. Header and body selectors are
+    driven with real chat-completions traffic, covering matched aliases,
+    rejection of non-matching aliases, and the format-default selector fallback
+    for a model with no selector. The path-selector model is only synced and
+    asserted Programmed; its traffic coverage lives in the skipped
+    `model-route-selectors-pathparam` test (KOKO-4314/KOKO-4312).
   bindings:
     - name: test_name
       value: ($namespace)
