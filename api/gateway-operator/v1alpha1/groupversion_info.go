@@ -56,8 +56,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&KongPluginInstallationList{},
 		&WatchNamespaceGrant{},
 		&WatchNamespaceGrantList{},
-		&DBBackedHybridControlPlane{},
-		&DBBackedHybridControlPlaneList{},
 	)
 
 	metav1.AddToGroupVersion(scheme, GroupVersion)
