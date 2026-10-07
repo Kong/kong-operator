@@ -202,6 +202,9 @@ func TestHandleKongConsumerSpecific(t *testing.T) {
 func TestHandleKonnectReferencesResolution(t *testing.T) {
 	agent := &aiconfigurationv1alpha1.AIGatewayAgent{
 		Name: "agent", Namespace: "ns",
+		// Cached objects always carry a resourceVersion; the optimistic-lock
+		// status patch below requires one.
+		ResourceVersion: "1",
 		Spec: aiconfigurationv1alpha1.AIGatewayAgentSpec{
 			APISpec: aiconfigurationv1alpha1.AIGatewayAgentAPISpec{
 				Policies: []aiconfigurationv1alpha1.AIGatewayPolicyRef{{Name: "missing-policy"}},
@@ -212,7 +215,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 	t.Run("missing referenced CR sets condition False with NotFound", func(t *testing.T) {
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(agent.DeepCopy()).Build()
 		ent := agent.DeepCopy()
-		updated, isProblem, err := handleKonnectReferences(t.Context(), cl, ent, ent)
+		updated, isProblem, _, err := handleKonnectReferences(t.Context(), cl, ent, ent)
 		require.NoError(t, err)
 		require.True(t, isProblem)
 		require.True(t, updated)
@@ -227,7 +230,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		policy := &aiconfigurationv1alpha1.AIGatewayPolicy{Name: "missing-policy", Namespace: "ns"}
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(agent.DeepCopy(), policy).Build()
 		ent := agent.DeepCopy()
-		updated, isProblem, err := handleKonnectReferences(t.Context(), cl, ent, ent)
+		updated, isProblem, _, err := handleKonnectReferences(t.Context(), cl, ent, ent)
 		require.NoError(t, err)
 		require.True(t, isProblem)
 		require.True(t, updated)
@@ -246,7 +249,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		}}
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(ent.DeepCopy()).Build()
 
-		updated, isProblem, err := handleKonnectReferences(t.Context(), cl, ent, ent)
+		updated, isProblem, _, err := handleKonnectReferences(t.Context(), cl, ent, ent)
 		require.NoError(t, err)
 		require.True(t, isProblem)
 		require.True(t, updated)
@@ -266,7 +269,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		ent.Spec.APISpec.Policies = []aiconfigurationv1alpha1.AIGatewayPolicyRef{{Name: policy.Name}}
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(ent.DeepCopy(), policy).Build()
 
-		updated, isProblem, err := handleKonnectReferences(t.Context(), cl, ent, ent)
+		updated, isProblem, _, err := handleKonnectReferences(t.Context(), cl, ent, ent)
 		require.NoError(t, err)
 		require.True(t, isProblem)
 		require.True(t, updated)
@@ -285,7 +288,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 			aiconfigurationv1alpha1.ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: "ns", Name: "policy-2"},
 		)
 
-		updated, isProblem, err := handleKonnectReferences(
+		updated, isProblem, _, err := handleKonnectReferences(
 			t.Context(),
 			cl,
 			ent,
@@ -317,7 +320,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 			},
 		)
 
-		updated, isProblem, err := handleKonnectReferences(
+		updated, isProblem, _, err := handleKonnectReferences(
 			t.Context(),
 			cl,
 			ent,
@@ -341,7 +344,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		policy.SetKonnectID("kid-123")
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(agent.DeepCopy(), policy).Build()
 		ent := agent.DeepCopy()
-		updated, isProblem, err := handleKonnectReferences(t.Context(), cl, ent, ent)
+		updated, isProblem, _, err := handleKonnectReferences(t.Context(), cl, ent, ent)
 		require.NoError(t, err)
 		require.False(t, isProblem)
 		require.True(t, updated)
@@ -357,7 +360,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		ent := agent.DeepCopy()
 		resolverErr := errors.New("cache unavailable")
 
-		updated, isProblem, err := handleKonnectReferences(
+		updated, isProblem, _, err := handleKonnectReferences(
 			t.Context(),
 			cl,
 			ent,
@@ -380,7 +383,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
 		ent := agent.DeepCopy()
 
-		updated, isProblem, err := handleKonnectReferences(
+		updated, isProblem, _, err := handleKonnectReferences(
 			t.Context(),
 			cl,
 			ent,
@@ -418,7 +421,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		ent := agent.DeepCopy()
 		resolverErr := aiconfigurationv1alpha1.ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: "other-ns", Name: "policy", Err: errors.New("not found")}
 
-		updated, isProblem, err := handleKonnectReferences(
+		updated, isProblem, _, err := handleKonnectReferences(
 			t.Context(),
 			cl,
 			ent,
@@ -456,7 +459,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 			WithStatusSubresource(ent.DeepCopy()).
 			Build()
 
-		updated, isProblem, err := handleKonnectReferences(t.Context(), cl, ent, ent)
+		updated, isProblem, _, err := handleKonnectReferences(t.Context(), cl, ent, ent)
 		require.NoError(t, err)
 		require.True(t, isProblem)
 		require.True(t, updated)

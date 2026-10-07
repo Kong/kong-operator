@@ -77,7 +77,12 @@ func StatusWithConditions[T interface {
 	}
 
 	if needsUpdate {
-		if err := cl.Status().Patch(ctx, ent, client.MergeFrom(old)); err != nil {
+		// Optimistic lock: the conditions array is replaced wholesale by a JSON
+		// merge patch, so patching from a stale cached object would silently drop
+		// conditions persisted by more recent writes (e.g. Programmed set right
+		// after a create). Conflict instead, and let the caller requeue on a
+		// fresh cache.
+		if err := cl.Status().Patch(ctx, ent, client.MergeFromWithOptions(old, client.MergeFromWithOptimisticLock{})); err != nil {
 			if apierrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, false, nil
 			}
@@ -110,7 +115,11 @@ func StatusWithoutCondition[T interface {
 		return ctrl.Result{}, nil
 	}
 
-	if err := cl.Status().Patch(ctx, ent, client.MergeFrom(old)); err != nil {
+	// Optimistic lock: a JSON merge patch replaces the whole conditions array,
+	// so patching from a stale cached object would silently drop conditions
+	// persisted by more recent writes. Conflict instead, and let the caller
+	// requeue on a fresh cache.
+	if err := cl.Status().Patch(ctx, ent, client.MergeFromWithOptions(old, client.MergeFromWithOptimisticLock{})); err != nil {
 		if apierrors.IsConflict(err) {
 			return ctrl.Result{Requeue: true}, nil
 		}
@@ -144,7 +153,11 @@ func StatusWithCondition[T interface {
 		return ctrl.Result{}, nil
 	}
 
-	if err := cl.Status().Patch(ctx, ent, client.MergeFrom(old)); err != nil {
+	// Optimistic lock: a JSON merge patch replaces the whole conditions array,
+	// so patching from a stale cached object would silently drop conditions
+	// persisted by more recent writes (e.g. Programmed set right after a
+	// create). Conflict instead, and let the caller requeue on a fresh cache.
+	if err := cl.Status().Patch(ctx, ent, client.MergeFromWithOptions(old, client.MergeFromWithOptimisticLock{})); err != nil {
 		if apierrors.IsConflict(err) {
 			return ctrl.Result{Requeue: true}, nil
 		}
