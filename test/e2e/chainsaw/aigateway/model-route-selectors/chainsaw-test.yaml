@@ -156,7 +156,55 @@ spec:
                 value: 'false'
             content: |
               bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
-    - name: 10-Verify-path-selector-routes-matching-alias
+    - name: 10-Verify-path-selector-gosyntax-routes-matching-alias
+      description: |
+        EXPERIMENT: same as the baseline path-selector step but against the
+        model whose route path spells the capture group in Go style
+        (`(?P<model_name>...)`), hedging against a Konnect backend that
+        parses the regex with Go/RE2. Header and body model omitted so this
+        exercises `pathParam` alone.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: /model-route/path-go/qwen2.5:0.5b/chat
+              - name: MODEL_ALIAS
+                value: qwen2.5:0.5b
+              - name: INCLUDE_HEADER
+                value: 'false'
+              - name: INCLUDE_BODY_MODEL
+                value: 'false'
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+    - name: 11-Verify-path-selector-noprefix-routes-matching-alias
+      description: |
+        EXPERIMENT: same as the baseline path-selector step but against the
+        model whose route path has no "~" regex-path prefix, hedging against
+        a Konnect backend that does not apply Kong's "~" convention when
+        deriving the selector's pcre_pattern. Header and body model omitted
+        so this exercises `pathParam` alone.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: /model-route/path-nopfx/qwen2.5:0.5b/chat
+              - name: MODEL_ALIAS
+                value: qwen2.5:0.5b
+              - name: INCLUDE_HEADER
+                value: 'false'
+              - name: INCLUDE_BODY_MODEL
+                value: 'false'
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+    - name: 12-Verify-path-selector-routes-matching-alias
       description: |
         A request whose path segment matches the selector's `values` is
         routed to the model. Both the X-Kong-LLM-Model header and the body
@@ -182,7 +230,7 @@ spec:
                 value: 'false'
             content: |
               bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
-    - name: 11-Verify-body-selector-rejects-non-matching-alias
+    - name: 13-Verify-body-selector-rejects-non-matching-alias
       description: |
         A request carrying a body property alias absent from the selector's
         `values` never resolves to the model. Header omitted for the same
@@ -204,7 +252,7 @@ spec:
                 value: 'false'
             content: |
               bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
-    - name: 12-Verify-path-selector-rejects-non-matching-alias
+    - name: 14-Verify-path-selector-rejects-non-matching-alias
       description: |
         A request whose path segment is absent from the selector's `values`
         never resolves to the model. Header and body `model` field omitted

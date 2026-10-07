@@ -153,6 +153,89 @@ spec:
             openai:
               upstreamURL: http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/provider-a
 ---
+# EXPERIMENT: path selector with the Go-style (?P<name>) capture-group spelling
+# (valid PCRE too). Hedges against a Konnect backend that parses the route-path
+# regex with Go/RE2, where (?<model_name>...) fails to compile and the path
+# selector source is silently dropped (DP falls back to the body selector).
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModel
+metadata:
+  name: model-path-selector-gosyntax
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: model
+    model:
+      name: model-path-selector-gosyntax
+      displayName: Model routed via path selector (Go-style capture group)
+      enabled: Enabled
+      formats:
+        - type: openai
+      capabilities:
+        - generate
+      config:
+        model:
+          nameHeader: Enabled
+        route:
+          model:
+            pathParam: ~model_name
+            values:
+              - qwen2.5:0.5b
+          paths:
+            - ~/model-route/path-go/(?P<model_name>[^/]+)/chat
+      targets:
+        - name: qwen2.5:0.5b
+          provider:
+            name: openai-provider
+          config:
+            type: openai
+            openai:
+              upstreamURL: http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/provider-a
+---
+# EXPERIMENT: path selector without the "~" regex-path prefix on the route path.
+# Hedges against a Konnect backend that does not apply Kong's "~" regex-path
+# convention when deriving the selector's pcre_pattern from the route path.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModel
+metadata:
+  name: model-path-selector-noprefix
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: model
+    model:
+      name: model-path-selector-noprefix
+      displayName: Model routed via path selector (no regex-path prefix)
+      enabled: Enabled
+      formats:
+        - type: openai
+      capabilities:
+        - generate
+      config:
+        model:
+          nameHeader: Enabled
+        route:
+          model:
+            pathParam: ~model_name
+            values:
+              - qwen2.5:0.5b
+          paths:
+            - /model-route/path-nopfx/(?<model_name>[^/]+)/chat
+      targets:
+        - name: qwen2.5:0.5b
+          provider:
+            name: openai-provider
+          config:
+            type: openai
+            openai:
+              upstreamURL: http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/provider-a
+---
 # no selector: `config.route.model` is left unset entirely. Per the schema's
 # doc comment, this should fall back to the format's default selector
 # (for `openai`, the request body's "model" field) with the target name

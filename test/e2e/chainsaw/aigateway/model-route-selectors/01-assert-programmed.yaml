@@ -41,6 +41,26 @@ status:
 apiVersion: aiconfiguration.konghq.com/v1alpha1
 kind: AIGatewayModel
 metadata:
+  name: model-path-selector-gosyntax
+  namespace: ($namespace)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+  (id != null): true
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModel
+metadata:
+  name: model-path-selector-noprefix
+  namespace: ($namespace)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+  (id != null): true
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModel
+metadata:
   name: model-no-selector
   namespace: ($namespace)
 status:
