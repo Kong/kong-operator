@@ -27,6 +27,7 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: |
             kong-operator
+          permission-actions: write
       - name: Rerun failed CRD breaking-change check
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
