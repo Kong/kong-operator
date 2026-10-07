@@ -107,7 +107,7 @@ func TestAIGatewayModel_ToAIGWModel(t *testing.T) {
 	}
 	wantAPI.Access.AuthStrategies = []string{"model-key-auth-provider"}
 	wantAPI.Access.ACLs = aigw.ACLs{Allow: []string{"model-dev-users"}}
-	wantAPI.Config.Route.Model.Path.PathParam = "model"
+	wantAPI.Config.Route.Model.Path.PathParam = "~model"
 
 	wantModel := &aigw.Model{
 		Type:         "model",
@@ -170,7 +170,7 @@ func TestAIGatewayModel_ToAIGWModel(t *testing.T) {
 									Route: AIGatewayModelRouteConfig{
 										Paths: []string{"/v1/chat/completions"},
 										Model: AIGatewayModelSelectorConfig{
-											PathParam: "model",
+											PathParam: "~model",
 											Values:    []string{"gpt-4o-mini"},
 										},
 									},
@@ -320,7 +320,7 @@ func TestAIGatewayModel_ToAIGWModel_StrictRoundTrip(t *testing.T) {
 					Route: AIGatewayModelRouteConfig{
 						Paths: []string{"/v1/chat/completions"},
 						Model: AIGatewayModelSelectorConfig{
-							PathParam: "model",
+							PathParam: "~model",
 							Values:    []string{"gpt-4o-mini"},
 						},
 					},
@@ -349,5 +349,5 @@ func TestAIGatewayModel_ToAIGWModel_StrictRoundTrip(t *testing.T) {
 
 	// Pin the fix itself, not just its absence of error.
 	require.Equal(t, []string{"gpt-4o-mini"}, model.Config.Route.Model.Values)
-	require.Equal(t, "model", model.Config.Route.Model.Path.PathParam)
+	require.Equal(t, "~model", model.Config.Route.Model.Path.PathParam)
 }
