@@ -110,7 +110,12 @@
   Existing values without the prefix are rejected by the CRD schema and by
   Konnect alike. On-prem translation strips the `~` prefix, because the
   rendered `ai-model-selector` plugin looks the PCRE capture group up by its
-  plain name.
+  plain name. Note: Konnect-side path-param model routing is not yet
+  functional (Konnect requires the `~`-prefixed `path_param` but never
+  renders a working `ai-model-selector` path source, so requests fall back
+  to the default body source; KOKO-4314/KOKO-4312). The e2e coverage for it
+  lives in the skipped `aigateway-model-route-selectors-pathparam` chainsaw
+  test until Konnect ships the fix.
 - `AIGatewayMCPServer`: conversion-tool and upstream-tool `name` entries
   must now match `^[A-Za-z0-9._-]+$` and be at most 128 characters.
   Existing entries outside these bounds are rejected by the CRD schema.

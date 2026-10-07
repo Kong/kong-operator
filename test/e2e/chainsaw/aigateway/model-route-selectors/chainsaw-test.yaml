@@ -63,13 +63,6 @@ spec:
       bindings:
         - name: namespace
           value: ($namespace)
-        # Debug level so the test snapshot's DP logs show the ai-model-selector's
-        # per-source errors ("source 'path' did not yield a model: ...") for the
-        # path-selector experiment below; the warn-level final message alone
-        # cannot tell a misrendered source from a missing one.
-        - name: aigw_dp_env
-          value: >-
-            ([{name: 'KONG_LOG_LEVEL', value: 'debug'}])
       use:
         template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
     - name: 6-Verify-headers-selector-routes-matching-alias
@@ -146,8 +139,7 @@ spec:
         AIGatewayModel resource's own `name` (`model-no-selector`), not any
         target's name. The X-Kong-LLM-Model header is deliberately omitted
         (INCLUDE_HEADER: 'false') so this exercises the format-default
-        fallback alone. Runs before the pathParam steps below so it still
-        executes even if pathParam routing is broken.
+        fallback alone.
       try:
         - script:
             env:
@@ -163,88 +155,7 @@ spec:
                 value: 'false'
             content: |
               bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
-    - name: 10-Verify-path-selector-gosyntax-routes-matching-alias
-      description: |
-        EXPERIMENT: same as the baseline path-selector step but against the
-        model whose route path spells the capture group in Go style
-        (`(?P<model_name>...)`), hedging against a Konnect backend that
-        parses the regex with Go/RE2. Header and body model omitted so this
-        exercises `pathParam` alone. continueOnError so the other experiment
-        steps still run if this one fails (the test stays red either way).
-      try:
-        - continueOnError: true
-          script:
-            env:
-              - name: NAMESPACE
-                value: ($namespace)
-              - name: ADDRESS
-                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
-              - name: ROUTE_PATH
-                value: /model-route/path-go/qwen2.5:0.5b/chat
-              - name: MODEL_ALIAS
-                value: qwen2.5:0.5b
-              - name: INCLUDE_HEADER
-                value: 'false'
-              - name: INCLUDE_BODY_MODEL
-                value: 'false'
-            content: |
-              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
-    - name: 11-Verify-path-selector-noprefix-routes-matching-alias
-      description: |
-        EXPERIMENT: same as the baseline path-selector step but against the
-        model whose route path has no "~" regex-path prefix, hedging against
-        a Konnect backend that does not apply Kong's "~" convention when
-        deriving the selector's pcre_pattern. Header and body model omitted
-        so this exercises `pathParam` alone. continueOnError so the baseline
-        step below still runs if this one fails.
-      try:
-        - continueOnError: true
-          script:
-            env:
-              - name: NAMESPACE
-                value: ($namespace)
-              - name: ADDRESS
-                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
-              - name: ROUTE_PATH
-                value: /model-route/path-nopfx/qwen2.5:0.5b/chat
-              - name: MODEL_ALIAS
-                value: qwen2.5:0.5b
-              - name: INCLUDE_HEADER
-                value: 'false'
-              - name: INCLUDE_BODY_MODEL
-                value: 'false'
-            content: |
-              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
-    - name: 12-Verify-path-selector-routes-matching-alias
-      description: |
-        A request whose path segment matches the selector's `values` is
-        routed to the model. Both the X-Kong-LLM-Model header and the body
-        `model` field are deliberately omitted (INCLUDE_HEADER,
-        INCLUDE_BODY_MODEL: 'false') so this exercises `pathParam` alone —
-        AI Gateway resolves the model alias from whichever of header, body,
-        or path carries it, so leaving either of the other two enabled would
-        let this step pass even if the path-based capture were broken.
-        continueOnError so the negative steps below still run if this one
-        fails (expected while the Konnect-side rendering is broken).
-      try:
-        - continueOnError: true
-          script:
-            env:
-              - name: NAMESPACE
-                value: ($namespace)
-              - name: ADDRESS
-                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
-              - name: ROUTE_PATH
-                value: /model-route/path/qwen2.5:0.5b/chat
-              - name: MODEL_ALIAS
-                value: qwen2.5:0.5b
-              - name: INCLUDE_HEADER
-                value: 'false'
-              - name: INCLUDE_BODY_MODEL
-                value: 'false'
-            content: |
-              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
-    - name: 13-Verify-body-selector-rejects-non-matching-alias
+    - name: 10-Verify-body-selector-rejects-non-matching-alias
       description: |
         A request carrying a body property alias absent from the selector's
         `values` never resolves to the model. Header omitted for the same
@@ -263,30 +174,6 @@ spec:
               - name: EXPECTED_SUCCESS
                 value: 'false'
               - name: INCLUDE_HEADER
-                value: 'false'
-            content: |
-              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
-    - name: 14-Verify-path-selector-rejects-non-matching-alias
-      description: |
-        A request whose path segment is absent from the selector's `values`
-        never resolves to the model. Header and body `model` field omitted
-        for the same reason as step 10.
-      try:
-        - script:
-            env:
-              - name: NAMESPACE
-                value: ($namespace)
-              - name: ADDRESS
-                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
-              - name: ROUTE_PATH
-                value: /model-route/path/path-alias-wrong/chat
-              - name: MODEL_ALIAS
-                value: path-alias-wrong
-              - name: EXPECTED_SUCCESS
-                value: 'false'
-              - name: INCLUDE_HEADER
-                value: 'false'
-              - name: INCLUDE_BODY_MODEL
                 value: 'false'
             content: |
               bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh

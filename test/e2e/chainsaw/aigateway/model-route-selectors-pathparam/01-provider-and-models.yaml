@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openai-provider-credentials
+  namespace: ($namespace)
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+stringData:
+  apikey: test-ai-gateway-key
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModelProvider
+metadata:
+  name: openai-provider
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: openai
+    openai:
+      name: openai-provider
+      displayName: OpenAI (mock)
+      config:
+        auth:
+          headers:
+            - name: apikey
+              value:
+                type: secretRef
+                secretRef:
+                  name: openai-provider-credentials
+                  key: apikey
+---
+# path selector: routes on a named capture group within the route's path regex.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModel
+metadata:
+  name: model-path-selector
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: model
+    model:
+      name: model-path-selector
+      displayName: Model routed via path selector
+      enabled: Enabled
+      formats:
+        - type: openai
+      capabilities:
+        - generate
+      config:
+        model:
+          nameHeader: Enabled
+        route:
+          model:
+            # Konnect requires path_param values to start with "~" (KOKO-4314),
+            # signaling that the route path is a dynamic (regex) path. The
+            # capture group in the path regex below is still named "model_name".
+            pathParam: ~model_name
+            values:
+              - qwen2.5:0.5b
+          paths:
+            - ~/model-route/path/(?<model_name>[^/]+)/chat
+      targets:
+        - name: qwen2.5:0.5b
+          provider:
+            name: openai-provider
+          config:
+            type: openai
+            openai:
+              upstreamURL: http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/provider-a
