@@ -99,6 +99,8 @@ jobs:
   # It posts the commit status `KSAI / independent approval` whatever this job is named, and only a
   # default branch ruleset carrying all three settings enforces it. The job skips fork pull
   # requests, whose read-only token cannot write a status.
+  #
+  # KSAI retired this hold upstream; removing it here means dropping the required status first.
   approval:
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
@@ -113,7 +115,7 @@ jobs:
       contents: read       # download the action this call runs, which lives in a private repository
       pull-requests: write # dismiss an approval from somebody who contributed to the pull request
       # The called workflow posts the required status with GITHUB_TOKEN and takes no secret, so it
-      # cannot mint an App token. Dropping this needs a change in KSAI (see the PR notes).
+      # cannot mint an App token. KSAI retired this hold, so this grant goes when this job does.
       statuses: write
     with:
       # The login KSAI's commits land under with push_as_app: true (the App's bot user).

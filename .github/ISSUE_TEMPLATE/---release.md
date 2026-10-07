@@ -75,9 +75,8 @@ token in every job that needs one (`actions/create-github-app-token`, fed by the
 PRs, release branches and cherry-pick PRs are all created with that token: there is no personal access
 token involved, so nothing has to be rotated.
 
-Within the release flow the only step that still uses the built-in Actions token
-(`github-actions[bot]`) is the `publish-release` job of `release-bot`, which creates the GitHub release
-and its tag.
+The step that creates the GitHub release and its tag, in `release-bot`, mints its own token the same
+way, so no step in the release flow writes with the built-in Actions token.
 
 ## Troubleshooting
 
