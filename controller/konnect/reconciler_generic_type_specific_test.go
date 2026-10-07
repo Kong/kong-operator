@@ -8,10 +8,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
@@ -438,6 +441,34 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		require.True(t, ok, "expected KonnectReferencesResolved condition to be set")
 		assert.Equal(t, metav1.ConditionFalse, cond.Status)
 		assert.Equal(t, configurationv1alpha1.KonnectReferencesResolvedReasonNotFound, cond.Reason, "grant check passed, so the resolver's own error must surface")
+	})
+
+	t.Run("status patch conflict requeues", func(t *testing.T) {
+		// The optimistic-lock status patch conflicts when the cached object is
+		// stale; handleKonnectReferences must surface the requeue instead of
+		// letting the caller proceed to SDK calls with a stale object.
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme.Get()).
+			WithInterceptorFuncs(interceptor.Funcs{
+				SubResourcePatch: func(ctx context.Context, c client.Client, subResourceName string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
+					return &apierrors.StatusError{
+						ErrStatus: metav1.Status{
+							Status: metav1.StatusFailure,
+							Reason: metav1.StatusReasonConflict,
+						},
+					}
+				},
+			}).
+			Build()
+		ent := agent.DeepCopy()
+
+		updated, isProblem, res, err := handleKonnectReferences(t.Context(), cl, ent, ent)
+		require.NoError(t, err)
+		require.True(t, updated)
+		// The agent references a missing policy, so the condition is False even
+		// though the patch itself conflicted.
+		require.True(t, isProblem)
+		require.Equal(t, ctrl.Result{Requeue: true}, res)
 	})
 
 	t.Run("condition is persisted when Programmed=False was already set", func(t *testing.T) {
