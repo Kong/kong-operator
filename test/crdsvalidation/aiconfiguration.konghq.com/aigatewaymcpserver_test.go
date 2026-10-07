@@ -322,7 +322,12 @@ func TestAIGatewayMCPServer(t *testing.T) {
 						obj.Spec.APISpec.ConversionOnly.Tools[0].Name = longName
 						return obj
 					}(),
-					ExpectedErrorMessage: new("spec.apiSpec.conversion-only.tools[0].name: Too long: may not be more than 128 bytes"),
+					// Keep the expected suffix version-agnostic: the apiserver's
+					// maxLength wording differs across Kubernetes versions
+					// ("may not be longer than 128" before, "may not be more
+					// than 128 bytes" later) - same pattern as
+					// gatewayconfiguration_v2_test.go.
+					ExpectedErrorMessage: new("spec.apiSpec.conversion-only.tools[0].name: Too long: may not be"),
 				},
 				{
 					Name: "conversion-listener tool name with invalid characters is rejected",
@@ -368,7 +373,8 @@ func TestAIGatewayMCPServer(t *testing.T) {
 						}
 						return obj
 					}(),
-					ExpectedErrorMessage: new("spec.apiSpec.upstream-server.tools[0].name: Too long: may not be more than 128 bytes"),
+					// Version-agnostic suffix, see the conversion-only case above.
+					ExpectedErrorMessage: new("spec.apiSpec.upstream-server.tools[0].name: Too long: may not be"),
 				},
 			}.RunWithConfig(t, cfg, scheme)
 		})
