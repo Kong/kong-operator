@@ -63,6 +63,13 @@ spec:
       bindings:
         - name: namespace
           value: ($namespace)
+        # Debug level so the test snapshot's DP logs show the ai-model-selector's
+        # per-source errors ("source 'path' did not yield a model: ...") for the
+        # path-selector experiment below; the warn-level final message alone
+        # cannot tell a misrendered source from a missing one.
+        - name: aigw_dp_env
+          value: >-
+            ([{name: 'KONG_LOG_LEVEL', value: 'debug'}])
       use:
         template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
     - name: 6-Verify-headers-selector-routes-matching-alias
@@ -162,9 +169,11 @@ spec:
         model whose route path spells the capture group in Go style
         (`(?P<model_name>...)`), hedging against a Konnect backend that
         parses the regex with Go/RE2. Header and body model omitted so this
-        exercises `pathParam` alone.
+        exercises `pathParam` alone. continueOnError so the other experiment
+        steps still run if this one fails (the test stays red either way).
       try:
-        - script:
+        - continueOnError: true
+          script:
             env:
               - name: NAMESPACE
                 value: ($namespace)
@@ -186,9 +195,11 @@ spec:
         model whose route path has no "~" regex-path prefix, hedging against
         a Konnect backend that does not apply Kong's "~" convention when
         deriving the selector's pcre_pattern. Header and body model omitted
-        so this exercises `pathParam` alone.
+        so this exercises `pathParam` alone. continueOnError so the baseline
+        step below still runs if this one fails.
       try:
-        - script:
+        - continueOnError: true
+          script:
             env:
               - name: NAMESPACE
                 value: ($namespace)
@@ -213,8 +224,11 @@ spec:
         AI Gateway resolves the model alias from whichever of header, body,
         or path carries it, so leaving either of the other two enabled would
         let this step pass even if the path-based capture were broken.
+        continueOnError so the negative steps below still run if this one
+        fails (expected while the Konnect-side rendering is broken).
       try:
-        - script:
+        - continueOnError: true
+          script:
             env:
               - name: NAMESPACE
                 value: ($namespace)
