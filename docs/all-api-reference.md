@@ -7471,6 +7471,7 @@ Package v1alpha1 contains API Schema definitions for the configuration.konghq.co
 - [EventGatewayListener](#configuration-konghq-com-v1alpha1-eventgatewaylistener)
 - [EventGatewayListenerPolicy](#configuration-konghq-com-v1alpha1-eventgatewaylistenerpolicy)
 - [EventGatewaySchemaRegistry](#configuration-konghq-com-v1alpha1-eventgatewayschemaregistry)
+- [EventGatewayTLSTrustBundle](#configuration-konghq-com-v1alpha1-eventgatewaytlstrustbundle)
 - [EventGatewayVirtualCluster](#configuration-konghq-com-v1alpha1-eventgatewayvirtualcluster)
 - [EventGatewayVirtualClusterConsumePolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterconsumepolicy)
 - [EventGatewayVirtualClusterPolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterpolicy)
@@ -7571,6 +7572,21 @@ EventGatewaySchemaRegistry is the Schema for the eventgatewayschemaregistrys API
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[EventGatewaySchemaRegistrySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryspec)_ |  |
 | `status` _[EventGatewaySchemaRegistryStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistrystatus)_ |  |
+
+### EventGatewayTLSTrustBundle
+
+
+EventGatewayTLSTrustBundle is the Schema for the eventgatewaytlstrustbundles API.
+
+<!-- event_gateway_tls_trust_bundle description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `EventGatewayTLSTrustBundle`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EventGatewayTLSTrustBundleSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundlespec)_ |  |
+| `status` _[EventGatewayTLSTrustBundleStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundlestatus)_ |  |
 
 ### EventGatewayVirtualCluster
 
@@ -10433,6 +10449,75 @@ _Appears in:_
 
 - [EventGatewayTLSListenerPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicyconfig)
 
+#### EventGatewayTLSTrustBundleAPISpec
+
+
+EventGatewayTLSTrustBundleAPISpec defines the API spec fields for EventGatewayTLSTrustBundle.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[TLSTrustBundleConfig](#configuration-konghq-com-v1alpha1-types-tlstrustbundleconfig)_ |  |
+| `description` _string_ | A human-readable description of the TLS trust bundle. |
+| `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _[TLSTrustBundleName](#configuration-konghq-com-v1alpha1-types-tlstrustbundlename)_ | The unique name of the TLS trust bundle. |
+
+_Appears in:_
+
+- [EventGatewayTLSTrustBundleSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundlespec)
+
+#### EventGatewayTLSTrustBundleRef
+
+
+EventGatewayTLSTrustBundleRef references an EventGatewayTLSTrustBundle in the cluster. The referenced
+object's Konnect id is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+
+_Appears in:_
+
+- [TLSTrustBundleReference](#configuration-konghq-com-v1alpha1-types-tlstrustbundlereference)
+
+#### EventGatewayTLSTrustBundleSpec
+
+
+EventGatewayTLSTrustBundleSpec defines the desired state of EventGatewayTLSTrustBundle.
+
+
+
+| Field | Description |
+| --- | --- |
+| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `apiSpec` _[EventGatewayTLSTrustBundleAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundleapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [EventGatewayTLSTrustBundle](#configuration-konghq-com-v1alpha1-eventgatewaytlstrustbundle)
+
+#### EventGatewayTLSTrustBundleStatus
+
+
+EventGatewayTLSTrustBundleStatus defines the observed state of EventGatewayTLSTrustBundle.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [EventGatewayTLSTrustBundle](#configuration-konghq-com-v1alpha1-eventgatewaytlstrustbundle)
+
 #### EventGatewayTxnOffsetCommitRequestRules
 
 
@@ -12288,6 +12373,7 @@ _Appears in:_
 - [EventGatewayListenerPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicystatus)
 - [EventGatewayListenerStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerstatus)
 - [EventGatewaySchemaRegistryStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistrystatus)
+- [EventGatewayTLSTrustBundleStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundlestatus)
 - [EventGatewayVirtualClusterConsumePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicystatus)
 - [EventGatewayVirtualClusterPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicystatus)
 - [EventGatewayVirtualClusterProducePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicystatus)
@@ -12323,6 +12409,7 @@ _Appears in:_
 - [EventGatewayRequestRuleValidatorPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestrulevalidatorpolicy)
 - [EventGatewaySkipRecordPolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayskiprecordpolicycreate)
 - [EventGatewayTLSListenerPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicy)
+- [EventGatewayTLSTrustBundleAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundleapispec)
 - [EventGatewayVirtualClusterAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)
 - [ForwardToVirtualClusterPolicy](#configuration-konghq-com-v1alpha1-types-forwardtovirtualclusterpolicy)
 - [SchemaRegistryConfluent](#configuration-konghq-com-v1alpha1-types-schemaregistryconfluent)
@@ -12706,6 +12793,7 @@ _Appears in:_
 - [EventGatewayDataPlaneCertificateAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificateapispec)
 - [SchemaRegistryAuthenticationBasic](#configuration-konghq-com-v1alpha1-types-schemaregistryauthenticationbasic)
 - [TLSCertificate](#configuration-konghq-com-v1alpha1-types-tlscertificate)
+- [TLSTrustBundleConfig](#configuration-konghq-com-v1alpha1-types-tlstrustbundleconfig)
 
 #### SensitiveDataSourceType
 
@@ -12759,6 +12847,21 @@ _Appears in:_
 
 - [EventGatewayTLSListenerPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicyconfig)
 
+#### TLSTrustBundleConfig
+
+
+TLSTrustBundleConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `trustedCa` _[SensitiveDataSource](#configuration-konghq-com-v1alpha1-types-sensitivedatasource)_ | PEM-encoded list of trusted CA certificates used to verify client certificates. Can be a literal PEM string or a vault reference. |
+
+_Appears in:_
+
+- [EventGatewayTLSTrustBundleAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundleapispec)
+
 #### TLSTrustBundleName
 
 _Underlying type:_ `string`
@@ -12770,6 +12873,7 @@ TLSTrustBundleName The unique name of the TLS trust bundle.
 
 _Appears in:_
 
+- [EventGatewayTLSTrustBundleAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundleapispec)
 - [TLSTrustBundleReference](#configuration-konghq-com-v1alpha1-types-tlstrustbundlereference)
 - [TLSTrustBundleReferenceByName](#configuration-konghq-com-v1alpha1-types-tlstrustbundlereferencebyname)
 
@@ -12784,6 +12888,7 @@ TLSTrustBundleReference is a type alias.
 | --- | --- |
 | `id` _*string_ |  |
 | `name` _[TLSTrustBundleName](#configuration-konghq-com-v1alpha1-types-tlstrustbundlename)_ |  |
+| `namespacedRef` _[EventGatewayTLSTrustBundleRef](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundleref)_ | NamespacedRef references an in-cluster EventGatewayTLSTrustBundle object, resolved to its Konnect id. It is mutually exclusive with the other fields. |
 
 _Appears in:_
 

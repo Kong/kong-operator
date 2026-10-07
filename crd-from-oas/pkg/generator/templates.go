@@ -1266,7 +1266,21 @@ func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) {{if .Nest
 	}
 {{- end}}
 {{- end}}
-{{- if .SingleValueObjectRef}}
+{{- if and .UnionMemberGoName .SingleValueObjectRef}}
+	if {{$path}}.{{.UnionMemberGoName}} == nil {
+		return nil
+	}
+	return []{{.TypeName}}{*{{$path}}.{{.UnionMemberGoName}}}
+{{- else if .UnionMemberGoName}}
+	var refs []{{.TypeName}}
+	for i := range {{$path}} {
+		if {{$path}}[i].{{.UnionMemberGoName}} == nil {
+			continue
+		}
+		refs = append(refs, *{{$path}}[i].{{.UnionMemberGoName}})
+	}
+	return refs
+{{- else if .SingleValueObjectRef}}
 	return []{{.TypeName}}{*{{$path}}}
 {{- else}}
 	return {{$path}}
@@ -1367,6 +1381,15 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 		// being deleted must not gain new users, which could keep their deletion
 		// blocked.
 		if !referenced.GetDeletionTimestamp().IsZero() {
+			errs = append(errs, ReferenceBeingDeletedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
+			continue
+		}
+{{- else if .ReverseWatch}}
+		// {{.DefaultKind}} objects being deleted must not gain new users, which
+		// could keep their deletion blocked: a referrer not created in Konnect
+		// yet can't use them, while existing ones keep syncing until they drop
+		// the reference.
+		if !referenced.GetDeletionTimestamp().IsZero() && obj.GetKonnectID() == "" {
 			errs = append(errs, ReferenceBeingDeletedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
 			continue
 		}
@@ -1512,6 +1535,12 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 	// object wrapping the resolved Konnect value under "{{.ObjectWrapKey}}",
 	// preserving sibling keys of its ancestors. A nil CRD ancestor pointer means
 	// that part of the config wasn't set, so the payload is left untouched.
+{{- else if .UnionMemberKey}}
+	// {{.Path}} may carry CR references: replace each reference object set to
+	// "{{.UnionMemberKey}}" in the SDK payload with one wrapping its resolved
+	// Konnect value under "{{.ObjectWrapKey}}", leaving reference objects set by
+	// Konnect ID or name untouched. A nil CRD ancestor pointer means that part
+	// of the config wasn't set, so the payload is left untouched.
 {{- else}}
 	// {{.Path}} carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
@@ -1526,9 +1555,13 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 {{- end}}
 {{- range .ParentNavs}}
 		{{.Var}}, _ := {{.Parent}}["{{.Key}}"].(map[string]any)
+{{- if .Optional}}
+		if {{.Var}} != nil {
+{{- else}}
 		if {{.Var}} == nil {
 			{{.Var}} = map[string]any{}
 		}
+{{- end}}
 {{- end}}
 {{- if .UnionVar}}
 		switch {
@@ -1582,6 +1615,38 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 			{{$inj.TargetVar}}["{{.LeafSDKKey}}"] = map[string]any{"{{$inj.ObjectWrapKey}}": resolved{{.ResolverName}}[0]}
 		}
 {{- end}}
+{{- else if .UnionMemberKey}}
+{{- range .Variants}}
+		resolved{{.ResolverName}}, err := resolve{{$.EntityName}}{{.ResolverName}}(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving {{.RefPath}} references: %w", err)
+		}
+{{- if $inj.UnionMemberArray}}
+		if arr, ok := {{$inj.TargetVar}}["{{.LeafSDKKey}}"].([]any); ok {
+			ri := 0
+			for i, e := range arr {
+				el, ok := e.(map[string]any)
+				if !ok {
+					continue
+				}
+				if _, has := el["{{$inj.UnionMemberKey}}"]; !has {
+					continue
+				}
+				if ri >= len(resolved{{.ResolverName}}) {
+					return nil, fmt.Errorf("resolving {{.RefPath}} references: more references set than the %d resolved", len(resolved{{.ResolverName}}))
+				}
+				arr[i] = map[string]any{"{{$inj.ObjectWrapKey}}": resolved{{.ResolverName}}[ri]}
+				ri++
+			}
+		}
+{{- else}}
+		if el, ok := {{$inj.TargetVar}}["{{.LeafSDKKey}}"].(map[string]any); ok && len(resolved{{.ResolverName}}) > 0 {
+			if _, has := el["{{$inj.UnionMemberKey}}"]; has {
+				{{$inj.TargetVar}}["{{.LeafSDKKey}}"] = map[string]any{"{{$inj.ObjectWrapKey}}": resolved{{.ResolverName}}[0]}
+			}
+		}
+{{- end}}
+{{- end}}
 {{- else}}
 {{- range .Variants}}
 		resolved{{.ResolverName}}, err := resolve{{$.EntityName}}{{.ResolverName}}(ctx, cl, obj)
@@ -1593,6 +1658,9 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 {{- end}}
 {{- range .ParentNavsReversed}}
 		{{.Parent}}["{{.Key}}"] = {{.Var}}
+{{- if .Optional}}
+		}
+{{- end}}
 {{- end}}
 {{- if .Cond}}
 	}

@@ -78,6 +78,8 @@ func getForUID[
 		return getEventGatewayListenerPolicyForUID(ctx, sdk.GetEventGatewayListenerPoliciesSDK(), ent)
 	case *configurationv1alpha1.EventGatewaySchemaRegistry:
 		return getEventGatewaySchemaRegistryForUID(ctx, sdk.GetEventGatewaySchemaRegistriesSDK(), ent)
+	case *configurationv1alpha1.EventGatewayTLSTrustBundle:
+		return getEventGatewayTLSTrustBundleForUID(ctx, sdk.GetEventGatewayTLSTrustBundlesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualCluster:
 		return getEventGatewayVirtualClusterForUID(ctx, sdk.GetEventGatewayVirtualClustersSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy:

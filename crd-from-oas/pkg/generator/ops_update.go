@@ -83,7 +83,8 @@ type opsUpdateFuncData struct {
 	// LabelsFieldGuard is a ready-to-emit Go boolean expression guarding every
 	// pointer segment in LabelsFieldPath (e.g. "req.SchemaRegistryUpdate != nil
 	// && req.SchemaRegistryUpdate.SchemaRegistryConfluentSensitiveDataAware != nil").
-	// Empty when LabelsFieldPath is empty.
+	// Empty when LabelsFieldPath is empty or has no pointer segment (e.g. a
+	// fully-wrapped update whose body is a struct value).
 	LabelsFieldGuard string
 	// LabelsUnionTargets lists one guarded injection target per member when
 	// the update request body is (or wraps) a root-level discriminated union
@@ -212,7 +213,7 @@ func (g *Generator) generateOpsUpdateFuncBody(
 		return nil, fmt.Errorf("entity %q: ops.responseStatusFields requires a 2xx response ref for update op", entityName)
 	}
 
-	labelsFieldPath, labelsUnionTargets, err := resolveUpdateLabelsFieldPath(entityName, callShape, hasLabels || hasTags, hasTags)
+	labelsFieldPath, labelsFieldGuard, labelsUnionTargets, err := resolveUpdateLabelsFieldPath(entityName, callShape, hasLabels || hasTags, hasTags)
 	if err != nil {
 		return nil, err
 	}
@@ -226,7 +227,7 @@ func (g *Generator) generateOpsUpdateFuncBody(
 		HasNestedResponseStatusFields: hasNestedResponseStatusFields(opsConfig.ResponseStatusFields),
 		HasReferences:                 g.entityHasParentRefReplacement(entityName),
 		HasTags:                       hasTags,
-		LabelsFieldGuard:              labelsFieldGuardExpr("req", labelsFieldPath),
+		LabelsFieldGuard:              labelsFieldGuard,
 		LabelsFieldPath:               labelsFieldPath,
 		LabelsPointer:                 labelsPointer,
 		LabelsUnionTargets:            labelsUnionTargets,
@@ -252,7 +253,10 @@ func (g *Generator) generateOpsUpdateFuncBody(
 // req, needed to reach a .Labels/.Tags field when the update request body is
 // (or wraps) a root-level discriminated union. Returns "" when req has a
 // direct .Labels/.Tags field (the common, non-union case) or when no
-// labels/tags were detected at all. When the union has multiple members, all
+// labels/tags were detected at all. Alongside the path it returns a Go boolean
+// expression (rooted at "req") nil-checking the path's pointer segments only,
+// or "" when none is a pointer (e.g. a fully wrapped, struct-typed, non-union
+// body). When the union has multiple members, all
 // of which declare the labels/tags field, it instead returns one guarded
 // target per member; a member lacking the field must opt out via
 // ops.skipRootUnionMetadataFields.
@@ -261,9 +265,9 @@ func resolveUpdateLabelsFieldPath(
 	callShape *updateOpCallShape,
 	needed bool,
 	hasTags bool,
-) (string, []labelsUnionTarget, error) {
+) (string, string, []labelsUnionTarget, error) {
 	if !needed {
-		return "", nil, nil
+		return "", "", nil, nil
 	}
 
 	checkImportPath, checkType := callShape.ReqImportPath, callShape.ReqType
@@ -274,7 +278,7 @@ func resolveUpdateLabelsFieldPath(
 	if callShape.FullyWrapped {
 		bodyInfo, err := ParseSDKRequestBodyInfo(callShape.ReqImportPath, callShape.ReqType)
 		if err != nil {
-			return "", nil, fmt.Errorf("entity %q: inspect update request body: %w", entityName, err)
+			return "", "", nil, fmt.Errorf("entity %q: inspect update request body: %w", entityName, err)
 		}
 		bodyField = bodyInfo.FieldName
 		bodyPointer = bodyInfo.Pointer
@@ -283,19 +287,20 @@ func resolveUpdateLabelsFieldPath(
 
 	memberFields, err := ParseSDKUnionMemberFieldNames(checkImportPath, checkType)
 	if err != nil {
-		return "", nil, fmt.Errorf("entity %q: inspect update request union: %w", entityName, err)
+		return "", "", nil, fmt.Errorf("entity %q: inspect update request union: %w", entityName, err)
 	}
 	switch len(memberFields) {
 	case 0:
-		return bodyField, nil, nil
-	case 1:
-		if bodyField == "" {
-			return memberFields[0], nil, nil
+		if bodyField == "" || !bodyPointer {
+			return bodyField, "", nil, nil
 		}
-		return bodyField + "." + memberFields[0], nil, nil
+		return bodyField, "req." + bodyField + " != nil", nil, nil
+	case 1:
+		target := newLabelsUnionTarget(bodyField, bodyPointer, memberFields[0])
+		return target.Path, target.Guard, nil, nil
 	default:
 		if err := requireUnionMembersMetadataField(checkImportPath, checkType, hasTags); err != nil {
-			return "", nil, fmt.Errorf(
+			return "", "", nil, fmt.Errorf(
 				"entity %q: update body %q: %w; set ops.skipRootUnionMetadataFields to opt out",
 				entityName, checkType, err,
 			)
@@ -304,7 +309,7 @@ func resolveUpdateLabelsFieldPath(
 		for _, member := range memberFields {
 			targets = append(targets, newLabelsUnionTarget(bodyField, bodyPointer, member))
 		}
-		return "", targets, nil
+		return "", "", targets, nil
 	}
 }
 
@@ -401,23 +406,6 @@ func requireUnionMembersMetadataField(importPath, typeName string, hasTags bool)
 		}
 	}
 	return nil
-}
-
-// labelsFieldGuardExpr builds a Go boolean expression guarding every pointer
-// segment of a dotted field path (e.g. base="req", path="A.B" produces
-// "req.A != nil && req.A.B != nil"). Returns "" when path is empty.
-func labelsFieldGuardExpr(base, path string) string {
-	if path == "" {
-		return ""
-	}
-	segments := strings.Split(path, ".")
-	guards := make([]string, 0, len(segments))
-	prefix := base
-	for _, seg := range segments {
-		prefix = prefix + "." + seg
-		guards = append(guards, prefix+" != nil")
-	}
-	return strings.Join(guards, " && ")
 }
 
 // GenerateOpsUpdateDispatcher emits zz_generated_ops_update.go with

@@ -1,0 +1,143 @@
+kind: KonnectEventGateway
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: cp-event-1
+  namespace: default
+spec:
+  apiSpec:
+    name: cp-event-1
+    description: Test Event Gateway CP
+    labels:
+      app: test1
+      key1: test1
+  konnect:
+    authRef:
+      name: konnect-api-auth
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cp-event-1-client-ca
+  namespace: default
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+stringData:
+  ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIIBjDCCATOgAwIBAgIUGrqi+hf4qi8fKgrdE2/XNxEsaLMwCgYIKoZIzj0EAwIw
+    HDEaMBgGA1UEAwwRZXhhbXBsZS1jbGllbnQtY2EwHhcNMjYxMDAyMTUyOTE0WhcN
+    MzYwOTI5MTUyOTE0WjAcMRowGAYDVQQDDBFleGFtcGxlLWNsaWVudC1jYTBZMBMG
+    ByqGSM49AgEGCCqGSM49AwEHA0IABJW0ufgC6ENgPNif8Ki2SSmpaiIk58HCG8J1
+    yljd1gxIrBHnHGDuHS6Z5WdUCk9ovVTqaLQ7Yh9oGdoW3vYVgLujUzBRMB0GA1Ud
+    DgQWBBRHMUCo+jvqgx1rXzFQfsRYjTPZaTAfBgNVHSMEGDAWgBRHMUCo+jvqgx1r
+    XzFQfsRYjTPZaTAPBgNVHRMBAf8EBTADAQH/MAoGCCqGSM49BAMCA0cAMEQCIG18
+    AeDINNwAe+zyIyj3MPhscFY7VexLjmv+pVh4NJUsAiAwpjPumrtPybvotXBDSF4V
+    HwiBLwcSoMhIHhtawp/QbA==
+    -----END CERTIFICATE-----
+---
+kind: EventGatewayTLSTrustBundle
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: cp-event-1-client-ca
+  namespace: default
+spec:
+  apiSpec:
+    name: cp-event-1-client-ca
+    description: CAs trusted to sign client certificates
+    labels:
+      app: test1
+    config:
+      trustedCa:
+        type: secretRef
+        secretRef:
+          name: cp-event-1-client-ca
+          key: ca.crt
+  gatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: cp-event-1
+---
+kind: EventGatewayListener
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: cp-event-1-mtls-listener
+  namespace: default
+spec:
+  apiSpec:
+    name: cp-event-1-mtls-listener
+    addresses:
+      - "0.0.0.0"
+    ports:
+      - 9093
+  gatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: cp-event-1
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cp-event-1-mtls-listener-tls
+  namespace: default
+  labels:
+    konghq.com/secret: "true"
+type: kubernetes.io/tls
+stringData:
+  tls.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIIBqjCCAVGgAwIBAgIUBcY4Pah1ObUQNydNOFWJGyKDFrwwCgYIKoZIzj0EAwIw
+    HDEaMBgGA1UEAwwRa2Fma2EuZXhhbXBsZS5jb20wHhcNMjYxMDA2MDcxMDM3WhcN
+    MzYxMDAzMDcxMDM3WjAcMRowGAYDVQQDDBFrYWZrYS5leGFtcGxlLmNvbTBZMBMG
+    ByqGSM49AgEGCCqGSM49AwEHA0IABKSSOw3Olk2fXA46Cglylx4zHNjK0AtZjOdQ
+    R42vo5lFhUbLE241M1q7eY6lRry0zRfi3ujVBsKFXyzyKZTRt3KjcTBvMB0GA1Ud
+    DgQWBBQwJH1BFoRvLM2YLbWMSmZd/l2RYTAfBgNVHSMEGDAWgBQwJH1BFoRvLM2Y
+    LbWMSmZd/l2RYTAPBgNVHRMBAf8EBTADAQH/MBwGA1UdEQQVMBOCEWthZmthLmV4
+    YW1wbGUuY29tMAoGCCqGSM49BAMCA0cAMEQCIAkSafV834zSDjng3M1SQScCwVEp
+    qEe8/1bI5IgdfrDdAiA6K/N839f05BYCaVirJn8nqnv56oX60k5BCFwhJ3+g1A==
+    -----END CERTIFICATE-----
+  tls.key: |
+    -----BEGIN PRIVATE KEY-----
+    MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgo2/aBgPdFzofao0S
+    Cdn4wlG1sh9HrPJYYK0vov+9xFChRANCAASkkjsNzpZNn1wOOgoJcpceMxzYytAL
+    WYznUEeNr6OZRYVGyxNuNTNau3mOpUa8tM0X4t7o1QbChV8s8imU0bdy
+    -----END PRIVATE KEY-----
+---
+# A TLS listener policy requiring client certificates signed by the CAs of the
+# EventGatewayTLSTrustBundle above, referenced through namespacedRef (resolved
+# to its Konnect ID). While the policy references it, deleting the trust
+# bundle is blocked.
+kind: EventGatewayListenerPolicy
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: cp-event-1-mtls-listener
+  namespace: default
+spec:
+  apiSpec:
+    type: tlsServer
+    tlsServer:
+      name: cp-event-1-mtls-listener-policy
+      config:
+        certificates:
+          - certificate:
+              type: secretRef
+              secretRef:
+                name: cp-event-1-mtls-listener-tls
+                key: tls.crt
+            key:
+              type: secretRef
+              secretRef:
+                name: cp-event-1-mtls-listener-tls
+                key: tls.key
+        clientAuthentication:
+          mode: required
+          tlsTrustBundles:
+            # An EventGatewayTLSTrustBundle in the same namespace. A trust
+            # bundle created outside the cluster can be referenced by its
+            # Konnect id or name instead.
+            - namespacedRef:
+                name: cp-event-1-client-ca
+  eventGatewayListenerRef:
+    type: namespacedRef
+    namespacedRef:
+      name: cp-event-1-mtls-listener

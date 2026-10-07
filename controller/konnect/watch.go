@@ -344,6 +344,7 @@ type WatchableEntityType interface {
 		configurationv1alpha1.EventGatewayVirtualClusterProducePolicy |
 		configurationv1alpha1.EventGatewayDataPlaneCertificate |
 		configurationv1alpha1.EventGatewaySchemaRegistry |
+		configurationv1alpha1.EventGatewayTLSTrustBundle |
 		configurationv1alpha1.KongService |
 		configurationv1alpha1.KongRoute |
 		configurationv1.KongConsumer |
