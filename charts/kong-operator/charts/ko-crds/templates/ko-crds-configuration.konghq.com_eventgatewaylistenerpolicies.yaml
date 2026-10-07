@@ -247,6 +247,21 @@ spec:
                                       type: string
                                     name:
                                       type: string
+                                    namespacedRef:
+                                      properties:
+                                        kind:
+                                          default: EventGatewayTLSTrustBundle
+                                          enum:
+                                          - EventGatewayTLSTrustBundle
+                                          type: string
+                                        name:
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
                                   type: object
                                 type: array
                             required:

@@ -422,6 +422,31 @@ spec:
                                       description: TLSTrustBundleName The unique name
                                         of the TLS trust bundle.
                                       type: string
+                                    namespacedRef:
+                                      description: |-
+                                        NamespacedRef references an in-cluster EventGatewayTLSTrustBundle object,
+                                        resolved to its Konnect id.
+                                        It is mutually exclusive with the other fields.
+                                      properties:
+                                        kind:
+                                          default: EventGatewayTLSTrustBundle
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - EventGatewayTLSTrustBundle
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: Namespace is reserved for future
+                                            cross-namespace support.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
                                   type: object
                                 type: array
                             required:

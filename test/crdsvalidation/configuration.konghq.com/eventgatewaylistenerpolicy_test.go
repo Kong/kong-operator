@@ -185,4 +185,65 @@ func TestEventGatewayListenerPolicy(t *testing.T) {
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
+
+	t.Run("clientAuthentication tlsTrustBundles", func(t *testing.T) {
+		withTrustBundles := func(refs ...configurationv1alpha1.TLSTrustBundleReference) *configurationv1alpha1.EventGatewayListenerPolicy {
+			obj := validListenerPolicy(ns.Name)
+			obj.Spec.APISpec.EventGatewayTLSListen.Config.ClientAuthentication = configurationv1alpha1.EventGatewayTLSListenerPolicyConfigClientAuthentication{
+				Mode:            "required",
+				TLSTrustBundles: refs,
+			}
+			return obj
+		}
+		byNamespacedRef := func(ref configurationv1alpha1.EventGatewayTLSTrustBundleRef) configurationv1alpha1.TLSTrustBundleReference {
+			return configurationv1alpha1.TLSTrustBundleReference{NamespacedRef: &ref}
+		}
+		common.TestCasesGroup[*configurationv1alpha1.EventGatewayListenerPolicy]{
+			{
+				Name: "Konnect trust bundle ID and name pass",
+				TestObject: withTrustBundles(
+					configurationv1alpha1.TLSTrustBundleReference{ID: new("7f3c2a6e-1b9d-4c8e-9f0a-2d4b6c8e0a1f")},
+					configurationv1alpha1.TLSTrustBundleReference{Name: new(configurationv1alpha1.TLSTrustBundleName("konnect-trust-bundle"))},
+				),
+			},
+			{
+				Name: "namespacedRef to EventGatewayTLSTrustBundles passes",
+				TestObject: withTrustBundles(
+					byNamespacedRef(configurationv1alpha1.EventGatewayTLSTrustBundleRef{Name: "trust-bundle-1"}),
+					byNamespacedRef(configurationv1alpha1.EventGatewayTLSTrustBundleRef{Kind: "EventGatewayTLSTrustBundle", Name: "trust-bundle-2"}),
+				),
+			},
+			{
+				Name: "mixing Konnect IDs, names and namespacedRefs passes",
+				TestObject: withTrustBundles(
+					configurationv1alpha1.TLSTrustBundleReference{ID: new("7f3c2a6e-1b9d-4c8e-9f0a-2d4b6c8e0a1f")},
+					byNamespacedRef(configurationv1alpha1.EventGatewayTLSTrustBundleRef{Name: "trust-bundle"}),
+					configurationv1alpha1.TLSTrustBundleReference{Name: new(configurationv1alpha1.TLSTrustBundleName("konnect-trust-bundle"))},
+				),
+			},
+			{
+				Name: "setting both a Konnect ID and a namespacedRef fails",
+				TestObject: withTrustBundles(configurationv1alpha1.TLSTrustBundleReference{
+					ID:            new("7f3c2a6e-1b9d-4c8e-9f0a-2d4b6c8e0a1f"),
+					NamespacedRef: &configurationv1alpha1.EventGatewayTLSTrustBundleRef{Name: "trust-bundle"},
+				}),
+				ExpectedErrorMessage: new("tlsTrustBundles[0]: Too many: 2: must have at most 1 item"),
+			},
+			{
+				Name:                 "an empty reference fails",
+				TestObject:           withTrustBundles(configurationv1alpha1.TLSTrustBundleReference{}),
+				ExpectedErrorMessage: new("should have at least 1 properties"),
+			},
+			{
+				Name:                 "namespacedRef with an unsupported kind fails",
+				TestObject:           withTrustBundles(byNamespacedRef(configurationv1alpha1.EventGatewayTLSTrustBundleRef{Kind: "EventGatewaySchemaRegistry", Name: "trust-bundle"})),
+				ExpectedErrorMessage: new(`supported values: "EventGatewayTLSTrustBundle"`),
+			},
+			{
+				Name:                 "namespacedRef with an empty name fails",
+				TestObject:           withTrustBundles(byNamespacedRef(configurationv1alpha1.EventGatewayTLSTrustBundleRef{})),
+				ExpectedErrorMessage: new("should be at least 1 chars long"),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
 }

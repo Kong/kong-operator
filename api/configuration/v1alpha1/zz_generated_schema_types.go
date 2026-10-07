@@ -4993,6 +4993,17 @@ type TLSCertificate struct {
 	Key SensitiveDataSource `json:"key,omitzero"`
 }
 
+// TLSTrustBundleConfig is a type alias.
+type TLSTrustBundleConfig struct {
+	// PEM-encoded list of trusted CA certificates used to verify client
+	// certificates.
+	// Can be a literal PEM string or a vault reference.
+	//
+	//
+	// +required
+	TrustedCa SensitiveDataSource `json:"trustedCa,omitzero"`
+}
+
 // TLSTrustBundleName The unique name of the TLS trust bundle.
 type TLSTrustBundleName string
 
@@ -5005,6 +5016,12 @@ type TLSTrustBundleReference struct {
 	ID *string `json:"id,omitempty"`
 	// +optional
 	Name *TLSTrustBundleName `json:"name,omitempty"`
+	// NamespacedRef references an in-cluster EventGatewayTLSTrustBundle object,
+	// resolved to its Konnect id.
+	// It is mutually exclusive with the other fields.
+	//
+	// +optional
+	NamespacedRef *EventGatewayTLSTrustBundleRef `json:"namespacedRef,omitempty"`
 }
 
 // TLSTrustBundleReferenceByID is a type alias.

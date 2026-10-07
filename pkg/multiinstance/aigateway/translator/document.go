@@ -162,6 +162,14 @@ func BuildDocument(
 	// translation still lets the referencing entity report success.
 	translatedCertificates := make(map[string]struct{})
 
+	// CA cert PEMs already claimed by a translated AIGatewayCACertificate, mapped to the
+	// claiming CR's name: ai-deck-converter derives the rendered entity ID from the cert
+	// content (convert/dbless.go's stableUUID("ca_certificate:"+cert)), so two CRs sharing
+	// one PEM would render two entries with the same ID and fail the whole push. The first
+	// CR in namespace/name order wins; the duplicate is reported per-entity and excluded
+	// from the document.
+	translatedCACertCRs := make(map[string]string)
+
 	for _, translate := range []func(context.Context) ([]EntityStatus, error){
 		translateKind[aiconfigurationv1alpha1.AIGatewayModelList](
 			cl, gw, index.IndexFieldAIGatewayModelOnOnPremAIGatewayRef,
@@ -172,6 +180,9 @@ func BuildDocument(
 		translateKind[aiconfigurationv1alpha1.AIGatewayPolicyList](
 			cl, gw, index.IndexFieldAIGatewayPolicyOnOnPremAIGatewayRef,
 			(*aiconfigurationv1alpha1.AIGatewayPolicy).ToAIGWPolicy, &doc.Policies),
+		translateKind[aiconfigurationv1alpha1.AIGatewayCustomPolicyList](
+			cl, gw, index.IndexFieldAIGatewayCustomPolicyOnOnPremAIGatewayRef,
+			(*aiconfigurationv1alpha1.AIGatewayCustomPolicy).ToAIGWCustomPolicy, &doc.CustomPolicies),
 		translateKind[aiconfigurationv1alpha1.AIGatewayConsumerGroupList](
 			cl, gw, index.IndexFieldAIGatewayConsumerGroupOnOnPremAIGatewayRef,
 			(*aiconfigurationv1alpha1.AIGatewayConsumerGroup).ToAIGWConsumerGroup, &doc.ConsumerGroups),
@@ -187,6 +198,23 @@ func BuildDocument(
 		translateKind[aiconfigurationv1alpha1.AIGatewayAuthStrategyList](
 			cl, gw, index.IndexFieldAIGatewayAuthStrategyOnOnPremAIGatewayRef,
 			(*aiconfigurationv1alpha1.AIGatewayAuthStrategy).ToAIGWAuthStrategy, &doc.AuthStrategies),
+		translateKind[aiconfigurationv1alpha1.AIGatewayCACertificateList](
+			cl, gw, index.IndexFieldAIGatewayCACertificateOnOnPremAIGatewayRef,
+			func(c *aiconfigurationv1alpha1.AIGatewayCACertificate, ctx context.Context, cl client.Client) (*aigw.CACertificate, error) {
+				caCert, err := c.ToAIGWCACertificate(ctx, cl)
+				if err != nil {
+					return nil, err
+				}
+				if first, ok := translatedCACertCRs[caCert.Cert]; ok {
+					return nil, fmt.Errorf(
+						"duplicate CA certificate content: AIGatewayCACertificate %q already carries this cert, and the rendered entity ID is derived from the cert content",
+						first,
+					)
+				}
+				translatedCACertCRs[caCert.Cert] = c.Name
+				return caCert, nil
+			},
+			&doc.CACertificates),
 		translateKind[aiconfigurationv1alpha1.AIGatewayCertificateList](
 			cl, gw, index.IndexFieldAIGatewayCertificateOnOnPremAIGatewayRef,
 			func(c *aiconfigurationv1alpha1.AIGatewayCertificate, ctx context.Context, cl client.Client) (*aigw.Certificate, error) {

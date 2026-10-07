@@ -95,14 +95,13 @@ func TestAIGatewayCustomPolicy(t *testing.T) {
 				}(),
 			},
 			{
-				Name: "OnPremAIGateway ref is rejected",
+				Name: "explicit OnPremAIGateway ref is valid",
 				TestObject: func() *aiconfigurationv1alpha1.AIGatewayCustomPolicy {
 					obj := validAIGatewayCustomPolicyInstalled(ns.Name)
 					obj.Spec.AIGatewayRef.Kind = aiconfigurationv1alpha1.AIGatewayRefKindOnPrem
 					obj.Spec.AIGatewayRef.Group = aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem
 					return obj
 				}(),
-				ExpectedErrorMessage: new("spec.aiGatewayRef.kind must be one of: KonnectAIGateway"),
 			},
 			{
 				Name:       "streaming variant is valid",

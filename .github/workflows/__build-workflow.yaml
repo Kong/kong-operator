@@ -429,7 +429,7 @@ jobs:
       # When building with `inputs.tag` set, `steps.meta.outputs.tags` contains multiple entries, so it cannot be used
       # directly in sources. Instead, the sources are constructed using the `inputs.registry`, `inputs.image-name` and
       # `needs.semver.outputs.fullversion`.
-      - uses: int128/docker-manifest-create-action@6edb43463bd4878b8cee224ca274378a3635d78f # v2.28.0
+      - uses: int128/docker-manifest-create-action@a118e9fe12455375d4810aa318c20e6dba77288e # v2.29.0
         id: manifest-tag
         if: ${{ inputs.tag != '' }}
         with:
@@ -442,7 +442,7 @@ jobs:
       # `steps.meta.outputs.tags` contains multiple entries, so it cannot be used
       # directly in sources. Instead, the sources are constructed using the `inputs.registry`, `inputs.image-name` and
       # the current date.
-      - uses: int128/docker-manifest-create-action@6edb43463bd4878b8cee224ca274378a3635d78f # v2.28.0
+      - uses: int128/docker-manifest-create-action@a118e9fe12455375d4810aa318c20e6dba77288e # v2.29.0
         id: manifest-nightly
         if: ${{ inputs.tag == '' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.nightly-tags)) }}
         with:
@@ -453,7 +453,7 @@ jobs:
 
       # When building on push (e.g. on main), `steps.meta.outputs.tags` contains only a single entry, so it can be used
       # directly in sources.
-      - uses: int128/docker-manifest-create-action@6edb43463bd4878b8cee224ca274378a3635d78f # v2.28.0
+      - uses: int128/docker-manifest-create-action@a118e9fe12455375d4810aa318c20e6dba77288e # v2.29.0
         id: manifest-push
         if: ${{ inputs.tag == '' && github.event_name == 'push' }}
         with:

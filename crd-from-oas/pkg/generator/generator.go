@@ -97,6 +97,8 @@ type Generator struct {
 	opsGetForUIDInfos []*OpsGetForUIDFileInfo
 	sdkFactoryInfos   []*SDKFactoryFileInfo
 	watchInfos        []*WatchFileInfo
+	// unionRefMembersCache memoizes unionRefMembers.
+	unionRefMembersCache map[string]unionRefMember
 	// anyOfSchemaNames holds schema names whose Go type is an anyOf union struct.
 	// Fields referencing these schemas must be pointers so omitempty omits zero values.
 	anyOfSchemaNames map[string]bool
@@ -2231,6 +2233,7 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 			case hasRefVariants(schema.AnyOf):
 				// Root-level anyOf without discriminator: emit a wrapper struct with one
 				// optional pointer per variant, with MinProperties=1 / MaxProperties=1.
+				// Keep rendersAsAnyOfUnion in sync with the cases above.
 				body.WriteString(g.emitAnyOfUnionType(goName, schema))
 
 			case schema.AdditionalProperties != nil:
@@ -4348,6 +4351,11 @@ func (g *Generator) emitAnyOfUnionType(goName string, schema *parser.Schema) str
 			fmt.Fprintf(&buf, "\t%s *%s `json:\"%s,omitempty\"`\n", fieldGoName, refTypeName, lowerCamelCase(fieldGoName))
 		}
 	}
+	if member, ok := g.unionRefMembers()[goName]; ok {
+		buf.WriteString(formatComment(member.Description))
+		buf.WriteString("\n\t//\n\t// +optional\n")
+		fmt.Fprintf(&buf, "\t%s *%s `json:\"%s,omitempty\"`\n", member.GoName, member.RefTypeName, member.JSONName)
+	}
 	buf.WriteString("}\n")
 	return buf.String()
 }
@@ -4599,6 +4607,16 @@ type GoPathSegment struct {
 	// whose OAS leaf is a $ref to a oneOf-by-id/by-name reference object. Such
 	// a leaf is ref-ified as a single *<RefType>, not a slice.
 	ObjectRefLeaf bool
+	// ObjectRefItems is true when this is the final segment, it is an array,
+	// and its items are object-typed references (a oneOf/anyOf, or a $ref to
+	// one) — e.g. "tlsServer.config.clientAuthentication.tlsTrustBundles",
+	// whose OAS items are TLSTrustBundleReference by-id/by-name objects. Each
+	// resolved value is then wrapped back into such an object on injection.
+	ObjectRefItems bool
+	// ObjectRefSchema is the name of the $ref'd reference-object schema (e.g.
+	// "TLSTrustBundleReference") when ObjectRefLeaf or ObjectRefItems is true
+	// and the reference object is a named schema rather than inline.
+	ObjectRefSchema string
 	// LeafArray is true when the final segment's OAS type is itself an array,
 	// i.e. the ref list lives inside each element of an enclosing non-leaf
 	// array (e.g. "tools.access.acls.allow": each tool carries its own allow
@@ -4742,9 +4760,14 @@ type TemplateReferenceConfig struct {
 	// an {"<ObjectWrapKey>": value} object (see ObjectWrap on TemplateRefInjection).
 	SingleValueObjectRef bool
 	// ObjectWrapKey is the SDK payload key the resolved value is wrapped
-	// under for a SingleValueObjectRef (e.g. "name" or "id", from ResolvesTo).
-	// Only set when SingleValueObjectRef is true.
+	// under for a SingleValueObjectRef, or each resolved value for an array
+	// of reference objects (e.g. "name" or "id", from ResolvesTo). Only set in
+	// those two cases.
 	ObjectWrapKey string
+	// UnionMemberGoName is the Go field name of the member a unionMember
+	// reference adds to the reference object (e.g. "NamespacedRef"). The
+	// RefsAt accessor then collects only the set members, in order.
+	UnionMemberGoName string
 	// DirectScalarRef is true when this is a direct (non-nested) reference
 	// whose apiSpec field is itself a plain scalar rather than an array (e.g.
 	// AIGatewaySNI's single "certificate" field). RefsExpr wraps it in a
@@ -4886,9 +4909,16 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 		}
 		var singleValueObjectRef bool
 		var objectWrapKey string
-		if len(goPathSegments) > 0 && goPathSegments[len(goPathSegments)-1].ObjectRefLeaf {
-			singleValueObjectRef = true
-			objectWrapKey = ref.ResolvesTo
+		if len(goPathSegments) > 0 {
+			leaf := goPathSegments[len(goPathSegments)-1]
+			singleValueObjectRef = leaf.ObjectRefLeaf
+			if leaf.ObjectRefLeaf || leaf.ObjectRefItems {
+				objectWrapKey = ref.ResolvesTo
+			}
+		}
+		var unionMemberGoName string
+		if ref.UnionMember != "" {
+			unionMemberGoName = goFieldName(ref.UnionMember)
 		}
 		// Same-type ObjectRefField references (e.g. PortalPage's
 		// parentPageIDRef) resolve to an ID embedded in a request scoped to
@@ -4928,6 +4958,7 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 			ArrayLeafPointer:     arrayLeafPointer,
 			SingleValueObjectRef: singleValueObjectRef,
 			ObjectWrapKey:        objectWrapKey,
+			UnionMemberGoName:    unionMemberGoName,
 			DirectScalarRef:      directScalarRef,
 			ObjectRefField:       objectRefField,
 			SameTypeRef:          sameTypeRef,
@@ -4964,6 +4995,12 @@ type TemplateRefParentNav struct {
 	Key string
 	// Parent is the variable holding the parent map ("payload" at the root).
 	Parent string
+	// Optional is true for the hops of a unionMember injection: it only
+	// rewrites reference objects already in the payload, so a missing hop
+	// skips the injection instead of being created (a created object would
+	// also lack its sibling, possibly required, fields). Only used by
+	// ParentNavs.
+	Optional bool
 }
 
 // TemplateRefVariant is one arm written at a TemplateRefInjection's own SDK
@@ -5057,8 +5094,15 @@ type TemplateRefInjection struct {
 	// wraps the single resolved value as {"<ObjectWrapKey>": value} instead of
 	// writing the resolved slice/string directly.
 	ObjectWrap bool
+	// UnionMemberKey is the SDK payload key of the member a unionMember
+	// reference adds to the reference object (e.g. "namespaced_ref"). The
+	// write replaces each reference object carrying it (one, or each item of
+	// an array when UnionMemberArray is true) with {"<ObjectWrapKey>": value},
+	// leaving reference objects set by Konnect ID or name untouched.
+	UnionMemberKey   string
+	UnionMemberArray bool
 	// ObjectWrapKey is the key the resolved value is wrapped under (e.g. "name"
-	// or "id"). Only set when ObjectWrap is true.
+	// or "id"). Only set when ObjectWrap is true or UnionMemberKey is set.
 	ObjectWrapKey string
 }
 
@@ -5246,6 +5290,9 @@ func appendRefInjection(ref TemplateReferenceConfig, usedVars map[string]bool, g
 			Var:    navVar,
 			Key:    sdkJSONKey(seg.JSONKey),
 			Parent: parent,
+			// A unionMember injection only rewrites reference objects already
+			// in the payload, so a missing ancestor has nothing to rewrite.
+			Optional: ref.UnionMember != "",
 		})
 		parent = navVar
 	}
@@ -5288,7 +5335,12 @@ func appendRefInjection(ref TemplateReferenceConfig, usedVars map[string]bool, g
 		injection.UnionExpr = "obj.Spec.APISpec." + groupKey
 		injection.SDKUnionKey = sdkJSONKey(segs[writeIdx].JSONKey)
 	}
-	if isObjectRefLeaf {
+	switch {
+	case ref.UnionMember != "":
+		injection.UnionMemberKey = sdkJSONKey(ref.UnionMember)
+		injection.UnionMemberArray = segs[len(segs)-1].ObjectRefItems
+		injection.ObjectWrapKey = ref.ResolvesTo
+	case isObjectRefLeaf:
 		injection.ObjectWrap = true
 		injection.ObjectWrapKey = ref.ObjectWrapKey
 	}
@@ -5651,8 +5703,15 @@ func (g *Generator) validateReferences(parsed *parser.ParsedSpec) error {
 		refTypeName string
 		resolvesTo  string
 		kindsKey    string
+		unionMember string
 	}
 	usages := make(map[refTarget][]refUsage)
+	// unionMemberUsage maps a reference-object schema extended by a
+	// unionMember reference to the first such reference's usage, which every
+	// other one must match, and unionMemberRefs counts those references per
+	// schema and entity.
+	unionMemberUsage := make(map[string]refUsage)
+	unionMemberRefs := make(map[string]map[string]int)
 
 	// Resolve every configured reference to its owning schema type + leaf field.
 	// Iterate entities in a stable order so error messages are deterministic.
@@ -5730,13 +5789,39 @@ func (g *Generator) validateReferences(parsed *parser.ParsedSpec) error {
 					}
 				}
 			}
-			target := refTarget{schemaType: schemaType, field: field}
-			usages[target] = append(usages[target], refUsage{
+			usage := refUsage{
 				entity:      entityName,
 				refTypeName: ref.TypeName(),
 				resolvesTo:  ref.ResolvesTo,
 				kindsKey:    kindsKey(ref.Kinds),
-			})
+				unionMember: ref.UnionMember,
+			}
+			if ref.UnionMember == "" && len(goPath) > 0 && goPath[len(goPath)-1].ObjectRefItems {
+				return fmt.Errorf("reference path %q: an array of by-id/by-name reference objects is only supported with unionMember", ref.Path)
+			}
+			if ref.UnionMember != "" {
+				objectRefSchema, err := g.validateUnionMemberReference(ref, goPath)
+				if err != nil {
+					return err
+				}
+				// The member is added to the type itself, so every reference
+				// extending it must agree on it, across entities too.
+				if prev, ok := unionMemberUsage[objectRefSchema]; ok {
+					cmp := usage
+					cmp.entity = prev.entity
+					if cmp != prev {
+						return fmt.Errorf("reference path %q: reference object %s is extended with mismatching unionMember references by entities %s and %s", ref.Path, objectRefSchema, prev.entity, entityName)
+					}
+				} else {
+					unionMemberUsage[objectRefSchema] = usage
+				}
+				if unionMemberRefs[objectRefSchema] == nil {
+					unionMemberRefs[objectRefSchema] = map[string]int{}
+				}
+				unionMemberRefs[objectRefSchema][entityName]++
+			}
+			target := refTarget{schemaType: schemaType, field: field}
+			usages[target] = append(usages[target], usage)
 		}
 	}
 
@@ -5775,12 +5860,198 @@ func (g *Generator) validateReferences(parsed *parser.ParsedSpec) error {
 			if !ok {
 				return fmt.Errorf("schema type %s field %q is referenced-typed via entity %s but entity %s embeds the same type without a matching references entry", target.schemaType, target.field, expected.entity, entity)
 			}
-			if u.refTypeName != expected.refTypeName || u.resolvesTo != expected.resolvesTo || u.kindsKey != expected.kindsKey {
+			if u != (refUsage{entity: entity, refTypeName: expected.refTypeName, resolvesTo: expected.resolvesTo, kindsKey: expected.kindsKey, unionMember: expected.unionMember}) {
 				return fmt.Errorf("schema type %s field %q is referenced-typed inconsistently: entity %s and entity %s declare mismatching references entries", target.schemaType, target.field, expected.entity, entity)
 			}
 		}
 	}
+
+	// A unionMember reference adds a member to the reference object type
+	// itself, so every field holding that type, in every entity, must have a
+	// unionMember reference resolving the member.
+	objectRefSchemas := make([]string, 0, len(unionMemberRefs))
+	for name := range unionMemberRefs {
+		objectRefSchemas = append(objectRefSchemas, name)
+	}
+	sort.Strings(objectRefSchemas)
+	entityBodies := make(map[string]*parser.Schema, len(parsed.RequestBodies))
+	for name, body := range parsed.RequestBodies {
+		entityBodies[parser.GetEntityNameFromType(name)] = body
+	}
+	for _, name := range objectRefSchemas {
+		entities := make([]string, 0, len(reach))
+		for entity := range reach {
+			entities = append(entities, entity)
+		}
+		sort.Strings(entities)
+		for _, entity := range entities {
+			if !reach[entity][fixInitialisms(name)] {
+				continue
+			}
+			fields := countSchemaFieldsOfType(parsed, entityBodies[entity], name, map[string]bool{})
+			if declared := unionMemberRefs[name][entity]; declared != fields {
+				return fmt.Errorf("reference object %s is extended by a unionMember reference, but entity %s embeds it in %d field(s) with %d matching references entries", name, entity, fields, declared)
+			}
+		}
+	}
 	return nil
+}
+
+// countSchemaFieldsOfType returns how many field paths of schema hold the
+// named schemaName, directly or as array items or map values, following $refs,
+// inline objects, arrays, maps and union variants, like the reachability walk
+// of collectNamedReferencedSchemas. visiting guards against $ref cycles.
+func countSchemaFieldsOfType(parsed *parser.ParsedSpec, schema *parser.Schema, schemaName string, visiting map[string]bool) int {
+	if schema == nil {
+		return 0
+	}
+	props := make([]*parser.Property, 0, len(schema.Properties)+len(schema.OneOf)+len(schema.AnyOf)+1)
+	props = append(props, schema.Properties...)
+	props = append(props, schema.OneOf...)
+	props = append(props, schema.AnyOf...)
+	if schema.AdditionalProperties != nil {
+		props = append(props, schema.AdditionalProperties)
+	}
+	return countPropertyFieldsOfType(parsed, props, schemaName, visiting)
+}
+
+func countPropertyFieldsOfType(parsed *parser.ParsedSpec, props []*parser.Property, schemaName string, visiting map[string]bool) int {
+	count := 0
+	for _, prop := range props {
+		if prop == nil || skipProperty(prop) {
+			continue
+		}
+		if prop.RefName == schemaName ||
+			(prop.Items != nil && prop.Items.RefName == schemaName) ||
+			(prop.AdditionalProperties != nil && prop.AdditionalProperties.RefName == schemaName) {
+			count++
+			continue
+		}
+		// The parser also inlines a $ref's properties and variants into the
+		// property, so a named schema is followed instead of the inline copy
+		// to count each field once.
+		if refSchema := parsed.Schemas[prop.RefName]; refSchema != nil {
+			if !visiting[prop.RefName] {
+				visiting[prop.RefName] = true
+				count += countSchemaFieldsOfType(parsed, refSchema, schemaName, visiting)
+				delete(visiting, prop.RefName)
+			}
+			continue
+		}
+		nested := append([]*parser.Property{prop.Items, prop.AdditionalProperties}, prop.Properties...)
+		nested = append(nested, prop.OneOf...)
+		nested = append(nested, prop.AnyOf...)
+		count += countPropertyFieldsOfType(parsed, nested, schemaName, visiting)
+	}
+	return count
+}
+
+// validateUnionMemberReference checks that a unionMember reference targets a
+// nested field whose type is a named, root-level anyOf reference object (or an
+// array of them), the shape emitAnyOfUnionType renders as a struct the member
+// can be added to. It returns the reference object schema name.
+func (g *Generator) validateUnionMemberReference(ref config.ReferenceConfig, goPath []GoPathSegment) (string, error) {
+	if len(goPath) < 2 {
+		return "", fmt.Errorf("reference path %q: unionMember is only supported for nested references", ref.Path)
+	}
+	leaf := goPath[len(goPath)-1]
+	if (!leaf.ObjectRefLeaf && !leaf.ObjectRefItems) || leaf.ObjectRefSchema == "" {
+		return "", fmt.Errorf("reference path %q: unionMember requires the field to be a named by-id/by-name reference object or an array of them", ref.Path)
+	}
+	if isNestedArrayScalar(goPath) {
+		return "", fmt.Errorf("reference path %q: unionMember is not supported inside a non-leaf array", ref.Path)
+	}
+	// Only a schema rendered by emitAnyOfUnionType gets the member.
+	schema := g.parsed.Schemas[leaf.ObjectRefSchema]
+	if schema == nil || !rendersAsAnyOfUnion(schema, g.parsed.Schemas) {
+		return "", fmt.Errorf("reference path %q: unionMember requires reference object %s to be a root-level anyOf without own properties", ref.Path, leaf.ObjectRefSchema)
+	}
+	for _, field := range anyOfUnionFieldJSONNames(schema) {
+		// Compare the Go field names too: e.g. "iD" differs from "id" in JSON
+		// but both become the Go field "ID".
+		if field == ref.UnionMember || goFieldName(field) == goFieldName(ref.UnionMember) {
+			return "", fmt.Errorf("reference path %q: unionMember %q collides with field %q of reference object %s", ref.Path, ref.UnionMember, field, leaf.ObjectRefSchema)
+		}
+	}
+	return leaf.ObjectRefSchema, nil
+}
+
+// rendersAsAnyOfUnion reports whether generateSchemaTypes renders the named
+// schema through emitAnyOfUnionType, mirroring its type switch: no earlier case
+// (own properties, boolean, scalar string/int oneOf, discriminated oneOf)
+// applies, and it has a root-level anyOf of $ref variants.
+func rendersAsAnyOfUnion(schema *parser.Schema, schemas map[string]*parser.Schema) bool {
+	switch {
+	case len(schema.Properties) > 0,
+		schema.Type == "boolean",
+		isScalarStringIntOneOf(schema.OneOf, schemas),
+		hasRefVariants(schema.OneOf) && schema.Discriminator != "":
+		return false
+	default:
+		return hasRefVariants(schema.AnyOf)
+	}
+}
+
+// anyOfUnionFieldJSONNames returns the JSON names of the fields
+// emitAnyOfUnionType emits for schema's variants.
+func anyOfUnionFieldJSONNames(schema *parser.Schema) []string {
+	var names []string
+	for _, variant := range schema.AnyOf {
+		if variant.RefName == "" {
+			continue
+		}
+		if len(variant.Properties) == 1 {
+			names = append(names, jsonName(variant.Properties[0].Name))
+			continue
+		}
+		names = append(names, lowerCamelCase(fixInitialisms(cleanSingleVariantName(variant.RefName))))
+	}
+	return names
+}
+
+// unionRefMember is a member a unionMember reference adds to a reference
+// object type.
+type unionRefMember struct {
+	// GoName is the Go field name of the member.
+	GoName string
+	// JSONName is the member's JSON field name.
+	JSONName string
+	// RefTypeName is the generated ref struct type the member holds.
+	RefTypeName string
+	// Description is the member's doc comment.
+	Description string
+}
+
+// unionRefMembers maps the Go type name of each reference object type extended
+// by a unionMember reference to the member it gains. Validation ensures every
+// entity embedding the type declares the same member.
+func (g *Generator) unionRefMembers() map[string]unionRefMember {
+	if g.unionRefMembersCache != nil {
+		return g.unionRefMembersCache
+	}
+	m := map[string]unionRefMember{}
+	for entityName, refs := range g.config.References {
+		for _, ref := range refs {
+			if ref.UnionMember == "" {
+				continue
+			}
+			_, _, goPath, err := g.refFieldTarget(entityName, ref)
+			if err != nil || len(goPath) == 0 || goPath[len(goPath)-1].ObjectRefSchema == "" {
+				// Reference paths are validated by validateReferences before code
+				// generation; skip anything that fails to resolve here.
+				continue
+			}
+			kinds := strings.Join(slices.Sorted(slices.Values(ref.Kinds)), " or ")
+			m[fixInitialisms(goPath[len(goPath)-1].ObjectRefSchema)] = unionRefMember{
+				GoName:      goFieldName(ref.UnionMember),
+				JSONName:    ref.UnionMember,
+				RefTypeName: ref.TypeName(),
+				Description: fmt.Sprintf("%s references an in-cluster %s object, resolved to its Konnect %s.\nIt is mutually exclusive with the other fields.", goFieldName(ref.UnionMember), kinds, ref.ResolvesTo),
+			}
+		}
+	}
+	g.unionRefMembersCache = m
+	return m
 }
 
 // kindsKey returns an order-insensitive key for a list of reference kinds so two
@@ -5940,8 +6211,15 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 			// An object-ref leaf is a single object field (an inline oneOf, or a
 			// $ref to a oneOf schema, e.g. SchemaRegistryReference's by-id/by-name
 			// variants) standing in for one reference, rather than an array of them.
+			// A unionMember reference also accepts a $ref to a root-level anyOf
+			// reference object (e.g. TLSTrustBundleReference); other references
+			// keep the stricter detection.
 			objectRefLeaf := prop.Type != "array" && (len(prop.OneOf) > 0 || len(prop.AnyOf) > 0 ||
-				(prop.RefName != "" && refTargetHasRootOneOf(g.parsed, prop.RefName)))
+				(prop.RefName != "" && refTargetHasRootOneOf(g.parsed, prop.RefName)) ||
+				(ref.UnionMember != "" && isObjectRefUnion(g.parsed, prop)))
+			// Likewise, an array whose items are such reference objects holds
+			// one reference per item.
+			objectRefItems := prop.Type == "array" && prop.Items != nil && isObjectRefUnion(g.parsed, prop.Items)
 			// A plain string field sitting directly on apiSpec (the reference
 			// path is a single segment, so there's no enclosing array or
 			// oneOf/anyOf wrapper to borrow cardinality from) is also a valid
@@ -5967,7 +6245,14 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 				leafName += "Ref"
 				leafJSONKey += "Ref"
 			}
-			goPathSegments = append(goPathSegments, GoPathSegment{Name: leafName, Pointer: leafPointer, JSONKey: leafJSONKey, ObjectRefLeaf: objectRefLeaf, LeafArray: prop.Type == "array", ObjectRefField: objectRefField})
+			var objectRefSchema string
+			switch {
+			case objectRefLeaf:
+				objectRefSchema = prop.RefName
+			case objectRefItems:
+				objectRefSchema = prop.Items.RefName
+			}
+			goPathSegments = append(goPathSegments, GoPathSegment{Name: leafName, Pointer: leafPointer, JSONKey: leafJSONKey, ObjectRefLeaf: objectRefLeaf, ObjectRefItems: objectRefItems, ObjectRefSchema: objectRefSchema, LeafArray: prop.Type == "array", ObjectRefField: objectRefField})
 			return typeName, jsonName(prop.Name), goPathSegments, nil
 		}
 
@@ -6012,11 +6297,11 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 			// rendered as a pointer (see goTypeInCRD/writeSchemaField's
 			// `g.anyOfSchemaNames[prop.RefName]` check); mirror that here so
 			// the accessor emits a nil guard for this segment too.
-			goPathSegments = append(goPathSegments, GoPathSegment{Name: goFieldName(prop.Name), Pointer: g.anyOfSchemaNames[prop.RefName], JSONKey: jsonName(prop.Name)})
 			refSchema := g.parsed.Schemas[prop.RefName]
 			if refSchema == nil {
 				return "", "", nil, fmt.Errorf("reference path %q: schema %q not found", ref.Path, prop.RefName)
 			}
+			goPathSegments = append(goPathSegments, GoPathSegment{Name: goFieldName(prop.Name), Pointer: g.anyOfSchemaNames[prop.RefName], JSONKey: jsonName(prop.Name)})
 			schema = refSchema
 			typeName = fixInitialisms(prop.RefName)
 		case len(prop.Properties) > 0:
@@ -6070,7 +6355,9 @@ func (g *Generator) schemaTypeRefFields() map[string]map[string]string {
 				// generation; skip anything that fails to resolve here.
 				continue
 			}
-			if schemaType == entityName+"APISpec" {
+			if schemaType == entityName+"APISpec" || ref.UnionMember != "" {
+				// A unionMember reference keeps the field's OAS type and adds
+				// the ref to the reference object instead (see unionRefMembers).
 				continue
 			}
 			if m[schemaType] == nil {
@@ -8037,6 +8324,21 @@ func isRefProperty(prop *parser.Property) bool {
 // hasRootOneOf returns true if the schema has root-level oneOf (i.e., the schema itself is a union type).
 func hasRootOneOf(schema *parser.Schema) bool {
 	return len(schema.OneOf) > 0
+}
+
+// isObjectRefUnion reports whether prop is an object-typed reference: an
+// inline oneOf/anyOf, or a $ref to a schema with a root-level oneOf/anyOf
+// (e.g. SchemaRegistryReference's or TLSTrustBundleReference's by-id/by-name
+// variants).
+func isObjectRefUnion(parsed *parser.ParsedSpec, prop *parser.Property) bool {
+	if len(prop.OneOf) > 0 || len(prop.AnyOf) > 0 {
+		return true
+	}
+	if prop.RefName == "" {
+		return false
+	}
+	schema := parsed.Schemas[prop.RefName]
+	return schema != nil && (len(schema.OneOf) > 0 || len(schema.AnyOf) > 0)
 }
 
 // refTargetHasRootOneOf reports whether refName names a schema with root-level
