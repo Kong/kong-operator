@@ -208,7 +208,7 @@
   cleared from Konnect 5xx API errors in the `Programmed` condition
   message, and 5xx update errors are returned to controller-runtime so its
   exponential backoff applies.
-  [#XXXX](https://github.com/Kong/kong-operator/pull/XXXX)
+  [#6008](https://github.com/Kong/kong-operator/pull/6008)
 - Konnect: the operator now adds its labels (`k8s-uid`, `managed-by`, ...) to
   the Konnect entities of `AIGatewayAuthStrategy`, `AIGatewayModel`,
   `AIGatewayModelProvider`, `AIGatewayMCPServer`, `EventGatewayListenerPolicy`,
