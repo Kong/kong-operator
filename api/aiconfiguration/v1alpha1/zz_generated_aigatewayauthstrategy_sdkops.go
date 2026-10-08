@@ -80,6 +80,7 @@ var AIGatewayAuthStrategySDKOpsBoolFields = []AIGatewayAuthStrategySDKOpsBoolFie
 		},
 	},
 	{
+<<<<<<< HEAD
 		Label: "openid-connect.config.authorization_cookie_http_only",
 		Path: []string{
 			"openid-connect",
@@ -104,6 +105,8 @@ var AIGatewayAuthStrategySDKOpsBoolFields = []AIGatewayAuthStrategySDKOpsBoolFie
 		},
 	},
 	{
+=======
+>>>>>>> 559b6d826 (fix(aigateway): fix konnect model path param (#5989))
 		Label: "openid-connect.config.cache_introspection",
 		Path: []string{
 			"openid-connect",

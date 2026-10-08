@@ -1203,6 +1203,55 @@ _Appears in:_
 
 - [AIGatewayAuthStrategyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyconfig)
 
+<<<<<<< HEAD
+=======
+#### AIGatewayAuthStrategyKeyAuthConfig
+
+
+AIGatewayAuthStrategyKeyAuthConfig Configuration for the key-auth auth
+strategy.
+For advanced use cases, additional config properties can be sent in the
+request body.
+See: https://developer.konghq.com/plugins/key-auth/reference/ for the list of
+properties
+
+
+
+| Field | Description |
+| --- | --- |
+| `hideCredentials` _string_ | An optional boolean value telling the plugin to show or hide the credential from the upstream service. If true, the plugin strips the credential from the request. |
+| `keyInBody` _string_ | If enabled, reads the request body. Supported MIME types: application/www-form-urlencoded, application/json, and multipart/form-data. |
+| `keyInHeader` _string_ | If enabled (default), the plugin reads the request header and tries to find the key in it. |
+| `keyInQuery` _string_ | If enabled (default), the plugin reads the query parameter in the request and tries to find the key in it. |
+| `keyNames` _[]string_ | An array of strings containing the names of the keys to look for in the request. |
+| `principals` _[AIGatewayAuthStrategyKeyAuthConfigPrincipals](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategykeyauthconfigprincipals)_ | Authenticate against Kong Identity instead of local credentials. Mutually exclusive with identity realms. |
+| `realm` _string_ | When authentication fails the plugin sends `WWW-Authenticate` header with `realm` attribute value. |
+| `runOnPreflight` _string_ | A boolean value that indicates whether the plugin should run (and try to authenticate) on `OPTIONS` preflight requests. If set to `false`, then `OPTIONS` requests are always allowed. |
+
+_Appears in:_
+
+- [AIGatewayAuthStrategyKeyAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategykeyauth)
+
+#### AIGatewayAuthStrategyKeyAuthConfigPrincipals
+
+
+AIGatewayAuthStrategyKeyAuthConfigPrincipals Authenticate against Kong
+Identity instead of local credentials.
+Mutually exclusive with identity realms.
+
+
+
+| Field | Description |
+| --- | --- |
+| `directory` _string_ | The Kong Identity directory instance to authenticate against. |
+| `enabled` _string_ | When true, authenticate against Kong Identity instead of local credentials. |
+| `errorOnMiss` _string_ | When true (default), reject the request if no matching principal is found in Kong Identity. When false, allow the request to continue unauthenticated instead. |
+
+_Appears in:_
+
+- [AIGatewayAuthStrategyKeyAuthConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategykeyauthconfig)
+
+>>>>>>> 559b6d826 (fix(aigateway): fix konnect model path param (#5989))
 #### AIGatewayAuthStrategyOpenIDConnect
 
 
@@ -5127,7 +5176,7 @@ When values are not set, the model name is used as the selector value.
 | --- | --- |
 | `bodyParam` _string_ | The body property name to match for routing. |
 | `headerParam` _string_ | The header property name to match for routing. |
-| `pathParam` _string_ | The name of the regex capture group defined in the route path for routing. |
+| `pathParam` _string_ | The name of the regex capture group beginning with "~", which is defined in the route path for routing. |
 | `values` _[]string_ | Optional model aliases. When omitted, the model name is used. When no selector location is configured, the format default selector is used. |
 
 _Appears in:_
