@@ -244,6 +244,11 @@
   until consumers migrate, without removing the unchanged Konnect registration.
   The extension remains unready until its current certificate is programmed.
   [#5982](https://github.com/Kong/kong-operator/pull/5982)
+- `AIGatewayCustomPolicy`: prevent bypassing type immutability by removing
+  and re-adding `spec.apiSpec`. Once the type is set, removing `apiSpec` or
+  its enclosing `spec` is rejected; changing the type requires recreating
+  the resource.
+  [#5999](https://github.com/Kong/kong-operator/issues/5999)
 - Konnect: the operator now adds its labels (`k8s-uid`, `managed-by`, ...) to
   the Konnect entities of `AIGatewayAuthStrategy`, `AIGatewayModel`,
   `AIGatewayModelProvider`, `AIGatewayMCPServer`, `EventGatewayListenerPolicy`,

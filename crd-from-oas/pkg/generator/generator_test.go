@@ -6892,6 +6892,25 @@ func TestEntitySupportsMirror(t *testing.T) {
 	require.False(t, g.entitySupportsMirror("Unknown"))
 }
 
+func TestGenerateCRDType_RootValidations(t *testing.T) {
+	marker := `+kubebuilder:validation:XValidation:rule="self == oldSelf",message="resource is immutable"`
+	g := NewGenerator(Config{
+		APIVersion: "v1alpha1",
+		FieldConfig: &config.Config{
+			Entities: map[string]*config.EntityConfig{
+				"Portal": {Validations: []string{marker}},
+			},
+		},
+	})
+	content, err := g.generateCRDType("CreatePortal", &parser.Schema{
+		Name:       "CreatePortal",
+		Properties: []*parser.Property{{Name: "name", Type: "string"}},
+	})
+	require.NoError(t, err)
+	require.Contains(t, content, "// "+marker+"\ntype Portal struct {")
+	require.Equal(t, 1, strings.Count(content, marker))
+}
+
 func TestGenerateCRDType_MirrorSpecFields(t *testing.T) {
 	schema := &parser.Schema{
 		Name: "CreateKonnectEventGateway",

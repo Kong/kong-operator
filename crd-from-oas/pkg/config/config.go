@@ -255,9 +255,9 @@ type TypeConfig struct {
 	// SchemaFieldOmissions maps generated schema type names to JSON field names
 	// that should be omitted when emitting schema_types.go for this API.
 	SchemaFieldOmissions map[string][]string `yaml:"schemaFieldOmissions,omitempty"`
-	// CEL maps field names to their configurations, allowing additional
-	// kubebuilder validation markers to be attached to specific fields.
-	CEL map[string]*FieldConfig `yaml:"cel,omitempty"`
+	// CEL configures additional kubebuilder validation markers on the resource
+	// root and its fields.
+	CEL *EntityConfig `yaml:"cel,omitempty"`
 	// References lists inter-CR reference fields on this entity's spec.
 	// Each entry replaces the OpenAPI-derived field with a *commonv1alpha1.ObjectRef
 	// and emits a corresponding resolved-ID field on the status.
@@ -636,16 +636,16 @@ type typeOpsYAML struct {
 }
 
 type typeConfigYAML struct {
-	Path                 string                  `yaml:"path"`
-	Name                 string                  `yaml:"name,omitempty"`
-	SchemaFieldOmissions map[string][]string     `yaml:"schemaFieldOmissions,omitempty"`
-	CEL                  map[string]*FieldConfig `yaml:"cel,omitempty"`
-	References           []ReferenceConfig       `yaml:"references,omitempty"`
-	Associations         []AssociationConfig     `yaml:"associations,omitempty"`
-	DataSources          []DataSourceConfig      `yaml:"dataSources,omitempty"`
-	Ops                  *typeOpsYAML            `yaml:"ops,omitempty"`
-	Reconciler           *ReconcilerConfig       `yaml:"reconciler,omitempty"`
-	Source               *SourceConfig           `yaml:"source,omitempty"`
+	Path                 string              `yaml:"path"`
+	Name                 string              `yaml:"name,omitempty"`
+	SchemaFieldOmissions map[string][]string `yaml:"schemaFieldOmissions,omitempty"`
+	CEL                  *EntityConfig       `yaml:"cel,omitempty"`
+	References           []ReferenceConfig   `yaml:"references,omitempty"`
+	Associations         []AssociationConfig `yaml:"associations,omitempty"`
+	DataSources          []DataSourceConfig  `yaml:"dataSources,omitempty"`
+	Ops                  *typeOpsYAML        `yaml:"ops,omitempty"`
+	Reconciler           *ReconcilerConfig   `yaml:"reconciler,omitempty"`
+	Source               *SourceConfig       `yaml:"source,omitempty"`
 	// OneOfVariantNamesFromTitle lists generated union wrapper type names opted
 	// into title-based anonymous variant naming. See TypeConfig's doc comment.
 	OneOfVariantNamesFromTitle []string `yaml:"oneOfVariantNamesFromTitle,omitempty"`
@@ -749,7 +749,7 @@ func (c *APIGroupVersionConfig) FieldConfig(pathToEntityName map[string]string) 
 		if !ok {
 			continue
 		}
-		entities[entityName] = &EntityConfig{Fields: tc.CEL}
+		entities[entityName] = tc.CEL
 	}
 	return &Config{Entities: entities}
 }
@@ -1205,6 +1205,8 @@ func (fc *FieldConfig) Sub(name string) *FieldConfig {
 
 // EntityConfig holds configuration for a single entity (CRD type)
 type EntityConfig struct {
+	// Validations are additional kubebuilder markers to add to the resource root.
+	Validations []string `yaml:"_validations,omitempty"`
 	// Fields maps field names to their configurations
 	Fields map[string]*FieldConfig `yaml:",inline"`
 }

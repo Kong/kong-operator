@@ -17,6 +17,8 @@ func TestLoadProjectConfig(t *testing.T) {
 			"    types:\n" +
 			"      - path: /v3/portals\n" +
 			"        cel:\n" +
+			"          _validations:\n" +
+			"            - \"+kubebuilder:validation:XValidation:rule=\\\"self == oldSelf\\\",message=\\\"resource is immutable\\\"\"\n" +
 			"          name:\n" +
 			"            _validations:\n" +
 			"              - \"+kubebuilder:validation:MinLength=1\"\n" +
@@ -41,7 +43,10 @@ func TestLoadProjectConfig(t *testing.T) {
 		require.Len(t, konnect.Types, 2)
 		assert.Equal(t, "/v3/portals", konnect.Types[0].Path)
 		require.NotNil(t, konnect.Types[0].CEL)
-		assert.Contains(t, konnect.Types[0].CEL, "name")
+		assert.Equal(t, []string{`+kubebuilder:validation:XValidation:rule="self == oldSelf",message="resource is immutable"`}, konnect.Types[0].CEL.Validations)
+		assert.Contains(t, konnect.Types[0].CEL.Fields, "name")
+		fieldConfig := konnect.FieldConfig(map[string]string{"/v3/portals": "Portal"})
+		assert.Equal(t, konnect.Types[0].CEL.Validations, fieldConfig.Entities["Portal"].Validations)
 		require.NotNil(t, konnect.Types[0].Ops)
 		assert.Len(t, konnect.Types[0].Ops, 2)
 		assert.Equal(t, "github.com/Kong/sdk-konnect-go/models/components.CreatePortal", konnect.Types[0].Ops["create"].Path)
@@ -829,8 +834,11 @@ func TestAPIGroupVersionConfig_FieldConfig(t *testing.T) {
 			Types: []*TypeConfig{
 				{
 					Path: "/v3/portals",
-					CEL: map[string]*FieldConfig{
-						"name": {Validations: []string{"+required"}},
+					CEL: &EntityConfig{
+						Validations: []string{"+kubebuilder:validation:XValidation:rule=\"self == oldSelf\""},
+						Fields: map[string]*FieldConfig{
+							"name": {Validations: []string{"+required"}},
+						},
 					},
 				},
 				{
@@ -846,6 +854,7 @@ func TestAPIGroupVersionConfig_FieldConfig(t *testing.T) {
 
 		fc := agv.FieldConfig(pathToEntity)
 		require.NotNil(t, fc)
+		assert.Equal(t, agv.Types[0].CEL.Validations, fc.Entities["Portal"].Validations)
 		assert.Equal(t, []string{"+required"}, fc.GetFieldValidations("Portal", "name"))
 		assert.Nil(t, fc.GetFieldValidations("PortalTeam", "name"))
 	})
@@ -875,13 +884,15 @@ func TestAPIGroupVersionConfig_FieldConfig(t *testing.T) {
 			Types: []*TypeConfig{
 				{
 					Path: "/v1/entities/{entityId}/sub",
-					CEL: map[string]*FieldConfig{
-						"tls": {
-							Fields: map[string]*FieldConfig{
-								"client_identity": {
-									Fields: map[string]*FieldConfig{
-										"certificate": {
-											Validations: []string{"+kubebuilder:validation:MaxLength=1024"},
+					CEL: &EntityConfig{
+						Fields: map[string]*FieldConfig{
+							"tls": {
+								Fields: map[string]*FieldConfig{
+									"client_identity": {
+										Fields: map[string]*FieldConfig{
+											"certificate": {
+												Validations: []string{"+kubebuilder:validation:MaxLength=1024"},
+											},
 										},
 									},
 								},

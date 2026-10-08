@@ -274,9 +274,6 @@ spec:
                 required:
                 - type
                 type: object
-                x-kubernetes-validations:
-                - message: type is immutable
-                  rule: '!has(oldSelf.type) || self.type == oldSelf.type'
             required:
             - aiGatewayRef
             type: object
@@ -350,6 +347,11 @@ spec:
         - message: 'spec.aiGatewayRef.kind must be one of: KonnectAIGateway, OnPremAIGateway'
           rule: '!has(self.spec.aiGatewayRef) || !has(self.spec.aiGatewayRef.kind)
             || self.spec.aiGatewayRef.kind in [''KonnectAIGateway'', ''OnPremAIGateway'']'
+        - fieldPath: .spec.apiSpec.type
+          message: type is immutable
+          rule: '!has(oldSelf.spec) || !has(oldSelf.spec.apiSpec) || !has(oldSelf.spec.apiSpec.type)
+            || (has(self.spec) && has(self.spec.apiSpec) && has(self.spec.apiSpec.type)
+            && self.spec.apiSpec.type == oldSelf.spec.apiSpec.type)'
     served: true
     storage: true
     subresources:
