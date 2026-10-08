@@ -136,7 +136,7 @@ spec:
           nameHeader: Enabled
         route:
           model:
-            pathParam: model_name
+            pathParam: ~model_name
             values:
               - qwen2.5:0.5b
           paths:
