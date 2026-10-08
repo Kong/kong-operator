@@ -1402,7 +1402,7 @@ func TestReferenceConfigValidation(t *testing.T) {
 			wantErr: "reverseWatch requires exactly one kind",
 		},
 		{
-			name: "two reverseWatch references to the same kind rejected",
+			name: "two reverseWatch references to the same kind accepted",
 			cfg: func() *APIGroupVersionConfig {
 				cfg := base(func(rc *ReferenceConfig) { rc.ReverseWatch = true })
 				second := cfg.Types[0].References[0]
@@ -1410,7 +1410,22 @@ func TestReferenceConfigValidation(t *testing.T) {
 				cfg.Types[0].References = append(cfg.Types[0].References, second)
 				return cfg
 			}(),
-			wantErr: "reverseWatch is supported for at most one reference per referenced kind",
+		},
+		{
+			name: "two reverseWatch references to the same kind with injectInto rejected",
+			cfg: func() *APIGroupVersionConfig {
+				cfg := base(func(rc *ReferenceConfig) {
+					rc.Path = "spec.apiSpec.customPolicyRef"
+					rc.InjectInto = "type"
+					rc.ReverseWatch = true
+				})
+				second := cfg.Types[0].References[0]
+				second.Path = "spec.apiSpec.otherPolicies"
+				second.InjectInto = ""
+				cfg.Types[0].References = append(cfg.Types[0].References, second)
+				return cfg
+			}(),
+			wantErr: "reverseWatch with injectInto is supported for at most one reference per referenced kind",
 		},
 	}
 	for _, tt := range tests {
@@ -1519,4 +1534,26 @@ func TestSourceConfigs_Accessor(t *testing.T) {
 	require.Contains(t, got, "KonnectEventGateway")
 	require.True(t, got["KonnectEventGateway"].SupportsMirror)
 	require.NotContains(t, got, "Portal")
+}
+
+func TestTypeConfig_ValidateFieldDescriptions(t *testing.T) {
+	tc := &TypeConfig{CEL: &EntityConfig{Fields: map[string]*FieldConfig{
+		"spec": {Fields: map[string]*FieldConfig{
+			"apiSpec": {Fields: map[string]*FieldConfig{
+				"value": {Description: "ok"},
+			}},
+		}},
+	}}}
+	require.NoError(t, tc.validate())
+
+	tc = &TypeConfig{CEL: &EntityConfig{Fields: map[string]*FieldConfig{
+		"spec": {Fields: map[string]*FieldConfig{
+			"apiSpec": {Fields: map[string]*FieldConfig{
+				"tls": {Fields: map[string]*FieldConfig{
+					"caBundle": {Description: "nested"},
+				}},
+			}},
+		}},
+	}}}
+	require.ErrorContains(t, tc.validate(), "cel.spec.apiSpec.tls.caBundle: _description is only supported on spec.apiSpec's direct fields")
 }

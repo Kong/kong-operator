@@ -462,6 +462,12 @@ type EncryptionKeyStaticReference struct {
 	ID *string `json:"id,omitempty"`
 	// +optional
 	Name *string `json:"name,omitempty"`
+	// NamespacedRef references an in-cluster EventGatewayStaticKey object,
+	// resolved to its Konnect id.
+	// It is mutually exclusive with the other fields.
+	//
+	// +optional
+	NamespacedRef *EventGatewayStaticKeyRef `json:"namespacedRef,omitempty"`
 }
 
 // EncryptionKeyStaticReferenceByID A static encryption key reference by ID.

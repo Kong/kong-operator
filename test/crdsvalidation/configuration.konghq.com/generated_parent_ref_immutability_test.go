@@ -43,6 +43,10 @@ func TestGeneratedParentRefImmutability(t *testing.T) {
 		common.NewCRDValidationTestCasesGroupParentRefChange(t, cfg, obj).RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("EventGatewayStaticKey", func(t *testing.T) {
+		common.NewCRDValidationTestCasesGroupParentRefChange(t, cfg, validStaticKey(ns.Name)).RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("EventGatewayTLSTrustBundle", func(t *testing.T) {
 		common.NewCRDValidationTestCasesGroupParentRefChange(t, cfg, validTLSTrustBundle(ns.Name)).RunWithConfig(t, cfg, scheme)
 	})
