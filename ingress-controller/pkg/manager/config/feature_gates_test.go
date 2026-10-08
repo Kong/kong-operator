@@ -15,10 +15,17 @@ func TestFeatureGates(t *testing.T) {
 	assert.Len(t, fgs, len(GetFeatureGatesDefaults()))
 
 	t.Log("Verifying feature gates setup results when valid feature gates options are present")
-	featureGates := map[string]bool{GatewayAlphaFeature: true}
+	featureGates := map[string]bool{RewriteURIsFeature: true}
 	fgs, err = NewFeatureGates(featureGates)
 	assert.NoError(t, err)
-	assert.True(t, fgs[GatewayAlphaFeature])
+	assert.True(t, fgs[RewriteURIsFeature])
+
+	t.Log("Verifying no-op feature gates are accepted but neither set nor reported")
+	featureGates = map[string]bool{GatewayAlphaFeature: true}
+	fgs, err = NewFeatureGates(featureGates)
+	assert.NoError(t, err)
+	assert.NotContains(t, fgs, GatewayAlphaFeature)
+	assert.Len(t, fgs, len(GetFeatureGatesDefaults()))
 
 	t.Log("Verifying feature gates setup will return error when settings has conflicts")
 	featureGates = map[string]bool{KongCustomEntityFeature: true, FillIDsFeature: false}

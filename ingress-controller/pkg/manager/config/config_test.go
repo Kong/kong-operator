@@ -135,10 +135,10 @@ func TestNewConfig(t *testing.T) {
 
 	t.Run("verify it's possible to override default feature gate", func(t *testing.T) {
 		overrideFeatureGate := func(config *managercfg.Config) {
-			config.FeatureGates[managercfg.GatewayAlphaFeature] = true
+			config.FeatureGates[managercfg.RewriteURIsFeature] = true
 		}
 		cfg := managercfg.NewConfig(overrideFeatureGate)
-		require.True(t, cfg.FeatureGates[managercfg.GatewayAlphaFeature])
+		require.True(t, cfg.FeatureGates[managercfg.RewriteURIsFeature])
 	})
 }
 

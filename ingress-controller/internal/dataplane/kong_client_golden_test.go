@@ -1,7 +1,6 @@
 package dataplane
 
 import (
-	"bytes"
 	"context"
 	"flag"
 	"fmt"
@@ -9,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -363,14 +363,18 @@ func extractObjectsFromYAML(t *testing.T, filePath string) [][]byte {
 	// Strip out the YAML comments.
 	f := util.ManualStrip(y)
 
-	// Split the YAML by the document separator.
-	objects := bytes.Split(f, []byte("---"))
+	// Split the YAML by the document separator. Only lines consisting solely of "---" are
+	// treated as separators, so that e.g. PEM armor ("-----BEGIN CERTIFICATE-----") is kept intact.
+	objects := yamlDocumentSeparator.Split(string(f), -1)
 
 	// Filter out empty YAML documents.
-	return lo.Filter(objects, func(o []byte, _ int) bool {
-		return len(bytes.TrimSpace(o)) > 0
+	return lo.FilterMap(objects, func(o string, _ int) ([]byte, bool) {
+		return []byte(o), strings.TrimSpace(o) != ""
 	})
 }
+
+// yamlDocumentSeparator matches YAML document separator lines.
+var yamlDocumentSeparator = regexp.MustCompile(`(?m)^---[ \t]*$`)
 
 // fakeSchemaServiceProvider is a stub implementation of the SchemaServiceProvider interface that returns an
 // UnavailableSchemaService. It's used to avoid hitting the Kong Admin API during tests.
