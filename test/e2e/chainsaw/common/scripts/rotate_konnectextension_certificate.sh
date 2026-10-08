@@ -2,7 +2,8 @@
 # Variables:
 #   NAMESPACE, EXTENSION_NAME, DATAPLANE_NAME: resources under test.
 #   MODE: manual (in-place renewal), regenerate (delete Automatic Secret),
-#         or renewal (seed a legacy Automatic certificate inside the renewal window).
+#         manual-snapshot (delete the current Manual snapshot), or renewal
+#         (seed a legacy Automatic certificate inside the renewal window).
 #   KONNECT_TOKEN, KONNECT_SERVER_URL: credentials and regional API endpoint.
 #   MAX_RETRIES: optional, defaults to 180.
 set -o errexit
@@ -69,6 +70,11 @@ case "$MODE" in
     [[ "$(kubectl get secret "$source" -n "$NAMESPACE" -o jsonpath='{.metadata.uid}')" == "$source_uid" ]] ||
       fail "Manual renewal replaced the source Secret instead of changing it in place"
     ;;
+  manual-snapshot)
+    source="$(jq -r '.spec.clientAuth.certificateSecret.secretRef.name' "$tmp/extension.json")"
+    source_uid="$(kubectl get secret "$source" -n "$NAMESPACE" -o jsonpath='{.metadata.uid}')"
+    kubectl delete secret "$old_secret" -n "$NAMESPACE" --wait=false >&2
+    ;;
   regenerate)
     kubectl delete secret "$old_secret" -n "$NAMESPACE" --wait=false >&2
     ;;
@@ -128,8 +134,10 @@ kubectl get kongdataplaneclientcertificate "$old_certificate" -n "$NAMESPACE" -o
   fail "The controller unexpectedly resumed the paused Deployment"
 [[ "$(kubectl get secret "$new_secret" -n "$NAMESPACE" -o jsonpath='{.immutable}')" == "true" ]] ||
   fail "The published certificate generation is mutable"
-if [[ "$MODE" == "manual" ]]; then
+if [[ "$MODE" == "manual" || "$MODE" == "manual-snapshot" ]]; then
   [[ "$new_secret" != "$source" ]] || fail "Manual source Secret was published directly instead of a snapshot"
+  [[ "$(kubectl get secret "$source" -n "$NAMESPACE" -o jsonpath='{.metadata.uid}')" == "$source_uid" ]] ||
+    fail "The Manual source Secret was replaced"
   [[ "$(kubectl get secret "$source" -n "$NAMESPACE" -o jsonpath='{.data.tls\.crt}')" == \
      "$(kubectl get secret "$new_secret" -n "$NAMESPACE" -o jsonpath='{.data.tls\.crt}')" ]] ||
     fail "Snapshot does not match the renewed source certificate"
@@ -138,6 +146,14 @@ fi
 kubectl rollout resume deployment "$deployment" -n "$NAMESPACE" >&2
 paused=false
 kubectl rollout status deployment "$deployment" -n "$NAMESPACE" --timeout=180s >&2
+if [[ "$MODE" == "manual-snapshot" ]]; then
+  for attempt in $(seq 1 "$MAX_RETRIES"); do
+    remaining="$(kubectl get secret "$old_secret" -n "$NAMESPACE" --ignore-not-found -o name)"
+    [[ -z "$remaining" ]] && break
+    sleep 1
+  done
+  [[ -z "$remaining" ]] || fail "The deleting Manual snapshot was not released after rollout"
+fi
 
 if [[ "$MODE" == "renewal" ]]; then
   # Once consumers finish migrating to the seeded legacy generation, it must

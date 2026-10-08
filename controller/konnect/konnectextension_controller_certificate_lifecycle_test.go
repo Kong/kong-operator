@@ -3,6 +3,7 @@ package konnect
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -77,6 +78,122 @@ func TestKonnectExtensionCertificateSnapshot(t *testing.T) {
 			require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(&source), &source))
 			assert.Equal(t, before.Labels, source.Labels)
 			assert.Empty(t, source.Finalizers)
+		})
+	}
+}
+
+func TestKonnectExtensionDeletingCertificateSnapshot(t *testing.T) {
+	for _, name := range []string{"extension", strings.Repeat("a", 253)} {
+		t.Run(name, func(t *testing.T) {
+			r, ext := dpCertTestReconciler(t, "certificate")
+			ext.Name = name
+			var source corev1.Secret
+			require.NoError(t, r.Get(t.Context(), client.ObjectKey{Namespace: ext.Namespace, Name: "certificate"}, &source))
+			_, first, err := r.ensureCertificateSnapshot(t.Context(), ext, &source)
+			require.NoError(t, err)
+			first.Finalizers = []string{KonnectCleanupFinalizer, consts.KonnectExtensionSecretInUseFinalizer}
+			require.NoError(t, r.Update(t.Context(), first))
+			require.NoError(t, r.Delete(t.Context(), first))
+
+			result, replacement, err := r.ensureCertificateSnapshot(t.Context(), ext, &source)
+			require.NoError(t, err)
+			assert.Equal(t, op.Created, result)
+			assert.NotEqual(t, first.Name, replacement.Name)
+			assert.Empty(t, validation.IsDNS1123Subdomain(replacement.Name))
+			assert.Equal(t, source.Data, replacement.Data)
+			assert.Equal(t, new(true), replacement.Immutable)
+			for range 3 {
+				restarted := *r
+				result, same, err := restarted.ensureCertificateSnapshot(t.Context(), ext, &source)
+				require.NoError(t, err)
+				assert.Equal(t, op.Noop, result)
+				assert.Equal(t, replacement.Name, same.Name)
+			}
+			var retained corev1.Secret
+			require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(first), &retained))
+			assert.Equal(t, first.Finalizers, retained.Finalizers, "the old mount must survive until consumer migration")
+			retained.Finalizers = nil
+			require.NoError(t, r.Update(t.Context(), &retained))
+			result, same, err := r.ensureCertificateSnapshot(t.Context(), ext, &source)
+			require.NoError(t, err)
+			assert.Equal(t, op.Noop, result)
+			assert.Equal(t, replacement.Name, same.Name, "do not switch back when the content-derived name becomes free")
+
+			replacement.Finalizers = []string{KonnectCleanupFinalizer}
+			require.NoError(t, r.Update(t.Context(), replacement))
+			require.NoError(t, r.Delete(t.Context(), replacement))
+			result, next, err := r.ensureCertificateSnapshot(t.Context(), ext, &source)
+			require.NoError(t, err)
+			assert.Equal(t, op.Created, result)
+			assert.NotEqual(t, replacement.Name, next.Name, "deleting a replacement must also recover")
+			assert.Equal(t, source.Data, next.Data)
+		})
+	}
+}
+
+func TestKonnectExtensionDeletingSnapshotConflict(t *testing.T) {
+	for _, tt := range []struct {
+		name   string
+		mutate func(*corev1.Secret)
+	}{
+		{name: "foreign owner", mutate: func(s *corev1.Secret) { s.OwnerReferences[0].UID = "foreign-extension" }},
+		{name: "different certificate", mutate: func(s *corev1.Secret) { s.Data[corev1.TLSCertKey] = []byte("other") }},
+		{name: "different key", mutate: func(s *corev1.Secret) { s.Data[corev1.TLSPrivateKeyKey] = []byte("other") }},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			r, ext := dpCertTestReconciler(t, "certificate")
+			var source corev1.Secret
+			require.NoError(t, r.Get(t.Context(), client.ObjectKey{Namespace: ext.Namespace, Name: "certificate"}, &source))
+			_, snapshot, err := r.ensureCertificateSnapshot(t.Context(), ext, &source)
+			require.NoError(t, err)
+			// A mutable fixture lets the fake client model a conflicting object
+			// at the desired name; production snapshots themselves are immutable.
+			snapshot.Immutable = nil
+			snapshot.Finalizers = []string{KonnectCleanupFinalizer, consts.KonnectExtensionSecretInUseFinalizer}
+			tt.mutate(snapshot)
+			require.NoError(t, r.Update(t.Context(), snapshot))
+			require.NoError(t, r.Delete(t.Context(), snapshot))
+			_, _, err = r.ensureCertificateSnapshot(t.Context(), ext, &source)
+			require.ErrorContains(t, err, "conflicts with the desired generation")
+			var retained corev1.Secret
+			require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(snapshot), &retained))
+			assert.Equal(t, snapshot.Finalizers, retained.Finalizers)
+			assert.Equal(t, snapshot.Data, retained.Data)
+		})
+	}
+}
+
+func TestKonnectExtensionRequeuesFutureDeletionTimestamp(t *testing.T) {
+	for _, hasDependent := range []bool{false, true} {
+		t.Run(fmt.Sprintf("dependent=%t", hasDependent), func(t *testing.T) {
+			registration := dpCertTestObject("extension", "certificate")
+			r, ext := dpCertTestReconciler(t, "certificate", registration)
+			ext.Finalizers = []string{KonnectCleanupFinalizer}
+			require.NoError(t, r.Update(t.Context(), ext))
+			if hasDependent {
+				require.NoError(t, r.Create(t.Context(), &operatorv1beta1.DataPlane{
+					Name: "dp", Namespace: ext.Namespace,
+					Spec: operatorv1beta1.DataPlaneSpec{DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Extensions: []commonv1alpha1.ExtensionRef{{
+							Group: konnectv1alpha2.GroupVersion.Group, Kind: konnectv1alpha2.KonnectExtensionKind, Name: ext.Name,
+						}},
+					}},
+				}))
+			}
+			ext.DeletionTimestamp = new(metav1.NewTime(time.Now().Add(time.Minute)))
+			result, err := r.Reconcile(t.Context(), ext)
+			require.NoError(t, err)
+			assert.Greater(t, result.RequeueAfter, 55*time.Second)
+			assert.LessOrEqual(t, result.RequeueAfter, time.Minute)
+			assert.Len(t, dpCertTestList(t, r.Client), 1)
+			ext.DeletionTimestamp = new(metav1.NewTime(time.Now().Add(-time.Second)))
+			_, err = r.Reconcile(t.Context(), ext)
+			require.NoError(t, err)
+			if hasDependent {
+				assert.Len(t, dpCertTestList(t, r.Client), 1, "dependents must still block deletion")
+			} else {
+				assert.Empty(t, dpCertTestList(t, r.Client), "cleanup must run after the timestamp passes")
+			}
 		})
 	}
 }
@@ -629,4 +746,91 @@ func TestKonnectExtensionReconciliationPreservesOverlapUntilOldPodsExit(t *testi
 	reconcile()
 	assert.True(t, apierrors.IsNotFound(r.Get(t.Context(), client.ObjectKeyFromObject(oldSecret), &retained)))
 	assert.Len(t, dpCertTestList(t, r.Client), 1)
+}
+
+func TestKonnectExtensionRecoversDeletingCurrentSnapshot(t *testing.T) {
+	r, ext := dpCertTestReconciler(t, "certificate")
+	reconcile := func(program bool) {
+		t.Helper()
+		for range 16 {
+			require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(ext), ext))
+			_, err := r.Reconcile(t.Context(), ext)
+			require.NoError(t, err)
+			if program {
+				for _, registration := range dpCertTestList(t, r.Client) {
+					if registration.GetKonnectID() == "" {
+						registration.Status = dpCertTestProgrammedStatus("original-certificate-id")
+						require.NoError(t, r.Status().Update(t.Context(), &registration))
+					}
+				}
+			}
+		}
+	}
+	reconcile(true)
+	require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(ext), ext))
+	require.True(t, k8sutils.HasConditionTrue(konnectv1alpha2.KonnectExtensionReadyConditionType, ext))
+	var original corev1.Secret
+	require.NoError(t, r.Get(t.Context(), client.ObjectKey{
+		Namespace: ext.Namespace, Name: ext.Status.DataPlaneClientAuth.CertificateSecretRef.Name,
+	}, &original))
+	require.Contains(t, original.Finalizers, KonnectCleanupFinalizer)
+	require.Contains(t, original.Finalizers, consts.KonnectExtensionSecretInUseFinalizer)
+	dp := &operatorv1beta1.DataPlane{
+		Name: "dp", Namespace: ext.Namespace, UID: "dp",
+		Spec: operatorv1beta1.DataPlaneSpec{DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+			Extensions: []commonv1alpha1.ExtensionRef{{
+				Group: konnectv1alpha2.GroupVersion.Group, Kind: konnectv1alpha2.KonnectExtensionKind, Name: ext.Name,
+			}},
+		}},
+	}
+	require.NoError(t, r.Create(t.Context(), dp))
+	deployment := &appsv1.Deployment{
+		Name: "dp", Namespace: ext.Namespace, Generation: 1,
+		Spec: appsv1.DeploymentSpec{Replicas: new(int32(1)),
+			Template: corev1.PodTemplateSpec{Spec: corev1.PodSpec{Volumes: []corev1.Volume{
+				{Name: consts.KongClusterCertVolume, Secret: &corev1.SecretVolumeSource{SecretName: original.Name}},
+			}}}},
+		Status: appsv1.DeploymentStatus{ObservedGeneration: 1, Replicas: 1, UpdatedReplicas: 1, AvailableReplicas: 1},
+	}
+	require.NoError(t, controllerutil.SetControllerReference(dp, deployment, r.Scheme()))
+	require.NoError(t, r.Create(t.Context(), deployment))
+	pod := &corev1.Pod{
+		Name: "old-pod", Namespace: ext.Namespace, Finalizers: []string{"test/hold"},
+		Spec: deployment.Spec.Template.Spec,
+	}
+	require.NoError(t, r.Create(t.Context(), pod))
+	require.NoError(t, r.Delete(t.Context(), &original))
+	reconcile(false)
+	require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(ext), ext))
+	replacementName := ext.Status.DataPlaneClientAuth.CertificateSecretRef.Name
+	require.NotEqual(t, original.Name, replacementName)
+	assert.True(t, k8sutils.HasConditionTrue(konnectv1alpha2.KonnectExtensionReadyConditionType, ext))
+	var held corev1.Secret
+	require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(&original), &held))
+	assert.Equal(t, original.Finalizers, held.Finalizers)
+	registrations := dpCertTestList(t, r.Client)
+	require.Len(t, registrations, 1, "unchanged certificate contents must reuse the existing Konnect registration")
+	registration := registrations["extension"]
+	assert.Equal(t, "original-certificate-id", registration.GetKonnectID())
+	assert.True(t, registration.DeletionTimestamp.IsZero())
+
+	deployment.Spec.Template.Spec.Volumes[0].Secret.SecretName = replacementName
+	require.NoError(t, r.Update(t.Context(), deployment))
+	require.NoError(t, r.Delete(t.Context(), pod))
+	reconcile(false)
+	require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(&original), &held))
+	assert.Equal(t, original.Finalizers, held.Finalizers, "terminating old Pods still protect the deleting snapshot")
+	require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(pod), pod))
+	pod.Finalizers = nil
+	require.NoError(t, r.Update(t.Context(), pod))
+	reconcile(false)
+	assert.True(t, apierrors.IsNotFound(r.Get(t.Context(), client.ObjectKeyFromObject(&original), &held)))
+	require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(ext), ext))
+	assert.Equal(t, replacementName, ext.Status.DataPlaneClientAuth.CertificateSecretRef.Name)
+	assert.True(t, k8sutils.HasConditionTrue(konnectv1alpha2.KonnectExtensionReadyConditionType, ext))
+	assert.Len(t, dpCertTestList(t, r.Client), 1)
+	var source corev1.Secret
+	require.NoError(t, r.Get(t.Context(), client.ObjectKey{Namespace: ext.Namespace, Name: "certificate"}, &source))
+	assert.Equal(t, original.Data, source.Data)
+	assert.Empty(t, source.Finalizers)
 }

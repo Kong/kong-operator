@@ -63,10 +63,41 @@ func (r *KonnectExtensionReconciler) ensureCertificateSnapshot(
 	if err == nil {
 		if !metav1.IsControlledBy(existing, ext) ||
 			string(existing.Data[corev1.TLSCertKey]) != string(source.Data[corev1.TLSCertKey]) ||
-			string(existing.Data[corev1.TLSPrivateKeyKey]) != string(source.Data[corev1.TLSPrivateKeyKey]) ||
-			!existing.DeletionTimestamp.IsZero() {
+			string(existing.Data[corev1.TLSPrivateKeyKey]) != string(source.Data[corev1.TLSPrivateKeyKey]) {
 			return op.Noop, nil, fmt.Errorf("certificate snapshot Secret %s/%s conflicts with the desired generation", ext.Namespace, name)
 		}
+	} else if !apierrors.IsNotFound(err) {
+		return op.Noop, nil, err
+	}
+	replacing := err == nil && !existing.DeletionTimestamp.IsZero()
+	if err != nil || replacing {
+		// Keep a deleting snapshot protected until consumers migrate. Reuse
+		// its replacement even after the original content-derived name is gone.
+		owned, err := r.listOwnedCertificateSecrets(ctx, ext)
+		if err != nil {
+			return op.Noop, nil, err
+		}
+		existing = nil
+		currentName := ""
+		if ext.Status.DataPlaneClientAuth != nil && ext.Status.DataPlaneClientAuth.CertificateSecretRef != nil {
+			currentName = ext.Status.DataPlaneClientAuth.CertificateSecretRef.Name
+		}
+		for i := range owned {
+			candidate := &owned[i]
+			if candidate.Name == source.Name || !candidate.DeletionTimestamp.IsZero() ||
+				!metav1.IsControlledBy(candidate, ext) ||
+				candidate.Labels[consts.SecretProvisioningLabelKey] == consts.SecretProvisioningAutomaticLabelValue ||
+				string(candidate.Data[corev1.TLSCertKey]) != string(source.Data[corev1.TLSCertKey]) ||
+				string(candidate.Data[corev1.TLSPrivateKeyKey]) != string(source.Data[corev1.TLSPrivateKeyKey]) {
+				continue
+			}
+			if existing == nil || candidate.Name == currentName ||
+				(existing.Name != currentName && candidate.Name < existing.Name) {
+				existing = candidate
+			}
+		}
+	}
+	if existing != nil {
 		if existing.Immutable == nil || !*existing.Immutable {
 			existing.Immutable = new(true)
 			if err := r.Update(ctx, existing); err != nil {
@@ -76,9 +107,6 @@ func (r *KonnectExtensionReconciler) ensureCertificateSnapshot(
 		}
 		return op.Noop, existing, nil
 	}
-	if !apierrors.IsNotFound(err) {
-		return op.Noop, nil, err
-	}
 	labels := k8sresources.GetManagedLabelForOwner(ext)
 	labels[SecretKonnectDataPlaneCertificateLabel] = "true"
 	if r.SecretLabelSelector != "" {
@@ -87,6 +115,10 @@ func (r *KonnectExtensionReconciler) ensureCertificateSnapshot(
 	snapshot := &corev1.Secret{
 		Name: name, Namespace: ext.Namespace, Labels: labels,
 		Type: corev1.SecretTypeTLS, Immutable: new(true), Data: source.DeepCopy().Data,
+	}
+	if replacing {
+		snapshot.Name = ""
+		snapshot.GenerateName = k8sutils.TrimGenerateName(name + "-")
 	}
 	if err := controllerutil.SetControllerReference(ext, snapshot, r.Scheme()); err != nil {
 		return op.Noop, nil, err

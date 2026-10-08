@@ -4,7 +4,8 @@ metadata:
   name: konnectextension-certificate-rotation
 spec:
   description: |
-    Covers in-place Manual renewal, switching to Automatic provisioning,
+    Covers in-place Manual renewal, deletion of a current Manual snapshot,
+    switching to Automatic provisioning,
     deleting an Automatic Secret with its normal finalizers, and renewal of
     a legacy certificate inside the expiration margin. A paused Deployment
     holds the rollout so old trust must coexist with the new registration.
@@ -171,6 +172,23 @@ spec:
                 value: rotating
               - name: MODE
                 value: manual
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_SERVER_URL
+                value: ($konnect_url)
+            content: bash ../../common/scripts/rotate_konnectextension_certificate.sh
+    - name: recreate-deleted-manual-snapshot
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: EXTENSION_NAME
+                value: rotating
+              - name: DATAPLANE_NAME
+                value: rotating
+              - name: MODE
+                value: manual-snapshot
               - name: KONNECT_TOKEN
                 value: ($konnect_token)
               - name: KONNECT_SERVER_URL

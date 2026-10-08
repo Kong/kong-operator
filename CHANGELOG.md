@@ -239,8 +239,10 @@
   and `--cert-expiration-margin`. Manually provisioned certificates use
   immutable owned Secret snapshots so in-place issuer renewal cannot reach
   Pods before Konnect accepts the new certificate. The source Secret remains
-  externally managed, and status references the snapshot. The extension
-  remains unready until its current certificate is programmed.
+  externally managed, and status references the snapshot. Deleting a current
+  Manual snapshot creates a replacement and preserves the original mount
+  until consumers migrate, without removing the unchanged Konnect registration.
+  The extension remains unready until its current certificate is programmed.
   [#5982](https://github.com/Kong/kong-operator/pull/5982)
 - Konnect: the operator now adds its labels (`k8s-uid`, `managed-by`, ...) to
   the Konnect entities of `AIGatewayAuthStrategy`, `AIGatewayModel`,
