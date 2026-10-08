@@ -925,3 +925,319 @@ func TestGenerateSDKOps_ACLRefInjectionUnsupportedShapes(t *testing.T) {
 		require.ErrorContains(t, err, "only supports paths ending in access.acls.allow.allow or access.acls.deny.deny")
 	})
 }
+
+// trustBundleUnionMemberParsedSpec builds a fixture mirroring the TLS listener
+// policy's config.clientAuthentication.trustBundles: an array of a named,
+// root-level anyOf by-id/by-name reference object.
+func trustBundleUnionMemberParsedSpec() *parser.ParsedSpec {
+	byID := &parser.Property{RefName: "TrustBundleReferenceByID", Properties: []*parser.Property{{Name: "id", Type: "string"}}}
+	byName := &parser.Property{RefName: "TrustBundleReferenceByName", Properties: []*parser.Property{{Name: "name", Type: "string"}}}
+	return &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{
+			"AIGatewayAgent": {Properties: []*parser.Property{
+				{Name: "config", Type: "object", Properties: []*parser.Property{
+					{Name: "client_authentication", Type: "object", Properties: []*parser.Property{
+						{Name: "mode", Type: "string", Required: true},
+						{Name: "trust_bundles", Type: "array", Required: true, Items: &parser.Property{RefName: "TrustBundleReference"}},
+					}},
+				}},
+			}},
+		},
+		Schemas: map[string]*parser.Schema{
+			"TrustBundleReference":       {AnyOf: []*parser.Property{byID, byName}},
+			"TrustBundleReferenceByID":   {Properties: byID.Properties},
+			"TrustBundleReferenceByName": {Properties: byName.Properties},
+		},
+	}
+}
+
+func trustBundleUnionMemberRef() config.ReferenceConfig {
+	return config.ReferenceConfig{
+		Path:        "spec.apiSpec.config.clientAuthentication.trustBundles",
+		Kinds:       []string{"AIGatewayConsumerGroup"},
+		ResolvesTo:  "name",
+		UnionMember: "namespacedRef",
+	}
+}
+
+// TestGenerateSDKOps_UnionMemberReference verifies an additive (unionMember)
+// reference: the field keeps its OAS reference-object type, which gains the
+// generated ref as one more member, and only items using that member are
+// resolved and rewritten in the SDK payload.
+func TestGenerateSDKOps_UnionMemberReference(t *testing.T) {
+	parsed := trustBundleUnionMemberParsedSpec()
+	g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{
+		"AIGatewayAgent": {trustBundleUnionMemberRef()},
+	})
+	require.NoError(t, g.validateReferences(parsed))
+
+	// The field is not ref-ified: it keeps its OAS type.
+	require.Empty(t, g.schemaTypeRefFields())
+
+	// The reference object gains the member next to its id/name fields.
+	union := g.emitAnyOfUnionType("TrustBundleReference", parsed.Schemas["TrustBundleReference"])
+	require.Contains(t, union, "// +kubebuilder:validation:MaxProperties=1")
+	require.Contains(t, union, "ID *string `json:\"id,omitempty\"`")
+	require.Contains(t, union, "Name *string `json:\"name,omitempty\"`")
+	require.Contains(t, union, "NamespacedRef *AIGatewayConsumerGroupRef `json:\"namespacedRef,omitempty\"`")
+
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayAgentRequest"},
+		},
+	}
+	content, err := g.generateSDKOps("AIGatewayAgent", parsed.RequestBodies["AIGatewayAgent"], opsConfig)
+	require.NoError(t, err)
+	_, err = format.Source([]byte(content))
+	require.NoError(t, err)
+
+	// Accessor: only the set members, in order.
+	require.Contains(t, content, "if obj.Spec.APISpec.Config.ClientAuthentication.TrustBundles[i].NamespacedRef == nil {")
+	require.Contains(t, content, "refs = append(refs, *obj.Spec.APISpec.Config.ClientAuthentication.TrustBundles[i].NamespacedRef)")
+
+	// Injection: only items carrying the member are replaced.
+	require.Contains(t, content, `if arr, ok := clientAuthentication["trust_bundles"].([]any); ok {`)
+	require.Contains(t, content, `if _, has := el["namespaced_ref"]; !has {`)
+	require.Contains(t, content, `arr[i] = map[string]any{"name": resolvedConfigClientAuthenticationTrustBundles[ri]}`)
+	require.NotContains(t, content, `clientAuthentication["trust_bundles"] = `)
+	// Missing ancestors are skipped, not created: they hold nothing to rewrite.
+	require.Contains(t, content, "if clientAuthentication != nil {")
+	require.NotContains(t, content, "clientAuthentication = map[string]any{}")
+}
+
+func TestValidateReferences_UnionMember(t *testing.T) {
+	t.Run("rejects a field that is not a reference object", func(t *testing.T) {
+		parsed := trustBundleUnionMemberParsedSpec()
+		clientAuth := parsed.RequestBodies["AIGatewayAgent"].Properties[0].Properties[0]
+		clientAuth.Properties = append(clientAuth.Properties, &parser.Property{
+			Name: "names", Type: "array", Items: &parser.Property{Type: "string"},
+		})
+		ref := trustBundleUnionMemberRef()
+		ref.Path = "spec.apiSpec.config.clientAuthentication.names"
+		g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{"AIGatewayAgent": {ref}})
+		require.ErrorContains(t, g.validateReferences(parsed), "unionMember requires the field to be a named by-id/by-name reference object")
+	})
+
+	t.Run("rejects a top-level field", func(t *testing.T) {
+		parsed := trustBundleUnionMemberParsedSpec()
+		body := parsed.RequestBodies["AIGatewayAgent"]
+		body.Properties = append(body.Properties, &parser.Property{
+			Name: "bundles", Type: "array", Items: &parser.Property{RefName: "TrustBundleReference"},
+		})
+		ref := trustBundleUnionMemberRef()
+		ref.Path = "spec.apiSpec.bundles"
+		g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{"AIGatewayAgent": {ref}})
+		require.ErrorContains(t, g.validateReferences(parsed), "unionMember is only supported for nested references")
+	})
+
+	t.Run("rejects a field inside a non-leaf array", func(t *testing.T) {
+		parsed := trustBundleUnionMemberParsedSpec()
+		parsed.Schemas["Item"] = &parser.Schema{Properties: []*parser.Property{
+			{Name: "bundles", Type: "array", Items: &parser.Property{RefName: "TrustBundleReference"}},
+		}}
+		body := parsed.RequestBodies["AIGatewayAgent"]
+		body.Properties = append(body.Properties, &parser.Property{
+			Name: "items", Type: "array", Items: &parser.Property{RefName: "Item"},
+		})
+		ref := trustBundleUnionMemberRef()
+		ref.Path = "spec.apiSpec.items.bundles"
+		ref2 := trustBundleUnionMemberRef()
+		g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{"AIGatewayAgent": {ref2, ref}})
+		require.ErrorContains(t, g.validateReferences(parsed), "unionMember is not supported inside a non-leaf array")
+	})
+
+	t.Run("rejects an array of reference objects without unionMember", func(t *testing.T) {
+		parsed := trustBundleUnionMemberParsedSpec()
+		ref := trustBundleUnionMemberRef()
+		ref.UnionMember = ""
+		g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{"AIGatewayAgent": {ref}})
+		require.ErrorContains(t, g.validateReferences(parsed), "an array of by-id/by-name reference objects is only supported with unionMember")
+	})
+
+	t.Run("rejects another entity holding the reference object as map values", func(t *testing.T) {
+		parsed := trustBundleUnionMemberParsedSpec()
+		parsed.RequestBodies["AIGatewayModel"] = &parser.Schema{Properties: []*parser.Property{
+			{Name: "bundles", Type: "object", AdditionalProperties: &parser.Property{RefName: "TrustBundleReference"}},
+		}}
+		g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{
+			"AIGatewayAgent": {trustBundleUnionMemberRef()},
+		})
+		require.ErrorContains(t, g.validateReferences(parsed), "entity AIGatewayModel embeds it in 1 field(s) with 0 matching references entries")
+	})
+
+	t.Run("documents the member with sorted kinds", func(t *testing.T) {
+		parsed := trustBundleUnionMemberParsedSpec()
+		ref := trustBundleUnionMemberRef()
+		ref.Kinds = []string{"AIGatewayConsumerGroup", "AIGatewayConsumer"}
+		ref.RefTypeName = "TrustBundleRef"
+		g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{"AIGatewayAgent": {ref}})
+		require.NoError(t, g.validateReferences(parsed))
+		require.Contains(t, g.unionRefMembers()["TrustBundleReference"].Description, "AIGatewayConsumer or AIGatewayConsumerGroup")
+	})
+
+	t.Run("rejects a member colliding with a reference object field", func(t *testing.T) {
+		parsed := trustBundleUnionMemberParsedSpec()
+		ref := trustBundleUnionMemberRef()
+		ref.UnionMember = "name"
+		g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{"AIGatewayAgent": {ref}})
+		require.ErrorContains(t, g.validateReferences(parsed), `unionMember "name" collides`)
+	})
+
+	t.Run("rejects another entity embedding the reference object without the reference", func(t *testing.T) {
+		parsed := trustBundleUnionMemberParsedSpec()
+		parsed.RequestBodies["AIGatewayModel"] = &parser.Schema{Properties: []*parser.Property{
+			{Name: "bundles", Type: "array", Items: &parser.Property{RefName: "TrustBundleReference"}},
+		}}
+		g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{
+			"AIGatewayAgent": {trustBundleUnionMemberRef()},
+		})
+		require.ErrorContains(t, g.validateReferences(parsed), "entity AIGatewayModel embeds it in 1 field(s) with 0 matching references entries")
+	})
+
+	t.Run("rejects another entity extending the reference object with a different member", func(t *testing.T) {
+		parsed := trustBundleUnionMemberParsedSpec()
+		parsed.RequestBodies["AIGatewayModel"] = &parser.Schema{Properties: []*parser.Property{
+			{Name: "settings", Type: "object", Properties: []*parser.Property{
+				{Name: "bundles", Type: "array", Items: &parser.Property{RefName: "TrustBundleReference"}},
+			}},
+		}}
+		other := config.ReferenceConfig{
+			Path:        "spec.apiSpec.settings.bundles",
+			Kinds:       []string{"AIGatewayConsumer"},
+			ResolvesTo:  "id",
+			UnionMember: "otherRef",
+		}
+		g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{
+			"AIGatewayAgent": {trustBundleUnionMemberRef()},
+			"AIGatewayModel": {other},
+		})
+		require.ErrorContains(t, g.validateReferences(parsed), "is extended with mismatching unionMember references by entities AIGatewayAgent and AIGatewayModel")
+	})
+
+	t.Run("accepts another entity extending the reference object with the same member", func(t *testing.T) {
+		parsed := trustBundleUnionMemberParsedSpec()
+		parsed.RequestBodies["AIGatewayModel"] = &parser.Schema{Properties: []*parser.Property{
+			{Name: "settings", Type: "object", Properties: []*parser.Property{
+				{Name: "bundles", Type: "array", Items: &parser.Property{RefName: "TrustBundleReference"}},
+			}},
+		}}
+		same := trustBundleUnionMemberRef()
+		same.Path = "spec.apiSpec.settings.bundles"
+		g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{
+			"AIGatewayAgent": {trustBundleUnionMemberRef()},
+			"AIGatewayModel": {same},
+		})
+		require.NoError(t, g.validateReferences(parsed))
+	})
+
+	t.Run("rejects a second field of the reference object type without the reference", func(t *testing.T) {
+		parsed := trustBundleUnionMemberParsedSpec()
+		config0 := parsed.RequestBodies["AIGatewayAgent"].Properties[0]
+		config0.Properties = append(config0.Properties, &parser.Property{
+			Name: "extra_bundles", Type: "array", Items: &parser.Property{RefName: "TrustBundleReference"},
+		})
+		g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{
+			"AIGatewayAgent": {trustBundleUnionMemberRef()},
+		})
+		require.ErrorContains(t, g.validateReferences(parsed), "entity AIGatewayAgent embeds it in 2 field(s) with 1 matching references entries")
+	})
+
+	t.Run("counts a field reached through a $ref once although the parser inlines it", func(t *testing.T) {
+		parsed := trustBundleUnionMemberParsedSpec()
+		// Mirror the parser: a $ref property also carries the referenced
+		// schema's properties inline.
+		clientAuth := parsed.RequestBodies["AIGatewayAgent"].Properties[0].Properties[0]
+		parsed.Schemas["ClientAuthentication"] = &parser.Schema{Properties: clientAuth.Properties}
+		parsed.RequestBodies["AIGatewayAgent"].Properties[0].Properties[0] = &parser.Property{
+			Name: "client_authentication", Type: "object", RefName: "ClientAuthentication", Properties: clientAuth.Properties,
+		}
+		g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{
+			"AIGatewayAgent": {trustBundleUnionMemberRef()},
+		})
+		require.NoError(t, g.validateReferences(parsed))
+	})
+
+	t.Run("rejects a reference object with its own properties", func(t *testing.T) {
+		parsed := trustBundleUnionMemberParsedSpec()
+		parsed.Schemas["TrustBundleReference"].Properties = []*parser.Property{{Name: "id", Type: "string"}}
+		g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{
+			"AIGatewayAgent": {trustBundleUnionMemberRef()},
+		})
+		require.ErrorContains(t, g.validateReferences(parsed), "to be a root-level anyOf without own properties")
+	})
+
+	t.Run("rejects a member colliding with a multi-property variant field", func(t *testing.T) {
+		parsed := trustBundleUnionMemberParsedSpec()
+		union := parsed.Schemas["TrustBundleReference"]
+		union.AnyOf = append(union.AnyOf, &parser.Property{RefName: "NamespacedRef", Properties: []*parser.Property{
+			{Name: "name", Type: "string"},
+			{Name: "namespace", Type: "string"},
+		}})
+		g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{
+			"AIGatewayAgent": {trustBundleUnionMemberRef()},
+		})
+		require.ErrorContains(t, g.validateReferences(parsed), `unionMember "namespacedRef" collides`)
+	})
+}
+
+// TestGenerateSDKOps_UnionMemberSingleObjectReference verifies a unionMember
+// reference on a single by-id/by-name reference object (e.g. a static key
+// reference): the accessor returns the member when set, and the injection
+// replaces the reference object only when it carries the member.
+func TestGenerateSDKOps_UnionMemberSingleObjectReference(t *testing.T) {
+	parsed := trustBundleUnionMemberParsedSpec()
+	clientAuth := parsed.RequestBodies["AIGatewayAgent"].Properties[0].Properties[0]
+	clientAuth.Properties = append(clientAuth.Properties, &parser.Property{
+		Name: "key", Type: "object", RefName: "TrustBundleReference",
+	})
+	ref := trustBundleUnionMemberRef()
+	ref.Path = "spec.apiSpec.config.clientAuthentication.key"
+	g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{
+		// Both fields of the reference object type must be covered.
+		"AIGatewayAgent": {trustBundleUnionMemberRef(), ref},
+	})
+	require.NoError(t, g.validateReferences(parsed))
+
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayAgentRequest"},
+		},
+	}
+	content, err := g.generateSDKOps("AIGatewayAgent", parsed.RequestBodies["AIGatewayAgent"], opsConfig)
+	require.NoError(t, err)
+	_, err = format.Source([]byte(content))
+	require.NoError(t, err)
+
+	// Accessor: the member, when set.
+	require.Contains(t, content, "if obj.Spec.APISpec.Config.ClientAuthentication.Key.NamespacedRef == nil {")
+	require.Contains(t, content, "return []AIGatewayConsumerGroupRef{*obj.Spec.APISpec.Config.ClientAuthentication.Key.NamespacedRef}")
+	// Injection: the reference object is replaced only when it carries the member.
+	require.Contains(t, content, `if el, ok := clientAuthentication2["key"].(map[string]any); ok && len(resolvedConfigClientAuthenticationKey) > 0 {`)
+	require.Contains(t, content, `clientAuthentication2["key"] = map[string]any{"name": resolvedConfigClientAuthenticationKey[0]}`)
+}
+
+func TestValidateReferences_UnionMemberGoNameCollision(t *testing.T) {
+	parsed := trustBundleUnionMemberParsedSpec()
+	ref := trustBundleUnionMemberRef()
+	// "iD" differs from the "id" variant field in JSON, but both are the Go
+	// field "ID".
+	ref.UnionMember = "iD"
+	g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{"AIGatewayAgent": {ref}})
+	require.ErrorContains(t, g.validateReferences(parsed), `unionMember "iD" collides with field "id"`)
+}
+
+func TestRefFieldTarget_RootAnyOfObjectRequiresUnionMember(t *testing.T) {
+	// Without unionMember, a single field holding a $ref to a root-level anyOf
+	// schema is not a reference object (it was rejected before unionMember
+	// existed, and still is).
+	parsed := trustBundleUnionMemberParsedSpec()
+	clientAuth := parsed.RequestBodies["AIGatewayAgent"].Properties[0].Properties[0]
+	clientAuth.Properties = append(clientAuth.Properties, &parser.Property{
+		Name: "key", Type: "object", RefName: "TrustBundleReference",
+	})
+	ref := trustBundleUnionMemberRef()
+	ref.Path = "spec.apiSpec.config.clientAuthentication.key"
+	ref.UnionMember = ""
+	g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{"AIGatewayAgent": {ref}})
+	require.ErrorContains(t, g.validateReferences(parsed), "must be an array property")
+}

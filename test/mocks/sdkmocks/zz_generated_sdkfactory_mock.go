@@ -28,6 +28,7 @@ type generatedMockSDKWrapper struct {
 	EventGatewayListenersSDK                     *mocks.MockEventGatewayListenersSDK
 	EventGatewayListenerPoliciesSDK              *mocks.MockEventGatewayListenerPoliciesSDK
 	EventGatewaySchemaRegistriesSDK              *mocks.MockEventGatewaySchemaRegistriesSDK
+	EventGatewayTLSTrustBundlesSDK               *mocks.MockEventGatewayTLSTrustBundlesSDK
 	EventGatewayVirtualClustersSDK               *mocks.MockEventGatewayVirtualClustersSDK
 	EventGatewayVirtualClusterConsumePoliciesSDK *mocks.MockEventGatewayVirtualClusterConsumePoliciesSDK
 	EventGatewayVirtualClusterPoliciesSDK        *mocks.MockEventGatewayVirtualClusterPoliciesSDK
@@ -65,6 +66,7 @@ func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {
 		EventGatewayListenersSDK:                     mocks.NewMockEventGatewayListenersSDK(t),
 		EventGatewayListenerPoliciesSDK:              mocks.NewMockEventGatewayListenerPoliciesSDK(t),
 		EventGatewaySchemaRegistriesSDK:              mocks.NewMockEventGatewaySchemaRegistriesSDK(t),
+		EventGatewayTLSTrustBundlesSDK:               mocks.NewMockEventGatewayTLSTrustBundlesSDK(t),
 		EventGatewayVirtualClustersSDK:               mocks.NewMockEventGatewayVirtualClustersSDK(t),
 		EventGatewayVirtualClusterConsumePoliciesSDK: mocks.NewMockEventGatewayVirtualClusterConsumePoliciesSDK(t),
 		EventGatewayVirtualClusterPoliciesSDK:        mocks.NewMockEventGatewayVirtualClusterPoliciesSDK(t),
@@ -171,6 +173,11 @@ func (m generatedMockSDKWrapper) GetEventGatewayListenerPoliciesSDK() sdkkonnect
 // GetEventGatewaySchemaRegistriesSDK returns the SDK to operate EventGatewaySchemaRegistry.
 func (m generatedMockSDKWrapper) GetEventGatewaySchemaRegistriesSDK() sdkkonnectgo.EventGatewaySchemaRegistriesSDK {
 	return m.EventGatewaySchemaRegistriesSDK
+}
+
+// GetEventGatewayTLSTrustBundlesSDK returns the SDK to operate EventGatewayTLSTrustBundle.
+func (m generatedMockSDKWrapper) GetEventGatewayTLSTrustBundlesSDK() sdkkonnectgo.EventGatewayTLSTrustBundlesSDK {
+	return m.EventGatewayTLSTrustBundlesSDK
 }
 
 // GetEventGatewayVirtualClustersSDK returns the SDK to operate EventGatewayVirtualCluster.

@@ -34,6 +34,14 @@ func EventGatewayListenerPolicyReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
+				&configurationv1alpha1.EventGatewayTLSTrustBundle{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueEventGatewayListenerPolicyForEventGatewayTLSTrustBundle(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
 				&configurationv1alpha1.KongReferenceGrant{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectsForKongReferenceGrant[configurationv1alpha1.EventGatewayListenerPolicyList](cl),
@@ -62,6 +70,24 @@ func enqueueEventGatewayListenerPolicyForEventGatewayListener(
 		var l configurationv1alpha1.EventGatewayListenerPolicyList
 		if err := cl.List(ctx, &l, client.MatchingFields{
 			index.IndexFieldEventGatewayListenerPolicyOnEventGatewayListenerRef: client.ObjectKeyFromObject(parent).String(),
+		}); err != nil {
+			return nil
+		}
+		return objectListToReconcileRequests(l.Items)
+	}
+}
+
+func enqueueEventGatewayListenerPolicyForEventGatewayTLSTrustBundle(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		ref, ok := obj.(*configurationv1alpha1.EventGatewayTLSTrustBundle)
+		if !ok {
+			return nil
+		}
+		var l configurationv1alpha1.EventGatewayListenerPolicyList
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexFieldEventGatewayListenerPolicyOnEventGatewayTLSTrustBundleRef: client.ObjectKeyFromObject(ref).String(),
 		}); err != nil {
 			return nil
 		}

@@ -1,0 +1,415 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-tlstrustbundle-listenerpolicy-reference
+spec:
+  description: |
+    EventGatewayTLSTrustBundle referenced by a TLS EventGatewayListenerPolicy
+    through clientAuthentication.tlsTrustBundles[].namespacedRef, against the
+    real Konnect API:
+
+    - the reference resolves to the trust bundle's Konnect ID, which is how
+      Konnect binds the policy to it (a by-name reference breaks when the trust
+      bundle is renamed);
+    - Konnect allows deleting a trust bundle used by listener policies, leaving
+      them referencing a missing trust bundle, so the operator blocks the
+      deletion: the trust bundle keeps its finalizer, reports a DeletionBlocked
+      Programmed condition and stays in Konnect while a Konnect policy
+      references it;
+    - once the policy is gone, the trust bundle is deleted, in Konnect too,
+      through the watch on listener policies (faster than the periodic retry of
+      a blocked deletion).
+
+    No data plane is needed.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: keg_cp_name
+      value: (join('-', [($test_name), 'keg']))
+    - name: listener_name
+      value: mtls-listener
+    - name: trust_bundle_name
+      value: client-ca
+    - name: policy_name
+      value: mtls-policy
+  steps:
+    - name: Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: Create-konnect-eventgateway
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectEventGateway.yaml
+    - name: Create-listener
+      bindings:
+        - name: listener_ports
+          value:
+            - '19092'
+      use:
+        template: ../../common/_step_templates/apply-assert-eventGatewayListener.yaml
+    - name: Create-server-tls-secret
+      bindings:
+        - name: sni_hostname
+          value: mtls.example.com
+        - name: cert_secret_name
+          value: server-tls
+        - name: cert_secret_namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
+    - name: Create-client-ca-secret
+      bindings:
+        - name: sni_hostname
+          value: client-ca.example.com
+        - name: cert_secret_name
+          value: client-ca
+        - name: cert_secret_namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
+
+    - name: Create-tls-trust-bundle
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayTLSTrustBundle
+              metadata:
+                name: ($trust_bundle_name)
+                namespace: ($namespace)
+              spec:
+                gatewayRef:
+                  type: namespacedRef
+                  namespacedRef:
+                    name: ($keg_cp_name)
+                apiSpec:
+                  name: (join('-', [($test_name), 'client-ca']))
+                  config:
+                    trustedCa:
+                      type: secretRef
+                      secretRef:
+                        name: client-ca
+                        key: tls.crt
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayTLSTrustBundle
+              metadata:
+                name: ($trust_bundle_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+
+    - name: Create-mtls-listener-policy
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              metadata:
+                name: ($policy_name)
+                namespace: ($namespace)
+              spec:
+                eventGatewayListenerRef:
+                  type: namespacedRef
+                  namespacedRef:
+                    name: ($listener_name)
+                apiSpec:
+                  type: tlsServer
+                  tlsServer:
+                    name: ($policy_name)
+                    config:
+                      certificates:
+                        - certificate:
+                            type: secretRef
+                            secretRef:
+                              name: server-tls
+                              key: tls.crt
+                          key:
+                            type: secretRef
+                            secretRef:
+                              name: server-tls
+                              key: tls.key
+                      clientAuthentication:
+                        mode: required
+                        tlsTrustBundles:
+                          - namespacedRef:
+                              name: ($trust_bundle_name)
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              metadata:
+                name: ($policy_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'KonnectReferencesResolved']):
+                  - status: 'True'
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+
+    - name: Assert-policy-references-trust-bundle-by-Konnect-ID
+      try:
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: eventgatewaytlstrustbundles.configuration.konghq.com
+              - name: RESOURCE_NAME
+                value: ($trust_bundle_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: COLLECTION_PATH_JQ
+                value: '"/v1/event-gateways/" + .status.gatewayID.id + "/tls-trust-bundles"'
+            content: |
+              bash ../../common/scripts/konnect_entity_of_resource.sh
+            outputs:
+              - name: trust_bundle
+                value: (json_parse($stdout))
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: eventgatewaylistenerpolicies.configuration.konghq.com
+              - name: RESOURCE_NAME
+                value: ($policy_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: COLLECTION_PATH_JQ
+                value: '"/v1/event-gateways/" + .status.gatewayID.id + "/listeners/" + .status.eventGatewayListenerID.id + "/policies"'
+            content: |
+              bash ../../common/scripts/konnect_entity_of_resource.sh
+            outputs:
+              - name: policy
+                value: (json_parse($stdout))
+        - description: The policy references the trust bundle by its Konnect ID.
+          script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: API_PATH
+                value: ($policy.entity_path)
+              - name: WANT_ID
+                value: ($trust_bundle.id)
+              - name: EXPECTED_JQ
+                value: '(.config.client_authentication.tls_trust_bundles | map(.id)) == [$ENV.WANT_ID]'
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh
+
+    - name: Rename-trust-bundle-keeps-policy-working
+      # The policy references the trust bundle by Konnect ID, so renaming the
+      # trust bundle doesn't break the policy: re-sending it (here after a
+      # label change) still succeeds. A by-name reference would fail with 400.
+      try:
+        - patch:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayTLSTrustBundle
+              metadata:
+                name: ($trust_bundle_name)
+                namespace: ($namespace)
+              spec:
+                apiSpec:
+                  name: (join('-', [($test_name), 'client-ca-renamed']))
+        - description: The rename is reconciled.
+          script:
+            env:
+              - name: RESOURCE_TYPE
+                value: eventgatewaytlstrustbundles.configuration.konghq.com
+              - name: RESOURCE_NAME
+                value: ($trust_bundle_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: JQ_CONDITION
+                value: 'any(.status.conditions[]; .type == "Programmed" and .status == "True")'
+            content: |
+              bash ../../common/scripts/wait_for_resource_reconciled.sh
+        - patch:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              metadata:
+                name: ($policy_name)
+                namespace: ($namespace)
+              spec:
+                apiSpec:
+                  tlsServer:
+                    labels:
+                      renamed: 'true'
+        - description: The policy update is reconciled successfully after the rename.
+          script:
+            env:
+              - name: RESOURCE_TYPE
+                value: eventgatewaylistenerpolicies.configuration.konghq.com
+              - name: RESOURCE_NAME
+                value: ($policy_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: JQ_CONDITION
+                value: 'any(.status.conditions[]; .type == "Programmed" and .status == "True")'
+            content: |
+              bash ../../common/scripts/wait_for_resource_reconciled.sh
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: eventgatewaylistenerpolicies.configuration.konghq.com
+              - name: RESOURCE_NAME
+                value: ($policy_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: COLLECTION_PATH_JQ
+                value: '"/v1/event-gateways/" + .status.gatewayID.id + "/listeners/" + .status.eventGatewayListenerID.id + "/policies"'
+            content: |
+              bash ../../common/scripts/konnect_entity_of_resource.sh
+            outputs:
+              - name: policy
+                value: (json_parse($stdout))
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: eventgatewaytlstrustbundles.configuration.konghq.com
+              - name: RESOURCE_NAME
+                value: ($trust_bundle_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: COLLECTION_PATH_JQ
+                value: '"/v1/event-gateways/" + .status.gatewayID.id + "/tls-trust-bundles"'
+            content: |
+              bash ../../common/scripts/konnect_entity_of_resource.sh
+            outputs:
+              - name: trust_bundle
+                value: (json_parse($stdout))
+        - description: The updated policy still references the renamed trust bundle by ID.
+          script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: API_PATH
+                value: ($policy.entity_path)
+              - name: WANT_ID
+                value: ($trust_bundle.id)
+              - name: EXPECTED_JQ
+                value: '.labels.renamed == "true" and (.config.client_authentication.tls_trust_bundles | map(.id)) == [$ENV.WANT_ID]'
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh
+
+    - name: Delete-trust-bundle-in-use-is-blocked
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: NAME
+                value: ($trust_bundle_name)
+            content: |
+              kubectl delete eventgatewaytlstrustbundles.configuration.konghq.com "$NAME" -n "$NAMESPACE" --wait=false
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayTLSTrustBundle
+              metadata:
+                name: ($trust_bundle_name)
+                namespace: ($namespace)
+                (contains(finalizers, 'gateway.konghq.com/konnect-cleanup')): true
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+                    reason: DeletionBlocked
+                    (contains(message, (join('/', [($namespace), ($policy_name)])))): true
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: eventgatewaytlstrustbundles.configuration.konghq.com
+              - name: RESOURCE_NAME
+                value: ($trust_bundle_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: COLLECTION_PATH_JQ
+                value: '"/v1/event-gateways/" + .status.gatewayID.id + "/tls-trust-bundles"'
+            content: |
+              bash ../../common/scripts/konnect_entity_of_resource.sh
+            outputs:
+              - name: trust_bundle
+                value: (json_parse($stdout))
+        - description: The trust bundle is still in Konnect.
+          script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: API_PATH
+                value: ($trust_bundle.entity_path)
+              - name: EXPECTED_STATUS
+                value: "200"
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh
+
+    - name: Delete-policy-unblocks-trust-bundle-deletion
+      try:
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: eventgatewaytlstrustbundles.configuration.konghq.com
+              - name: RESOURCE_NAME
+                value: ($trust_bundle_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: COLLECTION_PATH_JQ
+                value: '"/v1/event-gateways/" + .status.gatewayID.id + "/tls-trust-bundles"'
+            content: |
+              bash ../../common/scripts/konnect_entity_of_resource.sh
+            outputs:
+              - name: trust_bundle
+                value: (json_parse($stdout))
+        # Don't wait for the policy to be gone: the 45s window of the next
+        # operation must cover the whole path from the policy deletion request
+        # to the trust bundle deletion.
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: NAME
+                value: ($policy_name)
+            content: |
+              kubectl delete eventgatewaylistenerpolicies.configuration.konghq.com "$NAME" -n "$NAMESPACE" --wait=false
+        - error:
+            # Shorter than the one-minute retry of a blocked deletion: the
+            # deletion must resume through the watch on listener policies.
+            timeout: 45s
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayTLSTrustBundle
+              metadata:
+                name: ($trust_bundle_name)
+                namespace: ($namespace)
+        - description: The trust bundle is gone from Konnect too.
+          script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: API_PATH
+                value: ($trust_bundle.entity_path)
+              - name: EXPECTED_STATUS
+                value: "404"
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh

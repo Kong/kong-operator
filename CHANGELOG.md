@@ -77,9 +77,36 @@
   entity of an object, e.g. one whose Konnect ID was lost. It is a fallback in
   case Konnect rejects the default; lower values mean more requests.
   [#5961](https://github.com/Kong/kong-operator/pull/5961)
+- EventGateway CRDs: added `EventGatewayTLSTrustBundle` CRD and reconciliation
+  logic. Its trusted CA certificates (`spec.apiSpec.config.trustedCa`) can be
+  set inline or sourced from a Secret.
+  [#5987](https://github.com/Kong/kong-operator/pull/5987)
+- `EventGatewayListenerPolicy`: entries of the TLS listener policy's
+  `spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles` can now
+  reference an `EventGatewayTLSTrustBundle` in the same namespace via
+  `namespacedRef`, resolved to its Konnect ID. Referencing a Konnect trust
+  bundle by `id` or `name` keeps working as before. Listener policies now
+  report whether their references resolve in a `KonnectReferencesResolved`
+  status condition.
+  [#5987](https://github.com/Kong/kong-operator/pull/5987)
+- `EventGatewayTLSTrustBundle`: deleting a trust bundle while Konnect listener
+  policies reference it (by `namespacedRef`, Konnect ID or name) is blocked:
+  Konnect would allow it and leave the policies referencing a missing trust
+  bundle, failing their next update. The trust bundle keeps its finalizer and
+  reports a `DeletionBlocked` `Programmed` condition naming the policies in its
+  namespace, and is deleted once none references it anymore: right away when
+  the last `EventGatewayListenerPolicy` referencing it through `namespacedRef`
+  is deleted, and otherwise within a minute. While it is being
+  deleted, listener policies not yet created in Konnect can't reference it.
+  [#5987](https://github.com/Kong/kong-operator/pull/5987)
 
 ### Changed
 
+- On-prem AI Gateway: `AIGatewayCustomPolicy` configuration entities
+  referencing an `OnPremAIGateway` are now translated into the pushed
+  configuration document. The entity gains an on-prem reconciler, and
+  `spec.aiGatewayRef.kind` now accepts `OnPremAIGateway`.
+  [#5967](https://github.com/Kong/kong-operator/pull/5967)
 - On-prem AI Gateway: `AIGatewayCertificate` and `AIGatewaySNI` configuration
   entities are now translated into the pushed configuration document, enabling
   TLS certificate/SNI matching configuration for on-prem AI Gateway data

@@ -67,6 +67,22 @@ const (
 	// yet programmed in Konnect.
 	EventGatewaySchemaRegistryRefReasonNotProgrammed = "NotProgrammed"
 
+	// EventGatewayTLSTrustBundleRefValidConditionType is the type of the condition that indicates
+	// whether the EventGatewayTLSTrustBundle reference is valid and points to an existing
+	// EventGatewayTLSTrustBundle.
+	EventGatewayTLSTrustBundleRefValidConditionType = "EventGatewayTLSTrustBundleRefValid"
+
+	// EventGatewayTLSTrustBundleRefReasonValid is the reason used with the EventGatewayTLSTrustBundleRefValid
+	// condition type indicating that the EventGatewayTLSTrustBundle reference is valid.
+	EventGatewayTLSTrustBundleRefReasonValid = "Valid"
+	// EventGatewayTLSTrustBundleRefReasonInvalid is the reason used with the EventGatewayTLSTrustBundleRefValid
+	// condition type indicating that the EventGatewayTLSTrustBundle reference is invalid.
+	EventGatewayTLSTrustBundleRefReasonInvalid = "Invalid"
+	// EventGatewayTLSTrustBundleRefReasonNotProgrammed is the reason used with the EventGatewayTLSTrustBundleRefValid
+	// condition type indicating that the referenced EventGatewayTLSTrustBundle exists but is not
+	// yet programmed in Konnect.
+	EventGatewayTLSTrustBundleRefReasonNotProgrammed = "NotProgrammed"
+
 	// EventGatewayVirtualClusterRefValidConditionType is the type of the condition that indicates
 	// whether the EventGatewayVirtualCluster reference is valid and points to an existing
 	// EventGatewayVirtualCluster.

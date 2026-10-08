@@ -106,7 +106,6 @@ rules:
       - aigatewayconsumergroups/finalizers
       - aigatewayconsumers/finalizers
       - aigatewaycustompolicies/finalizers
-      - aigatewaycustompolicies/status
       - aigatewaydataplanecertificates/finalizers
       - aigatewaymcpservers/finalizers
       - aigatewaymodelproviders/finalizers
@@ -125,6 +124,7 @@ rules:
       - aigatewaycertificates/status
       - aigatewayconsumergroups/status
       - aigatewayconsumers/status
+      - aigatewaycustompolicies/status
       - aigatewaydataplanecertificates/status
       - aigatewaymcpservers/status
       - aigatewaymodelproviders/status
@@ -230,6 +230,7 @@ rules:
       - eventgatewaylistenerpolicies
       - eventgatewaylisteners
       - eventgatewayschemaregistries
+      - eventgatewaytlstrustbundles
       - eventgatewayvirtualclusterconsumepolicies
       - eventgatewayvirtualclusterpolicies
       - eventgatewayvirtualclusterproducepolicies
@@ -260,6 +261,8 @@ rules:
       - eventgatewaylisteners/status
       - eventgatewayschemaregistries/finalizers
       - eventgatewayschemaregistries/status
+      - eventgatewaytlstrustbundles/finalizers
+      - eventgatewaytlstrustbundles/status
       - eventgatewayvirtualclusterconsumepolicies/finalizers
       - eventgatewayvirtualclusterconsumepolicies/status
       - eventgatewayvirtualclusterpolicies/finalizers
