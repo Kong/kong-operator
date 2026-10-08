@@ -83,6 +83,10 @@ version = "v4.53.6"
 # renovate: datasource=git-refs packageName=https://github.com/kyverno/chainsaw.git
 version = "v0.2.15"
 
+[tools."github:anchore/syft"]
+# renovate: datasource=github-releases depName=anchore/syft
+version = "1.51.1"
+
 ################################################################################
 # Tasks
 

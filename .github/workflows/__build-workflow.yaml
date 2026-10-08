@@ -89,6 +89,8 @@ on:
         value: ${{ jobs.build.outputs.tags }}
       version:
         value: ${{ jobs.build.outputs.version }}
+      index_digest:
+        value: ${{ jobs.build-multi-arch.outputs.index_digest }}
 
 permissions:
   contents: read
@@ -309,6 +311,21 @@ jobs:
           name: image-${{ matrix.os }}-${{ matrix.arch }}
           path: /tmp/image.tar
 
+      # The scan job needs the child manifest digest, not the index one, to select the platform
+      # deterministically instead of defaulting to the runner's architecture.
+      - name: Write the per-arch digest
+        if: ${{ inputs.push }}
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          ARCH: ${{ matrix.arch }}
+        run: echo "${DIGEST}" > "digest-image-linux-${ARCH}.sha256"
+      - name: Upload the per-arch digest
+        if: ${{ inputs.push }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: digest-image-linux-${{ matrix.arch }}.sha256
+          path: digest-image-linux-${{ matrix.arch }}.sha256
+
       - name: Send slack notification if job fails.
         if: ${{ failure() && inputs.slack-send }}
         uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
@@ -333,6 +350,7 @@ jobs:
 
     outputs:
       full_tag: ${{ steps.tag.outputs.tag }}
+      index_digest: ${{ steps.index.outputs.digest }}
 
     needs:
       - semver
@@ -412,6 +430,7 @@ jobs:
       # directly in sources. Instead, the sources are constructed using the `inputs.registry`, `inputs.image-name` and
       # `needs.semver.outputs.fullversion`.
       - uses: int128/docker-manifest-create-action@a118e9fe12455375d4810aa318c20e6dba77288e # v2.29.0
+        id: manifest-tag
         if: ${{ inputs.tag != '' }}
         with:
           tags: ${{ steps.meta.outputs.tags }}
@@ -424,6 +443,7 @@ jobs:
       # directly in sources. Instead, the sources are constructed using the `inputs.registry`, `inputs.image-name` and
       # the current date.
       - uses: int128/docker-manifest-create-action@a118e9fe12455375d4810aa318c20e6dba77288e # v2.29.0
+        id: manifest-nightly
         if: ${{ inputs.tag == '' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.nightly-tags)) }}
         with:
           tags: ${{ steps.meta.outputs.tags }}
@@ -434,12 +454,31 @@ jobs:
       # When building on push (e.g. on main), `steps.meta.outputs.tags` contains only a single entry, so it can be used
       # directly in sources.
       - uses: int128/docker-manifest-create-action@a118e9fe12455375d4810aa318c20e6dba77288e # v2.29.0
+        id: manifest-push
         if: ${{ inputs.tag == '' && github.event_name == 'push' }}
         with:
           tags: ${{ steps.meta.outputs.tags }}
           sources: |
             ${{ steps.meta.outputs.tags }}-amd64
             ${{ steps.meta.outputs.tags }}-arm64
+
+      # Stable subject for the SBOM, the signature and the provenance: never a tag, which moves.
+      - name: Resolve the multi-arch index digest
+        id: index
+        env:
+          DIGEST_TAG: ${{ steps.manifest-tag.outputs.digest }}
+          DIGEST_NIGHTLY: ${{ steps.manifest-nightly.outputs.digest }}
+          DIGEST_PUSH: ${{ steps.manifest-push.outputs.digest }}
+        run: |
+          set -euo pipefail
+          DIGEST="${DIGEST_TAG:-}"
+          DIGEST="${DIGEST:-${DIGEST_NIGHTLY:-}}"
+          DIGEST="${DIGEST:-${DIGEST_PUSH:-}}"
+          if [ -z "${DIGEST}" ]; then
+            echo "::error::none of the manifest-create steps produced an index digest"
+            exit 1
+          fi
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
 
       - name: Set output tag
         if: ${{ inputs.tag != '' }}
@@ -464,3 +503,98 @@ jobs:
             status: "failure"
             fields: repo,message,commit,author,action,eventName,ref,workflow
             text: ":red_circle: Docker build failed. cc: <!subteam^${{ env.SLACK_TEAM_ID }}>"
+
+  # Separate job rather than a step in build-multi-arch: per-architecture matrix, and a scan
+  # failure leaves that job's outputs set instead of taking them down with it.
+  scan-image:
+    name: Image scan (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    needs: build-multi-arch
+    # Blocking: the SBOM is a deliverable, so a missing or failed scan fails the run rather than
+    # shipping silently.
+    if: ${{ needs.build-multi-arch.outputs.index_digest != '' }}
+    permissions:
+      contents: read
+    strategy:
+      # One instance per architecture, so one arch's failure does not affect the other.
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Download the per-arch digest
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: digest-image-linux-${{ matrix.arch }}.sha256
+
+      # `imagetools inspect` and the scanners below read ~/.docker/config.json; anonymous Docker Hub
+      # pulls are rate limited.
+      - name: Log in to the Container registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ${{ inputs.registry }}
+          username: ${{ inputs.username }}
+          password: ${{ secrets.dockerhub-token }}
+
+      # The build pushes a single platform with buildx attestations, so the digest it reports is an
+      # index whose one image child is that platform. Syft resolves an index against the runner's
+      # platform, so on the amd64 runner the arm64 scan looks for a linux/amd64 child and finds none
+      # (run 37463155262). Scan the child manifest the build actually produced.
+      - name: Set the scanned image reference
+        env:
+          REGISTRY: ${{ inputs.registry }}
+          IMAGE_NAME: ${{ inputs.image-name }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          index_digest="$(cat "digest-image-linux-${ARCH}.sha256")"
+          child_digest="$(docker buildx imagetools inspect "${REGISTRY}/${IMAGE_NAME}@${index_digest}" --raw \
+            | jq -r --arg arch "${ARCH}" \
+              '[.manifests[] | select(.platform.os == "linux" and .platform.architecture == $arch) | .digest] | .[0] // ""')"
+          if [ -z "${child_digest}" ]; then
+            echo "::error::no linux/${ARCH} child manifest in ${REGISTRY}/${IMAGE_NAME}@${index_digest}"
+            exit 1
+          fi
+          echo "IMAGE=${REGISTRY}/${IMAGE_NAME}@${child_digest}" >> "$GITHUB_ENV"
+
+      # SBOM (Syft), vulnerabilities (Grype, SARIF) and CIS (Trivy) in a single pass, one artifact
+      # per report named "<asset_prefix>-<kind>" — the same artifact contract sca uses, and what
+      # the attest job turns into referrers on the image.
+      - name: Scan the image
+        uses: Kong/public-shared-actions/security-actions/scan-docker-image@a92df3beb1e69e27d86be56346488f15fecaf0de # scan-docker-image@6.1.1
+        with:
+          asset_prefix: image-linux-${{ matrix.arch }}
+          image: ${{ env.IMAGE }}
+          registry_username: ${{ inputs.username }}
+          registry_password: ${{ secrets.dockerhub-token }}
+          # Gating on findings is a separate decision; a scanner failure still fails the job.
+          fail_build: 'false'
+
+  sbom-source:
+    name: Source SBOM
+    runs-on: ubuntu-latest
+    # Blocking, like scan-image: the source SBOM is a deliverable.
+    if: ${{ inputs.push }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: Kong/public-shared-actions/security-actions/sca@5d8835e25221a4aa16e7a53ab6e97c7fb2528b7e # sca@6.0.3
+        # fail_build stays false: gating on findings is a separate decision, not this PR's.
+        with:
+          dir: '.'
+          asset_prefix: source
+          fail_build: false
+          codeql_upload: false
