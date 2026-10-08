@@ -3,8 +3,10 @@ package konnect
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -56,6 +58,13 @@ func handleSecretRef[T constraints.SupportedKonnectEntityType, TEnt constraints.
 ) (ctrl.Result, bool, error) {
 	var entityHasCrossNamespaceRefs bool
 	deleting := !ent.GetDeletionTimestamp().IsZero()
+	// Some entities read their Secrets only when created in Konnect: once they
+	// are, a missing Secret (or key) doesn't block reconciliation, but is
+	// still reported, as recreating the entity (e.g. after it was deleted from
+	// Konnect out of band) needs it. Access to cross-namespace Secrets is
+	// always checked, so revoking a KongReferenceGrant takes effect.
+	createdFromSecrets := secretsReadOnlyAtCreation(ent) && ent.GetKonnectStatus().GetKonnectID() != ""
+	var unavailable []string
 
 	secretRefs := getSecretRefs(ent)
 	for _, secretRef := range secretRefs {
@@ -71,10 +80,16 @@ func handleSecretRef[T constraints.SupportedKonnectEntityType, TEnt constraints.
 			Namespace: ns,
 		}
 		secret := corev1.Secret{}
-		if err := cl.Get(ctx, nn, &secret); err != nil {
-			if deleting {
-				continue
-			}
+		err := cl.Get(ctx, nn, &secret)
+		switch {
+		case err == nil:
+		case deleting:
+			continue
+		case createdFromSecrets && apierrors.IsNotFound(err):
+			// Other errors (e.g. transient ones) are reported and retried
+			// below, as for any entity.
+			unavailable = append(unavailable, fmt.Sprintf("Secret %s not found", nn))
+		default:
 			if res, errStatus := patch.StatusWithCondition(
 				ctx, cl, ent,
 				konnectv1alpha1.SecretRefValidConditionType,
@@ -91,7 +106,7 @@ func handleSecretRef[T constraints.SupportedKonnectEntityType, TEnt constraints.
 		}
 
 		// For entities using SensitiveDataSource, verify every expected key exists.
-		if !deleting {
+		if !deleting && err == nil {
 			if refs, ok := sensitiveDataSecretRefs(ent); ok {
 				for _, sdr := range refs {
 					refNS := ent.GetNamespace()
@@ -103,6 +118,10 @@ func handleSecretRef[T constraints.SupportedKonnectEntityType, TEnt constraints.
 					}
 					if _, ok := secret.Data[sdr.Key]; !ok {
 						msg := fmt.Sprintf("secret %s/%s is missing key %q", ns, secretRef.Name, sdr.Key)
+						if createdFromSecrets {
+							unavailable = append(unavailable, msg)
+							continue
+						}
 						if res, errStatus := patch.StatusWithCondition(
 							ctx, cl, ent,
 							konnectv1alpha1.SecretRefValidConditionType,
@@ -162,6 +181,21 @@ func handleSecretRef[T constraints.SupportedKonnectEntityType, TEnt constraints.
 		}
 	}
 
+	// The entity exists in Konnect, so missing Secrets don't block it, but
+	// recreating it would fail: report them without stopping.
+	if len(unavailable) > 0 && !deleting {
+		if res, errStatus := patch.StatusWithCondition(
+			ctx, cl, ent,
+			konnectv1alpha1.SecretRefValidConditionType,
+			metav1.ConditionFalse,
+			konnectv1alpha1.SecretRefReasonInvalid,
+			strings.Join(unavailable, "; ")+": not needed while the entity exists in Konnect, but required to recreate it",
+		); errStatus != nil || !res.IsZero() {
+			return res, true, errStatus
+		}
+		return ctrl.Result{}, false, nil
+	}
+
 	// Every configured secretRef was resolved above without error, so mark
 	// SecretRefValid true. Without this, once a Secret becomes invalid and the
 	// condition flips to False, fixing the Secret never flips it back.
@@ -178,4 +212,17 @@ func handleSecretRef[T constraints.SupportedKonnectEntityType, TEnt constraints.
 	}
 
 	return ctrl.Result{}, false, nil
+}
+
+// secretsReadOnlyAtCreation reports whether the entity reads its Secrets only
+// when created in Konnect, because it can't be updated there.
+func secretsReadOnlyAtCreation[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
+	e TEnt,
+) bool {
+	switch any(e).(type) {
+	case *configurationv1alpha1.EventGatewayStaticKey:
+		return true
+	default:
+		return false
+	}
 }

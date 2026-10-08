@@ -111,6 +111,50 @@
   (`CertificateProvisioned=False/SecretRefOperatorManaged`). The operator
   re-checks the certificate when it becomes valid and when it expires.
   [#5976](https://github.com/Kong/kong-operator/pull/5976)
+- EventGateway CRDs: added `EventGatewayStaticKey` CRD and reconciliation
+  logic for Event Gateway static encryption keys.
+  - The key value (`spec.apiSpec.value`, a base64-encoded 256-bit key) can be
+    set inline or sourced from a Secret. Prefer a Secret: an inline value is
+    stored in plain text in the `EventGatewayStaticKey`. A Secret in another
+    namespace needs a `KongReferenceGrant` in the Secret's namespace.
+  - The value is read only when the key is created in Konnect: changing it,
+    or the Secret, afterwards doesn't update the key. A missing Secret doesn't
+    affect an existing key (`SecretRefValid` reports it), but a key deleted
+    from Konnect out of band is recreated from the Secret's current value.
+  - Konnect has no update API for static keys, so `spec.apiSpec` and
+    `spec.gatewayRef` are immutable once the key has been created in Konnect:
+    to rotate a key, create a new `EventGatewayStaticKey` and point the
+    policies at it. If the key is gone from Konnect and can't be recreated
+    (e.g. its Secret is gone), delete and recreate the `EventGatewayStaticKey`
+    to change them.
+  - `spec.apiSpec.name` must follow Konnect's naming rule: at least 2
+    characters, starting and ending with a letter or digit, with spaces and
+    `_ . : / + ' -` allowed in between.
+  [#6007](https://github.com/Kong/kong-operator/pull/6007)
+- `EventGatewayVirtualClusterProducePolicy`: the static encryption key of the
+  `encrypt` and `encryptFields` policies (`encryptionKey.static.key`) can now
+  reference an `EventGatewayStaticKey` in the same namespace via
+  `namespacedRef`, resolved to its Konnect ID. Referencing a Konnect static key
+  by `id` or `name` keeps working as before. Produce policies now report a
+  `KonnectReferencesResolved` condition, and wait for the referenced static key
+  to exist in Konnect before being created there. While a static key is being
+  deleted, produce policies not yet created in Konnect can't reference it.
+  Note that `encryptFields` policies still can't be created through the
+  operator, as Konnect requires a parent schema validation policy
+  (`parent_policy_id`) which the CRD doesn't expose.
+  [#6007](https://github.com/Kong/kong-operator/pull/6007)
+- `EventGatewayStaticKey`: Konnect refuses to delete a static key while produce
+  policies use it. The static key then keeps its finalizer and reports a
+  `DeletionBlocked` `Programmed` condition naming the policies in its
+  namespace, and is deleted once none uses it anymore: right away when the
+  last `EventGatewayVirtualClusterProducePolicy` referencing it through
+  `namespacedRef` is deleted, and otherwise within a minute.
+  [#6007](https://github.com/Kong/kong-operator/pull/6007)
+- `KongReferenceGrant`: `EventGatewayStaticKey` is now a supported `from` kind,
+  to let a static key read its value from a Secret in another namespace.
+  Revoking the grant stops the operator from syncing the static key (and from
+  recreating it in Konnect); the key itself keeps working in Konnect.
+  [#6007](https://github.com/Kong/kong-operator/pull/6007)
 
 ### Changed
 

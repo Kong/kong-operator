@@ -95,14 +95,14 @@ spec:
                   x-kubernetes-validations:
                   - message: Only KongConsumer, KongConsumerGroup, KongRoute, KongCertificate,
                       KongCACertificate, KongDataPlaneClientCertificate, KongService,
-                      KongUpstream, KongTarget, KongKey, KongKeySet, KongVault, KongPluginBinding
-                      and KongSNI kinds are supported for 'configuration.konghq.com'
+                      KongUpstream, KongTarget, KongKey, KongKeySet, KongVault, KongPluginBinding,
+                      KongSNI and EventGatewayStaticKey kinds are supported for 'configuration.konghq.com'
                       group
                     rule: self.group != 'configuration.konghq.com' || self.kind in
                       [ 'KongConsumer', 'KongConsumerGroup', 'KongRoute', 'KongService',
                       'KongCertificate', 'KongCACertificate', 'KongDataPlaneClientCertificate',
                       'KongUpstream', 'KongTarget', 'KongKey', 'KongKeySet', 'KongVault',
-                      'KongPluginBinding', 'KongSNI']
+                      'KongPluginBinding', 'KongSNI', 'EventGatewayStaticKey']
                   - message: Only GatewayConfiguration kind is supported for 'gateway-operator.konghq.com'
                       group
                     rule: self.group != 'gateway-operator.konghq.com' || self.kind

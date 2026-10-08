@@ -104,6 +104,31 @@ spec:
                                         type: string
                                       name:
                                         type: string
+                                      namespacedRef:
+                                        description: |-
+                                          NamespacedRef references an in-cluster EventGatewayStaticKey object,
+                                          resolved to its Konnect id.
+                                          It is mutually exclusive with the other fields.
+                                        properties:
+                                          kind:
+                                            default: EventGatewayStaticKey
+                                            description: Kind is the kind of the referenced
+                                              object.
+                                            enum:
+                                            - EventGatewayStaticKey
+                                            type: string
+                                          name:
+                                            description: Name is the name of the referenced
+                                              object.
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            description: Namespace is reserved for
+                                              future cross-namespace support.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
                                     type: object
                                 required:
                                 - key
@@ -233,6 +258,31 @@ spec:
                                               type: string
                                             name:
                                               type: string
+                                            namespacedRef:
+                                              description: |-
+                                                NamespacedRef references an in-cluster EventGatewayStaticKey object,
+                                                resolved to its Konnect id.
+                                                It is mutually exclusive with the other fields.
+                                              properties:
+                                                kind:
+                                                  default: EventGatewayStaticKey
+                                                  description: Kind is the kind of
+                                                    the referenced object.
+                                                  enum:
+                                                  - EventGatewayStaticKey
+                                                  type: string
+                                                name:
+                                                  description: Name is the name of
+                                                    the referenced object.
+                                                  minLength: 1
+                                                  type: string
+                                                namespace:
+                                                  description: Namespace is reserved
+                                                    for future cross-namespace support.
+                                                  type: string
+                                              required:
+                                              - name
+                                              type: object
                                           type: object
                                       required:
                                       - key

@@ -1,0 +1,121 @@
+kind: KonnectEventGateway
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: cp-event-1
+  namespace: default
+spec:
+  apiSpec:
+    name: cp-event-1
+    description: Test Event Gateway CP
+    labels:
+      app: test1
+  konnect:
+    authRef:
+      name: konnect-api-auth
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cp-event-1-encryption-key
+  namespace: default
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+stringData:
+  # A base64-encoded 256-bit key: replace the placeholder with your own key,
+  # e.g. generated with: openssl rand -base64 32
+  key: REPLACE-WITH-A-BASE64-ENCODED-256-BIT-KEY
+---
+# A static encryption key. Konnect has no update API for static keys, so its
+# apiSpec is immutable once the key exists in Konnect: to rotate the key,
+# create a new EventGatewayStaticKey and point the policies at it. The value
+# is read only when the key is created in Konnect.
+kind: EventGatewayStaticKey
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: cp-event-1-encryption-key
+  namespace: default
+spec:
+  apiSpec:
+    name: cp-event-1-encryption-key
+    description: Key encrypting produced record values
+    labels:
+      app: test1
+    value:
+      type: secretRef
+      secretRef:
+        name: cp-event-1-encryption-key
+        key: key
+  gatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: cp-event-1
+---
+kind: EventGatewayBackendCluster
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: cp-event-1-backend-cluster
+  namespace: default
+spec:
+  gatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: cp-event-1
+  apiSpec:
+    name: cp-event-1-backend-cluster
+    authentication:
+      type: anonymous
+      anonymous: {}
+    bootstrapServers:
+      - "kafka1:9092"
+    tls:
+      enabled: Disabled
+---
+kind: EventGatewayVirtualCluster
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: cp-event-1-virtual-cluster
+  namespace: default
+spec:
+  eventGatewayBackendClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: cp-event-1-backend-cluster
+  apiSpec:
+    name: cp-event-1-virtual-cluster
+    aclMode: passthrough
+    authentication:
+      - type: anonymous
+    dnsLabel: virtual-cluster
+---
+# A produce policy encrypting record values with the EventGatewayStaticKey
+# above, referenced through namespacedRef (resolved to its Konnect ID). While
+# the policy uses it, Konnect refuses to delete the static key: its deletion is
+# blocked until the policy is deleted or stops using it.
+kind: EventGatewayVirtualClusterProducePolicy
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: cp-event-1-encrypt
+  namespace: default
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: cp-event-1-virtual-cluster
+  apiSpec:
+    type: encrypt
+    encrypt:
+      name: cp-event-1-encrypt
+      config:
+        failureMode: error
+        partOfRecord:
+          - value
+        encryptionKey:
+          type: static
+          static:
+            key:
+              # An EventGatewayStaticKey in the same namespace. A static key
+              # created outside the cluster can be referenced by its Konnect id
+              # or name instead.
+              namespacedRef:
+                name: cp-event-1-encryption-key

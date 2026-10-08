@@ -11,6 +11,8 @@ import (
 const (
 	// IndexFieldEventGatewayVirtualClusterProducePolicyOnEventGatewayVirtualClusterRef is the index field for EventGatewayVirtualClusterProducePolicy -> EventGatewayVirtualCluster.
 	IndexFieldEventGatewayVirtualClusterProducePolicyOnEventGatewayVirtualClusterRef = "eventGatewayVirtualClusterProducePolicyOnEventGatewayVirtualClusterRef"
+	// IndexFieldEventGatewayVirtualClusterProducePolicyOnEventGatewayStaticKeyRef is the index field for EventGatewayVirtualClusterProducePolicy -> EventGatewayStaticKey.
+	IndexFieldEventGatewayVirtualClusterProducePolicyOnEventGatewayStaticKeyRef = "eventGatewayVirtualClusterProducePolicyOnEventGatewayStaticKeyRef"
 )
 
 // OptionsForEventGatewayVirtualClusterProducePolicy returns required Index options for EventGatewayVirtualClusterProducePolicy reconciler.
@@ -20,6 +22,11 @@ func OptionsForEventGatewayVirtualClusterProducePolicy() []Option {
 			Object:         &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{},
 			Field:          IndexFieldEventGatewayVirtualClusterProducePolicyOnEventGatewayVirtualClusterRef,
 			ExtractValueFn: eventGatewayVirtualClusterProducePolicyOnEventGatewayVirtualClusterRef,
+		},
+		{
+			Object:         &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{},
+			Field:          IndexFieldEventGatewayVirtualClusterProducePolicyOnEventGatewayStaticKeyRef,
+			ExtractValueFn: eventGatewayVirtualClusterProducePolicyOnEventGatewayStaticKeyRef,
 		},
 	}
 }
@@ -39,4 +46,33 @@ func eventGatewayVirtualClusterProducePolicyOnEventGatewayVirtualClusterRef(obje
 	}
 
 	return []string{refNamespace + "/" + ent.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Name}
+}
+
+func eventGatewayVirtualClusterProducePolicyOnEventGatewayStaticKeyRef(object client.Object) []string {
+	ent, ok := object.(*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy)
+	if !ok {
+		return nil
+	}
+	var out []string
+	for _, ref := range configurationv1alpha1.RefsAtEventGatewayVirtualClusterProducePolicyEncryptConfigEncryptionKeyStaticKey(ent) {
+		if ref.Kind != "" && ref.Kind != "EventGatewayStaticKey" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range configurationv1alpha1.RefsAtEventGatewayVirtualClusterProducePolicyEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey(ent) {
+		if ref.Kind != "" && ref.Kind != "EventGatewayStaticKey" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
 }

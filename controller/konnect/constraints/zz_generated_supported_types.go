@@ -30,6 +30,7 @@ type SupportedGeneratedKonnectEntityType interface {
 		configurationv1alpha1.EventGatewayListener |
 		configurationv1alpha1.EventGatewayListenerPolicy |
 		configurationv1alpha1.EventGatewaySchemaRegistry |
+		configurationv1alpha1.EventGatewayStaticKey |
 		configurationv1alpha1.EventGatewayTLSTrustBundle |
 		configurationv1alpha1.EventGatewayVirtualCluster |
 		configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy |

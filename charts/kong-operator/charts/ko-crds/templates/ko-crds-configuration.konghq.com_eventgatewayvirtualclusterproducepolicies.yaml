@@ -80,6 +80,21 @@ spec:
                                         type: string
                                       name:
                                         type: string
+                                      namespacedRef:
+                                        properties:
+                                          kind:
+                                            default: EventGatewayStaticKey
+                                            enum:
+                                            - EventGatewayStaticKey
+                                            type: string
+                                          name:
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
                                     type: object
                                 required:
                                 - key
@@ -168,6 +183,21 @@ spec:
                                               type: string
                                             name:
                                               type: string
+                                            namespacedRef:
+                                              properties:
+                                                kind:
+                                                  default: EventGatewayStaticKey
+                                                  enum:
+                                                  - EventGatewayStaticKey
+                                                  type: string
+                                                name:
+                                                  minLength: 1
+                                                  type: string
+                                                namespace:
+                                                  type: string
+                                              required:
+                                              - name
+                                              type: object
                                           type: object
                                       required:
                                       - key

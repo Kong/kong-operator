@@ -26,6 +26,7 @@ type GeneratedSDK interface {
 	GetEventGatewayListenersSDK() sdkkonnectgo.EventGatewayListenersSDK
 	GetEventGatewayListenerPoliciesSDK() sdkkonnectgo.EventGatewayListenerPoliciesSDK
 	GetEventGatewaySchemaRegistriesSDK() sdkkonnectgo.EventGatewaySchemaRegistriesSDK
+	GetEventGatewayStaticKeysSDK() sdkkonnectgo.EventGatewayStaticKeysSDK
 	GetEventGatewayTLSTrustBundlesSDK() sdkkonnectgo.EventGatewayTLSTrustBundlesSDK
 	GetEventGatewayVirtualClustersSDK() sdkkonnectgo.EventGatewayVirtualClustersSDK
 	GetEventGatewayVirtualClusterConsumePoliciesSDK() sdkkonnectgo.EventGatewayVirtualClusterConsumePoliciesSDK
@@ -132,6 +133,11 @@ func (w sdkWrapper) GetEventGatewayListenerPoliciesSDK() sdkkonnectgo.EventGatew
 // GetEventGatewaySchemaRegistriesSDK returns the SDK to operate EventGatewaySchemaRegistry.
 func (w sdkWrapper) GetEventGatewaySchemaRegistriesSDK() sdkkonnectgo.EventGatewaySchemaRegistriesSDK {
 	return w.sdk.EventGatewaySchemaRegistries
+}
+
+// GetEventGatewayStaticKeysSDK returns the SDK to operate EventGatewayStaticKey.
+func (w sdkWrapper) GetEventGatewayStaticKeysSDK() sdkkonnectgo.EventGatewayStaticKeysSDK {
+	return w.sdk.EventGatewayStaticKeys
 }
 
 // GetEventGatewayTLSTrustBundlesSDK returns the SDK to operate EventGatewayTLSTrustBundle.

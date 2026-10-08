@@ -8,8 +8,7 @@ import (
 	"text/template"
 	"unicode"
 
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"github.com/gobuffalo/flect"
 
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/config"
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/parser"
@@ -344,20 +343,11 @@ func (g *Generator) generateRBAC(entityNames []string) (string, error) {
 }
 
 func (g *Generator) resourceNameForKind(kind string) string {
-	// UnsafeGuessKindToResource is good enough for generated RBAC markers, but
-	// it incorrectly pluralizes Gateway kinds as gatewaies.
-	gvr, _ := meta.UnsafeGuessKindToResource(schema.GroupVersionKind{
-		Group:   g.config.APIGroup,
-		Version: g.config.APIVersion,
-		Kind:    kind,
-	})
-
-	resourceName := gvr.Resource
-	if strings.HasSuffix(kind, "Gateway") && strings.HasSuffix(resourceName, "gatewaies") {
-		return strings.TrimSuffix(resourceName, "gatewaies") + "gateways"
-	}
-
-	return resourceName
+	// Pluralize like controller-gen does when it generates the CRDs, so RBAC
+	// rules name the resources the CRDs actually serve (e.g.
+	// "eventgatewaystatickeys", where meta.UnsafeGuessKindToResource would
+	// guess "eventgatewaystatickeies").
+	return strings.ToLower(flect.Pluralize(kind))
 }
 
 const childWatchTemplate = sharedGeneratedFilePreamble + `

@@ -8,9 +8,11 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
 )
 
@@ -42,12 +44,13 @@ func TestCreateEventGatewayVirtualClusterProducePolicy_UsesSDKOpsConversion(t *t
 
 	ctx := t.Context()
 	sdk := mocks.NewMockEventGatewayVirtualClusterProducePoliciesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedEventGatewayVirtualClusterProducePolicyForSDKOps()
 	gatewayID := "gatewayID-1"
 	obj.SetGatewayID(gatewayID)
 	virtualClusterID := "virtualClusterID-1"
 	obj.SetVirtualClusterID(virtualClusterID)
-	expectedRequest, err := obj.Spec.APISpec.ToCreateEventGatewayVirtualClusterProducePolicyRequest()
+	expectedRequest, err := obj.ToCreateEventGatewayVirtualClusterProducePolicyRequest(ctx, cl)
 	require.NoError(t, err)
 	if expectedRequest.EventGatewayProducePolicyCreate != nil && expectedRequest.EventGatewayProducePolicyCreate.EventGatewayModifyHeadersPolicyCreate != nil {
 		expectedRequest.EventGatewayProducePolicyCreate.EventGatewayModifyHeadersPolicyCreate.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayProducePolicyCreate.EventGatewayModifyHeadersPolicyCreate.Labels)
@@ -77,7 +80,7 @@ func TestCreateEventGatewayVirtualClusterProducePolicy_UsesSDKOpsConversion(t *t
 		}, nil).
 		Once()
 
-	require.NoError(t, createEventGatewayVirtualClusterProducePolicy(ctx, sdk, obj))
+	require.NoError(t, createEventGatewayVirtualClusterProducePolicy(ctx, cl, sdk, obj))
 	require.Equal(t, expectedID, obj.GetKonnectID())
 }
 
@@ -86,12 +89,13 @@ func TestCreateEventGatewayVirtualClusterProducePolicy_PropagatesSDKError(t *tes
 
 	ctx := t.Context()
 	sdk := mocks.NewMockEventGatewayVirtualClusterProducePoliciesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedEventGatewayVirtualClusterProducePolicyForSDKOps()
 	gatewayID := "gatewayID-1"
 	obj.SetGatewayID(gatewayID)
 	virtualClusterID := "virtualClusterID-1"
 	obj.SetVirtualClusterID(virtualClusterID)
-	expectedRequest, err := obj.Spec.APISpec.ToCreateEventGatewayVirtualClusterProducePolicyRequest()
+	expectedRequest, err := obj.ToCreateEventGatewayVirtualClusterProducePolicyRequest(ctx, cl)
 	require.NoError(t, err)
 	if expectedRequest.EventGatewayProducePolicyCreate != nil && expectedRequest.EventGatewayProducePolicyCreate.EventGatewayModifyHeadersPolicyCreate != nil {
 		expectedRequest.EventGatewayProducePolicyCreate.EventGatewayModifyHeadersPolicyCreate.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayProducePolicyCreate.EventGatewayModifyHeadersPolicyCreate.Labels)
@@ -117,7 +121,7 @@ func TestCreateEventGatewayVirtualClusterProducePolicy_PropagatesSDKError(t *tes
 		Return(nil, sdkErr).
 		Once()
 
-	err = createEventGatewayVirtualClusterProducePolicy(ctx, sdk, obj)
+	err = createEventGatewayVirtualClusterProducePolicy(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 
@@ -126,13 +130,14 @@ func TestUpdateEventGatewayVirtualClusterProducePolicy_UsesSDKOpsConversion(t *t
 
 	ctx := t.Context()
 	sdk := mocks.NewMockEventGatewayVirtualClusterProducePoliciesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedEventGatewayVirtualClusterProducePolicyForSDKOps()
 	gatewayID := "gatewayID-1"
 	obj.SetGatewayID(gatewayID)
 	virtualClusterID := "virtualClusterID-1"
 	obj.SetVirtualClusterID(virtualClusterID)
 	obj.SetKonnectID("eventgatewayvirtualclusterproducepolicy-id")
-	expectedRequest, err := obj.Spec.APISpec.ToUpdateEventGatewayVirtualClusterProducePolicyRequest()
+	expectedRequest, err := obj.ToUpdateEventGatewayVirtualClusterProducePolicyRequest(ctx, cl)
 	require.NoError(t, err)
 	if expectedRequest.EventGatewayProducePolicyUpdate != nil && expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayProduceSchemaValidationPolicy != nil {
 		expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayProduceSchemaValidationPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayProduceSchemaValidationPolicy.Labels)
@@ -164,7 +169,7 @@ func TestUpdateEventGatewayVirtualClusterProducePolicy_UsesSDKOpsConversion(t *t
 		Return(&sdkkonnectops.UpdateEventGatewayVirtualClusterProducePolicyResponse{}, nil).
 		Once()
 
-	require.NoError(t, updateEventGatewayVirtualClusterProducePolicy(ctx, sdk, obj))
+	require.NoError(t, updateEventGatewayVirtualClusterProducePolicy(ctx, cl, sdk, obj))
 }
 
 func TestUpdateEventGatewayVirtualClusterProducePolicy_PropagatesSDKError(t *testing.T) {
@@ -172,13 +177,14 @@ func TestUpdateEventGatewayVirtualClusterProducePolicy_PropagatesSDKError(t *tes
 
 	ctx := t.Context()
 	sdk := mocks.NewMockEventGatewayVirtualClusterProducePoliciesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedEventGatewayVirtualClusterProducePolicyForSDKOps()
 	gatewayID := "gatewayID-1"
 	obj.SetGatewayID(gatewayID)
 	virtualClusterID := "virtualClusterID-1"
 	obj.SetVirtualClusterID(virtualClusterID)
 	obj.SetKonnectID("eventgatewayvirtualclusterproducepolicy-id")
-	expectedRequest, err := obj.Spec.APISpec.ToUpdateEventGatewayVirtualClusterProducePolicyRequest()
+	expectedRequest, err := obj.ToUpdateEventGatewayVirtualClusterProducePolicyRequest(ctx, cl)
 	require.NoError(t, err)
 	if expectedRequest.EventGatewayProducePolicyUpdate != nil && expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayProduceSchemaValidationPolicy != nil {
 		expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayProduceSchemaValidationPolicy.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.EventGatewayProducePolicyUpdate.EventGatewayProduceSchemaValidationPolicy.Labels)
@@ -211,7 +217,7 @@ func TestUpdateEventGatewayVirtualClusterProducePolicy_PropagatesSDKError(t *tes
 		Return(nil, sdkErr).
 		Once()
 
-	err = updateEventGatewayVirtualClusterProducePolicy(ctx, sdk, obj)
+	err = updateEventGatewayVirtualClusterProducePolicy(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 

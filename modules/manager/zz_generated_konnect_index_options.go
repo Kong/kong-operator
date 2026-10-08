@@ -33,6 +33,7 @@ func generatedIndexOptionsForKonnectEntities(
 		index.OptionsForEventGatewayListener(),
 		index.OptionsForEventGatewayListenerPolicy(),
 		index.OptionsForEventGatewaySchemaRegistry(),
+		index.OptionsForEventGatewayStaticKey(),
 		index.OptionsForEventGatewayTLSTrustBundle(),
 		index.OptionsForEventGatewayVirtualCluster(),
 		index.OptionsForEventGatewayVirtualClusterConsumePolicy(),

@@ -2682,6 +2682,15 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	// apiSpecCursor is the FieldConfig cursor pre-advanced to the spec.apiSpec level
 	// for this entity. KubebuilderTags advances it further by each property's JSON tag.
 	apiSpecCursor := g.getAPISpecCursor(entityName)
+	// Root union entities embed their union instead of emitting apiSpec's
+	// fields, so a _description override would be silently ignored.
+	if apiSpecCursor != nil && hasRootOneOf(schema) {
+		for name, fc := range apiSpecCursor.Fields {
+			if fc != nil && fc.Description != "" {
+				return "", fmt.Errorf("%s: _description on spec.apiSpec.%s isn't supported for entities whose schema is a root union", entityName, name)
+			}
+		}
+	}
 
 	// Create a closure that passes the apiSpec-level cursor to KubebuilderTags.
 	// For sensitive leaf fields the OAS string markers are suppressed since the
@@ -2790,12 +2799,18 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	}
 
 	funcMap := template.FuncMap{
-		"goType":           goTypeInCRD,
-		"goFieldName":      goFieldName,
-		"jsonTag":          jsonTag,
-		"jsonPropName":     func(p *parser.Property) string { return jsonName(p.Name) },
-		"refJSONTag":       func(p *parser.Property) string { return jsonName(p.Name) + "Ref" },
-		"kubebuilderTags":  kubebuilderTagsWithConfig,
+		"goType":          goTypeInCRD,
+		"goFieldName":     goFieldName,
+		"jsonTag":         jsonTag,
+		"jsonPropName":    func(p *parser.Property) string { return jsonName(p.Name) },
+		"refJSONTag":      func(p *parser.Property) string { return jsonName(p.Name) + "Ref" },
+		"kubebuilderTags": kubebuilderTagsWithConfig,
+		"propDescription": func(prop *parser.Property) string {
+			if c := apiSpecCursor.Sub(jsonTagForProperty(prop)); c != nil && c.Description != "" {
+				return c.Description
+			}
+			return prop.Description
+		},
 		"isRefProperty":    isRefProperty,
 		"isRefConfigField": func(prop *parser.Property) bool { return g.referenceForField(entityName, jsonName(prop.Name)) != nil },
 		"refTypeNameForField": func(prop *parser.Property) string {
@@ -2904,6 +2919,11 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		typeXValidations = append(typeXValidations, parentRefAllowedKindsXValidation(parentRef))
 	}
 	typeXValidations = append(typeXValidations, injectIntoReferenceXValidations(g.config.References[entityName])...)
+	if g.config.FieldConfig != nil {
+		if entityCfg := g.config.FieldConfig.Entities[entityName]; entityCfg != nil {
+			typeXValidations = append(typeXValidations, entityCfg.TypeValidations...)
+		}
+	}
 	// A same-type ObjectRefField reference (e.g. PortalPage's parentPageIDRef)
 	// must not point at the object itself: the reference can never resolve
 	// (the object is not programmed until the reference resolves). The CEL
@@ -4702,6 +4722,13 @@ type TemplateReferenceConfig struct {
 	// optional, so it sources its slice from a RefsAt<Entity><GoResolverName>
 	// accessor that yields no reference while the field is unset.
 	OptionalRef bool
+	// ReverseWatchRefsExprs is set on the first reverseWatch reference to a
+	// kind only: the RefsExpr of every reverseWatch reference of the entity to
+	// that kind, which the generated <Entity>RefsTo<Kind> accessor combines.
+	ReverseWatchRefsExprs []string
+	// ReverseWatchPaths are the paths of the references in
+	// ReverseWatchRefsExprs, in the same order.
+	ReverseWatchPaths []string
 	// InjectIntoSDKJSONFieldName is the SDK payload key the resolved value of
 	// an additive (InjectInto) reference is written to, e.g. "type".
 	InjectIntoSDKJSONFieldName string
@@ -4764,6 +4791,15 @@ type TemplateReferenceConfig struct {
 	// of reference objects (e.g. "name" or "id", from ResolvesTo). Only set in
 	// those two cases.
 	ObjectWrapKey string
+	// ArmChecks are Go conditions (rooted at obj) true when a union on the
+	// path to a unionMember reference selects another arm: the reference is
+	// then ignored, like its value is absent from the SDK payload. For a
+	// reference inside a non-leaf array, they cover the path to the array.
+	ArmChecks []string
+	// ElementArmChecks are the same conditions for the union hops inside the
+	// elements of the array (relative to an element): elements selecting
+	// another arm are skipped.
+	ElementArmChecks []string
 	// UnionMemberGoName is the Go field name of the member a unionMember
 	// reference adds to the reference object (e.g. "NamespacedRef"). The
 	// RefsAt accessor then collects only the set members, in order.
@@ -4878,6 +4914,10 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 		nestedArrayScalar := isNestedArrayScalar(goPathSegments)
 		var nestedArrayList bool
 		var arrayGuardExprs, elementGuardExprs []string
+		// armChecks / elementArmChecks: for a unionMember reference, conditions
+		// true when a union on the path selects another arm than the one
+		// leading to the reference, whose value is then not in the payload.
+		var armChecks, elementArmChecks []string
 		var arrayPath, arrayLeafPath string
 		var arrayLeafPointer bool
 		if nestedArrayScalar {
@@ -4906,6 +4946,12 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 			arrayLeafPath = leafBuilder.String()
 			arrayLeafPointer = leafSegs[len(leafSegs)-1].Pointer
 			nestedArrayList = leafSegs[len(leafSegs)-1].LeafArray
+			if ref.UnionMember != "" {
+				armChecks = unionArmChecks("obj.Spec.APISpec.", goPathSegments[:arrayIdx+1])
+				elementArmChecks = unionArmChecks("", leafSegs)
+			}
+		} else if ref.UnionMember != "" {
+			armChecks = unionArmChecks("obj.Spec.APISpec.", goPathSegments)
 		}
 		var singleValueObjectRef bool
 		var objectWrapKey string
@@ -4959,6 +5005,8 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 			SingleValueObjectRef: singleValueObjectRef,
 			ObjectWrapKey:        objectWrapKey,
 			UnionMemberGoName:    unionMemberGoName,
+			ArmChecks:            armChecks,
+			ElementArmChecks:     elementArmChecks,
 			DirectScalarRef:      directScalarRef,
 			ObjectRefField:       objectRefField,
 			SameTypeRef:          sameTypeRef,
@@ -4970,6 +5018,22 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 			result[i].InjectIntoSDKJSONFieldName = g.injectIntoTargetSDKKey(entityName, ref.InjectInto)
 			result[i].InjectIntoGoFieldName = goFieldName(result[i].InjectIntoSDKJSONFieldName)
 		}
+	}
+	// One <Entity>RefsTo<Kind> accessor per referenced kind, combining every
+	// reverseWatch reference to it (e.g. the two static key references of a
+	// produce policy).
+	firstByKind := map[string]int{}
+	for i := range result {
+		if !result[i].ReverseWatch {
+			continue
+		}
+		first, ok := firstByKind[result[i].DefaultKind]
+		if !ok {
+			first = i
+			firstByKind[result[i].DefaultKind] = i
+		}
+		result[first].ReverseWatchRefsExprs = append(result[first].ReverseWatchRefsExprs, result[i].RefsExpr)
+		result[first].ReverseWatchPaths = append(result[first].ReverseWatchPaths, result[i].Path)
 	}
 	return result
 }
@@ -5146,6 +5210,7 @@ func newRefInjectionUsedVars() map[string]bool {
 		"obj": true, "ctx": true, "cl": true, "spec": true,
 		// Locals emitted by the array-element injection template itself.
 		"arr": true, "e": true, "el": true, "ri": true, "ok": true,
+		"i": true, "v": true, "leaf": true, "has": true,
 	}
 }
 
@@ -5778,11 +5843,24 @@ func (g *Generator) validateReferences(parsed *parser.ParsedSpec) error {
 				// A nested array-scalar reference (scalar leaf reached through a
 				// non-leaf array of objects) only supports plain-object hops
 				// between the array and the leaf: a union hop inside the array
-				// elements is neither navigable in the SDK payload (which arm is
-				// selected varies per element) nor needed by any entity today.
+				// elements is not navigable in the SDK payload for a reference
+				// replacing the leaf's value. A unionMember reference only
+				// rewrites reference objects found in each element, so it can
+				// also go through discriminated unions, whose variant keys are
+				// still in the payload when references are injected (unions are
+				// flattened afterwards): elements whose selected arm doesn't
+				// lead to the leaf are skipped. That only holds for entities
+				// whose schema is a root union (flattened after injection, see
+				// selectedSDKOpsPayload): other entities flatten unions before
+				// references are injected, where the variant keys are gone.
 				if isNestedArrayScalar(goPath) {
 					arrayIdx := arraySegmentIndex(goPath)
+					entitySchema := findEntitySchema(parsed, entityName)
+					rootUnion := entitySchema != nil && hasRootOneOf(entitySchema)
 					for _, seg := range goPath[arrayIdx+1 : len(goPath)-1] {
+						if ref.UnionMember != "" && rootUnion && (seg.UnionVariant || (seg.UnionWrapper && seg.Discriminated)) {
+							continue
+						}
 						if seg.UnionWrapper || seg.UnionVariant {
 							return fmt.Errorf("reference path %q: nested array references only support plain-object hops between the array and the leaf", ref.Path)
 						}
@@ -5958,8 +6036,8 @@ func (g *Generator) validateUnionMemberReference(ref config.ReferenceConfig, goP
 	if (!leaf.ObjectRefLeaf && !leaf.ObjectRefItems) || leaf.ObjectRefSchema == "" {
 		return "", fmt.Errorf("reference path %q: unionMember requires the field to be a named by-id/by-name reference object or an array of them", ref.Path)
 	}
-	if isNestedArrayScalar(goPath) {
-		return "", fmt.Errorf("reference path %q: unionMember is not supported inside a non-leaf array", ref.Path)
+	if isNestedArrayScalar(goPath) && leaf.ObjectRefItems {
+		return "", fmt.Errorf("reference path %q: unionMember is not supported for an array of reference objects inside a non-leaf array", ref.Path)
 	}
 	// Only a schema rendered by emitAnyOfUnionType gets the member.
 	schema := g.parsed.Schemas[leaf.ObjectRefSchema]
@@ -6239,7 +6317,10 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 			// object-ref leaf, is a pointer when the leaf field itself is
 			// optional (an array-typed leaf is never a pointer). An ObjectRef
 			// field is always rendered as a pointer.
-			leafPointer := objectRefField || (prop.Type != "array" && (!prop.Required || prop.Nullable))
+			// A $ref to an anyOf-registered schema is rendered as a pointer even
+			// when required (see goTypeInCRD), e.g. a static key reference.
+			leafPointer := objectRefField || (prop.Type != "array" && (!prop.Required || prop.Nullable ||
+				(prop.RefName != "" && g.anyOfSchemaNames[prop.RefName])))
 			leafName, leafJSONKey := goFieldName(prop.Name), jsonName(prop.Name)
 			if objectRefField {
 				leafName += "Ref"
@@ -8327,6 +8408,23 @@ func isRefProperty(prop *parser.Property) bool {
 // hasRootOneOf returns true if the schema has root-level oneOf (i.e., the schema itself is a union type).
 func hasRootOneOf(schema *parser.Schema) bool {
 	return len(schema.OneOf) > 0
+}
+
+// unionArmChecks returns, for each union variant hop in segs reached through
+// its union wrapper, a Go condition (with prefix prepended) true when the
+// union selects another variant, e.g.
+// "obj.Spec.APISpec.Config.Type != ConfigTypeStatic".
+func unionArmChecks(prefix string, segs []GoPathSegment) []string {
+	var checks []string
+	path := make([]string, 0, len(segs))
+	for i, seg := range segs {
+		if seg.UnionVariant && i > 0 && segs[i-1].UnionWrapper && segs[i-1].UnionTypeName != "" {
+			checks = append(checks, fmt.Sprintf("%s%s.Type != %sType%s",
+				prefix, strings.Join(path, "."), segs[i-1].UnionTypeName, seg.Name))
+		}
+		path = append(path, seg.Name)
+	}
+	return checks
 }
 
 // isObjectRefUnion reports whether prop is an object-typed reference: an
