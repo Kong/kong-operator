@@ -115,7 +115,7 @@
   Existing values outside these bounds are rejected by the CRD schema.
   [#5989](https://github.com/Kong/kong-operator/pull/5989)
 - `AIGatewayAuthStrategy`: key-auth and openid-connect `config` schemas were
-  regenerated from the updated Konnect API (sdk-konnect-go v0.73.1). Notable
+  updated. Notable
   changes: `openid-connect.config.issuer` is now required, `leeway` and
   `timeout` are numbers instead of integers, and the key-auth/openid-connect
   config gained the new upstream plugin fields. Existing CRs with an empty
