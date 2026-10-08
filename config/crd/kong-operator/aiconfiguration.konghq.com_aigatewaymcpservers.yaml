@@ -1540,8 +1540,9 @@ spec:
                                 The MCP tool name.
                                 In upstream-server mode, it also matches the remote MCP Server tool whose
                                 metadata this entry overrides.
-                              maxLength: 253
+                              maxLength: 128
                               minLength: 1
+                              pattern: ^[A-Za-z0-9._-]+$
                               type: string
                             parameters:
                               items:
@@ -2108,8 +2109,9 @@ spec:
                                 The MCP tool name.
                                 In upstream-server mode, it also matches the remote MCP Server tool whose
                                 metadata this entry overrides.
-                              maxLength: 253
+                              maxLength: 128
                               minLength: 1
+                              pattern: ^[A-Za-z0-9._-]+$
                               type: string
                             parameters:
                               items:
@@ -5785,8 +5787,9 @@ spec:
                                 The MCP tool name.
                                 In upstream-server mode, it also matches the remote MCP Server tool whose
                                 metadata this entry overrides.
-                              maxLength: 253
+                              maxLength: 128
                               minLength: 1
+                              pattern: ^[A-Za-z0-9._-]+$
                               type: string
                             outputSchema:
                               description: |-

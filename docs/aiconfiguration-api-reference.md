@@ -512,6 +512,8 @@ properties
 | `keyInQuery` _string_ | If enabled (default), the plugin reads the query parameter in the request and tries to find the key in it. |
 | `keyNames` _[]string_ | An array of strings containing the names of the keys to look for in the request. |
 | `principals` _[AIGatewayAuthStrategyKeyAuthConfigPrincipals](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategykeyauthconfigprincipals)_ | Authenticate against Kong Identity instead of local credentials. Mutually exclusive with identity realms. |
+| `realm` _string_ | When authentication fails the plugin sends `WWW-Authenticate` header with `realm` attribute value. |
+| `runOnPreflight` _string_ | A boolean value that indicates whether the plugin should run (and try to authenticate) on `OPTIONS` preflight requests. If set to `false`, then `OPTIONS` requests are always allowed. |
 
 _Appears in:_
 
@@ -4550,7 +4552,7 @@ When values are not set, the model name is used as the selector value.
 | --- | --- |
 | `bodyParam` _string_ | The body property name to match for routing. |
 | `headerParam` _string_ | The header property name to match for routing. |
-| `pathParam` _string_ | The name of the regex capture group defined in the route path for routing. |
+| `pathParam` _string_ | The name of the regex capture group beginning with "~", which is defined in the route path for routing. |
 | `values` _[]string_ | Optional model aliases. When omitted, the model name is used. When no selector location is configured, the format default selector is used. |
 
 _Appears in:_

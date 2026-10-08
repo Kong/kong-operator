@@ -72,6 +72,14 @@ var AIGatewayAuthStrategySDKOpsBoolFields = []AIGatewayAuthStrategySDKOpsBoolFie
 		},
 	},
 	{
+		Label: "key-auth.config.run_on_preflight",
+		Path: []string{
+			"key-auth",
+			"config",
+			"run_on_preflight",
+		},
+	},
+	{
 		Label: "openid-connect.config.cache_introspection",
 		Path: []string{
 			"openid-connect",

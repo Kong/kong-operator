@@ -262,6 +262,19 @@ type AIGatewayAuthStrategyKeyAuthConfig struct {
 	//
 	// +optional
 	Principals AIGatewayAuthStrategyKeyAuthConfigPrincipals `json:"principals,omitzero"`
+	// When authentication fails the plugin sends `WWW-Authenticate` header with
+	// `realm` attribute value.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Realm string `json:"realm,omitzero"`
+	// A boolean value that indicates whether the plugin should run (and try to
+	// authenticate) on `OPTIONS` preflight requests.
+	// If set to `false`, then `OPTIONS` requests are always allowed.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	RunOnPreflight string `json:"runOnPreflight,omitzero"`
 }
 
 // AIGatewayAuthStrategyKeyAuthConfigPrincipals Authenticate against Kong
@@ -1027,7 +1040,8 @@ type AIGatewayMCPConversionTool struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:MaxLength=128
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]+$`
 	Name string `json:"name,omitzero"`
 	//
 	//
@@ -3094,7 +3108,8 @@ type AIGatewayMCPUpstreamTool struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:MaxLength=128
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]+$`
 	Name string `json:"name,omitzero"`
 	// The entire `outputSchema` section for the tool.
 	// Overrides the upstream server's `outputSchema`
@@ -7051,12 +7066,14 @@ type AIGatewayModelSelectorConfig struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	HeaderParam string `json:"headerParam,omitzero"`
-	// The name of the regex capture group defined in the route path for routing.
+	// The name of the regex capture group beginning with "~", which is defined in
+	// the route path for routing.
 	//
 	//
 	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^~.+$`
 	PathParam string `json:"pathParam,omitzero"`
 	// Optional model aliases. When omitted, the model name is used.
 	// When no selector location is configured, the format default selector is
@@ -8639,6 +8656,7 @@ type AIGatewayTargetAnthropicConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -8651,6 +8669,7 @@ type AIGatewayTargetAnthropicConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -8672,6 +8691,7 @@ type AIGatewayTargetAnthropicConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -8689,6 +8709,7 @@ type AIGatewayTargetAnthropicConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -8706,18 +8727,22 @@ type AIGatewayTargetAnthropicConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -8741,6 +8766,7 @@ type AIGatewayTargetAzureConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -8753,6 +8779,7 @@ type AIGatewayTargetAzureConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -8793,6 +8820,7 @@ type AIGatewayTargetAzureConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -8810,6 +8838,7 @@ type AIGatewayTargetAzureConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -8827,18 +8856,22 @@ type AIGatewayTargetAzureConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -8857,6 +8890,7 @@ type AIGatewayTargetBedrockConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -8869,6 +8903,7 @@ type AIGatewayTargetBedrockConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -8895,6 +8930,7 @@ type AIGatewayTargetBedrockConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -8912,6 +8948,7 @@ type AIGatewayTargetBedrockConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -8941,18 +8978,22 @@ type AIGatewayTargetBedrockConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -8971,6 +9012,7 @@ type AIGatewayTargetCerebrasConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -8983,6 +9025,7 @@ type AIGatewayTargetCerebrasConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -9004,6 +9047,7 @@ type AIGatewayTargetCerebrasConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -9021,6 +9065,7 @@ type AIGatewayTargetCerebrasConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -9038,18 +9083,22 @@ type AIGatewayTargetCerebrasConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -9071,6 +9120,7 @@ type AIGatewayTargetCohereConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -9083,6 +9133,7 @@ type AIGatewayTargetCohereConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -9110,6 +9161,7 @@ type AIGatewayTargetCohereConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -9127,6 +9179,7 @@ type AIGatewayTargetCohereConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -9144,18 +9197,22 @@ type AIGatewayTargetCohereConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -9688,6 +9745,7 @@ type AIGatewayTargetDashscopeConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -9700,6 +9758,7 @@ type AIGatewayTargetDashscopeConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -9721,6 +9780,7 @@ type AIGatewayTargetDashscopeConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -9743,6 +9803,7 @@ type AIGatewayTargetDashscopeConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -9760,18 +9821,22 @@ type AIGatewayTargetDashscopeConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -9786,6 +9851,7 @@ type AIGatewayTargetDatabricksConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -9798,6 +9864,7 @@ type AIGatewayTargetDatabricksConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -9819,6 +9886,7 @@ type AIGatewayTargetDatabricksConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -9836,6 +9904,7 @@ type AIGatewayTargetDatabricksConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -9853,18 +9922,22 @@ type AIGatewayTargetDatabricksConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -9884,6 +9957,7 @@ type AIGatewayTargetDeepseekConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -9896,6 +9970,7 @@ type AIGatewayTargetDeepseekConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -9917,6 +9992,7 @@ type AIGatewayTargetDeepseekConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -9934,6 +10010,7 @@ type AIGatewayTargetDeepseekConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -9951,18 +10028,22 @@ type AIGatewayTargetDeepseekConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -9976,6 +10057,7 @@ type AIGatewayTargetGeminiConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -9988,6 +10070,7 @@ type AIGatewayTargetGeminiConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -10013,6 +10096,7 @@ type AIGatewayTargetGeminiConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -10030,6 +10114,7 @@ type AIGatewayTargetGeminiConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -10047,18 +10132,22 @@ type AIGatewayTargetGeminiConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -10073,6 +10162,7 @@ type AIGatewayTargetHuggingfaceConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -10085,6 +10175,7 @@ type AIGatewayTargetHuggingfaceConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -10106,6 +10197,7 @@ type AIGatewayTargetHuggingfaceConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -10123,6 +10215,7 @@ type AIGatewayTargetHuggingfaceConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -10140,18 +10233,22 @@ type AIGatewayTargetHuggingfaceConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -10176,6 +10273,7 @@ type AIGatewayTargetKimiConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -10188,6 +10286,7 @@ type AIGatewayTargetKimiConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -10209,6 +10308,7 @@ type AIGatewayTargetKimiConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -10233,6 +10333,7 @@ type AIGatewayTargetKimiConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -10250,18 +10351,22 @@ type AIGatewayTargetKimiConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -10275,6 +10380,7 @@ type AIGatewayTargetLlama2Config struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -10287,6 +10393,7 @@ type AIGatewayTargetLlama2Config struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -10315,6 +10422,7 @@ type AIGatewayTargetLlama2Config struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -10332,6 +10440,7 @@ type AIGatewayTargetLlama2Config struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -10349,18 +10458,22 @@ type AIGatewayTargetLlama2Config struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -10375,6 +10488,7 @@ type AIGatewayTargetMistralConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -10387,6 +10501,7 @@ type AIGatewayTargetMistralConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -10415,6 +10530,7 @@ type AIGatewayTargetMistralConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -10432,6 +10548,7 @@ type AIGatewayTargetMistralConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -10449,18 +10566,22 @@ type AIGatewayTargetMistralConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -10474,6 +10595,7 @@ type AIGatewayTargetOllamaConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -10486,6 +10608,7 @@ type AIGatewayTargetOllamaConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -10507,6 +10630,7 @@ type AIGatewayTargetOllamaConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -10524,6 +10648,7 @@ type AIGatewayTargetOllamaConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -10541,18 +10666,22 @@ type AIGatewayTargetOllamaConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -10566,6 +10695,7 @@ type AIGatewayTargetOpenaiConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -10578,6 +10708,7 @@ type AIGatewayTargetOpenaiConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -10599,6 +10730,7 @@ type AIGatewayTargetOpenaiConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -10616,6 +10748,7 @@ type AIGatewayTargetOpenaiConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -10633,18 +10766,22 @@ type AIGatewayTargetOpenaiConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -10663,6 +10800,7 @@ type AIGatewayTargetSagemakerConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -10675,6 +10813,7 @@ type AIGatewayTargetSagemakerConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -10696,6 +10835,7 @@ type AIGatewayTargetSagemakerConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -10713,6 +10853,7 @@ type AIGatewayTargetSagemakerConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -10734,18 +10875,22 @@ type AIGatewayTargetSagemakerConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -10807,10 +10952,12 @@ type AIGatewayTargetTypesafeConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -10825,6 +10972,7 @@ type AIGatewayTargetVercelConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -10837,6 +10985,7 @@ type AIGatewayTargetVercelConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -10858,6 +11007,7 @@ type AIGatewayTargetVercelConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -10875,6 +11025,7 @@ type AIGatewayTargetVercelConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -10892,18 +11043,22 @@ type AIGatewayTargetVercelConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -10917,6 +11072,7 @@ type AIGatewayTargetVllmConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -10929,6 +11085,7 @@ type AIGatewayTargetVllmConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -10950,6 +11107,7 @@ type AIGatewayTargetVllmConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -10967,6 +11125,7 @@ type AIGatewayTargetVllmConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -10984,18 +11143,22 @@ type AIGatewayTargetVllmConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -11010,6 +11173,7 @@ type AIGatewayTargetXaiConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -11022,6 +11186,7 @@ type AIGatewayTargetXaiConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -11043,6 +11208,7 @@ type AIGatewayTargetXaiConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -11060,6 +11226,7 @@ type AIGatewayTargetXaiConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -11077,18 +11244,22 @@ type AIGatewayTargetXaiConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//

@@ -36,7 +36,7 @@ func TestAIGatewayModel_RouteModel_WireShape(t *testing.T) {
 							Route: AIGatewayModelRouteConfig{
 								Paths: []string{"/v1/chat/completions"},
 								Model: AIGatewayModelSelectorConfig{
-									PathParam: "model",
+									PathParam: "~model",
 									Values: []string{
 										"gpt-4o-mini",
 									},
@@ -80,7 +80,7 @@ func TestAIGatewayModel_RouteModel_WireShape(t *testing.T) {
 		} `json:"config"`
 	}
 	require.NoError(t, json.Unmarshal(data, &decoded))
-	require.JSONEq(t, `{"path_param":"model","values":["gpt-4o-mini"]}`, string(decoded.Config.Route.Model))
+	require.JSONEq(t, `{"path_param":"~model","values":["gpt-4o-mini"]}`, string(decoded.Config.Route.Model))
 }
 
 // TestAIGatewayModel_RouteModel_FreeformHeaderKeyPreserved guards against a
@@ -109,7 +109,7 @@ func TestAIGatewayModel_RouteModel_FreeformHeaderKeyPreserved(t *testing.T) {
 							Route: AIGatewayModelRouteConfig{
 								Paths: []string{"/v1/chat/completions"},
 								Model: AIGatewayModelSelectorConfig{
-									PathParam: "model",
+									PathParam: "~model",
 									Values: []string{
 										"gpt-4o-mini",
 									},
@@ -153,5 +153,5 @@ func TestAIGatewayModel_RouteModel_FreeformHeaderKeyPreserved(t *testing.T) {
 		} `json:"config"`
 	}
 	require.NoError(t, json.Unmarshal(data, &decoded))
-	require.JSONEq(t, `{"path_param":"model","values":["gpt-4o-mini"]}`, string(decoded.Config.Route.Model))
+	require.JSONEq(t, `{"path_param":"~model","values":["gpt-4o-mini"]}`, string(decoded.Config.Route.Model))
 }

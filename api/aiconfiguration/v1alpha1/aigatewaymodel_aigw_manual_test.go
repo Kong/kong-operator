@@ -107,6 +107,9 @@ func TestAIGatewayModel_ToAIGWModel(t *testing.T) {
 	}
 	wantAPI.Access.AuthStrategies = []string{"model-key-auth-provider"}
 	wantAPI.Access.ACLs = aigw.ACLs{Allow: []string{"model-dev-users"}}
+	// The CRD (mirroring Konnect) requires path_param to start with "~"; the
+	// aigw document carries the bare PCRE capture-group name, so translation
+	// strips the prefix.
 	wantAPI.Config.Route.Model.Path.PathParam = "model"
 
 	wantModel := &aigw.Model{
@@ -170,7 +173,7 @@ func TestAIGatewayModel_ToAIGWModel(t *testing.T) {
 									Route: AIGatewayModelRouteConfig{
 										Paths: []string{"/v1/chat/completions"},
 										Model: AIGatewayModelSelectorConfig{
-											PathParam: "model",
+											PathParam: "~model",
 											Values:    []string{"gpt-4o-mini"},
 										},
 									},
@@ -320,7 +323,7 @@ func TestAIGatewayModel_ToAIGWModel_StrictRoundTrip(t *testing.T) {
 					Route: AIGatewayModelRouteConfig{
 						Paths: []string{"/v1/chat/completions"},
 						Model: AIGatewayModelSelectorConfig{
-							PathParam: "model",
+							PathParam: "~model",
 							Values:    []string{"gpt-4o-mini"},
 						},
 					},
@@ -349,5 +352,7 @@ func TestAIGatewayModel_ToAIGWModel_StrictRoundTrip(t *testing.T) {
 
 	// Pin the fix itself, not just its absence of error.
 	require.Equal(t, []string{"gpt-4o-mini"}, model.Config.Route.Model.Values)
+	// The "~" prefix is Konnect-only; the aigw document carries the bare
+	// capture-group name.
 	require.Equal(t, "model", model.Config.Route.Model.Path.PathParam)
 }

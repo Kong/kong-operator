@@ -614,6 +614,14 @@ spec:
                                 - Disabled
                                 type: string
                             type: object
+                          realm:
+                            maxLength: 253
+                            type: string
+                          runOnPreflight:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
                         type: object
                       displayName:
                         maxLength: 256
@@ -3584,8 +3592,9 @@ spec:
                               minLength: 1
                               type: string
                             name:
-                              maxLength: 253
+                              maxLength: 128
                               minLength: 1
+                              pattern: ^[A-Za-z0-9._-]+$
                               type: string
                             parameters:
                               items:
@@ -3903,8 +3912,9 @@ spec:
                               minLength: 1
                               type: string
                             name:
-                              maxLength: 253
+                              maxLength: 128
                               minLength: 1
+                              pattern: ^[A-Za-z0-9._-]+$
                               type: string
                             parameters:
                               items:
@@ -5876,8 +5886,9 @@ spec:
                             inputSchema:
                               x-kubernetes-preserve-unknown-fields: true
                             name:
-                              maxLength: 253
+                              maxLength: 128
                               minLength: 1
+                              pattern: ^[A-Za-z0-9._-]+$
                               type: string
                             outputSchema:
                               x-kubernetes-preserve-unknown-fields: true
@@ -10102,6 +10113,7 @@ spec:
                                   pathParam:
                                     maxLength: 253
                                     minLength: 1
+                                    pattern: ^~.+$
                                     type: string
                                   values:
                                     items:
@@ -10224,6 +10236,7 @@ spec:
                                 anthropic:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -10246,6 +10259,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -10288,6 +10302,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -10314,6 +10329,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -10351,12 +10367,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -10371,6 +10391,7 @@ spec:
                                       maxLength: 253
                                       type: string
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -10393,6 +10414,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -10444,6 +10466,7 @@ spec:
                                       maxLength: 253
                                       type: string
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -10470,6 +10493,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -10507,12 +10531,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -10524,6 +10552,7 @@ spec:
                                       maxLength: 253
                                       type: string
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -10546,6 +10575,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -10593,6 +10623,7 @@ spec:
                                       - Disabled
                                       type: string
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -10619,6 +10650,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -10662,12 +10694,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -10679,6 +10715,7 @@ spec:
                                 cerebras:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -10701,6 +10738,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -10743,6 +10781,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -10769,6 +10808,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -10806,12 +10846,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -10826,6 +10870,7 @@ spec:
                                       maxLength: 253
                                       type: string
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -10848,6 +10893,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -10899,6 +10945,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -10925,6 +10972,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -10962,12 +11010,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -10981,6 +11033,7 @@ spec:
                                 dashscope:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -11003,6 +11056,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -11045,6 +11099,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -11076,6 +11131,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -11113,12 +11169,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -11127,6 +11187,7 @@ spec:
                                 databricks:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -11149,6 +11210,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -11191,6 +11253,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -11217,6 +11280,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -11254,12 +11318,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -11274,6 +11342,7 @@ spec:
                                 deepseek:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -11296,6 +11365,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -11338,6 +11408,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -11364,6 +11435,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -11401,12 +11473,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -11415,6 +11491,7 @@ spec:
                                 gemini:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -11437,6 +11514,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -11498,6 +11576,7 @@ spec:
                                       - projectID
                                       type: object
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -11524,6 +11603,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -11561,12 +11641,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -11575,6 +11659,7 @@ spec:
                                 huggingface:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -11597,6 +11682,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -11639,6 +11725,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -11665,6 +11752,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -11702,12 +11790,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -11726,6 +11818,7 @@ spec:
                                 kimi:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -11748,6 +11841,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -11790,6 +11884,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -11821,6 +11916,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -11858,12 +11954,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -11872,6 +11972,7 @@ spec:
                                 llama2:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -11894,6 +11995,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -11944,6 +12046,7 @@ spec:
                                       minLength: 1
                                       type: string
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -11970,6 +12073,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -12007,12 +12111,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -12025,6 +12133,7 @@ spec:
                                 mistral:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -12047,6 +12156,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -12096,6 +12206,7 @@ spec:
                                       minLength: 1
                                       type: string
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -12122,6 +12233,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -12159,12 +12271,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -12175,6 +12291,7 @@ spec:
                                 ollama:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -12197,6 +12314,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -12239,6 +12357,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -12265,6 +12384,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -12302,12 +12422,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -12316,6 +12440,7 @@ spec:
                                 openai:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -12338,6 +12463,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -12380,6 +12506,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -12406,6 +12533,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -12443,12 +12571,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -12472,6 +12604,7 @@ spec:
                                           type: string
                                       type: object
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -12494,6 +12627,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -12536,6 +12670,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -12562,6 +12697,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -12611,12 +12747,16 @@ spec:
                                           type: string
                                       type: object
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -12649,8 +12789,10 @@ spec:
                                 typesafe:
                                   properties:
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -12659,6 +12801,7 @@ spec:
                                 vercel:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -12681,6 +12824,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -12723,6 +12867,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -12749,6 +12894,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -12786,12 +12932,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -12800,6 +12950,7 @@ spec:
                                 vllm:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -12822,6 +12973,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -12864,6 +13016,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -12890,6 +13043,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -12927,12 +13081,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -12944,6 +13102,7 @@ spec:
                                 xai:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -12966,6 +13125,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -13008,6 +13168,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -13034,6 +13195,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -13071,12 +13233,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -13998,6 +14164,7 @@ spec:
                                   pathParam:
                                     maxLength: 253
                                     minLength: 1
+                                    pattern: ^~.+$
                                     type: string
                                   values:
                                     items:
@@ -14120,6 +14287,7 @@ spec:
                                 anthropic:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -14142,6 +14310,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -14184,6 +14353,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -14210,6 +14380,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -14247,12 +14418,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -14267,6 +14442,7 @@ spec:
                                       maxLength: 253
                                       type: string
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -14289,6 +14465,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -14340,6 +14517,7 @@ spec:
                                       maxLength: 253
                                       type: string
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -14366,6 +14544,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -14403,12 +14582,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -14420,6 +14603,7 @@ spec:
                                       maxLength: 253
                                       type: string
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -14442,6 +14626,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -14489,6 +14674,7 @@ spec:
                                       - Disabled
                                       type: string
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -14515,6 +14701,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -14558,12 +14745,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -14575,6 +14766,7 @@ spec:
                                 cerebras:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -14597,6 +14789,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -14639,6 +14832,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -14665,6 +14859,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -14702,12 +14897,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -14722,6 +14921,7 @@ spec:
                                       maxLength: 253
                                       type: string
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -14744,6 +14944,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -14795,6 +14996,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -14821,6 +15023,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -14858,12 +15061,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -14877,6 +15084,7 @@ spec:
                                 dashscope:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -14899,6 +15107,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -14941,6 +15150,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -14972,6 +15182,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -15009,12 +15220,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -15023,6 +15238,7 @@ spec:
                                 databricks:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -15045,6 +15261,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -15087,6 +15304,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -15113,6 +15331,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -15150,12 +15369,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -15170,6 +15393,7 @@ spec:
                                 deepseek:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -15192,6 +15416,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -15234,6 +15459,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -15260,6 +15486,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -15297,12 +15524,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -15311,6 +15542,7 @@ spec:
                                 gemini:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -15333,6 +15565,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -15394,6 +15627,7 @@ spec:
                                       - projectID
                                       type: object
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -15420,6 +15654,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -15457,12 +15692,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -15471,6 +15710,7 @@ spec:
                                 huggingface:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -15493,6 +15733,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -15535,6 +15776,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -15561,6 +15803,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -15598,12 +15841,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -15622,6 +15869,7 @@ spec:
                                 kimi:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -15644,6 +15892,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -15686,6 +15935,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -15717,6 +15967,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -15754,12 +16005,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -15768,6 +16023,7 @@ spec:
                                 llama2:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -15790,6 +16046,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -15840,6 +16097,7 @@ spec:
                                       minLength: 1
                                       type: string
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -15866,6 +16124,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -15903,12 +16162,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -15921,6 +16184,7 @@ spec:
                                 mistral:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -15943,6 +16207,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -15992,6 +16257,7 @@ spec:
                                       minLength: 1
                                       type: string
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -16018,6 +16284,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -16055,12 +16322,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -16071,6 +16342,7 @@ spec:
                                 ollama:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -16093,6 +16365,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -16135,6 +16408,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -16161,6 +16435,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -16198,12 +16473,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -16212,6 +16491,7 @@ spec:
                                 openai:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -16234,6 +16514,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -16276,6 +16557,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -16302,6 +16584,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -16339,12 +16622,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -16368,6 +16655,7 @@ spec:
                                           type: string
                                       type: object
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -16390,6 +16678,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -16432,6 +16721,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -16458,6 +16748,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -16507,12 +16798,16 @@ spec:
                                           type: string
                                       type: object
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -16545,8 +16840,10 @@ spec:
                                 typesafe:
                                   properties:
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -16555,6 +16852,7 @@ spec:
                                 vercel:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -16577,6 +16875,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -16619,6 +16918,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -16645,6 +16945,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -16682,12 +16983,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -16696,6 +17001,7 @@ spec:
                                 vllm:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -16718,6 +17024,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -16760,6 +17067,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -16786,6 +17094,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -16823,12 +17132,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -16840,6 +17153,7 @@ spec:
                                 xai:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -16862,6 +17176,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -16904,6 +17219,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -16930,6 +17246,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -16967,12 +17284,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
