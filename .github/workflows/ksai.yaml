@@ -36,11 +36,9 @@ on:
         required: false
 
 jobs:
-  ksai:
-    name: run
+  authorize:
+    name: authorize
     if: >-
-      (github.event_name == 'workflow_dispatch' &&
-      (inputs.pr != '' || inputs.issue_number != '' || inputs.work_ref != '')) ||
       ((github.event_name == 'issue_comment' ||
       github.event_name == 'pull_request_review_comment') &&
       github.event.comment.user.type != 'Bot' &&
@@ -57,6 +55,29 @@ jobs:
       github.event.pull_request.draft == true &&
       github.event.pull_request.user.type == 'Bot' &&
       github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      writes: ${{ steps.writes.outputs.writes }}
+    steps:
+      - name: Read whether the author can write to this repository
+        id: writes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LOGIN: ${{ github.event.comment.user.login || github.event.review.user.login }}
+        run: |
+          level=$(gh api "repos/${GITHUB_REPOSITORY}/collaborators/${LOGIN}/permission" --jq .permission 2>/dev/null || echo none)
+          case "$level" in admin|write) writes=true ;; *) writes=false ;; esac
+          echo "writes=${writes}" >> "$GITHUB_OUTPUT"
+
+  ksai:
+    name: run
+    needs: authorize
+    if: >-
+      !cancelled() &&
+      ((github.event_name == 'workflow_dispatch' &&
+      (inputs.pr != '' || inputs.issue_number != '' || inputs.work_ref != '')) ||
+      needs.authorize.outputs.writes == 'true')
     uses: Kong/ksai-public/.github/workflows/ksai.yml@86e9e205e61e0284e06261139334c9bbd2db9191 # v3.135.6
     permissions:
       contents: write      # checked out by every command, and pushed by one that changes code
