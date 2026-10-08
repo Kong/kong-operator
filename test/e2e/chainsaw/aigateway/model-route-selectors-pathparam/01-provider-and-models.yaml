@@ -58,10 +58,9 @@ spec:
           nameHeader: Enabled
         route:
           model:
-            # Konnect requires path_param values to start with "~" (KOKO-4314),
-            # signaling that the route path is a dynamic (regex) path. The
-            # capture group in the path regex below is still named "model_name".
-            pathParam: ~model_name
+            # pathParam is the name of the regex capture group defined in the
+            # route path below ("model_name").
+            pathParam: model_name
             values:
               - qwen2.5:0.5b
           paths:

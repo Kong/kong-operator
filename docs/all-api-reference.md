@@ -248,6 +248,705 @@ AIGatewaySNI is the Schema for the aigatewaysnis API.
 ### Types
 
 In this section you will find types that the CRDs rely on.
+#### AIGWKeyAuthGeneratedConfig
+
+
+AIGWKeyAuthGeneratedConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `anonymous` _string_ | An optional string (consumer UUID or username) value to use as an “anonymous” consumer if authentication fails. If empty (default null), the request will fail with an authentication failure `4xx`. |
+| `hideCredentials` _string_ | An optional boolean value telling the plugin to show or hide the credential from the upstream service. If `true`, the plugin strips the credential from the request. |
+| `identityRealms` _[][AIGWKeyAuthGeneratedConfigIdentityRealms](#aiconfiguration-konghq-com-v1alpha1-types-aigwkeyauthgeneratedconfigidentityrealms)_ | A configuration of Konnect Identity Realms that indicate where to source a consumer from. |
+| `keyInBody` _string_ | If enabled, the plugin reads the request body. Supported MIME types: `application/www-form-urlencoded`, `application/json`, and `multipart/form-data`. |
+| `keyInHeader` _string_ | If enabled (default), the plugin reads the request header and tries to find the key in it. |
+| `keyInQuery` _string_ | If enabled (default), the plugin reads the query parameter in the request and tries to find the key in it. |
+| `keyNames` _[]string_ | Describes an array of parameter names where the plugin will look for a key. The key names may only contain [a-z], [A-Z], [0-9], [_] underscore, and [-] hyphen. |
+| `principals` _[AIGWKeyAuthGeneratedConfigPrincipals](#aiconfiguration-konghq-com-v1alpha1-types-aigwkeyauthgeneratedconfigprincipals)_ |  |
+| `realm` _string_ | When authentication fails the plugin sends `WWW-Authenticate` header with `realm` attribute value. |
+| `runOnPreflight` _string_ | A boolean value that indicates whether the plugin should run (and try to authenticate) on `OPTIONS` preflight requests. If set to `false`, then `OPTIONS` requests are always allowed. |
+
+_Appears in:_
+
+- [AIGatewayAuthStrategyKeyAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategykeyauth)
+
+#### AIGWKeyAuthGeneratedConfigIdentityRealms
+
+
+AIGWKeyAuthGeneratedConfigIdentityRealms A configuration of Konnect Identity
+Realms that indicate where to source a consumer from.
+
+
+
+| Field | Description |
+| --- | --- |
+| `region` _string_ |  |
+| `scope` _string_ |  |
+
+_Appears in:_
+
+- [AIGWKeyAuthGeneratedConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigwkeyauthgeneratedconfig)
+
+#### AIGWKeyAuthGeneratedConfigPrincipals
+
+
+AIGWKeyAuthGeneratedConfigPrincipals is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `directory` _string_ | The Kong Identity directory instance to authenticate against. |
+| `enabled` _string_ | When true, authenticate against Kong Identity instead of local credentials. |
+| `errorOnMiss` _string_ | When true (default), return 401 if no matching principal is found in Kong Identity. When false, allow the request to continue unauthenticated instead. |
+
+_Appears in:_
+
+- [AIGWKeyAuthGeneratedConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigwkeyauthgeneratedconfig)
+
+#### AIGWOpenIDConnectGeneratedConfig
+
+
+AIGWOpenIDConnectGeneratedConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `anonymous` _string_ | An optional string (consumer UUID or username) value that functions as an “anonymous” consumer if authentication fails. If empty (default null), requests that fail authentication will return a `4xx` HTTP status code. This value must refer to the consumer `id` or `username` attribute, and **not** its `custom_id`. |
+| `audience` _[]string_ | The audience passed to the authorization endpoint. |
+| `audienceClaim` _[]string_ | The claim that contains the audience. If multiple values are set, it means the claim is inside a nested object of the token payload. |
+| `audienceRequired` _[]string_ | The audiences (`audience_claim` claim) required to be present in the access token (or introspection results) for successful authorization. This config parameter works in both **AND** / **OR** cases. |
+| `authMethods` _[]string_ | Types of credentials/grants to enable. |
+| `authenticatedGroupsClaim` _[]string_ | The claim that contains authenticated groups. This setting can be used together with ACL plugin, but it also enables IdP managed groups with other applications and integrations. If multiple values are set, it means the claim is inside a nested object of the token payload. |
+| `authorizationCookieDomain` _string_ | The authorization cookie Domain flag. |
+| `authorizationCookieHTTPOnly` _string_ | Forbids JavaScript from accessing the cookie, for example, through the `Document.cookie` property. |
+| `authorizationCookieName` _string_ | The authorization cookie name. |
+| `authorizationCookiePath` _string_ | The authorization cookie Path flag. |
+| `authorizationCookieSameSite` _string_ | Controls whether a cookie is sent with cross-origin requests, providing some protection against cross-site request forgery attacks. |
+| `authorizationCookieSecure` _string_ | Cookie is only sent to the server when a request is made with the https: scheme (except on localhost), and therefore is more resistant to man-in-the-middle attacks. |
+| `authorizationEndpoint` _string_ | The authorization endpoint. If set it overrides the value in `authorization_endpoint` returned by the discovery endpoint. |
+| `authorizationQueryArgsClient` _[]string_ | Extra query arguments passed from the client to the authorization endpoint. |
+| `authorizationQueryArgsNames` _[]string_ | Extra query argument names passed to the authorization endpoint. |
+| `authorizationQueryArgsValues` _[]string_ | Extra query argument values passed to the authorization endpoint. |
+| `authorizationRollingTimeout` _float64_ | Specifies how long the session used for the authorization code flow can be used in seconds until it needs to be renewed. 0 disables the checks and rolling. |
+| `bearerTokenCookieName` _string_ | The name of the cookie in which the bearer token is passed. |
+| `bearerTokenHeaderName` _string_ | The name of the HTTP header from which the bearer token is retrieved. The default value is `authorization:bearer`, which reads the token from the `Authorization: Bearer <token>` header. Accepts plain header names such as `x-my-token` as well as Kong's special `authorization:bearer` notation. The `access-token` and `x-access-token` headers are also checked as a fallback for backward compatibility regardless of this setting. |
+| `bearerTokenParamType` _[]string_ | Where to look for the bearer token: - `header`: search the `Authorization`, `access-token`, and `x-access-token` HTTP headers - `query`: search the URL's query string - `body`: search the HTTP request body - `cookie`: search the HTTP request cookies specified with `config.bearer_token_cookie_name`. |
+| `byUsernameIgnoreCase` _string_ | If `consumer_by` is set to `username`, specify whether `username` can match consumers case-insensitively. |
+| `cacheIntrospection` _string_ | Cache the introspection endpoint requests. |
+| `cacheTokenExchange` _string_ | Cache the legacy token exchange endpoint requests. |
+| `cacheTokens` _string_ | Cache the token endpoint requests. |
+| `cacheTokensSalt` _string_ | Salt used for generating the cache key that is used for caching the token endpoint requests. |
+| `cacheTtl` _float64_ | The default cache ttl in seconds that is used in case the cached object does not specify the expiry. |
+| `cacheTtlMax` _float64_ | The maximum cache ttl in seconds (enforced). |
+| `cacheTtlMin` _float64_ | The minimum cache ttl in seconds (enforced). |
+| `cacheTtlNeg` _float64_ | The negative cache ttl in seconds. |
+| `cacheTtlResurrect` _float64_ | The resurrection ttl in seconds. |
+| `cacheUserInfo` _string_ | Cache the user info requests. |
+| `claimsForbidden` _[]string_ | If given, these claims are forbidden in the token payload. |
+| `clientAlg` _[]string_ | The algorithm to use for client_secret_jwt (only HS***) or private_key_jwt authentication. |
+| `clientArg` _string_ | The client to use for this request (the selection is made with a request parameter with the same name). |
+| `clientAuth` _[]string_ | The default OpenID Connect client authentication method is 'client_secret_basic' (using 'Authorization: Basic' header), 'client_secret_post' (credentials in body), 'client_secret_jwt' (signed client assertion in body), 'private_key_jwt' (private key-signed assertion), 'tls_client_auth' (client certificate), 'self_signed_tls_client_auth' (self-signed client certificate), and 'none' (no authentication). |
+| `clientCredentialsParamType` _[]string_ | Where to look for the client credentials: - `header`: search the HTTP headers - `query`: search the URL's query string - `body`: search from the HTTP request body. |
+| `clientID` _[]string_ | The client id(s) that the plugin uses when it calls authenticated endpoints on the identity provider. |
+| `clientJwk` _[][AIGWOpenIDConnectGeneratedConfigClientJwk](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigclientjwk)_ | The JWK used for the private_key_jwt authentication. |
+| `clientSecret` _[][SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ | The client secret. |
+| `clusterCacheRedis` _[AIGWOpenIDConnectGeneratedConfigClusterCacheRedis](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigclustercacheredis)_ |  |
+| `clusterCacheStrategy` _string_ | The strategy to use for the cluster cache. If set, the plugin will share cache with nodes configured with the same strategy backend. Currentlly only introspection cache is shared. |
+| `consumerBy` _[]string_ | Consumer fields used for mapping: - `id`: try to find the matching Consumer by `id` - `username`: try to find the matching Consumer by `username` - `custom_id`: try to find the matching Consumer by `custom_id`. |
+| `consumerClaims` _[]string_ | The claims used for consumer mapping. Each entry represents a claim path inside the token payload. The paths are evaluated in order, and the first matching claim is used. |
+| `consumerGroupsClaim` _[]string_ | The claim used for consumer groups mapping. If multiple values are set, it means the claim is inside a nested object of the token payload. |
+| `consumerGroupsOptional` _string_ | Do not terminate the request if consumer groups mapping fails. |
+| `consumerOptional` _string_ | Do not terminate the request if consumer mapping fails. |
+| `credentialClaim` _[]string_ | The claim used to derive virtual credentials (e.g. to be consumed by the rate-limiting plugin), in case the consumer mapping is not used. If multiple values are set, it means the claim is inside a nested object of the token payload. |
+| `disableSession` _[]string_ | Disable issuing the session cookie with the specified grants. |
+| `discoveryHeadersNames` _[]string_ | Extra header names passed to the discovery endpoint. |
+| `discoveryHeadersValues` _[]string_ | Extra header values passed to the discovery endpoint. |
+| `displayErrors` _string_ | Display errors on failure responses. |
+| `domains` _[]string_ | The allowed values for the `hd` claim. |
+| `downstreamAccessTokenHeader` _string_ | The downstream access token header. |
+| `downstreamAccessTokenJwkHeader` _string_ | The downstream access token JWK header. |
+| `downstreamHeaders` _[][AIGWOpenIDConnectGeneratedConfigDownstreamHeaders](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigdownstreamheaders)_ | The downstream claim to header mappings. |
+| `downstreamHeadersClaims` _[]string_ | The downstream header claims. Only top level claims are supported. |
+| `downstreamHeadersNames` _[]string_ | The downstream header names for the claim values. |
+| `downstreamIDTokenHeader` _string_ | The downstream id token header. |
+| `downstreamIDTokenJwkHeader` _string_ | The downstream id token JWK header. |
+| `downstreamIntrospectionHeader` _string_ | The downstream introspection header. |
+| `downstreamIntrospectionJwtHeader` _string_ | The downstream introspection JWT header. |
+| `downstreamRefreshTokenHeader` _string_ | The downstream refresh token header. |
+| `downstreamSessionIDHeader` _string_ | The downstream session id header. |
+| `downstreamUserInfoHeader` _string_ | The downstream user info header. |
+| `downstreamUserInfoJwtHeader` _string_ | The downstream user info JWT header (in case the user info returns a JWT response). |
+| `dpopProofLifetime` _float64_ | Specifies the lifetime in seconds of the DPoP proof. It determines how long the same proof can be used after creation. The creation time is determined by the nonce creation time if a nonce is used, and the iat claim otherwise. |
+| `dpopUseNonce` _string_ | Specifies whether to challenge the client with a nonce value for DPoP proof. When enabled it will also be used to calculate the DPoP proof lifetime. |
+| `enableHsSignatures` _string_ | Enable shared secret, for example, HS256, signatures (when disabled they will not be accepted). |
+| `endSessionEndpoint` _string_ | The end session endpoint. If set it overrides the value in `end_session_endpoint` returned by the discovery endpoint. |
+| `exposeErrorCode` _string_ | Specifies whether to expose the error code header, as defined in RFC 6750. If an authorization request fails, this header is sent in the response. Set to `false` to disable. |
+| `extraJwksUris` _[]string_ | JWKS URIs whose public keys are trusted (in addition to the keys found with the discovery). |
+| `forbiddenDestroySession` _string_ | Destroy any active session for the forbidden requests. |
+| `forbiddenErrorMessage` _string_ | The error message for the forbidden requests (when not using the redirection). |
+| `forbiddenRedirectURI` _[]string_ | Where to redirect the client on forbidden requests. |
+| `groupsClaim` _[]string_ | The claim that contains the groups. If multiple values are set, it means the claim is inside a nested object of the token payload. |
+| `groupsRequired` _[]string_ | The groups (`groups_claim` claim) required to be present in the access token (or introspection results) for successful authorization. This config parameter works in both **AND** / **OR** cases. |
+| `hideCredentials` _string_ | Remove the credentials used for authentication from the request. If multiple credentials are sent with the same request, the plugin will remove those that were used for successful authentication. |
+| `httpProxy` _string_ | The HTTP proxy. |
+| `httpProxyAuthorization` _string_ | The HTTP proxy authorization. |
+| `httpVersion` _float64_ | The HTTP version used for the requests by this plugin: - `1.1`: HTTP 1.1 (the default) - `1.0`: HTTP 1.0. |
+| `httpsProxy` _string_ | The HTTPS proxy. |
+| `httpsProxyAuthorization` _string_ | The HTTPS proxy authorization. |
+| `idTokenParamName` _string_ | The name of the parameter used to pass the id token. |
+| `idTokenParamType` _[]string_ | Where to look for the id token: - `header`: search the HTTP headers - `query`: search the URL's query string - `body`: search the HTTP request body. |
+| `ignoreSignature` _[]string_ | Skip the token signature verification on certain grants. This is insecure and logs a warning; use it only for providers that publish no verification key. Grants: - `password`: OAuth password grant - `client_credentials`: OAuth client credentials grant - `authorization_code`: authorization code flow - `refresh_token`: OAuth refresh token grant - `session`: session cookie authentication - `introspection`: OAuth introspection - `userinfo`: OpenID Connect user info endpoint authentication. |
+| `introspectJwtTokens` _string_ | Specifies whether to introspect the JWT access tokens (can be used to check for revocations). |
+| `introspectionAccept` _string_ | The value of `Accept` header for introspection requests: - `application/json`: introspection response as JSON - `application/token-introspection+jwt`: introspection response as JWT (from the current IETF draft document) - `application/jwt`: introspection response as JWT (from the obsolete IETF draft document). |
+| `introspectionCheckActive` _string_ | Check that the introspection response has an `active` claim with a value of `true`. |
+| `introspectionEndpoint` _string_ | The introspection endpoint. If set it overrides the value in `introspection_endpoint` returned by the discovery endpoint. |
+| `introspectionEndpointAuthMethod` _string_ | The introspection endpoint authentication method: : `client_secret_basic`, `client_secret_post`, `client_secret_jwt`, `private_key_jwt`, `tls_client_auth`, `self_signed_tls_client_auth`, or `none`: do not authenticate |
+| `introspectionHeadersClient` _[]string_ | Extra headers passed from the client to the introspection endpoint. |
+| `introspectionHeadersNames` _[]string_ | Extra header names passed to the introspection endpoint. |
+| `introspectionHeadersValues` _[]string_ | Extra header values passed to the introspection endpoint. |
+| `introspectionHint` _string_ | Introspection hint parameter value passed to the introspection endpoint. |
+| `introspectionPostArgsClient` _[]string_ | Extra post arguments passed from the client to the introspection endpoint. |
+| `introspectionPostArgsClientHeaders` _[]string_ | Extra post arguments passed from the client headers to the introspection endpoint. |
+| `introspectionPostArgsNames` _[]string_ | Extra post argument names passed to the introspection endpoint. |
+| `introspectionPostArgsValues` _[]string_ | Extra post argument values passed to the introspection endpoint. |
+| `introspectionTokenParamName` _string_ | Designate token's parameter name for introspection. |
+| `issuer` _string_ | The discovery endpoint (or the issuer identifier). When there is no discovery endpoint, please also configure `config.using_pseudo_issuer=true`. |
+| `issuersAllowed` _[]string_ | The issuers allowed to be present in the tokens (`iss` claim). |
+| `jwksEndpoint` _string_ | Overrides the `jwks_uri` returned by discovery. Use when the IdP exposes a non-standard JWKS endpoint. |
+| `jwtSessionClaim` _string_ | The claim to match against the JWT session cookie. |
+| `jwtSessionCookie` _string_ | The name of the JWT session cookie. |
+| `keepalive` _string_ | Use keepalive with the HTTP client. |
+| `leeway` _float64_ | Defines leeway time (in seconds) for `auth_time`, `exp`, `iat`, and `nbf` claims |
+| `loginAction` _string_ | What to do after successful login: - `upstream`: proxy request to upstream service - `response`: terminate request with a response - `redirect`: redirect to a different location. |
+| `loginMethods` _[]string_ | Enable login functionality with specified grants. |
+| `loginRedirectMode` _string_ | Where to place `login_tokens` when using `redirect` `login_action`: - `query`: place tokens in query string - `fragment`: place tokens in url fragment (not readable by servers). |
+| `loginRedirectURI` _[]string_ | Where to redirect the client when `login_action` is set to `redirect`. |
+| `loginTokens` _[]string_ | What tokens to include in `response` body or `redirect` query string or fragment: - `id_token`: include id token - `access_token`: include access token - `refresh_token`: include refresh token - `tokens`: include the full token endpoint response - `introspection`: include introspection response. |
+| `logoutMethods` _[]string_ | The request methods that can activate the logout: - `POST`: HTTP POST method - `GET`: HTTP GET method - `DELETE`: HTTP DELETE method. |
+| `logoutPostArg` _string_ | The request body argument that activates the logout. |
+| `logoutQueryArg` _string_ | The request query argument that activates the logout. |
+| `logoutRedirectURI` _[]string_ | Where to redirect the client after the logout. |
+| `logoutRevoke` _string_ | Revoke tokens as part of the logout.<br /><br />For more granular token revocation, you can also adjust the `logout_revoke_access_token` and `logout_revoke_refresh_token` parameters. |
+| `logoutRevokeAccessToken` _string_ | Revoke the access token as part of the logout. Requires `logout_revoke` to be set to `true`. |
+| `logoutRevokeRefreshToken` _string_ | Revoke the refresh token as part of the logout. Requires `logout_revoke` to be set to `true`. |
+| `logoutURISuffix` _string_ | The request URI suffix that activates the logout. |
+| `maxAge` _float64_ | The maximum age (in seconds) compared to the `auth_time` claim. |
+| `mtlsIntrospectionEndpoint` _string_ | Alias for the introspection endpoint to be used for mTLS client authentication. If set it overrides the value in `mtls_endpoint_aliases` returned by the discovery endpoint. |
+| `mtlsRevocationEndpoint` _string_ | Alias for the introspection endpoint to be used for mTLS client authentication. If set it overrides the value in `mtls_endpoint_aliases` returned by the discovery endpoint. |
+| `mtlsTokenEndpoint` _string_ | Alias for the token endpoint to be used for mTLS client authentication. If set it overrides the value in `mtls_endpoint_aliases` returned by the discovery endpoint. |
+| `noProxy` _string_ | Do not use proxy with these hosts. |
+| `passwordParamType` _[]string_ | Where to look for the username and password: - `header`: search the HTTP headers - `query`: search the URL's query string - `body`: search the HTTP request body. |
+| `preserveQueryArgs` _string_ | With this parameter, you can preserve request query arguments even when doing authorization code flow. |
+| `principals` _[AIGWOpenIDConnectGeneratedConfigPrincipals](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigprincipals)_ | Configuration for Kong Identity principal hydration after token verification. |
+| `proofOfPossessionAuthMethodsValidation` _string_ | If set to true, only the auth_methods that are compatible with Proof of Possession (PoP) can be configured when PoP is enabled. If set to false, all auth_methods will be configurable and PoP checks will be silently skipped for those auth_methods that are not compatible with PoP. |
+| `proofOfPossessionDpop` _string_ | Enable Demonstrating Proof-of-Possession (DPoP). If set to strict, all request are verified despite the presence of the DPoP key claim (cnf.jkt). If set to optional, only tokens bound with DPoP's key are verified with the proof. |
+| `proofOfPossessionMtls` _string_ | Enable mtls proof of possession. If set to strict, all tokens (from supported auth_methods: bearer, introspection, and session granted with bearer or introspection) are verified, if set to optional, only tokens that contain the certificate hash claim are verified. If the verification fails, the request will be rejected with 401. |
+| `pushedAuthorizationRequestEndpoint` _string_ | The pushed authorization endpoint. If set it overrides the value in `pushed_authorization_request_endpoint` returned by the discovery endpoint. |
+| `pushedAuthorizationRequestEndpointAuthMethod` _string_ | The pushed authorization request endpoint authentication method: `client_secret_basic`, `client_secret_post`, `client_secret_jwt`, `private_key_jwt`, `tls_client_auth`, `self_signed_tls_client_auth`, or `none`: do not authenticate |
+| `redirectURI` _[]string_ | The redirect URI passed to the authorization and token endpoints. |
+| `redis` _[AIGWOpenIDConnectGeneratedConfigRedis](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigredis)_ |  |
+| `rediscoveryLifetime` _float64_ | Specifies how long (in seconds) the plugin waits between discovery attempts. Discovery is still triggered on an as-needed basis. |
+| `refreshTokenParamName` _string_ | The name of the parameter used to pass the refresh token. |
+| `refreshTokenParamType` _[]string_ | Where to look for the refresh token: - `header`: search the HTTP headers - `query`: search the URL's query string - `body`: search the HTTP request body. |
+| `refreshTokens` _string_ | Specifies whether the plugin should try to refresh (soon to be) expired access tokens if the plugin has a `refresh_token` available. |
+| `requireProofKeyForCodeExchange` _string_ | Forcibly enable or disable the proof key for code exchange. When not set the value is determined through the discovery using the value of `code_challenge_methods_supported`, and enabled automatically (in case the `code_challenge_methods_supported` is missing, the PKCE will not be enabled). |
+| `requirePushedAuthorizationRequests` _string_ | Forcibly enable or disable the pushed authorization requests. When not set the value is determined through the discovery using the value of `require_pushed_authorization_requests` (which defaults to `false`). |
+| `requireSignedRequestObject` _string_ | Forcibly enable or disable the usage of signed request object on authorization or pushed authorization endpoint. When not set the value is determined through the discovery using the value of `require_signed_request_object`, and enabled automatically (in case the `require_signed_request_object` is missing, the feature will not be enabled). |
+| `resolveDistributedClaims` _string_ | Distributed claims are represented by the `_claim_names` and `_claim_sources` members of the JSON object containing the claims. If this parameter is set to `true`, the plugin explicitly resolves these distributed claims. |
+| `responseMode` _string_ | Response mode passed to the authorization endpoint: - `query`: for parameters in query string - `form_post`: for parameters in request body - `fragment`: for parameters in uri fragment (rarely useful as the plugin itself cannot read it) - `query.jwt`, `form_post.jwt`, `fragment.jwt`: similar to `query`, `form_post` and `fragment` but the parameters are encoded in a JWT - `jwt`: shortcut that indicates the default encoding for the requested response type. |
+| `responseType` _[]string_ | The response type passed to the authorization endpoint. |
+| `reverify` _string_ | Specifies whether to always verify tokens stored in the session. |
+| `revocationEndpoint` _string_ | The revocation endpoint. If set it overrides the value in `revocation_endpoint` returned by the discovery endpoint. |
+| `revocationEndpointAuthMethod` _string_ | The revocation endpoint authentication method: : `client_secret_basic`, `client_secret_post`, `client_secret_jwt`, `private_key_jwt`, `tls_client_auth`, `self_signed_tls_client_auth`, or `none`: do not authenticate |
+| `revocationTokenParamName` _string_ | Designate token's parameter name for revocation. |
+| `rolesClaim` _[]string_ | The claim that contains the roles. If multiple values are set, it means the claim is inside a nested object of the token payload. |
+| `rolesRequired` _[]string_ | The roles (`roles_claim` claim) required to be present in the access token (or introspection results) for successful authorization. This config parameter works in both **AND** / **OR** cases. |
+| `runOnPreflight` _string_ | Specifies whether to run this plugin on pre-flight (`OPTIONS`) requests. |
+| `scopes` _[]string_ | The scopes passed to the authorization and token endpoints. |
+| `scopesClaim` _[]string_ | The claim that contains the scopes. If multiple values are set, it means the claim is inside a nested object of the token payload. |
+| `scopesRequired` _[]string_ | The scopes (`scopes_claim` claim) required to be present in the access token (or introspection results) for successful authorization. This config parameter works in both **AND** / **OR** cases. |
+| `searchUserInfo` _string_ | Specify whether to use the user info endpoint to get additional claims for consumer mapping, credential mapping, authenticated groups, and upstream and downstream headers. |
+| `sessionAbsoluteTimeout` _float64_ | Limits how long the session can be renewed in seconds, until re-authentication is required. 0 disables the checks. |
+| `sessionAudience` _string_ | The session audience, which is the intended target application. For example `"my-application"`. |
+| `sessionBind` _[]string_ | Bind the session to data acquired from the HTTP request or connection. |
+| `sessionCookieDomain` _string_ | The session cookie Domain flag. |
+| `sessionCookieHTTPOnly` _string_ | Forbids JavaScript from accessing the cookie, for example, through the `Document.cookie` property. |
+| `sessionCookieName` _string_ | The session cookie name. |
+| `sessionCookiePath` _string_ | The session cookie Path flag. |
+| `sessionCookieSameSite` _string_ | Controls whether a cookie is sent with cross-origin requests, providing some protection against cross-site request forgery attacks. |
+| `sessionCookieSecure` _string_ | Cookie is only sent to the server when a request is made with the https: scheme (except on localhost), and therefore is more resistant to man-in-the-middle attacks. |
+| `sessionEnforceSameSubject` _string_ | When set to `true`, audiences are forced to share the same subject. |
+| `sessionHashStorageKey` _string_ | When set to `true`, the storage key (session ID) is hashed for extra security. Hashing the storage key means it is impossible to decrypt data from the storage without a cookie. |
+| `sessionHashSubject` _string_ | When set to `true`, the value of subject is hashed before being stored. Only applies when `session_store_metadata` is enabled. |
+| `sessionIdlingTimeout` _float64_ | Specifies how long the session can be inactive until it is considered invalid in seconds. 0 disables the checks and touching. |
+| `sessionMemcachedHost` _string_ | The memcached host. |
+| `sessionMemcachedPort` _int_ | The memcached port. |
+| `sessionMemcachedPrefix` _string_ | The memcached session key prefix. |
+| `sessionMemcachedSocket` _string_ | The memcached unix socket path. |
+| `sessionMemcachedSSL` _string_ | If set to true, uses SSL to connect to memcached |
+| `sessionMemcachedSSLVerify` _string_ | If set to true, verifies the validity of the memcached server SSL certificate |
+| `sessionRemember` _string_ | Enables or disables persistent sessions. |
+| `sessionRememberAbsoluteTimeout` _float64_ | Limits how long the persistent session can be renewed in seconds, until re-authentication is required. 0 disables the checks. |
+| `sessionRememberCookieName` _string_ | Persistent session cookie name. Use with the `remember` configuration parameter. |
+| `sessionRememberRollingTimeout` _float64_ | Specifies how long the persistent session is considered valid in seconds. 0 disables the checks and rolling. |
+| `sessionRequestHeaders` _[]string_ | Set of headers to send to upstream, use id, audience, subject, timeout, idling-timeout, rolling-timeout, absolute-timeout. E.g. `[ "id", "timeout" ]` will set Session-Id and Session-Timeout request headers. |
+| `sessionResponseHeaders` _[]string_ | Set of headers to send to downstream, use id, audience, subject, timeout, idling-timeout, rolling-timeout, absolute-timeout. E.g. `[ "id", "timeout" ]` will set Session-Id and Session-Timeout response headers. |
+| `sessionRollingTimeout` _float64_ | Specifies how long the session can be used in seconds until it needs to be renewed. 0 disables the checks and rolling. |
+| `sessionSecret` _string_ | The session secret. |
+| `sessionStorage` _string_ | The session storage for session data: - `cookie`: stores session data with the session cookie (the session cannot be invalidated or revoked without changing session secret, but is stateless, and doesn't require a database) - `memcache`: stores session data in memcached - `redis`: stores session data in Redis. |
+| `sessionStoreMetadata` _string_ | Configures whether or not session metadata should be stored. This metadata includes information about the active sessions for a specific audience belonging to a specific subject. |
+| `sslVerify` _string_ | Verify identity provider server certificate. If set to `true`, the plugin uses the CA certificate set in the `kong.conf` config parameter `lua_ssl_trusted_certificate`. |
+| `timeout` _float64_ | Network IO timeout in milliseconds. |
+| `tlsClientAuthCertID` _string_ | ID of the Certificate entity representing the client certificate to use for mTLS client authentication for connections between Kong and the Auth Server. |
+| `tlsClientAuthSSLVerify` _string_ | Verify identity provider server certificate during mTLS client authentication. |
+| `tokenCacheKeyIncludeScope` _string_ | Include the scope in the token cache key, so token with different scopes are considered diffrent tokens. |
+| `tokenEndpoint` _string_ | The token endpoint. If set it overrides the value in `token_endpoint` returned by the discovery endpoint. |
+| `tokenEndpointAuthMethod` _string_ | The token endpoint authentication method: `client_secret_basic`, `client_secret_post`, `client_secret_jwt`, `private_key_jwt`, `tls_client_auth`, `self_signed_tls_client_auth`, or `none`: do not authenticate |
+| `tokenExchange` _[AIGWOpenIDConnectGeneratedConfigTokenExchange](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigtokenexchange)_ | Details on how to accept tokens from other identity providers. |
+| `tokenExchangeEndpoint` _string_ | Endpoint used to perform the legacy token exchange. |
+| `tokenHeadersClient` _[]string_ | Extra headers passed from the client to the token endpoint. |
+| `tokenHeadersGrants` _[]string_ | Enable the sending of the token endpoint response headers only with certain grants: - `password`: with OAuth password grant - `client_credentials`: with OAuth client credentials grant - `authorization_code`: with authorization code flow - `refresh_token` with refresh token grant. |
+| `tokenHeadersNames` _[]string_ | Extra header names passed to the token endpoint. |
+| `tokenHeadersPrefix` _string_ | Add a prefix to the token endpoint response headers before forwarding them to the downstream client. |
+| `tokenHeadersReplay` _[]string_ | The names of token endpoint response headers to forward to the downstream client. |
+| `tokenHeadersValues` _[]string_ | Extra header values passed to the token endpoint. |
+| `tokenPostArgsClient` _[]string_ | Pass extra arguments from the client to the OpenID-Connect plugin. If arguments exist, the client can pass them using: - Query parameters - Request Body - Request Header This parameter can be used with `scope` values, like this: `config.token_post_args_client=scope` In this case, the token would take the `scope` value from the query parameter or from the request body or from the header and send it to the token endpoint. |
+| `tokenPostArgsNames` _[]string_ | Extra post argument names passed to the token endpoint. |
+| `tokenPostArgsValues` _[]string_ | Extra post argument values passed to the token endpoint. |
+| `unauthorizedDestroySession` _string_ | Destroy any active session for the unauthorized requests. |
+| `unauthorizedErrorMessage` _string_ | The error message for the unauthorized requests (when not using the redirection). |
+| `unauthorizedRedirectURI` _[]string_ | Where to redirect the client on unauthorized requests. |
+| `unexpectedRedirectURI` _[]string_ | Where to redirect the client when unexpected errors happen with the requests. |
+| `upstreamAccessTokenHeader` _string_ | The upstream access token header. |
+| `upstreamAccessTokenJwkHeader` _string_ | The upstream access token JWK header. |
+| `upstreamHeaders` _[][AIGWOpenIDConnectGeneratedConfigUpstreamHeaders](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigupstreamheaders)_ | The upstream claim to header mappings. |
+| `upstreamHeadersClaims` _[]string_ | The upstream header claims. Only top level claims are supported. |
+| `upstreamHeadersNames` _[]string_ | The upstream header names for the claim values. |
+| `upstreamIDTokenHeader` _string_ | The upstream id token header. |
+| `upstreamIDTokenJwkHeader` _string_ | The upstream id token JWK header. |
+| `upstreamIntrospectionHeader` _string_ | The upstream introspection header. |
+| `upstreamIntrospectionJwtHeader` _string_ | The upstream introspection JWT header. |
+| `upstreamRefreshTokenHeader` _string_ | The upstream refresh token header. |
+| `upstreamSessionIDHeader` _string_ | The upstream session id header. |
+| `upstreamUserInfoHeader` _string_ | The upstream user info header. |
+| `upstreamUserInfoJwtHeader` _string_ | The upstream user info JWT header (in case the user info returns a JWT response). |
+| `userinfoAccept` _string_ | The value of `Accept` header for user info requests: - `application/json`: user info response as JSON - `application/jwt`: user info response as JWT (from the obsolete IETF draft document). |
+| `userinfoEndpoint` _string_ | The user info endpoint. If set it overrides the value in `userinfo_endpoint` returned by the discovery endpoint. |
+| `userinfoHeadersClient` _[]string_ | Extra headers passed from the client to the user info endpoint. |
+| `userinfoHeadersNames` _[]string_ | Extra header names passed to the user info endpoint. |
+| `userinfoHeadersValues` _[]string_ | Extra header values passed to the user info endpoint. |
+| `userinfoQueryArgsClient` _[]string_ | Extra query arguments passed from the client to the user info endpoint. |
+| `userinfoQueryArgsNames` _[]string_ | Extra query argument names passed to the user info endpoint. |
+| `userinfoQueryArgsValues` _[]string_ | Extra query argument values passed to the user info endpoint. |
+| `usingPseudoIssuer` _string_ | If the plugin uses a pseudo issuer. When set to true, the plugin will not discover the configuration from the issuer URL specified with `config.issuer`. |
+| `verifyClaims` _string_ | Verify tokens for standard claims. |
+| `verifyNonce` _string_ | Verify nonce on authorization code flow. |
+| `verifyParameters` _string_ | Verify plugin configuration against discovery. |
+| `verifySignature` _string_ | Verify the cryptographic signature of tokens. Disabling this skips verification for every token source, including tokens presented directly by clients (bearer); this is insecure for that path. To trust only tokens fetched from the identity provider for specific grants, use `ignore_signature` instead, which never affects bearer tokens. |
+
+_Appears in:_
+
+- [AIGatewayAuthStrategyOpenIDConnect](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyopenidconnect)
+
+#### AIGWOpenIDConnectGeneratedConfigClientJwk
+
+
+AIGWOpenIDConnectGeneratedConfigClientJwk The JWK used for the
+private_key_jwt authentication.
+
+
+
+| Field | Description |
+| --- | --- |
+| `alg` _string_ |  |
+| `crv` _string_ |  |
+| `d` _string_ |  |
+| `dp` _string_ |  |
+| `dq` _string_ |  |
+| `e` _string_ |  |
+| `issuer` _string_ |  |
+| `k` _string_ |  |
+| `keyOps` _[]string_ |  |
+| `kid` _string_ |  |
+| `kty` _string_ |  |
+| `n` _string_ |  |
+| `oth` _string_ |  |
+| `p` _string_ |  |
+| `q` _string_ |  |
+| `qi` _string_ |  |
+| `r` _string_ |  |
+| `t` _string_ |  |
+| `use` _string_ |  |
+| `x` _string_ |  |
+| `x5c` _[]string_ |  |
+| `x5t` _string_ |  |
+| `x5t#S256` _string_ |  |
+| `x5u` _string_ |  |
+| `y` _string_ |  |
+
+_Appears in:_
+
+- [AIGWOpenIDConnectGeneratedConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfig)
+
+#### AIGWOpenIDConnectGeneratedConfigClusterCacheRedis
+
+
+AIGWOpenIDConnectGeneratedConfigClusterCacheRedis is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `cloudAuthentication` _[AIGWOpenIDConnectGeneratedConfigClusterCacheRedisCloudAuthentication](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigclustercacherediscloudauthentication)_ | Cloud auth related configs for connecting to a Cloud Provider's Redis instance. |
+| `clusterMaxRedirections` _int_ | Maximum retry attempts for redirection. |
+| `clusterNodes` _[][AIGWOpenIDConnectGeneratedConfigClusterCacheRedisClusterNodes](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigclustercacheredisclusternodes)_ | Cluster addresses to use for Redis connections when the `redis` strategy is defined. Defining this field implies using a Redis Cluster. The minimum length of the array is 1 element. |
+| `connectTimeout` _int_ | An integer representing a timeout in milliseconds. Must be between 0 and 2^31-2. |
+| `connectionIsProxied` _string_ | If the connection to Redis is proxied (e.g. Envoy), set it `true`. Set the `host` and `port` to point to the proxy address. |
+| `database` _int_ | Database to use for the Redis connection when using the `redis` strategy |
+| `host` _string_ | A string representing a host name, such as example.com. |
+| `keepaliveBacklog` _int_ | Limits the total number of opened connections for a pool. If the connection pool is full, connection queues above the limit go into the backlog queue. If the backlog queue is full, subsequent connect operations fail and return `nil`. Queued operations (subject to set timeouts) resume once the number of connections in the pool is less than `keepalive_pool_size`. If latency is high or throughput is low, try increasing this value. Empirically, this value is larger than `keepalive_pool_size`. |
+| `keepalivePoolSize` _int_ | The size limit for every cosocket connection pool associated with every remote server, per worker process. If neither `keepalive_pool_size` nor `keepalive_backlog` is specified, no pool is created. If `keepalive_pool_size` isn't specified but `keepalive_backlog` is specified, then the pool uses the default value. Try to increase (e.g. 512) this value if latency is high or throughput is low. |
+| `password` _string_ | Password to use for Redis connections. If undefined, no AUTH commands are sent to Redis. |
+| `port` _int_ | An integer representing a port number between 0 and 65535, inclusive. |
+| `readTimeout` _int_ | An integer representing a timeout in milliseconds. Must be between 0 and 2^31-2. |
+| `sendTimeout` _int_ | An integer representing a timeout in milliseconds. Must be between 0 and 2^31-2. |
+| `sentinelMaster` _string_ | Sentinel master to use for Redis connections. Defining this value implies using Redis Sentinel. |
+| `sentinelNodes` _[][AIGWOpenIDConnectGeneratedConfigClusterCacheRedisSentinelNodes](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigclustercacheredissentinelnodes)_ | Sentinel node addresses to use for Redis connections when the `redis` strategy is defined. Defining this field implies using a Redis Sentinel. The minimum length of the array is 1 element. |
+| `sentinelPassword` _string_ | Sentinel password to authenticate with a Redis Sentinel instance. If undefined, no AUTH commands are sent to Redis Sentinels. |
+| `sentinelRole` _string_ | Sentinel role to use for Redis connections when the `redis` strategy is defined. Defining this value implies using Redis Sentinel. |
+| `sentinelUsername` _string_ | Sentinel username to authenticate with a Redis Sentinel instance. If undefined, ACL authentication won't be performed. This requires Redis v6.2.0+. |
+| `serverName` _string_ | A string representing an SNI (server name indication) value for TLS. |
+| `ssl` _string_ | If set to true, uses SSL to connect to Redis. |
+| `sslVerify` _string_ | If set to true, verifies the validity of the server SSL certificate. If setting this parameter, also configure `lua_ssl_trusted_certificate` in `kong.conf` to specify the CA (or server) certificate used by your Redis server. You may also need to configure `lua_ssl_verify_depth` accordingly. |
+| `username` _string_ | Username to use for Redis connections. If undefined, ACL authentication won't be performed. This requires Redis v6.0.0+. To be compatible with Redis v5.x.y, you can set it to `default`. |
+
+_Appears in:_
+
+- [AIGWOpenIDConnectGeneratedConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfig)
+
+#### AIGWOpenIDConnectGeneratedConfigClusterCacheRedisCloudAuthentication
+
+
+AIGWOpenIDConnectGeneratedConfigClusterCacheRedisCloudAuthentication Cloud
+auth related configs for connecting to a Cloud Provider's Redis instance.
+
+
+
+| Field | Description |
+| --- | --- |
+| `authProvider` _string_ | Auth providers to be used to authenticate to a Cloud Provider's Redis instance. |
+| `awsAccessKeyID` _string_ | AWS Access Key ID to be used for authentication when `auth_provider` is set to `aws`. |
+| `awsAssumeRoleArn` _string_ | The ARN of the IAM role to assume for generating ElastiCache IAM authentication tokens. |
+| `awsCacheName` _string_ | The name of the AWS Elasticache cluster when `auth_provider` is set to `aws`. |
+| `awsIsServerless` _string_ | This flag specifies whether the cluster is serverless when auth_provider is set to `aws`. |
+| `awsRegion` _string_ | The region of the AWS ElastiCache cluster when `auth_provider` is set to `aws`. |
+| `awsRoleSessionName` _string_ | The session name for the temporary credentials when assuming the IAM role. |
+| `awsSecretAccessKey` _string_ | AWS Secret Access Key to be used for authentication when `auth_provider` is set to `aws`. |
+| `azureClientID` _string_ | Azure Client ID to be used for authentication when `auth_provider` is set to `azure`. |
+| `azureClientSecret` _string_ | Azure Client Secret to be used for authentication when `auth_provider` is set to `azure`. |
+| `azureTenantID` _string_ | Azure Tenant ID to be used for authentication when `auth_provider` is set to `azure`. |
+| `gcpServiceAccountJSON` _string_ | GCP Service Account JSON to be used for authentication when `auth_provider` is set to `gcp`. |
+
+_Appears in:_
+
+- [AIGWOpenIDConnectGeneratedConfigClusterCacheRedis](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigclustercacheredis)
+
+#### AIGWOpenIDConnectGeneratedConfigClusterCacheRedisClusterNodes
+
+
+AIGWOpenIDConnectGeneratedConfigClusterCacheRedisClusterNodes Cluster
+addresses to use for Redis connections when the `redis` strategy is defined.
+Defining this field implies using a Redis Cluster.
+The minimum length of the array is 1 element.
+
+
+
+| Field | Description |
+| --- | --- |
+| `ip` _string_ | A string representing a host name, such as example.com. |
+| `port` _int_ | An integer representing a port number between 0 and 65535, inclusive. |
+
+_Appears in:_
+
+- [AIGWOpenIDConnectGeneratedConfigClusterCacheRedis](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigclustercacheredis)
+
+#### AIGWOpenIDConnectGeneratedConfigClusterCacheRedisSentinelNodes
+
+
+AIGWOpenIDConnectGeneratedConfigClusterCacheRedisSentinelNodes Sentinel node
+addresses to use for Redis connections when the `redis` strategy is defined.
+Defining this field implies using a Redis Sentinel.
+The minimum length of the array is 1 element.
+
+
+
+| Field | Description |
+| --- | --- |
+| `host` _string_ | A string representing a host name, such as example.com. |
+| `port` _int_ | An integer representing a port number between 0 and 65535, inclusive. |
+
+_Appears in:_
+
+- [AIGWOpenIDConnectGeneratedConfigClusterCacheRedis](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigclustercacheredis)
+
+#### AIGWOpenIDConnectGeneratedConfigDownstreamHeaders
+
+
+AIGWOpenIDConnectGeneratedConfigDownstreamHeaders The downstream claim to
+header mappings.
+
+
+
+| Field | Description |
+| --- | --- |
+| `header` _string_ | The name of the header. |
+| `path` _[]string_ | The path of the header value. |
+
+_Appears in:_
+
+- [AIGWOpenIDConnectGeneratedConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfig)
+
+#### AIGWOpenIDConnectGeneratedConfigPrincipals
+
+
+AIGWOpenIDConnectGeneratedConfigPrincipals Configuration for Kong Identity
+principal hydration after token verification.
+
+
+
+| Field | Description |
+| --- | --- |
+| `directory` _string_ | The Kong Identity directory instance to look up against. |
+| `enabled` _string_ | When true, query Kong Identity to map a Principal after token verification. |
+| `errorOnMiss` _string_ | When true (default), return 401 if fail to match a Principal in Kong Identity after token verification. When false, the request continues without authenticated_principal set. |
+| `matchConsumer` _string_ | If a Consumer is attached to the matched Principal in Kong Identity, load it and set it in the request context, overriding consumer_by. |
+| `matchConsumerGroups` _string_ | If Consumer Groups are attached to the matched Principal in Kong Identity, load them, overriding consumer_groups_claim. |
+| `principalBy` _string_ | Custom identity name for a type=custom Kong Identity lookup. When absent and principal_claim is set, an OIDC lookup is performed using principal_claim as the claim name instead of 'sub'. |
+| `principalClaim` _[]string_ | Token claim to use for the Kong Identity lookup. If multiple values are set, it means the claim is inside a nested object of the token payload. When principal_by is also set, performs a custom identity lookup (type=custom). When set alone, performs an OIDC lookup using this claim name instead of the default 'sub'. |
+
+_Appears in:_
+
+- [AIGWOpenIDConnectGeneratedConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfig)
+
+#### AIGWOpenIDConnectGeneratedConfigRedis
+
+
+AIGWOpenIDConnectGeneratedConfigRedis is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `cloudAuthentication` _[AIGWOpenIDConnectGeneratedConfigRedisCloudAuthentication](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigrediscloudauthentication)_ | Cloud auth related configs for connecting to a Cloud Provider's Redis instance. |
+| `clusterMaxRedirections` _int_ | Maximum retry attempts for redirection. |
+| `clusterNodes` _[][AIGWOpenIDConnectGeneratedConfigRedisClusterNodes](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigredisclusternodes)_ | Cluster addresses to use for Redis connections when the `redis` strategy is defined. Defining this field implies using a Redis Cluster. The minimum length of the array is 1 element. |
+| `connectTimeout` _int_ | An integer representing a timeout in milliseconds. Must be between 0 and 2^31-2. |
+| `connectionIsProxied` _string_ | If the connection to Redis is proxied (e.g. Envoy), set it `true`. Set the `host` and `port` to point to the proxy address. |
+| `database` _int_ | Database to use for the Redis connection when using the `redis` strategy |
+| `host` _string_ | A string representing a host name, such as example.com. |
+| `keepaliveBacklog` _int_ | Limits the total number of opened connections for a pool. If the connection pool is full, connection queues above the limit go into the backlog queue. If the backlog queue is full, subsequent connect operations fail and return `nil`. Queued operations (subject to set timeouts) resume once the number of connections in the pool is less than `keepalive_pool_size`. If latency is high or throughput is low, try increasing this value. Empirically, this value is larger than `keepalive_pool_size`. |
+| `keepalivePoolSize` _int_ | The size limit for every cosocket connection pool associated with every remote server, per worker process. If neither `keepalive_pool_size` nor `keepalive_backlog` is specified, no pool is created. If `keepalive_pool_size` isn't specified but `keepalive_backlog` is specified, then the pool uses the default value. Try to increase (e.g. 512) this value if latency is high or throughput is low. |
+| `password` _string_ | Password to use for Redis connections. If undefined, no AUTH commands are sent to Redis. |
+| `port` _int_ | An integer representing a port number between 0 and 65535, inclusive. |
+| `prefix` _string_ | The Redis session key prefix. |
+| `readTimeout` _int_ | An integer representing a timeout in milliseconds. Must be between 0 and 2^31-2. |
+| `sendTimeout` _int_ | An integer representing a timeout in milliseconds. Must be between 0 and 2^31-2. |
+| `sentinelMaster` _string_ | Sentinel master to use for Redis connections. Defining this value implies using Redis Sentinel. |
+| `sentinelNodes` _[][AIGWOpenIDConnectGeneratedConfigRedisSentinelNodes](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigredissentinelnodes)_ | Sentinel node addresses to use for Redis connections when the `redis` strategy is defined. Defining this field implies using a Redis Sentinel. The minimum length of the array is 1 element. |
+| `sentinelPassword` _string_ | Sentinel password to authenticate with a Redis Sentinel instance. If undefined, no AUTH commands are sent to Redis Sentinels. |
+| `sentinelRole` _string_ | Sentinel role to use for Redis connections when the `redis` strategy is defined. Defining this value implies using Redis Sentinel. |
+| `sentinelUsername` _string_ | Sentinel username to authenticate with a Redis Sentinel instance. If undefined, ACL authentication won't be performed. This requires Redis v6.2.0+. |
+| `serverName` _string_ | A string representing an SNI (server name indication) value for TLS. |
+| `socket` _string_ | The Redis unix socket path. |
+| `ssl` _string_ | If set to true, uses SSL to connect to Redis. |
+| `sslVerify` _string_ | If set to true, verifies the validity of the server SSL certificate. If setting this parameter, also configure `lua_ssl_trusted_certificate` in `kong.conf` to specify the CA (or server) certificate used by your Redis server. You may also need to configure `lua_ssl_verify_depth` accordingly. |
+| `username` _string_ | Username to use for Redis connections. If undefined, ACL authentication won't be performed. This requires Redis v6.0.0+. To be compatible with Redis v5.x.y, you can set it to `default`. |
+
+_Appears in:_
+
+- [AIGWOpenIDConnectGeneratedConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfig)
+
+#### AIGWOpenIDConnectGeneratedConfigRedisCloudAuthentication
+
+
+AIGWOpenIDConnectGeneratedConfigRedisCloudAuthentication Cloud auth related
+configs for connecting to a Cloud Provider's Redis instance.
+
+
+
+| Field | Description |
+| --- | --- |
+| `authProvider` _string_ | Auth providers to be used to authenticate to a Cloud Provider's Redis instance. |
+| `awsAccessKeyID` _string_ | AWS Access Key ID to be used for authentication when `auth_provider` is set to `aws`. |
+| `awsAssumeRoleArn` _string_ | The ARN of the IAM role to assume for generating ElastiCache IAM authentication tokens. |
+| `awsCacheName` _string_ | The name of the AWS Elasticache cluster when `auth_provider` is set to `aws`. |
+| `awsIsServerless` _string_ | This flag specifies whether the cluster is serverless when auth_provider is set to `aws`. |
+| `awsRegion` _string_ | The region of the AWS ElastiCache cluster when `auth_provider` is set to `aws`. |
+| `awsRoleSessionName` _string_ | The session name for the temporary credentials when assuming the IAM role. |
+| `awsSecretAccessKey` _string_ | AWS Secret Access Key to be used for authentication when `auth_provider` is set to `aws`. |
+| `azureClientID` _string_ | Azure Client ID to be used for authentication when `auth_provider` is set to `azure`. |
+| `azureClientSecret` _string_ | Azure Client Secret to be used for authentication when `auth_provider` is set to `azure`. |
+| `azureTenantID` _string_ | Azure Tenant ID to be used for authentication when `auth_provider` is set to `azure`. |
+| `gcpServiceAccountJSON` _string_ | GCP Service Account JSON to be used for authentication when `auth_provider` is set to `gcp`. |
+
+_Appears in:_
+
+- [AIGWOpenIDConnectGeneratedConfigRedis](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigredis)
+
+#### AIGWOpenIDConnectGeneratedConfigRedisClusterNodes
+
+
+AIGWOpenIDConnectGeneratedConfigRedisClusterNodes Cluster addresses to use
+for Redis connections when the `redis` strategy is defined.
+Defining this field implies using a Redis Cluster.
+The minimum length of the array is 1 element.
+
+
+
+| Field | Description |
+| --- | --- |
+| `ip` _string_ | A string representing a host name, such as example.com. |
+| `port` _int_ | An integer representing a port number between 0 and 65535, inclusive. |
+
+_Appears in:_
+
+- [AIGWOpenIDConnectGeneratedConfigRedis](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigredis)
+
+#### AIGWOpenIDConnectGeneratedConfigRedisSentinelNodes
+
+
+AIGWOpenIDConnectGeneratedConfigRedisSentinelNodes Sentinel node addresses to
+use for Redis connections when the `redis` strategy is defined.
+Defining this field implies using a Redis Sentinel.
+The minimum length of the array is 1 element.
+
+
+
+| Field | Description |
+| --- | --- |
+| `host` _string_ | A string representing a host name, such as example.com. |
+| `port` _int_ | An integer representing a port number between 0 and 65535, inclusive. |
+
+_Appears in:_
+
+- [AIGWOpenIDConnectGeneratedConfigRedis](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigredis)
+
+#### AIGWOpenIDConnectGeneratedConfigTokenExchange
+
+
+AIGWOpenIDConnectGeneratedConfigTokenExchange Details on how to accept tokens
+from other identity providers.
+
+
+
+| Field | Description |
+| --- | --- |
+| `cache` _[AIGWOpenIDConnectGeneratedConfigTokenExchangeCache](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigtokenexchangecache)_ | Cache support for token exchange |
+| `request` _[AIGWOpenIDConnectGeneratedConfigTokenExchangeRequest](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigtokenexchangerequest)_ | Parameters used in the token exchange request. |
+| `subjectTokenIssuers` _[][AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuers](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigtokenexchangesubjecttokenissuers)_ | Trusted token issuers from which the upstream may accept tokens to be exchanged. If a JWT bearer matches all the conditions of a subject token issuer item, the token will be exchanged. |
+
+_Appears in:_
+
+- [AIGWOpenIDConnectGeneratedConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfig)
+
+#### AIGWOpenIDConnectGeneratedConfigTokenExchangeCache
+
+
+AIGWOpenIDConnectGeneratedConfigTokenExchangeCache Cache support for token
+exchange
+
+
+
+| Field | Description |
+| --- | --- |
+| `enabled` _string_ | Whether to enable caching. |
+| `ttl` _int_ | Cache ttl in seconds used when caching exchanged tokens, use it to override `conf.cache_ttl`. Token expiry will be used if shorter than this value. |
+
+_Appears in:_
+
+- [AIGWOpenIDConnectGeneratedConfigTokenExchange](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigtokenexchange)
+
+#### AIGWOpenIDConnectGeneratedConfigTokenExchangeRequest
+
+
+AIGWOpenIDConnectGeneratedConfigTokenExchangeRequest Parameters used in the
+token exchange request.
+
+
+
+| Field | Description |
+| --- | --- |
+| `audience` _[]string_ | Audiences used in the token exchange request. Values defined here override those defined in `config.audience`. |
+| `emptyAudience` _string_ | Use empty audiences. Use this field to override audiences defined in `config.audience`. |
+| `emptyScopes` _string_ | Use empty scopes. Use this field to override scopes defined in `config.scopes`. |
+| `scopes` _[]string_ | Scopes used in the token exchange request. Values defined here override those defined in `config.scopes`. |
+
+_Appears in:_
+
+- [AIGWOpenIDConnectGeneratedConfigTokenExchange](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigtokenexchange)
+
+#### AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuers
+
+
+AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuers Trusted
+token issuers from which the upstream may accept tokens to be exchanged.
+If a JWT bearer matches all the conditions of a subject token issuer item,
+the token will be exchanged.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuersConditions](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigtokenexchangesubjecttokenissuersconditions)_ | A tokens will only be exchange when it matches all these criteria. To exchanging tokens issued from a different issuer, conditions must not be defined; On the contrary, to exchange tokens issued from the target issuer itself, conditions must be defined. |
+| `issuer` _string_ | Tokens of whose iss claim matches this value will be exchanged. |
+
+_Appears in:_
+
+- [AIGWOpenIDConnectGeneratedConfigTokenExchange](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigtokenexchange)
+
+#### AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuersConditions
+
+
+AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuersConditions A
+tokens will only be exchange when it matches all these criteria.
+To exchanging tokens issued from a different issuer, conditions must not be
+defined; On the contrary, to exchange tokens issued from the target issuer
+itself, conditions must be defined.
+
+
+
+| Field | Description |
+| --- | --- |
+| `hasAudience` _[]string_ |  |
+| `hasScopes` _[]string_ |  |
+| `missingAudience` _[]string_ |  |
+| `missingScopes` _[]string_ |  |
+
+_Appears in:_
+
+- [AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuers](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigtokenexchangesubjecttokenissuers)
+
+#### AIGWOpenIDConnectGeneratedConfigUpstreamHeaders
+
+
+AIGWOpenIDConnectGeneratedConfigUpstreamHeaders The upstream claim to header
+mappings.
+
+
+
+| Field | Description |
+| --- | --- |
+| `header` _string_ | The name of the header. |
+| `path` _[]string_ | The path of the header value. |
+
+_Appears in:_
+
+- [AIGWOpenIDConnectGeneratedConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfig)
+
 #### AIGatewayACLRef
 
 
@@ -494,7 +1193,7 @@ AIGatewayAuthStrategyKeyAuth Configuration for an auth strategy.
 
 | Field | Description |
 | --- | --- |
-| `config` _[AIGatewayAuthStrategyKeyAuthConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategykeyauthconfig)_ | Configuration for the key-auth auth strategy. For advanced use cases, additional config properties can be sent in the request body. See: https://developer.konghq.com/plugins/key-auth/reference/ for the list of properties |
+| `config` _[AIGWKeyAuthGeneratedConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigwkeyauthgeneratedconfig)_ |  |
 | `displayName` _string_ | The display name for this auth strategy instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
@@ -503,52 +1202,6 @@ AIGatewayAuthStrategyKeyAuth Configuration for an auth strategy.
 _Appears in:_
 
 - [AIGatewayAuthStrategyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyconfig)
-
-#### AIGatewayAuthStrategyKeyAuthConfig
-
-
-AIGatewayAuthStrategyKeyAuthConfig Configuration for the key-auth auth
-strategy.
-For advanced use cases, additional config properties can be sent in the
-request body.
-See: https://developer.konghq.com/plugins/key-auth/reference/ for the list of
-properties
-
-
-
-| Field | Description |
-| --- | --- |
-| `hideCredentials` _string_ | An optional boolean value telling the plugin to show or hide the credential from the upstream service. If true, the plugin strips the credential from the request. |
-| `keyInBody` _string_ | If enabled, reads the request body. Supported MIME types: application/www-form-urlencoded, application/json, and multipart/form-data. |
-| `keyInHeader` _string_ | If enabled (default), the plugin reads the request header and tries to find the key in it. |
-| `keyInQuery` _string_ | If enabled (default), the plugin reads the query parameter in the request and tries to find the key in it. |
-| `keyNames` _[]string_ | An array of strings containing the names of the keys to look for in the request. |
-| `principals` _[AIGatewayAuthStrategyKeyAuthConfigPrincipals](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategykeyauthconfigprincipals)_ | Authenticate against Kong Identity instead of local credentials. Mutually exclusive with identity realms. |
-| `realm` _string_ | When authentication fails the plugin sends `WWW-Authenticate` header with `realm` attribute value. |
-| `runOnPreflight` _string_ | A boolean value that indicates whether the plugin should run (and try to authenticate) on `OPTIONS` preflight requests. If set to `false`, then `OPTIONS` requests are always allowed. |
-
-_Appears in:_
-
-- [AIGatewayAuthStrategyKeyAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategykeyauth)
-
-#### AIGatewayAuthStrategyKeyAuthConfigPrincipals
-
-
-AIGatewayAuthStrategyKeyAuthConfigPrincipals Authenticate against Kong
-Identity instead of local credentials.
-Mutually exclusive with identity realms.
-
-
-
-| Field | Description |
-| --- | --- |
-| `directory` _string_ | The Kong Identity directory instance to authenticate against. |
-| `enabled` _string_ | When true, authenticate against Kong Identity instead of local credentials. |
-| `errorOnMiss` _string_ | When true (default), reject the request if no matching principal is found in Kong Identity. When false, allow the request to continue unauthenticated instead. |
-
-_Appears in:_
-
-- [AIGatewayAuthStrategyKeyAuthConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategykeyauthconfig)
 
 #### AIGatewayAuthStrategyOpenIDConnect
 
@@ -559,7 +1212,7 @@ AIGatewayAuthStrategyOpenIDConnect Configuration for an auth strategy.
 
 | Field | Description |
 | --- | --- |
-| `config` _[AIGatewayAuthStrategyOpenIDConnectConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyopenidconnectconfig)_ | Configuration for the OpenID Connect auth strategy. For advanced use cases, additional config properties can be sent in the request body. See: https://developer.konghq.com/plugins/openid-connect/reference/ for the list of properties |
+| `config` _[AIGWOpenIDConnectGeneratedConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfig)_ |  |
 | `displayName` _string_ | The display name for this auth strategy instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
@@ -568,96 +1221,6 @@ AIGatewayAuthStrategyOpenIDConnect Configuration for an auth strategy.
 _Appears in:_
 
 - [AIGatewayAuthStrategyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyconfig)
-
-#### AIGatewayAuthStrategyOpenIDConnectConfig
-
-
-AIGatewayAuthStrategyOpenIDConnectConfig Configuration for the OpenID Connect
-auth strategy.
-For advanced use cases, additional config properties can be sent in the
-request body.
-See: https://developer.konghq.com/plugins/openid-connect/reference/ for the
-list of properties
-
-
-
-| Field | Description |
-| --- | --- |
-| `audienceRequired` _[]string_ | Audiences required in the access token or introspection response. |
-| `authMethods` _[]string_ | Types of credentials/grants to enable. |
-| `cacheIntrospection` _string_ | Cache introspection endpoint requests. |
-| `cacheTokensSalt` _string_ | Salt used for generating the cache key that is used for caching the token endpoint requests. |
-| `clientAlg` _[]string_ | Algorithm to use for `client_secret_jwt` or `private_key_jwt` authentication. |
-| `clientAuth` _[]string_ | Client authentication methods used with the identity provider. |
-| `clientID` _[]string_ | An array of strings representing the client id for the OpenID Connect provider. When multiple values are provided, the client ID and secrets pairs correspond based on their locations in the array. |
-| `clientSecret` _[][SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ | An array of strings representing the client secret for the OpenID Connect provider. When multiple values are provided, the client ID and secrets pairs correspond based on their locations in the array. |
-| `consumerBy` _[]string_ | Consumer fields used when mapping a token claim to a Kong consumer. |
-| `consumerClaims` _[]string_ | An array containing an array of string paths representing the location of the claim in a nested object. For example, to map to user.info.id, set [ "user", "info", "id" ]. |
-| `consumerGroupsClaim` _[]string_ | The claim used for consumer groups mapping. If multiple values are set, it means the claim is inside a nested object of the token payload. |
-| `consumerGroupsOptional` _string_ | Do not terminate the request if consumer groups mapping fails. |
-| `consumerOptional` _string_ | Do not terminate the request if consumer mapping fails. |
-| `credentialClaim` _[]string_ | Claim path used to derive virtual credentials when consumer mapping is not used. |
-| `hideCredentials` _string_ | Remove credentials used for authentication before proxying the request upstream. |
-| `httpProxy` _string_ | HTTP proxy used for identity provider requests. |
-| `httpProxyAuthorization` _string_ | Authorization header value sent to the HTTP proxy. |
-| `httpVersion` _float64_ | HTTP version used for identity provider requests. |
-| `httpsProxy` _string_ | HTTPS proxy used for identity provider requests. |
-| `httpsProxyAuthorization` _string_ | Authorization header value sent to the HTTPS proxy. |
-| `introspectionEndpoint` _string_ | Overrides the introspection endpoint returned by discovery. |
-| `issuer` _string_ | URL that identifies the OpenID Provider |
-| `jwksEndpoint` _string_ | Overrides the JWKS endpoint returned by discovery. |
-| `keepalive` _string_ | Reuse HTTP client connections for identity provider requests. |
-| `leeway` _int_ | Leeway, in seconds, for validating token time claims. |
-| `mtlsIntrospectionEndpoint` _string_ | mTLS alias for the introspection endpoint. |
-| `noProxy` _string_ | Comma-separated hosts that bypass the configured proxies. |
-| `principals` _[AIGatewayAuthStrategyOpenIDConnectConfigPrincipals](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyopenidconnectconfigprincipals)_ | Map a request to a Kong Identity principal after token verification. |
-| `scopes` _[]string_ | This field is referenceable. |
-| `sslVerify` _string_ |  |
-| `timeout` _int_ | Network I/O timeout, in milliseconds, for identity provider requests. |
-| `upstreamHeaders` _[][AIGatewayAuthStrategyOpenIDConnectConfigUpstreamHeaders](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyopenidconnectconfigupstreamheaders)_ | Map token claims to upstream headers using path-based access. |
-
-_Appears in:_
-
-- [AIGatewayAuthStrategyOpenIDConnect](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyopenidconnect)
-
-#### AIGatewayAuthStrategyOpenIDConnectConfigPrincipals
-
-
-AIGatewayAuthStrategyOpenIDConnectConfigPrincipals Map a request to a Kong
-Identity principal after token verification.
-
-
-
-| Field | Description |
-| --- | --- |
-| `directory` _string_ | The Kong Identity directory instance to look up against. |
-| `enabled` _string_ | When true, look up a Kong Identity principal after token verification. |
-| `errorOnMiss` _string_ | When true (default), reject the request if no principal is matched in Kong Identity after token verification. When false, the request continues without an authenticated principal set. |
-| `matchConsumer` _string_ | If a consumer is attached to the matched principal, load it and set it in the request context, overriding consumer_by. |
-| `matchConsumerGroups` _string_ | If consumer groups are attached to the matched principal, load them, overriding consumer_groups_claim. |
-| `principalBy` _string_ | Custom identity name for a custom Kong Identity lookup. When absent and principal_claim is set, a lookup is performed using principal_claim as the claim name instead of the default sub claim. |
-| `principalClaim` _[]string_ | Token claim used for the Kong Identity lookup. If multiple values are set, the claim is inside a nested object of the token payload. Used together with, or instead of, principal_by. |
-
-_Appears in:_
-
-- [AIGatewayAuthStrategyOpenIDConnectConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyopenidconnectconfig)
-
-#### AIGatewayAuthStrategyOpenIDConnectConfigUpstreamHeaders
-
-
-AIGatewayAuthStrategyOpenIDConnectConfigUpstreamHeaders Map token claims to
-upstream headers using path-based access.
-
-
-
-| Field | Description |
-| --- | --- |
-| `header` _string_ | The name of the header. |
-| `path` _[]string_ | The path of the header value. |
-
-_Appears in:_
-
-- [AIGatewayAuthStrategyOpenIDConnectConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyopenidconnectconfig)
 
 #### AIGatewayAuthStrategyRef
 
@@ -4564,7 +5127,7 @@ When values are not set, the model name is used as the selector value.
 | --- | --- |
 | `bodyParam` _string_ | The body property name to match for routing. |
 | `headerParam` _string_ | The header property name to match for routing. |
-| `pathParam` _string_ | The name of the regex capture group beginning with "~", which is defined in the route path for routing. |
+| `pathParam` _string_ | The name of the regex capture group defined in the route path for routing. |
 | `values` _[]string_ | Optional model aliases. When omitted, the model name is used. When no selector location is configured, the format default selector is used. |
 
 _Appears in:_
@@ -6740,7 +7303,7 @@ either inline or sourced from a Kubernetes Secret.
 
 _Appears in:_
 
-- [AIGatewayAuthStrategyOpenIDConnectConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyopenidconnectconfig)
+- [AIGWOpenIDConnectGeneratedConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfig)
 - [AIGatewayCACertificateAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificateapispec)
 - [AIGatewayCertificateAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificateapispec)
 - [AIGatewayConsumerCredentialAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumercredentialapispec)
@@ -17366,7 +17929,7 @@ Colors is a type alias.
 
 | Field | Description |
 | --- | --- |
-| `primary` _string_ |  |
+| `primary` _string_ | The primary accent color used in the portal's theme. Must be a valid hex color value. |
 
 _Appears in:_
 
@@ -18882,11 +19445,11 @@ PortalCustomizationAPISpec defines the API spec fields for PortalCustomization.
 | Field | Description |
 | --- | --- |
 | `css` _*string_ |  |
-| `layout` _string_ |  |
+| `layout` _string_ | This property is deprecated and is not used by the portal. |
 | `menu` _[Menu](#konnect-konghq-com-v1alpha1-types-menu)_ |  |
 | `robots` _*string_ |  |
 | `specRenderer` _[SpecRenderer](#konnect-konghq-com-v1alpha1-types-specrenderer)_ | The spec renderer settings of this portal |
-| `theme` _[Theme](#konnect-konghq-com-v1alpha1-types-theme)_ |  |
+| `theme` _[Theme](#konnect-konghq-com-v1alpha1-types-theme)_ | The theme settings for this portal. |
 
 _Appears in:_
 
@@ -19416,7 +19979,7 @@ _Appears in:_
 #### Theme
 
 
-Theme is a type alias.
+Theme The theme settings for this portal.
 
 
 
@@ -19424,7 +19987,7 @@ Theme is a type alias.
 | --- | --- |
 | `colors` _[Colors](#konnect-konghq-com-v1alpha1-types-colors)_ |  |
 | `mode` _string_ |  |
-| `name` _string_ |  |
+| `name` _string_ | The theme name to apply to this portal. Supported names are 'ocean' and 'glacier'. If another name is provided or this property is omitted, the portal uses the default 'ocean' theme. |
 
 _Appears in:_
 

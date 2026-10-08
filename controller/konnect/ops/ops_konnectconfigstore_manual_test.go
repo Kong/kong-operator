@@ -162,7 +162,7 @@ func TestDeleteKonnectConfigStoreGuarded(t *testing.T) {
 				sdkkonnectops.ListConfigStoreSecretsRequest{
 					ControlPlaneID: parentID,
 					ConfigStoreID:  storeID,
-					PageSize:       new(int64(configStoreSecretsProbePageSize)),
+					Size:           new(int64(configStoreSecretsProbePageSize)),
 				},
 			).
 			Return(&sdkkonnectops.ListConfigStoreSecretsResponse{
@@ -332,7 +332,7 @@ func TestConfigStoreHasSecretEntries(t *testing.T) {
 			ListConfigStoreSecrets(mock.Anything, sdkkonnectops.ListConfigStoreSecretsRequest{
 				ControlPlaneID: parentID,
 				ConfigStoreID:  storeID,
-				PageSize:       new(int64(configStoreSecretsProbePageSize)),
+				Size:           new(int64(configStoreSecretsProbePageSize)),
 			}).
 			Return(newListResponse("cert-a"), nil).
 			Once()

@@ -11,8 +11,8 @@ spec:
     driven with real chat-completions traffic, covering matched aliases,
     rejection of non-matching aliases, and the format-default selector fallback
     for a model with no selector. The path-selector model is only synced and
-    asserted Programmed; its traffic coverage lives in the skipped
-    `model-route-selectors-pathparam` test (KOKO-4314/KOKO-4312).
+    asserted Programmed; its traffic coverage lives in the
+    `model-route-selectors-pathparam` test.
   bindings:
     - name: test_name
       value: ($namespace)
