@@ -615,15 +615,33 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnect
 		return res, err
 	}
 
-	migrated, err := r.certificateConsumersMigrated(ctx, ext, certificateSecret.Name)
-	if err != nil {
-		return ctrl.Result{}, err
+	needsRetirement := lo.ContainsBy(dpCertificates.Items, func(cert configurationv1alpha1.KongDataPlaneClientCertificate) bool {
+		return sanitizeCert(cert.Spec.Cert) != certDataStr
+	})
+	if !needsRetirement {
+		owned, err := r.listOwnedCertificateSecrets(ctx, ext)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		needsRetirement = lo.ContainsBy(owned, func(secret corev1.Secret) bool {
+			return secret.Name != certificateSecret.Name
+		})
 	}
-	if !migrated {
-		return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithBackoff}, nil
-	}
-	if err := r.retireCertificateGenerations(ctx, ext, certificateSecret); err != nil {
-		return ctrl.Result{}, err
+	if needsRetirement {
+		migrated, err := r.certificateConsumersMigrated(ctx, ext, certificateSecret.Name)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if !migrated {
+			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithBackoff}, nil
+		}
+		pending, err := r.retireCertificateGenerations(ctx, ext, certificateSecret)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if pending {
+			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+		}
 	}
 
 	requeueAfter := r.SyncPeriod

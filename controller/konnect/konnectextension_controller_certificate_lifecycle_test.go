@@ -196,6 +196,7 @@ func TestKonnectExtensionCertificateConsumersMigrated(t *testing.T) {
 		staleStatus bool
 		partial     bool
 		oldPod      bool
+		otherPod    bool
 		scaledZero  bool
 		paused      bool
 		want        bool
@@ -207,6 +208,7 @@ func TestKonnectExtensionCertificateConsumersMigrated(t *testing.T) {
 		{name: "partial rollout", partial: true},
 		{name: "paused rollout", paused: true},
 		{name: "terminating old Pod", oldPod: true},
+		{name: "unrelated Pod mounting Manual source Secret", otherPod: true, want: true},
 		{name: "completed rollout", want: true},
 		{name: "scaled to zero without old Pods", scaledZero: true, oldTemplate: true, want: true},
 		{name: "scaled to zero with old Pods", scaledZero: true, oldPod: true},
@@ -244,15 +246,21 @@ func TestKonnectExtensionCertificateConsumersMigrated(t *testing.T) {
 			if !tt.missing {
 				require.NoError(t, r.Create(t.Context(), deployment))
 			}
-			if tt.oldPod {
+			if tt.oldPod || tt.otherPod {
+				volumeName := consts.KongClusterCertVolume
+				if tt.otherPod {
+					volumeName = "unrelated-tls"
+				}
 				pod := &corev1.Pod{
 					Name: "old-pod", Namespace: ext.Namespace,
 					Finalizers: []string{"test/hold"},
-					Spec: corev1.PodSpec{Volumes: []corev1.Volume{{Name: consts.KongClusterCertVolume,
+					Spec: corev1.PodSpec{Volumes: []corev1.Volume{{Name: volumeName,
 						Secret: &corev1.SecretVolumeSource{SecretName: "certificate"}}}},
 				}
 				require.NoError(t, r.Create(t.Context(), pod))
-				require.NoError(t, r.Delete(t.Context(), pod))
+				if tt.oldPod {
+					require.NoError(t, r.Delete(t.Context(), pod))
+				}
 			}
 			got, err := r.certificateConsumersMigrated(t.Context(), ext, "new")
 			require.NoError(t, err)
@@ -271,7 +279,7 @@ func TestKonnectExtensionCertificateCleanupUsesLiveReader(t *testing.T) {
 	})
 	_, err := r.certificateConsumersMigrated(t.Context(), ext, "new")
 	require.ErrorIs(t, err, apiErr)
-	err = r.retireCertificateGenerations(t.Context(), ext, &corev1.Secret{})
+	_, err = r.retireCertificateGenerations(t.Context(), ext, &corev1.Secret{})
 	require.ErrorIs(t, err, apiErr)
 }
 
@@ -333,7 +341,9 @@ func TestKonnectExtensionRetirementWaitsForKonnectDeletion(t *testing.T) {
 	require.NoError(t, controllerutil.SetControllerReference(ext, oldSecret, r.Scheme()))
 	require.NoError(t, r.Create(t.Context(), oldSecret))
 	current := &corev1.Secret{Name: "new", Data: map[string][]byte{corev1.TLSCertKey: []byte("new")}}
-	require.NoError(t, r.retireCertificateGenerations(t.Context(), ext, current))
+	pending, err := r.retireCertificateGenerations(t.Context(), ext, current)
+	require.NoError(t, err)
+	assert.True(t, pending)
 	var held configurationv1alpha1.KongDataPlaneClientCertificate
 	require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(previous), &held))
 	assert.False(t, held.DeletionTimestamp.IsZero())
@@ -343,9 +353,99 @@ func TestKonnectExtensionRetirementWaitsForKonnectDeletion(t *testing.T) {
 	held.Finalizers = nil
 	require.NoError(t, r.Update(t.Context(), &held))
 	for range 3 {
-		require.NoError(t, r.retireCertificateGenerations(t.Context(), ext, current))
+		_, err := r.retireCertificateGenerations(t.Context(), ext, current)
+		require.NoError(t, err)
 	}
 	assert.True(t, apierrors.IsNotFound(r.Get(t.Context(), client.ObjectKeyFromObject(oldSecret), &retained)))
+}
+
+func TestKonnectExtensionRetirementCleansAllOldSecrets(t *testing.T) {
+	r, ext := dpCertTestReconciler(t, "new")
+	for _, name := range []string{"old-a", "old-b"} {
+		secret := &corev1.Secret{
+			Name: name, Namespace: ext.Namespace,
+			Labels:     map[string]string{SecretKonnectDataPlaneCertificateLabel: "true"},
+			Finalizers: []string{KonnectCleanupFinalizer, consts.KonnectExtensionSecretInUseFinalizer},
+			Data:       map[string][]byte{corev1.TLSCertKey: []byte(name)},
+		}
+		require.NoError(t, controllerutil.SetControllerReference(ext, secret, r.Scheme()))
+		require.NoError(t, r.Create(t.Context(), secret))
+	}
+	current := &corev1.Secret{Name: "current", Data: map[string][]byte{corev1.TLSCertKey: []byte("new")}}
+	pending, err := r.retireCertificateGenerations(t.Context(), ext, current)
+	require.NoError(t, err)
+	assert.True(t, pending)
+	for _, name := range []string{"old-a", "old-b"} {
+		var secret corev1.Secret
+		require.NoError(t, r.Get(t.Context(), client.ObjectKey{Namespace: ext.Namespace, Name: name}, &secret))
+		assert.Empty(t, secret.Finalizers, "all generations should release finalizers in the same pass")
+	}
+	pending, err = r.retireCertificateGenerations(t.Context(), ext, current)
+	require.NoError(t, err)
+	assert.True(t, pending)
+	for _, name := range []string{"old-a", "old-b"} {
+		var secret corev1.Secret
+		assert.True(t, apierrors.IsNotFound(r.Get(t.Context(), client.ObjectKey{Namespace: ext.Namespace, Name: name}, &secret)))
+	}
+	pending, err = r.retireCertificateGenerations(t.Context(), ext, current)
+	require.NoError(t, err)
+	assert.False(t, pending)
+}
+
+func TestKonnectExtensionSkipsConsumerReadsWithoutOldGenerations(t *testing.T) {
+	for _, staleSecret := range []bool{false, true} {
+		name := "steady state"
+		if staleSecret {
+			name = "stale Secret without registration"
+		}
+		t.Run(name, func(t *testing.T) {
+			r, ext := dpCertTestReconciler(t, "new", dpCertTestObject("extension", "new"))
+			var source corev1.Secret
+			require.NoError(t, r.Get(t.Context(), client.ObjectKey{Namespace: ext.Namespace, Name: "certificate"}, &source))
+			_, _, err := r.ensureCertificateSnapshot(t.Context(), ext, &source)
+			require.NoError(t, err)
+			if staleSecret {
+				old := &corev1.Secret{
+					Name: "old", Namespace: ext.Namespace,
+					Labels: map[string]string{SecretKonnectDataPlaneCertificateLabel: "true"},
+					Data:   map[string][]byte{corev1.TLSCertKey: []byte("old")},
+				}
+				require.NoError(t, controllerutil.SetControllerReference(ext, old, r.Scheme()))
+				require.NoError(t, r.Create(t.Context(), old))
+			}
+			live, ok := r.Client.(client.WithWatch)
+			require.True(t, ok)
+			listCalls, workloadLists := 0, 0
+			r.apiReader = interceptor.NewClient(live, interceptor.Funcs{
+				List: func(ctx context.Context, _ client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+					listCalls++
+					switch list.(type) {
+					case *corev1.PodList, *appsv1.DeploymentList:
+						workloadLists++
+					}
+					return live.List(ctx, list, opts...)
+				},
+			})
+			for range 16 {
+				require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(ext), ext))
+				_, err := r.Reconcile(t.Context(), ext)
+				require.NoError(t, err)
+			}
+			if staleSecret {
+				assert.Positive(t, workloadLists, "stale owned Secrets still require migration checks")
+				var old corev1.Secret
+				assert.True(t, apierrors.IsNotFound(r.Get(t.Context(), client.ObjectKey{Namespace: ext.Namespace, Name: "old"}, &old)))
+			} else {
+				require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(ext), ext))
+				assert.True(t, k8sutils.HasConditionTrue(konnectv1alpha2.KonnectExtensionReadyConditionType, ext))
+				listCalls, workloadLists = 0, 0
+				_, err := r.Reconcile(t.Context(), ext)
+				require.NoError(t, err)
+				assert.Equal(t, 4, listCalls, "steady state should only list DataPlanes, ControlPlanes, certificates, and owned Secrets")
+				assert.Zero(t, workloadLists, "steady state must skip rollout and Pod scans")
+			}
+		})
+	}
 }
 
 func TestKonnectExtensionWaitsForRegistrationBeforePublishingSnapshot(t *testing.T) {

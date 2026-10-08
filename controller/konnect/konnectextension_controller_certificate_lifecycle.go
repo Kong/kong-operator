@@ -176,7 +176,8 @@ func (r *KonnectExtensionReconciler) certificateConsumersMigrated(
 			continue
 		}
 		for _, volume := range pod.Spec.Volumes {
-			if volume.Secret != nil && oldNames[volume.Secret.SecretName] {
+			if volume.Name == consts.KongClusterCertVolume &&
+				volume.Secret != nil && oldNames[volume.Secret.SecretName] {
 				return false, nil
 			}
 		}
@@ -251,10 +252,10 @@ func (r *KonnectExtensionReconciler) retireCertificateGenerations(
 	ctx context.Context,
 	ext *konnectv1alpha2.KonnectExtension,
 	current *corev1.Secret,
-) error {
+) (bool, error) {
 	var certificates configurationv1alpha1.KongDataPlaneClientCertificateList
 	if err := r.certificateReader().List(ctx, &certificates, client.InNamespace(ext.Namespace)); err != nil {
-		return err
+		return false, err
 	}
 	pending := false
 	for i := range certificates.Items {
@@ -266,38 +267,45 @@ func (r *KonnectExtensionReconciler) retireCertificateGenerations(
 		pending = true
 		if cert.DeletionTimestamp.IsZero() {
 			if err := r.Delete(ctx, cert); client.IgnoreNotFound(err) != nil {
-				return err
+				return false, err
 			}
 		}
 	}
 	if pending {
-		return nil
+		return true, nil
 	}
 	owned, err := r.listOwnedCertificateSecrets(ctx, ext)
 	if err != nil {
-		return err
+		return false, err
 	}
 	for i := range owned {
 		secret := &owned[i]
 		if secret.Name == current.Name {
 			continue
 		}
-		active, pending, err := r.certificateSecretUsage(ctx, ext, secret)
+		active, usagePending, err := r.certificateSecretUsage(ctx, ext, secret)
 		if err != nil {
-			return err
+			return false, err
 		}
-		if active != nil || pending {
+		if active != nil || usagePending {
 			if _, err := r.finishOwnedCertificateSecretCleanup(ctx, ext, secret); err != nil {
-				return err
+				return false, err
 			}
+			pending = true
 			continue
 		}
-		if result, err := r.finishOwnedCertificateSecretCleanup(ctx, ext, secret); err != nil || result != nil {
-			return err
+		result, err := r.finishOwnedCertificateSecretCleanup(ctx, ext, secret)
+		if err != nil {
+			return false, err
+		}
+		if result != nil {
+			pending = true
+			continue
 		}
 		if err := r.Delete(ctx, secret); client.IgnoreNotFound(err) != nil {
-			return err
+			return false, err
 		}
+		pending = true
 	}
-	return nil
+	return pending, nil
 }
