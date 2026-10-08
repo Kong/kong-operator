@@ -997,6 +997,26 @@ func ClearInstanceFromError(err error) error {
 		return errNotFound
 	}
 
+	if errInternal, ok := errors.AsType[*sdkkonnecterrs.InternalError](err); ok {
+		errInternal.Instance = ""
+		return errInternal
+	}
+
+	if errInternalServer, ok := errors.AsType[*sdkkonnecterrs.InternalServerError](err); ok {
+		errInternalServer.Instance = ""
+		return errInternalServer
+	}
+
+	if errServiceUnavailable, ok := errors.AsType[*sdkkonnecterrs.ServiceUnavailable](err); ok {
+		errServiceUnavailable.Instance = ""
+		return errServiceUnavailable
+	}
+
+	if errNotAvailable, ok := errors.AsType[*sdkkonnecterrs.NotAvailableError](err); ok {
+		errNotAvailable.Instance = ""
+		return errNotAvailable
+	}
+
 	return err
 }
 
