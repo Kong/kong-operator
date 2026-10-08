@@ -172,7 +172,7 @@ func TestAIGatewayModel_ToAIGWModel(t *testing.T) {
 									Route: AIGatewayModelRouteConfig{
 										Paths: []string{"/v1/chat/completions"},
 										Model: AIGatewayModelSelectorConfig{
-											PathParam: "model",
+											PathParam: "~model",
 											Values:    []string{"gpt-4o-mini"},
 										},
 									},
@@ -322,7 +322,7 @@ func TestAIGatewayModel_ToAIGWModel_StrictRoundTrip(t *testing.T) {
 					Route: AIGatewayModelRouteConfig{
 						Paths: []string{"/v1/chat/completions"},
 						Model: AIGatewayModelSelectorConfig{
-							PathParam: "model",
+							PathParam: "~model",
 							Values:    []string{"gpt-4o-mini"},
 						},
 					},

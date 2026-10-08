@@ -40,6 +40,7 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/Kong/ai-deck-converter/aigw"
 	"gopkg.in/yaml.v3"
@@ -205,6 +206,17 @@ func renestModelSelector(cfg map[string]any) {
 	} {
 		if v, ok := selector[param]; ok {
 			delete(selector, param)
+			// The CRD mirrors the Konnect API, which requires path_param to
+			// start with "~" (it signals a dynamic regex route path). The aigw
+			// document (and the ai-model-selector plugin it renders) wants the
+			// bare PCRE capture-group name instead: it looks the group up
+			// as-is, and a "~model_name" value never matches a "(?<model_name>...)"
+			// capture, silently degrading the selector to the body source.
+			if param == "path_param" {
+				if s, isStr := v.(string); isStr {
+					v = strings.TrimPrefix(s, "~")
+				}
+			}
 			selector[group] = map[string]any{param: v}
 		}
 	}
