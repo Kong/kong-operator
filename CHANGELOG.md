@@ -111,17 +111,17 @@
   Konnect alike. On-prem translation strips the `~` prefix, because the
   rendered `ai-model-selector` plugin looks the PCRE capture group up by its
   plain name. Note: Konnect-side path-param model routing is not yet
-  functional (Konnect requires the `~`-prefixed `path_param` but never
-  renders a working `ai-model-selector` path source, so requests fall back
-  to the default body source; KOKO-4314/KOKO-4312). The e2e coverage for it
-  lives in the skipped `aigateway-model-route-selectors-pathparam` chainsaw
-  test until Konnect ships the fix.
+  functional . The e2e coverage for it lives in the skipped
+  `aigateway-model-route-selectors-pathparam` chainsaw test until Konnect ships the fix.
+  [#5989](https://github.com/Kong/kong-operator/pull/5989)
 - `AIGatewayMCPServer`: conversion-tool and upstream-tool `name` entries
   must now match `^[A-Za-z0-9._-]+$` and be at most 128 characters.
   Existing entries outside these bounds are rejected by the CRD schema.
+  [#5989](https://github.com/Kong/kong-operator/pull/5989)
 - `AIGatewayModel`: target `config` fields gained bounds: `temperature` 0-5,
   `topK` at most 500 (was 2147483646), `topP` 0-1, cost fields at least 0.
   Existing values outside these bounds are rejected by the CRD schema.
+  [#5989](https://github.com/Kong/kong-operator/pull/5989)
 - On-prem AI Gateway: `AIGatewayCustomPolicy` configuration entities
   referencing an `OnPremAIGateway` are now translated into the pushed
   configuration document. The entity gains an on-prem reconciler, and
