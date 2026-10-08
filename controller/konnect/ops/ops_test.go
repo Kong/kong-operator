@@ -1,6 +1,8 @@
 package ops
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"testing"
@@ -567,6 +569,90 @@ func testDelete[
 			}
 
 			require.NoError(t, err)
+		})
+	}
+}
+
+func TestClearInstanceFromError(t *testing.T) {
+	t.Parallel()
+
+	const trace = "kong:trace:1234"
+
+	testCases := []struct {
+		name  string
+		err   error
+		check func(t *testing.T, cleared error)
+	}{
+		{
+			name: "BadRequestError",
+			err:  &sdkkonnecterrs.BadRequestError{Status: 400, Instance: trace},
+			check: func(t *testing.T, cleared error) {
+				e, ok := errors.AsType[*sdkkonnecterrs.BadRequestError](cleared)
+				require.True(t, ok)
+				assert.Empty(t, e.Instance)
+			},
+		},
+		{
+			name: "InternalError (500)",
+			err:  &sdkkonnecterrs.InternalError{Status: 500, Instance: trace},
+			check: func(t *testing.T, cleared error) {
+				e, ok := errors.AsType[*sdkkonnecterrs.InternalError](cleared)
+				require.True(t, ok)
+				assert.Empty(t, e.Instance)
+			},
+		},
+		{
+			name: "InternalServerError",
+			err:  &sdkkonnecterrs.InternalServerError{Status: 500, Instance: trace},
+			check: func(t *testing.T, cleared error) {
+				e, ok := errors.AsType[*sdkkonnecterrs.InternalServerError](cleared)
+				require.True(t, ok)
+				assert.Empty(t, e.Instance)
+			},
+		},
+		{
+			name: "ServiceUnavailable",
+			err:  &sdkkonnecterrs.ServiceUnavailable{Status: 503, Instance: trace},
+			check: func(t *testing.T, cleared error) {
+				e, ok := errors.AsType[*sdkkonnecterrs.ServiceUnavailable](cleared)
+				require.True(t, ok)
+				assert.Empty(t, e.Instance)
+			},
+		},
+		{
+			name: "NotAvailableError",
+			err:  &sdkkonnecterrs.NotAvailableError{Status: 503, Instance: trace},
+			check: func(t *testing.T, cleared error) {
+				e, ok := errors.AsType[*sdkkonnecterrs.NotAvailableError](cleared)
+				require.True(t, ok)
+				assert.Empty(t, e.Instance)
+			},
+		},
+		{
+			name: "wrapped InternalError",
+			err:  fmt.Errorf("update failed: %w", &sdkkonnecterrs.InternalError{Status: 500, Instance: trace}),
+			check: func(t *testing.T, cleared error) {
+				e, ok := errors.AsType[*sdkkonnecterrs.InternalError](cleared)
+				require.True(t, ok)
+				assert.Empty(t, e.Instance)
+				assert.NotContains(t, cleared.Error(), trace)
+			},
+		},
+		{
+			name: "unrelated error is returned as is",
+			err:  assert.AnError,
+			check: func(t *testing.T, cleared error) {
+				assert.Equal(t, assert.AnError, cleared)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			cleared := ClearInstanceFromError(tc.err)
+			assert.NotContains(t, cleared.Error(), trace)
+			tc.check(t, cleared)
 		})
 	}
 }
