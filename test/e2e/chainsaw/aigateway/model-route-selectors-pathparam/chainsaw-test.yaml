@@ -34,6 +34,7 @@ spec:
   # Konnect render a working path source. Un-skip when Konnect reconciles the
   # ~-prefixed path_param with the plain capture-group name
   # (KOKO-4314 / KOKO-4312).
+  # TODO: https://github.com/Kong/kong-operator/issues/6001
   skip: true
   description: |
     AIGatewayModel path (`pathParam`) route selector. Stands up a Konnect
