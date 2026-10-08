@@ -32,7 +32,7 @@ var commonSupportedFeatures = []features.FeatureName{
 	// Gateway extended.
 	features.SupportGatewayAddressEmpty,
 	features.SupportGatewayPort8080,
-	features.SupportGatewayInfrastructurePropagation,
+	features.SupportGatewayInfrastructure,
 
 	// HTTPRoute extended.
 	features.SupportHTTPRouteResponseHeaderModification,
