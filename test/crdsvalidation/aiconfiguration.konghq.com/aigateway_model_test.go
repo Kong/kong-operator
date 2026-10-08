@@ -63,28 +63,12 @@ func TestAIGatewayModel(t *testing.T) {
 	})
 
 	t.Run("apiSpec.config.route.model.pathParam validation", func(t *testing.T) {
-		// Konnect requires path_param values to start with "~" (KOKO-4314),
-		// signaling that the route path is a dynamic (regex) path. The CRD
-		// schema enforces the same pattern: ^~.+$
+		// The path_param value is the plain name of the regex capture group
+		// defined in the route path (Konnect used to require a "~" prefix,
+		// dropped in the Konnect API revert shipped in sdk-konnect-go v0.73.1).
 		common.TestCasesGroup[*aiconfigurationv1alpha1.AIGatewayModel]{
 			{
-				Name: "pathParam starting with ~ is valid",
-				TestObject: func() *aiconfigurationv1alpha1.AIGatewayModel {
-					obj := validAIGatewayModel(ns.Name)
-					obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
-						PathParam: "~model_name",
-						Values:    []string{"my-alias"},
-					}
-					return obj
-				}(),
-				Assert: func(t *testing.T, obj *aiconfigurationv1alpha1.AIGatewayModel) {
-					if obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Route.Model.PathParam != "~model_name" {
-						t.Errorf("expected pathParam ~model_name, got %q", obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Route.Model.PathParam)
-					}
-				},
-			},
-			{
-				Name: "pathParam without leading ~ is invalid",
+				Name: "pathParam with plain capture group name is valid",
 				TestObject: func() *aiconfigurationv1alpha1.AIGatewayModel {
 					obj := validAIGatewayModel(ns.Name)
 					obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
@@ -93,7 +77,11 @@ func TestAIGatewayModel(t *testing.T) {
 					}
 					return obj
 				}(),
-				ExpectedErrorMessage: new("spec.apiSpec.model.config.route.model.pathParam in body should match"),
+				Assert: func(t *testing.T, obj *aiconfigurationv1alpha1.AIGatewayModel) {
+					if obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Route.Model.PathParam != "model_name" {
+						t.Errorf("expected pathParam model_name, got %q", obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Route.Model.PathParam)
+					}
+				},
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})

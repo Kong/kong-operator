@@ -212,7 +212,7 @@ func TestKonnectConfigStore(t *testing.T) {
 		sdk.ConfigStoreSecretsSDK.EXPECT().
 			ListConfigStoreSecrets(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.ListConfigStoreSecretsRequest) bool {
 				return req.ConfigStoreID == configStoreID &&
-					req.PageSize != nil && *req.PageSize == 1
+					req.Size != nil && *req.Size == 1
 			})).
 			Return(&sdkkonnectops.ListConfigStoreSecretsResponse{
 				ListConfigStoreSecretsResponse: &sdkkonnectcomp.ListConfigStoreSecretsResponse{

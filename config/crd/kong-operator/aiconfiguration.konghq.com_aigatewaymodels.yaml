@@ -1569,12 +1569,10 @@ spec:
                                     minLength: 1
                                     type: string
                                   pathParam:
-                                    description: |-
-                                      The name of the regex capture group beginning with "~", which is defined in
-                                      the route path for routing.
+                                    description: The name of the regex capture group
+                                      defined in the route path for routing.
                                     maxLength: 253
                                     minLength: 1
-                                    pattern: ^~.+$
                                     type: string
                                   values:
                                     description: |-
@@ -8154,12 +8152,10 @@ spec:
                                     minLength: 1
                                     type: string
                                   pathParam:
-                                    description: |-
-                                      The name of the regex capture group beginning with "~", which is defined in
-                                      the route path for routing.
+                                    description: The name of the regex capture group
+                                      defined in the route path for routing.
                                     maxLength: 253
                                     minLength: 1
-                                    pattern: ^~.+$
                                     type: string
                                   values:
                                     description: |-

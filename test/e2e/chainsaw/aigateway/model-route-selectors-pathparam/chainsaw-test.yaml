@@ -3,39 +3,6 @@ kind: Test
 metadata:
   name: aigateway-model-route-selectors-pathparam
 spec:
-  # Skipped: the path-selector case fails Konnect server-side, in every
-  # encoding the Konnect API accepts (verified 2026-10-07 against the dev
-  # environment and CI):
-  #
-  #   - Konnect's model API hard-requires `config.route.model.path_param` to
-  #     match `^~.+$` (400 "string doesn't match the regular expression
-  #     \"^~.+$\"" otherwise), so the capture group in the route-path regex
-  #     keeps its plain name.
-  #   - The data plane's ai-model-selector plugin, though, uses
-  #     `pcre_capture_name` as-is to look the named capture up
-  #     (goks-private ai-gateway ai-model-selector handler.lua
-  #     extract_from_pcre_path), and its config schema rejects a capture
-  #     name absent from the pattern at config time. No such rejection
-  #     appears in the DP logs, and every path-selector request logs
-  #     "no model string found in any configured source": Konnect renders no
-  #     working path source at all and falls back to the default (body)
-  #     source, which this test deliberately does not feed.
-  #   - Unresolved model => the request goes to the placeholder
-  #     `ai-gateway.upstream.local` service => DNS failure => 500, forever.
-  #   - Encodings driven in CI: `~/path/(?<model_name>...)` (500), Go-style
-  #     `~/path/(?P<model_name>...)` (500), `/path/(?<model_name>...)` with no
-  #     "~" prefix (404: without the "~" marker the route path is a literal,
-  #     so the route never matches at all). The Konnect API accepts and stores
-  #     all of them verbatim - the API validates nothing about the capture
-  #     group.
-  #
-  # The "~" prefix cannot be dropped (API 400) and the capture group cannot
-  # carry it (invalid PCRE group name), so no operator-side encoding can make
-  # Konnect render a working path source. Un-skip when Konnect reconciles the
-  # ~-prefixed path_param with the plain capture-group name
-  # (KOKO-4314 / KOKO-4312).
-  # TODO: https://github.com/Kong/kong-operator/issues/6001
-  skip: true
   description: |
     AIGatewayModel path (`pathParam`) route selector. Stands up a Konnect
     AIGateway control plane, an OpenAI-compatible provider, and one
@@ -95,9 +62,8 @@ spec:
           bindings:
             # Debug level so the failure snapshot's DP logs show the
             # ai-model-selector's per-source errors ("source 'path' did not
-            # yield a model: ...") when this test is un-skipped; the
-            # warn-level final message alone cannot tell a misrendered source
-            # from a missing one.
+            # yield a model: ..."); the warn-level final message alone cannot
+            # tell a misrendered source from a missing one.
             - name: aigw_dp_env
               value: >-
                 ([{name: 'KONG_LOG_LEVEL', value: 'debug'}])
