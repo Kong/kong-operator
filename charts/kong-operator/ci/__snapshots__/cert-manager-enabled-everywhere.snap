@@ -558,11 +558,28 @@ spec:
                     properties:
                       config:
                         properties:
+                          anonymous:
+                            maxLength: 253
+                            type: string
                           hideCredentials:
                             enum:
                             - Enabled
                             - Disabled
                             type: string
+                          identityRealms:
+                            items:
+                              properties:
+                                region:
+                                  maxLength: 253
+                                  type: string
+                                scope:
+                                  enum:
+                                  - cp
+                                  - realm
+                                  maxLength: 253
+                                  type: string
+                              type: object
+                            type: array
                           keyInBody:
                             enum:
                             - Enabled
@@ -586,7 +603,6 @@ spec:
                             properties:
                               directory:
                                 maxLength: 253
-                                pattern: ^[a-zA-Z0-9_-]+$
                                 type: string
                               enabled:
                                 enum:
@@ -599,6 +615,14 @@ spec:
                                 - Disabled
                                 type: string
                             type: object
+                          realm:
+                            maxLength: 253
+                            type: string
+                          runOnPreflight:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
                         type: object
                       displayName:
                         maxLength: 256
@@ -631,6 +655,17 @@ spec:
                     properties:
                       config:
                         properties:
+                          anonymous:
+                            maxLength: 253
+                            type: string
+                          audience:
+                            items:
+                              type: string
+                            type: array
+                          audienceClaim:
+                            items:
+                              type: string
+                            type: array
                           audienceRequired:
                             items:
                               type: string
@@ -639,7 +674,80 @@ spec:
                             items:
                               type: string
                             type: array
+                          authenticatedGroupsClaim:
+                            items:
+                              type: string
+                            type: array
+                          authorizationCookieDomain:
+                            maxLength: 253
+                            type: string
+                          authorizationCookieHTTPOnly:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          authorizationCookieName:
+                            maxLength: 253
+                            type: string
+                          authorizationCookiePath:
+                            maxLength: 253
+                            type: string
+                          authorizationCookieSameSite:
+                            enum:
+                            - Default
+                            - Lax
+                            - None
+                            - Strict
+                            maxLength: 253
+                            type: string
+                          authorizationCookieSecure:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          authorizationEndpoint:
+                            maxLength: 253
+                            type: string
+                          authorizationQueryArgsClient:
+                            items:
+                              type: string
+                            type: array
+                          authorizationQueryArgsNames:
+                            items:
+                              type: string
+                            type: array
+                          authorizationQueryArgsValues:
+                            items:
+                              type: string
+                            type: array
+                          authorizationRollingTimeout:
+                            type: number
+                          bearerTokenCookieName:
+                            maxLength: 253
+                            type: string
+                          bearerTokenHeaderName:
+                            maxLength: 253
+                            type: string
+                          bearerTokenParamType:
+                            items:
+                              type: string
+                            type: array
+                          byUsernameIgnoreCase:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
                           cacheIntrospection:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          cacheTokenExchange:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          cacheTokens:
                             enum:
                             - Enabled
                             - Disabled
@@ -648,17 +756,125 @@ spec:
                             maxLength: 253
                             minLength: 1
                             type: string
+                          cacheTtl:
+                            type: number
+                          cacheTtlMax:
+                            type: number
+                          cacheTtlMin:
+                            type: number
+                          cacheTtlNeg:
+                            type: number
+                          cacheTtlResurrect:
+                            type: number
+                          cacheUserInfo:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          claimsForbidden:
+                            items:
+                              type: string
+                            type: array
                           clientAlg:
                             items:
                               type: string
                             type: array
+                          clientArg:
+                            maxLength: 253
+                            type: string
                           clientAuth:
+                            items:
+                              type: string
+                            type: array
+                          clientCredentialsParamType:
                             items:
                               type: string
                             type: array
                           clientID:
                             items:
                               type: string
+                            type: array
+                          clientJwk:
+                            items:
+                              properties:
+                                alg:
+                                  maxLength: 253
+                                  type: string
+                                crv:
+                                  maxLength: 253
+                                  type: string
+                                d:
+                                  maxLength: 253
+                                  type: string
+                                dp:
+                                  maxLength: 253
+                                  type: string
+                                dq:
+                                  maxLength: 253
+                                  type: string
+                                e:
+                                  maxLength: 253
+                                  type: string
+                                issuer:
+                                  maxLength: 253
+                                  type: string
+                                k:
+                                  maxLength: 253
+                                  type: string
+                                keyOps:
+                                  items:
+                                    type: string
+                                  type: array
+                                kid:
+                                  maxLength: 253
+                                  type: string
+                                kty:
+                                  maxLength: 253
+                                  type: string
+                                "n":
+                                  maxLength: 253
+                                  type: string
+                                oth:
+                                  maxLength: 253
+                                  type: string
+                                p:
+                                  maxLength: 253
+                                  type: string
+                                q:
+                                  maxLength: 253
+                                  type: string
+                                qi:
+                                  maxLength: 253
+                                  type: string
+                                r:
+                                  maxLength: 253
+                                  type: string
+                                t:
+                                  maxLength: 253
+                                  type: string
+                                use:
+                                  maxLength: 253
+                                  type: string
+                                x:
+                                  maxLength: 253
+                                  type: string
+                                x5c:
+                                  items:
+                                    type: string
+                                  type: array
+                                x5t:
+                                  maxLength: 253
+                                  type: string
+                                x5t#S256:
+                                  maxLength: 253
+                                  type: string
+                                x5u:
+                                  maxLength: 253
+                                  type: string
+                                "y":
+                                  maxLength: 253
+                                  type: string
+                              type: object
                             type: array
                           clientSecret:
                             items:
@@ -696,6 +912,155 @@ spec:
                               - message: value required when type=inline; secretRef required when type=secretRef
                                 rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                             type: array
+                          clusterCacheRedis:
+                            properties:
+                              cloudAuthentication:
+                                properties:
+                                  authProvider:
+                                    enum:
+                                    - aws
+                                    - azure
+                                    - gcp
+                                    maxLength: 253
+                                    type: string
+                                  awsAccessKeyID:
+                                    maxLength: 253
+                                    type: string
+                                  awsAssumeRoleArn:
+                                    maxLength: 253
+                                    type: string
+                                  awsCacheName:
+                                    maxLength: 253
+                                    type: string
+                                  awsIsServerless:
+                                    enum:
+                                    - Enabled
+                                    - Disabled
+                                    type: string
+                                  awsRegion:
+                                    maxLength: 253
+                                    type: string
+                                  awsRoleSessionName:
+                                    maxLength: 253
+                                    type: string
+                                  awsSecretAccessKey:
+                                    maxLength: 253
+                                    type: string
+                                  azureClientID:
+                                    maxLength: 253
+                                    type: string
+                                  azureClientSecret:
+                                    maxLength: 253
+                                    type: string
+                                  azureTenantID:
+                                    maxLength: 253
+                                    type: string
+                                  gcpServiceAccountJSON:
+                                    maxLength: 253
+                                    type: string
+                                type: object
+                              clusterMaxRedirections:
+                                type: integer
+                              clusterNodes:
+                                items:
+                                  properties:
+                                    ip:
+                                      maxLength: 253
+                                      type: string
+                                    port:
+                                      maximum: 65535
+                                      minimum: 0
+                                      type: integer
+                                  type: object
+                                type: array
+                              connectTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              connectionIsProxied:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              database:
+                                type: integer
+                              host:
+                                maxLength: 253
+                                type: string
+                              keepaliveBacklog:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              keepalivePoolSize:
+                                maximum: 2147483646
+                                minimum: 1
+                                type: integer
+                              password:
+                                maxLength: 253
+                                type: string
+                              port:
+                                maximum: 65535
+                                minimum: 0
+                                type: integer
+                              readTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              sendTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              sentinelMaster:
+                                maxLength: 253
+                                type: string
+                              sentinelNodes:
+                                items:
+                                  properties:
+                                    host:
+                                      maxLength: 253
+                                      type: string
+                                    port:
+                                      maximum: 65535
+                                      minimum: 0
+                                      type: integer
+                                  type: object
+                                type: array
+                              sentinelPassword:
+                                maxLength: 253
+                                type: string
+                              sentinelRole:
+                                enum:
+                                - any
+                                - master
+                                - slave
+                                maxLength: 253
+                                type: string
+                              sentinelUsername:
+                                maxLength: 253
+                                type: string
+                              serverName:
+                                maxLength: 253
+                                type: string
+                              ssl:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              sslVerify:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              username:
+                                maxLength: 253
+                                type: string
+                            type: object
+                          clusterCacheStrategy:
+                            enum:
+                            - "off"
+                            - redis
+                            maxLength: 253
+                            type: string
                           consumerBy:
                             items:
                               type: string
@@ -724,6 +1089,125 @@ spec:
                             items:
                               type: string
                             type: array
+                          disableSession:
+                            items:
+                              type: string
+                            type: array
+                          discoveryHeadersNames:
+                            items:
+                              type: string
+                            type: array
+                          discoveryHeadersValues:
+                            items:
+                              type: string
+                            type: array
+                          displayErrors:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          domains:
+                            items:
+                              type: string
+                            type: array
+                          downstreamAccessTokenHeader:
+                            maxLength: 253
+                            type: string
+                          downstreamAccessTokenJwkHeader:
+                            maxLength: 253
+                            type: string
+                          downstreamHeaders:
+                            items:
+                              properties:
+                                header:
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                path:
+                                  items:
+                                    type: string
+                                  type: array
+                              required:
+                              - header
+                              - path
+                              type: object
+                            type: array
+                          downstreamHeadersClaims:
+                            items:
+                              type: string
+                            type: array
+                          downstreamHeadersNames:
+                            items:
+                              type: string
+                            type: array
+                          downstreamIDTokenHeader:
+                            maxLength: 253
+                            type: string
+                          downstreamIDTokenJwkHeader:
+                            maxLength: 253
+                            type: string
+                          downstreamIntrospectionHeader:
+                            maxLength: 253
+                            type: string
+                          downstreamIntrospectionJwtHeader:
+                            maxLength: 253
+                            type: string
+                          downstreamRefreshTokenHeader:
+                            maxLength: 253
+                            type: string
+                          downstreamSessionIDHeader:
+                            maxLength: 253
+                            type: string
+                          downstreamUserInfoHeader:
+                            maxLength: 253
+                            type: string
+                          downstreamUserInfoJwtHeader:
+                            maxLength: 253
+                            type: string
+                          dpopProofLifetime:
+                            type: number
+                          dpopUseNonce:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          enableHsSignatures:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          endSessionEndpoint:
+                            maxLength: 253
+                            type: string
+                          exposeErrorCode:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          extraJwksUris:
+                            items:
+                              type: string
+                            type: array
+                          forbiddenDestroySession:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          forbiddenErrorMessage:
+                            maxLength: 253
+                            type: string
+                          forbiddenRedirectURI:
+                            items:
+                              type: string
+                            type: array
+                          groupsClaim:
+                            items:
+                              type: string
+                            type: array
+                          groupsRequired:
+                            items:
+                              type: string
+                            type: array
                           hideCredentials:
                             enum:
                             - Enabled
@@ -743,13 +1227,97 @@ spec:
                           httpsProxyAuthorization:
                             maxLength: 253
                             type: string
+                          idTokenParamName:
+                            maxLength: 253
+                            type: string
+                          idTokenParamType:
+                            items:
+                              type: string
+                            type: array
+                          ignoreSignature:
+                            items:
+                              type: string
+                            type: array
+                          introspectJwtTokens:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          introspectionAccept:
+                            enum:
+                            - application/json
+                            - application/jwt
+                            - application/token-introspection+jwt
+                            maxLength: 253
+                            type: string
+                          introspectionCheckActive:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
                           introspectionEndpoint:
+                            maxLength: 253
+                            type: string
+                          introspectionEndpointAuthMethod:
+                            enum:
+                            - client_secret_basic
+                            - client_secret_jwt
+                            - client_secret_post
+                            - none
+                            - private_key_jwt
+                            - self_signed_tls_client_auth
+                            - tls_client_auth
+                            maxLength: 253
+                            type: string
+                          introspectionHeadersClient:
+                            items:
+                              type: string
+                            type: array
+                          introspectionHeadersNames:
+                            items:
+                              type: string
+                            type: array
+                          introspectionHeadersValues:
+                            items:
+                              type: string
+                            type: array
+                          introspectionHint:
+                            maxLength: 253
+                            type: string
+                          introspectionPostArgsClient:
+                            items:
+                              type: string
+                            type: array
+                          introspectionPostArgsClientHeaders:
+                            items:
+                              type: string
+                            type: array
+                          introspectionPostArgsNames:
+                            items:
+                              type: string
+                            type: array
+                          introspectionPostArgsValues:
+                            items:
+                              type: string
+                            type: array
+                          introspectionTokenParamName:
                             maxLength: 253
                             type: string
                           issuer:
                             maxLength: 253
+                            minLength: 1
                             type: string
+                          issuersAllowed:
+                            items:
+                              type: string
+                            type: array
                           jwksEndpoint:
+                            maxLength: 253
+                            type: string
+                          jwtSessionClaim:
+                            maxLength: 253
+                            type: string
+                          jwtSessionCookie:
                             maxLength: 253
                             type: string
                           keepalive:
@@ -758,19 +1326,91 @@ spec:
                             - Disabled
                             type: string
                           leeway:
-                            minimum: 0
-                            type: integer
+                            type: number
+                          loginAction:
+                            enum:
+                            - redirect
+                            - response
+                            - upstream
+                            maxLength: 253
+                            type: string
+                          loginMethods:
+                            items:
+                              type: string
+                            type: array
+                          loginRedirectMode:
+                            enum:
+                            - fragment
+                            - query
+                            maxLength: 253
+                            type: string
+                          loginRedirectURI:
+                            items:
+                              type: string
+                            type: array
+                          loginTokens:
+                            items:
+                              type: string
+                            type: array
+                          logoutMethods:
+                            items:
+                              type: string
+                            type: array
+                          logoutPostArg:
+                            maxLength: 253
+                            type: string
+                          logoutQueryArg:
+                            maxLength: 253
+                            type: string
+                          logoutRedirectURI:
+                            items:
+                              type: string
+                            type: array
+                          logoutRevoke:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          logoutRevokeAccessToken:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          logoutRevokeRefreshToken:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          logoutURISuffix:
+                            maxLength: 253
+                            type: string
+                          maxAge:
+                            type: number
                           mtlsIntrospectionEndpoint:
+                            maxLength: 253
+                            type: string
+                          mtlsRevocationEndpoint:
+                            maxLength: 253
+                            type: string
+                          mtlsTokenEndpoint:
                             maxLength: 253
                             type: string
                           noProxy:
                             maxLength: 253
                             type: string
+                          passwordParamType:
+                            items:
+                              type: string
+                            type: array
+                          preserveQueryArgs:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
                           principals:
                             properties:
                               directory:
                                 maxLength: 253
-                                pattern: ^[a-zA-Z0-9_-]+$
                                 type: string
                               enabled:
                                 enum:
@@ -801,18 +1441,567 @@ spec:
                                   type: string
                                 type: array
                             type: object
+                          proofOfPossessionAuthMethodsValidation:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          proofOfPossessionDpop:
+                            enum:
+                            - "off"
+                            - optional
+                            - strict
+                            maxLength: 253
+                            type: string
+                          proofOfPossessionMtls:
+                            enum:
+                            - "off"
+                            - optional
+                            - strict
+                            maxLength: 253
+                            type: string
+                          pushedAuthorizationRequestEndpoint:
+                            maxLength: 253
+                            type: string
+                          pushedAuthorizationRequestEndpointAuthMethod:
+                            enum:
+                            - client_secret_basic
+                            - client_secret_jwt
+                            - client_secret_post
+                            - none
+                            - private_key_jwt
+                            - self_signed_tls_client_auth
+                            - tls_client_auth
+                            maxLength: 253
+                            type: string
+                          redirectURI:
+                            items:
+                              type: string
+                            type: array
+                          redis:
+                            properties:
+                              cloudAuthentication:
+                                properties:
+                                  authProvider:
+                                    enum:
+                                    - aws
+                                    - azure
+                                    - gcp
+                                    maxLength: 253
+                                    type: string
+                                  awsAccessKeyID:
+                                    maxLength: 253
+                                    type: string
+                                  awsAssumeRoleArn:
+                                    maxLength: 253
+                                    type: string
+                                  awsCacheName:
+                                    maxLength: 253
+                                    type: string
+                                  awsIsServerless:
+                                    enum:
+                                    - Enabled
+                                    - Disabled
+                                    type: string
+                                  awsRegion:
+                                    maxLength: 253
+                                    type: string
+                                  awsRoleSessionName:
+                                    maxLength: 253
+                                    type: string
+                                  awsSecretAccessKey:
+                                    maxLength: 253
+                                    type: string
+                                  azureClientID:
+                                    maxLength: 253
+                                    type: string
+                                  azureClientSecret:
+                                    maxLength: 253
+                                    type: string
+                                  azureTenantID:
+                                    maxLength: 253
+                                    type: string
+                                  gcpServiceAccountJSON:
+                                    maxLength: 253
+                                    type: string
+                                type: object
+                              clusterMaxRedirections:
+                                type: integer
+                              clusterNodes:
+                                items:
+                                  properties:
+                                    ip:
+                                      maxLength: 253
+                                      type: string
+                                    port:
+                                      maximum: 65535
+                                      minimum: 0
+                                      type: integer
+                                  type: object
+                                type: array
+                              connectTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              connectionIsProxied:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              database:
+                                type: integer
+                              host:
+                                maxLength: 253
+                                type: string
+                              keepaliveBacklog:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              keepalivePoolSize:
+                                maximum: 2147483646
+                                minimum: 1
+                                type: integer
+                              password:
+                                maxLength: 253
+                                type: string
+                              port:
+                                maximum: 65535
+                                minimum: 0
+                                type: integer
+                              prefix:
+                                maxLength: 253
+                                type: string
+                              readTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              sendTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              sentinelMaster:
+                                maxLength: 253
+                                type: string
+                              sentinelNodes:
+                                items:
+                                  properties:
+                                    host:
+                                      maxLength: 253
+                                      type: string
+                                    port:
+                                      maximum: 65535
+                                      minimum: 0
+                                      type: integer
+                                  type: object
+                                type: array
+                              sentinelPassword:
+                                maxLength: 253
+                                type: string
+                              sentinelRole:
+                                enum:
+                                - any
+                                - master
+                                - slave
+                                maxLength: 253
+                                type: string
+                              sentinelUsername:
+                                maxLength: 253
+                                type: string
+                              serverName:
+                                maxLength: 253
+                                type: string
+                              socket:
+                                maxLength: 253
+                                type: string
+                              ssl:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              sslVerify:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              username:
+                                maxLength: 253
+                                type: string
+                            type: object
+                          rediscoveryLifetime:
+                            type: number
+                          refreshTokenParamName:
+                            maxLength: 253
+                            type: string
+                          refreshTokenParamType:
+                            items:
+                              type: string
+                            type: array
+                          refreshTokens:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          requireProofKeyForCodeExchange:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          requirePushedAuthorizationRequests:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          requireSignedRequestObject:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          resolveDistributedClaims:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          responseMode:
+                            enum:
+                            - form_post
+                            - form_post.jwt
+                            - fragment
+                            - fragment.jwt
+                            - jwt
+                            - query
+                            - query.jwt
+                            maxLength: 253
+                            type: string
+                          responseType:
+                            items:
+                              type: string
+                            type: array
+                          reverify:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          revocationEndpoint:
+                            maxLength: 253
+                            type: string
+                          revocationEndpointAuthMethod:
+                            enum:
+                            - client_secret_basic
+                            - client_secret_jwt
+                            - client_secret_post
+                            - none
+                            - private_key_jwt
+                            - self_signed_tls_client_auth
+                            - tls_client_auth
+                            maxLength: 253
+                            type: string
+                          revocationTokenParamName:
+                            maxLength: 253
+                            type: string
+                          rolesClaim:
+                            items:
+                              type: string
+                            type: array
+                          rolesRequired:
+                            items:
+                              type: string
+                            type: array
+                          runOnPreflight:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
                           scopes:
                             items:
                               type: string
                             type: array
+                          scopesClaim:
+                            items:
+                              type: string
+                            type: array
+                          scopesRequired:
+                            items:
+                              type: string
+                            type: array
+                          searchUserInfo:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          sessionAbsoluteTimeout:
+                            type: number
+                          sessionAudience:
+                            maxLength: 253
+                            type: string
+                          sessionBind:
+                            items:
+                              type: string
+                            type: array
+                          sessionCookieDomain:
+                            maxLength: 253
+                            type: string
+                          sessionCookieHTTPOnly:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          sessionCookieName:
+                            maxLength: 253
+                            type: string
+                          sessionCookiePath:
+                            maxLength: 253
+                            type: string
+                          sessionCookieSameSite:
+                            enum:
+                            - Default
+                            - Lax
+                            - None
+                            - Strict
+                            maxLength: 253
+                            type: string
+                          sessionCookieSecure:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          sessionEnforceSameSubject:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          sessionHashStorageKey:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          sessionHashSubject:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          sessionIdlingTimeout:
+                            type: number
+                          sessionMemcachedHost:
+                            maxLength: 253
+                            type: string
+                          sessionMemcachedPort:
+                            maximum: 65535
+                            minimum: 0
+                            type: integer
+                          sessionMemcachedPrefix:
+                            maxLength: 253
+                            type: string
+                          sessionMemcachedSSL:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          sessionMemcachedSSLVerify:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          sessionMemcachedSocket:
+                            maxLength: 253
+                            type: string
+                          sessionRemember:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          sessionRememberAbsoluteTimeout:
+                            type: number
+                          sessionRememberCookieName:
+                            maxLength: 253
+                            type: string
+                          sessionRememberRollingTimeout:
+                            type: number
+                          sessionRequestHeaders:
+                            items:
+                              type: string
+                            type: array
+                          sessionResponseHeaders:
+                            items:
+                              type: string
+                            type: array
+                          sessionRollingTimeout:
+                            type: number
+                          sessionSecret:
+                            maxLength: 253
+                            type: string
+                          sessionStorage:
+                            enum:
+                            - cookie
+                            - memcache
+                            - memcached
+                            - redis
+                            maxLength: 253
+                            type: string
+                          sessionStoreMetadata:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
                           sslVerify:
                             enum:
                             - Enabled
                             - Disabled
                             type: string
                           timeout:
-                            minimum: 0
-                            type: integer
+                            type: number
+                          tlsClientAuthCertID:
+                            maxLength: 253
+                            type: string
+                          tlsClientAuthSSLVerify:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          tokenCacheKeyIncludeScope:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          tokenEndpoint:
+                            maxLength: 253
+                            type: string
+                          tokenEndpointAuthMethod:
+                            enum:
+                            - client_secret_basic
+                            - client_secret_jwt
+                            - client_secret_post
+                            - none
+                            - private_key_jwt
+                            - self_signed_tls_client_auth
+                            - tls_client_auth
+                            maxLength: 253
+                            type: string
+                          tokenExchange:
+                            properties:
+                              cache:
+                                properties:
+                                  enabled:
+                                    enum:
+                                    - Enabled
+                                    - Disabled
+                                    type: string
+                                  ttl:
+                                    type: integer
+                                type: object
+                              request:
+                                properties:
+                                  audience:
+                                    items:
+                                      type: string
+                                    type: array
+                                  emptyAudience:
+                                    enum:
+                                    - Enabled
+                                    - Disabled
+                                    type: string
+                                  emptyScopes:
+                                    enum:
+                                    - Enabled
+                                    - Disabled
+                                    type: string
+                                  scopes:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
+                              subjectTokenIssuers:
+                                items:
+                                  properties:
+                                    conditions:
+                                      properties:
+                                        hasAudience:
+                                          items:
+                                            type: string
+                                          type: array
+                                        hasScopes:
+                                          items:
+                                            type: string
+                                          type: array
+                                        missingAudience:
+                                          items:
+                                            type: string
+                                          type: array
+                                        missingScopes:
+                                          items:
+                                            type: string
+                                          type: array
+                                      type: object
+                                    issuer:
+                                      maxLength: 253
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - issuer
+                                  type: object
+                                type: array
+                            required:
+                            - subjectTokenIssuers
+                            type: object
+                          tokenExchangeEndpoint:
+                            maxLength: 253
+                            type: string
+                          tokenHeadersClient:
+                            items:
+                              type: string
+                            type: array
+                          tokenHeadersGrants:
+                            items:
+                              type: string
+                            type: array
+                          tokenHeadersNames:
+                            items:
+                              type: string
+                            type: array
+                          tokenHeadersPrefix:
+                            maxLength: 253
+                            type: string
+                          tokenHeadersReplay:
+                            items:
+                              type: string
+                            type: array
+                          tokenHeadersValues:
+                            items:
+                              type: string
+                            type: array
+                          tokenPostArgsClient:
+                            items:
+                              type: string
+                            type: array
+                          tokenPostArgsNames:
+                            items:
+                              type: string
+                            type: array
+                          tokenPostArgsValues:
+                            items:
+                              type: string
+                            type: array
+                          unauthorizedDestroySession:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          unauthorizedErrorMessage:
+                            maxLength: 253
+                            type: string
+                          unauthorizedRedirectURI:
+                            items:
+                              type: string
+                            type: array
+                          unexpectedRedirectURI:
+                            items:
+                              type: string
+                            type: array
+                          upstreamAccessTokenHeader:
+                            maxLength: 253
+                            type: string
+                          upstreamAccessTokenJwkHeader:
+                            maxLength: 253
+                            type: string
                           upstreamHeaders:
                             items:
                               properties:
@@ -829,8 +2018,99 @@ spec:
                               - path
                               type: object
                             type: array
+                          upstreamHeadersClaims:
+                            items:
+                              type: string
+                            type: array
+                          upstreamHeadersNames:
+                            items:
+                              type: string
+                            type: array
+                          upstreamIDTokenHeader:
+                            maxLength: 253
+                            type: string
+                          upstreamIDTokenJwkHeader:
+                            maxLength: 253
+                            type: string
+                          upstreamIntrospectionHeader:
+                            maxLength: 253
+                            type: string
+                          upstreamIntrospectionJwtHeader:
+                            maxLength: 253
+                            type: string
+                          upstreamRefreshTokenHeader:
+                            maxLength: 253
+                            type: string
+                          upstreamSessionIDHeader:
+                            maxLength: 253
+                            type: string
+                          upstreamUserInfoHeader:
+                            maxLength: 253
+                            type: string
+                          upstreamUserInfoJwtHeader:
+                            maxLength: 253
+                            type: string
+                          userinfoAccept:
+                            enum:
+                            - application/json
+                            - application/jwt
+                            maxLength: 253
+                            type: string
+                          userinfoEndpoint:
+                            maxLength: 253
+                            type: string
+                          userinfoHeadersClient:
+                            items:
+                              type: string
+                            type: array
+                          userinfoHeadersNames:
+                            items:
+                              type: string
+                            type: array
+                          userinfoHeadersValues:
+                            items:
+                              type: string
+                            type: array
+                          userinfoQueryArgsClient:
+                            items:
+                              type: string
+                            type: array
+                          userinfoQueryArgsNames:
+                            items:
+                              type: string
+                            type: array
+                          userinfoQueryArgsValues:
+                            items:
+                              type: string
+                            type: array
+                          usingPseudoIssuer:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          verifyClaims:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          verifyNonce:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          verifyParameters:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          verifySignature:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
                         required:
                         - cacheTokensSalt
+                        - issuer
                         type: object
                       displayName:
                         maxLength: 256
@@ -3569,8 +4849,9 @@ spec:
                               minLength: 1
                               type: string
                             name:
-                              maxLength: 253
+                              maxLength: 128
                               minLength: 1
+                              pattern: ^[A-Za-z0-9._-]+$
                               type: string
                             parameters:
                               items:
@@ -3888,8 +5169,9 @@ spec:
                               minLength: 1
                               type: string
                             name:
-                              maxLength: 253
+                              maxLength: 128
                               minLength: 1
+                              pattern: ^[A-Za-z0-9._-]+$
                               type: string
                             parameters:
                               items:
@@ -5861,8 +7143,9 @@ spec:
                             inputSchema:
                               x-kubernetes-preserve-unknown-fields: true
                             name:
-                              maxLength: 253
+                              maxLength: 128
                               minLength: 1
+                              pattern: ^[A-Za-z0-9._-]+$
                               type: string
                             outputSchema:
                               x-kubernetes-preserve-unknown-fields: true
@@ -10209,6 +11492,7 @@ spec:
                                 anthropic:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -10231,6 +11515,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -10273,6 +11558,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -10299,6 +11585,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -10336,12 +11623,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -10356,6 +11647,7 @@ spec:
                                       maxLength: 253
                                       type: string
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -10378,6 +11670,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -10429,6 +11722,7 @@ spec:
                                       maxLength: 253
                                       type: string
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -10455,6 +11749,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -10492,12 +11787,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -10509,6 +11808,7 @@ spec:
                                       maxLength: 253
                                       type: string
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -10531,6 +11831,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -10578,6 +11879,7 @@ spec:
                                       - Disabled
                                       type: string
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -10604,6 +11906,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -10647,12 +11950,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -10664,6 +11971,7 @@ spec:
                                 cerebras:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -10686,6 +11994,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -10728,6 +12037,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -10754,6 +12064,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -10791,12 +12102,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -10811,6 +12126,7 @@ spec:
                                       maxLength: 253
                                       type: string
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -10833,6 +12149,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -10884,6 +12201,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -10910,6 +12228,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -10947,12 +12266,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -10966,6 +12289,7 @@ spec:
                                 dashscope:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -10988,6 +12312,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -11030,6 +12355,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -11061,6 +12387,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -11098,12 +12425,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -11112,6 +12443,7 @@ spec:
                                 databricks:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -11134,6 +12466,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -11176,6 +12509,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -11202,6 +12536,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -11239,12 +12574,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -11259,6 +12598,7 @@ spec:
                                 deepseek:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -11281,6 +12621,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -11323,6 +12664,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -11349,6 +12691,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -11386,12 +12729,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -11400,6 +12747,7 @@ spec:
                                 gemini:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -11422,6 +12770,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -11483,6 +12832,7 @@ spec:
                                       - projectID
                                       type: object
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -11509,6 +12859,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -11546,12 +12897,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -11560,6 +12915,7 @@ spec:
                                 huggingface:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -11582,6 +12938,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -11624,6 +12981,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -11650,6 +13008,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -11687,12 +13046,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -11711,6 +13074,7 @@ spec:
                                 kimi:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -11733,6 +13097,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -11775,6 +13140,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -11806,6 +13172,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -11843,12 +13210,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -11857,6 +13228,7 @@ spec:
                                 llama2:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -11879,6 +13251,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -11929,6 +13302,7 @@ spec:
                                       minLength: 1
                                       type: string
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -11955,6 +13329,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -11992,12 +13367,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -12010,6 +13389,7 @@ spec:
                                 mistral:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -12032,6 +13412,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -12081,6 +13462,7 @@ spec:
                                       minLength: 1
                                       type: string
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -12107,6 +13489,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -12144,12 +13527,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -12160,6 +13547,7 @@ spec:
                                 ollama:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -12182,6 +13570,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -12224,6 +13613,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -12250,6 +13640,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -12287,12 +13678,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -12301,6 +13696,7 @@ spec:
                                 openai:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -12323,6 +13719,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -12365,6 +13762,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -12391,6 +13789,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -12428,12 +13827,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -12457,6 +13860,7 @@ spec:
                                           type: string
                                       type: object
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -12479,6 +13883,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -12521,6 +13926,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -12547,6 +13953,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -12596,12 +14003,16 @@ spec:
                                           type: string
                                       type: object
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -12634,8 +14045,10 @@ spec:
                                 typesafe:
                                   properties:
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -12644,6 +14057,7 @@ spec:
                                 vercel:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -12666,6 +14080,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -12708,6 +14123,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -12734,6 +14150,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -12771,12 +14188,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -12785,6 +14206,7 @@ spec:
                                 vllm:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -12807,6 +14229,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -12849,6 +14272,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -12875,6 +14299,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -12912,12 +14337,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -12929,6 +14358,7 @@ spec:
                                 xai:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -12951,6 +14381,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -12993,6 +14424,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -13019,6 +14451,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -13056,12 +14489,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -14105,6 +15542,7 @@ spec:
                                 anthropic:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -14127,6 +15565,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -14169,6 +15608,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -14195,6 +15635,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -14232,12 +15673,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -14252,6 +15697,7 @@ spec:
                                       maxLength: 253
                                       type: string
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -14274,6 +15720,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -14325,6 +15772,7 @@ spec:
                                       maxLength: 253
                                       type: string
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -14351,6 +15799,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -14388,12 +15837,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -14405,6 +15858,7 @@ spec:
                                       maxLength: 253
                                       type: string
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -14427,6 +15881,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -14474,6 +15929,7 @@ spec:
                                       - Disabled
                                       type: string
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -14500,6 +15956,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -14543,12 +16000,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -14560,6 +16021,7 @@ spec:
                                 cerebras:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -14582,6 +16044,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -14624,6 +16087,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -14650,6 +16114,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -14687,12 +16152,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -14707,6 +16176,7 @@ spec:
                                       maxLength: 253
                                       type: string
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -14729,6 +16199,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -14780,6 +16251,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -14806,6 +16278,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -14843,12 +16316,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -14862,6 +16339,7 @@ spec:
                                 dashscope:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -14884,6 +16362,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -14926,6 +16405,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -14957,6 +16437,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -14994,12 +16475,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -15008,6 +16493,7 @@ spec:
                                 databricks:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -15030,6 +16516,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -15072,6 +16559,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -15098,6 +16586,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -15135,12 +16624,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -15155,6 +16648,7 @@ spec:
                                 deepseek:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -15177,6 +16671,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -15219,6 +16714,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -15245,6 +16741,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -15282,12 +16779,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -15296,6 +16797,7 @@ spec:
                                 gemini:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -15318,6 +16820,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -15379,6 +16882,7 @@ spec:
                                       - projectID
                                       type: object
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -15405,6 +16909,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -15442,12 +16947,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -15456,6 +16965,7 @@ spec:
                                 huggingface:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -15478,6 +16988,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -15520,6 +17031,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -15546,6 +17058,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -15583,12 +17096,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -15607,6 +17124,7 @@ spec:
                                 kimi:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -15629,6 +17147,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -15671,6 +17190,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -15702,6 +17222,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -15739,12 +17260,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -15753,6 +17278,7 @@ spec:
                                 llama2:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -15775,6 +17301,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -15825,6 +17352,7 @@ spec:
                                       minLength: 1
                                       type: string
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -15851,6 +17379,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -15888,12 +17417,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -15906,6 +17439,7 @@ spec:
                                 mistral:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -15928,6 +17462,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -15977,6 +17512,7 @@ spec:
                                       minLength: 1
                                       type: string
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -16003,6 +17539,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -16040,12 +17577,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -16056,6 +17597,7 @@ spec:
                                 ollama:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -16078,6 +17620,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -16120,6 +17663,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -16146,6 +17690,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -16183,12 +17728,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -16197,6 +17746,7 @@ spec:
                                 openai:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -16219,6 +17769,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -16261,6 +17812,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -16287,6 +17839,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -16324,12 +17877,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -16353,6 +17910,7 @@ spec:
                                           type: string
                                       type: object
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -16375,6 +17933,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -16417,6 +17976,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -16443,6 +18003,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -16492,12 +18053,16 @@ spec:
                                           type: string
                                       type: object
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -16530,8 +18095,10 @@ spec:
                                 typesafe:
                                   properties:
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -16540,6 +18107,7 @@ spec:
                                 vercel:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -16562,6 +18130,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -16604,6 +18173,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -16630,6 +18200,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -16667,12 +18238,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -16681,6 +18256,7 @@ spec:
                                 vllm:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -16703,6 +18279,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -16745,6 +18322,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -16771,6 +18349,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -16808,12 +18387,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253
@@ -16825,6 +18408,7 @@ spec:
                                 xai:
                                   properties:
                                     cacheReadCost:
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       items:
@@ -16847,6 +18431,7 @@ spec:
                                         type: object
                                       type: array
                                     cacheWriteCost:
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       items:
@@ -16889,6 +18474,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     inputCost:
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       items:
@@ -16915,6 +18501,7 @@ spec:
                                       minimum: 0
                                       type: integer
                                     outputCost:
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       items:
@@ -16952,12 +18539,16 @@ spec:
                                         type: object
                                       type: array
                                     temperature:
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       maxLength: 253

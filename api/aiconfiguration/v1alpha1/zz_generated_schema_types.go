@@ -8,6 +8,2308 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
+// AIGWKeyAuthGeneratedConfig is a type alias.
+type AIGWKeyAuthGeneratedConfig struct {
+	// An optional string (consumer UUID or username) value to use as an
+	// “anonymous” consumer if authentication fails.
+	// If empty (default null), the request will fail with an authentication
+	// failure `4xx`.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Anonymous string `json:"anonymous,omitzero"`
+	// An optional boolean value telling the plugin to show or hide the credential
+	// from the upstream service.
+	// If `true`, the plugin strips the credential from the request.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	HideCredentials string `json:"hideCredentials,omitzero"`
+	// A configuration of Konnect Identity Realms that indicate where to source a
+	// consumer from.
+	//
+	// +optional
+	IdentityRealms []AIGWKeyAuthGeneratedConfigIdentityRealms `json:"identityRealms,omitempty"`
+	// If enabled, the plugin reads the request body.
+	// Supported MIME types: `application/www-form-urlencoded`, `application/json`,
+	// and `multipart/form-data`.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	KeyInBody string `json:"keyInBody,omitzero"`
+	// If enabled (default), the plugin reads the request header and tries to find
+	// the key in it.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	KeyInHeader string `json:"keyInHeader,omitzero"`
+	// If enabled (default), the plugin reads the query parameter in the request
+	// and tries to find the key in it.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	KeyInQuery string `json:"keyInQuery,omitzero"`
+	// Describes an array of parameter names where the plugin will look for a key.
+	// The key names may only contain [a-z], [A-Z], [0-9], [_] underscore, and [-]
+	// hyphen.
+	//
+	// +optional
+	KeyNames []string `json:"keyNames,omitempty"`
+	//
+	//
+	// +optional
+	Principals AIGWKeyAuthGeneratedConfigPrincipals `json:"principals,omitzero"`
+	// When authentication fails the plugin sends `WWW-Authenticate` header with
+	// `realm` attribute value.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Realm string `json:"realm,omitzero"`
+	// A boolean value that indicates whether the plugin should run (and try to
+	// authenticate) on `OPTIONS` preflight requests.
+	// If set to `false`, then `OPTIONS` requests are always allowed.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	RunOnPreflight string `json:"runOnPreflight,omitzero"`
+}
+
+// AIGWKeyAuthGeneratedConfigIdentityRealms A configuration of Konnect Identity
+// Realms that indicate where to source a consumer from.
+type AIGWKeyAuthGeneratedConfigIdentityRealms struct {
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Region string `json:"region,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=cp;realm
+	Scope string `json:"scope,omitzero"`
+}
+
+// AIGWKeyAuthGeneratedConfigPrincipals is a type alias.
+type AIGWKeyAuthGeneratedConfigPrincipals struct {
+	// The Kong Identity directory instance to authenticate against.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Directory string `json:"directory,omitzero"`
+	// When true, authenticate against Kong Identity instead of local credentials.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// When true (default), return 401 if no matching principal is found in Kong
+	// Identity.
+	// When false, allow the request to continue unauthenticated instead.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ErrorOnMiss string `json:"errorOnMiss,omitzero"`
+}
+
+// AIGWOpenIDConnectGeneratedConfig is a type alias.
+type AIGWOpenIDConnectGeneratedConfig struct {
+	// An optional string (consumer UUID or username) value that functions as an
+	// “anonymous” consumer if authentication fails.
+	// If empty (default null), requests that fail authentication will return a
+	// `4xx` HTTP status code.
+	// This value must refer to the consumer `id` or `username` attribute, and
+	// **not** its `custom_id`.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Anonymous string `json:"anonymous,omitzero"`
+	// The audience passed to the authorization endpoint.
+	//
+	// +optional
+	Audience []string `json:"audience,omitempty"`
+	// The claim that contains the audience.
+	// If multiple values are set, it means the claim is inside a nested object of
+	// the token payload.
+	//
+	// +optional
+	AudienceClaim []string `json:"audienceClaim,omitempty"`
+	// The audiences (`audience_claim` claim) required to be present in the access
+	// token (or introspection results) for successful authorization.
+	// This config parameter works in both **AND** / **OR** cases.
+	//
+	// +optional
+	AudienceRequired []string `json:"audienceRequired,omitempty"`
+	// Types of credentials/grants to enable.
+	//
+	// +optional
+	AuthMethods []string `json:"authMethods,omitempty"`
+	// The claim that contains authenticated groups.
+	// This setting can be used together with ACL plugin, but it also enables IdP
+	// managed groups with other applications and integrations.
+	// If multiple values are set, it means the claim is inside a nested object of
+	// the token payload.
+	//
+	// +optional
+	AuthenticatedGroupsClaim []string `json:"authenticatedGroupsClaim,omitempty"`
+	// The authorization cookie Domain flag.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AuthorizationCookieDomain string `json:"authorizationCookieDomain,omitzero"`
+	// Forbids JavaScript from accessing the cookie, for example, through the
+	// `Document.cookie` property.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	AuthorizationCookieHTTPOnly string `json:"authorizationCookieHTTPOnly,omitzero"`
+	// The authorization cookie name.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AuthorizationCookieName string `json:"authorizationCookieName,omitzero"`
+	// The authorization cookie Path flag.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AuthorizationCookiePath string `json:"authorizationCookiePath,omitzero"`
+	// Controls whether a cookie is sent with cross-origin requests, providing some
+	// protection against cross-site request forgery attacks.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=Default;Lax;None;Strict
+	AuthorizationCookieSameSite string `json:"authorizationCookieSameSite,omitzero"`
+	// Cookie is only sent to the server when a request is made with the https:
+	// scheme (except on localhost), and therefore is more resistant to
+	// man-in-the-middle attacks.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	AuthorizationCookieSecure string `json:"authorizationCookieSecure,omitzero"`
+	// The authorization endpoint.
+	// If set it overrides the value in `authorization_endpoint` returned by the
+	// discovery endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AuthorizationEndpoint string `json:"authorizationEndpoint,omitzero"`
+	// Extra query arguments passed from the client to the authorization endpoint.
+	//
+	// +optional
+	AuthorizationQueryArgsClient []string `json:"authorizationQueryArgsClient,omitempty"`
+	// Extra query argument names passed to the authorization endpoint.
+	//
+	// +optional
+	AuthorizationQueryArgsNames []string `json:"authorizationQueryArgsNames,omitempty"`
+	// Extra query argument values passed to the authorization endpoint.
+	//
+	// +optional
+	AuthorizationQueryArgsValues []string `json:"authorizationQueryArgsValues,omitempty"`
+	// Specifies how long the session used for the authorization code flow can be
+	// used in seconds until it needs to be renewed.
+	// 0 disables the checks and rolling.
+	//
+	// +optional
+	AuthorizationRollingTimeout float64 `json:"authorizationRollingTimeout,omitzero"`
+	// The name of the cookie in which the bearer token is passed.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	BearerTokenCookieName string `json:"bearerTokenCookieName,omitzero"`
+	// The name of the HTTP header from which the bearer token is retrieved.
+	// The default value is `authorization:bearer`, which reads the token from the
+	// `Authorization: Bearer <token>` header.
+	// Accepts plain header names such as `x-my-token` as well as Kong's special
+	// `authorization:bearer` notation.
+	// The `access-token` and `x-access-token` headers are also checked as a
+	// fallback for backward compatibility regardless of this setting.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	BearerTokenHeaderName string `json:"bearerTokenHeaderName,omitzero"`
+	// Where to look for the bearer token: - `header`: search the `Authorization`,
+	// `access-token`, and `x-access-token` HTTP headers - `query`: search the
+	// URL's query string - `body`: search the HTTP request body - `cookie`: search
+	// the HTTP request cookies specified with `config.bearer_token_cookie_name`.
+	//
+	// +optional
+	BearerTokenParamType []string `json:"bearerTokenParamType,omitempty"`
+	// If `consumer_by` is set to `username`, specify whether `username` can match
+	// consumers case-insensitively.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ByUsernameIgnoreCase string `json:"byUsernameIgnoreCase,omitzero"`
+	// Cache the introspection endpoint requests.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	CacheIntrospection string `json:"cacheIntrospection,omitzero"`
+	// Cache the legacy token exchange endpoint requests.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	CacheTokenExchange string `json:"cacheTokenExchange,omitzero"`
+	// Cache the token endpoint requests.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	CacheTokens string `json:"cacheTokens,omitzero"`
+	// Salt used for generating the cache key that is used for caching the token
+	// endpoint requests.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	CacheTokensSalt string `json:"cacheTokensSalt,omitzero"`
+	// The default cache ttl in seconds that is used in case the cached object does
+	// not specify the expiry.
+	//
+	// +optional
+	CacheTtl float64 `json:"cacheTtl,omitzero"`
+	// The maximum cache ttl in seconds (enforced).
+	//
+	// +optional
+	CacheTtlMax float64 `json:"cacheTtlMax,omitzero"`
+	// The minimum cache ttl in seconds (enforced).
+	//
+	// +optional
+	CacheTtlMin float64 `json:"cacheTtlMin,omitzero"`
+	// The negative cache ttl in seconds.
+	//
+	// +optional
+	CacheTtlNeg float64 `json:"cacheTtlNeg,omitzero"`
+	// The resurrection ttl in seconds.
+	//
+	// +optional
+	CacheTtlResurrect float64 `json:"cacheTtlResurrect,omitzero"`
+	// Cache the user info requests.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	CacheUserInfo string `json:"cacheUserInfo,omitzero"`
+	// If given, these claims are forbidden in the token payload.
+	//
+	// +optional
+	ClaimsForbidden []string `json:"claimsForbidden,omitempty"`
+	// The algorithm to use for client_secret_jwt (only HS***) or private_key_jwt
+	// authentication.
+	//
+	// +optional
+	ClientAlg []string `json:"clientAlg,omitempty"`
+	// The client to use for this request (the selection is made with a request
+	// parameter with the same name).
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	ClientArg string `json:"clientArg,omitzero"`
+	// The default OpenID Connect client authentication method is
+	// 'client_secret_basic' (using 'Authorization: Basic' header),
+	// 'client_secret_post' (credentials in body), 'client_secret_jwt' (signed
+	// client assertion in body), 'private_key_jwt' (private key-signed assertion),
+	// 'tls_client_auth' (client certificate), 'self_signed_tls_client_auth'
+	// (self-signed client certificate), and 'none' (no authentication).
+	//
+	// +optional
+	ClientAuth []string `json:"clientAuth,omitempty"`
+	// Where to look for the client credentials: - `header`: search the HTTP
+	// headers - `query`: search the URL's query string - `body`: search from the
+	// HTTP request body.
+	//
+	// +optional
+	ClientCredentialsParamType []string `json:"clientCredentialsParamType,omitempty"`
+	// The client id(s) that the plugin uses when it calls authenticated endpoints
+	// on the identity provider.
+	//
+	// +optional
+	ClientID []string `json:"clientID,omitempty"`
+	// The JWK used for the private_key_jwt authentication.
+	//
+	// +optional
+	ClientJwk []AIGWOpenIDConnectGeneratedConfigClientJwk `json:"clientJwk,omitempty"`
+	// The client secret.
+	//
+	// +optional
+	ClientSecret []SensitiveDataSource `json:"clientSecret,omitempty"`
+	//
+	//
+	// +optional
+	ClusterCacheRedis AIGWOpenIDConnectGeneratedConfigClusterCacheRedis `json:"clusterCacheRedis,omitzero"`
+	// The strategy to use for the cluster cache.
+	// If set, the plugin will share cache with nodes configured with the same
+	// strategy backend.
+	// Currentlly only introspection cache is shared.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=off;redis
+	ClusterCacheStrategy string `json:"clusterCacheStrategy,omitzero"`
+	// Consumer fields used for mapping: - `id`: try to find the matching Consumer
+	// by `id` - `username`: try to find the matching Consumer by `username` -
+	// `custom_id`: try to find the matching Consumer by `custom_id`.
+	//
+	// +optional
+	ConsumerBy []string `json:"consumerBy,omitempty"`
+	// The claims used for consumer mapping.
+	// Each entry represents a claim path inside the token payload.
+	// The paths are evaluated in order, and the first matching claim is used.
+	//
+	// +optional
+	ConsumerClaims [][]string `json:"consumerClaims,omitempty"`
+	// The claim used for consumer groups mapping.
+	// If multiple values are set, it means the claim is inside a nested object of
+	// the token payload.
+	//
+	// +optional
+	ConsumerGroupsClaim []string `json:"consumerGroupsClaim,omitempty"`
+	// Do not terminate the request if consumer groups mapping fails.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ConsumerGroupsOptional string `json:"consumerGroupsOptional,omitzero"`
+	// Do not terminate the request if consumer mapping fails.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ConsumerOptional string `json:"consumerOptional,omitzero"`
+	// The claim used to derive virtual credentials (e.g.
+	// to be consumed by the rate-limiting plugin), in case the consumer mapping is
+	// not used.
+	// If multiple values are set, it means the claim is inside a nested object of
+	// the token payload.
+	//
+	// +optional
+	CredentialClaim []string `json:"credentialClaim,omitempty"`
+	// Disable issuing the session cookie with the specified grants.
+	//
+	// +optional
+	DisableSession []string `json:"disableSession,omitempty"`
+	// Extra header names passed to the discovery endpoint.
+	//
+	// +optional
+	DiscoveryHeadersNames []string `json:"discoveryHeadersNames,omitempty"`
+	// Extra header values passed to the discovery endpoint.
+	//
+	// +optional
+	DiscoveryHeadersValues []string `json:"discoveryHeadersValues,omitempty"`
+	// Display errors on failure responses.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	DisplayErrors string `json:"displayErrors,omitzero"`
+	// The allowed values for the `hd` claim.
+	//
+	// +optional
+	Domains []string `json:"domains,omitempty"`
+	// The downstream access token header.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	DownstreamAccessTokenHeader string `json:"downstreamAccessTokenHeader,omitzero"`
+	// The downstream access token JWK header.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	DownstreamAccessTokenJwkHeader string `json:"downstreamAccessTokenJwkHeader,omitzero"`
+	// The downstream claim to header mappings.
+	//
+	// +optional
+	DownstreamHeaders []AIGWOpenIDConnectGeneratedConfigDownstreamHeaders `json:"downstreamHeaders,omitempty"`
+	// The downstream header claims. Only top level claims are supported.
+	//
+	// +optional
+	DownstreamHeadersClaims []string `json:"downstreamHeadersClaims,omitempty"`
+	// The downstream header names for the claim values.
+	//
+	// +optional
+	DownstreamHeadersNames []string `json:"downstreamHeadersNames,omitempty"`
+	// The downstream id token header.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	DownstreamIDTokenHeader string `json:"downstreamIDTokenHeader,omitzero"`
+	// The downstream id token JWK header.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	DownstreamIDTokenJwkHeader string `json:"downstreamIDTokenJwkHeader,omitzero"`
+	// The downstream introspection header.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	DownstreamIntrospectionHeader string `json:"downstreamIntrospectionHeader,omitzero"`
+	// The downstream introspection JWT header.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	DownstreamIntrospectionJwtHeader string `json:"downstreamIntrospectionJwtHeader,omitzero"`
+	// The downstream refresh token header.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	DownstreamRefreshTokenHeader string `json:"downstreamRefreshTokenHeader,omitzero"`
+	// The downstream session id header.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	DownstreamSessionIDHeader string `json:"downstreamSessionIDHeader,omitzero"`
+	// The downstream user info header.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	DownstreamUserInfoHeader string `json:"downstreamUserInfoHeader,omitzero"`
+	// The downstream user info JWT header (in case the user info returns a JWT
+	// response).
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	DownstreamUserInfoJwtHeader string `json:"downstreamUserInfoJwtHeader,omitzero"`
+	// Specifies the lifetime in seconds of the DPoP proof.
+	// It determines how long the same proof can be used after creation.
+	// The creation time is determined by the nonce creation time if a nonce is
+	// used, and the iat claim otherwise.
+	//
+	// +optional
+	DpopProofLifetime float64 `json:"dpopProofLifetime,omitzero"`
+	// Specifies whether to challenge the client with a nonce value for DPoP proof.
+	// When enabled it will also be used to calculate the DPoP proof lifetime.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	DpopUseNonce string `json:"dpopUseNonce,omitzero"`
+	// Enable shared secret, for example, HS256, signatures (when disabled they
+	// will not be accepted).
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	EnableHsSignatures string `json:"enableHsSignatures,omitzero"`
+	// The end session endpoint.
+	// If set it overrides the value in `end_session_endpoint` returned by the
+	// discovery endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	EndSessionEndpoint string `json:"endSessionEndpoint,omitzero"`
+	// Specifies whether to expose the error code header, as defined in RFC 6750.
+	// If an authorization request fails, this header is sent in the response.
+	// Set to `false` to disable.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ExposeErrorCode string `json:"exposeErrorCode,omitzero"`
+	// JWKS URIs whose public keys are trusted (in addition to the keys found with
+	// the discovery).
+	//
+	// +optional
+	ExtraJwksUris []string `json:"extraJwksUris,omitempty"`
+	// Destroy any active session for the forbidden requests.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ForbiddenDestroySession string `json:"forbiddenDestroySession,omitzero"`
+	// The error message for the forbidden requests (when not using the
+	// redirection).
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	ForbiddenErrorMessage string `json:"forbiddenErrorMessage,omitzero"`
+	// Where to redirect the client on forbidden requests.
+	//
+	// +optional
+	ForbiddenRedirectURI []string `json:"forbiddenRedirectURI,omitempty"`
+	// The claim that contains the groups.
+	// If multiple values are set, it means the claim is inside a nested object of
+	// the token payload.
+	//
+	// +optional
+	GroupsClaim []string `json:"groupsClaim,omitempty"`
+	// The groups (`groups_claim` claim) required to be present in the access token
+	// (or introspection results) for successful authorization.
+	// This config parameter works in both **AND** / **OR** cases.
+	//
+	// +optional
+	GroupsRequired []string `json:"groupsRequired,omitempty"`
+	// Remove the credentials used for authentication from the request.
+	// If multiple credentials are sent with the same request, the plugin will
+	// remove those that were used for successful authentication.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	HideCredentials string `json:"hideCredentials,omitzero"`
+	// The HTTP proxy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	HTTPProxy string `json:"httpProxy,omitzero"`
+	// The HTTP proxy authorization.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	HTTPProxyAuthorization string `json:"httpProxyAuthorization,omitzero"`
+	// The HTTP version used for the requests by this plugin: - `1.1`: HTTP 1.1
+	// (the default) - `1.0`: HTTP 1.0.
+	//
+	// +optional
+	HTTPVersion float64 `json:"httpVersion,omitzero"`
+	// The HTTPS proxy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	HTTPSProxy string `json:"httpsProxy,omitzero"`
+	// The HTTPS proxy authorization.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	HTTPSProxyAuthorization string `json:"httpsProxyAuthorization,omitzero"`
+	// The name of the parameter used to pass the id token.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	IDTokenParamName string `json:"idTokenParamName,omitzero"`
+	// Where to look for the id token: - `header`: search the HTTP headers -
+	// `query`: search the URL's query string - `body`: search the HTTP request
+	// body.
+	//
+	// +optional
+	IDTokenParamType []string `json:"idTokenParamType,omitempty"`
+	// Skip the token signature verification on certain grants.
+	// This is insecure and logs a warning; use it only for providers that publish
+	// no verification key.
+	// Grants: - `password`: OAuth password grant - `client_credentials`: OAuth
+	// client credentials grant - `authorization_code`: authorization code flow -
+	// `refresh_token`: OAuth refresh token grant - `session`: session cookie
+	// authentication - `introspection`: OAuth introspection - `userinfo`: OpenID
+	// Connect user info endpoint authentication.
+	//
+	// +optional
+	IgnoreSignature []string `json:"ignoreSignature,omitempty"`
+	// Specifies whether to introspect the JWT access tokens (can be used to check
+	// for revocations).
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	IntrospectJwtTokens string `json:"introspectJwtTokens,omitzero"`
+	// The value of `Accept` header for introspection requests: -
+	// `application/json`: introspection response as JSON -
+	// `application/token-introspection+jwt`: introspection response as JWT (from
+	// the current IETF draft document) - `application/jwt`: introspection response
+	// as JWT (from the obsolete IETF draft document).
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=application/json;application/jwt;application/token-introspection+jwt
+	IntrospectionAccept string `json:"introspectionAccept,omitzero"`
+	// Check that the introspection response has an `active` claim with a value of
+	// `true`.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	IntrospectionCheckActive string `json:"introspectionCheckActive,omitzero"`
+	// The introspection endpoint.
+	// If set it overrides the value in `introspection_endpoint` returned by the
+	// discovery endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	IntrospectionEndpoint string `json:"introspectionEndpoint,omitzero"`
+	// The introspection endpoint authentication method: : `client_secret_basic`,
+	// `client_secret_post`, `client_secret_jwt`, `private_key_jwt`,
+	// `tls_client_auth`, `self_signed_tls_client_auth`, or `none`: do not
+	// authenticate
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=client_secret_basic;client_secret_jwt;client_secret_post;none;private_key_jwt;self_signed_tls_client_auth;tls_client_auth
+	IntrospectionEndpointAuthMethod string `json:"introspectionEndpointAuthMethod,omitzero"`
+	// Extra headers passed from the client to the introspection endpoint.
+	//
+	// +optional
+	IntrospectionHeadersClient []string `json:"introspectionHeadersClient,omitempty"`
+	// Extra header names passed to the introspection endpoint.
+	//
+	// +optional
+	IntrospectionHeadersNames []string `json:"introspectionHeadersNames,omitempty"`
+	// Extra header values passed to the introspection endpoint.
+	//
+	// +optional
+	IntrospectionHeadersValues []string `json:"introspectionHeadersValues,omitempty"`
+	// Introspection hint parameter value passed to the introspection endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	IntrospectionHint string `json:"introspectionHint,omitzero"`
+	// Extra post arguments passed from the client to the introspection endpoint.
+	//
+	// +optional
+	IntrospectionPostArgsClient []string `json:"introspectionPostArgsClient,omitempty"`
+	// Extra post arguments passed from the client headers to the introspection
+	// endpoint.
+	//
+	// +optional
+	IntrospectionPostArgsClientHeaders []string `json:"introspectionPostArgsClientHeaders,omitempty"`
+	// Extra post argument names passed to the introspection endpoint.
+	//
+	// +optional
+	IntrospectionPostArgsNames []string `json:"introspectionPostArgsNames,omitempty"`
+	// Extra post argument values passed to the introspection endpoint.
+	//
+	// +optional
+	IntrospectionPostArgsValues []string `json:"introspectionPostArgsValues,omitempty"`
+	// Designate token's parameter name for introspection.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	IntrospectionTokenParamName string `json:"introspectionTokenParamName,omitzero"`
+	// The discovery endpoint (or the issuer identifier).
+	// When there is no discovery endpoint, please also configure
+	// `config.using_pseudo_issuer=true`.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Issuer string `json:"issuer,omitzero"`
+	// The issuers allowed to be present in the tokens (`iss` claim).
+	//
+	// +optional
+	IssuersAllowed []string `json:"issuersAllowed,omitempty"`
+	// Overrides the `jwks_uri` returned by discovery.
+	// Use when the IdP exposes a non-standard JWKS endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	JwksEndpoint string `json:"jwksEndpoint,omitzero"`
+	// The claim to match against the JWT session cookie.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	JwtSessionClaim string `json:"jwtSessionClaim,omitzero"`
+	// The name of the JWT session cookie.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	JwtSessionCookie string `json:"jwtSessionCookie,omitzero"`
+	// Use keepalive with the HTTP client.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Keepalive string `json:"keepalive,omitzero"`
+	// Defines leeway time (in seconds) for `auth_time`, `exp`, `iat`, and `nbf`
+	// claims
+	//
+	// +optional
+	Leeway float64 `json:"leeway,omitzero"`
+	// What to do after successful login: - `upstream`: proxy request to upstream
+	// service - `response`: terminate request with a response - `redirect`:
+	// redirect to a different location.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=redirect;response;upstream
+	LoginAction string `json:"loginAction,omitzero"`
+	// Enable login functionality with specified grants.
+	//
+	// +optional
+	LoginMethods []string `json:"loginMethods,omitempty"`
+	// Where to place `login_tokens` when using `redirect` `login_action`: -
+	// `query`: place tokens in query string - `fragment`: place tokens in url
+	// fragment (not readable by servers).
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=fragment;query
+	LoginRedirectMode string `json:"loginRedirectMode,omitzero"`
+	// Where to redirect the client when `login_action` is set to `redirect`.
+	//
+	// +optional
+	LoginRedirectURI []string `json:"loginRedirectURI,omitempty"`
+	// What tokens to include in `response` body or `redirect` query string or
+	// fragment: - `id_token`: include id token - `access_token`: include access
+	// token - `refresh_token`: include refresh token - `tokens`: include the full
+	// token endpoint response - `introspection`: include introspection response.
+	//
+	// +optional
+	LoginTokens []string `json:"loginTokens,omitempty"`
+	// The request methods that can activate the logout: - `POST`: HTTP POST method
+	// - `GET`: HTTP GET method - `DELETE`: HTTP DELETE method.
+	//
+	// +optional
+	LogoutMethods []string `json:"logoutMethods,omitempty"`
+	// The request body argument that activates the logout.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	LogoutPostArg string `json:"logoutPostArg,omitzero"`
+	// The request query argument that activates the logout.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	LogoutQueryArg string `json:"logoutQueryArg,omitzero"`
+	// Where to redirect the client after the logout.
+	//
+	// +optional
+	LogoutRedirectURI []string `json:"logoutRedirectURI,omitempty"`
+	// Revoke tokens as part of the logout.
+	//
+	// For more granular token revocation, you can also adjust the
+	// `logout_revoke_access_token` and `logout_revoke_refresh_token` parameters.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	LogoutRevoke string `json:"logoutRevoke,omitzero"`
+	// Revoke the access token as part of the logout.
+	// Requires `logout_revoke` to be set to `true`.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	LogoutRevokeAccessToken string `json:"logoutRevokeAccessToken,omitzero"`
+	// Revoke the refresh token as part of the logout.
+	// Requires `logout_revoke` to be set to `true`.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	LogoutRevokeRefreshToken string `json:"logoutRevokeRefreshToken,omitzero"`
+	// The request URI suffix that activates the logout.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	LogoutURISuffix string `json:"logoutURISuffix,omitzero"`
+	// The maximum age (in seconds) compared to the `auth_time` claim.
+	//
+	// +optional
+	MaxAge float64 `json:"maxAge,omitzero"`
+	// Alias for the introspection endpoint to be used for mTLS client
+	// authentication.
+	// If set it overrides the value in `mtls_endpoint_aliases` returned by the
+	// discovery endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	MtlsIntrospectionEndpoint string `json:"mtlsIntrospectionEndpoint,omitzero"`
+	// Alias for the introspection endpoint to be used for mTLS client
+	// authentication.
+	// If set it overrides the value in `mtls_endpoint_aliases` returned by the
+	// discovery endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	MtlsRevocationEndpoint string `json:"mtlsRevocationEndpoint,omitzero"`
+	// Alias for the token endpoint to be used for mTLS client authentication.
+	// If set it overrides the value in `mtls_endpoint_aliases` returned by the
+	// discovery endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	MtlsTokenEndpoint string `json:"mtlsTokenEndpoint,omitzero"`
+	// Do not use proxy with these hosts.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	NoProxy string `json:"noProxy,omitzero"`
+	// Where to look for the username and password: - `header`: search the HTTP
+	// headers - `query`: search the URL's query string - `body`: search the HTTP
+	// request body.
+	//
+	// +optional
+	PasswordParamType []string `json:"passwordParamType,omitempty"`
+	// With this parameter, you can preserve request query arguments even when
+	// doing authorization code flow.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	PreserveQueryArgs string `json:"preserveQueryArgs,omitzero"`
+	// Configuration for Kong Identity principal hydration after token
+	// verification.
+	//
+	// +optional
+	Principals AIGWOpenIDConnectGeneratedConfigPrincipals `json:"principals,omitzero"`
+	// If set to true, only the auth_methods that are compatible with Proof of
+	// Possession (PoP) can be configured when PoP is enabled.
+	// If set to false, all auth_methods will be configurable and PoP checks will
+	// be silently skipped for those auth_methods that are not compatible with PoP.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ProofOfPossessionAuthMethodsValidation string `json:"proofOfPossessionAuthMethodsValidation,omitzero"`
+	// Enable Demonstrating Proof-of-Possession (DPoP).
+	// If set to strict, all request are verified despite the presence of the DPoP
+	// key claim (cnf.jkt).
+	// If set to optional, only tokens bound with DPoP's key are verified with the
+	// proof.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=off;optional;strict
+	ProofOfPossessionDpop string `json:"proofOfPossessionDpop,omitzero"`
+	// Enable mtls proof of possession.
+	// If set to strict, all tokens (from supported auth_methods: bearer,
+	// introspection, and session granted with bearer or introspection) are
+	// verified, if set to optional, only tokens that contain the certificate hash
+	// claim are verified.
+	// If the verification fails, the request will be rejected with 401.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=off;optional;strict
+	ProofOfPossessionMtls string `json:"proofOfPossessionMtls,omitzero"`
+	// The pushed authorization endpoint.
+	// If set it overrides the value in `pushed_authorization_request_endpoint`
+	// returned by the discovery endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	PushedAuthorizationRequestEndpoint string `json:"pushedAuthorizationRequestEndpoint,omitzero"`
+	// The pushed authorization request endpoint authentication method:
+	// `client_secret_basic`, `client_secret_post`, `client_secret_jwt`,
+	// `private_key_jwt`, `tls_client_auth`, `self_signed_tls_client_auth`, or
+	// `none`: do not authenticate
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=client_secret_basic;client_secret_jwt;client_secret_post;none;private_key_jwt;self_signed_tls_client_auth;tls_client_auth
+	PushedAuthorizationRequestEndpointAuthMethod string `json:"pushedAuthorizationRequestEndpointAuthMethod,omitzero"`
+	// The redirect URI passed to the authorization and token endpoints.
+	//
+	// +optional
+	RedirectURI []string `json:"redirectURI,omitempty"`
+	//
+	//
+	// +optional
+	Redis AIGWOpenIDConnectGeneratedConfigRedis `json:"redis,omitzero"`
+	// Specifies how long (in seconds) the plugin waits between discovery attempts.
+	// Discovery is still triggered on an as-needed basis.
+	//
+	// +optional
+	RediscoveryLifetime float64 `json:"rediscoveryLifetime,omitzero"`
+	// The name of the parameter used to pass the refresh token.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	RefreshTokenParamName string `json:"refreshTokenParamName,omitzero"`
+	// Where to look for the refresh token: - `header`: search the HTTP headers -
+	// `query`: search the URL's query string - `body`: search the HTTP request
+	// body.
+	//
+	// +optional
+	RefreshTokenParamType []string `json:"refreshTokenParamType,omitempty"`
+	// Specifies whether the plugin should try to refresh (soon to be) expired
+	// access tokens if the plugin has a `refresh_token` available.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	RefreshTokens string `json:"refreshTokens,omitzero"`
+	// Forcibly enable or disable the proof key for code exchange.
+	// When not set the value is determined through the discovery using the value
+	// of `code_challenge_methods_supported`, and enabled automatically (in case
+	// the `code_challenge_methods_supported` is missing, the PKCE will not be
+	// enabled).
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	RequireProofKeyForCodeExchange string `json:"requireProofKeyForCodeExchange,omitzero"`
+	// Forcibly enable or disable the pushed authorization requests.
+	// When not set the value is determined through the discovery using the value
+	// of `require_pushed_authorization_requests` (which defaults to `false`).
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	RequirePushedAuthorizationRequests string `json:"requirePushedAuthorizationRequests,omitzero"`
+	// Forcibly enable or disable the usage of signed request object on
+	// authorization or pushed authorization endpoint.
+	// When not set the value is determined through the discovery using the value
+	// of `require_signed_request_object`, and enabled automatically (in case the
+	// `require_signed_request_object` is missing, the feature will not be
+	// enabled).
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	RequireSignedRequestObject string `json:"requireSignedRequestObject,omitzero"`
+	// Distributed claims are represented by the `_claim_names` and
+	// `_claim_sources` members of the JSON object containing the claims.
+	// If this parameter is set to `true`, the plugin explicitly resolves these
+	// distributed claims.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ResolveDistributedClaims string `json:"resolveDistributedClaims,omitzero"`
+	// Response mode passed to the authorization endpoint: - `query`: for
+	// parameters in query string - `form_post`: for parameters in request body -
+	// `fragment`: for parameters in uri fragment (rarely useful as the plugin
+	// itself cannot read it) - `query.jwt`, `form_post.jwt`, `fragment.jwt`:
+	// similar to `query`, `form_post` and `fragment` but the parameters are
+	// encoded in a JWT - `jwt`: shortcut that indicates the default encoding for
+	// the requested response type.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=form_post;form_post.jwt;fragment;fragment.jwt;jwt;query;query.jwt
+	ResponseMode string `json:"responseMode,omitzero"`
+	// The response type passed to the authorization endpoint.
+	//
+	// +optional
+	ResponseType []string `json:"responseType,omitempty"`
+	// Specifies whether to always verify tokens stored in the session.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Reverify string `json:"reverify,omitzero"`
+	// The revocation endpoint.
+	// If set it overrides the value in `revocation_endpoint` returned by the
+	// discovery endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	RevocationEndpoint string `json:"revocationEndpoint,omitzero"`
+	// The revocation endpoint authentication method: : `client_secret_basic`,
+	// `client_secret_post`, `client_secret_jwt`, `private_key_jwt`,
+	// `tls_client_auth`, `self_signed_tls_client_auth`, or `none`: do not
+	// authenticate
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=client_secret_basic;client_secret_jwt;client_secret_post;none;private_key_jwt;self_signed_tls_client_auth;tls_client_auth
+	RevocationEndpointAuthMethod string `json:"revocationEndpointAuthMethod,omitzero"`
+	// Designate token's parameter name for revocation.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	RevocationTokenParamName string `json:"revocationTokenParamName,omitzero"`
+	// The claim that contains the roles.
+	// If multiple values are set, it means the claim is inside a nested object of
+	// the token payload.
+	//
+	// +optional
+	RolesClaim []string `json:"rolesClaim,omitempty"`
+	// The roles (`roles_claim` claim) required to be present in the access token
+	// (or introspection results) for successful authorization.
+	// This config parameter works in both **AND** / **OR** cases.
+	//
+	// +optional
+	RolesRequired []string `json:"rolesRequired,omitempty"`
+	// Specifies whether to run this plugin on pre-flight (`OPTIONS`) requests.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	RunOnPreflight string `json:"runOnPreflight,omitzero"`
+	// The scopes passed to the authorization and token endpoints.
+	//
+	// +optional
+	Scopes []string `json:"scopes,omitempty"`
+	// The claim that contains the scopes.
+	// If multiple values are set, it means the claim is inside a nested object of
+	// the token payload.
+	//
+	// +optional
+	ScopesClaim []string `json:"scopesClaim,omitempty"`
+	// The scopes (`scopes_claim` claim) required to be present in the access token
+	// (or introspection results) for successful authorization.
+	// This config parameter works in both **AND** / **OR** cases.
+	//
+	// +optional
+	ScopesRequired []string `json:"scopesRequired,omitempty"`
+	// Specify whether to use the user info endpoint to get additional claims for
+	// consumer mapping, credential mapping, authenticated groups, and upstream and
+	// downstream headers.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SearchUserInfo string `json:"searchUserInfo,omitzero"`
+	// Limits how long the session can be renewed in seconds, until
+	// re-authentication is required.
+	// 0 disables the checks.
+	//
+	// +optional
+	SessionAbsoluteTimeout float64 `json:"sessionAbsoluteTimeout,omitzero"`
+	// The session audience, which is the intended target application.
+	// For example `"my-application"`.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SessionAudience string `json:"sessionAudience,omitzero"`
+	// Bind the session to data acquired from the HTTP request or connection.
+	//
+	// +optional
+	SessionBind []string `json:"sessionBind,omitempty"`
+	// The session cookie Domain flag.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SessionCookieDomain string `json:"sessionCookieDomain,omitzero"`
+	// Forbids JavaScript from accessing the cookie, for example, through the
+	// `Document.cookie` property.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SessionCookieHTTPOnly string `json:"sessionCookieHTTPOnly,omitzero"`
+	// The session cookie name.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SessionCookieName string `json:"sessionCookieName,omitzero"`
+	// The session cookie Path flag.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SessionCookiePath string `json:"sessionCookiePath,omitzero"`
+	// Controls whether a cookie is sent with cross-origin requests, providing some
+	// protection against cross-site request forgery attacks.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=Default;Lax;None;Strict
+	SessionCookieSameSite string `json:"sessionCookieSameSite,omitzero"`
+	// Cookie is only sent to the server when a request is made with the https:
+	// scheme (except on localhost), and therefore is more resistant to
+	// man-in-the-middle attacks.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SessionCookieSecure string `json:"sessionCookieSecure,omitzero"`
+	// When set to `true`, audiences are forced to share the same subject.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SessionEnforceSameSubject string `json:"sessionEnforceSameSubject,omitzero"`
+	// When set to `true`, the storage key (session ID) is hashed for extra
+	// security.
+	// Hashing the storage key means it is impossible to decrypt data from the
+	// storage without a cookie.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SessionHashStorageKey string `json:"sessionHashStorageKey,omitzero"`
+	// When set to `true`, the value of subject is hashed before being stored.
+	// Only applies when `session_store_metadata` is enabled.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SessionHashSubject string `json:"sessionHashSubject,omitzero"`
+	// Specifies how long the session can be inactive until it is considered
+	// invalid in seconds.
+	// 0 disables the checks and touching.
+	//
+	// +optional
+	SessionIdlingTimeout float64 `json:"sessionIdlingTimeout,omitzero"`
+	// The memcached host.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SessionMemcachedHost string `json:"sessionMemcachedHost,omitzero"`
+	// The memcached port.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
+	SessionMemcachedPort int `json:"sessionMemcachedPort,omitzero"`
+	// The memcached session key prefix.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SessionMemcachedPrefix string `json:"sessionMemcachedPrefix,omitzero"`
+	// The memcached unix socket path.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SessionMemcachedSocket string `json:"sessionMemcachedSocket,omitzero"`
+	// If set to true, uses SSL to connect to memcached
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SessionMemcachedSSL string `json:"sessionMemcachedSSL,omitzero"`
+	// If set to true, verifies the validity of the memcached server SSL
+	// certificate
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SessionMemcachedSSLVerify string `json:"sessionMemcachedSSLVerify,omitzero"`
+	// Enables or disables persistent sessions.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SessionRemember string `json:"sessionRemember,omitzero"`
+	// Limits how long the persistent session can be renewed in seconds, until
+	// re-authentication is required.
+	// 0 disables the checks.
+	//
+	// +optional
+	SessionRememberAbsoluteTimeout float64 `json:"sessionRememberAbsoluteTimeout,omitzero"`
+	// Persistent session cookie name.
+	// Use with the `remember` configuration parameter.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SessionRememberCookieName string `json:"sessionRememberCookieName,omitzero"`
+	// Specifies how long the persistent session is considered valid in seconds.
+	// 0 disables the checks and rolling.
+	//
+	// +optional
+	SessionRememberRollingTimeout float64 `json:"sessionRememberRollingTimeout,omitzero"`
+	// Set of headers to send to upstream, use id, audience, subject, timeout,
+	// idling-timeout, rolling-timeout, absolute-timeout.
+	// E.g.
+	// `[ "id", "timeout" ]` will set Session-Id and Session-Timeout request
+	// headers.
+	//
+	// +optional
+	SessionRequestHeaders []string `json:"sessionRequestHeaders,omitempty"`
+	// Set of headers to send to downstream, use id, audience, subject, timeout,
+	// idling-timeout, rolling-timeout, absolute-timeout.
+	// E.g.
+	// `[ "id", "timeout" ]` will set Session-Id and Session-Timeout response
+	// headers.
+	//
+	// +optional
+	SessionResponseHeaders []string `json:"sessionResponseHeaders,omitempty"`
+	// Specifies how long the session can be used in seconds until it needs to be
+	// renewed.
+	// 0 disables the checks and rolling.
+	//
+	// +optional
+	SessionRollingTimeout float64 `json:"sessionRollingTimeout,omitzero"`
+	// The session secret.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SessionSecret string `json:"sessionSecret,omitzero"`
+	// The session storage for session data: - `cookie`: stores session data with
+	// the session cookie (the session cannot be invalidated or revoked without
+	// changing session secret, but is stateless, and doesn't require a database) -
+	// `memcache`: stores session data in memcached - `redis`: stores session data
+	// in Redis.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=cookie;memcache;memcached;redis
+	SessionStorage string `json:"sessionStorage,omitzero"`
+	// Configures whether or not session metadata should be stored.
+	// This metadata includes information about the active sessions for a specific
+	// audience belonging to a specific subject.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SessionStoreMetadata string `json:"sessionStoreMetadata,omitzero"`
+	// Verify identity provider server certificate.
+	// If set to `true`, the plugin uses the CA certificate set in the `kong.conf`
+	// config parameter `lua_ssl_trusted_certificate`.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSLVerify string `json:"sslVerify,omitzero"`
+	// Network IO timeout in milliseconds.
+	//
+	// +optional
+	Timeout float64 `json:"timeout,omitzero"`
+	// ID of the Certificate entity representing the client certificate to use for
+	// mTLS client authentication for connections between Kong and the Auth Server.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	TLSClientAuthCertID string `json:"tlsClientAuthCertID,omitzero"`
+	// Verify identity provider server certificate during mTLS client
+	// authentication.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	TLSClientAuthSSLVerify string `json:"tlsClientAuthSSLVerify,omitzero"`
+	// Include the scope in the token cache key, so token with different scopes are
+	// considered diffrent tokens.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	TokenCacheKeyIncludeScope string `json:"tokenCacheKeyIncludeScope,omitzero"`
+	// The token endpoint.
+	// If set it overrides the value in `token_endpoint` returned by the discovery
+	// endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	TokenEndpoint string `json:"tokenEndpoint,omitzero"`
+	// The token endpoint authentication method: `client_secret_basic`,
+	// `client_secret_post`, `client_secret_jwt`, `private_key_jwt`,
+	// `tls_client_auth`, `self_signed_tls_client_auth`, or `none`: do not
+	// authenticate
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=client_secret_basic;client_secret_jwt;client_secret_post;none;private_key_jwt;self_signed_tls_client_auth;tls_client_auth
+	TokenEndpointAuthMethod string `json:"tokenEndpointAuthMethod,omitzero"`
+	// Details on how to accept tokens from other identity providers.
+	//
+	// +optional
+	TokenExchange AIGWOpenIDConnectGeneratedConfigTokenExchange `json:"tokenExchange,omitzero"`
+	// Endpoint used to perform the legacy token exchange.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	TokenExchangeEndpoint string `json:"tokenExchangeEndpoint,omitzero"`
+	// Extra headers passed from the client to the token endpoint.
+	//
+	// +optional
+	TokenHeadersClient []string `json:"tokenHeadersClient,omitempty"`
+	// Enable the sending of the token endpoint response headers only with certain
+	// grants: - `password`: with OAuth password grant - `client_credentials`: with
+	// OAuth client credentials grant - `authorization_code`: with authorization
+	// code flow - `refresh_token` with refresh token grant.
+	//
+	// +optional
+	TokenHeadersGrants []string `json:"tokenHeadersGrants,omitempty"`
+	// Extra header names passed to the token endpoint.
+	//
+	// +optional
+	TokenHeadersNames []string `json:"tokenHeadersNames,omitempty"`
+	// Add a prefix to the token endpoint response headers before forwarding them
+	// to the downstream client.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	TokenHeadersPrefix string `json:"tokenHeadersPrefix,omitzero"`
+	// The names of token endpoint response headers to forward to the downstream
+	// client.
+	//
+	// +optional
+	TokenHeadersReplay []string `json:"tokenHeadersReplay,omitempty"`
+	// Extra header values passed to the token endpoint.
+	//
+	// +optional
+	TokenHeadersValues []string `json:"tokenHeadersValues,omitempty"`
+	// Pass extra arguments from the client to the OpenID-Connect plugin.
+	// If arguments exist, the client can pass them using: - Query parameters -
+	// Request Body - Request Header This parameter can be used with `scope`
+	// values, like this: `config.token_post_args_client=scope` In this case, the
+	// token would take the `scope` value from the query parameter or from the
+	// request body or from the header and send it to the token endpoint.
+	//
+	// +optional
+	TokenPostArgsClient []string `json:"tokenPostArgsClient,omitempty"`
+	// Extra post argument names passed to the token endpoint.
+	//
+	// +optional
+	TokenPostArgsNames []string `json:"tokenPostArgsNames,omitempty"`
+	// Extra post argument values passed to the token endpoint.
+	//
+	// +optional
+	TokenPostArgsValues []string `json:"tokenPostArgsValues,omitempty"`
+	// Destroy any active session for the unauthorized requests.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	UnauthorizedDestroySession string `json:"unauthorizedDestroySession,omitzero"`
+	// The error message for the unauthorized requests (when not using the
+	// redirection).
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UnauthorizedErrorMessage string `json:"unauthorizedErrorMessage,omitzero"`
+	// Where to redirect the client on unauthorized requests.
+	//
+	// +optional
+	UnauthorizedRedirectURI []string `json:"unauthorizedRedirectURI,omitempty"`
+	// Where to redirect the client when unexpected errors happen with the
+	// requests.
+	//
+	// +optional
+	UnexpectedRedirectURI []string `json:"unexpectedRedirectURI,omitempty"`
+	// The upstream access token header.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamAccessTokenHeader string `json:"upstreamAccessTokenHeader,omitzero"`
+	// The upstream access token JWK header.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamAccessTokenJwkHeader string `json:"upstreamAccessTokenJwkHeader,omitzero"`
+	// The upstream claim to header mappings.
+	//
+	// +optional
+	UpstreamHeaders []AIGWOpenIDConnectGeneratedConfigUpstreamHeaders `json:"upstreamHeaders,omitempty"`
+	// The upstream header claims. Only top level claims are supported.
+	//
+	// +optional
+	UpstreamHeadersClaims []string `json:"upstreamHeadersClaims,omitempty"`
+	// The upstream header names for the claim values.
+	//
+	// +optional
+	UpstreamHeadersNames []string `json:"upstreamHeadersNames,omitempty"`
+	// The upstream id token header.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamIDTokenHeader string `json:"upstreamIDTokenHeader,omitzero"`
+	// The upstream id token JWK header.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamIDTokenJwkHeader string `json:"upstreamIDTokenJwkHeader,omitzero"`
+	// The upstream introspection header.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamIntrospectionHeader string `json:"upstreamIntrospectionHeader,omitzero"`
+	// The upstream introspection JWT header.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamIntrospectionJwtHeader string `json:"upstreamIntrospectionJwtHeader,omitzero"`
+	// The upstream refresh token header.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamRefreshTokenHeader string `json:"upstreamRefreshTokenHeader,omitzero"`
+	// The upstream session id header.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamSessionIDHeader string `json:"upstreamSessionIDHeader,omitzero"`
+	// The upstream user info header.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamUserInfoHeader string `json:"upstreamUserInfoHeader,omitzero"`
+	// The upstream user info JWT header (in case the user info returns a JWT
+	// response).
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamUserInfoJwtHeader string `json:"upstreamUserInfoJwtHeader,omitzero"`
+	// The value of `Accept` header for user info requests: - `application/json`:
+	// user info response as JSON - `application/jwt`: user info response as JWT
+	// (from the obsolete IETF draft document).
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=application/json;application/jwt
+	UserinfoAccept string `json:"userinfoAccept,omitzero"`
+	// The user info endpoint.
+	// If set it overrides the value in `userinfo_endpoint` returned by the
+	// discovery endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UserinfoEndpoint string `json:"userinfoEndpoint,omitzero"`
+	// Extra headers passed from the client to the user info endpoint.
+	//
+	// +optional
+	UserinfoHeadersClient []string `json:"userinfoHeadersClient,omitempty"`
+	// Extra header names passed to the user info endpoint.
+	//
+	// +optional
+	UserinfoHeadersNames []string `json:"userinfoHeadersNames,omitempty"`
+	// Extra header values passed to the user info endpoint.
+	//
+	// +optional
+	UserinfoHeadersValues []string `json:"userinfoHeadersValues,omitempty"`
+	// Extra query arguments passed from the client to the user info endpoint.
+	//
+	// +optional
+	UserinfoQueryArgsClient []string `json:"userinfoQueryArgsClient,omitempty"`
+	// Extra query argument names passed to the user info endpoint.
+	//
+	// +optional
+	UserinfoQueryArgsNames []string `json:"userinfoQueryArgsNames,omitempty"`
+	// Extra query argument values passed to the user info endpoint.
+	//
+	// +optional
+	UserinfoQueryArgsValues []string `json:"userinfoQueryArgsValues,omitempty"`
+	// If the plugin uses a pseudo issuer.
+	// When set to true, the plugin will not discover the configuration from the
+	// issuer URL specified with `config.issuer`.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	UsingPseudoIssuer string `json:"usingPseudoIssuer,omitzero"`
+	// Verify tokens for standard claims.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	VerifyClaims string `json:"verifyClaims,omitzero"`
+	// Verify nonce on authorization code flow.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	VerifyNonce string `json:"verifyNonce,omitzero"`
+	// Verify plugin configuration against discovery.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	VerifyParameters string `json:"verifyParameters,omitzero"`
+	// Verify the cryptographic signature of tokens.
+	// Disabling this skips verification for every token source, including tokens
+	// presented directly by clients (bearer); this is insecure for that path.
+	// To trust only tokens fetched from the identity provider for specific grants,
+	// use `ignore_signature` instead, which never affects bearer tokens.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	VerifySignature string `json:"verifySignature,omitzero"`
+}
+
+// AIGWOpenIDConnectGeneratedConfigClientJwk The JWK used for the
+// private_key_jwt authentication.
+type AIGWOpenIDConnectGeneratedConfigClientJwk struct {
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Alg string `json:"alg,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Crv string `json:"crv,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	D string `json:"d,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Dp string `json:"dp,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Dq string `json:"dq,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	E string `json:"e,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Issuer string `json:"issuer,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	K string `json:"k,omitzero"`
+	//
+	//
+	// +optional
+	KeyOps []string `json:"keyOps,omitempty"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Kid string `json:"kid,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Kty string `json:"kty,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	N string `json:"n,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Oth string `json:"oth,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	P string `json:"p,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Q string `json:"q,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Qi string `json:"qi,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	R string `json:"r,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	T string `json:"t,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Use string `json:"use,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	X string `json:"x,omitzero"`
+	//
+	//
+	// +optional
+	X5c []string `json:"x5c,omitempty"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	X5t string `json:"x5t,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	X5tS256 string `json:"x5t#S256,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	X5u string `json:"x5u,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Y string `json:"y,omitzero"`
+}
+
+// AIGWOpenIDConnectGeneratedConfigClusterCacheRedis is a type alias.
+type AIGWOpenIDConnectGeneratedConfigClusterCacheRedis struct {
+	// Cloud auth related configs for connecting to a Cloud Provider's Redis
+	// instance.
+	//
+	// +optional
+	CloudAuthentication AIGWOpenIDConnectGeneratedConfigClusterCacheRedisCloudAuthentication `json:"cloudAuthentication,omitzero"`
+	// Maximum retry attempts for redirection.
+	//
+	// +optional
+	ClusterMaxRedirections int `json:"clusterMaxRedirections,omitzero"`
+	// Cluster addresses to use for Redis connections when the `redis` strategy is
+	// defined.
+	// Defining this field implies using a Redis Cluster.
+	// The minimum length of the array is 1 element.
+	//
+	// +optional
+	ClusterNodes []AIGWOpenIDConnectGeneratedConfigClusterCacheRedisClusterNodes `json:"clusterNodes,omitempty"`
+	// An integer representing a timeout in milliseconds.
+	// Must be between 0 and 2^31-2.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
+	ConnectTimeout int `json:"connectTimeout,omitzero"`
+	// If the connection to Redis is proxied (e.g.
+	// Envoy), set it `true`.
+	// Set the `host` and `port` to point to the proxy address.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ConnectionIsProxied string `json:"connectionIsProxied,omitzero"`
+	// Database to use for the Redis connection when using the `redis` strategy
+	//
+	// +optional
+	Database int `json:"database,omitzero"`
+	// A string representing a host name, such as example.com.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	// Limits the total number of opened connections for a pool.
+	// If the connection pool is full, connection queues above the limit go into
+	// the backlog queue.
+	// If the backlog queue is full, subsequent connect operations fail and return
+	// `nil`.
+	// Queued operations (subject to set timeouts) resume once the number of
+	// connections in the pool is less than `keepalive_pool_size`.
+	// If latency is high or throughput is low, try increasing this value.
+	// Empirically, this value is larger than `keepalive_pool_size`.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
+	KeepaliveBacklog int `json:"keepaliveBacklog,omitzero"`
+	// The size limit for every cosocket connection pool associated with every
+	// remote server, per worker process.
+	// If neither `keepalive_pool_size` nor `keepalive_backlog` is specified, no
+	// pool is created.
+	// If `keepalive_pool_size` isn't specified but `keepalive_backlog` is
+	// specified, then the pool uses the default value.
+	// Try to increase (e.g.
+	// 512) this value if latency is high or throughput is low.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2147483646
+	KeepalivePoolSize int `json:"keepalivePoolSize,omitzero"`
+	// Password to use for Redis connections.
+	// If undefined, no AUTH commands are sent to Redis.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Password string `json:"password,omitzero"`
+	// An integer representing a port number between 0 and 65535, inclusive.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
+	Port int `json:"port,omitzero"`
+	// An integer representing a timeout in milliseconds.
+	// Must be between 0 and 2^31-2.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
+	ReadTimeout int `json:"readTimeout,omitzero"`
+	// An integer representing a timeout in milliseconds.
+	// Must be between 0 and 2^31-2.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
+	SendTimeout int `json:"sendTimeout,omitzero"`
+	// Sentinel master to use for Redis connections.
+	// Defining this value implies using Redis Sentinel.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SentinelMaster string `json:"sentinelMaster,omitzero"`
+	// Sentinel node addresses to use for Redis connections when the `redis`
+	// strategy is defined.
+	// Defining this field implies using a Redis Sentinel.
+	// The minimum length of the array is 1 element.
+	//
+	// +optional
+	SentinelNodes []AIGWOpenIDConnectGeneratedConfigClusterCacheRedisSentinelNodes `json:"sentinelNodes,omitempty"`
+	// Sentinel password to authenticate with a Redis Sentinel instance.
+	// If undefined, no AUTH commands are sent to Redis Sentinels.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SentinelPassword string `json:"sentinelPassword,omitzero"`
+	// Sentinel role to use for Redis connections when the `redis` strategy is
+	// defined.
+	// Defining this value implies using Redis Sentinel.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=any;master;slave
+	SentinelRole string `json:"sentinelRole,omitzero"`
+	// Sentinel username to authenticate with a Redis Sentinel instance.
+	// If undefined, ACL authentication won't be performed.
+	// This requires Redis v6.2.0+.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SentinelUsername string `json:"sentinelUsername,omitzero"`
+	// A string representing an SNI (server name indication) value for TLS.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	ServerName string `json:"serverName,omitzero"`
+	// If set to true, uses SSL to connect to Redis.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSL string `json:"ssl,omitzero"`
+	// If set to true, verifies the validity of the server SSL certificate.
+	// If setting this parameter, also configure `lua_ssl_trusted_certificate` in
+	// `kong.conf` to specify the CA (or server) certificate used by your Redis
+	// server.
+	// You may also need to configure `lua_ssl_verify_depth` accordingly.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSLVerify string `json:"sslVerify,omitzero"`
+	// Username to use for Redis connections.
+	// If undefined, ACL authentication won't be performed.
+	// This requires Redis v6.0.0+.
+	// To be compatible with Redis v5.x.y, you can set it to `default`.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Username string `json:"username,omitzero"`
+}
+
+// AIGWOpenIDConnectGeneratedConfigClusterCacheRedisCloudAuthentication Cloud
+// auth related configs for connecting to a Cloud Provider's Redis instance.
+type AIGWOpenIDConnectGeneratedConfigClusterCacheRedisCloudAuthentication struct {
+	// Auth providers to be used to authenticate to a Cloud Provider's Redis
+	// instance.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=aws;azure;gcp
+	AuthProvider string `json:"authProvider,omitzero"`
+	// AWS Access Key ID to be used for authentication when `auth_provider` is set
+	// to `aws`.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AwsAccessKeyID string `json:"awsAccessKeyID,omitzero"`
+	// The ARN of the IAM role to assume for generating ElastiCache IAM
+	// authentication tokens.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AwsAssumeRoleArn string `json:"awsAssumeRoleArn,omitzero"`
+	// The name of the AWS Elasticache cluster when `auth_provider` is set to
+	// `aws`.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AwsCacheName string `json:"awsCacheName,omitzero"`
+	// This flag specifies whether the cluster is serverless when auth_provider is
+	// set to `aws`.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	AwsIsServerless string `json:"awsIsServerless,omitzero"`
+	// The region of the AWS ElastiCache cluster when `auth_provider` is set to
+	// `aws`.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AwsRegion string `json:"awsRegion,omitzero"`
+	// The session name for the temporary credentials when assuming the IAM role.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AwsRoleSessionName string `json:"awsRoleSessionName,omitzero"`
+	// AWS Secret Access Key to be used for authentication when `auth_provider` is
+	// set to `aws`.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AwsSecretAccessKey string `json:"awsSecretAccessKey,omitzero"`
+	// Azure Client ID to be used for authentication when `auth_provider` is set to
+	// `azure`.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AzureClientID string `json:"azureClientID,omitzero"`
+	// Azure Client Secret to be used for authentication when `auth_provider` is
+	// set to `azure`.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AzureClientSecret string `json:"azureClientSecret,omitzero"`
+	// Azure Tenant ID to be used for authentication when `auth_provider` is set to
+	// `azure`.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AzureTenantID string `json:"azureTenantID,omitzero"`
+	// GCP Service Account JSON to be used for authentication when `auth_provider`
+	// is set to `gcp`.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	GcpServiceAccountJSON string `json:"gcpServiceAccountJSON,omitzero"`
+}
+
+// AIGWOpenIDConnectGeneratedConfigClusterCacheRedisClusterNodes Cluster
+// addresses to use for Redis connections when the `redis` strategy is defined.
+// Defining this field implies using a Redis Cluster.
+// The minimum length of the array is 1 element.
+type AIGWOpenIDConnectGeneratedConfigClusterCacheRedisClusterNodes struct {
+	// A string representing a host name, such as example.com.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	IP string `json:"ip,omitzero"`
+	// An integer representing a port number between 0 and 65535, inclusive.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
+	Port int `json:"port,omitzero"`
+}
+
+// AIGWOpenIDConnectGeneratedConfigClusterCacheRedisSentinelNodes Sentinel node
+// addresses to use for Redis connections when the `redis` strategy is defined.
+// Defining this field implies using a Redis Sentinel.
+// The minimum length of the array is 1 element.
+type AIGWOpenIDConnectGeneratedConfigClusterCacheRedisSentinelNodes struct {
+	// A string representing a host name, such as example.com.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	// An integer representing a port number between 0 and 65535, inclusive.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
+	Port int `json:"port,omitzero"`
+}
+
+// AIGWOpenIDConnectGeneratedConfigDownstreamHeaders The downstream claim to
+// header mappings.
+type AIGWOpenIDConnectGeneratedConfigDownstreamHeaders struct {
+	// The name of the header.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Header string `json:"header,omitzero"`
+	// The path of the header value.
+	//
+	// +required
+	Path []string `json:"path,omitempty"`
+}
+
+// AIGWOpenIDConnectGeneratedConfigPrincipals Configuration for Kong Identity
+// principal hydration after token verification.
+type AIGWOpenIDConnectGeneratedConfigPrincipals struct {
+	// The Kong Identity directory instance to look up against.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Directory string `json:"directory,omitzero"`
+	// When true, query Kong Identity to map a Principal after token verification.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// When true (default), return 401 if fail to match a Principal in Kong
+	// Identity after token verification.
+	// When false, the request continues without authenticated_principal set.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ErrorOnMiss string `json:"errorOnMiss,omitzero"`
+	// If a Consumer is attached to the matched Principal in Kong Identity, load it
+	// and set it in the request context, overriding consumer_by.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	MatchConsumer string `json:"matchConsumer,omitzero"`
+	// If Consumer Groups are attached to the matched Principal in Kong Identity,
+	// load them, overriding consumer_groups_claim.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	MatchConsumerGroups string `json:"matchConsumerGroups,omitzero"`
+	// Custom identity name for a type=custom Kong Identity lookup.
+	// When absent and principal_claim is set, an OIDC lookup is performed using
+	// principal_claim as the claim name instead of 'sub'.
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	PrincipalBy string `json:"principalBy,omitzero"`
+	// Token claim to use for the Kong Identity lookup.
+	// If multiple values are set, it means the claim is inside a nested object of
+	// the token payload.
+	// When principal_by is also set, performs a custom identity lookup
+	// (type=custom).
+	// When set alone, performs an OIDC lookup using this claim name instead of the
+	// default 'sub'.
+	//
+	// +optional
+	PrincipalClaim []string `json:"principalClaim,omitempty"`
+}
+
+// AIGWOpenIDConnectGeneratedConfigRedis is a type alias.
+type AIGWOpenIDConnectGeneratedConfigRedis struct {
+	// Cloud auth related configs for connecting to a Cloud Provider's Redis
+	// instance.
+	//
+	// +optional
+	CloudAuthentication AIGWOpenIDConnectGeneratedConfigRedisCloudAuthentication `json:"cloudAuthentication,omitzero"`
+	// Maximum retry attempts for redirection.
+	//
+	// +optional
+	ClusterMaxRedirections int `json:"clusterMaxRedirections,omitzero"`
+	// Cluster addresses to use for Redis connections when the `redis` strategy is
+	// defined.
+	// Defining this field implies using a Redis Cluster.
+	// The minimum length of the array is 1 element.
+	//
+	// +optional
+	ClusterNodes []AIGWOpenIDConnectGeneratedConfigRedisClusterNodes `json:"clusterNodes,omitempty"`
+	// An integer representing a timeout in milliseconds.
+	// Must be between 0 and 2^31-2.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
+	ConnectTimeout int `json:"connectTimeout,omitzero"`
+	// If the connection to Redis is proxied (e.g.
+	// Envoy), set it `true`.
+	// Set the `host` and `port` to point to the proxy address.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ConnectionIsProxied string `json:"connectionIsProxied,omitzero"`
+	// Database to use for the Redis connection when using the `redis` strategy
+	//
+	// +optional
+	Database int `json:"database,omitzero"`
+	// A string representing a host name, such as example.com.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	// Limits the total number of opened connections for a pool.
+	// If the connection pool is full, connection queues above the limit go into
+	// the backlog queue.
+	// If the backlog queue is full, subsequent connect operations fail and return
+	// `nil`.
+	// Queued operations (subject to set timeouts) resume once the number of
+	// connections in the pool is less than `keepalive_pool_size`.
+	// If latency is high or throughput is low, try increasing this value.
+	// Empirically, this value is larger than `keepalive_pool_size`.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
+	KeepaliveBacklog int `json:"keepaliveBacklog,omitzero"`
+	// The size limit for every cosocket connection pool associated with every
+	// remote server, per worker process.
+	// If neither `keepalive_pool_size` nor `keepalive_backlog` is specified, no
+	// pool is created.
+	// If `keepalive_pool_size` isn't specified but `keepalive_backlog` is
+	// specified, then the pool uses the default value.
+	// Try to increase (e.g.
+	// 512) this value if latency is high or throughput is low.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2147483646
+	KeepalivePoolSize int `json:"keepalivePoolSize,omitzero"`
+	// Password to use for Redis connections.
+	// If undefined, no AUTH commands are sent to Redis.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Password string `json:"password,omitzero"`
+	// An integer representing a port number between 0 and 65535, inclusive.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
+	Port int `json:"port,omitzero"`
+	// The Redis session key prefix.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Prefix string `json:"prefix,omitzero"`
+	// An integer representing a timeout in milliseconds.
+	// Must be between 0 and 2^31-2.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
+	ReadTimeout int `json:"readTimeout,omitzero"`
+	// An integer representing a timeout in milliseconds.
+	// Must be between 0 and 2^31-2.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
+	SendTimeout int `json:"sendTimeout,omitzero"`
+	// Sentinel master to use for Redis connections.
+	// Defining this value implies using Redis Sentinel.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SentinelMaster string `json:"sentinelMaster,omitzero"`
+	// Sentinel node addresses to use for Redis connections when the `redis`
+	// strategy is defined.
+	// Defining this field implies using a Redis Sentinel.
+	// The minimum length of the array is 1 element.
+	//
+	// +optional
+	SentinelNodes []AIGWOpenIDConnectGeneratedConfigRedisSentinelNodes `json:"sentinelNodes,omitempty"`
+	// Sentinel password to authenticate with a Redis Sentinel instance.
+	// If undefined, no AUTH commands are sent to Redis Sentinels.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SentinelPassword string `json:"sentinelPassword,omitzero"`
+	// Sentinel role to use for Redis connections when the `redis` strategy is
+	// defined.
+	// Defining this value implies using Redis Sentinel.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=any;master;slave
+	SentinelRole string `json:"sentinelRole,omitzero"`
+	// Sentinel username to authenticate with a Redis Sentinel instance.
+	// If undefined, ACL authentication won't be performed.
+	// This requires Redis v6.2.0+.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SentinelUsername string `json:"sentinelUsername,omitzero"`
+	// A string representing an SNI (server name indication) value for TLS.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	ServerName string `json:"serverName,omitzero"`
+	// The Redis unix socket path.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Socket string `json:"socket,omitzero"`
+	// If set to true, uses SSL to connect to Redis.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSL string `json:"ssl,omitzero"`
+	// If set to true, verifies the validity of the server SSL certificate.
+	// If setting this parameter, also configure `lua_ssl_trusted_certificate` in
+	// `kong.conf` to specify the CA (or server) certificate used by your Redis
+	// server.
+	// You may also need to configure `lua_ssl_verify_depth` accordingly.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSLVerify string `json:"sslVerify,omitzero"`
+	// Username to use for Redis connections.
+	// If undefined, ACL authentication won't be performed.
+	// This requires Redis v6.0.0+.
+	// To be compatible with Redis v5.x.y, you can set it to `default`.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Username string `json:"username,omitzero"`
+}
+
+// AIGWOpenIDConnectGeneratedConfigRedisCloudAuthentication Cloud auth related
+// configs for connecting to a Cloud Provider's Redis instance.
+type AIGWOpenIDConnectGeneratedConfigRedisCloudAuthentication struct {
+	// Auth providers to be used to authenticate to a Cloud Provider's Redis
+	// instance.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=aws;azure;gcp
+	AuthProvider string `json:"authProvider,omitzero"`
+	// AWS Access Key ID to be used for authentication when `auth_provider` is set
+	// to `aws`.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AwsAccessKeyID string `json:"awsAccessKeyID,omitzero"`
+	// The ARN of the IAM role to assume for generating ElastiCache IAM
+	// authentication tokens.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AwsAssumeRoleArn string `json:"awsAssumeRoleArn,omitzero"`
+	// The name of the AWS Elasticache cluster when `auth_provider` is set to
+	// `aws`.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AwsCacheName string `json:"awsCacheName,omitzero"`
+	// This flag specifies whether the cluster is serverless when auth_provider is
+	// set to `aws`.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	AwsIsServerless string `json:"awsIsServerless,omitzero"`
+	// The region of the AWS ElastiCache cluster when `auth_provider` is set to
+	// `aws`.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AwsRegion string `json:"awsRegion,omitzero"`
+	// The session name for the temporary credentials when assuming the IAM role.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AwsRoleSessionName string `json:"awsRoleSessionName,omitzero"`
+	// AWS Secret Access Key to be used for authentication when `auth_provider` is
+	// set to `aws`.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AwsSecretAccessKey string `json:"awsSecretAccessKey,omitzero"`
+	// Azure Client ID to be used for authentication when `auth_provider` is set to
+	// `azure`.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AzureClientID string `json:"azureClientID,omitzero"`
+	// Azure Client Secret to be used for authentication when `auth_provider` is
+	// set to `azure`.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AzureClientSecret string `json:"azureClientSecret,omitzero"`
+	// Azure Tenant ID to be used for authentication when `auth_provider` is set to
+	// `azure`.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AzureTenantID string `json:"azureTenantID,omitzero"`
+	// GCP Service Account JSON to be used for authentication when `auth_provider`
+	// is set to `gcp`.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	GcpServiceAccountJSON string `json:"gcpServiceAccountJSON,omitzero"`
+}
+
+// AIGWOpenIDConnectGeneratedConfigRedisClusterNodes Cluster addresses to use
+// for Redis connections when the `redis` strategy is defined.
+// Defining this field implies using a Redis Cluster.
+// The minimum length of the array is 1 element.
+type AIGWOpenIDConnectGeneratedConfigRedisClusterNodes struct {
+	// A string representing a host name, such as example.com.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	IP string `json:"ip,omitzero"`
+	// An integer representing a port number between 0 and 65535, inclusive.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
+	Port int `json:"port,omitzero"`
+}
+
+// AIGWOpenIDConnectGeneratedConfigRedisSentinelNodes Sentinel node addresses to
+// use for Redis connections when the `redis` strategy is defined.
+// Defining this field implies using a Redis Sentinel.
+// The minimum length of the array is 1 element.
+type AIGWOpenIDConnectGeneratedConfigRedisSentinelNodes struct {
+	// A string representing a host name, such as example.com.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	// An integer representing a port number between 0 and 65535, inclusive.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
+	Port int `json:"port,omitzero"`
+}
+
+// AIGWOpenIDConnectGeneratedConfigTokenExchange Details on how to accept tokens
+// from other identity providers.
+type AIGWOpenIDConnectGeneratedConfigTokenExchange struct {
+	// Cache support for token exchange
+	//
+	// +optional
+	Cache AIGWOpenIDConnectGeneratedConfigTokenExchangeCache `json:"cache,omitzero"`
+	// Parameters used in the token exchange request.
+	//
+	// +optional
+	Request AIGWOpenIDConnectGeneratedConfigTokenExchangeRequest `json:"request,omitzero"`
+	// Trusted token issuers from which the upstream may accept tokens to be
+	// exchanged.
+	// If a JWT bearer matches all the conditions of a subject token issuer item,
+	// the token will be exchanged.
+	//
+	// +required
+	SubjectTokenIssuers []AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuers `json:"subjectTokenIssuers,omitempty"`
+}
+
+// AIGWOpenIDConnectGeneratedConfigTokenExchangeCache Cache support for token
+// exchange
+type AIGWOpenIDConnectGeneratedConfigTokenExchangeCache struct {
+	// Whether to enable caching.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// Cache ttl in seconds used when caching exchanged tokens, use it to override
+	// `conf.cache_ttl`.
+	// Token expiry will be used if shorter than this value.
+	//
+	// +optional
+	Ttl int `json:"ttl,omitzero"`
+}
+
+// AIGWOpenIDConnectGeneratedConfigTokenExchangeRequest Parameters used in the
+// token exchange request.
+type AIGWOpenIDConnectGeneratedConfigTokenExchangeRequest struct {
+	// Audiences used in the token exchange request.
+	// Values defined here override those defined in `config.audience`.
+	//
+	// +optional
+	Audience []string `json:"audience,omitempty"`
+	// Use empty audiences.
+	// Use this field to override audiences defined in `config.audience`.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	EmptyAudience string `json:"emptyAudience,omitzero"`
+	// Use empty scopes.
+	// Use this field to override scopes defined in `config.scopes`.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	EmptyScopes string `json:"emptyScopes,omitzero"`
+	// Scopes used in the token exchange request.
+	// Values defined here override those defined in `config.scopes`.
+	//
+	// +optional
+	Scopes []string `json:"scopes,omitempty"`
+}
+
+// AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuers Trusted
+// token issuers from which the upstream may accept tokens to be exchanged.
+// If a JWT bearer matches all the conditions of a subject token issuer item,
+// the token will be exchanged.
+type AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuers struct {
+	// A tokens will only be exchange when it matches all these criteria.
+	// To exchanging tokens issued from a different issuer, conditions must not be
+	// defined; On the contrary, to exchange tokens issued from the target issuer
+	// itself, conditions must be defined.
+	//
+	// +optional
+	Conditions AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuersConditions `json:"conditions,omitzero"`
+	// Tokens of whose iss claim matches this value will be exchanged.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Issuer string `json:"issuer,omitzero"`
+}
+
+// AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuersConditions A
+// tokens will only be exchange when it matches all these criteria.
+// To exchanging tokens issued from a different issuer, conditions must not be
+// defined; On the contrary, to exchange tokens issued from the target issuer
+// itself, conditions must be defined.
+type AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuersConditions struct {
+	//
+	//
+	// +optional
+	HasAudience []string `json:"hasAudience,omitempty"`
+	//
+	//
+	// +optional
+	HasScopes []string `json:"hasScopes,omitempty"`
+	//
+	//
+	// +optional
+	MissingAudience []string `json:"missingAudience,omitempty"`
+	//
+	//
+	// +optional
+	MissingScopes []string `json:"missingScopes,omitempty"`
+}
+
+// AIGWOpenIDConnectGeneratedConfigUpstreamHeaders The upstream claim to header
+// mappings.
+type AIGWOpenIDConnectGeneratedConfigUpstreamHeaders struct {
+	// The name of the header.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Header string `json:"header,omitzero"`
+	// The path of the header value.
+	//
+	// +required
+	Path []string `json:"path,omitempty"`
+}
+
 // AIGatewayACLS Access control rules.
 // Configure exactly one of `allow` or `deny`.
 type AIGatewayACLS map[string]string
@@ -165,15 +2467,10 @@ type AIGatewayAllowACL struct {
 
 // AIGatewayAuthStrategyKeyAuth Configuration for an auth strategy.
 type AIGatewayAuthStrategyKeyAuth struct {
-	// Configuration for the key-auth auth strategy.
-	// For advanced use cases, additional config properties can be sent in the
-	// request body.
-	// See: https://developer.konghq.com/plugins/key-auth/reference/ for the list
-	// of properties
 	//
 	//
 	// +optional
-	Config AIGatewayAuthStrategyKeyAuthConfig `json:"config,omitzero"`
+	Config AIGWKeyAuthGeneratedConfig `json:"config,omitzero"`
 	// The display name for this auth strategy instance.
 	//
 	// +required
@@ -211,95 +2508,14 @@ type AIGatewayAuthStrategyKeyAuth struct {
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-}
-
-// AIGatewayAuthStrategyKeyAuthConfig Configuration for the key-auth auth
-// strategy.
-// For advanced use cases, additional config properties can be sent in the
-// request body.
-// See: https://developer.konghq.com/plugins/key-auth/reference/ for the list of
-// properties
-type AIGatewayAuthStrategyKeyAuthConfig struct {
-	// An optional boolean value telling the plugin to show or hide the credential
-	// from the upstream service.
-	// If true, the plugin strips the credential from the request.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	HideCredentials string `json:"hideCredentials,omitzero"`
-	// If enabled, reads the request body.
-	// Supported MIME types: application/www-form-urlencoded, application/json, and
-	// multipart/form-data.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	KeyInBody string `json:"keyInBody,omitzero"`
-	// If enabled (default), the plugin reads the request header and tries to find
-	// the key in it.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	KeyInHeader string `json:"keyInHeader,omitzero"`
-	// If enabled (default), the plugin reads the query parameter in the request
-	// and tries to find the key in it.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	KeyInQuery string `json:"keyInQuery,omitzero"`
-	// An array of strings containing the names of the keys to look for in the
-	// request.
-	//
-	//
-	// +optional
-	KeyNames []string `json:"keyNames,omitempty"`
-	// Authenticate against Kong Identity instead of local credentials.
-	// Mutually exclusive with identity realms.
-	//
-	//
-	// +optional
-	Principals AIGatewayAuthStrategyKeyAuthConfigPrincipals `json:"principals,omitzero"`
-}
-
-// AIGatewayAuthStrategyKeyAuthConfigPrincipals Authenticate against Kong
-// Identity instead of local credentials.
-// Mutually exclusive with identity realms.
-type AIGatewayAuthStrategyKeyAuthConfigPrincipals struct {
-	// The Kong Identity directory instance to authenticate against.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9_-]+$`
-	Directory string `json:"directory,omitzero"`
-	// When true, authenticate against Kong Identity instead of local credentials.
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Enabled string `json:"enabled,omitzero"`
-	// When true (default), reject the request if no matching principal is found in
-	// Kong Identity.
-	// When false, allow the request to continue unauthenticated instead.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	ErrorOnMiss string `json:"errorOnMiss,omitzero"`
 }
 
 // AIGatewayAuthStrategyOpenIDConnect Configuration for an auth strategy.
 type AIGatewayAuthStrategyOpenIDConnect struct {
-	// Configuration for the OpenID Connect auth strategy.
-	// For advanced use cases, additional config properties can be sent in the
-	// request body.
-	// See: https://developer.konghq.com/plugins/openid-connect/reference/ for the
-	// list of properties
 	//
 	//
 	// +optional
-	Config AIGatewayAuthStrategyOpenIDConnectConfig `json:"config,omitzero"`
+	Config AIGWOpenIDConnectGeneratedConfig `json:"config,omitzero"`
 	// The display name for this auth strategy instance.
 	//
 	// +required
@@ -337,257 +2553,6 @@ type AIGatewayAuthStrategyOpenIDConnect struct {
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-}
-
-// AIGatewayAuthStrategyOpenIDConnectConfig Configuration for the OpenID Connect
-// auth strategy.
-// For advanced use cases, additional config properties can be sent in the
-// request body.
-// See: https://developer.konghq.com/plugins/openid-connect/reference/ for the
-// list of properties
-type AIGatewayAuthStrategyOpenIDConnectConfig struct {
-	// Audiences required in the access token or introspection response.
-	//
-	// +optional
-	AudienceRequired []string `json:"audienceRequired,omitempty"`
-	// Types of credentials/grants to enable.
-	//
-	// +optional
-	AuthMethods []string `json:"authMethods,omitempty"`
-	// Cache introspection endpoint requests.
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	CacheIntrospection string `json:"cacheIntrospection,omitzero"`
-	// Salt used for generating the cache key that is used for caching the token
-	// endpoint requests.
-	//
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	CacheTokensSalt string `json:"cacheTokensSalt,omitzero"`
-	// Algorithm to use for `client_secret_jwt` or `private_key_jwt`
-	// authentication.
-	//
-	// +optional
-	ClientAlg []string `json:"clientAlg,omitempty"`
-	// Client authentication methods used with the identity provider.
-	//
-	// +optional
-	ClientAuth []string `json:"clientAuth,omitempty"`
-	// An array of strings representing the client id for the OpenID Connect
-	// provider.
-	// When multiple values are provided, the client ID and secrets pairs
-	// correspond based on their locations in the array.
-	//
-	//
-	// +optional
-	ClientID []string `json:"clientID,omitempty"`
-	// An array of strings representing the client secret for the OpenID Connect
-	// provider.
-	// When multiple values are provided, the client ID and secrets pairs
-	// correspond based on their locations in the array.
-	//
-	//
-	// +optional
-	ClientSecret []SensitiveDataSource `json:"clientSecret,omitempty"`
-	// Consumer fields used when mapping a token claim to a Kong consumer.
-	//
-	// +optional
-	ConsumerBy []string `json:"consumerBy,omitempty"`
-	// An array containing an array of string paths representing the location of
-	// the claim in a nested object.
-	// For example, to map to user.info.id, set [ "user", "info", "id" ].
-	//
-	//
-	// +optional
-	ConsumerClaims [][]string `json:"consumerClaims,omitempty"`
-	// The claim used for consumer groups mapping.
-	// If multiple values are set, it means the claim is inside a nested object of
-	// the token payload.
-	//
-	//
-	// +optional
-	ConsumerGroupsClaim []string `json:"consumerGroupsClaim,omitempty"`
-	// Do not terminate the request if consumer groups mapping fails.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	ConsumerGroupsOptional string `json:"consumerGroupsOptional,omitzero"`
-	// Do not terminate the request if consumer mapping fails.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	ConsumerOptional string `json:"consumerOptional,omitzero"`
-	// Claim path used to derive virtual credentials when consumer mapping is not
-	// used.
-	//
-	// +optional
-	CredentialClaim []string `json:"credentialClaim,omitempty"`
-	// Remove credentials used for authentication before proxying the request
-	// upstream.
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	HideCredentials string `json:"hideCredentials,omitzero"`
-	// HTTP proxy used for identity provider requests.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	HTTPProxy string `json:"httpProxy,omitzero"`
-	// Authorization header value sent to the HTTP proxy.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	HTTPProxyAuthorization string `json:"httpProxyAuthorization,omitzero"`
-	// HTTP version used for identity provider requests.
-	//
-	// +optional
-	HTTPVersion float64 `json:"httpVersion,omitzero"`
-	// HTTPS proxy used for identity provider requests.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	HTTPSProxy string `json:"httpsProxy,omitzero"`
-	// Authorization header value sent to the HTTPS proxy.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	HTTPSProxyAuthorization string `json:"httpsProxyAuthorization,omitzero"`
-	// Overrides the introspection endpoint returned by discovery.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	IntrospectionEndpoint string `json:"introspectionEndpoint,omitzero"`
-	// URL that identifies the OpenID Provider
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Issuer string `json:"issuer,omitzero"`
-	// Overrides the JWKS endpoint returned by discovery.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	JwksEndpoint string `json:"jwksEndpoint,omitzero"`
-	// Reuse HTTP client connections for identity provider requests.
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Keepalive string `json:"keepalive,omitzero"`
-	// Leeway, in seconds, for validating token time claims.
-	//
-	// +optional
-	// +kubebuilder:validation:Minimum=0
-	Leeway int `json:"leeway,omitzero"`
-	// mTLS alias for the introspection endpoint.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	MtlsIntrospectionEndpoint string `json:"mtlsIntrospectionEndpoint,omitzero"`
-	// Comma-separated hosts that bypass the configured proxies.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	NoProxy string `json:"noProxy,omitzero"`
-	// Map a request to a Kong Identity principal after token verification.
-	//
-	// +optional
-	Principals AIGatewayAuthStrategyOpenIDConnectConfigPrincipals `json:"principals,omitzero"`
-	// This field is referenceable.
-	//
-	//
-	// +optional
-	Scopes []string `json:"scopes,omitempty"`
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	SSLVerify string `json:"sslVerify,omitzero"`
-	// Network I/O timeout, in milliseconds, for identity provider requests.
-	//
-	// +optional
-	// +kubebuilder:validation:Minimum=0
-	Timeout int `json:"timeout,omitzero"`
-	// Map token claims to upstream headers using path-based access.
-	//
-	// +optional
-	UpstreamHeaders []AIGatewayAuthStrategyOpenIDConnectConfigUpstreamHeaders `json:"upstreamHeaders,omitempty"`
-}
-
-// AIGatewayAuthStrategyOpenIDConnectConfigPrincipals Map a request to a Kong
-// Identity principal after token verification.
-type AIGatewayAuthStrategyOpenIDConnectConfigPrincipals struct {
-	// The Kong Identity directory instance to look up against.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9_-]+$`
-	Directory string `json:"directory,omitzero"`
-	// When true, look up a Kong Identity principal after token verification.
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Enabled string `json:"enabled,omitzero"`
-	// When true (default), reject the request if no principal is matched in Kong
-	// Identity after token
-	// verification.
-	// When false, the request continues without an authenticated principal set.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	ErrorOnMiss string `json:"errorOnMiss,omitzero"`
-	// If a consumer is attached to the matched principal, load it and set it in
-	// the request context,
-	// overriding consumer_by.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	MatchConsumer string `json:"matchConsumer,omitzero"`
-	// If consumer groups are attached to the matched principal, load them,
-	// overriding consumer_groups_claim.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	MatchConsumerGroups string `json:"matchConsumerGroups,omitzero"`
-	// Custom identity name for a custom Kong Identity lookup.
-	// When absent and principal_claim is set,
-	// a lookup is performed using principal_claim as the claim name instead of the
-	// default sub claim.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	PrincipalBy string `json:"principalBy,omitzero"`
-	// Token claim used for the Kong Identity lookup.
-	// If multiple values are set, the claim is inside a
-	// nested object of the token payload.
-	// Used together with, or instead of, principal_by.
-	//
-	//
-	// +optional
-	PrincipalClaim []string `json:"principalClaim,omitempty"`
-}
-
-// AIGatewayAuthStrategyOpenIDConnectConfigUpstreamHeaders Map token claims to
-// upstream headers using path-based access.
-type AIGatewayAuthStrategyOpenIDConnectConfigUpstreamHeaders struct {
-	// The name of the header.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Header string `json:"header,omitzero"`
-	// The path of the header value.
-	//
-	// +required
-	Path []string `json:"path,omitempty"`
 }
 
 // AIGatewayAuthStrategyReference Reference to an auth strategy instance by
@@ -1027,7 +2992,8 @@ type AIGatewayMCPConversionTool struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:MaxLength=128
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]+$`
 	Name string `json:"name,omitzero"`
 	//
 	//
@@ -3094,7 +5060,8 @@ type AIGatewayMCPUpstreamTool struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:MaxLength=128
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._-]+$`
 	Name string `json:"name,omitzero"`
 	// The entire `outputSchema` section for the tool.
 	// Overrides the upstream server's `outputSchema`
@@ -8639,6 +10606,7 @@ type AIGatewayTargetAnthropicConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -8651,6 +10619,7 @@ type AIGatewayTargetAnthropicConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -8672,6 +10641,7 @@ type AIGatewayTargetAnthropicConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -8689,6 +10659,7 @@ type AIGatewayTargetAnthropicConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -8706,18 +10677,22 @@ type AIGatewayTargetAnthropicConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -8741,6 +10716,7 @@ type AIGatewayTargetAzureConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -8753,6 +10729,7 @@ type AIGatewayTargetAzureConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -8793,6 +10770,7 @@ type AIGatewayTargetAzureConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -8810,6 +10788,7 @@ type AIGatewayTargetAzureConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -8827,18 +10806,22 @@ type AIGatewayTargetAzureConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -8857,6 +10840,7 @@ type AIGatewayTargetBedrockConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -8869,6 +10853,7 @@ type AIGatewayTargetBedrockConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -8895,6 +10880,7 @@ type AIGatewayTargetBedrockConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -8912,6 +10898,7 @@ type AIGatewayTargetBedrockConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -8941,18 +10928,22 @@ type AIGatewayTargetBedrockConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -8971,6 +10962,7 @@ type AIGatewayTargetCerebrasConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -8983,6 +10975,7 @@ type AIGatewayTargetCerebrasConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -9004,6 +10997,7 @@ type AIGatewayTargetCerebrasConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -9021,6 +11015,7 @@ type AIGatewayTargetCerebrasConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -9038,18 +11033,22 @@ type AIGatewayTargetCerebrasConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -9071,6 +11070,7 @@ type AIGatewayTargetCohereConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -9083,6 +11083,7 @@ type AIGatewayTargetCohereConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -9110,6 +11111,7 @@ type AIGatewayTargetCohereConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -9127,6 +11129,7 @@ type AIGatewayTargetCohereConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -9144,18 +11147,22 @@ type AIGatewayTargetCohereConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -9688,6 +11695,7 @@ type AIGatewayTargetDashscopeConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -9700,6 +11708,7 @@ type AIGatewayTargetDashscopeConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -9721,6 +11730,7 @@ type AIGatewayTargetDashscopeConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -9743,6 +11753,7 @@ type AIGatewayTargetDashscopeConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -9760,18 +11771,22 @@ type AIGatewayTargetDashscopeConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -9786,6 +11801,7 @@ type AIGatewayTargetDatabricksConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -9798,6 +11814,7 @@ type AIGatewayTargetDatabricksConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -9819,6 +11836,7 @@ type AIGatewayTargetDatabricksConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -9836,6 +11854,7 @@ type AIGatewayTargetDatabricksConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -9853,18 +11872,22 @@ type AIGatewayTargetDatabricksConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -9884,6 +11907,7 @@ type AIGatewayTargetDeepseekConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -9896,6 +11920,7 @@ type AIGatewayTargetDeepseekConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -9917,6 +11942,7 @@ type AIGatewayTargetDeepseekConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -9934,6 +11960,7 @@ type AIGatewayTargetDeepseekConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -9951,18 +11978,22 @@ type AIGatewayTargetDeepseekConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -9976,6 +12007,7 @@ type AIGatewayTargetGeminiConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -9988,6 +12020,7 @@ type AIGatewayTargetGeminiConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -10013,6 +12046,7 @@ type AIGatewayTargetGeminiConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -10030,6 +12064,7 @@ type AIGatewayTargetGeminiConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -10047,18 +12082,22 @@ type AIGatewayTargetGeminiConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -10073,6 +12112,7 @@ type AIGatewayTargetHuggingfaceConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -10085,6 +12125,7 @@ type AIGatewayTargetHuggingfaceConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -10106,6 +12147,7 @@ type AIGatewayTargetHuggingfaceConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -10123,6 +12165,7 @@ type AIGatewayTargetHuggingfaceConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -10140,18 +12183,22 @@ type AIGatewayTargetHuggingfaceConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -10176,6 +12223,7 @@ type AIGatewayTargetKimiConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -10188,6 +12236,7 @@ type AIGatewayTargetKimiConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -10209,6 +12258,7 @@ type AIGatewayTargetKimiConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -10233,6 +12283,7 @@ type AIGatewayTargetKimiConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -10250,18 +12301,22 @@ type AIGatewayTargetKimiConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -10275,6 +12330,7 @@ type AIGatewayTargetLlama2Config struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -10287,6 +12343,7 @@ type AIGatewayTargetLlama2Config struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -10315,6 +12372,7 @@ type AIGatewayTargetLlama2Config struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -10332,6 +12390,7 @@ type AIGatewayTargetLlama2Config struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -10349,18 +12408,22 @@ type AIGatewayTargetLlama2Config struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -10375,6 +12438,7 @@ type AIGatewayTargetMistralConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -10387,6 +12451,7 @@ type AIGatewayTargetMistralConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -10415,6 +12480,7 @@ type AIGatewayTargetMistralConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -10432,6 +12498,7 @@ type AIGatewayTargetMistralConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -10449,18 +12516,22 @@ type AIGatewayTargetMistralConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -10474,6 +12545,7 @@ type AIGatewayTargetOllamaConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -10486,6 +12558,7 @@ type AIGatewayTargetOllamaConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -10507,6 +12580,7 @@ type AIGatewayTargetOllamaConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -10524,6 +12598,7 @@ type AIGatewayTargetOllamaConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -10541,18 +12616,22 @@ type AIGatewayTargetOllamaConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -10566,6 +12645,7 @@ type AIGatewayTargetOpenaiConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -10578,6 +12658,7 @@ type AIGatewayTargetOpenaiConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -10599,6 +12680,7 @@ type AIGatewayTargetOpenaiConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -10616,6 +12698,7 @@ type AIGatewayTargetOpenaiConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -10633,18 +12716,22 @@ type AIGatewayTargetOpenaiConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -10663,6 +12750,7 @@ type AIGatewayTargetSagemakerConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -10675,6 +12763,7 @@ type AIGatewayTargetSagemakerConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -10696,6 +12785,7 @@ type AIGatewayTargetSagemakerConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -10713,6 +12803,7 @@ type AIGatewayTargetSagemakerConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -10734,18 +12825,22 @@ type AIGatewayTargetSagemakerConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -10807,10 +12902,12 @@ type AIGatewayTargetTypesafeConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -10825,6 +12922,7 @@ type AIGatewayTargetVercelConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -10837,6 +12935,7 @@ type AIGatewayTargetVercelConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -10858,6 +12957,7 @@ type AIGatewayTargetVercelConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -10875,6 +12975,7 @@ type AIGatewayTargetVercelConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -10892,18 +12993,22 @@ type AIGatewayTargetVercelConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -10917,6 +13022,7 @@ type AIGatewayTargetVllmConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -10929,6 +13035,7 @@ type AIGatewayTargetVllmConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -10950,6 +13057,7 @@ type AIGatewayTargetVllmConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -10967,6 +13075,7 @@ type AIGatewayTargetVllmConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -10984,18 +13093,22 @@ type AIGatewayTargetVllmConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//
@@ -11010,6 +13123,7 @@ type AIGatewayTargetXaiConfig struct {
 	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
 	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
 	// tokens.
@@ -11022,6 +13136,7 @@ type AIGatewayTargetXaiConfig struct {
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
 	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
 	// Configure this when the upstream provider charges differently for different
@@ -11043,6 +13158,7 @@ type AIGatewayTargetXaiConfig struct {
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	InputCost float64 `json:"inputCost,omitzero"`
 	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
 	// Set it for models that price each modality separately.
@@ -11060,6 +13176,7 @@ type AIGatewayTargetXaiConfig struct {
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
 	OutputCost float64 `json:"outputCost,omitzero"`
 	// Per-modality override of `output_cost`, in cost per 1M output tokens.
 	// Set it for models that price each modality separately.
@@ -11077,18 +13194,22 @@ type AIGatewayTargetXaiConfig struct {
 	// Higher values produce more varied responses.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
 	Temperature float64 `json:"temperature,omitzero"`
 	// Limits the number of highest-probability tokens considered during
 	// generation.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
+	// +kubebuilder:validation:Maximum=500
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
 	TopP float64 `json:"topP,omitzero"`
 	// The upstream URL for the model endpoint.
 	//

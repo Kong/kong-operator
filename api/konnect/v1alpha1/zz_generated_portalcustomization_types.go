@@ -60,7 +60,7 @@ type PortalCustomizationAPISpec struct {
 	// +kubebuilder:validation:MaxLength=253
 	Css *string `json:"css,omitempty"`
 
-	//
+	// This property is deprecated and is not used by the portal.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
@@ -82,7 +82,7 @@ type PortalCustomizationAPISpec struct {
 	// +optional
 	SpecRenderer SpecRenderer `json:"specRenderer,omitzero"`
 
-	//
+	// The theme settings for this portal.
 	//
 	// +optional
 	Theme Theme `json:"theme,omitzero"`
@@ -178,7 +178,7 @@ type SpecRenderer struct {
 	TryItUi string `json:"tryItUi,omitzero"`
 }
 
-// Theme is a type alias.
+// Theme The theme settings for this portal.
 type Theme struct {
 	//
 	//
@@ -190,7 +190,10 @@ type Theme struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=light;dark;system
 	Mode string `json:"mode,omitzero"`
-	//
+	// The theme name to apply to this portal.
+	// Supported names are 'ocean' and 'glacier'.
+	// If another name is provided or this property is omitted, the portal uses the
+	// default 'ocean' theme.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
@@ -199,7 +202,8 @@ type Theme struct {
 
 // Colors is a type alias.
 type Colors struct {
-	//
+	// The primary accent color used in the portal's theme.
+	// Must be a valid hex color value.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253

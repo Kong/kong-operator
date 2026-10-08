@@ -64,6 +64,8 @@ spec:
                     maxLength: 253
                     type: string
                   layout:
+                    description: This property is deprecated and is not used by the
+                      portal.
                     maxLength: 253
                     type: string
                   menu:
@@ -262,12 +264,15 @@ spec:
                         type: string
                     type: object
                   theme:
-                    description: Theme is a type alias.
+                    description: The theme settings for this portal.
                     properties:
                       colors:
                         description: Colors is a type alias.
                         properties:
                           primary:
+                            description: |-
+                              The primary accent color used in the portal's theme.
+                              Must be a valid hex color value.
                             maxLength: 253
                             pattern: ^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$
                             type: string
@@ -280,6 +285,11 @@ spec:
                         maxLength: 253
                         type: string
                       name:
+                        description: |-
+                          The theme name to apply to this portal.
+                          Supported names are 'ocean' and 'glacier'.
+                          If another name is provided or this property is omitted, the portal uses the
+                          default 'ocean' theme.
                         maxLength: 253
                         type: string
                     type: object

@@ -102,6 +102,25 @@
 
 ### Changed
 
+- `AIGatewayModel`: `spec.apiSpec.{api,model}.config.route.model.pathParam`
+  is the plain name of the regex capture group defined in the route path,
+  e.g. route path `~/path/(?<model_name>[^/]+)` with `pathParam: model_name`.
+  [#5989](https://github.com/Kong/kong-operator/pull/5989)
+- `AIGatewayMCPServer`: conversion-tool and upstream-tool `name` entries
+  must now match `^[A-Za-z0-9._-]+$` and be at most 128 characters.
+  Existing entries outside these bounds are rejected by the CRD schema.
+  [#5989](https://github.com/Kong/kong-operator/pull/5989)
+- `AIGatewayModel`: target `config` fields gained bounds: `temperature` 0-5,
+  `topK` at most 500 (was 2147483646), `topP` 0-1, cost fields at least 0.
+  Existing values outside these bounds are rejected by the CRD schema.
+  [#5989](https://github.com/Kong/kong-operator/pull/5989)
+- `AIGatewayAuthStrategy`: key-auth and openid-connect `config` schemas were
+  updated. Notable
+  changes: `openid-connect.config.issuer` is now required, `leeway` and
+  `timeout` are numbers instead of integers, and the key-auth/openid-connect
+  config gained the new upstream plugin fields. Existing CRs with an empty
+  `openid-connect.config.issuer` are rejected by the CRD schema.
+  [#6002](https://github.com/Kong/kong-operator/pull/6002)
 - On-prem AI Gateway: `AIGatewayCustomPolicy` configuration entities
   referencing an `OnPremAIGateway` are now translated into the pushed
   configuration document. The entity gains an on-prem reconciler, and
