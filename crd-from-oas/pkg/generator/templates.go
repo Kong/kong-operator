@@ -1266,7 +1266,21 @@ func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) {{if .Nest
 	}
 {{- end}}
 {{- end}}
-{{- if .SingleValueObjectRef}}
+{{- if and .UnionMemberGoName .SingleValueObjectRef}}
+	if {{$path}}.{{.UnionMemberGoName}} == nil {
+		return nil
+	}
+	return []{{.TypeName}}{*{{$path}}.{{.UnionMemberGoName}}}
+{{- else if .UnionMemberGoName}}
+	var refs []{{.TypeName}}
+	for i := range {{$path}} {
+		if {{$path}}[i].{{.UnionMemberGoName}} == nil {
+			continue
+		}
+		refs = append(refs, *{{$path}}[i].{{.UnionMemberGoName}})
+	}
+	return refs
+{{- else if .SingleValueObjectRef}}
 	return []{{.TypeName}}{*{{$path}}}
 {{- else}}
 	return {{$path}}
@@ -1367,6 +1381,15 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 		// being deleted must not gain new users, which could keep their deletion
 		// blocked.
 		if !referenced.GetDeletionTimestamp().IsZero() {
+			errs = append(errs, ReferenceBeingDeletedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
+			continue
+		}
+{{- else if .ReverseWatch}}
+		// {{.DefaultKind}} objects being deleted must not gain new users, which
+		// could keep their deletion blocked: a referrer not created in Konnect
+		// yet can't use them, while existing ones keep syncing until they drop
+		// the reference.
+		if !referenced.GetDeletionTimestamp().IsZero() && obj.GetKonnectID() == "" {
 			errs = append(errs, ReferenceBeingDeletedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
 			continue
 		}
@@ -1512,6 +1535,12 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 	// object wrapping the resolved Konnect value under "{{.ObjectWrapKey}}",
 	// preserving sibling keys of its ancestors. A nil CRD ancestor pointer means
 	// that part of the config wasn't set, so the payload is left untouched.
+{{- else if .UnionMemberKey}}
+	// {{.Path}} may carry CR references: replace each reference object set to
+	// "{{.UnionMemberKey}}" in the SDK payload with one wrapping its resolved
+	// Konnect value under "{{.ObjectWrapKey}}", leaving reference objects set by
+	// Konnect ID or name untouched. A nil CRD ancestor pointer means that part
+	// of the config wasn't set, so the payload is left untouched.
 {{- else}}
 	// {{.Path}} carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
@@ -1526,9 +1555,13 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 {{- end}}
 {{- range .ParentNavs}}
 		{{.Var}}, _ := {{.Parent}}["{{.Key}}"].(map[string]any)
+{{- if .Optional}}
+		if {{.Var}} != nil {
+{{- else}}
 		if {{.Var}} == nil {
 			{{.Var}} = map[string]any{}
 		}
+{{- end}}
 {{- end}}
 {{- if .UnionVar}}
 		switch {
@@ -1582,6 +1615,38 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 			{{$inj.TargetVar}}["{{.LeafSDKKey}}"] = map[string]any{"{{$inj.ObjectWrapKey}}": resolved{{.ResolverName}}[0]}
 		}
 {{- end}}
+{{- else if .UnionMemberKey}}
+{{- range .Variants}}
+		resolved{{.ResolverName}}, err := resolve{{$.EntityName}}{{.ResolverName}}(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving {{.RefPath}} references: %w", err)
+		}
+{{- if $inj.UnionMemberArray}}
+		if arr, ok := {{$inj.TargetVar}}["{{.LeafSDKKey}}"].([]any); ok {
+			ri := 0
+			for i, e := range arr {
+				el, ok := e.(map[string]any)
+				if !ok {
+					continue
+				}
+				if _, has := el["{{$inj.UnionMemberKey}}"]; !has {
+					continue
+				}
+				if ri >= len(resolved{{.ResolverName}}) {
+					return nil, fmt.Errorf("resolving {{.RefPath}} references: more references set than the %d resolved", len(resolved{{.ResolverName}}))
+				}
+				arr[i] = map[string]any{"{{$inj.ObjectWrapKey}}": resolved{{.ResolverName}}[ri]}
+				ri++
+			}
+		}
+{{- else}}
+		if el, ok := {{$inj.TargetVar}}["{{.LeafSDKKey}}"].(map[string]any); ok && len(resolved{{.ResolverName}}) > 0 {
+			if _, has := el["{{$inj.UnionMemberKey}}"]; has {
+				{{$inj.TargetVar}}["{{.LeafSDKKey}}"] = map[string]any{"{{$inj.ObjectWrapKey}}": resolved{{.ResolverName}}[0]}
+			}
+		}
+{{- end}}
+{{- end}}
 {{- else}}
 {{- range .Variants}}
 		resolved{{.ResolverName}}, err := resolve{{$.EntityName}}{{.ResolverName}}(ctx, cl, obj)
@@ -1593,6 +1658,9 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 {{- end}}
 {{- range .ParentNavsReversed}}
 		{{.Parent}}["{{.Key}}"] = {{.Var}}
+{{- if .Optional}}
+		}
+{{- end}}
 {{- end}}
 {{- if .Cond}}
 	}
@@ -3435,6 +3503,7 @@ func get{{.Entity}}ForUID(
 	// getForUID implementation is added.
 	return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 {{- else if .UseUIDTagFilter}}
+{{- template "getForUIDPageLoopStart" .}}
 
 {{- if .GetForUIDFullyWrapped}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.GetForUIDWrappedType}}{
@@ -3442,17 +3511,20 @@ func get{{.Entity}}ForUID(
 		{{.SDKFieldName}}: {{.VarName}},
 		{{- end}}
 		Tags: new(UIDLabelForObject(obj)),
+		{{- template "getForUIDPageArgs" .}}
 	})
 {{- else if .Parents}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
 		Tags: new(UIDLabelForObject(obj)),
+		{{- template "getForUIDPageArgs" .}}
 	})
 {{- else if .ListCallStylePositional}}
-	resp, err := sdk.{{.ListSDKMethod}}(ctx, nil, nil)
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{template "getForUIDPositionalPageArgs" .}})
 {{- else}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		Tags: new(UIDLabelForObject(obj)),
+		{{- template "getForUIDPageArgs" .}}
 	})
 {{- end}}
 	if err != nil {
@@ -3476,24 +3548,30 @@ func get{{.Entity}}ForUID(
 			return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
 		}
 	}
+{{- template "getForUIDPageLoopEnd" .}}
 {{- else if .MatchFields}}
+{{- template "getForUIDPageLoopStart" .}}
 
 {{- if .GetForUIDFullyWrapped}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.GetForUIDWrappedType}}{
 		{{- range .Parents}}
 		{{.SDKFieldName}}: {{.VarName}},
 		{{- end}}
+		{{- template "getForUIDPageArgs" .}}
 	})
 {{- else if .ListCallPositionalWithParent}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, nil)
 {{- else if .Parents}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
+		{{- template "getForUIDPageArgs" .}}
 	})
 {{- else if .ListCallStylePositional}}
-	resp, err := sdk.{{.ListSDKMethod}}(ctx, nil, nil)
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{template "getForUIDPositionalPageArgs" .}})
 {{- else}}
-	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{})
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
+		{{- template "getForUIDPageArgs" .}}
+	})
 {{- end}}
 	if err != nil {
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
@@ -3510,10 +3588,6 @@ func get{{.Entity}}ForUID(
 	}
 {{- end}}
 
-	// TODO: only the first page of results is scanned. When the parent has more
-	// entries than the SDK's default page size, a matching entry on a later
-	// page is missed and getForUID returns NotFound. Tracked in
-	// https://github.com/Kong/kong-operator/issues/3987.
 	for _, entry := range {{.ListResponseItemsExpr}} {
 		{{- range .MatchFields}}
 		if !{{if .SliceMatch}}matchSliceField{{else if .SkipWhenUnset}}matchOptionalStringField{{else}}matchStringField{{end}}(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
@@ -3533,24 +3607,30 @@ func get{{.Entity}}ForUID(
 			return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
 		}
 	}
+{{- template "getForUIDPageLoopEnd" .}}
 {{- else if .RootUnion}}
+{{- template "getForUIDPageLoopStart" .}}
 
 {{- if .GetForUIDFullyWrapped}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.GetForUIDWrappedType}}{
 		{{- range .Parents}}
 		{{.SDKFieldName}}: {{.VarName}},
 		{{- end}}
+		{{- template "getForUIDPageArgs" .}}
 	})
 {{- else if .ListCallPositionalWithParent}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, nil)
 {{- else if .Parents}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
+		{{- template "getForUIDPageArgs" .}}
 	})
 {{- else if .ListCallStylePositional}}
-	resp, err := sdk.{{.ListSDKMethod}}(ctx, nil, nil)
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{template "getForUIDPositionalPageArgs" .}})
 {{- else}}
-	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{})
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
+		{{- template "getForUIDPageArgs" .}}
+	})
 {{- end}}
 	if err != nil {
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
@@ -3628,6 +3708,7 @@ func get{{.Entity}}ForUID(
 	default:
 		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 	}
+{{- template "getForUIDPageLoopEnd" .}}
 {{- else if .HasLabels}}
 
 	// Without a UID every unlabeled Konnect entity would match below.
@@ -3639,22 +3720,27 @@ func get{{.Entity}}ForUID(
 	// TODO: pass a Filter to {{.ListSDKMethod}} (e.g. by name/labels) so we
 	// do not page through every entity in the tenant. Filter types and
 	// fields are entity-specific; derive from OpenAPI schema.
+{{- template "getForUIDPageLoopStart" .}}
 {{- if .GetForUIDFullyWrapped}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.GetForUIDWrappedType}}{
 		{{- range .Parents}}
 		{{.SDKFieldName}}: {{.VarName}},
 		{{- end}}
+		{{- template "getForUIDPageArgs" .}}
 	})
 {{- else if .ListCallPositionalWithParent}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, nil)
 {{- else if .Parents}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
+		{{- template "getForUIDPageArgs" .}}
 	})
 {{- else if .ListCallStylePositional}}
-	resp, err := sdk.{{.ListSDKMethod}}(ctx, nil, nil)
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{template "getForUIDPositionalPageArgs" .}})
 {{- else}}
-	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{})
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
+		{{- template "getForUIDPageArgs" .}}
+	})
 {{- end}}
 	if err != nil {
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
@@ -3667,8 +3753,6 @@ func get{{.Entity}}ForUID(
 
 	// List items are root unions whose wrapper exposes no GetID()/GetLabels():
 	// read them from whichever variant is set.
-	// TODO: only the first page of results is scanned. Tracked in
-	// https://github.com/Kong/kong-operator/issues/3987.
 	for _, entry := range {{.ListResponseItemsExpr}} {
 		var (
 			id     string
@@ -3697,6 +3781,7 @@ func get{{.Entity}}ForUID(
 		}
 	}
 {{- end}}
+{{- template "getForUIDPageLoopEnd" .}}
 {{- else if .HasName}}
 
 	// TODO: {{.Entity}}'s Konnect list response lacks labels/tags so UID matching
@@ -3704,22 +3789,27 @@ func get{{.Entity}}ForUID(
 	// false positives when multiple entities share a name and cannot be
 	// improved here until Konnect exposes labels/tags on this type. Tracked in
 	// https://github.com/Kong/kong-operator/issues/3987
+{{- template "getForUIDPageLoopStart" .}}
 {{- if .GetForUIDFullyWrapped}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.GetForUIDWrappedType}}{
 		{{- range .Parents}}
 		{{.SDKFieldName}}: {{.VarName}},
 		{{- end}}
+		{{- template "getForUIDPageArgs" .}}
 	})
 {{- else if .ListCallPositionalWithParent}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, nil)
 {{- else if .Parents}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
+		{{- template "getForUIDPageArgs" .}}
 	})
 {{- else if .ListCallStylePositional}}
-	resp, err := sdk.{{.ListSDKMethod}}(ctx, nil, nil)
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{template "getForUIDPositionalPageArgs" .}})
 {{- else}}
-	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{})
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
+		{{- template "getForUIDPageArgs" .}}
+	})
 {{- end}}
 	if err != nil {
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
@@ -3739,6 +3829,7 @@ func get{{.Entity}}ForUID(
 		}
 		return *id, nil
 	}
+{{- template "getForUIDPageLoopEnd" .}}
 {{- else}}
 
 	// TODO: {{.Entity}}'s Konnect list response lacks labels/tags and no
@@ -3754,6 +3845,58 @@ func get{{.Entity}}ForUID(
 	return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 {{- end}}
 }
+{{- define "getForUIDPageLoopStart"}}
+{{- if eq .ListPagination "cursor"}}
+	var pageAfter *string
+	// Cursors already requested, to detect a next-page cursor that does not
+	// advance (directly or through a longer cycle).
+	seenCursors := map[string]struct{}{}
+	for {
+{{- else if eq .ListPagination "number"}}
+	for pageNumber := int64(1); ; pageNumber++ {
+{{- end}}
+{{- end}}
+{{- define "getForUIDPageLoopEnd"}}
+{{- if eq .ListPagination "cursor"}}
+
+	meta := resp.{{.ListResponseField}}.GetMeta()
+{{- if .ListMetaIsPage}}
+	if pageAfter, err = nextPageCursor(meta.GetNext(), seenCursors); err != nil {
+{{- else}}
+	page := meta.GetPage()
+	if pageAfter, err = nextPageCursor(page.GetNext(), seenCursors); err != nil {
+{{- end}}
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+	}
+	if pageAfter == nil {
+		break
+	}
+	}
+{{- else if eq .ListPagination "number"}}
+
+	meta := resp.{{.ListResponseField}}.GetMeta()
+	hasNext, err := hasNextNumberedPage(pageNumber, meta.GetPage(), len({{.ListResponseItemsExpr}}))
+	if err != nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+	}
+	if !hasNext {
+		break
+	}
+	}
+{{- end}}
+{{- end}}
+{{- define "getForUIDPageArgs"}}
+{{- if eq .ListPagination "cursor"}}
+		PageSize:  new(listPageSize),
+		PageAfter: pageAfter,
+{{- else if eq .ListPagination "number"}}
+		PageSize:   new(listPageSize),
+		PageNumber: new(pageNumber),
+{{- end}}
+{{- end}}
+{{- define "getForUIDPositionalPageArgs"}}
+{{- if eq .ListPagination "number"}}new(listPageSize), new(pageNumber){{else}}nil, nil{{end}}
+{{- end}}
 `
 
 // opsGetForUIDDispatcherTemplate renders zz_generated_ops_getforuid.go.

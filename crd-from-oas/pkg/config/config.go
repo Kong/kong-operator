@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -113,6 +114,17 @@ type ReferenceConfig struct {
 	// set, so the target keeps accepting literal values (e.g. built-in plugin
 	// names) while the reference offers an in-cluster alternative.
 	InjectInto string `yaml:"injectInto,omitempty"`
+	// UnionMember makes this an additive reference for a field whose OAS type
+	// is a by-id/by-name reference object (anyOf, e.g. TLSTrustBundleReference)
+	// or an array of them: instead of replacing the field's type, the generated
+	// ref struct is added to the reference object as one more mutually
+	// exclusive member under this JSON name (e.g. "namespacedRef"). Konnect IDs
+	// and names keep being accepted and sent as-is; only members set to the
+	// in-cluster reference are resolved and rewritten as
+	// {"<ResolvesTo>": <resolved value>} in the SDK payload. The reference
+	// object type gains the member wherever it is used, so every other field
+	// of that type must declare the same reference.
+	UnionMember string `yaml:"unionMember,omitempty"`
 	// Description is the doc comment of the field added for an InjectInto
 	// reference. Ignored otherwise: other references reuse the OAS field's
 	// description.
@@ -984,6 +996,9 @@ func equalKinds(a, b []string) bool {
 	return true
 }
 
+// unionMemberNameRegex matches a lowerCamelCase JSON field name.
+var unionMemberNameRegex = regexp.MustCompile(`^[a-z][a-zA-Z0-9]*$`)
+
 func (tc *TypeConfig) validate() error {
 	for _, ref := range tc.References {
 		if !strings.HasPrefix(ref.Path, "spec.apiSpec.") {
@@ -1009,6 +1024,14 @@ func (tc *TypeConfig) validate() error {
 			}
 			if ref.SupportCrossNamespaceReference {
 				return fmt.Errorf("reference %q: supportCrossNamespaceReference is not supported with injectInto", ref.Path)
+			}
+		}
+		if ref.UnionMember != "" {
+			if ref.InjectInto != "" {
+				return fmt.Errorf("reference %q: unionMember and injectInto are mutually exclusive", ref.Path)
+			}
+			if !unionMemberNameRegex.MatchString(ref.UnionMember) {
+				return fmt.Errorf("reference %q: unionMember must be a lowerCamelCase JSON field name, got %q", ref.Path, ref.UnionMember)
 			}
 		}
 		if ref.ReverseWatch && len(ref.Kinds) != 1 {

@@ -110,7 +110,7 @@ jobs:
       (github.event_name == 'pull_request_review' &&
       github.event.sender.type != 'Bot' &&
       github.event.review.state != 'commented'))
-    uses: Kong/ksai-public/.github/workflows/ksai-hold.yml@7e3d012f9cd9297ad7e90c0335a3864feb15b8fd # v3.127.4
+    uses: Kong/ksai-public/.github/workflows/ksai-hold.yml@86e9e205e61e0284e06261139334c9bbd2db9191 # v3.135.6
     permissions:
       contents: read       # download the action this call runs, which lives in a private repository
       pull-requests: write # dismiss an approval from somebody who contributed to the pull request

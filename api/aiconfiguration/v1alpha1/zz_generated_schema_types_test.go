@@ -7,6 +7,32 @@ import (
 	"testing"
 )
 
+func TestAIGWKeyAuthGeneratedConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGWKeyAuthGeneratedConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGWOpenIDConnectGeneratedConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGWOpenIDConnectGeneratedConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestAIGatewayAgentAccess_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 

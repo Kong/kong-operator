@@ -155,41 +155,56 @@ func getAIGatewayMCPServerForUID(
 	// TODO: pass a Filter to ListAiGatewayMcpServers (e.g. by name/labels) so we
 	// do not page through every entity in the tenant. Filter types and
 	// fields are entity-specific; derive from OpenAPI schema.
-	resp, err := sdk.ListAiGatewayMcpServers(ctx, sdkkonnectops.ListAiGatewayMcpServersRequest{
-		GatewayID: parentID,
-	})
-	if err != nil {
-		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
-	}
-	if resp == nil || resp.ListAIGatewayMCPServersResponse == nil {
-		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
-	}
-
-	// List items are root unions whose wrapper exposes no GetID()/GetLabels():
-	// read them from whichever variant is set.
-	// TODO: only the first page of results is scanned. Tracked in
-	// https://github.com/Kong/kong-operator/issues/3987.
-	for _, entry := range resp.ListAIGatewayMCPServersResponse.Data {
-		var (
-			id     string
-			labels map[string]string
-		)
-		switch {
-		case entry.AIGatewayMCPServerConversionOnlyResponse != nil:
-			id, labels = entry.AIGatewayMCPServerConversionOnlyResponse.GetID(), entry.AIGatewayMCPServerConversionOnlyResponse.GetLabels()
-		case entry.AIGatewayMCPServerConversionListenerResponse != nil:
-			id, labels = entry.AIGatewayMCPServerConversionListenerResponse.GetID(), entry.AIGatewayMCPServerConversionListenerResponse.GetLabels()
-		case entry.AIGatewayMCPServerListenerResponse != nil:
-			id, labels = entry.AIGatewayMCPServerListenerResponse.GetID(), entry.AIGatewayMCPServerListenerResponse.GetLabels()
-		case entry.AIGatewayMCPServerPassthroughListenerResponse != nil:
-			id, labels = entry.AIGatewayMCPServerPassthroughListenerResponse.GetID(), entry.AIGatewayMCPServerPassthroughListenerResponse.GetLabels()
-		case entry.AIGatewayMCPServerUpstreamServerResponse != nil:
-			id, labels = entry.AIGatewayMCPServerUpstreamServerResponse.GetID(), entry.AIGatewayMCPServerUpstreamServerResponse.GetLabels()
-		default:
-			continue
+	var pageAfter *string
+	// Cursors already requested, to detect a next-page cursor that does not
+	// advance (directly or through a longer cycle).
+	seenCursors := map[string]struct{}{}
+	for {
+		resp, err := sdk.ListAiGatewayMcpServers(ctx, sdkkonnectops.ListAiGatewayMcpServersRequest{
+			GatewayID: parentID,
+			PageSize:  new(listPageSize),
+			PageAfter: pageAfter,
+		})
+		if err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
 		}
-		if id != "" && labels[KubernetesUIDLabelKey] == uid {
-			return id, nil
+		if resp == nil || resp.ListAIGatewayMCPServersResponse == nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+		}
+
+		// List items are root unions whose wrapper exposes no GetID()/GetLabels():
+		// read them from whichever variant is set.
+		for _, entry := range resp.ListAIGatewayMCPServersResponse.Data {
+			var (
+				id     string
+				labels map[string]string
+			)
+			switch {
+			case entry.AIGatewayMCPServerConversionOnlyResponse != nil:
+				id, labels = entry.AIGatewayMCPServerConversionOnlyResponse.GetID(), entry.AIGatewayMCPServerConversionOnlyResponse.GetLabels()
+			case entry.AIGatewayMCPServerConversionListenerResponse != nil:
+				id, labels = entry.AIGatewayMCPServerConversionListenerResponse.GetID(), entry.AIGatewayMCPServerConversionListenerResponse.GetLabels()
+			case entry.AIGatewayMCPServerListenerResponse != nil:
+				id, labels = entry.AIGatewayMCPServerListenerResponse.GetID(), entry.AIGatewayMCPServerListenerResponse.GetLabels()
+			case entry.AIGatewayMCPServerPassthroughListenerResponse != nil:
+				id, labels = entry.AIGatewayMCPServerPassthroughListenerResponse.GetID(), entry.AIGatewayMCPServerPassthroughListenerResponse.GetLabels()
+			case entry.AIGatewayMCPServerUpstreamServerResponse != nil:
+				id, labels = entry.AIGatewayMCPServerUpstreamServerResponse.GetID(), entry.AIGatewayMCPServerUpstreamServerResponse.GetLabels()
+			default:
+				continue
+			}
+			if id != "" && labels[KubernetesUIDLabelKey] == uid {
+				return id, nil
+			}
+		}
+
+		meta := resp.ListAIGatewayMCPServersResponse.GetMeta()
+		page := meta.GetPage()
+		if pageAfter, err = nextPageCursor(page.GetNext(), seenCursors); err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+		}
+		if pageAfter == nil {
+			break
 		}
 	}
 

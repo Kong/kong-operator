@@ -23,6 +23,7 @@ func TestGetPortalIPAllowListForUID_MatchesAllowedIPs(t *testing.T) {
 
 	sdk.EXPECT().
 		ListPortalIPAllowList(mock.Anything, sdkkonnectops.ListPortalIPAllowListRequest{
+			PageSize: new(listPageSize),
 			PortalID: "portal-1",
 		}).
 		Return(&sdkkonnectops.ListPortalIPAllowListResponse{

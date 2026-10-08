@@ -25,6 +25,26 @@ func TestPageAfterCursorFromNextPageURL(t *testing.T) {
 			expected: "cursor-1",
 		},
 		{
+			name:     "bare cursor, as AI Gateway sub-collections return",
+			next:     "flAVCgRYQxdFUEMBFA19RlxFMWZWXVsUDUYKUxhKRBRXFkZQRg",
+			expected: "flAVCgRYQxdFUEMBFA19RlxFMWZWXVsUDUYKUxhKRBRXFkZQRg",
+		},
+		{
+			name:     "bare base64 cursor starting with a slash",
+			next:     "/0Y+UQJaUFpyUkcRQ0JFBkdtMUwGW11cclUQ==",
+			expected: "/0Y+UQJaUFpyUkcRQ0JFBkdtMUwGW11cclUQ==",
+		},
+		{
+			name:     "next URI as Event Gateway APIs return",
+			next:     "/v1/event-gateways?page%5Bafter%5D=V0Y%2BUQJaUFpyUkcRQ0JFBkdtMUwGW11cclUQS0VfQAZBZ1FUDg%3D%3D&page%5Bsize%5D=1",
+			expected: "V0Y+UQJaUFpyUkcRQ0JFBkdtMUwGW11cclUQS0VfQAZBZ1FUDg==",
+		},
+		{
+			name:      "relative next URI without a page[after] parameter",
+			next:      "/v1/event-gateways?page%5Bsize%5D=1",
+			expectErr: true,
+		},
+		{
 			name:      "next URI without a page[after] parameter",
 			next:      "https://us.api.konghq.com/v1/mcp-cp/cp-id/mcp-servers",
 			expectErr: true,

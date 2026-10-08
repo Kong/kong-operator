@@ -96,6 +96,7 @@ func New(m metadata.Info) *CLI {
 	flagSet.Var(newValidatedValue(&cfg.FeatureGates, manager.NewFeatureGates, withDefault(manager.FeatureGates{})), "feature-gates", "Comma-separated list of feature gates to enable. Valid values: mcp-server.")
 	flagSet.DurationVar(&cfg.KonnectSyncPeriod, "konnect-sync-period", consts.DefaultKonnectSyncPeriod, "Sync period for Konnect entities. Must be greater than 0. After a successful reconciliation of Konnect entities the controller will wait this duration before enforcing configuration on Konnect once again.")
 	flagSet.DurationVar(&cfg.KonnectRequestTimeout, "konnect-request-timeout", consts.DefaultKonnectRequestTimeout, "Timeout for Konnect API requests.")
+	flagSet.Int64Var(&cfg.KonnectListPageSize, "konnect-list-page-size", consts.DefaultKonnectListPageSize, fmt.Sprintf("Page size requested when listing Konnect entities to find the Konnect entity of an object, e.g. one whose Konnect ID was lost or that is deleted without one. Must be between 1 and %d. Only lower it if Konnect rejects the default: a lower value means more requests.", consts.MaxKonnectListPageSize))
 	flagSet.UintVar(&cfg.KonnectControllerMaxConcurrentReconciles, "konnect-controller-max-concurrent-reconciles", consts.DefaultMaxConcurrentReconcilesKonnect, "Deprecated: Please use '--max-concurrent-reconciles-konnect-controller' instead.")
 	flagSet.UintVar(&cfg.MaxConcurrentReconcilesKonnect, "max-concurrent-reconciles-konnect-controller", consts.DefaultMaxConcurrentReconcilesKonnect, "Maximum number of concurrent reconciles for Konnect controllers.")
 	flagSet.UintVar(&cfg.MaxConcurrentReconcilesDataPlane, "max-concurrent-reconciles-dataplane-controller", consts.DefaultMaxConcurrentReconcilesDataPlane, "Maximum number of concurrent reconciles for DataPlane controllers.")
@@ -125,6 +126,13 @@ func New(m metadata.Info) *CLI {
 		deferFlagValues: &deferCfg,
 		metadata:        m,
 	}
+}
+
+func validateKonnectListPageSize(size int64) error {
+	if size < 1 || size > consts.MaxKonnectListPageSize {
+		return fmt.Errorf("must be between 1 and %d", consts.MaxKonnectListPageSize)
+	}
+	return nil
 }
 
 func validateKonnectSyncPeriod(duration time.Duration) error {
@@ -230,6 +238,10 @@ func (c *CLI) Parse(arguments []string) manager.Config {
 	}
 	if err := validateKonnectSyncPeriod(c.cfg.KonnectSyncPeriod); err != nil {
 		fmt.Printf("invalid value for --konnect-sync-period: %v\n", err)
+		os.Exit(1)
+	}
+	if err := validateKonnectListPageSize(c.cfg.KonnectListPageSize); err != nil {
+		fmt.Printf("invalid value for --konnect-list-page-size: %v\n", err)
 		os.Exit(1)
 	}
 

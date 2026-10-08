@@ -106,7 +106,7 @@ func configStoreHasSecretEntries(
 	resp, err := configStoreSecretsSDK.ListConfigStoreSecrets(ctx, sdkkonnectops.ListConfigStoreSecretsRequest{
 		ControlPlaneID: obj.GetControlPlaneID(),
 		ConfigStoreID:  obj.GetKonnectStatus().GetKonnectID(),
-		PageSize:       new(int64(configStoreSecretsProbePageSize)),
+		Size:           new(int64(configStoreSecretsProbePageSize)),
 	})
 	if err != nil {
 		return false, err

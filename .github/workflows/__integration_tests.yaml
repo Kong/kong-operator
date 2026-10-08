@@ -186,7 +186,7 @@ jobs:
 
     - name: upload pcap capture
       if: failure()
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: pcap-integration-${{ matrix.suite }}-${{ matrix.kong-variant }}-${{ matrix.router_flavor }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}
         path: /tmp/capture-${{ matrix.suite }}-${{ matrix.kong-variant }}-${{ matrix.router_flavor }}.pcap
@@ -194,21 +194,21 @@ jobs:
 
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: diagnostics-integration-${{ matrix.suite }}-${{ matrix.kong-variant }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
     - name: collect test coverage
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: ${{ matrix.suite }}-${{ matrix.kong-variant }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}-coverage-integration
         path: coverage.integration.${{ matrix.suite }}-${{ matrix.kong-variant }}-${{ matrix.router_flavor }}.out
 
     - name: collect test report
       if: ${{ always() }}
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: ${{ matrix.suite }}-${{ matrix.kong-variant }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}-tests-report-integration
         path: integration-tests-${{ matrix.suite }}-${{ matrix.kong-variant }}-${{ matrix.router_flavor }}.xml

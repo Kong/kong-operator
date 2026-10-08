@@ -70,7 +70,68 @@
 
 ## [Unreleased]
 
+### Added
+
+- `--konnect-list-page-size` flag (default and maximum `100`): the page size
+  the operator requests when listing Konnect entities to find the Konnect
+  entity of an object, e.g. one whose Konnect ID was lost. It is a fallback in
+  case Konnect rejects the default; lower values mean more requests.
+  [#5961](https://github.com/Kong/kong-operator/pull/5961)
+- EventGateway CRDs: added `EventGatewayTLSTrustBundle` CRD and reconciliation
+  logic. Its trusted CA certificates (`spec.apiSpec.config.trustedCa`) can be
+  set inline or sourced from a Secret.
+  [#5987](https://github.com/Kong/kong-operator/pull/5987)
+- `EventGatewayListenerPolicy`: entries of the TLS listener policy's
+  `spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles` can now
+  reference an `EventGatewayTLSTrustBundle` in the same namespace via
+  `namespacedRef`, resolved to its Konnect ID. Referencing a Konnect trust
+  bundle by `id` or `name` keeps working as before. Listener policies now
+  report whether their references resolve in a `KonnectReferencesResolved`
+  status condition.
+  [#5987](https://github.com/Kong/kong-operator/pull/5987)
+- `EventGatewayTLSTrustBundle`: deleting a trust bundle while Konnect listener
+  policies reference it (by `namespacedRef`, Konnect ID or name) is blocked:
+  Konnect would allow it and leave the policies referencing a missing trust
+  bundle, failing their next update. The trust bundle keeps its finalizer and
+  reports a `DeletionBlocked` `Programmed` condition naming the policies in its
+  namespace, and is deleted once none references it anymore: right away when
+  the last `EventGatewayListenerPolicy` referencing it through `namespacedRef`
+  is deleted, and otherwise within a minute. While it is being
+  deleted, listener policies not yet created in Konnect can't reference it.
+  [#5987](https://github.com/Kong/kong-operator/pull/5987)
+
 ### Changed
+
+- `AIGatewayModel`: `spec.apiSpec.{api,model}.config.route.model.pathParam`
+  is the plain name of the regex capture group defined in the route path,
+  e.g. route path `~/path/(?<model_name>[^/]+)` with `pathParam: model_name`.
+  [#5989](https://github.com/Kong/kong-operator/pull/5989)
+- `AIGatewayMCPServer`: conversion-tool and upstream-tool `name` entries
+  must now match `^[A-Za-z0-9._-]+$` and be at most 128 characters.
+  Existing entries outside these bounds are rejected by the CRD schema.
+  [#5989](https://github.com/Kong/kong-operator/pull/5989)
+- `AIGatewayModel`: target `config` fields gained bounds: `temperature` 0-5,
+  `topK` at most 500 (was 2147483646), `topP` 0-1, cost fields at least 0.
+  Existing values outside these bounds are rejected by the CRD schema.
+  [#5989](https://github.com/Kong/kong-operator/pull/5989)
+- `AIGatewayAuthStrategy`: key-auth and openid-connect `config` schemas were
+  updated. Notable
+  changes: `openid-connect.config.issuer` is now required, `leeway` and
+  `timeout` are numbers instead of integers, and the key-auth/openid-connect
+  config gained the new upstream plugin fields. Existing CRs with an empty
+  `openid-connect.config.issuer` are rejected by the CRD schema.
+  [#6002](https://github.com/Kong/kong-operator/pull/6002)
+- On-prem AI Gateway: `AIGatewayCustomPolicy` configuration entities
+  referencing an `OnPremAIGateway` are now translated into the pushed
+  configuration document. The entity gains an on-prem reconciler, and
+  `spec.aiGatewayRef.kind` now accepts `OnPremAIGateway`.
+  [#5967](https://github.com/Kong/kong-operator/pull/5967)
+- On-prem AI Gateway: `AIGatewayCertificate` and `AIGatewaySNI` configuration
+  entities are now translated into the pushed configuration document, enabling
+  TLS certificate/SNI matching configuration for on-prem AI Gateway data
+  planes. An SNI's `certificate` reference resolves to the referenced
+  certificate's entity name in the same namespace; the referenced certificate
+  must target the same `OnPremAIGateway` as the SNI.
 
 - On-prem AI Gateway: each `OnPremAIGateway`'s control plane instance now runs
   a Secret watcher that re-renders the configuration when a Secret referenced
@@ -132,6 +193,20 @@
   update, keep being found by their certificate, title and description when
   they carry no `k8s-uid` label.
   [#5947](https://github.com/Kong/kong-operator/pull/5947)
+- Konnect: when looking up the existing Konnect entity of an AI Gateway, Event
+  Gateway or Portal object (to recover a lost entity ID, or to delete an
+  object without one), the operator now goes through every page of the
+  Konnect list instead of only the first one. An entity listed after the
+  first page (e.g. with more than 20 Event Gateways in an organization) was
+  not found, so the object kept failing to be created, or its entity was left
+  behind in Konnect when the object was deleted.
+  [#5961](https://github.com/Kong/kong-operator/pull/5961)
+- Konnect: when the deletion of an `AIGatewayCustomPolicy` is blocked by
+  `AIGatewayPolicy` objects still using it, the operator now names them even
+  when the AI Gateway has more than one page of policies. Before, it failed
+  to read the second page of policies, so the blocking objects were not
+  reported.
+  [#5961](https://github.com/Kong/kong-operator/pull/5961)
 
 - On-prem AI Gateway: `AIGatewayConsumer`s referenced by an `OnPremAIGateway`
   are now rendered into the on-prem document, with their

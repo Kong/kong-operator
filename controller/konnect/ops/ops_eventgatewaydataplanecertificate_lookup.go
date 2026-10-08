@@ -39,24 +39,41 @@ func getEventGatewayDataPlaneCertificateForUID(
 		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 	}
 
-	resp, err := sdk.ListEventGatewayDataPlaneCertificates(ctx, sdkkonnectops.ListEventGatewayDataPlaneCertificatesRequest{
-		GatewayID: gatewayID,
-	})
-	if err != nil {
-		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
-	}
-	if resp == nil || resp.ListEventGatewayDataPlaneCertificatesResponse == nil {
-		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
-	}
-
-	for _, entry := range resp.ListEventGatewayDataPlaneCertificatesResponse.Data {
-		if strings.TrimSpace(entry.GetCertificate()) != strings.TrimSpace(want.GetCertificate()) ||
-			stringValueGeneric(entry.GetName()) != stringValueGeneric(want.GetName()) ||
-			stringValueGeneric(entry.GetDescription()) != stringValueGeneric(want.GetDescription()) {
-			continue
+	var pageAfter *string
+	// Cursors already requested, to detect a next-page cursor that does not
+	// advance (directly or through a longer cycle).
+	seenCursors := map[string]struct{}{}
+	for {
+		resp, err := sdk.ListEventGatewayDataPlaneCertificates(ctx, sdkkonnectops.ListEventGatewayDataPlaneCertificatesRequest{
+			GatewayID: gatewayID,
+			PageSize:  new(listPageSize),
+			PageAfter: pageAfter,
+		})
+		if err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
 		}
-		if entry.GetID() != "" {
-			return entry.GetID(), nil
+		if resp == nil || resp.ListEventGatewayDataPlaneCertificatesResponse == nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+		}
+
+		for _, entry := range resp.ListEventGatewayDataPlaneCertificatesResponse.Data {
+			if strings.TrimSpace(entry.GetCertificate()) != strings.TrimSpace(want.GetCertificate()) ||
+				stringValueGeneric(entry.GetName()) != stringValueGeneric(want.GetName()) ||
+				stringValueGeneric(entry.GetDescription()) != stringValueGeneric(want.GetDescription()) {
+				continue
+			}
+			if entry.GetID() != "" {
+				return entry.GetID(), nil
+			}
+		}
+
+		meta := resp.ListEventGatewayDataPlaneCertificatesResponse.GetMeta()
+		page := meta.GetPage()
+		if pageAfter, err = nextPageCursor(page.GetNext(), seenCursors); err != nil {
+			return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+		}
+		if pageAfter == nil {
+			break
 		}
 	}
 

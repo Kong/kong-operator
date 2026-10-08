@@ -465,7 +465,7 @@ Colors is a type alias.
 
 | Field | Description |
 | --- | --- |
-| `primary` _string_ |  |
+| `primary` _string_ | The primary accent color used in the portal's theme. Must be a valid hex color value. |
 
 _Appears in:_
 
@@ -1980,11 +1980,11 @@ PortalCustomizationAPISpec defines the API spec fields for PortalCustomization.
 | Field | Description |
 | --- | --- |
 | `css` _*string_ |  |
-| `layout` _string_ |  |
+| `layout` _string_ | This property is deprecated and is not used by the portal. |
 | `menu` _[Menu](#konnect-konghq-com-v1alpha1-types-menu)_ |  |
 | `robots` _*string_ |  |
 | `specRenderer` _[SpecRenderer](#konnect-konghq-com-v1alpha1-types-specrenderer)_ | The spec renderer settings of this portal |
-| `theme` _[Theme](#konnect-konghq-com-v1alpha1-types-theme)_ |  |
+| `theme` _[Theme](#konnect-konghq-com-v1alpha1-types-theme)_ | The theme settings for this portal. |
 
 _Appears in:_
 
@@ -2514,7 +2514,7 @@ _Appears in:_
 #### Theme
 
 
-Theme is a type alias.
+Theme The theme settings for this portal.
 
 
 
@@ -2522,7 +2522,7 @@ Theme is a type alias.
 | --- | --- |
 | `colors` _[Colors](#konnect-konghq-com-v1alpha1-types-colors)_ |  |
 | `mode` _string_ |  |
-| `name` _string_ |  |
+| `name` _string_ | The theme name to apply to this portal. Supported names are 'ocean' and 'glacier'. If another name is provided or this property is omitted, the portal uses the default 'ocean' theme. |
 
 _Appears in:_
 

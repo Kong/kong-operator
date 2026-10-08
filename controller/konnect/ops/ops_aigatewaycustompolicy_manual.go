@@ -14,7 +14,6 @@ import (
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
-	"github.com/kong/kong-operator/v2/internal/utils/konnectpagination"
 )
 
 // aiGatewayPoliciesProbePageSize is the page size used to list the Konnect
@@ -175,19 +174,12 @@ func konnectPoliciesUsingCustomPolicy(
 		}
 		meta := resp.ListAIGatewayPoliciesResponse.GetMeta()
 		page := meta.GetPage()
-		next := page.GetNext()
-		if next == nil || *next == "" {
+		if after, err = nextPageCursor(page.GetNext(), seenCursors); err != nil {
+			return nil, fmt.Errorf("failed listing policies of AI Gateway %s: %w", gatewayID, err)
+		}
+		if after == nil {
 			return policies, nil
 		}
-		cursor, err := konnectpagination.PageAfterCursorFromNextPageURL(*next)
-		if err != nil {
-			return nil, err
-		}
-		if _, ok := seenCursors[cursor]; ok {
-			return nil, fmt.Errorf("next page cursor %q repeated while listing policies of AI Gateway %s", cursor, gatewayID)
-		}
-		seenCursors[cursor] = struct{}{}
-		after = &cursor
 	}
 }
 

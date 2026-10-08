@@ -92,6 +92,7 @@ func TestGetKonnectEventGatewayForUID(t *testing.T) {
 
 	sdk.EXPECT().
 		ListEventGateways(mock.Anything, sdkkonnectops.ListEventGatewaysRequest{
+			PageSize: new(listPageSize),
 			// TODO: this will be more specific when we start generating getForUID functions
 			// with support for filters derived from the OpenAPI schema.
 		}).

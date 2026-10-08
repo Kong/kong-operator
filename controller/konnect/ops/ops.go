@@ -227,6 +227,7 @@ func isCreateNameConflict[
 		*configurationv1alpha1.EventGatewayListener,
 		*configurationv1alpha1.EventGatewayVirtualCluster,
 		*configurationv1alpha1.EventGatewaySchemaRegistry,
+		*configurationv1alpha1.EventGatewayTLSTrustBundle,
 		*configurationv1alpha1.EventGatewayDataPlaneCertificate,
 		*configurationv1alpha1.EventGatewayListenerPolicy,
 		*configurationv1alpha1.EventGatewayVirtualClusterPolicy,
@@ -391,6 +392,10 @@ func Delete[
 		err = deleteKonnectConfigStoreGuarded(ctx, sdk.GetConfigStoresSDK(), sdk.GetConfigStoreSecretsSDK(), e)
 	case *aiconfigurationv1alpha1.AIGatewayCustomPolicy:
 		err = deleteAIGatewayCustomPolicyGuarded(ctx, sdk.GetAIGatewayCustomPoliciesSDK(), sdk.GetAIGatewayPoliciesSDK(), cl, e)
+	case *configurationv1alpha1.EventGatewayTLSTrustBundle:
+		err = deleteEventGatewayTLSTrustBundleGuarded(
+			ctx, sdk.GetEventGatewayTLSTrustBundlesSDK(), sdk.GetEventGatewayListenersSDK(), sdk.GetEventGatewayListenerPoliciesSDK(), cl, e,
+		)
 	case *configurationv1alpha1.KongService:
 		err = deleteService(ctx, sdk.GetServicesSDK(), e)
 	case *configurationv1alpha1.KongRoute:
@@ -964,8 +969,8 @@ func getMatchingEntryFromListResponseData[
 func ClearInstanceFromError(err error) error {
 	// Some delete operations wrap the typed SDK error in a richer error that
 	// carries extra context for the reconciler (a DeletionBlockedError such as
-	// KonnectConfigStoreNotEmptyError or AIGatewayCustomPolicyInUseError
-	// describes what blocks the deletion). Keep such wrappers intact so
+	// KonnectConfigStoreNotEmptyError, AIGatewayCustomPolicyInUseError or
+	// EventGatewayTLSTrustBundleInUseError describes what blocks the deletion). Keep such wrappers intact so
 	// reconcilers can act on them; the instance field of the underlying typed
 	// error is still cleared in place. This check must stay ahead of the
 	// typed-error branches below, which unwrap and would otherwise silently

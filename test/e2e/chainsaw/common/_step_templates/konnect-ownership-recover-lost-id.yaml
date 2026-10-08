@@ -97,4 +97,4 @@ spec:
               else [(if type == "array" then . else .data end)[] | .id] | index($ENV.WANT_ID) != null
               end
         content: |
-          bash ../../common/scripts/konnect_api_request.sh
+          bash ../../common/scripts/konnect_list_all_entities.sh

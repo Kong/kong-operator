@@ -136,6 +136,8 @@ spec:
           nameHeader: Enabled
         route:
           model:
+            # pathParam is the name of the regex capture group defined in the
+            # route path below ("model_name").
             pathParam: model_name
             values:
               - qwen2.5:0.5b
