@@ -1192,6 +1192,7 @@ _Appears in:_
 - [AIGatewayAuthStrategyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyconfig)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 #### AIGatewayAuthStrategyKeyAuthConfig
 
@@ -1240,6 +1241,8 @@ _Appears in:_
 - [AIGatewayAuthStrategyKeyAuthConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategykeyauthconfig)
 
 >>>>>>> 559b6d826 (fix(aigateway): fix konnect model path param (#5989))
+=======
+>>>>>>> 0f32c03 (chore: bump sdk to 0.73.1 (#6002))
 #### AIGatewayAuthStrategyOpenIDConnect
 
 
@@ -5164,7 +5167,7 @@ When values are not set, the model name is used as the selector value.
 | --- | --- |
 | `bodyParam` _string_ | The body property name to match for routing. |
 | `headerParam` _string_ | The header property name to match for routing. |
-| `pathParam` _string_ | The name of the regex capture group beginning with "~", which is defined in the route path for routing. |
+| `pathParam` _string_ | The name of the regex capture group defined in the route path for routing. |
 | `values` _[]string_ | Optional model aliases. When omitted, the model name is used. When no selector location is configured, the format default selector is used. |
 
 _Appears in:_

@@ -5,6 +5,7 @@ package v1alpha1
 import (
 	"encoding/json"
 	"fmt"
+
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
@@ -2510,8 +2511,6 @@ type AIGatewayAuthStrategyKeyAuth struct {
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
-<<<<<<< HEAD
-=======
 // AIGatewayAuthStrategyKeyAuthConfig Configuration for the key-auth auth
 // strategy.
 // For advanced use cases, additional config properties can be sent in the
@@ -2601,7 +2600,6 @@ type AIGatewayAuthStrategyKeyAuthConfigPrincipals struct {
 	ErrorOnMiss string `json:"errorOnMiss,omitzero"`
 }
 
->>>>>>> 559b6d826 (fix(aigateway): fix konnect model path param (#5989))
 // AIGatewayAuthStrategyOpenIDConnect Configuration for an auth strategy.
 type AIGatewayAuthStrategyOpenIDConnect struct {
 	//
@@ -9110,14 +9108,12 @@ type AIGatewayModelSelectorConfig struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	HeaderParam string `json:"headerParam,omitzero"`
-	// The name of the regex capture group beginning with "~", which is defined in
-	// the route path for routing.
+	// The name of the regex capture group defined in the route path for routing.
 	//
 	//
 	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Pattern=`^~.+$`
 	PathParam string `json:"pathParam,omitzero"`
 	// Optional model aliases. When omitted, the model name is used.
 	// When no selector location is configured, the format default selector is
