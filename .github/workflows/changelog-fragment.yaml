@@ -1,0 +1,80 @@
+name: Changelog fragment
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+jobs:
+  scaffold:
+    name: Scaffold changelog fragment
+    runs-on: ubuntu-latest
+    # Skip forks: the bot cannot push to a fork's head branch.
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    permissions:
+      contents: write
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ secrets.PAT_GITHUB }}
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Resolve PR payload to JSON
+        id: pr_json
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require('fs');
+            fs.writeFileSync(process.env.RUNNER_TEMP + '/pr.json', JSON.stringify(context.payload.pull_request));
+
+      - name: Compute fragment from PR title
+        id: frag
+        env:
+          PR_JSON_FILE: ${{ runner.temp }}/pr.json
+        run: scripts/changelog/pr-fragment-status.sh
+
+      - name: Write and push fragment if missing
+        if: ${{ steps.frag.outputs.status == 'required' }}
+        env:
+          NUM: ${{ github.event.pull_request.number }}
+          # Consume the script's own fragment_path output rather than
+          # re-deriving "changelog/unreleased/kong-operator/${NUM}.yml" by
+          # hand here: that was a second hardcoded copy of the exact path
+          # changelog-gate's "Enforce changelog fragment requirement" step
+          # (tests.yaml) compares against, and the two could silently drift.
+          FRAGMENT_PATH: ${{ steps.frag.outputs.fragment_path }}
+          TYPE: ${{ steps.frag.outputs.type }}
+          SCOPE: ${{ steps.frag.outputs.scope }}
+          MESSAGE: ${{ steps.frag.outputs.message }}
+        run: |
+          set -euo pipefail
+          file="${FRAGMENT_PATH}"
+          if [ -z "$file" ]; then
+            echo "::error::pr-fragment-status.sh returned status=required but no fragment_path (missing PR number)."
+            exit 1
+          fi
+          if [ -f "$file" ]; then
+            echo "Fragment $file already exists; leaving author edits intact."
+            exit 0
+          fi
+          mkdir -p "$(dirname "$file")"
+          # Build the fragment with yq so the PR-title-derived MESSAGE is safely
+          # YAML-escaped (raw printf interpolation broke on titles containing ": "
+          # or " #123", producing invalid or silently truncated YAML).
+          yq -n '
+            .message = strenv(MESSAGE) |
+            .type = strenv(TYPE) |
+            .scope = strenv(SCOPE) |
+            del(.scope | select(. == ""))
+          ' > "$file"
+          git config user.name "Kong's Team k8s bot"
+          git config user.email "team-k8s+github-bot@konghq.com"
+          git add "$file"
+          git commit -m "chore(changelog): add fragment for #${NUM}"
+          git push origin "HEAD:${GITHUB_HEAD_REF}"
