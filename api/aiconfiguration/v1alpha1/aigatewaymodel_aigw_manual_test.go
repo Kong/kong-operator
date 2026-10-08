@@ -107,9 +107,8 @@ func TestAIGatewayModel_ToAIGWModel(t *testing.T) {
 	}
 	wantAPI.Access.AuthStrategies = []string{"model-key-auth-provider"}
 	wantAPI.Access.ACLs = aigw.ACLs{Allow: []string{"model-dev-users"}}
-	// The CRD (mirroring Konnect) requires path_param to start with "~"; the
-	// aigw document carries the bare PCRE capture-group name, so translation
-	// strips the prefix.
+	// The CRD's flat pathParam maps 1:1 into the aigw document's nested
+	// path selector (see renestModelSelector).
 	wantAPI.Config.Route.Model.Path.PathParam = "model"
 
 	wantModel := &aigw.Model{
@@ -173,7 +172,7 @@ func TestAIGatewayModel_ToAIGWModel(t *testing.T) {
 									Route: AIGatewayModelRouteConfig{
 										Paths: []string{"/v1/chat/completions"},
 										Model: AIGatewayModelSelectorConfig{
-											PathParam: "~model",
+											PathParam: "model",
 											Values:    []string{"gpt-4o-mini"},
 										},
 									},
@@ -323,7 +322,7 @@ func TestAIGatewayModel_ToAIGWModel_StrictRoundTrip(t *testing.T) {
 					Route: AIGatewayModelRouteConfig{
 						Paths: []string{"/v1/chat/completions"},
 						Model: AIGatewayModelSelectorConfig{
-							PathParam: "~model",
+							PathParam: "model",
 							Values:    []string{"gpt-4o-mini"},
 						},
 					},

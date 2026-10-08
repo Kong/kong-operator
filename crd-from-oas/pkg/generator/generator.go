@@ -8166,12 +8166,15 @@ func formatSchemaComment(name, desc string) string {
 	return strings.Join(result, "\n") + "\n"
 }
 
-// goFieldName converts property name to Go field name (PascalCase). Both "_"
-// and "-" are treated as word separators, since discriminator values (e.g.
-// "conversion-listener") use kebab-case while most OAS property names use
-// snake_case.
+// goFieldName converts property name to Go field name (PascalCase). Any rune
+// that is not a letter or digit is treated as a word separator: "_" because
+// most OAS property names use snake_case, "-" because discriminator values
+// (e.g. "conversion-listener") use kebab-case, and characters like '#' because
+// OAS property names are not always valid Go identifiers (e.g. "x5t#S256").
 func goFieldName(name string) string {
-	parts := strings.FieldsFunc(name, func(r rune) bool { return r == '_' || r == '-' })
+	parts := strings.FieldsFunc(name, func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r)
+	})
 	for i, part := range parts {
 		if len(part) > 0 {
 			// Handle common acronyms

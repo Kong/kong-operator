@@ -6620,6 +6620,10 @@ func TestGoFieldName_FixesCamelCaseInitialisms(t *testing.T) {
 		{"aiGatewayRef", "AIGatewayRef"},
 		{"modelIdOrName", "ModelIDOrName"},
 		{"apiSpec", "APISpec"},
+		// OAS property names are not always valid Go identifiers: the JWK
+		// "x5t#S256" property (sdk-konnect-go 0.73) must not leak '#' into
+		// the generated field name.
+		{"x5t#S256", "X5tS256"},
 	}
 
 	for _, tc := range tests {

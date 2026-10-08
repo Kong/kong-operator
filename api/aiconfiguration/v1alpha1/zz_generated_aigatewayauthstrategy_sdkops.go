@@ -80,11 +80,96 @@ var AIGatewayAuthStrategySDKOpsBoolFields = []AIGatewayAuthStrategySDKOpsBoolFie
 		},
 	},
 	{
+		Label: "openid-connect.config.authorization_cookie_http_only",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"authorization_cookie_http_only",
+		},
+	},
+	{
+		Label: "openid-connect.config.authorization_cookie_secure",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"authorization_cookie_secure",
+		},
+	},
+	{
+		Label: "openid-connect.config.by_username_ignore_case",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"by_username_ignore_case",
+		},
+	},
+	{
 		Label: "openid-connect.config.cache_introspection",
 		Path: []string{
 			"openid-connect",
 			"config",
 			"cache_introspection",
+		},
+	},
+	{
+		Label: "openid-connect.config.cache_token_exchange",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"cache_token_exchange",
+		},
+	},
+	{
+		Label: "openid-connect.config.cache_tokens",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"cache_tokens",
+		},
+	},
+	{
+		Label: "openid-connect.config.cache_user_info",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"cache_user_info",
+		},
+	},
+	{
+		Label: "openid-connect.config.cluster_cache_redis.cloud_authentication.aws_is_serverless",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"cluster_cache_redis",
+			"cloud_authentication",
+			"aws_is_serverless",
+		},
+	},
+	{
+		Label: "openid-connect.config.cluster_cache_redis.connection_is_proxied",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"cluster_cache_redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "openid-connect.config.cluster_cache_redis.ssl",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"cluster_cache_redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "openid-connect.config.cluster_cache_redis.ssl_verify",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"cluster_cache_redis",
+			"ssl_verify",
 		},
 	},
 	{
@@ -104,6 +189,46 @@ var AIGatewayAuthStrategySDKOpsBoolFields = []AIGatewayAuthStrategySDKOpsBoolFie
 		},
 	},
 	{
+		Label: "openid-connect.config.display_errors",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"display_errors",
+		},
+	},
+	{
+		Label: "openid-connect.config.dpop_use_nonce",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"dpop_use_nonce",
+		},
+	},
+	{
+		Label: "openid-connect.config.enable_hs_signatures",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"enable_hs_signatures",
+		},
+	},
+	{
+		Label: "openid-connect.config.expose_error_code",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"expose_error_code",
+		},
+	},
+	{
+		Label: "openid-connect.config.forbidden_destroy_session",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"forbidden_destroy_session",
+		},
+	},
+	{
 		Label: "openid-connect.config.hide_credentials",
 		Path: []string{
 			"openid-connect",
@@ -112,11 +237,59 @@ var AIGatewayAuthStrategySDKOpsBoolFields = []AIGatewayAuthStrategySDKOpsBoolFie
 		},
 	},
 	{
+		Label: "openid-connect.config.introspect_jwt_tokens",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"introspect_jwt_tokens",
+		},
+	},
+	{
+		Label: "openid-connect.config.introspection_check_active",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"introspection_check_active",
+		},
+	},
+	{
 		Label: "openid-connect.config.keepalive",
 		Path: []string{
 			"openid-connect",
 			"config",
 			"keepalive",
+		},
+	},
+	{
+		Label: "openid-connect.config.logout_revoke",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"logout_revoke",
+		},
+	},
+	{
+		Label: "openid-connect.config.logout_revoke_access_token",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"logout_revoke_access_token",
+		},
+	},
+	{
+		Label: "openid-connect.config.logout_revoke_refresh_token",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"logout_revoke_refresh_token",
+		},
+	},
+	{
+		Label: "openid-connect.config.preserve_query_args",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"preserve_query_args",
 		},
 	},
 	{
@@ -156,11 +329,286 @@ var AIGatewayAuthStrategySDKOpsBoolFields = []AIGatewayAuthStrategySDKOpsBoolFie
 		},
 	},
 	{
+		Label: "openid-connect.config.proof_of_possession_auth_methods_validation",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"proof_of_possession_auth_methods_validation",
+		},
+	},
+	{
+		Label: "openid-connect.config.redis.cloud_authentication.aws_is_serverless",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"redis",
+			"cloud_authentication",
+			"aws_is_serverless",
+		},
+	},
+	{
+		Label: "openid-connect.config.redis.connection_is_proxied",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "openid-connect.config.redis.ssl",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "openid-connect.config.redis.ssl_verify",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "openid-connect.config.refresh_tokens",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"refresh_tokens",
+		},
+	},
+	{
+		Label: "openid-connect.config.require_proof_key_for_code_exchange",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"require_proof_key_for_code_exchange",
+		},
+	},
+	{
+		Label: "openid-connect.config.require_pushed_authorization_requests",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"require_pushed_authorization_requests",
+		},
+	},
+	{
+		Label: "openid-connect.config.require_signed_request_object",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"require_signed_request_object",
+		},
+	},
+	{
+		Label: "openid-connect.config.resolve_distributed_claims",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"resolve_distributed_claims",
+		},
+	},
+	{
+		Label: "openid-connect.config.reverify",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"reverify",
+		},
+	},
+	{
+		Label: "openid-connect.config.run_on_preflight",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"run_on_preflight",
+		},
+	},
+	{
+		Label: "openid-connect.config.search_user_info",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"search_user_info",
+		},
+	},
+	{
+		Label: "openid-connect.config.session_cookie_http_only",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"session_cookie_http_only",
+		},
+	},
+	{
+		Label: "openid-connect.config.session_cookie_secure",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"session_cookie_secure",
+		},
+	},
+	{
+		Label: "openid-connect.config.session_enforce_same_subject",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"session_enforce_same_subject",
+		},
+	},
+	{
+		Label: "openid-connect.config.session_hash_storage_key",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"session_hash_storage_key",
+		},
+	},
+	{
+		Label: "openid-connect.config.session_hash_subject",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"session_hash_subject",
+		},
+	},
+	{
+		Label: "openid-connect.config.session_memcached_ssl",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"session_memcached_ssl",
+		},
+	},
+	{
+		Label: "openid-connect.config.session_memcached_ssl_verify",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"session_memcached_ssl_verify",
+		},
+	},
+	{
+		Label: "openid-connect.config.session_remember",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"session_remember",
+		},
+	},
+	{
+		Label: "openid-connect.config.session_store_metadata",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"session_store_metadata",
+		},
+	},
+	{
 		Label: "openid-connect.config.ssl_verify",
 		Path: []string{
 			"openid-connect",
 			"config",
 			"ssl_verify",
+		},
+	},
+	{
+		Label: "openid-connect.config.tls_client_auth_ssl_verify",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"tls_client_auth_ssl_verify",
+		},
+	},
+	{
+		Label: "openid-connect.config.token_cache_key_include_scope",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"token_cache_key_include_scope",
+		},
+	},
+	{
+		Label: "openid-connect.config.token_exchange.cache.enabled",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"token_exchange",
+			"cache",
+			"enabled",
+		},
+	},
+	{
+		Label: "openid-connect.config.token_exchange.request.empty_audience",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"token_exchange",
+			"request",
+			"empty_audience",
+		},
+	},
+	{
+		Label: "openid-connect.config.token_exchange.request.empty_scopes",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"token_exchange",
+			"request",
+			"empty_scopes",
+		},
+	},
+	{
+		Label: "openid-connect.config.unauthorized_destroy_session",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"unauthorized_destroy_session",
+		},
+	},
+	{
+		Label: "openid-connect.config.using_pseudo_issuer",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"using_pseudo_issuer",
+		},
+	},
+	{
+		Label: "openid-connect.config.verify_claims",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"verify_claims",
+		},
+	},
+	{
+		Label: "openid-connect.config.verify_nonce",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"verify_nonce",
+		},
+	},
+	{
+		Label: "openid-connect.config.verify_parameters",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"verify_parameters",
+		},
+	},
+	{
+		Label: "openid-connect.config.verify_signature",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"verify_signature",
 		},
 	},
 }

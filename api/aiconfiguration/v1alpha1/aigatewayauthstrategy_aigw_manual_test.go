@@ -52,7 +52,7 @@ func TestAIGatewayAuthStrategy_ToAIGWAuthStrategy(t *testing.T) {
 								DisplayName: "Key Auth Strategy 1",
 								Labels:      PublicLabels{"app": "test1"},
 								ManagedBy:   ManagedBy{"kong-operator": "true"},
-								Config: AIGatewayAuthStrategyKeyAuthConfig{
+								Config: AIGWKeyAuthGeneratedConfig{
 									HideCredentials: "Enabled",
 								},
 							},
@@ -79,7 +79,7 @@ func TestAIGatewayAuthStrategy_ToAIGWAuthStrategy(t *testing.T) {
 							OpenIDConnect: &AIGatewayAuthStrategyOpenIDConnect{
 								Name:        "my-oidc-provider",
 								DisplayName: "My OpenID Connect Identity Provider",
-								Config: AIGatewayAuthStrategyOpenIDConnectConfig{
+								Config: AIGWOpenIDConnectGeneratedConfig{
 									Issuer:          "https://my-idp.example.com/.well-known/openid-configuration",
 									CacheTokensSalt: "my-cache-salt",
 									ClientID:        []string{"my-client-id"},
@@ -114,7 +114,7 @@ func TestAIGatewayAuthStrategy_ToAIGWAuthStrategy(t *testing.T) {
 							OpenIDConnect: &AIGatewayAuthStrategyOpenIDConnect{
 								Name:        "cross-ns-oidc",
 								DisplayName: "Cross NS OIDC",
-								Config: AIGatewayAuthStrategyOpenIDConnectConfig{
+								Config: AIGWOpenIDConnectGeneratedConfig{
 									ClientSecret: []SensitiveDataSource{{
 										Type: SensitiveDataSourceTypeSecretRef,
 										SecretRef: &SensitiveDataSecretRef{
@@ -192,7 +192,7 @@ func TestAIGatewayAuthStrategy_ToAIGWAuthStrategy_StrictRoundTrip(t *testing.T) 
 					OpenIDConnect: &AIGatewayAuthStrategyOpenIDConnect{
 						Name:        "my-oidc-provider",
 						DisplayName: "My OpenID Connect Identity Provider",
-						Config: AIGatewayAuthStrategyOpenIDConnectConfig{
+						Config: AIGWOpenIDConnectGeneratedConfig{
 							Issuer:          "https://my-idp.example.com/.well-known/openid-configuration",
 							CacheTokensSalt: "my-cache-salt",
 							ClientID:        []string{"my-client-id"},
