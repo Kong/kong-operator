@@ -11385,7 +11385,6 @@ spec:
                                   pathParam:
                                     maxLength: 253
                                     minLength: 1
-                                    pattern: ^~.+$
                                     type: string
                                   values:
                                     items:
@@ -15436,7 +15435,6 @@ spec:
                                   pathParam:
                                     maxLength: 253
                                     minLength: 1
-                                    pattern: ^~.+$
                                     type: string
                                   values:
                                     items:
