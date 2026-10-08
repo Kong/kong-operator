@@ -1569,10 +1569,12 @@ spec:
                                     minLength: 1
                                     type: string
                                   pathParam:
-                                    description: The name of the regex capture group
-                                      defined in the route path for routing.
+                                    description: |-
+                                      The name of the regex capture group beginning with "~", which is defined in
+                                      the route path for routing.
                                     maxLength: 253
                                     minLength: 1
+                                    pattern: ^~.+$
                                     type: string
                                   values:
                                     description: |-
@@ -1783,6 +1785,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -1819,6 +1822,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -1887,6 +1891,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -1928,6 +1933,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -1992,18 +1998,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -2026,6 +2036,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -2062,6 +2073,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -2149,6 +2161,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -2190,6 +2203,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -2254,18 +2268,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -2284,6 +2302,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -2320,6 +2339,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -2395,6 +2415,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -2436,6 +2457,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -2511,18 +2533,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -2541,6 +2567,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -2577,6 +2604,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -2645,6 +2673,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -2686,6 +2715,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -2750,18 +2780,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -2784,6 +2818,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -2820,6 +2855,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -2899,6 +2935,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -2940,6 +2977,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -3004,18 +3042,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -3036,6 +3078,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -3072,6 +3115,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -3140,6 +3184,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -3188,6 +3233,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -3252,18 +3298,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -3277,6 +3327,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -3313,6 +3364,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -3381,6 +3433,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -3422,6 +3475,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -3486,18 +3540,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -3519,6 +3577,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -3555,6 +3614,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -3623,6 +3683,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -3664,6 +3725,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -3728,18 +3790,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -3753,6 +3819,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -3789,6 +3856,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -3884,6 +3952,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -3925,6 +3994,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -3989,18 +4059,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -4014,6 +4088,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -4050,6 +4125,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -4118,6 +4194,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -4159,6 +4236,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -4223,18 +4301,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -4262,6 +4344,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -4298,6 +4381,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -4366,6 +4450,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -4415,6 +4500,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -4479,18 +4565,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -4504,6 +4594,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -4540,6 +4631,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -4618,6 +4710,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -4659,6 +4752,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -4723,18 +4817,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -4752,6 +4850,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -4788,6 +4887,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -4865,6 +4965,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -4906,6 +5007,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -4970,18 +5072,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -4997,6 +5103,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -5033,6 +5140,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -5101,6 +5209,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -5142,6 +5251,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -5206,18 +5316,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -5231,6 +5345,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -5267,6 +5382,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -5335,6 +5451,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -5376,6 +5493,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -5440,18 +5558,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -5492,6 +5614,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -5528,6 +5651,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -5596,6 +5720,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -5637,6 +5762,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -5722,18 +5848,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -5772,10 +5902,12 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -5789,6 +5921,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -5825,6 +5958,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -5893,6 +6027,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -5934,6 +6069,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -5998,18 +6134,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -6023,6 +6163,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -6059,6 +6200,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -6127,6 +6269,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -6168,6 +6311,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -6232,18 +6376,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -6260,6 +6408,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -6296,6 +6445,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -6364,6 +6514,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -6405,6 +6556,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -6469,18 +6621,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -7998,10 +8154,12 @@ spec:
                                     minLength: 1
                                     type: string
                                   pathParam:
-                                    description: The name of the regex capture group
-                                      defined in the route path for routing.
+                                    description: |-
+                                      The name of the regex capture group beginning with "~", which is defined in
+                                      the route path for routing.
                                     maxLength: 253
                                     minLength: 1
+                                    pattern: ^~.+$
                                     type: string
                                   values:
                                     description: |-
@@ -8212,6 +8370,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -8248,6 +8407,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -8316,6 +8476,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -8357,6 +8518,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -8421,18 +8583,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -8455,6 +8621,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -8491,6 +8658,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -8578,6 +8746,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -8619,6 +8788,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -8683,18 +8853,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -8713,6 +8887,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -8749,6 +8924,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -8824,6 +9000,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -8865,6 +9042,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -8940,18 +9118,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -8970,6 +9152,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -9006,6 +9189,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -9074,6 +9258,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -9115,6 +9300,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -9179,18 +9365,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -9213,6 +9403,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -9249,6 +9440,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -9328,6 +9520,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -9369,6 +9562,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -9433,18 +9627,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -9465,6 +9663,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -9501,6 +9700,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -9569,6 +9769,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -9617,6 +9818,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -9681,18 +9883,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -9706,6 +9912,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -9742,6 +9949,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -9810,6 +10018,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -9851,6 +10060,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -9915,18 +10125,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -9948,6 +10162,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -9984,6 +10199,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -10052,6 +10268,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -10093,6 +10310,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -10157,18 +10375,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -10182,6 +10404,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -10218,6 +10441,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -10313,6 +10537,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -10354,6 +10579,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -10418,18 +10644,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -10443,6 +10673,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -10479,6 +10710,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -10547,6 +10779,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -10588,6 +10821,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -10652,18 +10886,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -10691,6 +10929,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -10727,6 +10966,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -10795,6 +11035,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -10844,6 +11085,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -10908,18 +11150,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -10933,6 +11179,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -10969,6 +11216,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -11047,6 +11295,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -11088,6 +11337,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -11152,18 +11402,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -11181,6 +11435,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -11217,6 +11472,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -11294,6 +11550,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -11335,6 +11592,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -11399,18 +11657,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -11426,6 +11688,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -11462,6 +11725,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -11530,6 +11794,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -11571,6 +11836,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -11635,18 +11901,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -11660,6 +11930,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -11696,6 +11967,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -11764,6 +12036,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -11805,6 +12078,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -11869,18 +12143,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -11921,6 +12199,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -11957,6 +12236,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -12025,6 +12305,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -12066,6 +12347,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -12151,18 +12433,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -12201,10 +12487,12 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -12218,6 +12506,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -12254,6 +12543,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -12322,6 +12612,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -12363,6 +12654,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -12427,18 +12719,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -12452,6 +12748,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -12488,6 +12785,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -12556,6 +12854,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -12597,6 +12896,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -12661,18 +12961,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model
@@ -12689,6 +12993,7 @@ spec:
                                     cacheReadCost:
                                       description: Cost per 1M cache-read (cached)
                                         prompt tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheReadCostList:
                                       description: |-
@@ -12725,6 +13030,7 @@ spec:
                                     cacheWriteCost:
                                       description: Cost per 1M cache-write prompt
                                         tokens for billing and cost tracking.
+                                      minimum: 0
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -12793,6 +13099,7 @@ spec:
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     inputCostList:
                                       description: |-
@@ -12834,6 +13141,7 @@ spec:
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
                                         and cost tracking.
+                                      minimum: 0
                                       type: number
                                     outputCostList:
                                       description: |-
@@ -12898,18 +13206,22 @@ spec:
                                       description: |-
                                         Controls randomness in the model output.
                                         Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
                                       type: number
                                     topK:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
-                                      maximum: 2147483646
+                                      maximum: 500
                                       minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
                                         Nucleus sampling probability mass.
                                         Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
                                       type: number
                                     upstreamURL:
                                       description: The upstream URL for the model

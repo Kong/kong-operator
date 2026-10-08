@@ -850,8 +850,9 @@ spec:
                               minLength: 1
                               type: string
                             name:
-                              maxLength: 253
+                              maxLength: 128
                               minLength: 1
+                              pattern: ^[A-Za-z0-9._-]+$
                               type: string
                             parameters:
                               items:
@@ -1169,8 +1170,9 @@ spec:
                               minLength: 1
                               type: string
                             name:
-                              maxLength: 253
+                              maxLength: 128
                               minLength: 1
+                              pattern: ^[A-Za-z0-9._-]+$
                               type: string
                             parameters:
                               items:
@@ -3142,8 +3144,9 @@ spec:
                             inputSchema:
                               x-kubernetes-preserve-unknown-fields: true
                             name:
-                              maxLength: 253
+                              maxLength: 128
                               minLength: 1
+                              pattern: ^[A-Za-z0-9._-]+$
                               type: string
                             outputSchema:
                               x-kubernetes-preserve-unknown-fields: true

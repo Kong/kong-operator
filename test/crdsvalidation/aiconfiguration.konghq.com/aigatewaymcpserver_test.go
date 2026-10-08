@@ -1,6 +1,7 @@
 package crdsvalidation
 
 import (
+	"strings"
 	"testing"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
@@ -288,6 +289,95 @@ func TestAIGatewayMCPServer(t *testing.T) {
 				ExpectedErrorMessage: new("spec.apiSpec.listener.displayName"),
 			},
 		}.RunWithConfig(t, cfg, scheme)
+	})
+
+	// Tool names must match ^[A-Za-z0-9._-]+$ and be at most 128 characters
+	// long, for both conversion tools and upstream tools.
+	t.Run("tool name validation", func(t *testing.T) {
+		longName := strings.Repeat("a", 129)
+
+		t.Run("conversion tools", func(t *testing.T) {
+			common.TestCasesGroup[*aiconfigurationv1alpha1.AIGatewayMCPServer]{
+				{
+					Name: "conversion-only tool name of 128 characters is accepted",
+					TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
+						obj := validAIGatewayMCPServerConversionOnly(ns.Name)
+						obj.Spec.APISpec.ConversionOnly.Tools[0].Name = strings.Repeat("a", 128)
+						return obj
+					}(),
+				},
+				{
+					Name: "conversion-only tool name with invalid characters is rejected",
+					TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
+						obj := validAIGatewayMCPServerConversionOnly(ns.Name)
+						obj.Spec.APISpec.ConversionOnly.Tools[0].Name = "bad/name"
+						return obj
+					}(),
+					ExpectedErrorMessage: new("spec.apiSpec.conversion-only.tools[0].name in body should match"),
+				},
+				{
+					Name: "conversion-only tool name longer than 128 characters is rejected",
+					TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
+						obj := validAIGatewayMCPServerConversionOnly(ns.Name)
+						obj.Spec.APISpec.ConversionOnly.Tools[0].Name = longName
+						return obj
+					}(),
+					// Keep the expected suffix version-agnostic: the apiserver's
+					// maxLength wording differs across Kubernetes versions
+					// ("may not be longer than 128" before, "may not be more
+					// than 128 bytes" later) - same pattern as
+					// gatewayconfiguration_v2_test.go.
+					ExpectedErrorMessage: new("spec.apiSpec.conversion-only.tools[0].name: Too long: may not be"),
+				},
+				{
+					Name: "conversion-listener tool name with invalid characters is rejected",
+					TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
+						obj := validAIGatewayMCPServerConversionListener(ns.Name)
+						obj.Spec.APISpec.ConversionListener.Tools[0].Name = "bad name"
+						return obj
+					}(),
+					ExpectedErrorMessage: new("spec.apiSpec.conversion-listener.tools[0].name in body should match"),
+				},
+			}.RunWithConfig(t, cfg, scheme)
+		})
+
+		t.Run("upstream tools", func(t *testing.T) {
+			common.TestCasesGroup[*aiconfigurationv1alpha1.AIGatewayMCPServer]{
+				{
+					Name: "upstream-server tool name of 128 characters is accepted",
+					TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
+						obj := validAIGatewayMCPServerUpstreamServer(ns.Name)
+						obj.Spec.APISpec.UpstreamServer.Tools = []aiconfigurationv1alpha1.AIGatewayMCPUpstreamTool{
+							{Name: strings.Repeat("a", 128)},
+						}
+						return obj
+					}(),
+				},
+				{
+					Name: "upstream-server tool name with invalid characters is rejected",
+					TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
+						obj := validAIGatewayMCPServerUpstreamServer(ns.Name)
+						obj.Spec.APISpec.UpstreamServer.Tools = []aiconfigurationv1alpha1.AIGatewayMCPUpstreamTool{
+							{Name: "bad/name"},
+						}
+						return obj
+					}(),
+					ExpectedErrorMessage: new("spec.apiSpec.upstream-server.tools[0].name in body should match"),
+				},
+				{
+					Name: "upstream-server tool name longer than 128 characters is rejected",
+					TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
+						obj := validAIGatewayMCPServerUpstreamServer(ns.Name)
+						obj.Spec.APISpec.UpstreamServer.Tools = []aiconfigurationv1alpha1.AIGatewayMCPUpstreamTool{
+							{Name: longName},
+						}
+						return obj
+					}(),
+					// Version-agnostic suffix, see the conversion-only case above.
+					ExpectedErrorMessage: new("spec.apiSpec.upstream-server.tools[0].name: Too long: may not be"),
+				},
+			}.RunWithConfig(t, cfg, scheme)
+		})
 	})
 }
 
