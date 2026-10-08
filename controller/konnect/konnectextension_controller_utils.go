@@ -3,9 +3,13 @@ package konnect
 import (
 	"context"
 	"crypto/sha256"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/google/go-cmp/cmp"
@@ -15,6 +19,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/validation"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -227,7 +232,68 @@ func (r *KonnectExtensionReconciler) ensureCertificateSecret(ctx context.Context
 	if r.SecretLabelSelector != "" {
 		matchingLabels[r.SecretLabelSelector] = "true"
 	}
-	return secrets.EnsureCertificate(ctx,
+	owned, err := r.listOwnedCertificateSecrets(ctx, ext)
+	if err != nil {
+		return op.Noop, nil, err
+	}
+	var candidates []corev1.Secret
+	issuedAt := make(map[string]time.Time)
+	for _, secret := range owned {
+		if secret.Labels[consts.SecretProvisioningLabelKey] == consts.SecretProvisioningAutomaticLabelValue &&
+			secret.DeletionTimestamp.IsZero() {
+			candidates = append(candidates, secret)
+			issuedAt[secret.Name] = secret.CreationTimestamp.Time
+			if value := secret.Annotations[automaticCertificateIssuedAtAnnotation]; value != "" {
+				issued, err := time.Parse(time.RFC3339Nano, value)
+				if err != nil {
+					return op.Noop, nil, fmt.Errorf("invalid issuance time on certificate Secret %s/%s: %w", secret.Namespace, secret.Name, err)
+				}
+				issuedAt[secret.Name] = issued
+			}
+		}
+	}
+	sort.Slice(candidates, func(i, j int) bool {
+		if issuedAt[candidates[i].Name].Equal(issuedAt[candidates[j].Name]) {
+			return candidates[i].Name > candidates[j].Name
+		}
+		return issuedAt[candidates[i].Name].After(issuedAt[candidates[j].Name])
+	})
+	if len(candidates) > 0 {
+		current := &candidates[0]
+		pair, err := tls.X509KeyPair(current.Data[corev1.TLSCertKey], current.Data[corev1.TLSPrivateKeyKey])
+		if err == nil && pair.Leaf == nil {
+			pair.Leaf, err = x509.ParseCertificate(pair.Certificate[0])
+		}
+		switch {
+		case err != nil:
+			ctrl.LoggerFrom(ctx).Error(err, "Replacing invalid automatically provisioned certificate", "secret", client.ObjectKeyFromObject(current))
+		case pair.Leaf.Subject.CommonName != fmt.Sprintf("%s.%s", ext.Name, ext.Namespace):
+			ctrl.LoggerFrom(ctx).Info("Replacing automatically provisioned certificate with unexpected subject", "secret", client.ObjectKeyFromObject(current))
+		default:
+			renewAt := pair.Leaf.NotAfter.Add(-r.CertExpirationMargin)
+			if current.Annotations[automaticCertificateIssuedAtAnnotation] != "" &&
+				!current.CreationTimestamp.IsZero() && !renewAt.After(current.CreationTimestamp.Time) {
+				return op.Noop, nil, fmt.Errorf("certificate Secret %s/%s has no renewal interval: increase --cert-ttl or decrease --cert-expiration-margin",
+					current.Namespace, current.Name)
+			}
+			// Finish publishing and migrating a pending generation before issuing
+			// another. Old Secrets are deliberately retained during the rollout.
+			if time.Now().Before(renewAt) || len(candidates) > 1 ||
+				(ext.Status.DataPlaneClientAuth != nil &&
+					ext.Status.DataPlaneClientAuth.CertificateSecretRef != nil &&
+					ext.Status.DataPlaneClientAuth.CertificateSecretRef.Name != current.Name) {
+				if current.Immutable == nil || !*current.Immutable {
+					current.Immutable = new(true)
+					if err := r.Update(ctx, current); err != nil {
+						return op.Noop, nil, err
+					}
+					return op.Updated, current, nil
+				}
+				return op.Noop, current, nil
+			}
+		}
+	}
+	return secrets.GenerateCertificate(ctx,
 		ext,
 		fmt.Sprintf("%s.%s", ext.Name, ext.Namespace),
 		types.NamespacedName{
@@ -238,6 +304,12 @@ func (r *KonnectExtensionReconciler) ensureCertificateSecret(ctx context.Context
 		r.Client,
 		matchingLabels,
 		r.CertTTL,
+		func(secret *corev1.Secret) {
+			secret.Immutable = new(true)
+			secret.Annotations = map[string]string{
+				automaticCertificateIssuedAtAnnotation: time.Now().UTC().Format(time.RFC3339Nano),
+			}
+		},
 	)
 }
 
@@ -287,10 +359,26 @@ func (r *KonnectExtensionReconciler) getCertificateSecret(ctx context.Context, e
 			Namespace: ext.Namespace,
 			Name:      ext.Spec.ClientAuth.CertificateSecret.CertificateSecretRef.Name,
 		}, certificateSecret)
-	case *ext.Spec.ClientAuth.CertificateSecret.Provisioning == konnectv1alpha2.AutomaticSecretProvisioning:
+		if err == nil {
+			return r.ensureCertificateSnapshot(ctx, &ext, certificateSecret)
+		}
+	default:
 		res, certificateSecret, err = r.ensureCertificateSecret(ctx, &ext)
 	}
+
 	return res, certificateSecret, err
+}
+
+func (r *KonnectExtensionReconciler) certificateRenewalTime(secret *corev1.Secret) (time.Time, error) {
+	block, _ := pem.Decode(secret.Data[corev1.TLSCertKey])
+	if block == nil {
+		return time.Time{}, fmt.Errorf("invalid certificate in Secret %s/%s", secret.Namespace, secret.Name)
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("invalid certificate in Secret %s/%s: %w", secret.Namespace, secret.Name, err)
+	}
+	return cert.NotAfter.Add(-r.CertExpirationMargin), nil
 }
 
 func enforceKonnectExtensionStatus(
@@ -369,15 +457,26 @@ func sanitizeCert(cert string) string {
 // dataPlaneClientCertificateName returns the name of the KongDataPlaneClientCertificate registering certData.
 // It is the KonnectExtension name, unless an existing KongDataPlaneClientCertificate with that name registers
 // another certificate (spec.cert is immutable): then a digest of certData is appended, so that both can exist
-// until the new one is programmed.
+// until consumers migrate to the new generation.
 func dataPlaneClientCertificateName(
 	extName string,
 	existing []configurationv1alpha1.KongDataPlaneClientCertificate,
 	certData string,
 ) string {
 	for _, c := range existing {
+		if c.DeletionTimestamp.IsZero() && sanitizeCert(c.Spec.Cert) == sanitizeCert(certData) {
+			return c.Name
+		}
+	}
+	for _, c := range existing {
 		if c.Name == extName && sanitizeCert(c.Spec.Cert) != sanitizeCert(certData) {
 			digest := sha256.Sum256([]byte(sanitizeCert(certData)))
+			const maxPrefixLength = validation.DNS1123SubdomainMaxLength - 9
+			if len(extName) > maxPrefixLength {
+				// Include the full name so truncation cannot merge two extensions' names.
+				digest = sha256.Sum256([]byte(extName + "\x00" + sanitizeCert(certData)))
+				extName = strings.TrimRight(extName[:maxPrefixLength], ".-")
+			}
 			return fmt.Sprintf("%s-%x", extName, digest[:4])
 		}
 	}

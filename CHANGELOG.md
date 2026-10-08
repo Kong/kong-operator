@@ -233,7 +233,14 @@
   `KongDataPlaneClientCertificate` kept the previous certificate (its
   `spec.cert` is immutable) while the `KonnectExtension` stayed ready, so new
   `DataPlane` Pods got `401` from Konnect. The new certificate is registered
-  next to the previous one, which is deleted once the new one is programmed.
+  next to the previous one, which is deleted only after managed consumers
+  finish migrating and no running or terminating Pod still mounts it.
+  Automatically provisioned certificates are renewed using `--cert-ttl`
+  and `--cert-expiration-margin`. Manually provisioned certificates use
+  immutable owned Secret snapshots so in-place issuer renewal cannot reach
+  Pods before Konnect accepts the new certificate. The source Secret remains
+  externally managed, and status references the snapshot. The extension
+  remains unready until its current certificate is programmed.
   [#5982](https://github.com/Kong/kong-operator/pull/5982)
 - Konnect: the operator now adds its labels (`k8s-uid`, `managed-by`, ...) to
   the Konnect entities of `AIGatewayAuthStrategy`, `AIGatewayModel`,

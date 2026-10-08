@@ -1,16 +1,21 @@
 package konnect
 
 import (
+	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -21,6 +26,7 @@ import (
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 const (
@@ -58,7 +64,7 @@ func dpCertTestReconciler(t *testing.T, secretCert string, extra ...client.Objec
 		Name:      "certificate",
 		Namespace: dpCertTestNamespace,
 		Labels:    map[string]string{SecretKonnectDataPlaneCertificateLabel: "true"},
-		Data:      map[string][]byte{consts.TLSCRT: []byte(secretCert)},
+		Data:      map[string][]byte{consts.TLSCRT: []byte(secretCert), consts.TLSKey: []byte("private-key")},
 	}
 	ext := &konnectv1alpha2.KonnectExtension{
 		Name: dpCertTestExtName, Namespace: dpCertTestNamespace, UID: types.UID(dpCertTestExtName),
@@ -149,6 +155,99 @@ func TestDataPlaneClientCertificateName(t *testing.T) {
 		"the replacement name is stable for the same certificate")
 	assert.Equal(t, replacement, dataPlaneClientCertificateName("ext", append(existing("ext", "old"), existing(replacement, "cert")...), "cert"),
 		"and it stays the same once the replacement exists")
+	assert.Equal(t, replacement, dataPlaneClientCertificateName("ext", existing(replacement, "cert"), "cert"),
+		"removing the original object must not duplicate a pending replacement")
+
+	t.Run("long extension names", func(t *testing.T) {
+		names := []string{
+			strings.Repeat("a", validation.DNS1123SubdomainMaxLength),
+			strings.Repeat("a", 243) + "." + strings.Repeat("b", 9),
+			strings.Repeat("a", 244) + strings.Repeat("b", 9),
+		}
+		replacements := map[string]bool{}
+		for _, name := range names {
+			replacement := dataPlaneClientCertificateName(name, existing(name, "old"), "cert")
+			assert.Empty(t, validation.IsDNS1123Subdomain(replacement))
+			assert.LessOrEqual(t, len(replacement), validation.DNS1123SubdomainMaxLength)
+			assert.False(t, replacements[replacement], "different extensions must not share a replacement name")
+			replacements[replacement] = true
+			assert.Equal(t, replacement, dataPlaneClientCertificateName(name, existing(name, "old"), "cert\n"))
+		}
+	})
+}
+
+func TestKonnectExtensionWaitsForRegisteredCertificate(t *testing.T) {
+	for _, state := range []string{"missing", "no ID", "not programmed", "deleting"} {
+		t.Run(state, func(t *testing.T) {
+			previous := dpCertTestObject(dpCertTestExtName, "cert-v1")
+			desired := dpCertTestObject(dataPlaneClientCertificateName(
+				dpCertTestExtName,
+				[]configurationv1alpha1.KongDataPlaneClientCertificate{*previous},
+				"cert-v2",
+			), "cert-v2")
+			switch state {
+			case "no ID":
+				desired.Status = configurationv1alpha1.KongDataPlaneClientCertificateStatus{}
+			case "not programmed":
+				desired.Status.Conditions[0].Status = metav1.ConditionFalse
+			case "deleting":
+				now := metav1.Now()
+				desired.DeletionTimestamp = &now
+				desired.Finalizers = []string{"test/hold"}
+			}
+			objects := []client.Object{previous}
+			if state != "missing" {
+				objects = append(objects, desired)
+			}
+			r, ext := dpCertTestReconciler(t, "cert-v2", objects...)
+			ext.Status.Conditions = []metav1.Condition{
+				{Type: konnectv1alpha2.KonnectExtensionReadyConditionType, Status: metav1.ConditionTrue},
+				{Type: konnectv1alpha1.DataPlaneCertificateProvisionedConditionType, Status: metav1.ConditionTrue},
+			}
+			require.NoError(t, r.Status().Update(t.Context(), ext))
+			for range 10 {
+				require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(ext), ext))
+				_, err := r.Reconcile(t.Context(), ext)
+				require.NoError(t, err)
+			}
+			require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(ext), ext))
+			assert.True(t, k8sutils.HasConditionFalse(konnectv1alpha2.KonnectExtensionReadyConditionType, ext))
+			assert.True(t, k8sutils.HasConditionFalse(konnectv1alpha1.DataPlaneCertificateProvisionedConditionType, ext))
+			assert.Contains(t, dpCertTestList(t, r.Client), previous.Name)
+		})
+	}
+}
+
+func TestKonnectExtensionReportsCertificateCreateError(t *testing.T) {
+	r, ext := dpCertTestReconciler(t, "cert-v2", dpCertTestObject(dpCertTestExtName, "cert-v1"))
+	createErr := apierrors.NewForbidden(
+		configurationv1alpha1.GroupVersion.WithResource("kongdataplaneclientcertificates").GroupResource(),
+		"replacement",
+		fmt.Errorf("certificate creation denied"),
+	)
+	cl, ok := r.Client.(client.WithWatch)
+	require.True(t, ok)
+	r.Client = interceptor.NewClient(cl, interceptor.Funcs{
+		Create: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+			if _, ok := obj.(*configurationv1alpha1.KongDataPlaneClientCertificate); ok {
+				return createErr
+			}
+			return cl.Create(ctx, obj, opts...)
+		},
+	})
+	for range 10 {
+		require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(ext), ext))
+		_, err := r.Reconcile(t.Context(), ext)
+		require.NoError(t, err)
+	}
+	require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(ext), ext))
+	condition, found := k8sutils.GetCondition(konnectv1alpha1.DataPlaneCertificateProvisionedConditionType, ext)
+	require.True(t, found)
+	assert.Equal(t, metav1.ConditionFalse, condition.Status)
+	assert.Equal(t, konnectv1alpha1.DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed, condition.Reason)
+	assert.Equal(t, createErr.Error(), condition.Message)
+	assert.True(t, k8sutils.HasConditionFalse(konnectv1alpha2.KonnectExtensionReadyConditionType, ext))
+	require.Len(t, dpCertTestList(t, r.Client), 1)
 }
 
 // A certificate is registered once, also while its KongDataPlaneClientCertificate is not programmed yet.
@@ -209,6 +308,9 @@ func TestKonnectExtensionReplacesRegisteredCertificate(t *testing.T) {
 		assert.NotEqual(t, dpCertTestExtName, name)
 		assert.Equal(t, "cert-v2", c.Spec.Cert)
 	}
+	require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(ext), ext))
+	assert.True(t, k8sutils.HasConditionTrue(konnectv1alpha2.KonnectExtensionReadyConditionType, ext))
+	assert.True(t, k8sutils.HasConditionTrue(konnectv1alpha1.DataPlaneCertificateProvisionedConditionType, ext))
 }
 
 // When the certificate in the Secret changes back to one whose object is being deleted, the object
