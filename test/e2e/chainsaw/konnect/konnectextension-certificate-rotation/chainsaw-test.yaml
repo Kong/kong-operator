@@ -207,10 +207,10 @@ spec:
               - name: NAMESPACE
                 value: ($namespace)
             content: |
-              set -euo pipefail
+              set -eu
               for attempt in $(seq 1 180); do
                 secret="$(kubectl get konnectextension rotating -n "$NAMESPACE" -o jsonpath='{.status.dataPlaneClientAuth.certificateSecretRef.name}')"
-                if [[ "$(kubectl get secret "$secret" -n "$NAMESPACE" -o jsonpath='{.metadata.labels.gateway\.konghq\.com/secret-provisioning}')" == "automatic" ]]; then
+                if [ "$(kubectl get secret "$secret" -n "$NAMESPACE" -o jsonpath='{.metadata.labels.gateway\.konghq\.com/secret-provisioning}')" = "automatic" ]; then
                   exit 0
                 fi
                 sleep 1

@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -313,7 +312,7 @@ func (r *KonnectExtensionReconciler) ensureCertificateSecret(ctx context.Context
 	)
 }
 
-func (r *KonnectExtensionReconciler) getCertificateSecret(ctx context.Context, ext konnectv1alpha2.KonnectExtension, cleanup bool) (op.Result, *corev1.Secret, error) {
+func (r *KonnectExtensionReconciler) getCertificateSecret(ctx context.Context, ext konnectv1alpha2.KonnectExtension) (op.Result, *corev1.Secret, error) {
 	var (
 		certificateSecret  = &corev1.Secret{}
 		err                error
@@ -324,35 +323,6 @@ func (r *KonnectExtensionReconciler) getCertificateSecret(ctx context.Context, e
 	)
 
 	switch {
-	case cleanup && manualProvisioning:
-		secretName := ext.Spec.ClientAuth.CertificateSecret.CertificateSecretRef.Name
-		if ext.Status.DataPlaneClientAuth != nil && ext.Status.DataPlaneClientAuth.CertificateSecretRef != nil {
-			secretName = ext.Status.DataPlaneClientAuth.CertificateSecretRef.Name
-		}
-		err = r.Get(ctx, types.NamespacedName{
-			Namespace: ext.Namespace,
-			Name:      secretName,
-		}, certificateSecret)
-	case cleanup:
-		var secretsForOwner []corev1.Secret
-		secretsForOwner, err = r.listOwnedCertificateSecrets(ctx, &ext)
-		switch {
-		case err != nil:
-		case len(secretsForOwner) == 0:
-			err = apierrors.NewNotFound(corev1.Resource("secrets"), ext.Name)
-		default:
-			sort.Slice(secretsForOwner, func(i, j int) bool {
-				iPendingCleanup := controllerutil.ContainsFinalizer(&secretsForOwner[i], consts.KonnectExtensionSecretInUseFinalizer) ||
-					controllerutil.ContainsFinalizer(&secretsForOwner[i], KonnectCleanupFinalizer)
-				jPendingCleanup := controllerutil.ContainsFinalizer(&secretsForOwner[j], consts.KonnectExtensionSecretInUseFinalizer) ||
-					controllerutil.ContainsFinalizer(&secretsForOwner[j], KonnectCleanupFinalizer)
-				if iPendingCleanup != jPendingCleanup {
-					return iPendingCleanup
-				}
-				return secretsForOwner[i].Name < secretsForOwner[j].Name
-			})
-			certificateSecret = &secretsForOwner[0]
-		}
 	case manualProvisioning:
 		// No need to check CertificateSecretRef is nil, as it is enforced at the CRD level.
 		err = r.Get(ctx, types.NamespacedName{

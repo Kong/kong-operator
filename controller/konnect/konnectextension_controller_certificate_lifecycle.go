@@ -113,11 +113,11 @@ func (r *KonnectExtensionReconciler) certificateConsumersMigrated(
 	if err := reader.List(ctx, &cps, client.InNamespace(ext.Namespace)); err != nil {
 		return false, err
 	}
-	owners := make(map[types.UID]bool)
+	owners := make(map[types.UID]struct{})
 	for _, dp := range dps.Items {
 		for _, ref := range listExtendableReferencedExtensions[*operatorv1beta1.DataPlane](ctx, &dp) {
 			if ref.Name == ext.Name {
-				owners[dp.UID] = false
+				owners[dp.UID] = struct{}{}
 			}
 		}
 	}
@@ -142,7 +142,6 @@ func (r *KonnectExtensionReconciler) certificateConsumersMigrated(
 		if _, found := owners[owner.UID]; !found {
 			continue
 		}
-		owners[owner.UID] = true
 		if deployment.Spec.Replicas != nil && *deployment.Spec.Replicas == 0 {
 			continue
 		}
@@ -150,11 +149,6 @@ func (r *KonnectExtensionReconciler) certificateConsumersMigrated(
 			deployment.Spec.Paused ||
 			!k8sutils.DeploymentRolloutComplete(&deployment) ||
 			!usesClientCertificate(deployment.Spec.Template.Spec, secretName) {
-			return false, nil
-		}
-	}
-	for _, found := range owners {
-		if !found {
 			return false, nil
 		}
 	}

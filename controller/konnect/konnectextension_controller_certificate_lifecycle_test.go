@@ -200,7 +200,8 @@ func TestKonnectExtensionCertificateConsumersMigrated(t *testing.T) {
 		paused      bool
 		want        bool
 	}{
-		{name: "missing Deployment", missing: true},
+		{name: "missing Deployment without old Pods", missing: true, want: true},
+		{name: "missing Deployment with old Pod", missing: true, oldPod: true},
 		{name: "old Pod template", oldTemplate: true},
 		{name: "unobserved generation", staleStatus: true},
 		{name: "partial rollout", partial: true},
@@ -291,6 +292,32 @@ func TestKonnectExtensionKeepsCertificateUntilControlPlaneApplied(t *testing.T) 
 	got, err = r.certificateConsumersMigrated(t.Context(), ext, "new")
 	require.NoError(t, err)
 	assert.True(t, got)
+}
+
+func TestKonnectExtensionRetiresCertificateWithoutDeployment(t *testing.T) {
+	old := dpCertTestObject("extension", "old")
+	old.Finalizers = []string{KonnectCleanupFinalizer}
+	current := dpCertTestObject(dataPlaneClientCertificateName("extension",
+		[]configurationv1alpha1.KongDataPlaneClientCertificate{*old}, "new"), "new")
+	r, ext := dpCertTestReconciler(t, "new", old, current)
+	dp := &operatorv1beta1.DataPlane{
+		Name: "dp", Namespace: ext.Namespace, UID: "dp",
+		Spec: operatorv1beta1.DataPlaneSpec{DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+			Extensions: []commonv1alpha1.ExtensionRef{
+				{Group: konnectv1alpha2.GroupVersion.Group, Kind: konnectv1alpha2.KonnectExtensionKind, Name: ext.Name},
+			},
+		}},
+	}
+	require.NoError(t, r.Create(t.Context(), dp))
+
+	for range 16 {
+		require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(ext), ext))
+		_, err := r.Reconcile(t.Context(), ext)
+		require.NoError(t, err)
+	}
+	var retired configurationv1alpha1.KongDataPlaneClientCertificate
+	require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(old), &retired))
+	assert.False(t, retired.DeletionTimestamp.IsZero(), "a missing Deployment without old Pods must not stall retirement")
 }
 
 func TestKonnectExtensionRetirementWaitsForKonnectDeletion(t *testing.T) {

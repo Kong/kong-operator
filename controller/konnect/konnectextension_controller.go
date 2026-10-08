@@ -244,7 +244,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnect
 		Message: "DataPlane client certificate is provisioning",
 	}
 	// get the Kubernetes secret holding the certificate.
-	opRes, certificateSecret, err := r.getCertificateSecret(ctx, *ext, false)
+	opRes, certificateSecret, err := r.getCertificateSecret(ctx, *ext)
 	if client.IgnoreNotFound(err) != nil {
 		certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonInvalidSecret
 		certProvisionedCond.Message = err.Error()
