@@ -321,7 +321,11 @@ type CertificateConfig[T Object, Cert CertificateObject] struct {
 	//   - return (op.Result, nil, nil) to wire no certificate at all (a
 	//     condition explaining why is expected to be set on dp);
 	//   - call resolveAutomatic to fall back to the default operator-managed
-	//     provisioning.
+	//     provisioning;
+	//   - return a *RequeueAfterError when the certificate can't be used yet
+	//     but will become usable on its own (a condition explaining why is
+	//     expected to be set on dp): the DataPlane is reconciled again after
+	//     its After delay instead of being retried with error backoff.
 	Resolve func(
 		ctx context.Context,
 		cl client.Client,
@@ -476,7 +480,7 @@ func (r *Reconciler[T, Cert]) SetupWithManager(ctx context.Context, mgr ctrl.Man
 	for _, cpKind := range r.Config.ControlPlanes {
 		blder = blder.Watches(
 			cpKind.NewObject(),
-			handler.EnqueueRequestsFromMapFunc(EnqueueDataPlanesForControlPlane(
+			handler.EnqueueRequestsFromMapFunc(EnqueueDataPlanesByIndex(
 				mgr.GetClient(),
 				r.Config.NewObjectList,
 				cpKind.ControlPlaneRefIndexField,
@@ -539,9 +543,16 @@ func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Res
 
 	log.Trace(logger, "reconciling "+r.Config.Kind+" resource")
 
+	// expiryRequeue is set once a user-owned certificate is resolved: it
+	// expires without any watch event firing, so every successful exit below
+	// requeues for its expiry, not just the one at the end of the reconcile.
+	var expiryRequeue time.Duration
 	defer func() {
 		err = errors.Join(err, r.ensureReadyStatus(ctx, dp))
 		err = errors.Join(err, r.applyStatus(ctx, logger, dp))
+		if err == nil && res.RequeueAfter == 0 && expiryRequeue > 0 {
+			res.RequeueAfter = expiryRequeue
+		}
 	}()
 
 	// Resolve the referenced control plane and set the resolution condition.
@@ -588,8 +599,15 @@ func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Res
 		certResult, certSecret, err = r.ensureCertificateSecret(ctx, dp)
 	}
 	if err != nil {
+		// A certificate that becomes usable on its own at a known time (a
+		// condition explaining why is already set on dp) is reconciled again
+		// at that time rather than retried with error backoff.
+		if requeue, ok := errors.AsType[*RequeueAfterError](err); ok {
+			return ctrl.Result{RequeueAfter: requeue.After}, nil
+		}
 		return ctrl.Result{}, err
 	}
+	expiryRequeue = manualCertificateExpiryRequeue(certSecret, time.Now())
 
 	// Return early if the Secret was just created/updated so the Deployment
 	// picks up the correct Secret name on the next reconcile. No explicit

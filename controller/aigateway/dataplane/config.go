@@ -18,9 +18,7 @@ package dataplane
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
-	"strings"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -178,7 +176,7 @@ var config = shareddataplane.Config[
 			// Deployment.
 			return aigwdp.Spec.CertificateSecret != nil && !isOnPremControlPlaneRef(aigwdp)
 		},
-		Checksum:           certificateChecksum,
+		Checksum:           shareddataplane.CertificateChecksum,
 		ChecksumAnnotation: consts.AIGatewayDataPlaneCertificateChecksumAnnotation,
 		CleanupStale:       cleanupStaleCertificates,
 	},
@@ -534,38 +532,10 @@ func buildOnPremEnvVars(adminCertSecretName string) []corev1.EnvVar {
 	)
 }
 
-// certEntityName derives the AIGatewayDataPlaneCertificate CR name from the
-// AIGatewayDataPlane's name and a checksum of the mTLS certificate Secret's
-// content. Deriving the name from the content (rather than reusing a fixed
-// name) means a certificate rotation creates a new CR/Konnect entity instead
-// of overwriting the existing one in place, so the previous certificate stays
-// registered and trusted by Konnect until it is safe to remove it (see
-// cleanupStaleKonnectCertificates). When the DataPlane name must be truncated,
-// a hash of the full name is retained to distinguish names with a shared prefix.
-func certEntityName(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane, certChecksum string) string {
-	const (
-		maxObjectNameLen  = 253
-		checksumPrefixLen = 10
-		nameHashPrefixLen = 10
-	)
-	suffix := certChecksum
-	if len(suffix) > checksumPrefixLen {
-		suffix = suffix[:checksumPrefixLen]
-	}
-	name := aigwdp.Name
-	if maxNameLen := maxObjectNameLen - 1 - len(suffix); len(name) > maxNameLen {
-		nameHash := fmt.Sprintf("%x", sha256.Sum256([]byte(name)))[:nameHashPrefixLen]
-		maxNameLen = maxObjectNameLen - 1 - len(nameHash) - 1 - len(suffix)
-		name = strings.TrimRight(name[:maxNameLen], ".-")
-		return fmt.Sprintf("%s-%s-%s", name, nameHash, suffix)
-	}
-	return fmt.Sprintf("%s-%s", name, suffix)
-}
-
 // buildAIGatewayDataPlaneCertificate builds the desired
 // AIGatewayDataPlaneCertificate for the given AIGatewayDataPlane, referencing
 // the provisioned mTLS Secret and the resolved KonnectAIGateway. Its name is
-// derived from certChecksum (see certEntityName), so a certificate rotation
+// derived from certChecksum (see shareddataplane.CertEntityName), so a certificate rotation
 // registers a new entity rather than mutating the previous one in place.
 func buildAIGatewayDataPlaneCertificate(
 	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
@@ -583,7 +553,7 @@ func buildAIGatewayDataPlaneCertificate(
 	// certificate's ID instead of erroring, so the rotation would appear to
 	// succeed (Programmed=True) while Konnect keeps serving the old
 	// certificate forever.
-	certName := certEntityName(aigwdp, certChecksum)
+	certName := shareddataplane.CertEntityName(aigwdp.Name, certChecksum)
 	return &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
 		APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
 		Kind:       "AIGatewayDataPlaneCertificate",
@@ -637,12 +607,15 @@ func cleanupStaleCertificates(
 	certChecksum string,
 ) error {
 	if cp.IsKonnect {
-		if err := cleanupStaleKonnectCertificates(ctx, cl, logger, aigwdp, certEntityName(aigwdp, certChecksum)); err != nil {
+		if err := shareddataplane.CleanupStaleKonnectCertificates(ctx, cl, logger, aigwdp,
+			&aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateList{}, "AIGatewayDataPlaneCertificate",
+			shareddataplane.CertEntityName(aigwdp.Name, certChecksum),
+		); err != nil {
 			return err
 		}
 	}
 	if !cp.IsKonnect || isManualProvisioning(aigwdp) {
-		if err := cleanupStaleAutomaticCertificateSecret(ctx, cl, logger, aigwdp); err != nil {
+		if err := shareddataplane.CleanupStaleAutomaticCertificateSecret(ctx, cl, logger, aigwdp, consts.SecretAIGatewayDataPlaneCertificateLabel); err != nil {
 			return err
 		}
 	}
@@ -656,6 +629,12 @@ func cleanupStaleCertificates(
 func extraWatches(blder *builder.Builder, mgr ctrl.Manager) *builder.Builder {
 	return blder.Watches(
 		&corev1.Secret{},
-		handler.EnqueueRequestsFromMapFunc(enqueueForAIGatewayDataPlaneCertificateSecretRef(mgr.GetClient())),
+		handler.EnqueueRequestsFromMapFunc(shareddataplane.EnqueueDataPlanesByIndex(
+			mgr.GetClient(),
+			func() client.ObjectList { return &aigatewayv1alpha1.AIGatewayDataPlaneList{} },
+			index.IndexFieldAIGatewayDataPlaneOnCertificateSecret,
+			"AIGatewayDataPlane",
+			"Secret",
+		)),
 	)
 }

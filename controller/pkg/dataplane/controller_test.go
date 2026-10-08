@@ -1,6 +1,7 @@
 package dataplane
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -10,12 +11,15 @@ import (
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/events"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
 func TestReconcile_ControlPlaneNotReady(t *testing.T) {
@@ -176,5 +180,63 @@ func TestEnsureServiceReadyCondition(t *testing.T) {
 		require.Len(t, aigwdp.Status.Addresses, 1)
 		assert.Equal(t, "203.0.113.5", aigwdp.Status.Addresses[0].Value)
 		assert.Equal(t, aigatewayv1alpha1.PublicLoadBalancerAddressSourceType, aigwdp.Status.Addresses[0].SourceType)
+	})
+}
+
+func TestReconcile_CertificateRequeue(t *testing.T) {
+	programmedCP := func() *konnectv1alpha1.KonnectAIGateway {
+		cp := testKonnectAIGateway()
+		cp.Namespace, cp.Name = reconcileTestNS, reconcileTestAIGWCPName
+		cp.Status.Conditions = []metav1.Condition{{
+			Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
+			Status:             metav1.ConditionTrue,
+			Reason:             "Programmed",
+			LastTransitionTime: metav1.NewTime(time.Now()),
+		}}
+		return cp
+	}
+	reconcileWith := func(
+		t *testing.T,
+		resolve func() (op.Result, *corev1.Secret, error),
+	) (ctrl.Result, error) {
+		t.Helper()
+		aigwdp := newReconcileAIGWDP()
+		cl := fake.NewClientBuilder().
+			WithScheme(managerscheme.Get()).
+			WithStatusSubresource(&aigatewayv1alpha1.AIGatewayDataPlane{}).
+			WithObjects(aigwdp, programmedCP()).
+			Build()
+		r := newTestReconciler(cl, events.NewFakeRecorder(10))
+		r.Config.Certificate.Resolve = func(
+			context.Context, client.Client, *aigatewayv1alpha1.AIGatewayDataPlane, ResolvedControlPlane,
+			func(context.Context, *aigatewayv1alpha1.AIGatewayDataPlane) (op.Result, *corev1.Secret, error),
+		) (op.Result, *corev1.Secret, error) {
+			return resolve()
+		}
+		return r.Reconcile(t.Context(), aigwdp)
+	}
+
+	t.Run("RequeueAfterError requeues after its delay without error backoff", func(t *testing.T) {
+		res, err := reconcileWith(t, func() (op.Result, *corev1.Secret, error) {
+			return op.Noop, nil, &RequeueAfterError{After: 42 * time.Minute, Err: assert.AnError}
+		})
+		require.NoError(t, err)
+		assert.Equal(t, 42*time.Minute, res.RequeueAfter)
+	})
+
+	t.Run("user-owned certificate requeues at its expiry even on an early exit", func(t *testing.T) {
+		now := time.Now()
+		crt, key := certificate.MustGenerateCertPEMFormat(certificate.WithValidity(now.Add(-time.Hour), now.Add(time.Hour)))
+		userSecret := &corev1.Secret{
+			Namespace: reconcileTestNS, Name: "user-cert",
+			Data: map[string][]byte{corev1.TLSCertKey: crt, corev1.TLSPrivateKeyKey: key},
+		}
+		// The Konnect certificate is never Programmed here, so the reconcile
+		// exits early, before reconciling the Deployment.
+		res, err := reconcileWith(t, func() (op.Result, *corev1.Secret, error) {
+			return op.Noop, userSecret, nil
+		})
+		require.NoError(t, err)
+		assert.InDelta(t, (time.Hour + time.Second).Seconds(), res.RequeueAfter.Seconds(), 5)
 	})
 }

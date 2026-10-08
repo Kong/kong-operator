@@ -19244,6 +19244,7 @@ spec:
                     properties:
                       name:
                         maxLength: 253
+                        minLength: 1
                         type: string
                     required:
                     - name
@@ -33605,6 +33606,29 @@ spec:
             type: object
           spec:
             properties:
+              certificateSecret:
+                properties:
+                  provisioning:
+                    default: Automatic
+                    enum:
+                    - Manual
+                    - Automatic
+                    type: string
+                  secretRef:
+                    properties:
+                      name:
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                    required:
+                    - name
+                    type: object
+                type: object
+                x-kubernetes-validations:
+                - message: secretRef must be set when provisioning is Manual
+                  rule: 'self.provisioning == ''Manual'' ? has(self.secretRef) : true'
+                - message: secretRef must not be set when provisioning is Automatic
+                  rule: 'self.provisioning == ''Automatic'' ? !has(self.secretRef) : true'
               config:
                 properties:
                   configPollIntervalSeconds:

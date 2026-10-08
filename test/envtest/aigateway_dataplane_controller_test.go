@@ -317,7 +317,7 @@ func TestAIGatewayDataPlaneReconciler_KonnectCertificateBlueGreenRotation(t *tes
 	deploy := waitForAIGWDeployment(t, ctx, cl, ns.Name, aigwdp.Name)
 	checksumV1 := deploy.Spec.Template.Annotations[consts.AIGatewayDataPlaneCertificateChecksumAnnotation]
 	require.NotEmpty(t, checksumV1)
-	setDeploymentRolloutStatus(t, ctx, cl, ns.Name, deploy.Name, true)
+	setDeploymentRolloutStatus(t, ctx, cl, ns.Name, deploy.Name)
 
 	// Rotate the Secret's content in place -- the cert-manager-renewal scenario.
 	certV2, keyV2 := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("rotation cert v2"))
@@ -369,7 +369,7 @@ func TestAIGatewayDataPlaneReconciler_KonnectCertificateBlueGreenRotation(t *tes
 	}, waitTime, tickTime, "old certificate must not be removed before the rollout to the new one is confirmed complete")
 
 	// Confirm the rollout to the new generation.
-	setDeploymentRolloutStatus(t, ctx, cl, ns.Name, deploy.Name, true)
+	setDeploymentRolloutStatus(t, ctx, cl, ns.Name, deploy.Name)
 
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
 		assert.True(ct, apierrors.IsNotFound(
@@ -378,31 +378,27 @@ func TestAIGatewayDataPlaneReconciler_KonnectCertificateBlueGreenRotation(t *tes
 	assert.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(certB), &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}))
 }
 
-// setDeploymentRolloutStatus sets deployment status fields to either report a
-// fully-complete rollout (matching k8sutils.DeploymentRolloutComplete) or a
-// zeroed, clearly-incomplete one. Envtest doesn't run the real Deployment
-// controller, so nothing populates these fields on its own.
-func setDeploymentRolloutStatus(t *testing.T, ctx context.Context, cl client.Client, ns, name string, complete bool) {
+// setDeploymentRolloutStatus sets deployment status fields to report a
+// fully-complete rollout (matching k8sutils.DeploymentRolloutComplete).
+// Envtest doesn't run the real Deployment controller, so nothing populates
+// these fields on its own.
+func setDeploymentRolloutStatus(t *testing.T, ctx context.Context, cl client.Client, ns, name string) {
 	t.Helper()
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
 		deploy := &appsv1.Deployment{}
 		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: name}, deploy)) {
 			return
 		}
-		if complete {
-			replicas := int32(1)
-			if deploy.Spec.Replicas != nil {
-				replicas = *deploy.Spec.Replicas
-			}
-			deploy.Status = appsv1.DeploymentStatus{
-				ObservedGeneration: deploy.Generation,
-				Replicas:           replicas,
-				UpdatedReplicas:    replicas,
-				ReadyReplicas:      replicas,
-				AvailableReplicas:  replicas,
-			}
-		} else {
-			deploy.Status = appsv1.DeploymentStatus{}
+		replicas := int32(1)
+		if deploy.Spec.Replicas != nil {
+			replicas = *deploy.Spec.Replicas
+		}
+		deploy.Status = appsv1.DeploymentStatus{
+			ObservedGeneration: deploy.Generation,
+			Replicas:           replicas,
+			UpdatedReplicas:    replicas,
+			ReadyReplicas:      replicas,
+			AvailableReplicas:  replicas,
 		}
 		assert.NoError(ct, cl.Status().Update(ctx, deploy))
 	}, waitTime, tickTime)
@@ -455,8 +451,8 @@ func setupProgrammedAIGWDP(
 // waitForAIGWCertificate waits for exactly one AIGatewayDataPlaneCertificate
 // owned by the given AIGatewayDataPlane name and returns it. The CR's name is
 // derived from the mTLS certificate Secret's content checksum (see
-// certEntityName in controller/aigateway/dataplane), not from aigwdpName, so
-// it can't be looked up by a fixed name.
+// CertEntityName in controller/pkg/dataplane), not from aigwdpName, so it
+// can't be looked up by a fixed name.
 func waitForAIGWCertificate(t *testing.T, ctx context.Context, cl client.Client, ns, aigwdpName string) *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate {
 	t.Helper()
 	var certList aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateList

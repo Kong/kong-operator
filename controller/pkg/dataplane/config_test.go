@@ -18,8 +18,6 @@ package dataplane
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"testing"
 
@@ -343,31 +341,6 @@ func buildTestContainer(
 	return container, volumes, nil
 }
 
-// certEntityName derives the certificate CR name from the DataPlane name and
-// the certificate content checksum: rotating the certificate produces a new CR
-// name instead of mutating the previous one in place. Mirrors the wrapper
-// implementations under test.
-func certEntityName(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane, certChecksum string) string {
-	const checksumPrefixLen = 10
-	suffix := certChecksum
-	if len(suffix) > checksumPrefixLen {
-		suffix = suffix[:checksumPrefixLen]
-	}
-	name := aigwdp.Name
-	if maxNameLen := 253 - 1 - checksumPrefixLen; len(name) > maxNameLen {
-		name = name[:maxNameLen]
-	}
-	return fmt.Sprintf("%s-%s", name, suffix)
-}
-
-// certificateChecksum hashes the certificate Secret's tls.crt/tls.key pair.
-func certificateChecksum(secret *corev1.Secret) string {
-	h := sha256.New()
-	h.Write(secret.Data[corev1.TLSCertKey])
-	h.Write(secret.Data[corev1.TLSPrivateKeyKey])
-	return hex.EncodeToString(h.Sum(nil))
-}
-
 // buildTestCertificate builds the desired AIGatewayDataPlaneCertificate for
 // the given AIGatewayDataPlane.
 func buildTestCertificate(
@@ -380,7 +353,7 @@ func buildTestCertificate(
 	if !ok {
 		panic("buildTestCertificate expects a resolved KonnectAIGateway control plane")
 	}
-	name := certEntityName(aigwdp, certChecksum)
+	name := CertEntityName(aigwdp.Name, certChecksum)
 	return &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
 		APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
 		Kind:       "AIGatewayDataPlaneCertificate",

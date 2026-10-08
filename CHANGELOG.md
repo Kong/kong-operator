@@ -99,6 +99,18 @@
   is deleted, and otherwise within a minute. While it is being
   deleted, listener policies not yet created in Konnect can't reference it.
   [#5987](https://github.com/Kong/kong-operator/pull/5987)
+- `KegDataPlane`: added `spec.certificateSecret.{provisioning,secretRef}`,
+  letting users supply their own same-namespace TLS Secret for the mTLS client
+  certificate instead of relying on operator auto-provisioning, with support
+  for switching between `Manual` and `Automatic` provisioning. The operator
+  never creates, modifies or deletes the referenced Secret, and in-place edits
+  to it roll the Deployment. The Secret must hold a matching certificate and
+  key that are currently valid (`CertificateProvisioned=False/InvalidSecret`
+  otherwise; a `NotBefore` up to 5 minutes in the future is tolerated for clock
+  skew) and must not be an operator-provisioned Secret
+  (`CertificateProvisioned=False/SecretRefOperatorManaged`). The operator
+  re-checks the certificate when it becomes valid and when it expires.
+  [#5976](https://github.com/Kong/kong-operator/pull/5976)
 
 ### Changed
 
@@ -132,7 +144,35 @@
   planes. An SNI's `certificate` reference resolves to the referenced
   certificate's entity name in the same namespace; the referenced certificate
   must target the same `OnPremAIGateway` as the SNI.
-
+- `KegDataPlane`: the `EventGatewayDataPlaneCertificate` is renamed from
+  `<kegdataplane>` to `<kegdataplane>-<checksum>`, derived from the certificate
+  content, and now carries the operator's managed-by labels. Tooling that looks
+  it up by the old name must switch to the labels or the owner reference. A
+  certificate rotation therefore registers a new Konnect certificate and keeps
+  the previous one until the Deployment rollout onto the new one completes.
+  The Deployment's Pod template now also carries a certificate checksum
+  annotation. **On upgrade, every existing `KegDataPlane` registers a new
+  certificate and its Deployment is rolled out once**; the old,
+  `KegDataPlane`-named certificate is removed after the rollout completes.
+  [#5976](https://github.com/Kong/kong-operator/pull/5976)
+- `AIGatewayDataPlane`: a `Manual` `spec.certificateSecret` is now validated
+  more strictly: `tls.crt` and `tls.key` must form a matching key pair and the
+  certificate must be currently valid (not expired, and a `NotBefore` at most
+  5 minutes in the future), otherwise `CertificateProvisioned` goes
+  `False/InvalidSecret` (previously only PEM decoding was checked), and the
+  condition message now ends with the specific validation failure.
+  Referencing an operator-provisioned Secret is rejected with
+  `CertificateProvisioned=False/SecretRefOperatorManaged`, since the operator
+  would otherwise delete it once the switch to `Manual` completes. The
+  operator re-checks the certificate when it becomes valid and when it
+  expires. While `CertificateProvisioned` is `False` the Deployment isn't
+  updated, so an existing `AIGatewayDataPlane` whose Manual Secret is now
+  rejected keeps its current Deployment (ignoring e.g. image or replica
+  changes) until the Secret is fixed. `spec.certificateSecret.secretRef.name`
+  must now be non-empty (`MinLength=1`), so an empty name is rejected at
+  admission instead of leaving the `AIGatewayDataPlane` stuck at
+  `SecretRefNotFound`.
+  [#5976](https://github.com/Kong/kong-operator/pull/5976)
 - On-prem AI Gateway: each `OnPremAIGateway`'s control plane instance now runs
   a Secret watcher that re-renders the configuration when a Secret referenced
   by a configuration entity's `secretRef` changes, instead of waiting for an

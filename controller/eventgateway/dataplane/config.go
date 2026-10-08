@@ -17,9 +17,11 @@ limitations under the License.
 package dataplane
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -75,9 +77,17 @@ var config = shareddataplane.Config[
 	},
 
 	ControlPlaneRef: func(egdp *eventgatewayv1alpha1.KegDataPlane) shareddataplane.ControlPlaneRef {
+		ref := egdp.Spec.ControlPlaneRef.KonnectNamespacedRef
+		if ref == nil {
+			// The CRD schema requires konnectNamespacedRef, so this shouldn't
+			// happen. Returning an empty ref skips control plane resolution;
+			// buildContainer then refuses to build a Deployment without a
+			// resolved KonnectEventGateway, instead of panicking.
+			return shareddataplane.ControlPlaneRef{}
+		}
 		return shareddataplane.ControlPlaneRef{
 			Kind: konnectEventGatewayKind.Kind,
-			Name: egdp.Spec.ControlPlaneRef.KonnectNamespacedRef.Name,
+			Name: ref.Name,
 		}
 	},
 	ControlPlanes: []shareddataplane.ControlPlaneKindConfig{konnectEventGatewayKind},
@@ -113,33 +123,26 @@ var config = shareddataplane.Config[
 		Kind:     "EventGatewayDataPlaneCertificate",
 		Build:    buildEventGatewayDataPlaneCertificate,
 		Ensure:   secrets.EnsureCertificate[*eventgatewayv1alpha1.KegDataPlane],
+		// Requested is left nil: KEG always needs a certificate to connect to
+		// its (Konnect-backed) control plane, so an unresolved one always
+		// blocks the Deployment.
+		Resolve:            resolveCertificateSecret,
+		Checksum:           shareddataplane.CertificateChecksum,
+		ChecksumAnnotation: consts.KEGDataPlaneCertificateChecksumAnnotation,
+		CleanupStale:       cleanupStaleCertificates,
 	},
+	ExtraWatches: extraWatches,
 
 	Deployment: shareddataplane.DeploymentConfig[*eventgatewayv1alpha1.KegDataPlane]{
-		ContainerName:       consts.KEGContainerName,
-		RelatedImageEnvVar:  consts.RelatedImageKEGEnvVar,
-		DefaultImage:        consts.DefaultKEGImage,
-		ManagedByLabelValue: consts.DataPlaneManagedByLabelValue,
-		PodTemplateSpec: func(egdp *eventgatewayv1alpha1.KegDataPlane) *corev1.PodTemplateSpec {
-			if egdp.Spec.Deployment == nil {
-				return nil
-			}
-			return egdp.Spec.Deployment.PodTemplateSpec
-		},
-		DeploymentLabels: func(egdp *eventgatewayv1alpha1.KegDataPlane) map[string]string {
-			if egdp.Spec.Deployment == nil {
-				return nil
-			}
-			return egdp.Spec.Deployment.Labels
-		},
-		DeploymentAnnotations: func(egdp *eventgatewayv1alpha1.KegDataPlane) map[string]string {
-			if egdp.Spec.Deployment == nil {
-				return nil
-			}
-			return egdp.Spec.Deployment.Annotations
-		},
-		Replicas:       replicas,
-		BuildContainer: buildContainer,
+		ContainerName:         consts.KEGContainerName,
+		RelatedImageEnvVar:    consts.RelatedImageKEGEnvVar,
+		DefaultImage:          consts.DefaultKEGImage,
+		ManagedByLabelValue:   consts.DataPlaneManagedByLabelValue,
+		PodTemplateSpec:       podTemplateSpec,
+		DeploymentLabels:      deploymentLabels,
+		DeploymentAnnotations: deploymentAnnotations,
+		Replicas:              replicas,
+		BuildContainer:        buildContainer,
 	},
 
 	Service: shareddataplane.ServiceConfig[*eventgatewayv1alpha1.KegDataPlane]{
@@ -155,6 +158,27 @@ var config = shareddataplane.Config[
 
 	HPAScalingSpec:    hpaScalingSpec,
 	SetStatusReplicas: setStatusReplicas,
+}
+
+func podTemplateSpec(egdp *eventgatewayv1alpha1.KegDataPlane) *corev1.PodTemplateSpec {
+	if egdp.Spec.Deployment == nil {
+		return nil
+	}
+	return egdp.Spec.Deployment.PodTemplateSpec
+}
+
+func deploymentLabels(egdp *eventgatewayv1alpha1.KegDataPlane) map[string]string {
+	if egdp.Spec.Deployment == nil {
+		return nil
+	}
+	return egdp.Spec.Deployment.Labels
+}
+
+func deploymentAnnotations(egdp *eventgatewayv1alpha1.KegDataPlane) map[string]string {
+	if egdp.Spec.Deployment == nil {
+		return nil
+	}
+	return egdp.Spec.Deployment.Annotations
 }
 
 // replicas returns the replica count to seed on the Deployment: the static
@@ -270,10 +294,17 @@ func buildContainer(
 	egdp *eventgatewayv1alpha1.KegDataPlane,
 	cp shareddataplane.ResolvedControlPlane,
 	image string,
-	_ string, // certSecretName: KEG always provisions its certificate Secret.
+	_ string, // certSecretName: KEG always resolves a certificate Secret before the Deployment is built.
 	_ string, // adminCertSecretName: KEG never provisions an admin certificate.
 ) (corev1.Container, []corev1.Volume, error) {
-	envVars, err := buildKEGEnvVars(egdp, konnectEventGatewayFromResolved(cp))
+	keg := konnectEventGatewayFromResolved(cp)
+	if keg == nil {
+		// keg needs its KonnectEventGateway's region and cluster ID to start, so
+		// there is no Deployment to build without one. The CRD schema requires
+		// spec.controlPlaneRef.konnectNamespacedRef, so this shouldn't happen.
+		return corev1.Container{}, nil, fmt.Errorf("KegDataPlane %s/%s has no resolved KonnectEventGateway", egdp.Namespace, egdp.Name)
+	}
+	envVars, err := buildKEGEnvVars(egdp, keg)
 	if err != nil {
 		return corev1.Container{}, nil, err
 	}
@@ -392,19 +423,26 @@ func buildKEGEnvVars(
 
 // buildEventGatewayDataPlaneCertificate builds the desired
 // EventGatewayDataPlaneCertificate for the given KegDataPlane, referencing the
-// provisioned mTLS Secret and the resolved KonnectEventGateway.
+// mTLS Secret and the resolved KonnectEventGateway. Its name is derived from
+// certChecksum, so a certificate rotation registers a new entity rather than
+// mutating the previous one in place.
 func buildEventGatewayDataPlaneCertificate(
 	egdp *eventgatewayv1alpha1.KegDataPlane,
 	cp shareddataplane.ResolvedControlPlane,
 	certSecretName string,
-	_ string, // certChecksum: KEG does not track certificate content checksums.
+	certChecksum string,
 ) *configurationv1alpha1.EventGatewayDataPlaneCertificate {
 	keg := konnectEventGatewayFromResolved(cp)
+	// certName is also used as the Konnect certificate name so that every
+	// rotation registers a distinct Konnect entity (see
+	// shareddataplane.CertEntityName).
+	certName := shareddataplane.CertEntityName(egdp.Name, certChecksum)
 	return &configurationv1alpha1.EventGatewayDataPlaneCertificate{
 		APIVersion: configurationv1alpha1.GroupVersion.String(),
 		Kind:       "EventGatewayDataPlaneCertificate",
-		Name:       egdp.Name,
+		Name:       certName,
 		Namespace:  egdp.Namespace,
+		Labels:     selectorLabelsForKegDataPlane(egdp),
 		Spec: configurationv1alpha1.EventGatewayDataPlaneCertificateSpec{
 			GatewayRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -420,7 +458,45 @@ func buildEventGatewayDataPlaneCertificate(
 						Key:  corev1.TLSCertKey,
 					},
 				},
+				Name: certName,
 			},
 		},
 	}
+}
+
+// selectorLabelsForKegDataPlane returns the labels identifying the
+// operator-managed resources of the given KegDataPlane.
+func selectorLabelsForKegDataPlane(egdp *eventgatewayv1alpha1.KegDataPlane) map[string]string {
+	return map[string]string{
+		consts.GatewayOperatorManagedByLabel:          consts.KEGDataPlaneManagedByLabelValue,
+		consts.GatewayOperatorManagedByNameLabel:      egdp.Name,
+		consts.GatewayOperatorManagedByNamespaceLabel: egdp.Namespace,
+	}
+}
+
+// cleanupStaleCertificates removes the certificate resources left over from
+// an earlier rotation or a switch of provisioning mode: stale
+// EventGatewayDataPlaneCertificates (all but the one named after the current
+// checksum) and, when a manually-referenced Secret is in use, the
+// operator-provisioned Automatic Secret. The shared reconciler only calls
+// this once the rollout onto the current certificate completed, so no
+// running replica is left depending on what this removes.
+func cleanupStaleCertificates(
+	ctx context.Context,
+	cl client.Client,
+	logger logr.Logger,
+	egdp *eventgatewayv1alpha1.KegDataPlane,
+	_ shareddataplane.ResolvedControlPlane,
+	certChecksum string,
+) error {
+	if err := shareddataplane.CleanupStaleKonnectCertificates(ctx, cl, logger, egdp,
+		&configurationv1alpha1.EventGatewayDataPlaneCertificateList{}, "EventGatewayDataPlaneCertificate",
+		shareddataplane.CertEntityName(egdp.Name, certChecksum),
+	); err != nil {
+		return err
+	}
+	if isManualProvisioning(egdp) {
+		return shareddataplane.CleanupStaleAutomaticCertificateSecret(ctx, cl, logger, egdp, consts.SecretKEGDataPlaneCertificateLabel)
+	}
+	return nil
 }

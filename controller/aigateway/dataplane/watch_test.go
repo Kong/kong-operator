@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	shareddataplane "github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
@@ -24,7 +24,7 @@ func (c *errListClient) List(_ context.Context, _ client.ObjectList, _ ...client
 	return assert.AnError
 }
 
-func Test_enqueueForAIGatewayDataPlaneCertificateSecretRef(t *testing.T) {
+func Test_certificateSecretWatch(t *testing.T) {
 	const (
 		ns         = "test-ns"
 		secretName = "user-cert"
@@ -82,10 +82,10 @@ func Test_enqueueForAIGatewayDataPlaneCertificateSecretRef(t *testing.T) {
 			},
 		},
 		{
-			name:    "returns nil when obj is not a Secret",
-			cl:      cl,
-			obj:     &konnectv1alpha1.KonnectAIGateway{},
-			wantNil: true,
+			name: "returns no requests for an unreferenced Secret",
+			cl:   cl,
+			obj:  &corev1.Secret{Namespace: ns, Name: "unreferenced"},
+			want: nil,
 		},
 		{
 			name:    "returns nil when List fails",
@@ -97,7 +97,13 @@ func Test_enqueueForAIGatewayDataPlaneCertificateSecretRef(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			mapFunc := enqueueForAIGatewayDataPlaneCertificateSecretRef(tc.cl)
+			mapFunc := shareddataplane.EnqueueDataPlanesByIndex(
+				tc.cl,
+				func() client.ObjectList { return &aigatewayv1alpha1.AIGatewayDataPlaneList{} },
+				index.IndexFieldAIGatewayDataPlaneOnCertificateSecret,
+				"AIGatewayDataPlane",
+				"Secret",
+			)
 			requests := mapFunc(t.Context(), tc.obj)
 			if tc.wantNil {
 				require.Nil(t, requests)

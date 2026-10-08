@@ -69,6 +69,11 @@ const (
 	// CertificateSecretInvalidReason indicates the manually-referenced Secret
 	// does not contain a valid tls.crt/tls.key pair.
 	CertificateSecretInvalidReason consts.ConditionReason = "InvalidSecret"
+	// CertificateSecretRefOperatorManagedReason indicates the manually-referenced
+	// Secret is an operator-provisioned (Automatic) certificate Secret. Such a
+	// Secret is owned and garbage-collected by the operator, so it can't be
+	// used as a user-owned Manual certificate.
+	CertificateSecretRefOperatorManagedReason consts.ConditionReason = "SecretRefOperatorManaged" //nolint:gosec
 	// CertificateControlPlaneRefMissingReason indicates spec.certificateSecret
 	// was configured but spec.controlPlaneRef is unset, so there's no
 	// KonnectAIGateway to ever use the certificate against.
@@ -88,6 +93,10 @@ func CertificateSecretRefNotFoundMessage(name string) string {
 // manually-referenced certificate Secret does not contain a valid TLS
 // certificate and key.
 const CertificateSecretInvalidMessage = "Referenced certificate Secret does not contain a valid tls.crt/tls.key pair"
+
+// CertificateSecretRefOperatorManagedMessage is the message used when the
+// manually-referenced certificate Secret is an operator-provisioned one.
+const CertificateSecretRefOperatorManagedMessage = "Referenced certificate Secret is provisioned and managed by the operator; Manual provisioning requires a user-owned Secret"
 
 // CertificateControlPlaneRefMissingMessage is the message used when
 // spec.certificateSecret is configured but spec.controlPlaneRef is unset.
