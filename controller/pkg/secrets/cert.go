@@ -264,6 +264,28 @@ func matchingLabelsToSecretOpt(ml client.MatchingLabels) k8sresources.SecretOpt 
 	}
 }
 
+// GenerateCertificate creates a new certificate Secret without reducing existing
+// generations. Callers must retain and retire those generations safely.
+func GenerateCertificate[T interface {
+	k8sresources.ControlPlaneOrDataPlaneOrKonnectExtension
+	client.Object
+}](
+	ctx context.Context,
+	owner T,
+	subject string,
+	ca types.NamespacedName,
+	usages []certificatesv1.KeyUsage,
+	cl client.Client,
+	labels client.MatchingLabels,
+	certTTL time.Duration,
+	opts ...k8sresources.SecretOpt,
+) (op.Result, *corev1.Secret, error) {
+	secretOpts := append(getSecretOpts(owner), opts...)
+	secretOpts = append(secretOpts, matchingLabelsToSecretOpt(labels))
+	secret := k8sresources.GenerateNewTLSSecret(owner, secretOpts...)
+	return generateTLSDataSecret(ctx, secret, owner, subject, ca, usages, cl, certTTL)
+}
+
 // getPreDeleteHooks returns a list of pre-delete hooks for the given object type.
 func getPreDeleteHooks[T interface {
 	k8sresources.ControlPlaneOrDataPlaneOrKonnectExtension

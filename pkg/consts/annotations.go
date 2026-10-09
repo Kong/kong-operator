@@ -1,5 +1,9 @@
 package consts
 
+// KonnectClientCertificateSecretAnnotation records the certificate generation
+// applied to a ready in-process ControlPlane instance.
+const KonnectClientCertificateSecretAnnotation = "konghq.com/konnect-client-certificate-secret" // #nosec G101 -- Kubernetes annotation key, not a credential.
+
 const (
 	// AnnotationSpecHash is the annotation used to store the hash of the spec
 	// in the owner object.

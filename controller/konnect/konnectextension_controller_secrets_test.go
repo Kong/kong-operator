@@ -368,7 +368,7 @@ func sharedSecretCleanupFixture(t *testing.T, controlPlane, deletingSecret, dele
 		Name:       "shared-certificate",
 		Namespace:  "default",
 		Labels:     map[string]string{SecretKonnectDataPlaneCertificateLabel: "true"},
-		Data:       map[string][]byte{consts.TLSCRT: []byte("certificate")},
+		Data:       map[string][]byte{consts.TLSCRT: []byte("certificate"), consts.TLSKey: []byte("private-key")},
 		Finalizers: []string{consts.KonnectExtensionSecretInUseFinalizer, KonnectCleanupFinalizer},
 	}
 	if deletingSecret {
@@ -511,7 +511,7 @@ func TestKonnectExtensionFinalizerPrecedesSecretFinalizers(t *testing.T) {
 		Name:      "certificate",
 		Namespace: namespace,
 		Labels:    map[string]string{SecretKonnectDataPlaneCertificateLabel: "true"},
-		Data:      map[string][]byte{consts.TLSCRT: []byte("certificate")},
+		Data:      map[string][]byte{consts.TLSCRT: []byte("certificate"), consts.TLSKey: []byte("private-key")},
 	}
 	ext := &konnectv1alpha2.KonnectExtension{
 		Name: extName, Namespace: namespace, UID: types.UID(extName),
@@ -575,7 +575,6 @@ func TestKonnectExtensionFinalizerPrecedesSecretFinalizers(t *testing.T) {
 	r := &KonnectExtensionReconciler{Client: cl, apiReader: cl}
 
 	extNN := client.ObjectKeyFromObject(ext)
-	secretNN := client.ObjectKeyFromObject(secret)
 	for range 16 {
 		var current konnectv1alpha2.KonnectExtension
 		require.NoError(t, r.Get(t.Context(), extNN, &current))
@@ -585,14 +584,15 @@ func TestKonnectExtensionFinalizerPrecedesSecretFinalizers(t *testing.T) {
 		var gotExt konnectv1alpha2.KonnectExtension
 		require.NoError(t, r.Get(t.Context(), extNN, &gotExt))
 
-		var gotSecret corev1.Secret
-		require.NoError(t, r.Get(t.Context(), secretNN, &gotSecret))
-		if controllerutil.ContainsFinalizer(&gotSecret, consts.KonnectExtensionSecretInUseFinalizer) ||
-			controllerutil.ContainsFinalizer(&gotSecret, KonnectCleanupFinalizer) {
-			require.Contains(t, gotExt.Finalizers, KonnectCleanupFinalizer,
-				"the certificate Secret gained a cleanup finalizer while the KonnectExtension had none: "+
-					"deleting the extension now would orphan the Secret in a Terminating namespace")
-			return
+		owned, err := r.listOwnedCertificateSecrets(t.Context(), &gotExt)
+		require.NoError(t, err)
+		for _, gotSecret := range owned {
+			if controllerutil.ContainsFinalizer(&gotSecret, consts.KonnectExtensionSecretInUseFinalizer) ||
+				controllerutil.ContainsFinalizer(&gotSecret, KonnectCleanupFinalizer) {
+				require.Contains(t, gotExt.Finalizers, KonnectCleanupFinalizer,
+					"the certificate snapshot gained a cleanup finalizer before its owner")
+				return
+			}
 		}
 	}
 	t.Fatal("the certificate Secret never gained a cleanup finalizer")

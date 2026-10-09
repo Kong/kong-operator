@@ -1,0 +1,333 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: konnectextension-certificate-rotation
+spec:
+  description: |
+    Covers in-place Manual renewal, deletion of a current Manual snapshot,
+    switching to Automatic provisioning,
+    deleting an Automatic Secret with its normal finalizers, and renewal of
+    a legacy certificate inside the expiration margin. A paused Deployment
+    holds the rollout so old trust must coexist with the new registration.
+    Fresh replicas must connect to Konnect with the new certificate before
+    the test passes; Kubernetes readiness alone is not sufficient.
+  bindings:
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: konnect-auth
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: konnect-auth
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: cp_name
+      value: (join('-', [$namespace, 'cp']))
+    - name: cp_namespace
+      value: ($namespace)
+    - name: auth_name
+      value: konnect-auth
+    - name: extension_name
+      value: rotating
+    - name: extension_namespace
+      value: ($namespace)
+    - name: cert_secret_name
+      value: manual-certificate
+    - name: cert_secret_namespace
+      value: ($namespace)
+    - name: sni_hostname
+      value: (join('.', ['rotating', $namespace]))
+  steps:
+    - name: create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: create-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: create-control-plane
+      try:
+        - apply:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp_name)
+                namespace: ($namespace)
+              spec:
+                createControlPlaneRequest:
+                  name: ($cp_name)
+                  cluster_type: CLUSTER_TYPE_CONTROL_PLANE
+                  auth_type: pinned_client_certs
+                konnect:
+                  authRef:
+                    name: ($auth_name)
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+    - name: create-manual-certificate
+      use:
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
+    - name: create-data-plane
+      try:
+        - apply:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectExtension
+              metadata:
+                name: rotating
+                namespace: ($namespace)
+              spec:
+                clientAuth:
+                  certificateSecret:
+                    provisioning: Manual
+                    secretRef:
+                      name: manual-certificate
+                konnect:
+                  controlPlane:
+                    ref:
+                      type: konnectNamespacedRef
+                      konnectNamespacedRef:
+                        name: ($cp_name)
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              metadata:
+                name: certificate-repro
+                namespace: ($namespace)
+              spec:
+                host: example.com
+                port: 80
+                protocol: http
+                controlPlaneRef:
+                  type: konnectNamespacedRef
+                  konnectNamespacedRef:
+                    name: ($cp_name)
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              metadata:
+                name: certificate-repro
+                namespace: ($namespace)
+              spec:
+                paths:
+                  - /certificate-repro
+                serviceRef:
+                  type: namespacedRef
+                  namespacedRef:
+                    name: certificate-repro
+        - apply:
+            resource:
+              apiVersion: gateway-operator.konghq.com/v1beta1
+              kind: DataPlane
+              metadata:
+                name: rotating
+                namespace: ($namespace)
+              spec:
+                extensions:
+                  - group: konnect.konghq.com
+                    kind: KonnectExtension
+                    name: rotating
+                deployment:
+                  replicas: 2
+                  podTemplateSpec:
+                    spec:
+                      containers:
+                        - name: proxy
+                          image: (env('GATEWAY_IMAGE'))
+                network:
+                  services:
+                    ingress:
+                      type: ClusterIP
+        - assert:
+            resource:
+              apiVersion: gateway-operator.konghq.com/v1beta1
+              kind: DataPlane
+              metadata:
+                name: rotating
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+    - name: renew-manual-secret-in-place
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: EXTENSION_NAME
+                value: rotating
+              - name: DATAPLANE_NAME
+                value: rotating
+              - name: MODE
+                value: manual
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_SERVER_URL
+                value: ($konnect_url)
+            content: bash ../../common/scripts/rotate_konnectextension_certificate.sh
+    - name: recreate-deleted-manual-snapshot
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: EXTENSION_NAME
+                value: rotating
+              - name: DATAPLANE_NAME
+                value: rotating
+              - name: MODE
+                value: manual-snapshot
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_SERVER_URL
+                value: ($konnect_url)
+            content: bash ../../common/scripts/rotate_konnectextension_certificate.sh
+    - name: switch-to-automatic
+      try:
+        - patch:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectExtension
+              metadata:
+                name: rotating
+                namespace: ($namespace)
+              spec:
+                clientAuth:
+                  certificateSecret:
+                    provisioning: Automatic
+                    secretRef: null
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectExtension
+              metadata:
+                name: rotating
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+                (conditions[?type == 'DataPlaneCertificateProvisioned']):
+                  - status: 'True'
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              set -eu
+              for attempt in $(seq 1 180); do
+                secret="$(kubectl get konnectextension rotating -n "$NAMESPACE" -o jsonpath='{.status.dataPlaneClientAuth.certificateSecretRef.name}')"
+                if [ "$(kubectl get secret "$secret" -n "$NAMESPACE" -o jsonpath='{.metadata.labels.gateway\.konghq\.com/secret-provisioning}')" = "automatic" ]; then
+                  exit 0
+                fi
+                sleep 1
+              done
+              exit 1
+    - name: regenerate-automatic-secret
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: EXTENSION_NAME
+                value: rotating
+              - name: DATAPLANE_NAME
+                value: rotating
+              - name: MODE
+                value: regenerate
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_SERVER_URL
+                value: ($konnect_url)
+            content: bash ../../common/scripts/rotate_konnectextension_certificate.sh
+    - name: renew-automatic-certificate-inside-margin
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: EXTENSION_NAME
+                value: rotating
+              - name: DATAPLANE_NAME
+                value: rotating
+              - name: MODE
+                value: renewal
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_SERVER_URL
+                value: ($konnect_url)
+            content: bash ../../common/scripts/rotate_konnectextension_certificate.sh
+    - name: cleanup-in-dependency-order
+      try:
+        - delete:
+            ref:
+              apiVersion: gateway-operator.konghq.com/v1beta1
+              kind: DataPlane
+              name: rotating
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: gateway-operator.konghq.com/v1beta1
+              kind: DataPlane
+              metadata:
+                name: rotating
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectExtension
+              name: rotating
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectExtension
+              metadata:
+                name: rotating
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              name: certificate-repro
+              namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+              name: certificate-repro
+              namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp_name)
+                namespace: ($namespace)
+  catch:
+    - script:
+        env:
+          - name: TEST_NAME
+            value: konnectextension-certificate-rotation
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: bash ../../common/scripts/debug_snapshot.sh
