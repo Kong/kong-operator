@@ -571,6 +571,12 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 		// Otherwise, just return the error and requeue.
 		if _, ok := errors.AsType[ReferencedObjectIsBeingDeletedError](err); !ok ||
 			ent.GetDeletionTimestamp().IsZero() {
+			// The status patch in handleKonnectNetworkRef can conflict with a
+			// concurrent write on a stale cached object; the requeue must not be
+			// masked by the Programmed aggregate patch below.
+			if err == nil && !res.IsZero() {
+				return res, nil
+			}
 			log.Debug(logger, "error handling KonnectNetwork ref", "error", err)
 			return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 		}

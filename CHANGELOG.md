@@ -260,6 +260,17 @@
   message, and 5xx update errors are returned to controller-runtime so its
   exponential backoff applies.
   [#6008](https://github.com/Kong/kong-operator/pull/6008)
+- Konnect: status condition patches no longer drop status conditions that a
+  concurrent write set between the operator reading the object and patching it.
+  A JSON merge patch replaces the whole `conditions` array, so a patch built
+  from a stale cached object could silently remove newer conditions such as
+  `Programmed` (for example set right after the entity was created in Konnect).
+  Condition patches now carry the optimistic-lock `resourceVersion` and
+  conflict instead; the reconciler then requeues and retries on a fresh cache.
+  [#5958](https://github.com/Kong/kong-operator/pull/5958) fixed one visible
+  symptom of this; this change fixes the root cause in the shared condition
+  patch helpers.
+  [#5990](https://github.com/Kong/kong-operator/pull/5990)
 - Konnect: the operator now adds its labels (`k8s-uid`, `managed-by`, ...) to
   the Konnect entities of `AIGatewayAuthStrategy`, `AIGatewayModel`,
   `AIGatewayModelProvider`, `AIGatewayMCPServer`, `EventGatewayListenerPolicy`,

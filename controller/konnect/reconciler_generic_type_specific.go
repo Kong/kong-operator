@@ -43,9 +43,13 @@ func handleTypeSpecific[
 	)
 
 	if resolver, ok := any(ent).(konnectReferenceResolver); ok {
-		refUpdated, refProblem, err := handleKonnectReferences(ctx, cl, ent, resolver)
+		refUpdated, refProblem, refRes, err := handleKonnectReferences(ctx, cl, ent, resolver)
 		if err != nil {
 			return false, ctrl.Result{}, err
+		}
+		if !refRes.IsZero() {
+			// Requeue before any SDK calls; the cached object is stale.
+			return false, refRes, nil
 		}
 		updated = updated || refUpdated
 		isProblem = isProblem || refProblem
@@ -164,6 +168,8 @@ func crossNamespaceSiblingReferences(ent any) []commonv1alpha1.CrossNamespaceRef
 // references declared on ent's spec (if any), and reflects the outcome in the
 // KonnectReferencesResolved condition. Reconciliation must stop
 // (isProblem=true) before any SDK calls when references fail to resolve.
+// A non-zero res is returned when the caller should requeue (e.g. the status
+// patch conflicted with a concurrent write on a stale cached object).
 func handleKonnectReferences[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
@@ -172,7 +178,7 @@ func handleKonnectReferences[
 	cl client.Client,
 	ent TEnt,
 	resolver konnectReferenceResolver,
-) (updated bool, isProblem bool, err error) {
+) (updated bool, isProblem bool, res ctrl.Result, err error) {
 	// Snapshot before any condition mutation: the patch below must be computed
 	// against the pre-mutation state, otherwise the changed conditions array is
 	// never included in the patch.
@@ -191,11 +197,22 @@ func handleKonnectReferences[
 		// Programmed is already False with the same reason and message (e.g. it
 		// was persisted earlier by another path), which would otherwise leave
 		// this condition visible only in memory.
-		if err := cl.Status().Patch(ctx, ent, client.MergeFrom(old)); err != nil && !apierrors.IsNotFound(err) {
-			return updated, isProblem, fmt.Errorf("failed to persist KonnectReferencesResolved condition: %w", err)
+		//
+		// Optimistic lock: a JSON merge patch replaces the whole conditions
+		// array, so patching from a stale cached object would silently drop
+		// conditions persisted by more recent writes (e.g. Programmed set right
+		// after a create). Conflict instead, and requeue on a fresh cache.
+		if err := cl.Status().Patch(ctx, ent, client.MergeFromWithOptions(old, client.MergeFromWithOptimisticLock{})); err != nil {
+			switch {
+			case apierrors.IsNotFound(err):
+			case apierrors.IsConflict(err):
+				return updated, isProblem, ctrl.Result{Requeue: true}, nil
+			default:
+				return updated, isProblem, ctrl.Result{}, fmt.Errorf("failed to persist KonnectReferencesResolved condition: %w", err)
+			}
 		}
 	}
-	return updated, isProblem, err
+	return updated, isProblem, ctrl.Result{}, err
 }
 
 // checkCrossNamespaceSiblingReferences authorizes every check against
