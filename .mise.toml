@@ -83,6 +83,10 @@ version = "v4.53.6"
 # renovate: datasource=git-refs packageName=https://github.com/kyverno/chainsaw.git
 version = "v0.2.15"
 
+[tools."github:sigstore/cosign"]
+# renovate: datasource=github-releases depName=sigstore/cosign
+version = "v3.1.3"
+
 ################################################################################
 # Tasks
 
