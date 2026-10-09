@@ -26,6 +26,7 @@ import (
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	hybridgatewayerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/pkg/vars"
@@ -3663,3 +3664,58 @@ func kindPtr(s string) *gatewayv1.Kind           { k := gatewayv1.Kind(s); retur
 func nsPtr(s string) *gatewayv1.Namespace        { n := gatewayv1.Namespace(s); return &n }
 func sectionPtr(s string) *gatewayv1.SectionName { sec := gatewayv1.SectionName(s); return &sec }
 func ptrObjName(s string) *gwtypes.ObjectName    { n := gwtypes.ObjectName(s); return &n }
+
+func TestValidateAnnotationsRouteAnnotations(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+	s := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(s))
+	require.NoError(t, gatewayv1.Install(s))
+	cl := fake.NewClientBuilder().WithScheme(s).Build()
+
+	tests := []struct {
+		name    string
+		anns    map[string]string
+		wantErr bool
+	}{
+		{name: "none"},
+		{
+			name: "all valid",
+			anns: map[string]string{
+				"konghq.com/strip-path":                 "true",
+				"konghq.com/preserve-host":              "false",
+				"konghq.com/request-buffering":          "true",
+				"konghq.com/response-buffering":         "false",
+				"konghq.com/https-redirect-status-code": "301",
+				"konghq.com/path-handling":              "v1",
+			},
+		},
+		{name: "bad strip-path", anns: map[string]string{"konghq.com/strip-path": "x"}, wantErr: true},
+		{name: "bad preserve-host", anns: map[string]string{"konghq.com/preserve-host": "x"}, wantErr: true},
+		{name: "bad request-buffering", anns: map[string]string{"konghq.com/request-buffering": "x"}, wantErr: true},
+		{name: "bad response-buffering", anns: map[string]string{"konghq.com/response-buffering": "x"}, wantErr: true},
+		{name: "bad https-redirect-status-code", anns: map[string]string{"konghq.com/https-redirect-status-code": "200"}, wantErr: true},
+		{name: "bad path-handling", anns: map[string]string{"konghq.com/path-handling": "v2"}, wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run("HTTPRoute "+tt.name, func(t *testing.T) {
+			route := &gwtypes.HTTPRoute{Namespace: "default", Name: "route", Annotations: tt.anns}
+			err := validateAnnotations(ctx, logger, cl, route)
+			if tt.wantErr {
+				require.ErrorIs(t, err, hybridgatewayerrors.ErrMalformedAnnotation)
+				return
+			}
+			require.NoError(t, err)
+		})
+		t.Run("GRPCRoute "+tt.name, func(t *testing.T) {
+			route := &gwtypes.GRPCRoute{Namespace: "default", Name: "route", Annotations: tt.anns}
+			err := validateAnnotations(ctx, logger, cl, route)
+			if tt.wantErr {
+				require.ErrorIs(t, err, hybridgatewayerrors.ErrMalformedAnnotation)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}

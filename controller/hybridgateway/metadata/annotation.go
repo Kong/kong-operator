@@ -18,20 +18,24 @@ import (
 
 // Annotation constants matching those in the ingress controller.
 const (
-	annotationPrefix          = "konghq.com"
-	stripPathKey              = "/strip-path"
-	preserveHostKey           = "/preserve-host"
-	protocolKey               = "/protocol"
-	pathKey                   = "/path"
-	tlsVerifyKey              = "/tls-verify"
-	tlsVerifyDepthKey         = "/tls-verify-depth"
-	connectTimeoutKey         = "/connect-timeout"
-	readTimeoutKey            = "/read-timeout"
-	writeTimeoutKey           = "/write-timeout"
-	retriesKey                = "/retries"
-	hostHeaderKey             = "/host-header"
-	clientCertKey             = "/client-cert"
-	serviceUpstreamAnnotation = "ingress.kubernetes.io/service-upstream"
+	annotationPrefix           = "konghq.com"
+	stripPathKey               = "/strip-path"
+	preserveHostKey            = "/preserve-host"
+	requestBufferingKey        = "/request-buffering"
+	responseBufferingKey       = "/response-buffering"
+	httpsRedirectStatusCodeKey = "/https-redirect-status-code"
+	pathHandlingKey            = "/path-handling"
+	protocolKey                = "/protocol"
+	pathKey                    = "/path"
+	tlsVerifyKey               = "/tls-verify"
+	tlsVerifyDepthKey          = "/tls-verify-depth"
+	connectTimeoutKey          = "/connect-timeout"
+	readTimeoutKey             = "/read-timeout"
+	writeTimeoutKey            = "/write-timeout"
+	retriesKey                 = "/retries"
+	hostHeaderKey              = "/host-header"
+	clientCertKey              = "/client-cert"
+	serviceUpstreamAnnotation  = "ingress.kubernetes.io/service-upstream"
 )
 
 const (
@@ -71,6 +75,48 @@ func ExtractPreserveHost(anns map[string]string) (bool, error) {
 		return defaultPreserveHost, err
 	}
 	return *preserveHost, nil
+}
+
+// ExtractRequestBuffering extracts the request-buffering annotation value.
+// Returns nil when absent and a non-nil error when it cannot be parsed.
+func ExtractRequestBuffering(anns map[string]string) (*bool, error) {
+	return parseAnnotationBool(anns, requestBufferingKey)
+}
+
+// ExtractResponseBuffering extracts the response-buffering annotation value.
+// Returns nil when absent and a non-nil error when it cannot be parsed.
+func ExtractResponseBuffering(anns map[string]string) (*bool, error) {
+	return parseAnnotationBool(anns, responseBufferingKey)
+}
+
+// ExtractHTTPSRedirectStatusCode extracts the https-redirect-status-code annotation value.
+// Returns nil when absent and a non-nil error when it is not one of 301, 302, 307, 308, 426.
+func ExtractHTTPSRedirectStatusCode(anns map[string]string) (*int64, error) {
+	code, err := parseAnnotationInt(anns, httpsRedirectStatusCodeKey)
+	if err != nil || code == nil {
+		return nil, err
+	}
+	switch *code {
+	case 301, 302, 307, 308, 426:
+		return code, nil
+	default:
+		return nil, fmt.Errorf("annotation %s%s must be one of 301, 302, 307, 308, 426, got %d",
+			annotationPrefix, httpsRedirectStatusCodeKey, *code)
+	}
+}
+
+// ExtractPathHandling extracts the path-handling annotation value.
+// Returns nil when absent or empty and a non-nil error when it is not "v0" or "v1".
+func ExtractPathHandling(anns map[string]string) (*string, error) {
+	val := anns[annotationPrefix+pathHandlingKey]
+	if val == "" {
+		return nil, nil
+	}
+	if val != "v0" && val != "v1" {
+		return nil, fmt.Errorf("annotation %s%s must be \"v0\" or \"v1\", got %q",
+			annotationPrefix, pathHandlingKey, val)
+	}
+	return &val, nil
 }
 
 // ExtractProtocol extracts the protocol supplied in the konghq.com/protocol annotation.
