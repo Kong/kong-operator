@@ -849,6 +849,11 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 				return ctrl.Result{RequeueAfter: referenceErr.RetryAfter}, nil
 			}
 			return ctrl.Result{}, nil
+
+		// Konnect 5xx: return the error so controller-runtime's default
+		// exponential backoff applies.
+		case ops.ErrorIsServerError(err):
+			return ctrl.Result{}, err
 		}
 
 	} else if !res.IsZero() {
