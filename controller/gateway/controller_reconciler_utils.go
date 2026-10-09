@@ -40,6 +40,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets/ref"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/internal/utils/config"
 	gwconfigutils "github.com/kong/kong-operator/v2/internal/utils/gatewayconfig"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/pkg/ipfamily"
@@ -75,7 +76,7 @@ func (r *Reconciler) createDataPlane(
 	if err := setDataPlaneOptionsForListeners(
 		&dataplane.Spec.DataPlaneOptions,
 		gateway.Spec.Listeners,
-		gatewayConfig.Spec.ListenersOptions,
+		gatewayConfig,
 		r.DataPlaneIPFamily,
 	); err != nil {
 		return nil, err
@@ -752,8 +753,12 @@ func generateDataPlaneNetworkPolicy(
 
 	ingressRules := []networkingv1.NetworkPolicyIngressRule{
 		limitAdminAPIIngress,
-		allowProxyIngress,
 		allowMetricsIngress,
+	}
+	// Only add the rule when there is at least one proxy port (KONG_PROXY_LISTEN can be "off").
+	// Otherwise, a rule with an empty port list would allow ingress traffic to ALL ports.
+	if len(allowProxyIngress.Ports) > 0 {
+		ingressRules = append(ingressRules, allowProxyIngress)
 	}
 
 	// Add a rule to allow ingress traffics to listened ports for stream proxy on dataplane pods.
@@ -1258,9 +1263,10 @@ func (g *gatewayConditionsAndListenersAwareT) setConflicted() {
 				conflictedCondition.Reason = string(gatewayv1.ListenerReasonProtocolConflict)
 				break
 			}
-			// If two listeners specify the same hostname, they have a hostname conflict, and
-			// the conflicted condition must be updated accordingly.
-			if l.Hostname != nil && l2.Hostname != nil && *l.Hostname == *l2.Hostname {
+			// If two listeners specify the same port and hostname, they have a hostname conflict, and
+			// the conflicted condition must be updated accordingly. Listeners on different ports are
+			// distinct even when they share a hostname.
+			if l.Port == l2.Port && l.Hostname != nil && l2.Hostname != nil && *l.Hostname == *l2.Hostname {
 				conflictedCondition.Status = metav1.ConditionTrue
 				conflictedCondition.Reason = string(gatewayv1.ListenerReasonHostnameConflict)
 				break
@@ -1301,20 +1307,23 @@ func (g *gatewayConditionsAndListenersAwareT) setListenersStatus(status metav1.C
 	}
 }
 
-// setDataPlaneOptionsForListeners configures DataPlaneOptions in generated DataPlane from listeners of the gateway.
-// It includes configuring deployment options and ingress service options.
+// setDataPlaneOptionsForListeners configures DataPlaneOptions in generated
+// DataPlane from listeners of the gateway. It includes configuring deployment
+// options and ingress service options.
 func setDataPlaneOptionsForListeners(
 	opts *operatorv1beta1.DataPlaneOptions,
 	listeners []gatewayv1.Listener,
-	listenersOpts []operatorv2beta1.GatewayConfigurationListenerOptions,
+	gatewayConfig *GatewayConfiguration,
 	dataPlaneIPFamily ipfamily.IPFamily,
 ) error {
-	listenerPortToKongListenPort, err := setDataPlaneDeploymentListenPorts(opts, listeners, dataPlaneIPFamily)
+	listenerPortToKongListenPort, err := setDataPlaneDeploymentListenPorts(
+		opts, listeners, dataPlaneIPFamily, gwconfigutils.IsGatewayHybrid(gatewayConfig),
+	)
 	if err != nil {
 		return err
 	}
 
-	return setDataPlaneIngressServicePorts(opts, listeners, listenersOpts, listenerPortToKongListenPort)
+	return setDataPlaneIngressServicePorts(opts, listeners, gatewayConfig.Spec.ListenersOptions, listenerPortToKongListenPort)
 }
 
 // isKnownPort returns true if the required listener port number is a well-known port (below 1024)
@@ -1325,12 +1334,21 @@ func isKnownPort(portNumber int) bool {
 
 // setDataPlaneDeploymentListenPorts configures deploymentOptions to set listen ports of the generated DataPlane.
 // It returns the map from the listener's port to the port.
+//
+// Kong listens only on the ports required by the Gateway's listeners, the rest is
+// disabled ("off"). The exception is a Konnect hybrid DataPlane (hybrid == true):
+// Kong in the data_plane role refuses to start without a proxy listener ("off" and
+// an empty value are both rejected), so when the Gateway has no HTTP(S) listeners
+// KONG_PROXY_LISTEN is left unset and Kong's default proxy listeners (8000 and 8443)
+// apply, as they did for every DataPlane before. Due to this Kong limitation it
+// can't be tightened to be secure by default like in other cases, but the
+// ingress Service doesn't expose these ports.
 func setDataPlaneDeploymentListenPorts(
 	opts *operatorv1beta1.DataPlaneOptions,
 	listeners []gatewayv1.Listener,
 	dataPlaneIPFamily ipfamily.IPFamily,
+	isHybrid bool,
 ) (map[int]int, error) {
-
 	if opts.Deployment.PodTemplateSpec == nil {
 		return nil, errors.New("podTemplateSpec in DeploymentOptions not initialized")
 	}
@@ -1341,24 +1359,41 @@ func setDataPlaneDeploymentListenPorts(
 
 	listenerPortToKongListenPort := map[int]int{}
 	kongPortOccupied := map[int]struct{}{
-		consts.DataPlaneProxyPort:    {},
-		consts.DataPlaneProxySSLPort: {},
-		consts.DataPlaneMetricsPort:  {},
+		consts.DataPlaneMetricsPort: {},
 		// Currently DataPlaneMetricsPort and DataPlaneStatusPort are the same port.
 		// We should uncomment this if they are changed to use different ports.
 		// consts.DataPlaneStatusPort:   {},
-		consts.DataPlaneAdminAPIPort: {},
+
+		// Ports from https://developer.konghq.com/gateway/network/#other-default-ports
+		consts.DataPlaneAdminAPIPort:             {},
+		consts.DataPlaneKongAdminAPIPortHTTP:     {},
+		consts.DataPlaneKongManagerGUIPortHTTP:   {},
+		consts.DataPlaneKongManagerGUIPortHTTPS:  {},
+		consts.DataPlaneKongClusterPort:          {},
+		consts.DataPlaneKongClusterTelemetryPort: {},
+		consts.DataPlaneKongStatusPort:           {},
+	}
+	// Hybrid DataPlanes may keep Kong's default proxy listeners (they don't boot
+	// without one), so their ports are reserved. Otherwise a stream listener on the
+	// same port would bind next to the HTTP proxy (both use reuseport).
+	if isHybrid {
+		kongPortOccupied[consts.DataPlaneProxyPort] = struct{}{}
+		kongPortOccupied[consts.DataPlaneProxySSLPort] = struct{}{}
 	}
 
-	// Extract stream (TLS/TCP/UDP) listeners with the Kong port they map to.
-	var streamPorts []streamListenPort
-	var errs error
-	// assignedPortNumber and assignedPortMax defines the interval of ports to assign to listen on Kong stream proxy
-	// if the specified port in the listener is already occupied on Kong DataPlane.
+	// Extract HTTP/HTTPS and stream (TLS/TCP/UDP) listeners with the Kong port they map to.
+	var (
+		httpPorts   []httpListenPort
+		streamPorts []streamListenPort
+		errs        error
+	)
+	// assignedPortNumber and assignedPortMax defines the interval of ports to assign
+	// to listen on Kong (HTTP or stream) proxy if the specified port in the listener
+	// is already occupied on Kong DataPlane.
 	assignedPortNumber := consts.DataPlaneAssignedPortStart
 	assignedPortMax := consts.DataPlaneAssignedPortStart + 1024
 
-	assignStreamPort := func(i int, portNumber int) {
+	assignPort := func(i int, portNumber int) {
 		_, occupied := kongPortOccupied[portNumber]
 		if isKnownPort(portNumber) || occupied {
 			for ; assignedPortNumber < assignedPortMax; assignedPortNumber++ {
@@ -1377,45 +1412,40 @@ func setDataPlaneDeploymentListenPorts(
 		}
 	}
 
+	// listenerPortProtocol tracks the protocol of the listener the Kong port was assigned for,
+	// so listeners sharing a port and protocol (e.g. HTTP listeners that differ only by hostname)
+	// are served by the same Kong port instead of each getting its own, unreachable one.
+	listenerPortProtocol := map[int]gatewayv1.ProtocolType{}
 	for i, l := range listeners {
+		portNumber := int(l.Port)
+		if protocol, ok := listenerPortProtocol[portNumber]; ok && protocol == l.Protocol {
+			continue
+		}
+		assignPort(i, portNumber)
+		listenerPortProtocol[portNumber] = l.Protocol
 		switch l.Protocol {
-		case gatewayv1.HTTPProtocolType:
-			listenerPortToKongListenPort[int(l.Port)] = consts.DataPlaneProxyPort
-		case gatewayv1.HTTPSProtocolType:
-			listenerPortToKongListenPort[int(l.Port)] = consts.DataPlaneProxySSLPort
-		case gatewayv1.TLSProtocolType:
-			portNumber := int(l.Port)
-			// TODO: support multiple listeners using the same port:
+		case gatewayv1.HTTPProtocolType, gatewayv1.HTTPSProtocolType:
+			httpPorts = append(httpPorts, httpListenPort{
+				kongPort: listenerPortToKongListenPort[portNumber],
+				protocol: l.Protocol,
+			})
+		case gatewayv1.TLSProtocolType, gatewayv1.UDPProtocolType, gatewayv1.TCPProtocolType:
+			// TODO: For TLS, support multiple listeners using the same port:
 			// https://github.com/Kong/kong-operator/issues/3511
-			assignStreamPort(i, portNumber)
 			streamPorts = append(streamPorts, streamListenPort{
 				kongPort: listenerPortToKongListenPort[portNumber],
-				protocol: gatewayv1.TLSProtocolType,
-			})
-		case gatewayv1.UDPProtocolType:
-			portNumber := int(l.Port)
-			assignStreamPort(i, portNumber)
-			streamPorts = append(streamPorts, streamListenPort{
-				kongPort: listenerPortToKongListenPort[portNumber],
-				protocol: gatewayv1.UDPProtocolType,
-			})
-		case gatewayv1.TCPProtocolType:
-			portNumber := int(l.Port)
-			assignStreamPort(i, portNumber)
-			streamPorts = append(streamPorts, streamListenPort{
-				kongPort: listenerPortToKongListenPort[portNumber],
-				protocol: gatewayv1.TCPProtocolType,
+				protocol: l.Protocol,
 			})
 		default:
 			errs = errors.Join(errs, fmt.Errorf("listener %d uses unsupported protocol %s", i, l.Protocol))
 		}
 	}
-
 	if errs != nil {
 		return nil, errs
 	}
 
-	// Configure env `KONG_STREAM_LISTEN` if there are stream listeners.
+	// By default, disable stream listen unless there are stream listeners.
+	kongStreamListenEnvValue := consts.ListenOff
 	if len(streamPorts) > 0 {
 		// The controller enforces only the Kong port (its remapping logic) and the
 		// protocol token (e.g. `ssl` for TLS). The bind address and any other listen
@@ -1460,9 +1490,51 @@ func setDataPlaneDeploymentListenPorts(
 					renderStreamListenEntry(tmpl, sp.kongPort, tokens))
 			}
 		}
+		kongStreamListenEnvValue = strings.Join(streamListenEnvs, ",")
+	}
+	k8sutils.SetContainerEnv(container, corev1.EnvVar{
+		Name:  "KONG_STREAM_LISTEN",
+		Value: kongStreamListenEnvValue,
+	})
+
+	// By default, disable proxy listen unless there are HTTP(S) listeners.
+	// Hybrid DataPlanes can't disable it (Kong in the data_plane role rejects "off"),
+	// so leave it unset to fall back to the defaults (see the function doc).
+	kongProxyListenEnvValue := consts.ListenOff
+	if isHybrid {
+		kongProxyListenEnvValue = ""
+	}
+	if len(httpPorts) > 0 {
+		sort.Slice(httpPorts, func(i, j int) bool { return httpPorts[i].kongPort < httpPorts[j].kongPort })
+		proxyListenPortsEnvs := make([]string, 0, len(httpPorts))
+		for _, hp := range httpPorts {
+			var options []string
+			switch hp.protocol {
+			case gatewayv1.HTTPProtocolType:
+				options = config.DefaultOptionsHTTP()
+			case gatewayv1.HTTPSProtocolType:
+				options = config.DefaultOptionsHTTPS()
+			default:
+				errs = errors.Join(errs, fmt.Errorf("listener mapped to Kong port %d uses unsupported protocol %s", hp.kongPort, hp.protocol))
+				continue
+			}
+			proxyListen, err := config.ListenValue(
+				dataPlaneIPFamily, hp.kongPort, options...,
+			)
+			if err != nil {
+				return nil, err
+			}
+			proxyListenPortsEnvs = append(proxyListenPortsEnvs, proxyListen)
+		}
+		if errs != nil {
+			return nil, errs
+		}
+		kongProxyListenEnvValue = strings.Join(proxyListenPortsEnvs, ",")
+	}
+	if kongProxyListenEnvValue != "" {
 		k8sutils.SetContainerEnv(container, corev1.EnvVar{
-			Name:  "KONG_STREAM_LISTEN",
-			Value: strings.Join(streamListenEnvs, ","),
+			Name:  "KONG_PROXY_LISTEN",
+			Value: kongProxyListenEnvValue,
 		})
 	}
 
@@ -1524,35 +1596,28 @@ func setDataPlaneIngressServicePorts(
 		} else {
 			name = fmt.Sprintf("%s-%s", l.Protocol, uuid.NewString()[:6])
 		}
+
 		port := operatorv1beta1.DataPlaneServicePort{
-			Name:     name,
-			Port:     l.Port,
-			Protocol: corev1.ProtocolTCP,
+			Name: name,
+			Port: l.Port,
 		}
 		switch l.Protocol {
-		case gatewayv1.HTTPSProtocolType:
-			port.TargetPort = intstr.FromInt(consts.DataPlaneProxySSLPort)
-		case gatewayv1.HTTPProtocolType:
-			port.TargetPort = intstr.FromInt(consts.DataPlaneProxyPort)
-		case gatewayv1.TLSProtocolType, gatewayv1.TCPProtocolType:
-			targetPort, ok := servicePortMap[int(l.Port)]
-			if !ok {
-				errs = errors.Join(errs, fmt.Errorf("no target port assigned listener %s on port %d", l.Name, l.Port))
-				continue
-			}
-			port.TargetPort = intstr.FromInt(targetPort)
+		case gatewayv1.HTTPSProtocolType, gatewayv1.HTTPProtocolType,
+			gatewayv1.TLSProtocolType,
+			gatewayv1.TCPProtocolType:
+			port.Protocol = corev1.ProtocolTCP
 		case gatewayv1.UDPProtocolType:
-			targetPort, ok := servicePortMap[int(l.Port)]
-			if !ok {
-				errs = errors.Join(errs, fmt.Errorf("no target port assigned listener %s on port %d", l.Name, l.Port))
-				continue
-			}
-			port.TargetPort = intstr.FromInt(targetPort)
 			port.Protocol = corev1.ProtocolUDP
 		default:
 			errs = errors.Join(errs, fmt.Errorf("listener %d uses unsupported protocol %s", i, l.Protocol))
 			continue
 		}
+		targetPort, ok := servicePortMap[int(l.Port)]
+		if !ok {
+			errs = errors.Join(errs, fmt.Errorf("no target port assigned listener %s on port %d", l.Name, l.Port))
+			continue
+		}
+		port.TargetPort = intstr.FromInt(targetPort)
 
 		// Update the service port by GatewayConfiguration's spec.listenersOptions if there is a matching item by listener name.
 		if listenerOpt, found := lo.Find(listenersOpts, func(listenerOpts operatorv2beta1.GatewayConfigurationListenerOptions) bool {
@@ -1727,6 +1792,11 @@ type streamListenPort struct {
 	protocol gatewayv1.ProtocolType
 }
 
+type httpListenPort struct {
+	kongPort int
+	protocol gatewayv1.ProtocolType
+}
+
 // streamListenTemplate holds the user-controlled parts of a KONG_STREAM_LISTEN entry:
 // the bind address and the listen options. The controller supplies the port and the
 // protocol token itself.
@@ -1798,6 +1868,9 @@ func renderStreamListenEntry(tmpl streamListenTemplate, port int, tokens []strin
 // - https://docs.konghq.com/gateway/3.0.x/reference/configuration/#proxy_listen
 func parseKongListenEnv(str string) (kongListenConfig, error) {
 	kongListenConfig := kongListenConfig{}
+	if strings.TrimSpace(str) == consts.ListenOff {
+		return kongListenConfig, nil
+	}
 
 	for s := range strings.SplitSeq(str, ",") {
 		s = strings.TrimPrefix(s, " ")

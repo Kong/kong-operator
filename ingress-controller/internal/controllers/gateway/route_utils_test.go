@@ -509,6 +509,59 @@ func TestFilterHostnames(t *testing.T) {
 	}
 }
 
+func TestFilterHostnames_ListenersSharingHostnamesOnDifferentPorts(t *testing.T) {
+	// Listeners modelled on the gateway-api HTTPRouteListenerPortMatching conformance test.
+	gateway := &gatewayapi.Gateway{
+		Spec: gatewayapi.GatewaySpec{
+			Listeners: []gatewayapi.Listener{
+				{Name: "listener-1", Port: 80, Protocol: gatewayapi.HTTPProtocolType, Hostname: new(gatewayapi.Hostname("foo.com"))},
+				{Name: "listener-2", Port: 8080, Protocol: gatewayapi.HTTPProtocolType, Hostname: new(gatewayapi.Hostname("foo.com"))},
+				{Name: "listener-3", Port: 8080, Protocol: gatewayapi.HTTPProtocolType, Hostname: new(gatewayapi.Hostname("bar.com"))},
+				{Name: "listener-4", Port: 8090, Protocol: gatewayapi.HTTPProtocolType, Hostname: new(gatewayapi.Hostname("foo.com"))},
+				{Name: "listener-5", Port: 8090, Protocol: gatewayapi.HTTPProtocolType, Hostname: new(gatewayapi.Hostname("bar.com"))},
+			},
+		},
+	}
+
+	testCases := []struct {
+		name              string
+		gateway           supportedGatewayWithCondition
+		expectedHostnames []gatewayapi.Hostname
+	}{
+		{
+			name: "parentRef port 80 uses only the hostnames of the listener on that port",
+			gateway: supportedGatewayWithCondition{
+				gateway:               gateway,
+				attachedListenerNames: []gatewayapi.SectionName{"listener-1"},
+			},
+			expectedHostnames: []gatewayapi.Hostname{"foo.com"},
+		},
+		{
+			name: "parentRef port 8080 uses only the hostnames of the listeners on that port",
+			gateway: supportedGatewayWithCondition{
+				gateway:               gateway,
+				attachedListenerNames: []gatewayapi.SectionName{"listener-2", "listener-3"},
+			},
+			expectedHostnames: []gatewayapi.Hostname{"foo.com", "bar.com"},
+		},
+		{
+			name: "without attached listeners hostnames of all listeners are used without duplicates",
+			gateway: supportedGatewayWithCondition{
+				gateway: gateway,
+			},
+			expectedHostnames: []gatewayapi.Hostname{"foo.com", "bar.com"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			filteredHTTPRoute, err := filterHostnames([]supportedGatewayWithCondition{tc.gateway}, &gatewayapi.HTTPRoute{})
+			require.NoError(t, err)
+			require.Equal(t, tc.expectedHostnames, filteredHTTPRoute.Spec.Hostnames)
+		})
+	}
+}
+
 func TestFilterHostnames_TLSRoute(t *testing.T) {
 	// Listeners modelled on the gateway-api TLSRouteHostnameIntersection conformance:
 	// abc.example.com, *.example.com, *.com, and an empty (match-any) listener.
