@@ -75,7 +75,7 @@ func listUserRolesPaged(
 	if total == 0 {
 		roles := firstPage
 		lastLen := len(firstPage)
-		for pageNumber := 2; lastLen == konnectUserRolesPageSize; pageNumber++ {
+		for pageNumber := 2; lastLen == konnectUserRolesPageSize && pageNumber <= konnectUserRolesMaxPages; pageNumber++ {
 			page, _, err := fetchUserRolesPage(ctx, log, client, baseURL, token, userID, pageNumber)
 			if err != nil {
 				return roles, err
@@ -190,6 +190,11 @@ func removeOrphanedControlPlaneRoles(
 
 	log.Info("Listing existing Control Planes")
 	existingCPsIDs, listCPsErr := listControlPlaneIDsPaged(ctx, log, sdk.ControlPlanes)
+	if listCPsErr != nil {
+		// Without the set of existing control planes every role would look
+		// orphaned - do not remove anything.
+		return fmt.Errorf("failed to list existing control planes: %w", listCPsErr)
+	}
 
 	existingCPs := make(map[string]struct{}, len(existingCPsIDs))
 	for _, cpID := range existingCPsIDs {
@@ -200,25 +205,12 @@ func removeOrphanedControlPlaneRoles(
 		deletedCPs[cpID] = struct{}{}
 	}
 
-	roleIDsToRemove := filterRoleIDs(log, roles, func(role sdkkonnectcomp.AssignedRole) bool {
-		if role.EntityTypeName == nil || *role.EntityTypeName != konnectControlPlaneEntityTypeName {
-			return false
-		}
-		// Roles with no entity ID reference nothing - treat them as stale.
-		if role.EntityID == nil {
-			return true
-		}
-		if _, deleted := deletedCPs[*role.EntityID]; deleted {
-			return true
-		}
-		_, exists := existingCPs[*role.EntityID]
-		return !exists
-	})
+	roleIDsToRemove := filterRoleIDs(log, roles, orphanedControlPlaneRoleMatcher(deletedCPs, existingCPs))
 
 	removed, removeErr := removeRoles(ctx, log, sdk.Roles, userID, roleIDsToRemove)
 	log.Info("Removed orphaned control plane roles", "count", removed, "to_remove", len(roleIDsToRemove))
 
-	return errors.Join(listErr, listCPsErr, removeErr)
+	return errors.Join(listErr, removeErr)
 }
 
 // removeOrphanedAIGatewayRoles lists all the roles assigned to userID, then
@@ -245,6 +237,11 @@ func removeOrphanedAIGatewayRoles(
 
 	log.Info("Listing existing AI Gateways")
 	existingAIGatewayIDs, listAIGatewaysErr := listAIGatewayIDsPaged(ctx, log, sdk.AIGateways)
+	if listAIGatewaysErr != nil {
+		// Without the set of existing AI Gateways every role would look
+		// orphaned - do not remove anything.
+		return fmt.Errorf("failed to list existing AI Gateways: %w", listAIGatewaysErr)
+	}
 	existingAIGateways := make(map[string]struct{}, len(existingAIGatewayIDs))
 	for _, id := range existingAIGatewayIDs {
 		existingAIGateways[id] = struct{}{}
@@ -255,7 +252,30 @@ func removeOrphanedAIGatewayRoles(
 	removed, removeErr := removeRoles(ctx, log, sdk.Roles, userID, roleIDsToRemove)
 	log.Info("Removed orphaned AI Gateway roles", "count", removed, "to_remove", len(roleIDsToRemove))
 
-	return errors.Join(listErr, listAIGatewaysErr, removeErr)
+	return errors.Join(listErr, removeErr)
+}
+
+// orphanedControlPlaneRoleMatcher returns a matcher matching the roles that
+// reference control planes which no longer exist, or that were deleted during
+// this run.
+func orphanedControlPlaneRoleMatcher(
+	deletedCPs, existingCPs map[string]struct{},
+) func(role sdkkonnectcomp.AssignedRole) bool {
+	return func(role sdkkonnectcomp.AssignedRole) bool {
+		if role.EntityTypeName == nil || *role.EntityTypeName != konnectControlPlaneEntityTypeName {
+			return false
+		}
+		if role.EntityID == nil {
+			// A role with no entity ID references no control plane, so it cannot
+			// be told whether it's orphaned - skip it.
+			return false
+		}
+		if _, deleted := deletedCPs[*role.EntityID]; deleted {
+			return true
+		}
+		_, exists := existingCPs[*role.EntityID]
+		return !exists
+	}
 }
 
 // orphanedAIGatewayRoleMatcher returns a matcher matching the roles that

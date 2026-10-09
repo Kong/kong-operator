@@ -136,6 +136,7 @@ func findOrphanedEventGateways(
 	}
 	if response.ListEventGatewaysResponse == nil {
 		body, err := io.ReadAll(response.RawResponse.Body)
+		response.RawResponse.Body.Close()
 		if err != nil {
 			body = []byte(err.Error())
 		}
@@ -200,6 +201,7 @@ func findOrphanedControlPlanes(
 		}
 		if response.ListControlPlanesResponse == nil {
 			body, err := io.ReadAll(response.RawResponse.Body)
+			response.RawResponse.Body.Close()
 			if err != nil {
 				body = []byte(err.Error())
 			}
@@ -270,6 +272,7 @@ func listControlPlaneIDsPaged(
 		}
 		if response.ListControlPlanesResponse == nil {
 			body, err := io.ReadAll(response.RawResponse.Body)
+			response.RawResponse.Body.Close()
 			if err != nil {
 				body = []byte(err.Error())
 			}

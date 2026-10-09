@@ -67,6 +67,7 @@ func findOrphanedAIGateways(
 	}
 	if response.ListAIGatewaysResponse == nil {
 		body, err := io.ReadAll(response.RawResponse.Body)
+		response.RawResponse.Body.Close()
 		if err != nil {
 			body = []byte(err.Error())
 		}
@@ -93,7 +94,7 @@ func findOrphanedAIGateways(
 			log.Info("AIGateway has no creation timestamp, skipping", "name", aiGateway.Name)
 			continue
 		}
-		orphanedTime := aiGateway.CreatedAt.Add(time.Minute * 30)
+		orphanedTime := aiGateway.CreatedAt.Add(timeUntilControlPlaneOrphaned)
 		if orphanedTime.After(time.Now()) {
 			log.Info("AIGateway is not old enough to be considered orphaned, skipping",
 				"name", aiGateway.Name, "id", aiGateway.ID, "created_at", aiGateway.CreatedAt,
@@ -122,6 +123,7 @@ func listAIGatewayIDsPaged(
 		}
 		if response.ListAIGatewaysResponse == nil {
 			body, err := io.ReadAll(response.RawResponse.Body)
+			response.RawResponse.Body.Close()
 			if err != nil {
 				body = []byte(err.Error())
 			}

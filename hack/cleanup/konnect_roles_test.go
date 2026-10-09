@@ -129,8 +129,6 @@ func TestListUserRolesPagedAllPagesSuccess(t *testing.T) {
 	}
 }
 
-// TestRemoveRolesNotFoundSkippedAndCounted verifies that removeRoles skips
-// roles that no longer exist (404) and counts only the removed ones.
 func TestOrphanedAIGatewayRoleMatcherSkipsRolesWithoutEntityID(t *testing.T) {
 	match := orphanedAIGatewayRoleMatcher(logr.Discard(), map[string]struct{}{"gw-1": {}})
 	gwType := konnectAIGatewayEntityTypeName
@@ -153,6 +151,48 @@ func TestOrphanedAIGatewayRoleMatcherSkipsRolesWithoutEntityID(t *testing.T) {
 		},
 		"other entity type": {
 			role: sdkkonnectcomp.AssignedRole{ID: new("r4"), EntityID: new("gw-gone")},
+			want: false,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if got := match(tc.role); got != tc.want {
+				t.Errorf("match(%s) = %v, want %v", *tc.role.ID, got, tc.want)
+			}
+		})
+	}
+}
+
+// TestRemoveRolesNotFoundSkippedAndCounted verifies that removeRoles skips
+// roles that no longer exist (404) and counts only the removed ones.
+func TestOrphanedControlPlaneRoleMatcherSkipsRolesWithoutEntityID(t *testing.T) {
+	match := orphanedControlPlaneRoleMatcher(
+		map[string]struct{}{"cp-deleted": {}},
+		map[string]struct{}{"cp-1": {}},
+	)
+	cpType := konnectControlPlaneEntityTypeName
+
+	for name, tc := range map[string]struct {
+		role sdkkonnectcomp.AssignedRole
+		want bool
+	}{
+		"existing control plane": {
+			role: sdkkonnectcomp.AssignedRole{ID: new("r1"), EntityID: new("cp-1"), EntityTypeName: &cpType},
+			want: false,
+		},
+		"orphaned control plane": {
+			role: sdkkonnectcomp.AssignedRole{ID: new("r2"), EntityID: new("cp-gone"), EntityTypeName: &cpType},
+			want: true,
+		},
+		"deleted this run": {
+			role: sdkkonnectcomp.AssignedRole{ID: new("r3"), EntityID: new("cp-deleted"), EntityTypeName: &cpType},
+			want: true,
+		},
+		"no entity ID": {
+			role: sdkkonnectcomp.AssignedRole{ID: new("r4"), EntityID: nil, EntityTypeName: &cpType},
+			want: false,
+		},
+		"other entity type": {
+			role: sdkkonnectcomp.AssignedRole{ID: new("r5"), EntityID: new("cp-gone")},
 			want: false,
 		},
 	} {

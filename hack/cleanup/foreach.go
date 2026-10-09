@@ -15,8 +15,10 @@ func forEachLimited[E any](items []E, limit int, fn func(item E) error) error {
 	)
 	sem := make(chan struct{}, limit)
 	for _, item := range items {
+		// Acquire the semaphore before spawning, so that at most limit
+		// goroutines exist at any time.
+		sem <- struct{}{}
 		wg.Go(func() {
-			sem <- struct{}{}
 			defer func() { <-sem }()
 			if err := fn(item); err != nil {
 				mu.Lock()
