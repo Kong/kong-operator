@@ -117,6 +117,9 @@ func listAIGatewayIDsPaged(
 ) ([]string, error) {
 	var ids []string
 	for pageNumber := int64(1); ; pageNumber++ {
+		if pageNumber > konnectUserRolesMaxPages {
+			return nil, fmt.Errorf("failed to list AI Gateways: exceeded %d pages", konnectUserRolesMaxPages)
+		}
 		response, err := sdk.ListAiGateways(ctx, new(konnectAIGatewaysLimit), new(pageNumber))
 		if err != nil {
 			return nil, fmt.Errorf("failed to list AI Gateways (page %d): %w", pageNumber, err)
