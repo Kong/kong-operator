@@ -1648,41 +1648,58 @@ func TestISServiceUpstream(t *testing.T) {
 	}
 }
 
-func TestExtractRequestAndResponseBuffering(t *testing.T) {
+func TestExtractRequestBuffering(t *testing.T) {
+	const key = "konghq.com/request-buffering"
 	tests := []struct {
 		name    string
 		anns    map[string]string
-		wantReq *bool
-		wantRes *bool
+		want    *bool
 		wantErr bool
 	}{
-		{name: "absent"},
-		{name: "empty value", anns: map[string]string{"konghq.com/request-buffering": ""}},
-		{
-			name:    "both true",
-			anns:    map[string]string{"konghq.com/request-buffering": "true", "konghq.com/response-buffering": "true"},
-			wantReq: new(true), wantRes: new(true),
-		},
-		{
-			name:    "both false",
-			anns:    map[string]string{"konghq.com/request-buffering": "false", "konghq.com/response-buffering": "false"},
-			wantReq: new(false), wantRes: new(false),
-		},
-		{name: "invalid request", anns: map[string]string{"konghq.com/request-buffering": "x"}, wantErr: true},
-		{name: "invalid response", anns: map[string]string{"konghq.com/response-buffering": "x"}, wantErr: true},
+		{name: "absent", anns: map[string]string{}},
+		{name: "nil map"},
+		{name: "empty value", anns: map[string]string{key: ""}},
+		{name: "true", anns: map[string]string{key: "true"}, want: new(true)},
+		{name: "false", anns: map[string]string{key: "false"}, want: new(false)},
+		{name: "invalid", anns: map[string]string{key: "x"}, wantErr: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req, reqErr := ExtractRequestBuffering(tt.anns)
-			res, resErr := ExtractResponseBuffering(tt.anns)
+			got, err := ExtractRequestBuffering(tt.anns)
 			if tt.wantErr {
-				assert.True(t, reqErr != nil || resErr != nil)
+				require.Error(t, err)
 				return
 			}
-			require.NoError(t, reqErr)
-			require.NoError(t, resErr)
-			assert.Equal(t, tt.wantReq, req)
-			assert.Equal(t, tt.wantRes, res)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestExtractResponseBuffering(t *testing.T) {
+	const key = "konghq.com/response-buffering"
+	tests := []struct {
+		name    string
+		anns    map[string]string
+		want    *bool
+		wantErr bool
+	}{
+		{name: "absent", anns: map[string]string{}},
+		{name: "nil map"},
+		{name: "empty value", anns: map[string]string{key: ""}},
+		{name: "true", anns: map[string]string{key: "true"}, want: new(true)},
+		{name: "false", anns: map[string]string{key: "false"}, want: new(false)},
+		{name: "invalid", anns: map[string]string{key: "x"}, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ExtractResponseBuffering(tt.anns)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
