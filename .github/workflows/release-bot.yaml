@@ -167,7 +167,7 @@ jobs:
 
   publish-release:
     permissions:
-      contents: write
+      contents: read
     needs:
       - look_for_release
       - semver
@@ -178,6 +178,15 @@ jobs:
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           egress-policy: audit
+      # The release and its tag are created with the App token, so GITHUB_TOKEN needs no write scope.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
+          private-key: ${{ secrets.GH_APP__KONG_K8S__PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            kong-operator
       - uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1.21.0
         with:
           body: |
@@ -190,7 +199,7 @@ jobs:
 
             - [Changelog](https://github.com/kong/kong-operator/blob/main/CHANGELOG.md#${{ needs.semver.outputs.changelog_anchor }})
 
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           tag: v${{ needs.semver.outputs.version }}
           commit: ${{ github.sha }}
           prerelease: ${{ needs.look_for_release.outputs.release_type == 'prerelease' }}
