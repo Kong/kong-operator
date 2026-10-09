@@ -22,6 +22,14 @@ const (
 // cleanupKonnectAIGateways deletes orphaned AI Gateways created by the tests.
 func cleanupKonnectAIGateways(sdk *sdkkonnectgo.SDK) func(ctx context.Context, log logr.Logger) error {
 	return func(ctx context.Context, log logr.Logger) error {
+		me, err := sdk.Me.GetUsersMe(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to get user info: %w", err)
+		}
+		if me.User == nil || me.User.ID == nil {
+			return errors.New("failed to get user info, user is nil")
+		}
+
 		orphanedAIGateways, err := findOrphanedAIGateways(ctx, log, sdk.AIGateways)
 		if err != nil {
 			return fmt.Errorf("failed to find orphaned AI Gateways: %w", err)
@@ -29,6 +37,23 @@ func cleanupKonnectAIGateways(sdk *sdkkonnectgo.SDK) func(ctx context.Context, l
 		if err := deleteAIGateways(ctx, log, sdk.AIGateways, orphanedAIGateways); err != nil {
 			return fmt.Errorf("failed to delete AI Gateways: %w", err)
 		}
+
+		userID := *me.User.ID
+
+		// We do this but in the future this should be done automatically.
+		// Ref thread: https://kongstrong.slack.com/archives/CQK8J4VN3/p1791535821979929
+		log.Info("Listing existing AI Gateways", "user_id", userID)
+		existingAIGatewayIDs, err := listAIGatewayIDsPaged(ctx, log, sdk.AIGateways)
+		if err != nil {
+			return fmt.Errorf("failed to list existing AI Gateways: %w", err)
+		}
+		log.Info("Listed existing AI Gateways", "count", len(existingAIGatewayIDs))
+
+		if err := removeOrphanedAIGatewayRoles(ctx, log, sdk.Roles, userID, existingAIGatewayIDs); err != nil {
+			return fmt.Errorf("failed to remove AI gateway roles: %w", err)
+		}
+
+		log.Info("AI gateway cleanup completed")
 		return nil
 	}
 }
@@ -85,7 +110,44 @@ func findOrphanedAIGateways(
 		orphanedAIGateways = append(orphanedAIGateways, aiGateway.ID)
 	}
 
+	log.Info("Checked AI Gateways for orphans", "count", len(seenAIGatewayIDs), "orphaned", len(orphanedAIGateways))
+
 	return orphanedAIGateways, nil
+}
+
+// listAIGatewayIDsPaged lists the IDs of all AI Gateways, paging through the results.
+func listAIGatewayIDsPaged(
+	ctx context.Context,
+	log logr.Logger,
+	sdk *sdkkonnectgo.AIGateways,
+) ([]string, error) {
+	var ids []string
+	for pageNumber := int64(1); ; pageNumber++ {
+		response, err := sdk.ListAiGateways(ctx, new(konnectAIGatewaysLimit), new(pageNumber))
+		if err != nil {
+			return nil, fmt.Errorf("failed to list AI Gateways (page %d): %w", pageNumber, err)
+		}
+		if response.ListAIGatewaysResponse == nil {
+			body, err := io.ReadAll(response.RawResponse.Body)
+			if err != nil {
+				body = []byte(err.Error())
+			}
+			return nil, fmt.Errorf("failed to list AI Gateways, status: %d, body: %s", response.GetStatusCode(), body)
+		}
+
+		gateways := response.ListAIGatewaysResponse.Data
+		if len(gateways) == 0 {
+			break
+		}
+		for _, aiGateway := range gateways {
+			ids = append(ids, aiGateway.ID)
+		}
+		log.Info("Fetched AI Gateways page", "page", pageNumber, "count", len(gateways), "total", len(ids))
+		if int64(len(gateways)) < konnectAIGatewaysLimit {
+			break
+		}
+	}
+	return ids, nil
 }
 
 // deleteAIGateways deletes AI Gateways by their IDs.
