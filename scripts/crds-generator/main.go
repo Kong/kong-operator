@@ -295,7 +295,10 @@ func simplifyAllOf(props *apiext.JSONSchemaProps) error {
 		}
 		if ok {
 			*props = merged
-			return nil
+			// The hoisted entry may have brought nested schemas (properties,
+			// items, ...) with their own duplicate allOf entries, so keep
+			// simplifying the merged schema.
+			return simplifyAllOf(props)
 		}
 	}
 

@@ -80,6 +80,26 @@ func TestSimplifyAllOf(t *testing.T) {
 			},
 		},
 		{
+			name: "hoisting recurses into the merged schema's nested properties",
+			in: &apiext.JSONSchemaProps{
+				Properties: map[string]apiext.JSONSchemaProps{
+					"kind": {
+						AllOf: []apiext.JSONSchemaProps{
+							minLengthSchema(1),
+							minLengthSchema(1),
+						},
+					},
+				},
+				AllOf: []apiext.JSONSchemaProps{minLengthSchema(3)},
+			},
+			expected: &apiext.JSONSchemaProps{
+				MinLength: new(int64(3)),
+				Properties: map[string]apiext.JSONSchemaProps{
+					"kind": minLengthSchema(1),
+				},
+			},
+		},
+		{
 			name: "nested schemas are simplified",
 			in: &apiext.JSONSchemaProps{
 				Properties: map[string]apiext.JSONSchemaProps{

@@ -78,8 +78,9 @@
   using the named map types, which controller-gen rejects and silently drops;
   it is now emitted on the type declarations
   (`Labels`, `LabelsUpdate`, `PublicLabels`, ...).
-  This is considered a breaking change but it has been enforced on a different
-  level before this change so net enforcement is not stricter than before.
+  This is considered a breaking change but it is not stricter than before:
+  objects exceeding these limits were already rejected by the Konnect API and
+  are now additionally rejected at Kubernetes admission time.
   [#5983](https://github.com/Kong/kong-operator/pull/5983)
 
 ### Added
