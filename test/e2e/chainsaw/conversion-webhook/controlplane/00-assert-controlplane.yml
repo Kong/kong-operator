@@ -66,8 +66,6 @@ status:
   # Assert feature gates.
   (featureGates[?name == 'KongCustomEntity'] != null): true
   (featureGates[?name == 'FillIDs'] != null): true
-  (featureGates[?name == 'GatewayAlpha']):
-    - state: enabled
   (featureGates[?name == 'KongServiceFacade'] != null): true
   (featureGates[?name == 'SanitizeKonnectConfigDumps'] != null): true
   (featureGates[?name == 'FallbackConfiguration'] != null): true

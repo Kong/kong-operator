@@ -59,7 +59,7 @@ func TestControlPlane_ConvertTo(t *testing.T) {
 										Env: []corev1.EnvVar{
 											{
 												Name:  "CONTROLLER_FEATURE_GATES",
-												Value: "GatewayAlpha=true,ExperimentalFeature=false",
+												Value: "RewriteURIs=true,ExperimentalFeature=false",
 											},
 											{
 												Name:  "CONTROLLER_ENABLE_CONTROLLER_INGRESS_CLASS_NETWORKINGV1",
@@ -80,7 +80,7 @@ func TestControlPlane_ConvertTo(t *testing.T) {
 			expectedIngressClass: new("kong"),
 			expectsDataPlane:     true,
 			expectedFeatureGates: []operatorv2beta1.ControlPlaneFeatureGate{
-				{Name: "GatewayAlpha", State: operatorv2beta1.FeatureGateStateEnabled},
+				{Name: "RewriteURIs", State: operatorv2beta1.FeatureGateStateEnabled},
 				{Name: "ExperimentalFeature", State: operatorv2beta1.FeatureGateStateDisabled},
 			},
 			expectedControllers: []operatorv2beta1.ControlPlaneController{
@@ -315,7 +315,7 @@ func TestControlPlane_ConvertFrom(t *testing.T) {
 						Type: operatorv2beta1.WatchNamespacesTypeAll,
 					},
 					FeatureGates: []operatorv2beta1.ControlPlaneFeatureGate{
-						{Name: "GatewayAlpha", State: operatorv2beta1.FeatureGateStateEnabled},
+						{Name: "RewriteURIs", State: operatorv2beta1.FeatureGateStateEnabled},
 						{Name: "ExperimentalFeature", State: operatorv2beta1.FeatureGateStateDisabled},
 					},
 				},
@@ -434,7 +434,7 @@ func TestControlPlane_RoundTrip(t *testing.T) {
 						Type: operatorv2beta1.WatchNamespacesTypeAll,
 					},
 					FeatureGates: []operatorv2beta1.ControlPlaneFeatureGate{
-						{Name: "GatewayAlpha", State: operatorv2beta1.FeatureGateStateEnabled},
+						{Name: "RewriteURIs", State: operatorv2beta1.FeatureGateStateEnabled},
 						{Name: "ExperimentalFeature", State: operatorv2beta1.FeatureGateStateDisabled},
 					},
 					Controllers: []operatorv2beta1.ControlPlaneController{

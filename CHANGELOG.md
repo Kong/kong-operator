@@ -114,6 +114,13 @@
 
 ### Changed
 
+- `BackendTLSPolicy` is now supported in Gateway API `v1` (previously `v1alpha3`)
+  and no longer requires the `GatewayAlpha` feature gate. It's enabled by default
+  and can be disabled with the `GWAPI_BACKEND_TLS_POLICY` ControlPlane controller.
+  The `GatewayAlpha` feature gate is kept for future Gateway API alpha features,
+  but currently doesn't enable any feature. Setting it is accepted and has no
+  effect, and it's no longer reported in the `ControlPlane`'s `status.featureGates`.
+  [#5971](https://github.com/Kong/kong-operator/pull/5971)
 - `AIGatewayModel`: `spec.apiSpec.{api,model}.config.route.model.pathParam`
   is the plain name of the regex capture group defined in the route path,
   e.g. route path `~/path/(?<model_name>[^/]+)` with `pathParam: model_name`.

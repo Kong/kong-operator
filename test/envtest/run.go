@@ -67,10 +67,6 @@ func WithDefaultEnvTestsConfig(envcfg *rest.Config) func(cfg *managercfg.Config)
 	}
 }
 
-func WithGatewayFeatureEnabled(cfg *managercfg.Config) {
-	cfg.FeatureGates[managercfg.GatewayAlphaFeature] = true
-}
-
 func WithGatewayAPIControllers() func(cfg *managercfg.Config) {
 	return func(cfg *managercfg.Config) {
 		cfg.GatewayAPIGatewayController = true

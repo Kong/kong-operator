@@ -32,7 +32,6 @@ func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExce
 	RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(gw.Namespace),
-		WithGatewayFeatureEnabled,
 		WithGatewayAPIControllers(),
 		func(cfg *managercfg.Config) {
 			// Enable status updates and change the queue's buffer size to 0 to
@@ -127,7 +126,6 @@ func Test_WatchNamespaces(t *testing.T) {
 	RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(gw.Namespace),
-		WithGatewayFeatureEnabled,
 		WithGatewayAPIControllers(),
 		func(cfg *managercfg.Config) {
 			// Enable status updates and change the queue's buffer size to 0 to

@@ -2,15 +2,13 @@ package gatewayapi
 
 import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 var (
-	InstallV1       = gatewayv1.Install
-	InstallV1beta1  = gatewayv1beta1.Install
-	InstallV1alpha3 = gatewayv1alpha3.Install
-	GroupVersion    = gatewayv1.GroupVersion
+	InstallV1      = gatewayv1.Install
+	InstallV1beta1 = gatewayv1beta1.Install
+	GroupVersion   = gatewayv1.GroupVersion
 )
 
 // This file contains aliases for types and consts from the Gateway API. Its purpose is to allow easy migration from
@@ -117,8 +115,8 @@ type (
 	UDPRouteSpec         = gatewayv1.UDPRouteSpec
 	UDPRouteStatus       = gatewayv1.UDPRouteStatus
 
-	BackendTLSPolicy            = gatewayv1alpha3.BackendTLSPolicy
-	BackendTLSPolicyList        = gatewayv1alpha3.BackendTLSPolicyList
+	BackendTLSPolicy            = gatewayv1.BackendTLSPolicy
+	BackendTLSPolicyList        = gatewayv1.BackendTLSPolicyList
 	BackendTLSPolicySpec        = gatewayv1.BackendTLSPolicySpec
 	BackendTLSPolicyValidation  = gatewayv1.BackendTLSPolicyValidation
 	SubjectAltName              = gatewayv1.SubjectAltName

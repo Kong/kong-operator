@@ -46,7 +46,6 @@ func TestGatewayAddressOverride(t *testing.T) {
 		envtest.AdminAPIOptFns(),
 		envtest.WithPublishService(gw.Namespace),
 		envtest.WithPublishStatusAddress(expected, udp),
-		envtest.WithGatewayFeatureEnabled,
 		envtest.WithGatewayAPIControllers(),
 	)
 
@@ -93,7 +92,6 @@ func TestGatewayReconciliation_MoreThan100Routes(t *testing.T) {
 	envtest.RunManager(ctx, t, envcfg,
 		envtest.AdminAPIOptFns(),
 		envtest.WithPublishService(gw.Namespace),
-		envtest.WithGatewayFeatureEnabled,
 		envtest.WithGatewayAPIControllers(),
 	)
 
