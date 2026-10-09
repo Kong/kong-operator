@@ -38,3 +38,4 @@ Where `mode` is one of:
 
 - `KONG_TEST_KONNECT_ACCESS_TOKEN`: Konnect API access token
 - `KONG_TEST_KONNECT_SERVER_URL`: Konnect API server URL
+- `KONNECT_CLEANUP_CONCURRENCY`: number of parallel goroutines used for Konnect API calls (listing role pages, deleting roles). Defaults to 8.

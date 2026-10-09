@@ -33,10 +33,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
+	"time"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	"github.com/Kong/sdk-konnect-go/retry"
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
@@ -122,6 +125,22 @@ func generateSDK() (*sdkkonnectgo.SDK, error) {
 			},
 		),
 		sdkkonnectgo.WithServerURL(serverURL),
+		// Timeout guards against connections that connect but never respond -
+		// without it the SDK call would block forever.
+		sdkkonnectgo.WithClient(&http.Client{Timeout: 60 * time.Second}),
+		// Retry 429 (rate limit) and 5xx responses with exponential backoff for
+		// all SDK calls. The parallel role removal easily hits the Konnect API
+		// rate limits, and the SDK only retries when a retry config is set.
+		sdkkonnectgo.WithRetryConfig(retry.Config{
+			Strategy: "backoff",
+			Backoff: &retry.BackoffStrategy{
+				InitialInterval: 1000,
+				MaxInterval:     30000,
+				Exponent:        2,
+				MaxElapsedTime:  120000, // milliseconds
+			},
+			RetryConnectionErrors: true,
+		}),
 	), nil
 }
 
