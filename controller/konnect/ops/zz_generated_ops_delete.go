@@ -64,6 +64,8 @@ func DeleteGeneratedOps[
 		return deleteEventGatewayListenerPolicy(ctx, sdk.GetEventGatewayListenerPoliciesSDK(), ent)
 	case *configurationv1alpha1.EventGatewaySchemaRegistry:
 		return deleteEventGatewaySchemaRegistry(ctx, sdk.GetEventGatewaySchemaRegistriesSDK(), ent)
+	case *configurationv1alpha1.EventGatewayStaticKey:
+		return deleteEventGatewayStaticKey(ctx, sdk.GetEventGatewayStaticKeysSDK(), ent)
 	case *configurationv1alpha1.EventGatewayTLSTrustBundle:
 		return deleteEventGatewayTLSTrustBundle(ctx, sdk.GetEventGatewayTLSTrustBundlesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualCluster:

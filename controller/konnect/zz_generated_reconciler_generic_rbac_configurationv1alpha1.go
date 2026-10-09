@@ -17,6 +17,9 @@ package konnect
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewayschemaregistries,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewayschemaregistries/status,verbs=update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewayschemaregistries/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaystatickeys,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaystatickeys/status,verbs=update;patch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaystatickeys/finalizers,verbs=update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaytlstrustbundles,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaytlstrustbundles/status,verbs=update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaytlstrustbundles/finalizers,verbs=update;patch

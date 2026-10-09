@@ -67,6 +67,22 @@ const (
 	// yet programmed in Konnect.
 	EventGatewaySchemaRegistryRefReasonNotProgrammed = "NotProgrammed"
 
+	// EventGatewayStaticKeyRefValidConditionType is the type of the condition that indicates
+	// whether the EventGatewayStaticKey reference is valid and points to an existing
+	// EventGatewayStaticKey.
+	EventGatewayStaticKeyRefValidConditionType = "EventGatewayStaticKeyRefValid"
+
+	// EventGatewayStaticKeyRefReasonValid is the reason used with the EventGatewayStaticKeyRefValid
+	// condition type indicating that the EventGatewayStaticKey reference is valid.
+	EventGatewayStaticKeyRefReasonValid = "Valid"
+	// EventGatewayStaticKeyRefReasonInvalid is the reason used with the EventGatewayStaticKeyRefValid
+	// condition type indicating that the EventGatewayStaticKey reference is invalid.
+	EventGatewayStaticKeyRefReasonInvalid = "Invalid"
+	// EventGatewayStaticKeyRefReasonNotProgrammed is the reason used with the EventGatewayStaticKeyRefValid
+	// condition type indicating that the referenced EventGatewayStaticKey exists but is not
+	// yet programmed in Konnect.
+	EventGatewayStaticKeyRefReasonNotProgrammed = "NotProgrammed"
+
 	// EventGatewayTLSTrustBundleRefValidConditionType is the type of the condition that indicates
 	// whether the EventGatewayTLSTrustBundle reference is valid and points to an existing
 	// EventGatewayTLSTrustBundle.

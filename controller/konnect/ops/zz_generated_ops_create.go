@@ -66,6 +66,8 @@ func CreateGeneratedOps[
 		return createEventGatewayListenerPolicy(ctx, cl, sdk.GetEventGatewayListenerPoliciesSDK(), ent)
 	case *configurationv1alpha1.EventGatewaySchemaRegistry:
 		return createEventGatewaySchemaRegistry(ctx, cl, sdk.GetEventGatewaySchemaRegistriesSDK(), ent)
+	case *configurationv1alpha1.EventGatewayStaticKey:
+		return createEventGatewayStaticKey(ctx, cl, sdk.GetEventGatewayStaticKeysSDK(), ent)
 	case *configurationv1alpha1.EventGatewayTLSTrustBundle:
 		return createEventGatewayTLSTrustBundle(ctx, cl, sdk.GetEventGatewayTLSTrustBundlesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualCluster:
@@ -75,7 +77,7 @@ func CreateGeneratedOps[
 	case *configurationv1alpha1.EventGatewayVirtualClusterPolicy:
 		return createEventGatewayVirtualClusterPolicy(ctx, sdk.GetEventGatewayVirtualClusterPoliciesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy:
-		return createEventGatewayVirtualClusterProducePolicy(ctx, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), ent)
+		return createEventGatewayVirtualClusterProducePolicy(ctx, cl, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), ent)
 	case *konnectv1alpha1.KonnectAIGateway:
 		return createKonnectAIGateway(ctx, sdk.GetAIGatewaysSDK(), ent)
 	case *konnectv1alpha1.KonnectConfigStore:

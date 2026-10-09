@@ -766,6 +766,56 @@ apiGroupVersions:
           parentEntityGVK:
             kind: KonnectEventGateway
             group: konnect.konghq.com
+      - path: /v1/event-gateways/{gatewayId}/static-keys
+        name: EventGatewayStaticKey
+        dataSources:
+          - path: spec.apiSpec.value
+            type: Secret
+        # Konnect has no update API for static keys: apiSpec is immutable once
+        # the static key has been created in Konnect (status.id set), and
+        # editable before (e.g. to fix a value Konnect rejected). To rotate a
+        # key, create a new EventGatewayStaticKey and point the policies at it
+        # (data encrypted with the old key stays decryptable while it exists).
+        # gatewayRef is immutable from then on too, not only while it's
+        # Programmed: a static key whose deletion is blocked isn't Programmed,
+        # and repointing it would orphan it in the old gateway, still in use.
+        # status.id isn't cleared if the key is later deleted from Konnect and
+        # can't be recreated: the object must then be deleted and recreated.
+        cel:
+          spec:
+            apiSpec:
+              name:
+                _validations:
+                  # Konnect's rule, which the OpenAPI spec doesn't declare
+                  # (checked against the API): letters (incl. non-ASCII) and
+                  # digits at both ends, spaces and _ . : / + ' - inside.
+                  - '+kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _.:/+''-]*[\p{L}\p{N}]$`'
+              value:
+                # The OpenAPI description says plain text values are encrypted
+                # and never returned: that holds in Konnect, not for the CR.
+                _description: |-
+                  Value is the static key's secret value: a base64-encoded 256-bit key.
+                  It is read only when the static key is created in Konnect: changing
+                  it afterwards (or the Secret it comes from) doesn't update the key, as
+                  Konnect static keys can't be updated. To rotate a key, create a new
+                  EventGatewayStaticKey and point the policies at it.
+                  Prefer sourcing it from a Secret: an inline value is stored in plain
+                  text in the EventGatewayStaticKey and readable by anyone allowed to
+                  read it.
+        typeValidations:
+          - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.gatewayRef == oldSelf.spec.gatewayRef\",message=\"gatewayRef is immutable once the static key has been created in Konnect\",fieldPath=\".spec.gatewayRef\""
+          - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.apiSpec == oldSelf.spec.apiSpec\",message=\"apiSpec is immutable once the static key has been created in Konnect: Konnect static keys can't be updated, create a new EventGatewayStaticKey instead\",fieldPath=\".spec.apiSpec\""
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.EventGatewayStaticKeysSDK
+            fieldName: EventGatewayStaticKeys
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.EventGatewayStaticKeyCreate
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectEventGateway
+            group: konnect.konghq.com
       - path: /v1/event-gateways/{gatewayId}/listeners
         name: EventGatewayListener
         ops:
@@ -879,6 +929,23 @@ apiGroupVersions:
             replacesAPISpecField: destination
       - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/produce-policies
         name: EventGatewayVirtualClusterProducePolicy
+        references:
+          # Additive: Konnect static key IDs/names keep working; namespacedRef
+          # references an EventGatewayStaticKey in the cluster instead,
+          # resolved to its Konnect ID. Konnect refuses to delete a static key
+          # while policies use it: the EventGatewayStaticKey controller watches
+          # the policies so a blocked deletion resumes as soon as they stop
+          # using it.
+          - path: spec.apiSpec.encrypt.config.encryptionKey.static.key
+            kinds: [EventGatewayStaticKey]
+            resolvesTo: id
+            unionMember: namespacedRef
+            reverseWatch: true
+          - path: spec.apiSpec.encryptFields.config.encryptFields.encryptionKey.static.key
+            kinds: [EventGatewayStaticKey]
+            resolvesTo: id
+            unionMember: namespacedRef
+            reverseWatch: true
         schemaFieldOmissions:
           EventGatewayModifyHeadersPolicyCreate:
             - parentPolicyID

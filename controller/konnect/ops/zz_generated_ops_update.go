@@ -66,6 +66,8 @@ func UpdateGeneratedOps[
 		return updateEventGatewayListenerPolicy(ctx, cl, sdk.GetEventGatewayListenerPoliciesSDK(), ent)
 	case *configurationv1alpha1.EventGatewaySchemaRegistry:
 		return updateEventGatewaySchemaRegistry(ctx, cl, sdk.GetEventGatewaySchemaRegistriesSDK(), ent)
+	case *configurationv1alpha1.EventGatewayStaticKey:
+		return nil // Entity does not support update.
 	case *configurationv1alpha1.EventGatewayTLSTrustBundle:
 		return updateEventGatewayTLSTrustBundle(ctx, cl, sdk.GetEventGatewayTLSTrustBundlesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualCluster:
@@ -75,7 +77,7 @@ func UpdateGeneratedOps[
 	case *configurationv1alpha1.EventGatewayVirtualClusterPolicy:
 		return updateEventGatewayVirtualClusterPolicy(ctx, sdk.GetEventGatewayVirtualClusterPoliciesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy:
-		return updateEventGatewayVirtualClusterProducePolicy(ctx, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), ent)
+		return updateEventGatewayVirtualClusterProducePolicy(ctx, cl, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), ent)
 	case *konnectv1alpha1.KonnectAIGateway:
 		return updateKonnectAIGateway(ctx, sdk.GetAIGatewaysSDK(), ent)
 	case *konnectv1alpha1.KonnectConfigStore:

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -258,6 +259,10 @@ type TypeConfig struct {
 	// CEL maps field names to their configurations, allowing additional
 	// kubebuilder validation markers to be attached to specific fields.
 	CEL map[string]*FieldConfig `yaml:"cel,omitempty"`
+	// TypeValidations lists kubebuilder validation markers emitted on the CRD
+	// type itself, for rules that span spec and status (e.g. immutability once
+	// the entity exists in Konnect).
+	TypeValidations []string `yaml:"typeValidations,omitempty"`
 	// References lists inter-CR reference fields on this entity's spec.
 	// Each entry replaces the OpenAPI-derived field with a *commonv1alpha1.ObjectRef
 	// and emits a corresponding resolved-ID field on the status.
@@ -640,6 +645,7 @@ type typeConfigYAML struct {
 	Name                 string                  `yaml:"name,omitempty"`
 	SchemaFieldOmissions map[string][]string     `yaml:"schemaFieldOmissions,omitempty"`
 	CEL                  map[string]*FieldConfig `yaml:"cel,omitempty"`
+	TypeValidations      []string                `yaml:"typeValidations,omitempty"`
 	References           []ReferenceConfig       `yaml:"references,omitempty"`
 	Associations         []AssociationConfig     `yaml:"associations,omitempty"`
 	DataSources          []DataSourceConfig      `yaml:"dataSources,omitempty"`
@@ -664,6 +670,7 @@ func (tc *TypeConfig) UnmarshalYAML(value *yaml.Node) error {
 		Name:                       raw.Name,
 		SchemaFieldOmissions:       raw.SchemaFieldOmissions,
 		CEL:                        raw.CEL,
+		TypeValidations:            raw.TypeValidations,
 		References:                 raw.References,
 		Associations:               raw.Associations,
 		DataSources:                raw.DataSources,
@@ -742,14 +749,14 @@ func (c *APIGroupVersionConfig) GetPaths() []string {
 func (c *APIGroupVersionConfig) FieldConfig(pathToEntityName map[string]string) *Config {
 	entities := make(map[string]*EntityConfig)
 	for _, tc := range c.Types {
-		if tc.CEL == nil {
+		if tc.CEL == nil && len(tc.TypeValidations) == 0 {
 			continue
 		}
 		entityName, ok := pathToEntityName[tc.Path]
 		if !ok {
 			continue
 		}
-		entities[entityName] = &EntityConfig{Fields: tc.CEL}
+		entities[entityName] = &EntityConfig{Fields: tc.CEL, TypeValidations: tc.TypeValidations}
 	}
 	return &Config{Entities: entities}
 }
@@ -999,7 +1006,34 @@ func equalKinds(a, b []string) bool {
 // unionMemberNameRegex matches a lowerCamelCase JSON field name.
 var unionMemberNameRegex = regexp.MustCompile(`^[a-z][a-zA-Z0-9]*$`)
 
+// validateFieldDescriptions checks _description is only set on spec.apiSpec's
+// direct fields, the only ones the generator applies it to.
+func validateFieldDescriptions(fields map[string]*FieldConfig, path []string) error {
+	for name, fc := range fields {
+		if fc == nil {
+			continue
+		}
+		p := append(slices.Clone(path), name)
+		if fc.Description != "" && (len(p) != 3 || p[0] != "spec" || p[1] != "apiSpec") {
+			return fmt.Errorf("cel.%s: _description is only supported on spec.apiSpec's direct fields", strings.Join(p, "."))
+		}
+		if err := validateFieldDescriptions(fc.Fields, p); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (tc *TypeConfig) validate() error {
+	if err := validateFieldDescriptions(tc.CEL, nil); err != nil {
+		return err
+	}
+	for _, v := range tc.TypeValidations {
+		// Anything else is emitted as a plain comment, silently ignored.
+		if !strings.HasPrefix(v, "+kubebuilder:validation:") {
+			return fmt.Errorf("typeValidations: %q must be a +kubebuilder:validation: marker", v)
+		}
+	}
 	for _, ref := range tc.References {
 		if !strings.HasPrefix(ref.Path, "spec.apiSpec.") {
 			return fmt.Errorf("reference %q: path must start with \"spec.apiSpec.\"", ref.Path)
@@ -1038,15 +1072,18 @@ func (tc *TypeConfig) validate() error {
 			return fmt.Errorf("reference %q: reverseWatch requires exactly one kind", ref.Path)
 		}
 	}
-	seenReverseWatchKinds := make(map[string]string)
+	// Several reverseWatch references to a kind share one generated
+	// <Entity>RefsTo<Kind> accessor; an injectInto one also has its literal
+	// value looked up, which is only supported alone.
+	seenReverseWatchKinds := make(map[string]ReferenceConfig)
 	for _, ref := range tc.References {
 		if !ref.ReverseWatch {
 			continue
 		}
-		if prev, ok := seenReverseWatchKinds[ref.Kinds[0]]; ok {
-			return fmt.Errorf("references %q and %q: reverseWatch is supported for at most one reference per referenced kind", prev, ref.Path)
+		if prev, ok := seenReverseWatchKinds[ref.Kinds[0]]; ok && (prev.InjectInto != "" || ref.InjectInto != "") {
+			return fmt.Errorf("references %q and %q: reverseWatch with injectInto is supported for at most one reference per referenced kind", prev.Path, ref.Path)
 		}
-		seenReverseWatchKinds[ref.Kinds[0]] = ref.Path
+		seenReverseWatchKinds[ref.Kinds[0]] = ref
 	}
 	seenAssocNames := make(map[string]bool)
 	for i, a := range tc.Associations {
@@ -1190,6 +1227,10 @@ func ParseAPIGroupVersion(gv string) (group, version string, err error) {
 type FieldConfig struct {
 	// Validations are additional kubebuilder markers to add to the field.
 	Validations []string `yaml:"_validations,omitempty"`
+	// Description replaces the field's OpenAPI description in the CRD, e.g.
+	// when it describes Konnect behavior that doesn't hold for the CR. Only
+	// supported on spec.apiSpec's direct fields.
+	Description string `yaml:"_description,omitempty"`
 	// Fields maps child field names to their own FieldConfig, allowing
 	// multi-segment CEL paths that traverse referenced schema types.
 	Fields map[string]*FieldConfig `yaml:",inline"`
@@ -1207,6 +1248,8 @@ func (fc *FieldConfig) Sub(name string) *FieldConfig {
 type EntityConfig struct {
 	// Fields maps field names to their configurations
 	Fields map[string]*FieldConfig `yaml:",inline"`
+	// TypeValidations are the markers emitted on the CRD type itself.
+	TypeValidations []string `yaml:"-"`
 }
 
 // Config holds the complete configuration for CRD generation

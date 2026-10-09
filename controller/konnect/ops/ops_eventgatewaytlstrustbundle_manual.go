@@ -2,19 +2,14 @@ package ops
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"slices"
-	"strings"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
-	"github.com/kong/kong-operator/v2/internal/utils/konnectpagination"
 )
 
 // eventGatewayListenersProbePageSize is the page size used to list the
@@ -58,18 +53,7 @@ func (e EventGatewayTLSTrustBundleInUseError) DeletionBlockedMessage() string {
 }
 
 func (e EventGatewayTLSTrustBundleInUseError) usersDescription() string {
-	var parts []string
-	if len(e.Users) > 0 {
-		parts = append(parts, "EventGatewayListenerPolicy "+strings.Join(e.Users, ", "))
-	}
-	if e.OtherNamespacesUsers > 0 {
-		parts = append(parts, fmt.Sprintf("%d EventGatewayListenerPolicy in other namespaces", e.OtherNamespacesUsers))
-	}
-	if len(e.UnmanagedKonnectPolicies) > 0 {
-		parts = append(parts, "Konnect listener policies "+strings.Join(e.UnmanagedKonnectPolicies, ", ")+
-			", which are not managed from this cluster")
-	}
-	return strings.Join(parts, ", and by ")
+	return describePolicyUsers("EventGatewayListenerPolicy", "Konnect listener policies", e.Users, e.OtherNamespacesUsers, e.UnmanagedKonnectPolicies)
 }
 
 // deleteEventGatewayTLSTrustBundleGuarded deletes an EventGatewayTLSTrustBundle
@@ -132,29 +116,12 @@ func deleteEventGatewayTLSTrustBundleGuarded(
 			managed[policyID] = client.ObjectKeyFromObject(&list.Items[i])
 		}
 	}
-	var inUse EventGatewayTLSTrustBundleInUseError
-	for _, p := range konnectPolicies {
-		if user, ok := managed[p.id]; ok {
-			if user.Namespace == obj.GetNamespace() {
-				inUse.Users = append(inUse.Users, user.String())
-			} else {
-				inUse.OtherNamespacesUsers++
-			}
-			continue
-		}
-		inUse.UnmanagedKonnectPolicies = append(inUse.UnmanagedKonnectPolicies, p.listenerName+"/"+p.name)
+	u := classifyPolicyUsers(obj.GetNamespace(), konnectPolicies, managed)
+	return EventGatewayTLSTrustBundleInUseError{
+		Users:                    u.users,
+		OtherNamespacesUsers:     u.otherNamespaces,
+		UnmanagedKonnectPolicies: u.unmanaged,
 	}
-	slices.Sort(inUse.Users)
-	inUse.Users = slices.Compact(inUse.Users)
-	slices.Sort(inUse.UnmanagedKonnectPolicies)
-	return inUse
-}
-
-// konnectListenerPolicy is a Konnect listener policy using a TLS trust bundle.
-type konnectListenerPolicy struct {
-	id           string
-	name         string
-	listenerName string
 }
 
 // konnectListenerPoliciesUsingTLSTrustBundle returns the Konnect policies of
@@ -166,9 +133,9 @@ func konnectListenerPoliciesUsingTLSTrustBundle(
 	listenersSDK sdkkonnectgo.EventGatewayListenersSDK,
 	policiesSDK sdkkonnectgo.EventGatewayListenerPoliciesSDK,
 	gatewayID, trustBundleID, trustBundleName string,
-) ([]konnectListenerPolicy, error) {
+) ([]konnectPolicyUser, error) {
 	var (
-		users []konnectListenerPolicy
+		users []konnectPolicyUser
 		after *string
 		// Cursors already requested, to detect a next-page cursor that does
 		// not advance (directly or through a longer cycle).
@@ -203,25 +170,18 @@ func konnectListenerPoliciesUsingTLSTrustBundle(
 			}
 			for _, p := range policies {
 				if p.usesTrustBundle(trustBundleID, trustBundleName) {
-					users = append(users, konnectListenerPolicy{id: p.ID, name: p.Name, listenerName: l.GetName()})
+					users = append(users, konnectPolicyUser{id: p.ID, name: p.Name, parentName: l.GetName()})
 				}
 			}
 		}
 		meta := resp.ListEventGatewayListenersResponse.GetMeta()
 		page := meta.GetPage()
-		next := page.GetNext()
-		if next == nil || *next == "" {
+		if after, err = nextPageCursor(page.GetNext(), seenCursors); err != nil {
+			return nil, fmt.Errorf("listing listeners of Event Gateway %s: %w", gatewayID, err)
+		}
+		if after == nil {
 			return users, nil
 		}
-		cursor, err := konnectpagination.PageAfterCursorFromNextPageURL(*next)
-		if err != nil {
-			return nil, err
-		}
-		if _, ok := seenCursors[cursor]; ok {
-			return nil, fmt.Errorf("next page cursor %q repeated while listing listeners of Event Gateway %s", cursor, gatewayID)
-		}
-		seenCursors[cursor] = struct{}{}
-		after = &cursor
 	}
 }
 
@@ -268,16 +228,12 @@ func listenerPoliciesTrustBundleRefs(
 	if err != nil {
 		return nil, err
 	}
-	if resp == nil || resp.RawResponse == nil || resp.RawResponse.Body == nil || resp.RawResponse.Body == http.NoBody {
+	if resp == nil {
 		return nil, ErrNilResponse
 	}
-	body, err := io.ReadAll(resp.RawResponse.Body)
-	if err != nil {
-		return nil, fmt.Errorf("reading listener policies response body: %w", err)
-	}
 	var policies []listenerPolicyTrustBundleRefs
-	if err := json.Unmarshal(body, &policies); err != nil {
-		return nil, fmt.Errorf("decoding listener policies response body: %w", err)
+	if err := decodeRawResponseBody(resp.RawResponse, &policies); err != nil {
+		return nil, fmt.Errorf("listener policies: %w", err)
 	}
 	return policies, nil
 }

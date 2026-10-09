@@ -1,0 +1,300 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-statickey-producepolicy-reference
+spec:
+  description: |
+    EventGatewayStaticKey used by an encrypt EventGatewayVirtualClusterProducePolicy
+    through encryptionKey.static.key.namespacedRef, against the real Konnect
+    API:
+
+    - the reference resolves to the static key's Konnect ID;
+    - Konnect refuses to delete a static key a produce policy uses, so the
+      static key keeps its finalizer, reports a DeletionBlocked Programmed
+      condition naming the policy and stays in Konnect;
+    - once the policy is gone, the static key is deleted, in Konnect too,
+      through the watch on produce policies (faster than the periodic retry of
+      a blocked deletion).
+
+    No data plane is needed.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: keg_cp_name
+      value: (join('-', [($test_name), 'keg']))
+    - name: backend_cluster_name
+      value: backend-cluster
+    - name: virtual_cluster_name
+      value: virtual-cluster
+    - name: static_key_name
+      value: encryption-key
+    - name: policy_name
+      value: encrypt
+  steps:
+    - name: Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: Create-konnect-eventgateway
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectEventGateway.yaml
+    - name: Create-backend-cluster
+      use:
+        template: ../../common/_step_templates/apply-assert-eventGatewayBackendCluster.yaml
+    - name: Create-virtual-cluster
+      bindings:
+        - name: dns_label
+          value: statickeyref
+      use:
+        template: ../../common/_step_templates/apply-assert-eventGatewayVirtualCluster.yaml
+
+    - name: Create-static-key
+      try:
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: encryption-key
+                namespace: ($namespace)
+                labels:
+                  konghq.com/secret: "true"
+              type: Opaque
+              stringData:
+                key: Y2hhaW5zYXctc3RhdGljLWtleS0zMi1ieXRlcy1vayE=
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayStaticKey
+              metadata:
+                name: ($static_key_name)
+                namespace: ($namespace)
+              spec:
+                gatewayRef:
+                  type: namespacedRef
+                  namespacedRef:
+                    name: ($keg_cp_name)
+                apiSpec:
+                  name: (join('-', [($test_name), 'encryption-key']))
+                  value:
+                    type: secretRef
+                    secretRef:
+                      name: encryption-key
+                      key: key
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayStaticKey
+              metadata:
+                name: ($static_key_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+
+    - name: Create-encrypt-produce-policy
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              metadata:
+                name: ($policy_name)
+                namespace: ($namespace)
+              spec:
+                eventGatewayVirtualClusterRef:
+                  type: namespacedRef
+                  namespacedRef:
+                    name: ($virtual_cluster_name)
+                apiSpec:
+                  type: encrypt
+                  encrypt:
+                    name: ($policy_name)
+                    config:
+                      failureMode: error
+                      partOfRecord:
+                        - value
+                      encryptionKey:
+                        type: static
+                        static:
+                          key:
+                            namespacedRef:
+                              name: ($static_key_name)
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              metadata:
+                name: ($policy_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'KonnectReferencesResolved']):
+                  - status: 'True'
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+
+    - name: Assert-policy-references-static-key-by-Konnect-ID
+      try:
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: eventgatewaystatickeys.configuration.konghq.com
+              - name: RESOURCE_NAME
+                value: ($static_key_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: COLLECTION_PATH_JQ
+                value: '"/v1/event-gateways/" + .status.gatewayID.id + "/static-keys"'
+            content: |
+              bash ../../common/scripts/konnect_entity_of_resource.sh
+            outputs:
+              - name: static_key
+                value: (json_parse($stdout))
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: eventgatewayvirtualclusterproducepolicies.configuration.konghq.com
+              - name: RESOURCE_NAME
+                value: ($policy_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: COLLECTION_PATH_JQ
+                value: '"/v1/event-gateways/" + .status.gatewayID.id + "/virtual-clusters/" + .status.virtualClusterID.id + "/produce-policies"'
+            content: |
+              bash ../../common/scripts/konnect_entity_of_resource.sh
+            outputs:
+              - name: policy
+                value: (json_parse($stdout))
+        - description: The policy references the static key by its Konnect ID.
+          script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: API_PATH
+                value: ($policy.entity_path)
+              - name: WANT_ID
+                value: ($static_key.id)
+              - name: EXPECTED_JQ
+                value: '.config.encryption_key.type == "static" and .config.encryption_key.key.id == $ENV.WANT_ID'
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh
+
+    - name: Delete-static-key-in-use-is-blocked
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: NAME
+                value: ($static_key_name)
+            content: |
+              kubectl delete eventgatewaystatickeys.configuration.konghq.com "$NAME" -n "$NAMESPACE" --wait=false
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayStaticKey
+              metadata:
+                name: ($static_key_name)
+                namespace: ($namespace)
+                (contains(finalizers, 'gateway.konghq.com/konnect-cleanup')): true
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+                    reason: DeletionBlocked
+                    (contains(message, (join('/', [($namespace), ($policy_name)])))): true
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: eventgatewaystatickeys.configuration.konghq.com
+              - name: RESOURCE_NAME
+                value: ($static_key_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: COLLECTION_PATH_JQ
+                value: '"/v1/event-gateways/" + .status.gatewayID.id + "/static-keys"'
+            content: |
+              bash ../../common/scripts/konnect_entity_of_resource.sh
+            outputs:
+              - name: static_key
+                value: (json_parse($stdout))
+        - description: The static key is still in Konnect.
+          script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: API_PATH
+                value: ($static_key.entity_path)
+              - name: EXPECTED_STATUS
+                value: "200"
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh
+
+    - name: Delete-policy-unblocks-static-key-deletion
+      try:
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: eventgatewaystatickeys.configuration.konghq.com
+              - name: RESOURCE_NAME
+                value: ($static_key_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: COLLECTION_PATH_JQ
+                value: '"/v1/event-gateways/" + .status.gatewayID.id + "/static-keys"'
+            content: |
+              bash ../../common/scripts/konnect_entity_of_resource.sh
+            outputs:
+              - name: static_key
+                value: (json_parse($stdout))
+        # Don't wait for the policy to be gone: the 45s window of the next
+        # operation must cover the whole path from the policy deletion request
+        # to the static key deletion.
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: NAME
+                value: ($policy_name)
+            content: |
+              kubectl delete eventgatewayvirtualclusterproducepolicies.configuration.konghq.com "$NAME" -n "$NAMESPACE" --wait=false
+        - error:
+            # Shorter than the one-minute retry of a blocked deletion: the
+            # deletion must resume through the watch on produce policies.
+            timeout: 45s
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayStaticKey
+              metadata:
+                name: ($static_key_name)
+                namespace: ($namespace)
+        - description: The static key is gone from Konnect too.
+          script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: API_PATH
+                value: ($static_key.entity_path)
+              - name: EXPECTED_STATUS
+                value: "404"
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh

@@ -850,6 +850,22 @@ func TestAPIGroupVersionConfig_FieldConfig(t *testing.T) {
 		assert.Nil(t, fc.GetFieldValidations("PortalTeam", "name"))
 	})
 
+	t.Run("with type validations only", func(t *testing.T) {
+		agv := &APIGroupVersionConfig{
+			Types: []*TypeConfig{
+				{
+					Path:            "/v3/portals",
+					TypeValidations: []string{"+kubebuilder:validation:XValidation:rule=\"true\""},
+				},
+			},
+		}
+
+		fc := agv.FieldConfig(map[string]string{"/v3/portals": "Portal"})
+		require.NotNil(t, fc)
+		require.Contains(t, fc.Entities, "Portal")
+		assert.Equal(t, []string{"+kubebuilder:validation:XValidation:rule=\"true\""}, fc.Entities["Portal"].TypeValidations)
+	})
+
 	t.Run("no cel validations", func(t *testing.T) {
 		agv := &APIGroupVersionConfig{
 			Types: []*TypeConfig{
@@ -1391,7 +1407,7 @@ func TestReferenceConfigValidation(t *testing.T) {
 			wantErr: "reverseWatch requires exactly one kind",
 		},
 		{
-			name: "two reverseWatch references to the same kind rejected",
+			name: "two reverseWatch references to the same kind accepted",
 			cfg: func() *APIGroupVersionConfig {
 				cfg := base(func(rc *ReferenceConfig) { rc.ReverseWatch = true })
 				second := cfg.Types[0].References[0]
@@ -1399,7 +1415,22 @@ func TestReferenceConfigValidation(t *testing.T) {
 				cfg.Types[0].References = append(cfg.Types[0].References, second)
 				return cfg
 			}(),
-			wantErr: "reverseWatch is supported for at most one reference per referenced kind",
+		},
+		{
+			name: "two reverseWatch references to the same kind with injectInto rejected",
+			cfg: func() *APIGroupVersionConfig {
+				cfg := base(func(rc *ReferenceConfig) {
+					rc.Path = "spec.apiSpec.customPolicyRef"
+					rc.InjectInto = "type"
+					rc.ReverseWatch = true
+				})
+				second := cfg.Types[0].References[0]
+				second.Path = "spec.apiSpec.otherPolicies"
+				second.InjectInto = ""
+				cfg.Types[0].References = append(cfg.Types[0].References, second)
+				return cfg
+			}(),
+			wantErr: "reverseWatch with injectInto is supported for at most one reference per referenced kind",
 		},
 	}
 	for _, tt := range tests {
@@ -1508,4 +1539,34 @@ func TestSourceConfigs_Accessor(t *testing.T) {
 	require.Contains(t, got, "KonnectEventGateway")
 	require.True(t, got["KonnectEventGateway"].SupportsMirror)
 	require.NotContains(t, got, "Portal")
+}
+
+func TestTypeConfig_ValidateTypeValidations(t *testing.T) {
+	tc := &TypeConfig{TypeValidations: []string{`+kubebuilder:validation:XValidation:rule="true",message="m"`}}
+	require.NoError(t, tc.validate())
+
+	tc = &TypeConfig{TypeValidations: []string{`kubebuilder:validation:XValidation:rule="true",message="m"`}}
+	require.ErrorContains(t, tc.validate(), "must be a +kubebuilder:validation: marker")
+}
+
+func TestTypeConfig_ValidateFieldDescriptions(t *testing.T) {
+	tc := &TypeConfig{CEL: map[string]*FieldConfig{
+		"spec": {Fields: map[string]*FieldConfig{
+			"apiSpec": {Fields: map[string]*FieldConfig{
+				"value": {Description: "ok"},
+			}},
+		}},
+	}}
+	require.NoError(t, tc.validate())
+
+	tc = &TypeConfig{CEL: map[string]*FieldConfig{
+		"spec": {Fields: map[string]*FieldConfig{
+			"apiSpec": {Fields: map[string]*FieldConfig{
+				"tls": {Fields: map[string]*FieldConfig{
+					"caBundle": {Description: "nested"},
+				}},
+			}},
+		}},
+	}}
+	require.ErrorContains(t, tc.validate(), "cel.spec.apiSpec.tls.caBundle: _description is only supported on spec.apiSpec's direct fields")
 }

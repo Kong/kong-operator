@@ -152,7 +152,7 @@ type {{.EntityName}}APISpec struct {
 {{- range $i, $prop := .Schema.Properties}}
 {{- if not (skipProperty $prop)}}
 {{- if not (isParentRefReplacedField $prop.Name)}}
-{{formatComment $prop.Description}}
+{{formatComment (propDescription $prop)}}
 	//
 {{- range kubebuilderTags $prop}}
 	// {{.}}
@@ -1235,9 +1235,19 @@ func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) {{if .Nest
 {{- else}}
 	var refs []{{.TypeName}}
 {{- end}}
+{{- range .ArmChecks}}
+	if {{.}} {
+		return nil
+	}
+{{- end}}
 	for i := range {{.ArrayPath}} {
 {{- range .ElementGuardExprs}}
 		if {{$ref.ArrayPath}}[i].{{.}} == nil {
+			continue
+		}
+{{- end}}
+{{- range .ElementArmChecks}}
+		if {{$ref.ArrayPath}}[i].{{.}} {
 			continue
 		}
 {{- end}}
@@ -1246,6 +1256,16 @@ func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) {{if .Nest
 			continue
 		}
 		refs = append(refs, {{.ArrayPath}}[i].{{.ArrayLeafPath}})
+{{- else if .UnionMemberGoName}}
+{{- if .ArrayLeafPointer}}
+		if {{.ArrayPath}}[i].{{.ArrayLeafPath}} == nil {
+			continue
+		}
+{{- end}}
+		if {{.ArrayPath}}[i].{{.ArrayLeafPath}}.{{.UnionMemberGoName}} == nil {
+			continue
+		}
+		refs = append(refs, *{{.ArrayPath}}[i].{{.ArrayLeafPath}}.{{.UnionMemberGoName}})
 {{- else if .ArrayLeafPointer}}
 		if {{.ArrayPath}}[i].{{.ArrayLeafPath}} == nil {
 			continue
@@ -1265,6 +1285,11 @@ func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) {{if .Nest
 		return nil
 	}
 {{- end}}
+{{- end}}
+{{- range .ArmChecks}}
+	if {{.}} {
+		return nil
+	}
 {{- end}}
 {{- if and .UnionMemberGoName .SingleValueObjectRef}}
 	if {{$path}}.{{.UnionMemberGoName}} == nil {
@@ -1422,14 +1447,16 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 {{- end}}
 {{- end}}
 {{- range .References}}
-{{- if .ReverseWatch}}
+{{- if .ReverseWatchRefsExprs}}
+{{- $kind := .DefaultKind}}
 
 // {{$.EntityName}}RefsTo{{.DefaultKind}} returns the keys of the {{.DefaultKind}}
-// objects obj references through {{.Path}}, with the default namespace applied.
+// objects obj references through {{range $i, $p := .ReverseWatchPaths}}{{if $i}}, {{end}}{{$p}}{{end}}, with the default namespace applied.
 func {{$.EntityName}}RefsTo{{.DefaultKind}}(obj *{{$.EntityName}}) []client.ObjectKey {
 	var keys []client.ObjectKey
-	for _, ref := range {{.RefsExpr}} {
-		if ref.Kind != "" && ref.Kind != "{{.DefaultKind}}" {
+{{- range .ReverseWatchRefsExprs}}
+	for _, ref := range {{.}} {
+		if ref.Kind != "" && ref.Kind != "{{$kind}}" {
 			continue
 		}
 		ns := ref.Namespace
@@ -1438,6 +1465,7 @@ func {{$.EntityName}}RefsTo{{.DefaultKind}}(obj *{{$.EntityName}}) []client.Obje
 		}
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
+{{- end}}
 	return keys
 }
 
@@ -1580,8 +1608,13 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 		if err != nil {
 			return nil, fmt.Errorf("resolving {{.RefPath}} references: %w", err)
 		}
+{{- if $inj.UnionMemberKey}}
+		rewritten{{.ResolverName}} := 0
+		if arr, ok := {{$inj.TargetVar}}["{{$inj.ArrayKey}}"].([]any); ok {
+{{- else}}
 		if arr, ok := {{$inj.TargetVar}}["{{$inj.ArrayKey}}"].([]any); ok {
 			ri := 0
+{{- end}}
 			for _, e := range arr {
 				el, ok := e.(map[string]any)
 				if !ok {
@@ -1595,6 +1628,20 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 				}
 {{- $lp = .Var}}
 {{- end}}
+{{- if $inj.UnionMemberKey}}
+				leaf, ok := {{$lp}}["{{.LeafSDKKey}}"].(map[string]any)
+				if !ok {
+					continue
+				}
+				if _, has := leaf["{{$inj.UnionMemberKey}}"]; !has {
+					continue
+				}
+				if rewritten{{.ResolverName}} >= len(resolved{{.ResolverName}}) {
+					return nil, fmt.Errorf("resolving {{.RefPath}} references: more references set than the %d resolved", len(resolved{{.ResolverName}}))
+				}
+				{{$lp}}["{{.LeafSDKKey}}"] = map[string]any{"{{$inj.ObjectWrapKey}}": resolved{{.ResolverName}}[rewritten{{.ResolverName}}]}
+				rewritten{{.ResolverName}}++
+{{- else}}
 				if _, has := {{$lp}}["{{.LeafSDKKey}}"]; !has {
 					continue
 				}
@@ -1602,8 +1649,16 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 					{{$lp}}["{{.LeafSDKKey}}"] = resolved{{.ResolverName}}[ri]
 					ri++
 				}
+{{- end}}
 			}
 		}
+{{- if $inj.UnionMemberKey}}
+		// Every resolved reference must have been rewritten: a mismatch means
+		// the references and the payload disagree on which items carry one.
+		if rewritten{{.ResolverName}} != len(resolved{{.ResolverName}}) {
+			return nil, fmt.Errorf("resolving {{.RefPath}} references: %d resolved but %d set in the payload", len(resolved{{.ResolverName}}), rewritten{{.ResolverName}})
+		}
+{{- end}}
 {{- end}}
 {{- else if .ObjectWrap}}
 {{- range .Variants}}
@@ -1622,8 +1677,8 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 			return nil, fmt.Errorf("resolving {{.RefPath}} references: %w", err)
 		}
 {{- if $inj.UnionMemberArray}}
+		rewritten{{.ResolverName}} := 0
 		if arr, ok := {{$inj.TargetVar}}["{{.LeafSDKKey}}"].([]any); ok {
-			ri := 0
 			for i, e := range arr {
 				el, ok := e.(map[string]any)
 				if !ok {
@@ -1632,16 +1687,26 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 				if _, has := el["{{$inj.UnionMemberKey}}"]; !has {
 					continue
 				}
-				if ri >= len(resolved{{.ResolverName}}) {
+				if rewritten{{.ResolverName}} >= len(resolved{{.ResolverName}}) {
 					return nil, fmt.Errorf("resolving {{.RefPath}} references: more references set than the %d resolved", len(resolved{{.ResolverName}}))
 				}
-				arr[i] = map[string]any{"{{$inj.ObjectWrapKey}}": resolved{{.ResolverName}}[ri]}
-				ri++
+				arr[i] = map[string]any{"{{$inj.ObjectWrapKey}}": resolved{{.ResolverName}}[rewritten{{.ResolverName}}]}
+				rewritten{{.ResolverName}}++
 			}
 		}
+		// Every resolved reference must have been rewritten: a mismatch means
+		// the references and the payload disagree on which items carry one.
+		if rewritten{{.ResolverName}} != len(resolved{{.ResolverName}}) {
+			return nil, fmt.Errorf("resolving {{.RefPath}} references: %d resolved but %d set in the payload", len(resolved{{.ResolverName}}), rewritten{{.ResolverName}})
+		}
 {{- else}}
-		if el, ok := {{$inj.TargetVar}}["{{.LeafSDKKey}}"].(map[string]any); ok && len(resolved{{.ResolverName}}) > 0 {
+		if el, ok := {{$inj.TargetVar}}["{{.LeafSDKKey}}"].(map[string]any); ok {
 			if _, has := el["{{$inj.UnionMemberKey}}"]; has {
+				// The reference is set in the payload: it must have resolved,
+				// or it would reach Konnect unresolved.
+				if len(resolved{{.ResolverName}}) == 0 {
+					return nil, fmt.Errorf("resolving {{.RefPath}} references: reference set in the payload but not resolved")
+				}
 				{{$inj.TargetVar}}["{{.LeafSDKKey}}"] = map[string]any{"{{$inj.ObjectWrapKey}}": resolved{{.ResolverName}}[0]}
 			}
 		}

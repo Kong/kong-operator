@@ -28,6 +28,7 @@ type generatedMockSDKWrapper struct {
 	EventGatewayListenersSDK                     *mocks.MockEventGatewayListenersSDK
 	EventGatewayListenerPoliciesSDK              *mocks.MockEventGatewayListenerPoliciesSDK
 	EventGatewaySchemaRegistriesSDK              *mocks.MockEventGatewaySchemaRegistriesSDK
+	EventGatewayStaticKeysSDK                    *mocks.MockEventGatewayStaticKeysSDK
 	EventGatewayTLSTrustBundlesSDK               *mocks.MockEventGatewayTLSTrustBundlesSDK
 	EventGatewayVirtualClustersSDK               *mocks.MockEventGatewayVirtualClustersSDK
 	EventGatewayVirtualClusterConsumePoliciesSDK *mocks.MockEventGatewayVirtualClusterConsumePoliciesSDK
@@ -66,6 +67,7 @@ func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {
 		EventGatewayListenersSDK:                     mocks.NewMockEventGatewayListenersSDK(t),
 		EventGatewayListenerPoliciesSDK:              mocks.NewMockEventGatewayListenerPoliciesSDK(t),
 		EventGatewaySchemaRegistriesSDK:              mocks.NewMockEventGatewaySchemaRegistriesSDK(t),
+		EventGatewayStaticKeysSDK:                    mocks.NewMockEventGatewayStaticKeysSDK(t),
 		EventGatewayTLSTrustBundlesSDK:               mocks.NewMockEventGatewayTLSTrustBundlesSDK(t),
 		EventGatewayVirtualClustersSDK:               mocks.NewMockEventGatewayVirtualClustersSDK(t),
 		EventGatewayVirtualClusterConsumePoliciesSDK: mocks.NewMockEventGatewayVirtualClusterConsumePoliciesSDK(t),
@@ -173,6 +175,11 @@ func (m generatedMockSDKWrapper) GetEventGatewayListenerPoliciesSDK() sdkkonnect
 // GetEventGatewaySchemaRegistriesSDK returns the SDK to operate EventGatewaySchemaRegistry.
 func (m generatedMockSDKWrapper) GetEventGatewaySchemaRegistriesSDK() sdkkonnectgo.EventGatewaySchemaRegistriesSDK {
 	return m.EventGatewaySchemaRegistriesSDK
+}
+
+// GetEventGatewayStaticKeysSDK returns the SDK to operate EventGatewayStaticKey.
+func (m generatedMockSDKWrapper) GetEventGatewayStaticKeysSDK() sdkkonnectgo.EventGatewayStaticKeysSDK {
+	return m.EventGatewayStaticKeysSDK
 }
 
 // GetEventGatewayTLSTrustBundlesSDK returns the SDK to operate EventGatewayTLSTrustBundle.
