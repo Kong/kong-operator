@@ -85,6 +85,7 @@ func cleanupKonnectControlPlanes(sdk *sdkkonnectgo.SDK) func(ctx context.Context
 		}
 
 		userID := *me.User.ID
+		userID = "63da16fc-94e7-4cbf-bf12-1b2623e0c0d6"
 
 		log.Info("User", "user_id", userID)
 
@@ -95,7 +96,14 @@ func cleanupKonnectControlPlanes(sdk *sdkkonnectgo.SDK) func(ctx context.Context
 		//
 		// We can drop this once the automated cleanup is implemented on Konnect side:
 		// https://konghq.atlassian.net/browse/TPS-1453.
-		if err := removeOrphanedControlPlaneRoles(ctx, log, sdk.Roles, userID, orphanedCPs); err != nil {
+		log.Info("Listing existing Control Planes", "user_id", userID)
+		existingCPIDs, err := listControlPlaneIDsPaged(ctx, log, sdk.ControlPlanes)
+		if err != nil {
+			return fmt.Errorf("failed to list existing control planes: %w", err)
+		}
+		log.Info("Listed existing control planes", "count", len(existingCPIDs))
+
+		if err := removeOrphanedControlPlaneRoles(ctx, log, sdk.Roles, userID, existingCPIDs, orphanedCPs); err != nil {
 			return fmt.Errorf("failed to remove control plane roles: %w", err)
 		}
 
@@ -246,6 +254,46 @@ func deleteEventGateways(
 		}
 	}
 	return errors.Join(errs...)
+}
+
+// listControlPlaneIDsPaged lists the IDs of all control planes, paging through
+// the results. No label filter is applied: the full set of existing IDs is
+// needed so that only roles of control planes that no longer exist get removed.
+func listControlPlaneIDsPaged(
+	ctx context.Context,
+	log logr.Logger,
+	c *sdkkonnectgo.ControlPlanes,
+) ([]string, error) {
+	var ids []string
+	for pageNumber := int64(1); ; pageNumber++ {
+		response, err := c.ListControlPlanes(ctx, sdkkonnectops.ListControlPlanesRequest{
+			PageSize:   new(konnectControlPlanesLimit),
+			PageNumber: new(pageNumber),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to list control planes (page %d): %w", pageNumber, err)
+		}
+		if response.ListControlPlanesResponse == nil {
+			body, err := io.ReadAll(response.RawResponse.Body)
+			if err != nil {
+				body = []byte(err.Error())
+			}
+			return nil, fmt.Errorf("failed to list control planes, status: %d, body: %s", response.GetStatusCode(), body)
+		}
+
+		controlPlanes := response.ListControlPlanesResponse.Data
+		if len(controlPlanes) == 0 {
+			break
+		}
+		for _, cp := range controlPlanes {
+			ids = append(ids, cp.ID)
+		}
+		log.Info("Fetched control planes page", "page", pageNumber, "count", len(controlPlanes), "total", len(ids))
+		if int64(len(controlPlanes)) < konnectControlPlanesLimit {
+			break
+		}
+	}
+	return ids, nil
 }
 
 // deleteControlPlanes deletes control planes by their IDs.

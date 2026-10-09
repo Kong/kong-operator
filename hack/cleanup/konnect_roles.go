@@ -25,6 +25,10 @@ import (
 // as returned by the list user roles endpoint.
 const konnectAIGatewayEntityTypeName = "AI Gateways"
 
+// konnectControlPlaneEntityTypeName is the entity_type_name of control plane roles
+// as returned by the list user roles endpoint.
+const konnectControlPlaneEntityTypeName = "Control Planes"
+
 // userRolesRequestURL builds the URL for listing the roles assigned to userID,
 // paged with page[size]/page[number].
 func userRolesRequestURL(baseURL, userID string, pageNumber int) (*url.URL, error) {
@@ -138,17 +142,23 @@ func filterRoleIDs(
 }
 
 // removeOrphanedControlPlaneRoles lists all the roles assigned to userID, then
-// removes those that belong to the orphaned control planes.
+// removes those that reference control planes which no longer exist, or that
+// were deleted during this run (the Konnect listing may lag behind the deletions).
 func removeOrphanedControlPlaneRoles(
 	ctx context.Context,
 	log logr.Logger,
 	sdk *sdkkonnectgo.Roles,
 	userID string,
-	orphanedCPsIDs []string,
+	existingCPsIDs []string,
+	deletedCPsIDs []string,
 ) error {
-	orphanedCPs := make(map[string]struct{}, len(orphanedCPsIDs))
-	for _, cpID := range orphanedCPsIDs {
-		orphanedCPs[cpID] = struct{}{}
+	existingCPs := make(map[string]struct{}, len(existingCPsIDs))
+	for _, cpID := range existingCPsIDs {
+		existingCPs[cpID] = struct{}{}
+	}
+	deletedCPs := make(map[string]struct{}, len(deletedCPsIDs))
+	for _, cpID := range deletedCPsIDs {
+		deletedCPs[cpID] = struct{}{}
 	}
 
 	baseURL, err := canonicalizedServerURL()
@@ -159,11 +169,17 @@ func removeOrphanedControlPlaneRoles(
 
 	roles, listErr := listUserRolesPaged(ctx, log, baseURL, token, userID)
 	roleIDsToRemove := filterRoleIDs(log, roles, func(role sdkkonnectcomp.AssignedRole) bool {
-		if role.EntityID == nil {
+		if role.EntityTypeName == nil || *role.EntityTypeName != konnectControlPlaneEntityTypeName {
 			return false
 		}
-		_, ok := orphanedCPs[*role.EntityID]
-		return ok
+		if role.EntityID == nil {
+			return true
+		}
+		if _, deleted := deletedCPs[*role.EntityID]; deleted {
+			return true
+		}
+		_, exists := existingCPs[*role.EntityID]
+		return !exists
 	})
 
 	removed, removeErr := removeRoles(ctx, log, sdk, userID, roleIDsToRemove)

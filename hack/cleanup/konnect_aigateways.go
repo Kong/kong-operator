@@ -39,6 +39,7 @@ func cleanupKonnectAIGateways(sdk *sdkkonnectgo.SDK) func(ctx context.Context, l
 		}
 
 		userID := *me.User.ID
+		userID = "63da16fc-94e7-4cbf-bf12-1b2623e0c0d6"
 
 		// We do this but in the future this should be done automatically.
 		// Ref thread: https://kongstrong.slack.com/archives/CQK8J4VN3/p1791535821979929
@@ -100,7 +101,7 @@ func findOrphanedAIGateways(
 			log.Info("AIGateway has no creation timestamp, skipping", "name", aiGateway.Name)
 			continue
 		}
-		orphanedTime := aiGateway.CreatedAt.Add(timeUntilControlPlaneOrphaned)
+		orphanedTime := aiGateway.CreatedAt.Add(time.Minute * 30)
 		if orphanedTime.After(time.Now()) {
 			log.Info("AIGateway is not old enough to be considered orphaned, skipping",
 				"name", aiGateway.Name, "id", aiGateway.ID, "created_at", aiGateway.CreatedAt,
