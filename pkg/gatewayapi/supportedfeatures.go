@@ -16,6 +16,9 @@ var (
 		// HTTPRoute extended.
 		features.SupportHTTPRouteMethodMatching,
 		features.SupportHTTPRouteQueryParamMatching,
+		// Routes attached to specific listener ports are matched by `net.dst.port`,
+		// which only expression routes support.
+		features.SupportHTTPRouteParentRefPort,
 	)
 )
 

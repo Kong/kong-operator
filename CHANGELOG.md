@@ -294,6 +294,14 @@
 
 ### Fixes
 
+- Gateway API: `Gateway` listeners on different ports that share a hostname
+  are no longer reported as conflicted (`HostnameConflict`) and not accepted.
+  Listeners now conflict on a hostname only when they also share a port.
+- Gateway API: an `HTTPRoute` without hostnames attached to a `Gateway` by
+  `parentRefs[].port` now gets only the hostnames of the listeners on that
+  port. Before, it got the hostnames of all listeners, and listeners sharing a
+  hostname made Kong reject the whole configuration with a route name
+  uniqueness violation.
 - Konnect: fix hot retry loop when Konnect returns 5xx on entity update
   (e.g. Event Gateway update returning 500). The Konnect trace ID is now
   cleared from Konnect 5xx API errors in the `Programmed` condition

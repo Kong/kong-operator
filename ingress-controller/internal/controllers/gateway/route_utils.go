@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"slices"
 
 	"github.com/go-logr/logr"
+	"github.com/samber/lo"
 	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -566,6 +568,11 @@ func getUnionOfGatewayHostnames(gateways []supportedGatewayWithCondition) ([]gat
 			}
 		} else {
 			for _, listener := range gateway.gateway.Spec.Listeners {
+				// Consider only the listeners the route attached to (e.g. the ones matching
+				// parentRef.port), otherwise hostnames of listeners on other ports leak in.
+				if len(gateway.attachedListenerNames) > 0 && !slices.Contains(gateway.attachedListenerNames, listener.Name) {
+					continue
+				}
 				// here we consider ALL listeners that are able to configure a hostname if no listener attached.
 				// may be changed if there is a conclusion on the upstream discussion about it:
 				// https://github.com/kubernetes-sigs/gateway-api/discussions/1563
@@ -578,7 +585,9 @@ func getUnionOfGatewayHostnames(gateways []supportedGatewayWithCondition) ([]gat
 			}
 		}
 	}
-	return hostnames, false
+	// Listeners may share a hostname (e.g. on different ports), and the route is split
+	// into Kong routes per hostname, so duplicates would produce Kong routes with the same name.
+	return lo.Uniq(hostnames), false
 }
 
 // getMinimumHostnameIntersection returns the minimum intersecting hostname, in the sense that:
