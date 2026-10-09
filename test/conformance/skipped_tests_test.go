@@ -3,6 +3,7 @@ package conformance
 import (
 	"sigs.k8s.io/gateway-api/conformance/tests"
 
+	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/test"
 )
 
@@ -18,8 +19,16 @@ var skippedTestsForHybrid = []string{
 	tests.HTTPRouteQueryParamMatching.ShortName,
 }
 
-// skippedTestsForConfig returns the list of skipped tests for the given gateway type.
-func skippedTestsForConfig(gwType gatewayType) []string {
+var skippedTestsForExpressionsRouter = []string{
+	// Expression routes match the listener port with `net.dst.port`, which Kong
+	// takes from the port in the Host header when present. A request with
+	// `Host: very.specific.com:1234` doesn't match a route for a listener on
+	// port 80, while the test requires the Host header port to be ignored.
+	tests.HTTPRouteHostnameIntersection.ShortName,
+}
+
+// skippedTestsForConfig returns the list of skipped tests for the given gateway type and router flavor.
+func skippedTestsForConfig(gwType gatewayType, routerFlavor consts.RouterFlavor) []string {
 	skipped := append([]string{}, skippedTestsShared...)
 	if gwType == standardGateway {
 		skipped = append(skipped, skippedTestsForStandard...)
@@ -27,6 +36,10 @@ func skippedTestsForConfig(gwType gatewayType) []string {
 
 	if gwType == hybridGateway {
 		skipped = append(skipped, skippedTestsForHybrid...)
+	}
+
+	if routerFlavor == consts.RouterFlavorExpressions {
+		skipped = append(skipped, skippedTestsForExpressionsRouter...)
 	}
 
 	// Allow excluding extra (e.g. flaky or undesired) tests via the

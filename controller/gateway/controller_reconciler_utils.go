@@ -1263,9 +1263,10 @@ func (g *gatewayConditionsAndListenersAwareT) setConflicted() {
 				conflictedCondition.Reason = string(gatewayv1.ListenerReasonProtocolConflict)
 				break
 			}
-			// If two listeners specify the same hostname, they have a hostname conflict, and
-			// the conflicted condition must be updated accordingly.
-			if l.Hostname != nil && l2.Hostname != nil && *l.Hostname == *l2.Hostname {
+			// If two listeners specify the same port and hostname, they have a hostname conflict, and
+			// the conflicted condition must be updated accordingly. Listeners on different ports are
+			// distinct even when they share a hostname.
+			if l.Port == l2.Port && l.Hostname != nil && l2.Hostname != nil && *l.Hostname == *l2.Hostname {
 				conflictedCondition.Status = metav1.ConditionTrue
 				conflictedCondition.Reason = string(gatewayv1.ListenerReasonHostnameConflict)
 				break

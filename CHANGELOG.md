@@ -111,6 +111,11 @@
   (`CertificateProvisioned=False/SecretRefOperatorManaged`). The operator
   re-checks the certificate when it becomes valid and when it expires.
   [#5976](https://github.com/Kong/kong-operator/pull/5976)
+- Gateway API: the `HTTPRouteParentRefPort` feature is supported and advertised
+  in the `GatewayClass` status with the `expressions` router flavor. An
+  `HTTPRoute` attached to a `Gateway` by `parentRefs[].port` or `sectionName`
+  is served only on the ports of the listeners it attached to.
+  It isn't supported with the `traditional_compatible` router flavor.
 
 ### Changed
 
@@ -210,6 +215,14 @@
 
 ### Fixes
 
+- Gateway API: `Gateway` listeners on different ports that share a hostname
+  are no longer reported as conflicted (`HostnameConflict`) and not accepted.
+  Listeners now conflict on a hostname only when they also share a port.
+- Gateway API: an `HTTPRoute` without hostnames attached to a `Gateway` by
+  `parentRefs[].port` now gets only the hostnames of the listeners on that
+  port. Before, it got the hostnames of all listeners, and listeners sharing a
+  hostname made Kong reject the whole configuration with a route name
+  uniqueness violation.
 - Konnect: fix hot retry loop when Konnect returns 5xx on entity update
   (e.g. Event Gateway update returning 500). The Konnect trace ID is now
   cleared from Konnect 5xx API errors in the `Programmed` condition

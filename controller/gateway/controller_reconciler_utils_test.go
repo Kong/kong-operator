@@ -5492,7 +5492,40 @@ func TestSetAcceptedAndAttachedRoutes(t *testing.T) {
 			},
 		},
 		{
-			name: "two listeners sharing a hostname are conflicted and not accepted",
+			name: "two listeners sharing a port and hostname are conflicted and not accepted",
+			listeners: []gwtypes.Listener{
+				{
+					Name:          "http-a",
+					Protocol:      gatewayv1.HTTPProtocolType,
+					Port:          80,
+					Hostname:      new(gatewayv1.Hostname("example.com")),
+					AllowedRoutes: allowedRoutesFromSame,
+				},
+				{
+					Name:          "http-b",
+					Protocol:      gatewayv1.HTTPProtocolType,
+					Port:          80,
+					Hostname:      new(gatewayv1.Hostname("example.com")),
+					AllowedRoutes: allowedRoutesFromSame,
+				},
+			},
+			expected: []expectedCond{
+				{
+					acceptedStatus:   metav1.ConditionFalse,
+					acceptedReason:   gatewayv1.ListenerReasonHostnameConflict,
+					conflictedStatus: metav1.ConditionTrue,
+					conflictedReason: gatewayv1.ListenerReasonHostnameConflict,
+				},
+				{
+					acceptedStatus:   metav1.ConditionFalse,
+					acceptedReason:   gatewayv1.ListenerReasonHostnameConflict,
+					conflictedStatus: metav1.ConditionTrue,
+					conflictedReason: gatewayv1.ListenerReasonHostnameConflict,
+				},
+			},
+		},
+		{
+			name: "two listeners sharing a hostname on different ports are both accepted and not conflicted",
 			listeners: []gwtypes.Listener{
 				{
 					Name:          "http-a",
@@ -5511,16 +5544,16 @@ func TestSetAcceptedAndAttachedRoutes(t *testing.T) {
 			},
 			expected: []expectedCond{
 				{
-					acceptedStatus:   metav1.ConditionFalse,
-					acceptedReason:   gatewayv1.ListenerReasonHostnameConflict,
-					conflictedStatus: metav1.ConditionTrue,
-					conflictedReason: gatewayv1.ListenerReasonHostnameConflict,
+					acceptedStatus:   metav1.ConditionTrue,
+					acceptedReason:   gatewayv1.ListenerReasonAccepted,
+					conflictedStatus: metav1.ConditionFalse,
+					conflictedReason: gatewayv1.ListenerReasonNoConflicts,
 				},
 				{
-					acceptedStatus:   metav1.ConditionFalse,
-					acceptedReason:   gatewayv1.ListenerReasonHostnameConflict,
-					conflictedStatus: metav1.ConditionTrue,
-					conflictedReason: gatewayv1.ListenerReasonHostnameConflict,
+					acceptedStatus:   metav1.ConditionTrue,
+					acceptedReason:   gatewayv1.ListenerReasonAccepted,
+					conflictedStatus: metav1.ConditionFalse,
+					conflictedReason: gatewayv1.ListenerReasonNoConflicts,
 				},
 			},
 		},

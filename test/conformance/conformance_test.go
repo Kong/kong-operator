@@ -3,6 +3,7 @@ package conformance
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -81,7 +82,7 @@ func TestGatewayConformance(t *testing.T) {
 		t.Fatal("hybrid gateway type requires KONG_TEST_KONNECT_ACCESS_TOKEN to be set")
 	}
 
-	skippedTests := skippedTestsForConfig(gwType)
+	skippedTests := skippedTestsForConfig(gwType, kongRouterFlavor)
 	runConformance(t, gwType, kongRouterFlavor, supportedFeatures, cleanupResources, skippedTests)
 }
 
@@ -151,7 +152,12 @@ func runConformance(
 	opts.ConformanceProfiles = conformanceProfiles(gwType)
 	opts.SupportedFeatures = supportedFeatures
 	opts.SkipTests = skipped
-	opts.RunTest = tests.HTTPRouteHostnameIntersection.ShortName
+	// Run only the tests exercising HTTPRouteParentRefPort.
+	for _, ct := range tests.ConformanceTests {
+		if !slices.Contains(ct.Features, features.SupportHTTPRouteParentRefPort) {
+			opts.SkipTests = append(opts.SkipTests, ct.ShortName)
+		}
+	}
 	opts.CleanupBaseResources = cleanupResources
 	opts.GatewayClassName = gwc.Name
 	opts.Client = clients.MgrClient
