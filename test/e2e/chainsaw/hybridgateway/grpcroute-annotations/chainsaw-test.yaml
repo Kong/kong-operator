@@ -1,0 +1,505 @@
+# Test: GRPCRoute-level Kong annotations.
+# Verifies that the hybrid gateway controller propagates GRPCRoute-level
+# konghq.com annotations to the generated KongRoute spec, re-reconciles when
+# they change, and reports malformed values via the KongConfigurationValid condition.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: grpcroute-annotations
+spec:
+  description: |
+    This test validates that the hybrid gateway controller correctly processes
+    annotations set directly on a GRPCRoute object.
+    Supported GRPCRoute-level annotations:
+    - konghq.com/preserve-host:             <bool> (default: true) -> KongRoute.spec.preserve_host
+    - konghq.com/request-buffering:         <bool>                 -> KongRoute.spec.request_buffering
+    - konghq.com/response-buffering:        <bool>                 -> KongRoute.spec.response_buffering
+    - konghq.com/https-redirect-status-code: 301|302|307|308|426   -> KongRoute.spec.https_redirect_status_code
+    - konghq.com/path-handling:             v0|v1                  -> KongRoute.spec.path_handling
+    konghq.com/strip-path is intentionally not applied to GRPC KongRoutes
+    (Kong rejects strip_path on grpc/grpcs routes), so it is not asserted here.
+    The GRPCRoute is created with non-default values, then patched to flipped
+    values to verify subsequent changes are reconciled. Finally a malformed
+    konghq.com/request-buffering value is set and the test verifies the GRPCRoute
+    gets a KongConfigurationValid condition with status False and reason
+    InvalidKongConfiguration (Accepted stays True); fixing the annotation removes
+    the condition again.
+
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_api_auth_namespace
+      value: ($namespace)
+    - name: sni_hostname
+      value: (join('.', ['*', ($test_name), 'example.com']))
+    - name: grpc_host
+      value: (join('.', ['grpc', ($test_name), 'example.com']))
+    - name: cert_secret_name
+      value: test-tls-secret
+    - name: cert_secret_namespace
+      value: ($namespace)
+    - name: listener_https_port
+      value: 443
+    - name: listener_http_port
+      value: 80
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE'))
+    - name: gateway_name
+      value: (join('-', [($test_name), 'gateway']))
+    - name: gateway_namespace
+      value: ($namespace)
+    - name: grpc_route_name
+      value: (join('-', [($test_name), 'grpc-route']))
+    - name: grpc_route_namespace
+      value: ($namespace)
+    - name: grpcbin_name
+      value: (join('-', [($test_name), 'grpcbin']))
+    - name: grpcbin_namespace
+      value: ($namespace)
+    - name: grpcbin_image
+      value: 'kong/grpcbin:latest'
+    - name: request_message
+      value: kong
+    - name: insecure_tls
+      value: 'true'
+
+  steps:
+    - name: Create-tls-secret
+      description: Create TLS Secret for the Gateway HTTPS listener.
+      use:
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
+
+    - name: Create-auth-secret
+      description: Create Secret with Konnect token for KonnectAPIAuthConfiguration.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+    - name: Create-konnect-api-auth
+      description: Create KonnectAPIAuthConfiguration for the test.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+
+    - name: Create-gateway-configuration
+      description: Create GatewayConfiguration for hybrid gateway.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayConfiguration.yaml
+
+    - name: Create-gateway-class
+      description: Create GatewayClass.
+      use:
+        template: ../../common/_step_templates/apply-assert-gatewayClass.yaml
+
+    - name: Create-gateway
+      description: Create Gateway with HTTP and HTTPS listeners.
+      use:
+        template: ../../common/_step_templates/apply-assert-gateway.yaml
+
+    - name: Assert-konnect-gateway-control-plane
+      description: Assert that the KonnectGatewayControlPlane resource is synchronized.
+      use:
+        template: ../../common/_step_templates/assert-konnectGatewayControlPlane.yaml
+
+    - name: Assert-kong-certificate
+      description: Assert that the KongCertificate resource is created for the TLS secret.
+      use:
+        template: ../../common/_step_templates/assert-kongCertificate.yaml
+
+    - name: Assert-kong-sni
+      description: Assert that the KongSNI resource is created for the SNI hostname.
+      use:
+        template: ../../common/_step_templates/assert-kongSNI.yaml
+      bindings:
+        - name: resource_type
+          value: "kongcertificates.configuration.konghq.com"
+
+    - name: Create-grpcbin-backend
+      description: Create grpcbin Deployment and Service.
+      use:
+        template: ../../common/_step_templates/apply-assert-grpcbinService.yaml
+
+    - name: Create-grpcroute-with-annotations
+      description: Create GRPCRoute with konghq.com annotations.
+      try:
+        - apply:
+            file: 01-grpcRoute-grpcbin.yaml
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: GRPCRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($grpc_route_name)
+              status:
+                parents:
+                  - parentRef:
+                      name: ($gateway_name)
+                      namespace: ($gateway_namespace)
+                    (conditions[?type == 'Accepted']):
+                      - status: "True"
+                        reason: Accepted
+                    (length(conditions[?type == 'KongConfigurationValid'])): 0
+
+    - name: Assert-kong-route-annotations
+      description: Assert KongRoute reflects the GRPCRoute annotations.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: RESOURCE_TYPE
+                value: kongservices.configuration.konghq.com
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+              - name: HTTP_ROUTE_NAME
+                value: ($grpc_route_name)
+              - name: HTTP_ROUTE_NAMESPACE
+                value: ($grpc_route_namespace)
+              - name: ROUTE_ANNOTATION_KEY
+                value: gateway-operator.konghq.com/hybrid-routes-GRPCRoute
+              - name: REQUIRED_CONDITION_TYPE
+                value: Programmed
+              - name: REQUIRED_CONDITION_STATUS
+                value: "True"
+            content: |
+              bash ../../common/scripts/kongResource_name.sh
+            outputs:
+              - name: kong_service_name
+                value: (json_parse($stdout).name)
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: RESOURCE_TYPE
+                value: kongroutes.configuration.konghq.com
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+              - name: HTTP_ROUTE_NAME
+                value: ($grpc_route_name)
+              - name: HTTP_ROUTE_NAMESPACE
+                value: ($grpc_route_namespace)
+              - name: ROUTE_ANNOTATION_KEY
+                value: gateway-operator.konghq.com/hybrid-routes-GRPCRoute
+              - name: EXPECTED_SERVICE_NAME
+                value: ($kong_service_name)
+              - name: REQUIRED_CONDITION_TYPE
+                value: Programmed
+              - name: REQUIRED_CONDITION_STATUS
+                value: "True"
+            content: |
+              bash ../../common/scripts/kongResource_name.sh
+            outputs:
+              - name: kong_route_name
+                value: (json_parse($stdout).name)
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              metadata:
+                name: ($kong_route_name)
+                namespace: ($namespace)
+                (labels."gateway-operator.konghq.com/managed-by" == 'GRPCRoute'): true
+              spec:
+                protocols:
+                  - grpc
+                  - grpcs
+                preserve_host: false
+                request_buffering: false
+                response_buffering: false
+                https_redirect_status_code: 308
+                path_handling: v1
+                serviceRef:
+                  namespacedRef:
+                    name: ($kong_service_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+
+    - name: Patch-grpcroute-flipped-annotations
+      description: Patch GRPCRoute annotations to flipped values.
+      try:
+        - patch:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: GRPCRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($grpc_route_name)
+                annotations:
+                  konghq.com/preserve-host: "true"
+                  konghq.com/request-buffering: "true"
+                  konghq.com/response-buffering: "true"
+                  konghq.com/https-redirect-status-code: "301"
+                  konghq.com/path-handling: "v0"
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: GRPCRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($grpc_route_name)
+                annotations:
+                  konghq.com/preserve-host: "true"
+                  konghq.com/request-buffering: "true"
+                  konghq.com/response-buffering: "true"
+                  konghq.com/https-redirect-status-code: "301"
+                  konghq.com/path-handling: "v0"
+
+    - name: Assert-kong-route-flipped-annotations
+      description: Assert KongRoute reflects the flipped annotations.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: RESOURCE_TYPE
+                value: kongservices.configuration.konghq.com
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+              - name: HTTP_ROUTE_NAME
+                value: ($grpc_route_name)
+              - name: HTTP_ROUTE_NAMESPACE
+                value: ($grpc_route_namespace)
+              - name: ROUTE_ANNOTATION_KEY
+                value: gateway-operator.konghq.com/hybrid-routes-GRPCRoute
+              - name: REQUIRED_CONDITION_TYPE
+                value: Programmed
+              - name: REQUIRED_CONDITION_STATUS
+                value: "True"
+            content: |
+              bash ../../common/scripts/kongResource_name.sh
+            outputs:
+              - name: kong_service_name
+                value: (json_parse($stdout).name)
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: RESOURCE_TYPE
+                value: kongroutes.configuration.konghq.com
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+              - name: HTTP_ROUTE_NAME
+                value: ($grpc_route_name)
+              - name: HTTP_ROUTE_NAMESPACE
+                value: ($grpc_route_namespace)
+              - name: ROUTE_ANNOTATION_KEY
+                value: gateway-operator.konghq.com/hybrid-routes-GRPCRoute
+              - name: EXPECTED_SERVICE_NAME
+                value: ($kong_service_name)
+              - name: REQUIRED_CONDITION_TYPE
+                value: Programmed
+              - name: REQUIRED_CONDITION_STATUS
+                value: "True"
+            content: |
+              bash ../../common/scripts/kongResource_name.sh
+            outputs:
+              - name: kong_route_name
+                value: (json_parse($stdout).name)
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              metadata:
+                name: ($kong_route_name)
+                namespace: ($namespace)
+                (labels."gateway-operator.konghq.com/managed-by" == 'GRPCRoute'): true
+              spec:
+                protocols:
+                  - grpc
+                  - grpcs
+                preserve_host: true
+                request_buffering: true
+                response_buffering: true
+                https_redirect_status_code: 301
+                path_handling: v0
+                serviceRef:
+                  namespacedRef:
+                    name: ($kong_service_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+
+    - name: Patch-grpcroute-malformed-annotation
+      description: Patch GRPCRoute with a malformed konghq.com/request-buffering value.
+      try:
+        - patch:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: GRPCRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($grpc_route_name)
+                annotations:
+                  konghq.com/request-buffering: "notabool"
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: GRPCRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($grpc_route_name)
+              status:
+                parents:
+                  - parentRef:
+                      name: ($gateway_name)
+                      namespace: ($gateway_namespace)
+                    (conditions[?type == 'Accepted'] | [0]):
+                      type: Accepted
+                      status: "True"
+                    (conditions[?type == 'KongConfigurationValid'] | [0]):
+                      type: KongConfigurationValid
+                      status: "False"
+                      reason: InvalidKongConfiguration
+
+    - name: Fix-grpcroute-malformed-annotation
+      description: Patch konghq.com/request-buffering back to a valid boolean.
+      try:
+        - patch:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: GRPCRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($grpc_route_name)
+                annotations:
+                  konghq.com/request-buffering: "false"
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: GRPCRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($grpc_route_name)
+              status:
+                parents:
+                  - parentRef:
+                      name: ($gateway_name)
+                      namespace: ($gateway_namespace)
+                    (length(conditions[?type == 'KongConfigurationValid'])): 0
+
+    - name: Assert-kong-route-recovered-after-fix
+      description: Assert KongRoute reflects the fixed annotation.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: RESOURCE_TYPE
+                value: kongservices.configuration.konghq.com
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+              - name: HTTP_ROUTE_NAME
+                value: ($grpc_route_name)
+              - name: HTTP_ROUTE_NAMESPACE
+                value: ($grpc_route_namespace)
+              - name: ROUTE_ANNOTATION_KEY
+                value: gateway-operator.konghq.com/hybrid-routes-GRPCRoute
+              - name: REQUIRED_CONDITION_TYPE
+                value: Programmed
+              - name: REQUIRED_CONDITION_STATUS
+                value: "True"
+            content: |
+              bash ../../common/scripts/kongResource_name.sh
+            outputs:
+              - name: kong_service_name
+                value: (json_parse($stdout).name)
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: RESOURCE_TYPE
+                value: kongroutes.configuration.konghq.com
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+              - name: HTTP_ROUTE_NAME
+                value: ($grpc_route_name)
+              - name: HTTP_ROUTE_NAMESPACE
+                value: ($grpc_route_namespace)
+              - name: ROUTE_ANNOTATION_KEY
+                value: gateway-operator.konghq.com/hybrid-routes-GRPCRoute
+              - name: EXPECTED_SERVICE_NAME
+                value: ($kong_service_name)
+              - name: REQUIRED_CONDITION_TYPE
+                value: Programmed
+              - name: REQUIRED_CONDITION_STATUS
+                value: "True"
+            content: |
+              bash ../../common/scripts/kongResource_name.sh
+            outputs:
+              - name: kong_route_name
+                value: (json_parse($stdout).name)
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              metadata:
+                name: ($kong_route_name)
+                namespace: ($namespace)
+                (labels."gateway-operator.konghq.com/managed-by" == 'GRPCRoute'): true
+              spec:
+                protocols:
+                  - grpc
+                  - grpcs
+                preserve_host: true
+                request_buffering: false
+                response_buffering: true
+                https_redirect_status_code: 301
+                path_handling: v0
+                serviceRef:
+                  namespacedRef:
+                    name: ($kong_service_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+
+    - name: Verify-grpc-traffic
+      description: Verify end-to-end gRPC traffic through the hybrid Gateway.
+      use:
+        template: ../../common/_step_templates/verify-grpc-traffic-from-host.yaml
+      bindings:
+        - name: grpc_host
+          value: ($grpc_host)
+        - name: request_message
+          value: ($request_message)
+        - name: insecure_tls
+          value: ($insecure_tls)
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: hybridgateway-grpcroute-annotations
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

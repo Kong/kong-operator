@@ -1,0 +1,29 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: GRPCRoute
+metadata:
+  name: ($grpc_route_name)
+  namespace: ($grpc_route_namespace)
+  labels:
+    chainsaw/test: ($test_name)
+  annotations:
+    konghq.com/preserve-host: "false"
+    konghq.com/request-buffering: "false"
+    konghq.com/response-buffering: "false"
+    konghq.com/https-redirect-status-code: "308"
+    konghq.com/path-handling: "v1"
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ($gateway_name)
+      namespace: ($gateway_namespace)
+  hostnames:
+    - ($grpc_host)
+  rules:
+    - matches:
+        - method:
+            service: grpcbin.GRPCBin
+            method: DummyUnary
+      backendRefs:
+        - name: ($grpcbin_name)
+          port: 80
