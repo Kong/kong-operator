@@ -162,8 +162,6 @@ func TestOrphanedAIGatewayRoleMatcherSkipsRolesWithoutEntityID(t *testing.T) {
 	}
 }
 
-// TestRemoveRolesNotFoundSkippedAndCounted verifies that removeRoles skips
-// roles that no longer exist (404) and counts only the removed ones.
 func TestOrphanedControlPlaneRoleMatcherSkipsRolesWithoutEntityID(t *testing.T) {
 	match := orphanedControlPlaneRoleMatcher(
 		map[string]struct{}{"cp-deleted": {}},

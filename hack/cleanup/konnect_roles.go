@@ -193,7 +193,8 @@ func removeOrphanedControlPlaneRoles(
 	if listCPsErr != nil {
 		// Without the set of existing control planes every role would look
 		// orphaned - do not remove anything.
-		return fmt.Errorf("failed to list existing control planes: %w", listCPsErr)
+		return errors.Join(listErr,
+			fmt.Errorf("failed to list existing control planes: %w", listCPsErr))
 	}
 
 	existingCPs := make(map[string]struct{}, len(existingCPsIDs))
@@ -240,7 +241,8 @@ func removeOrphanedAIGatewayRoles(
 	if listAIGatewaysErr != nil {
 		// Without the set of existing AI Gateways every role would look
 		// orphaned - do not remove anything.
-		return fmt.Errorf("failed to list existing AI Gateways: %w", listAIGatewaysErr)
+		return errors.Join(listErr,
+			fmt.Errorf("failed to list existing AI Gateways: %w", listAIGatewaysErr))
 	}
 	existingAIGateways := make(map[string]struct{}, len(existingAIGatewayIDs))
 	for _, id := range existingAIGatewayIDs {

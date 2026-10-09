@@ -40,8 +40,14 @@ func TestForEachLimited(t *testing.T) {
 	}
 
 	err := forEachLimited(items, 4, func(item int) error {
-		if cur := current.Add(1); cur > maxObserved.Load() {
-			maxObserved.Store(cur)
+		cur := current.Add(1)
+		// Compare-and-swap so a Store from one goroutine can't clobber a higher
+		// value stored by another between this goroutine's Load and Store.
+		for {
+			old := maxObserved.Load()
+			if cur <= old || maxObserved.CompareAndSwap(old, cur) {
+				break
+			}
 		}
 		defer current.Add(-1)
 		mu.Lock()
