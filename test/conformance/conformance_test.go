@@ -3,7 +3,6 @@ package conformance
 import (
 	"context"
 	"fmt"
-	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -19,7 +18,6 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/gateway-api/conformance"
 	conformancev1 "sigs.k8s.io/gateway-api/conformance/apis/v1"
-	"sigs.k8s.io/gateway-api/conformance/tests"
 	conformanceconfig "sigs.k8s.io/gateway-api/conformance/utils/config"
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/pkg/features"
@@ -152,12 +150,6 @@ func runConformance(
 	opts.ConformanceProfiles = conformanceProfiles(gwType)
 	opts.SupportedFeatures = supportedFeatures
 	opts.SkipTests = skipped
-	// Run only the tests exercising HTTPRouteParentRefPort.
-	for _, ct := range tests.ConformanceTests {
-		if !slices.Contains(ct.Features, features.SupportHTTPRouteParentRefPort) {
-			opts.SkipTests = append(opts.SkipTests, ct.ShortName)
-		}
-	}
 	opts.CleanupBaseResources = cleanupResources
 	opts.GatewayClassName = gwc.Name
 	opts.Client = clients.MgrClient

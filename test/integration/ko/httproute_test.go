@@ -329,7 +329,7 @@ func TestHTTPRouteExpressionsRouterPortIsolation(t *testing.T) {
 	gatewayIPAddress := gateway.Status.Addresses[0].Value
 
 	t.Log("deploying backend deployment (httpbin) shared by both HTTPRoutes")
-	deployment := generators.NewDeploymentForContainer(generators.NewContainer("httpbin", testutils.HTTPBinImage, 80))
+	deployment := generators.NewDeploymentForContainer(testutils.NewHTTPBinContainer("httpbin", 80))
 	deployment, err = integration.GetEnv().Cluster().Client().AppsV1().Deployments(namespace.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 
