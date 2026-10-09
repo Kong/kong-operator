@@ -80,7 +80,10 @@ jobs:
       needs.authorize.outputs.writes == 'true')
     uses: Kong/ksai-public/.github/workflows/ksai.yml@86e9e205e61e0284e06261139334c9bbd2db9191 # v3.135.6
     permissions:
-      contents: read      # checked out by every command; pushes go through the App (push_as_app)
+      # GitHub validates reusable-workflow calls statically: the nested implement job declares
+      # contents: write, so the caller must grant it even though push_as_app means the App,
+      # not this token, does the pushing.
+      contents: write
       issues: write        # every command answers with a comment, and reacts to the one that asked
       pull-requests: write # post reviews and maintain draft pull request plans
       id-token: write      # mint the GitHub OIDC token for federation
@@ -97,7 +100,8 @@ jobs:
       service_account_id: svac_01RRiHX67AjG5bKDHhFHbwkF
       workspace_id: wrkspc_01G7dX83HGYMZDwLuJNPnA5T
       continuation_workflow: ksai.yaml
-      # KSAI pushes and comments through the App, so the caller token needs no write scope of its own.
+      # KSAI pushes and comments through the App; the caller's contents: write grant above
+      # exists only to satisfy GitHub's static validation of the nested implement job.
       push_as_app: true
       clear_request: false
       pr: ${{ inputs.pr }}
