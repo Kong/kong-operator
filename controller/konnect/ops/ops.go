@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -997,24 +998,36 @@ func ClearInstanceFromError(err error) error {
 		return errNotFound
 	}
 
+	// 5xx: clear a copy so logs and the returned error keep the trace ID.
 	if errInternal, ok := errors.AsType[*sdkkonnecterrs.InternalError](err); ok {
-		errInternal.Instance = ""
-		return errInternal
+		c := *errInternal
+		c.Instance = ""
+		return &c
 	}
 
 	if errInternalServer, ok := errors.AsType[*sdkkonnecterrs.InternalServerError](err); ok {
-		errInternalServer.Instance = ""
-		return errInternalServer
+		c := *errInternalServer
+		c.Instance = ""
+		return &c
 	}
 
 	if errServiceUnavailable, ok := errors.AsType[*sdkkonnecterrs.ServiceUnavailable](err); ok {
-		errServiceUnavailable.Instance = ""
-		return errServiceUnavailable
+		c := *errServiceUnavailable
+		c.Instance = ""
+		return &c
 	}
 
 	if errNotAvailable, ok := errors.AsType[*sdkkonnecterrs.NotAvailableError](err); ok {
-		errNotAvailable.Instance = ""
-		return errNotAvailable
+		c := *errNotAvailable
+		c.Instance = ""
+		return &c
+	}
+
+	// Generic 5xx body may carry per-request IDs (e.g. Kong's request_id).
+	if errSDK, ok := errors.AsType[*sdkkonnecterrs.SDKError](err); ok && errSDK.StatusCode >= http.StatusInternalServerError {
+		c := *errSDK
+		c.Body = ""
+		return &c
 	}
 
 	return err

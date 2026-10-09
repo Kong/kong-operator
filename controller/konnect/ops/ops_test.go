@@ -656,3 +656,40 @@ func TestClearInstanceFromError(t *testing.T) {
 		})
 	}
 }
+
+func TestClearInstanceFromErrorKeepsOriginal5xx(t *testing.T) {
+	t.Parallel()
+
+	const trace = "kong:trace:1234"
+
+	original := &sdkkonnecterrs.InternalError{Status: 500, Instance: trace}
+	wrapped := fmt.Errorf("update failed: %w", original)
+
+	cleared := ClearInstanceFromError(wrapped)
+	assert.NotContains(t, cleared.Error(), trace)
+	assert.Equal(t, trace, original.Instance, "original error must keep the trace ID for logs")
+	assert.Contains(t, wrapped.Error(), trace)
+}
+
+func TestClearInstanceFromErrorSDKError(t *testing.T) {
+	t.Parallel()
+
+	const body = `{"message":"An unexpected error occurred","request_id":"abc123"}`
+
+	t.Run("5xx body is dropped from a copy", func(t *testing.T) {
+		t.Parallel()
+		original := &sdkkonnecterrs.SDKError{Message: "unknown content-type received", StatusCode: 502, Body: body}
+
+		cleared := ClearInstanceFromError(original)
+		assert.NotContains(t, cleared.Error(), "abc123")
+		assert.Contains(t, cleared.Error(), "Status 502")
+		assert.JSONEq(t, body, original.Body, "original error must keep the body for logs")
+	})
+
+	t.Run("4xx is returned as is", func(t *testing.T) {
+		t.Parallel()
+		original := &sdkkonnecterrs.SDKError{Message: "bad", StatusCode: 422, Body: body}
+
+		assert.Equal(t, original, ClearInstanceFromError(original))
+	})
+}
