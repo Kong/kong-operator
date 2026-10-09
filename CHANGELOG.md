@@ -124,6 +124,10 @@
   `GatewayClass`es. When they have different values on the same key, the value
   from annotation of `Gateway` is used.
   [#5808](https://github.com/Kong/kong-operator/pull/5808)
+- Hybrid Gateway: support the `konghq.com/request-buffering`,
+  `konghq.com/response-buffering`, `konghq.com/https-redirect-status-code` and
+  `konghq.com/path-handling` annotations on `HTTPRoute` and `GRPCRoute`, and
+  `konghq.com/preserve-host` on `GRPCRoute`.
 
 ### Changed
 
