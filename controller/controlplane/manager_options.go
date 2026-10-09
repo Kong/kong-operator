@@ -107,6 +107,12 @@ func WithFeatureGates(logger logr.Logger, featureGates []gwtypes.ControlPlaneFea
 		fgs := managercfg.FeatureGates{}
 		defaults := managercfg.GetFeatureGatesDefaults()
 		for _, feature := range featureGates {
+			if managercfg.IsNoOpFeatureGate(feature.Name) {
+				log.Debug(logger, "ignoring feature gate that doesn't enable any feature",
+					"feature", feature.Name, "state", feature.State,
+				)
+				continue
+			}
 			if _, ok := defaults[feature.Name]; !ok {
 				log.Error(logger, errors.New("unknown feature gate"), "unknown feature gate",
 					"feature", feature.Name, "state", feature.State,
@@ -206,6 +212,9 @@ const (
 	// ControllerNameGatewayAPITLSRoute identifies the controller for managing
 	// Gateway API TLSRoute resources.
 	ControllerNameGatewayAPITLSRoute = "GWAPI_TLSROUTE"
+	// ControllerNameGatewayAPIBackendTLSPolicy identifies the controller for managing
+	// Gateway API BackendTLSPolicy resources.
+	ControllerNameGatewayAPIBackendTLSPolicy = "GWAPI_BACKEND_TLS_POLICY"
 	// ControllerNameGatewayAPIReferenceGrant identifies the controller for managing
 	// Gateway API ReferenceGrant resources.
 	ControllerNameGatewayAPIReferenceGrant = "GWAPI_REFERENCE_GRANT"
@@ -276,6 +285,8 @@ func WithControllers(logger logr.Logger, controllers []gwtypes.ControlPlaneContr
 				setOpt(&c.GatewayAPIGRPCRouteController, controller.State)
 			case ControllerNameGatewayAPITLSRoute:
 				setOpt(&c.GatewayAPITLSRouteController, controller.State)
+			case ControllerNameGatewayAPIBackendTLSPolicy:
+				setOpt(&c.GatewayAPIBackendTLSRouteController, controller.State)
 			case ControllerNameGatewayAPIReferenceGrant:
 				setOpt(&c.GatewayAPIReferenceGrantController, controller.State)
 			default:
@@ -375,6 +386,11 @@ func managerConfigToStatusControllers(
 	controllers = append(controllers, gwtypes.ControlPlaneController{
 		Name:  ControllerNameGatewayAPITLSRoute,
 		State: boolToControllerState(cfg.GatewayAPITLSRouteController),
+	})
+
+	controllers = append(controllers, gwtypes.ControlPlaneController{
+		Name:  ControllerNameGatewayAPIBackendTLSPolicy,
+		State: boolToControllerState(cfg.GatewayAPIBackendTLSRouteController),
 	})
 
 	controllers = append(controllers, gwtypes.ControlPlaneController{

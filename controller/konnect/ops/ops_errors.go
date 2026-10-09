@@ -279,6 +279,26 @@ func ErrorIsRateLimited(err error) bool {
 	return false
 }
 
+// ErrorIsServerError returns true if the provided error is a Konnect 5xx server error.
+func ErrorIsServerError(err error) bool {
+	if _, ok := errors.AsType[*sdkkonnecterrs.InternalError](err); ok {
+		return true
+	}
+	if _, ok := errors.AsType[*sdkkonnecterrs.InternalServerError](err); ok {
+		return true
+	}
+	if _, ok := errors.AsType[*sdkkonnecterrs.ServiceUnavailable](err); ok {
+		return true
+	}
+	if _, ok := errors.AsType[*sdkkonnecterrs.NotAvailableError](err); ok {
+		return true
+	}
+	if errSDK, ok := errors.AsType[*sdkkonnecterrs.SDKError](err); ok {
+		return errSDK.StatusCode >= http.StatusInternalServerError
+	}
+	return false
+}
+
 const (
 	// DefaultRateLimitRetryAfter is the default retry-after duration when the
 	// Retry-After header is not present in the rate limit response.

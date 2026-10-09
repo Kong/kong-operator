@@ -209,7 +209,7 @@ download.helm: mise ## Download helm locally if necessary.
 	$(MAKE) mise-install-global DEP_BIN=$(HELM) DEP_VER=aqua:helm/helm
 
 # NOTE: temporary override to work around:
-# export data version 4 is greater than maximum supported version 2
+# export data version 5 is greater than maximum supported version 2 (Go 1.27.2+)
 # Upstream issue: https://github.com/kubernetes-sigs/kube-api-linter/issues/260
 KUBE_API_LINTER_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["go:github.com/pmalek/kube-api-linter/cmd/golangci-lint-kube-api-linter"].version' < $(MISE_FILE))
 KUBE_API_LINTER = $(PROJECT_DIR)/bin/installs/go-github-com-pmalek-kube-api-linter-cmd-golangci-lint-kube-api-linter/$(KUBE_API_LINTER_VERSION)/bin/golangci-lint-kube-api-linter
@@ -609,7 +609,7 @@ E2E_TEST_TIMEOUT ?= "20m"
 _CLUSTER_VERSION ?= $(shell $(YQ) eval -r -o=json '.[0] | sub("^v"; "")' .github/supported_k8s_node_versions.yaml)
 CLUSTER_VERSION ?=$(patsubst v%,%,$(_CLUSTER_VERSION ))
 TEST_KONG_HELM_CHART_VERSION ?= $(shell $(YQ) -ojson -r '.integration.helm.kong' < $(TEST_DEPENDENCIES_FILE))
-KONG_CONTROLLER_FEATURE_GATES ?= GatewayAlpha=true
+KONG_CONTROLLER_FEATURE_GATES ?=
 
 .PHONY: tune.inotify
 tune.inotify: ## Raise host fs.inotify limits to avoid "too many open files" in kind-based tests (Linux host / Docker VM).
@@ -619,7 +619,9 @@ tune.inotify: ## Raise host fs.inotify limits to avoid "too many open files" in 
 .PHONY: test
 test: test.unit
 
-UNIT_TEST_PATHS := ./api/... ./controller/... ./internal/... ./pkg/... ./modules/... ./ingress-controller/internal/... ./ingress-controller/pkg/... ./test/helpers/...
+UNIT_TEST_PATHS := ./api/... ./controller/... ./internal/... ./pkg/... ./modules/... ./ingress-controller/internal/... ./ingress-controller/pkg/... ./test/helpers/... \
+	./test/mocks/sdkmocks ./scripts/apitypes-funcs \
+	./ingress-controller/test/helpers ./ingress-controller/test/mocks ./ingress-controller/test/kongintegration/containers
 UNIT_TEST_PATHS_CRD_GEN := ./pkg/...
 
 .PHONY: _test.unit

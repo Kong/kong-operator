@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,4 +50,22 @@ func TestSetKonnectEntityProgrammedConditionTrueRefreshesTimestamp(t *testing.T)
 	require.True(t, ok)
 	assert.Equal(t, metav1.ConditionTrue, cond.Status)
 	assert.Equal(t, konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed, cond.Reason)
+}
+
+func TestSetKonnectEntityProgrammedConditionFalseIsStableAcross5xx(t *testing.T) {
+	t.Parallel()
+
+	var obj aiconfigurationv1alpha1.AIGatewayModelProvider
+
+	SetKonnectEntityProgrammedConditionFalse(&obj, "Failed",
+		&sdkkonnecterrs.InternalError{Status: 500, Title: "Internal Error", Instance: "kong:trace:aaa"})
+	first, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, &obj)
+	require.True(t, ok)
+
+	SetKonnectEntityProgrammedConditionFalse(&obj, "Failed",
+		&sdkkonnecterrs.InternalError{Status: 500, Title: "Internal Error", Instance: "kong:trace:bbb"})
+	second, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, &obj)
+	require.True(t, ok)
+
+	assert.Equal(t, first.Message, second.Message)
 }

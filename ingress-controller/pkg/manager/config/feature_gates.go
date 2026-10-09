@@ -18,6 +18,9 @@ func NewFeatureGates(featureGates map[string]bool) (FeatureGates, error) {
 
 	// override the default settings
 	for feature, enabled := range featureGates {
+		if IsNoOpFeatureGate(feature) {
+			continue
+		}
 		_, ok := ctrlMap[feature]
 		if !ok {
 			return ctrlMap, fmt.Errorf("%s is not a valid feature, please see the documentation: %s", feature, DocsURL)

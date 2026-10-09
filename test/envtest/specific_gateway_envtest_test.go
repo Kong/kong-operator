@@ -41,7 +41,6 @@ func TestSpecificGatewayNN(t *testing.T) {
 	RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(gw.Namespace),
-		WithGatewayFeatureEnabled,
 		WithGatewayAPIControllers(),
 		WithGatewayToReconcile(nn.String()),
 		WithProxySyncInterval(250*time.Millisecond),
