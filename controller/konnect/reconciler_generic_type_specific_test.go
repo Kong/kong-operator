@@ -8,10 +8,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
@@ -202,6 +205,9 @@ func TestHandleKongConsumerSpecific(t *testing.T) {
 func TestHandleKonnectReferencesResolution(t *testing.T) {
 	agent := &aiconfigurationv1alpha1.AIGatewayAgent{
 		Name: "agent", Namespace: "ns",
+		// Cached objects always carry a resourceVersion; the optimistic-lock
+		// status patch below requires one.
+		ResourceVersion: "1",
 		Spec: aiconfigurationv1alpha1.AIGatewayAgentSpec{
 			APISpec: aiconfigurationv1alpha1.AIGatewayAgentAPISpec{
 				Policies: []aiconfigurationv1alpha1.AIGatewayPolicyRef{{Name: "missing-policy"}},
@@ -212,7 +218,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 	t.Run("missing referenced CR sets condition False with NotFound", func(t *testing.T) {
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(agent.DeepCopy()).Build()
 		ent := agent.DeepCopy()
-		updated, isProblem, err := handleKonnectReferences(t.Context(), cl, ent, ent)
+		updated, isProblem, _, err := handleKonnectReferences(t.Context(), cl, ent, ent)
 		require.NoError(t, err)
 		require.True(t, isProblem)
 		require.True(t, updated)
@@ -227,7 +233,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		policy := &aiconfigurationv1alpha1.AIGatewayPolicy{Name: "missing-policy", Namespace: "ns"}
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(agent.DeepCopy(), policy).Build()
 		ent := agent.DeepCopy()
-		updated, isProblem, err := handleKonnectReferences(t.Context(), cl, ent, ent)
+		updated, isProblem, _, err := handleKonnectReferences(t.Context(), cl, ent, ent)
 		require.NoError(t, err)
 		require.True(t, isProblem)
 		require.True(t, updated)
@@ -246,7 +252,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		}}
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(ent.DeepCopy()).Build()
 
-		updated, isProblem, err := handleKonnectReferences(t.Context(), cl, ent, ent)
+		updated, isProblem, _, err := handleKonnectReferences(t.Context(), cl, ent, ent)
 		require.NoError(t, err)
 		require.True(t, isProblem)
 		require.True(t, updated)
@@ -266,7 +272,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		ent.Spec.APISpec.Policies = []aiconfigurationv1alpha1.AIGatewayPolicyRef{{Name: policy.Name}}
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(ent.DeepCopy(), policy).Build()
 
-		updated, isProblem, err := handleKonnectReferences(t.Context(), cl, ent, ent)
+		updated, isProblem, _, err := handleKonnectReferences(t.Context(), cl, ent, ent)
 		require.NoError(t, err)
 		require.True(t, isProblem)
 		require.True(t, updated)
@@ -285,7 +291,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 			aiconfigurationv1alpha1.ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: "ns", Name: "policy-2"},
 		)
 
-		updated, isProblem, err := handleKonnectReferences(
+		updated, isProblem, _, err := handleKonnectReferences(
 			t.Context(),
 			cl,
 			ent,
@@ -317,7 +323,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 			},
 		)
 
-		updated, isProblem, err := handleKonnectReferences(
+		updated, isProblem, _, err := handleKonnectReferences(
 			t.Context(),
 			cl,
 			ent,
@@ -341,7 +347,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		policy.SetKonnectID("kid-123")
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(agent.DeepCopy(), policy).Build()
 		ent := agent.DeepCopy()
-		updated, isProblem, err := handleKonnectReferences(t.Context(), cl, ent, ent)
+		updated, isProblem, _, err := handleKonnectReferences(t.Context(), cl, ent, ent)
 		require.NoError(t, err)
 		require.False(t, isProblem)
 		require.True(t, updated)
@@ -357,7 +363,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		ent := agent.DeepCopy()
 		resolverErr := errors.New("cache unavailable")
 
-		updated, isProblem, err := handleKonnectReferences(
+		updated, isProblem, _, err := handleKonnectReferences(
 			t.Context(),
 			cl,
 			ent,
@@ -380,7 +386,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
 		ent := agent.DeepCopy()
 
-		updated, isProblem, err := handleKonnectReferences(
+		updated, isProblem, _, err := handleKonnectReferences(
 			t.Context(),
 			cl,
 			ent,
@@ -418,7 +424,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		ent := agent.DeepCopy()
 		resolverErr := aiconfigurationv1alpha1.ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: "other-ns", Name: "policy", Err: errors.New("not found")}
 
-		updated, isProblem, err := handleKonnectReferences(
+		updated, isProblem, _, err := handleKonnectReferences(
 			t.Context(),
 			cl,
 			ent,
@@ -435,6 +441,34 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		require.True(t, ok, "expected KonnectReferencesResolved condition to be set")
 		assert.Equal(t, metav1.ConditionFalse, cond.Status)
 		assert.Equal(t, configurationv1alpha1.KonnectReferencesResolvedReasonNotFound, cond.Reason, "grant check passed, so the resolver's own error must surface")
+	})
+
+	t.Run("status patch conflict requeues", func(t *testing.T) {
+		// The optimistic-lock status patch conflicts when the cached object is
+		// stale; handleKonnectReferences must surface the requeue instead of
+		// letting the caller proceed to SDK calls with a stale object.
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme.Get()).
+			WithInterceptorFuncs(interceptor.Funcs{
+				SubResourcePatch: func(ctx context.Context, c client.Client, subResourceName string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
+					return &apierrors.StatusError{
+						ErrStatus: metav1.Status{
+							Status: metav1.StatusFailure,
+							Reason: metav1.StatusReasonConflict,
+						},
+					}
+				},
+			}).
+			Build()
+		ent := agent.DeepCopy()
+
+		updated, isProblem, res, err := handleKonnectReferences(t.Context(), cl, ent, ent)
+		require.NoError(t, err)
+		require.True(t, updated)
+		// The agent references a missing policy, so the condition is False even
+		// though the patch itself conflicted.
+		require.True(t, isProblem)
+		require.Equal(t, ctrl.Result{Requeue: true}, res)
 	})
 
 	t.Run("condition is persisted when Programmed=False was already set", func(t *testing.T) {
@@ -456,7 +490,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 			WithStatusSubresource(ent.DeepCopy()).
 			Build()
 
-		updated, isProblem, err := handleKonnectReferences(t.Context(), cl, ent, ent)
+		updated, isProblem, _, err := handleKonnectReferences(t.Context(), cl, ent, ent)
 		require.NoError(t, err)
 		require.True(t, isProblem)
 		require.True(t, updated)

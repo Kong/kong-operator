@@ -122,12 +122,10 @@ func TestHandleKongCACertificateRefs(t *testing.T) {
 		}), "KongService does not have KongCACertificateRefsValid condition set to True")
 
 		// NOTE: CACertificateIDs is set on svc.Status.Konnect.CACertificateIDs before the status patch, but
-		// the patch is created via client.MergeFrom(old) where old is a DeepCopy taken at the start of
-		// patch.StatusWithCondition — after CACertificateIDs is already set on the object. As a result,
-		// the diff contains only the condition change, and the fake client does not persist CACertificateIDs
-		// to its store. Asserting updatedSvc.Status.Konnect.CACertificateIDs here would therefore always
-		// fail even though the production code sets the field correctly. The integration/envtest suite
-		// provides the authoritative coverage for this field.
+		// the status patch diffs only the condition change against the pre-mutation snapshot, so the fake
+		// client never persists CACertificateIDs to its store. Asserting updatedSvc.Status.Konnect.CACertificateIDs
+		// here would therefore always fail even though the production code sets the field correctly. The
+		// integration/envtest suite provides the authoritative coverage for this field.
 	})
 
 	t.Run("CA cert not found returns ReferencedKongCACertificateDoesNotExistError", func(t *testing.T) {
