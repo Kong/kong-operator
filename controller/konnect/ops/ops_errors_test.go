@@ -2,6 +2,7 @@ package ops
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"testing"
 	"testing/synctest"
@@ -763,4 +764,30 @@ func TestGetRetryAfterFromRateLimitError(t *testing.T) {
 			require.Equal(t, 60*time.Second, gotDuration)
 		})
 	})
+}
+
+func TestErrorIsServerError(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{name: "nil", err: nil, want: false},
+		{name: "InternalServerError", err: &sdkkonnecterrs.InternalServerError{Status: 500}, want: true},
+		{name: "ServiceUnavailable", err: &sdkkonnecterrs.ServiceUnavailable{Status: 503}, want: true},
+		{name: "SDKError 500", err: &sdkkonnecterrs.SDKError{StatusCode: 500}, want: true},
+		{name: "SDKError 502", err: &sdkkonnecterrs.SDKError{StatusCode: 502}, want: true},
+		{name: "SDKError 504", err: &sdkkonnecterrs.SDKError{StatusCode: 504}, want: true},
+		{name: "wrapped InternalServerError", err: fmt.Errorf("wrapped: %w", &sdkkonnecterrs.InternalServerError{Status: 500}), want: true},
+		{name: "SDKError 499", err: &sdkkonnecterrs.SDKError{StatusCode: 499}, want: false},
+		{name: "SDKError 400", err: &sdkkonnecterrs.SDKError{StatusCode: 400}, want: false},
+		{name: "SDKError 429", err: &sdkkonnecterrs.SDKError{StatusCode: 429}, want: false},
+		{name: "ForbiddenError", err: &sdkkonnecterrs.ForbiddenError{Status: 403}, want: false},
+		{name: "generic error", err: errors.New("boom"), want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, ErrorIsServerError(tt.err))
+		})
+	}
 }

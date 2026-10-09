@@ -63,6 +63,18 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Fixes
+
+- Konnect: fix hot retry loop when Konnect returns 5xx on entity update
+  (e.g. Event Gateway update returning 500). The Konnect trace ID is now
+  cleared from Konnect 5xx API errors in the `Programmed` condition
+  message, and 5xx update errors are returned to controller-runtime so its
+  exponential backoff applies.
+  [#6008](https://github.com/Kong/kong-operator/pull/6008)
+  [#6813](https://github.com/Kong/kong-operator/pull/6813)
+
 ## [v2.3.4]
 
 > Release date: 2026-10-23
