@@ -418,6 +418,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, cp *ControlPlane) (ctrl.Resu
 	markAsProvisioned(cp)
 	k8sutils.SetReady(cp)
 
+	if err := konnectExtensionProcessor.MarkCertificateApplied(ctx, r.Client, cp); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	result, err = r.patchStatus(ctx, logger, cp)
 	if err != nil {
 		log.Debug(logger, "unable to patch ControlPlane status", "error", err)

@@ -18,7 +18,24 @@ import (
 	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
+
+func TestControlPlaneCertificateApplied(t *testing.T) {
+	cp := &gwtypes.ControlPlane{ObjectMeta: metav1.ObjectMeta{Name: "cp", Namespace: "default"}}
+	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(cp).Build()
+	processor := &ControlPlaneKonnectExtensionProcessor{CertificateSecretName: "generation-v2"}
+	require.NoError(t, processor.MarkCertificateApplied(t.Context(), cl, cp))
+	var current gwtypes.ControlPlane
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(cp), &current))
+	assert.Equal(t, "generation-v2", current.Annotations[consts.KonnectClientCertificateSecretAnnotation])
+	resourceVersion := current.ResourceVersion
+	require.NoError(t, processor.MarkCertificateApplied(t.Context(), cl, &current))
+	assert.Equal(t, resourceVersion, current.ResourceVersion)
+	processor.CertificateSecretName = ""
+	require.NoError(t, processor.MarkCertificateApplied(t.Context(), cl, &current))
+	assert.NotContains(t, current.Annotations, consts.KonnectClientCertificateSecretAnnotation)
+}
 
 func TestBuildKonnectAddress(t *testing.T) {
 	tests := []struct {
