@@ -72,7 +72,7 @@ version = "4.3.0"
 # export data version 4 is greater than maximum supported version 2
 # Upstream issue: https://github.com/kubernetes-sigs/kube-api-linter/issues/260
 [tools."go:github.com/pmalek/kube-api-linter/cmd/golangci-lint-kube-api-linter"]
-# renovate: datasource=git-refs packageName=https://github.com/kubernetes-sigs/kube-api-linter.git
+# renovate: datasource=git-refs packageName=https://github.com/pmalek/kube-api-linter.git
 version = "f6c98d29c0424bdfa52de5b80af681f602625383"
 
 [tools."yq"]
