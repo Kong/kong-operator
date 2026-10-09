@@ -619,7 +619,9 @@ tune.inotify: ## Raise host fs.inotify limits to avoid "too many open files" in 
 .PHONY: test
 test: test.unit
 
-UNIT_TEST_PATHS := ./api/... ./controller/... ./internal/... ./pkg/... ./modules/... ./ingress-controller/internal/... ./ingress-controller/pkg/... ./test/helpers/...
+UNIT_TEST_PATHS := ./api/... ./controller/... ./internal/... ./pkg/... ./modules/... ./ingress-controller/internal/... ./ingress-controller/pkg/... ./test/helpers/... \
+	./test/mocks/sdkmocks ./scripts/apitypes-funcs \
+	./ingress-controller/test/helpers ./ingress-controller/test/mocks ./ingress-controller/test/kongintegration/containers
 UNIT_TEST_PATHS_CRD_GEN := ./pkg/...
 
 .PHONY: _test.unit

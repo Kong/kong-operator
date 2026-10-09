@@ -56,7 +56,7 @@ func TestGetFreePort(t *testing.T) {
 					s.Start()
 					defer s.Close()
 
-					resp, err := http.Get(s.URL)
+					resp, err := s.Client().Get(s.URL)
 					if !assert.NoError(t, err) {
 						return
 					}
