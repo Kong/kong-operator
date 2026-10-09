@@ -163,6 +163,113 @@ func TestKonnectExtensionDeletingSnapshotConflict(t *testing.T) {
 	}
 }
 
+func TestKonnectExtensionSelectsReusableSnapshot(t *testing.T) {
+	for _, tt := range []struct {
+		name        string
+		currentName string
+		reverse     bool
+		want        string
+	}{
+		{name: "published snapshot visited first", currentName: "z-published", reverse: true, want: "z-published"},
+		{name: "published snapshot visited last", currentName: "z-published", want: "z-published"},
+		{name: "pending snapshots in ascending order", want: "a-pending"},
+		{name: "pending snapshots in descending order", reverse: true, want: "a-pending"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			r, ext := dpCertTestReconciler(t, "certificate")
+			var source corev1.Secret
+			require.NoError(t, r.Get(t.Context(), client.ObjectKey{Namespace: ext.Namespace, Name: "certificate"}, &source))
+			_, original, err := r.ensureCertificateSnapshot(t.Context(), ext, &source)
+			require.NoError(t, err)
+			candidates := make([]corev1.Secret, 0, 2)
+			for _, name := range []string{"a-pending", "z-published"} {
+				candidate := original.DeepCopy()
+				candidate.Name = name
+				candidate.ResourceVersion, candidate.UID = "", ""
+				require.NoError(t, r.Create(t.Context(), candidate))
+				candidates = append(candidates, *candidate)
+			}
+			original.Finalizers = []string{KonnectCleanupFinalizer}
+			require.NoError(t, r.Update(t.Context(), original))
+			require.NoError(t, r.Delete(t.Context(), original))
+			ext.Status.DataPlaneClientAuth = &konnectv1alpha2.DataPlaneClientAuthStatus{
+				CertificateSecretRef: &konnectv1alpha2.SecretRef{Name: tt.currentName},
+			}
+			if tt.reverse {
+				candidates[0], candidates[1] = candidates[1], candidates[0]
+			}
+			live, ok := r.Client.(client.WithWatch)
+			require.True(t, ok)
+			r.apiReader = interceptor.NewClient(live, interceptor.Funcs{
+				List: func(ctx context.Context, _ client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+					if secrets, ok := list.(*corev1.SecretList); ok {
+						secrets.Items = candidates
+						return nil
+					}
+					return live.List(ctx, list, opts...)
+				},
+			})
+			result, selected, err := r.ensureCertificateSnapshot(t.Context(), ext, &source)
+			require.NoError(t, err)
+			assert.Equal(t, op.Noop, result)
+			assert.Equal(t, tt.want, selected.Name)
+		})
+	}
+}
+
+func TestIsReusableManualCertificateSnapshot(t *testing.T) {
+	for _, tt := range []struct {
+		name   string
+		mutate func(*corev1.Secret)
+		want   bool
+	}{
+		{name: "matching owned snapshot", mutate: func(*corev1.Secret) {}, want: true},
+		{name: "source Secret", mutate: func(s *corev1.Secret) { s.Name = "certificate" }},
+		{name: "deleting snapshot", mutate: func(s *corev1.Secret) { s.DeletionTimestamp = new(metav1.Now()) }},
+		{name: "foreign owner", mutate: func(s *corev1.Secret) { s.OwnerReferences[0].UID = "other-extension" }},
+		{name: "Automatic Secret", mutate: func(s *corev1.Secret) {
+			s.Labels[consts.SecretProvisioningLabelKey] = consts.SecretProvisioningAutomaticLabelValue
+		}},
+		{name: "different certificate", mutate: func(s *corev1.Secret) { s.Data[corev1.TLSCertKey] = []byte("other") }},
+		{name: "different key", mutate: func(s *corev1.Secret) { s.Data[corev1.TLSPrivateKeyKey] = []byte("other") }},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			r, ext := dpCertTestReconciler(t, "certificate")
+			var source corev1.Secret
+			require.NoError(t, r.Get(t.Context(), client.ObjectKey{Namespace: ext.Namespace, Name: "certificate"}, &source))
+			_, snapshot, err := r.ensureCertificateSnapshot(t.Context(), ext, &source)
+			require.NoError(t, err)
+			tt.mutate(snapshot)
+			assert.Equal(t, tt.want, isReusableManualCertificateSnapshot(ext, &source, snapshot))
+		})
+	}
+}
+
+func TestKonnectExtensionSnapshotReadFailure(t *testing.T) {
+	r, ext := dpCertTestReconciler(t, "certificate")
+	var source corev1.Secret
+	require.NoError(t, r.Get(t.Context(), client.ObjectKey{Namespace: ext.Namespace, Name: "certificate"}, &source))
+	live, ok := r.Client.(client.WithWatch)
+	require.True(t, ok)
+	readErr := errors.New("snapshot read failed")
+	r.apiReader = interceptor.NewClient(live, interceptor.Funcs{
+		Get: func(context.Context, client.WithWatch, client.ObjectKey, client.Object, ...client.GetOption) error {
+			return readErr
+		},
+		List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
+			t.Fatal("a failed snapshot read must not fall through to candidate selection")
+			return nil
+		},
+	})
+	result, snapshot, err := r.ensureCertificateSnapshot(t.Context(), ext, &source)
+	require.ErrorIs(t, err, readErr)
+	assert.Equal(t, op.Noop, result)
+	assert.Nil(t, snapshot)
+	var secrets corev1.SecretList
+	require.NoError(t, live.List(t.Context(), &secrets))
+	assert.Len(t, secrets.Items, 1)
+}
+
 func TestKonnectExtensionRequeuesFutureDeletionTimestamp(t *testing.T) {
 	for _, hasDependent := range []bool{false, true} {
 		t.Run(fmt.Sprintf("dependent=%t", hasDependent), func(t *testing.T) {
@@ -400,6 +507,58 @@ func TestKonnectExtensionCertificateCleanupUsesLiveReader(t *testing.T) {
 	require.ErrorIs(t, err, apiErr)
 }
 
+func TestKonnectExtensionConfirmsDependentAbsenceBeforeCleanup(t *testing.T) {
+	for _, kind := range []string{"DataPlane", "ControlPlane"} {
+		for _, deleting := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/deleting=%t", kind, deleting), func(t *testing.T) {
+				registration := dpCertTestObject("extension", "certificate")
+				r, ext := dpCertTestReconciler(t, "certificate", registration)
+				refs := []commonv1alpha1.ExtensionRef{{
+					Group: konnectv1alpha2.GroupVersion.Group, Kind: konnectv1alpha2.KonnectExtensionKind, Name: ext.Name,
+				}}
+				switch kind {
+				case "DataPlane":
+					require.NoError(t, r.Create(t.Context(), &operatorv1beta1.DataPlane{
+						Name: "dependent", Namespace: ext.Namespace,
+						Spec: operatorv1beta1.DataPlaneSpec{DataPlaneOptions: operatorv1beta1.DataPlaneOptions{Extensions: refs}},
+					}))
+				case "ControlPlane":
+					require.NoError(t, r.Create(t.Context(), &gwtypes.ControlPlane{
+						Name: "dependent", Namespace: ext.Namespace,
+						Spec: gwtypes.ControlPlaneSpec{Extensions: refs},
+					}))
+				}
+				ext.Finalizers = []string{KonnectCleanupFinalizer, consts.ExtensionInUseFinalizer}
+				require.NoError(t, r.Update(t.Context(), ext))
+				live, ok := r.Client.(client.WithWatch)
+				require.True(t, ok)
+				r.Client = interceptor.NewClient(live, interceptor.Funcs{
+					List: func(ctx context.Context, _ client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+						switch list := list.(type) {
+						case *operatorv1beta1.DataPlaneList:
+							list.Items = nil
+							return nil
+						case *gwtypes.ControlPlaneList:
+							list.Items = nil
+							return nil
+						}
+						return live.List(ctx, list, opts...)
+					},
+				})
+				if deleting {
+					ext.DeletionTimestamp = new(metav1.NewTime(time.Now().Add(-time.Second)))
+				}
+				_, err := r.Reconcile(t.Context(), ext)
+				require.NoError(t, err)
+				assert.Contains(t, ext.Finalizers, consts.ExtensionInUseFinalizer,
+					"a cached absence must not release the finalizer while a live dependent exists")
+				require.NoError(t, live.Get(t.Context(), client.ObjectKeyFromObject(registration), registration))
+				assert.True(t, registration.DeletionTimestamp.IsZero(), "a live dependent must retain its Konnect registration")
+			})
+		}
+	}
+}
+
 func TestKonnectExtensionKeepsCertificateUntilControlPlaneApplied(t *testing.T) {
 	r, ext := dpCertTestReconciler(t, "new")
 	cp := &gwtypes.ControlPlane{
@@ -558,7 +717,7 @@ func TestKonnectExtensionSkipsConsumerReadsWithoutOldGenerations(t *testing.T) {
 				listCalls, workloadLists = 0, 0
 				_, err := r.Reconcile(t.Context(), ext)
 				require.NoError(t, err)
-				assert.Equal(t, 4, listCalls, "steady state should only list DataPlanes, ControlPlanes, certificates, and owned Secrets")
+				assert.Equal(t, 2, listCalls, "steady-state live reads should only list certificates and owned Secrets")
 				assert.Zero(t, workloadLists, "steady state must skip rollout and Pod scans")
 			}
 		})

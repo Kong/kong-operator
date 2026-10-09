@@ -59,18 +59,19 @@ func (r *KonnectExtensionReconciler) ensureCertificateSnapshot(
 	}
 	name := fmt.Sprintf("%s-%x", prefix, digest[:16])
 	existing := &corev1.Secret{}
-	err := r.certificateReader().Get(ctx, client.ObjectKey{Namespace: ext.Namespace, Name: name}, existing)
-	if err == nil {
+	getErr := r.certificateReader().Get(ctx, client.ObjectKey{Namespace: ext.Namespace, Name: name}, existing)
+	if getErr != nil && !apierrors.IsNotFound(getErr) {
+		return op.Noop, nil, getErr
+	}
+	if getErr == nil {
 		if !metav1.IsControlledBy(existing, ext) ||
 			string(existing.Data[corev1.TLSCertKey]) != string(source.Data[corev1.TLSCertKey]) ||
 			string(existing.Data[corev1.TLSPrivateKeyKey]) != string(source.Data[corev1.TLSPrivateKeyKey]) {
 			return op.Noop, nil, fmt.Errorf("certificate snapshot Secret %s/%s conflicts with the desired generation", ext.Namespace, name)
 		}
-	} else if !apierrors.IsNotFound(err) {
-		return op.Noop, nil, err
 	}
-	replacing := err == nil && !existing.DeletionTimestamp.IsZero()
-	if err != nil || replacing {
+	replacing := getErr == nil && !existing.DeletionTimestamp.IsZero()
+	if apierrors.IsNotFound(getErr) || replacing {
 		// Keep a deleting snapshot protected until consumers migrate. Reuse
 		// its replacement even after the original content-derived name is gone.
 		owned, err := r.listOwnedCertificateSecrets(ctx, ext)
@@ -84,13 +85,11 @@ func (r *KonnectExtensionReconciler) ensureCertificateSnapshot(
 		}
 		for i := range owned {
 			candidate := &owned[i]
-			if candidate.Name == source.Name || !candidate.DeletionTimestamp.IsZero() ||
-				!metav1.IsControlledBy(candidate, ext) ||
-				candidate.Labels[consts.SecretProvisioningLabelKey] == consts.SecretProvisioningAutomaticLabelValue ||
-				string(candidate.Data[corev1.TLSCertKey]) != string(source.Data[corev1.TLSCertKey]) ||
-				string(candidate.Data[corev1.TLSPrivateKeyKey]) != string(source.Data[corev1.TLSPrivateKeyKey]) {
+			if !isReusableManualCertificateSnapshot(ext, source, candidate) {
 				continue
 			}
+			// Prefer the published snapshot; otherwise choose the smallest name
+			// so list ordering cannot change the selected pending generation.
 			if existing == nil || candidate.Name == currentName ||
 				(existing.Name != currentName && candidate.Name < existing.Name) {
 				existing = candidate
@@ -127,6 +126,20 @@ func (r *KonnectExtensionReconciler) ensureCertificateSnapshot(
 		return op.Noop, nil, err
 	}
 	return op.Created, snapshot, nil
+}
+
+// isReusableManualCertificateSnapshot excludes source, deleting, foreign, and
+// Automatic Secrets even when their certificate contents match the Manual source.
+func isReusableManualCertificateSnapshot(
+	ext *konnectv1alpha2.KonnectExtension,
+	source, candidate *corev1.Secret,
+) bool {
+	return candidate.Name != source.Name &&
+		candidate.DeletionTimestamp.IsZero() &&
+		metav1.IsControlledBy(candidate, ext) &&
+		candidate.Labels[consts.SecretProvisioningLabelKey] != consts.SecretProvisioningAutomaticLabelValue &&
+		string(candidate.Data[corev1.TLSCertKey]) == string(source.Data[corev1.TLSCertKey]) &&
+		string(candidate.Data[corev1.TLSPrivateKeyKey]) == string(source.Data[corev1.TLSPrivateKeyKey])
 }
 
 // Use live reads: cached rollout status or a cached absence of an old Pod must

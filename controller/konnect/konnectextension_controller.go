@@ -148,22 +148,20 @@ func listExtendableReferencedExtensions[t extensions.ExtendableT](_ context.Cont
 	return recs
 }
 
-// Reconcile reconciles a KonnectExtension object.
-func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnectv1alpha2.KonnectExtension) (ctrl.Result, error) {
-	logger := log.GetLogger(ctx, konnectv1alpha2.KonnectExtensionKind, r.LoggingMode)
-
-	ctx = ctrllog.IntoContext(ctx, logger)
-	log.Debug(logger, "reconciling")
-
+func listReferencingExtendables(
+	ctx context.Context,
+	reader client.Reader,
+	ext *konnectv1alpha2.KonnectExtension,
+) (operatorv1beta1.DataPlaneList, gwtypes.ControlPlaneList, error) {
 	var (
 		dataPlaneList    operatorv1beta1.DataPlaneList
 		controlPlaneList gwtypes.ControlPlaneList
 	)
-	if err := r.certificateReader().List(ctx, &dataPlaneList, client.InNamespace(ext.Namespace)); err != nil {
-		return ctrl.Result{}, err
+	if err := reader.List(ctx, &dataPlaneList, client.InNamespace(ext.Namespace)); err != nil {
+		return dataPlaneList, controlPlaneList, err
 	}
-	if err := r.certificateReader().List(ctx, &controlPlaneList, client.InNamespace(ext.Namespace)); err != nil {
-		return ctrl.Result{}, err
+	if err := reader.List(ctx, &controlPlaneList, client.InNamespace(ext.Namespace)); err != nil {
+		return dataPlaneList, controlPlaneList, err
 	}
 	dataPlaneList.Items = lo.Filter(dataPlaneList.Items, func(dp operatorv1beta1.DataPlane, _ int) bool {
 		return lo.ContainsBy(listExtendableReferencedExtensions[*operatorv1beta1.DataPlane](ctx, &dp), func(ref reconcile.Request) bool {
@@ -175,6 +173,35 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnect
 			return ref.Name == ext.Name && ref.Namespace == ext.Namespace
 		})
 	})
+	return dataPlaneList, controlPlaneList, nil
+}
+
+// Reconcile reconciles a KonnectExtension object.
+func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnectv1alpha2.KonnectExtension) (ctrl.Result, error) {
+	logger := log.GetLogger(ctx, konnectv1alpha2.KonnectExtensionKind, r.LoggingMode)
+
+	ctx = ctrllog.IntoContext(ctx, logger)
+	log.Debug(logger, "reconciling")
+
+	reader := client.Reader(r.Client)
+	if !ext.DeletionTimestamp.IsZero() {
+		// Cached absence of a referencing DataPlane or ControlPlane must not
+		// authorize deletion of the extension's certificates and Secrets.
+		reader = r.certificateReader()
+	}
+	dataPlaneList, controlPlaneList, err := listReferencingExtendables(ctx, reader, ext)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if ext.DeletionTimestamp.IsZero() &&
+		len(dataPlaneList.Items)+len(controlPlaneList.Items) == 0 &&
+		controllerutil.ContainsFinalizer(ext, consts.ExtensionInUseFinalizer) {
+		// Confirm cached absence before releasing the in-use finalizer.
+		dataPlaneList, controlPlaneList, err = listReferencingExtendables(ctx, r.certificateReader(), ext)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
 
 	var updated bool
 
@@ -371,6 +398,8 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnect
 
 	// Get the list of in cluster DataPlane client certificates.
 	var dpCertificates configurationv1alpha1.KongDataPlaneClientCertificateList
+	// Read live registration state: a cached Programmed certificate may already
+	// be deleting in Konnect and must not authorize publishing a new Secret.
 	err = r.certificateReader().List(ctx, &dpCertificates, client.InNamespace(ext.Namespace))
 	dpCertificates.Items = lo.Filter(dpCertificates.Items, func(cert configurationv1alpha1.KongDataPlaneClientCertificate, _ int) bool {
 		return k8sutils.IsOwnedByRefUID(&cert, ext.UID)
