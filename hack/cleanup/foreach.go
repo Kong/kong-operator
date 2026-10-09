@@ -32,6 +32,8 @@ func forEachLimited[E any](items []E, limit int, fn func(item E) error) error {
 			return nil
 		})
 	}
-	g.Wait()
+	if err := g.Wait(); err != nil {
+		errs = append(errs, err)
+	}
 	return errors.Join(errs...)
 }
