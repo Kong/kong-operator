@@ -64,9 +64,7 @@ func MapHTTPRouteForReferenceGrant(cl client.Client) handler.MapFunc {
 }
 
 // MapHTTPRouteForKongPlugin returns a handler.MapFunc that, given a KongPlugin object,
-// lists all HTTPRoutes that reference it. This includes both:
-// 1. HTTPRoutes that explicitly reference the KongPlugin via the konghq.com/plugins annotation
-// 2. HTTPRoutes that have generated KongPlugins from Gateway API extensionRef filters
+// lists all HTTPRoutes that reference it through Gateway API ExtensionRef filters.
 // It returns a slice of reconcile.Requests for each matching HTTPRoute, enabling efficient
 // event handling and reconciliation when a KongPlugin changes.
 func MapHTTPRouteForKongPlugin(cl client.Client) handler.MapFunc {
