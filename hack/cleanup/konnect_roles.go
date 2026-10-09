@@ -60,19 +60,36 @@ func listUserRolesPaged(
 	log logr.Logger,
 	baseURL, token, userID string,
 ) ([]sdkkonnectcomp.AssignedRole, error) {
-	client := &http.Client{}
+	// Timeout guards against connections that connect but never respond -
+	// without it the fetch would block forever.
+	client := &http.Client{Timeout: 60 * time.Second}
 
 	log.Info("Listing user roles", "user_id", userID)
 	firstPage, total, err := fetchUserRolesPage(ctx, log, client, baseURL, token, userID, 1)
 	if err != nil {
 		return nil, err
 	}
-	// Defensive fallback in case the response metadata doesn't provide the total.
+	// Defensive fallback in case the response metadata doesn't provide the
+	// total: the page count is unknown, so fetch pages sequentially until one
+	// comes back short.
 	if total == 0 {
-		total = float64(len(firstPage))
+		roles := firstPage
+		lastLen := len(firstPage)
+		for pageNumber := 2; lastLen == konnectUserRolesPageSize; pageNumber++ {
+			page, _, err := fetchUserRolesPage(ctx, log, client, baseURL, token, userID, pageNumber)
+			if err != nil {
+				return roles, err
+			}
+			roles = append(roles, page...)
+			lastLen = len(page)
+			log.Info("Fetched user roles page", "page", pageNumber, "count", len(page), "total_roles", len(roles))
+		}
+		return roles, nil
 	}
 	totalPages := (int(total) + konnectUserRolesPageSize - 1) / konnectUserRolesPageSize
-	totalPages = max(totalPages, 1)
+	// Cap the page count so that a wrong server-reported total cannot allocate
+	// a huge page list or flood the API with page fetches.
+	totalPages = max(min(totalPages, konnectUserRolesMaxPages), 1)
 
 	// fetchedPages counts how many pages have been fetched so far (page 1 is
 	// already fetched), so the logs show the progress as n/MAX.
@@ -144,21 +161,23 @@ func filterRoleIDs(
 // removeOrphanedControlPlaneRoles lists all the roles assigned to userID, then
 // removes those that reference control planes which no longer exist, or that
 // were deleted during this run (the Konnect listing may lag behind the deletions).
+//
+// The roles are listed before the control planes - see
+// removeOrphanedAIGatewayRoles for why the entity snapshot must be newer than
+// the role snapshot.
 func removeOrphanedControlPlaneRoles(
 	ctx context.Context,
 	log logr.Logger,
-	sdk *sdkkonnectgo.Roles,
+	sdk *sdkkonnectgo.SDK,
 	userID string,
-	existingCPsIDs []string,
 	deletedCPsIDs []string,
 ) error {
-	existingCPs := make(map[string]struct{}, len(existingCPsIDs))
-	for _, cpID := range existingCPsIDs {
-		existingCPs[cpID] = struct{}{}
-	}
-	deletedCPs := make(map[string]struct{}, len(deletedCPsIDs))
-	for _, cpID := range deletedCPsIDs {
-		deletedCPs[cpID] = struct{}{}
+	if len(deletedCPsIDs) == 0 {
+		// Skip the (expensive) user roles listing when no control plane was
+		// deleted in this run: roles of deleted control planes are removed by
+		// the run that deletes them.
+		log.Info("No control planes deleted in this run, skipping control plane roles cleanup")
+		return nil
 	}
 
 	baseURL, err := canonicalizedServerURL()
@@ -168,10 +187,24 @@ func removeOrphanedControlPlaneRoles(
 	token := test.KonnectAccessToken()
 
 	roles, listErr := listUserRolesPaged(ctx, log, baseURL, token, userID)
+
+	log.Info("Listing existing Control Planes")
+	existingCPsIDs, listCPsErr := listControlPlaneIDsPaged(ctx, log, sdk.ControlPlanes)
+
+	existingCPs := make(map[string]struct{}, len(existingCPsIDs))
+	for _, cpID := range existingCPsIDs {
+		existingCPs[cpID] = struct{}{}
+	}
+	deletedCPs := make(map[string]struct{}, len(deletedCPsIDs))
+	for _, cpID := range deletedCPsIDs {
+		deletedCPs[cpID] = struct{}{}
+	}
+
 	roleIDsToRemove := filterRoleIDs(log, roles, func(role sdkkonnectcomp.AssignedRole) bool {
 		if role.EntityTypeName == nil || *role.EntityTypeName != konnectControlPlaneEntityTypeName {
 			return false
 		}
+		// Roles with no entity ID reference nothing - treat them as stale.
 		if role.EntityID == nil {
 			return true
 		}
@@ -182,26 +215,26 @@ func removeOrphanedControlPlaneRoles(
 		return !exists
 	})
 
-	removed, removeErr := removeRoles(ctx, log, sdk, userID, roleIDsToRemove)
+	removed, removeErr := removeRoles(ctx, log, sdk.Roles, userID, roleIDsToRemove)
 	log.Info("Removed orphaned control plane roles", "count", removed, "to_remove", len(roleIDsToRemove))
 
-	return errors.Join(listErr, removeErr)
+	return errors.Join(listErr, listCPsErr, removeErr)
 }
 
 // removeOrphanedAIGatewayRoles lists all the roles assigned to userID, then
 // removes those that reference AI Gateways which no longer exist.
+//
+// The roles are listed before the gateways so that the gateway snapshot is
+// newer than the role snapshot: a gateway created between the two listings
+// (e.g. by a concurrent test) is then present in the snapshot, so its fresh
+// role is not removed as orphaned. A deletion between the two listings is the
+// intended cleanup.
 func removeOrphanedAIGatewayRoles(
 	ctx context.Context,
 	log logr.Logger,
-	sdk *sdkkonnectgo.Roles,
+	sdk *sdkkonnectgo.SDK,
 	userID string,
-	existingAIGatewayIDs []string,
 ) error {
-	existingAIGateways := make(map[string]struct{}, len(existingAIGatewayIDs))
-	for _, id := range existingAIGatewayIDs {
-		existingAIGateways[id] = struct{}{}
-	}
-
 	baseURL, err := canonicalizedServerURL()
 	if err != nil {
 		return fmt.Errorf("failed to get Konnect server URL: %w", err)
@@ -209,21 +242,41 @@ func removeOrphanedAIGatewayRoles(
 	token := test.KonnectAccessToken()
 
 	roles, listErr := listUserRolesPaged(ctx, log, baseURL, token, userID)
-	roleIDsToRemove := filterRoleIDs(log, roles, func(role sdkkonnectcomp.AssignedRole) bool {
+
+	log.Info("Listing existing AI Gateways")
+	existingAIGatewayIDs, listAIGatewaysErr := listAIGatewayIDsPaged(ctx, log, sdk.AIGateways)
+	existingAIGateways := make(map[string]struct{}, len(existingAIGatewayIDs))
+	for _, id := range existingAIGatewayIDs {
+		existingAIGateways[id] = struct{}{}
+	}
+
+	roleIDsToRemove := filterRoleIDs(log, roles, orphanedAIGatewayRoleMatcher(log, existingAIGateways))
+
+	removed, removeErr := removeRoles(ctx, log, sdk.Roles, userID, roleIDsToRemove)
+	log.Info("Removed orphaned AI Gateway roles", "count", removed, "to_remove", len(roleIDsToRemove))
+
+	return errors.Join(listErr, listAIGatewaysErr, removeErr)
+}
+
+// orphanedAIGatewayRoleMatcher returns a matcher matching the roles that
+// reference AI Gateways which no longer exist.
+func orphanedAIGatewayRoleMatcher(
+	log logr.Logger,
+	existingAIGateways map[string]struct{},
+) func(role sdkkonnectcomp.AssignedRole) bool {
+	return func(role sdkkonnectcomp.AssignedRole) bool {
 		if role.EntityTypeName == nil || *role.EntityTypeName != konnectAIGatewayEntityTypeName {
 			return false
 		}
 		if role.EntityID == nil {
-			return true
+			// A role with no entity ID references no gateway, so it cannot be
+			// told whether it's orphaned - skip it.
+			log.Info("AI Gateway role has no entity ID, skipping", "id", role.ID)
+			return false
 		}
 		_, exists := existingAIGateways[*role.EntityID]
 		return !exists
-	})
-
-	removed, removeErr := removeRoles(ctx, log, sdk, userID, roleIDsToRemove)
-	log.Info("Removed orphaned AI Gateway roles", "count", removed, "to_remove", len(roleIDsToRemove))
-
-	return errors.Join(listErr, removeErr)
+	}
 }
 
 // removeRoles removes the given roles of userID, with at most cleanupConcurrency()
@@ -323,7 +376,8 @@ func fetchUserRolesPage(
 		body, err := io.ReadAll(resp.Body)
 		resp.Body.Close()
 		if err != nil {
-			return nil, 0, fmt.Errorf("failed to read user roles response body (page %d): %w", pageNumber, err)
+			lastErr = fmt.Errorf("failed to read user roles response body (page %d): %w", pageNumber, err)
+			continue
 		}
 		if resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500 {
 			lastErr = fmt.Errorf("failed to list user roles (page %d), status: %d, body: %s",

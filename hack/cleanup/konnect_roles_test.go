@@ -83,6 +83,26 @@ func TestListUserRolesPagedPartialPageFailure(t *testing.T) {
 	}
 }
 
+func TestListUserRolesPagedUnknownTotal(t *testing.T) {
+	shortenRetryDelays(t)
+
+	// No total in the response metadata (total 0): pages are fetched
+	// sequentially until one comes back short.
+	srv := fakeKonnectUserRoles(t, map[int]fakePage{
+		1: {status: http.StatusOK, total: 0, roleIDs: ids("p1", 100)},
+		2: {status: http.StatusOK, total: 0, roleIDs: ids("p2", 100)},
+		3: {status: http.StatusOK, total: 0, roleIDs: ids("p3", 50)},
+	})
+
+	roles, err := listUserRolesPaged(t.Context(), logr.Discard(), srv.URL, "token", "test-user")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(roles) != 250 {
+		t.Errorf("expected 250 roles, got %d", len(roles))
+	}
+}
+
 func TestListUserRolesPagedAllPagesSuccess(t *testing.T) {
 	shortenRetryDelays(t)
 
@@ -111,6 +131,39 @@ func TestListUserRolesPagedAllPagesSuccess(t *testing.T) {
 
 // TestRemoveRolesNotFoundSkippedAndCounted verifies that removeRoles skips
 // roles that no longer exist (404) and counts only the removed ones.
+func TestOrphanedAIGatewayRoleMatcherSkipsRolesWithoutEntityID(t *testing.T) {
+	match := orphanedAIGatewayRoleMatcher(logr.Discard(), map[string]struct{}{"gw-1": {}})
+	gwType := konnectAIGatewayEntityTypeName
+
+	for name, tc := range map[string]struct {
+		role sdkkonnectcomp.AssignedRole
+		want bool
+	}{
+		"existing gateway": {
+			role: sdkkonnectcomp.AssignedRole{ID: new("r1"), EntityID: new("gw-1"), EntityTypeName: &gwType},
+			want: false,
+		},
+		"orphaned gateway": {
+			role: sdkkonnectcomp.AssignedRole{ID: new("r2"), EntityID: new("gw-gone"), EntityTypeName: &gwType},
+			want: true,
+		},
+		"no entity ID": {
+			role: sdkkonnectcomp.AssignedRole{ID: new("r3"), EntityID: nil, EntityTypeName: &gwType},
+			want: false,
+		},
+		"other entity type": {
+			role: sdkkonnectcomp.AssignedRole{ID: new("r4"), EntityID: new("gw-gone")},
+			want: false,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if got := match(tc.role); got != tc.want {
+				t.Errorf("match(%s) = %v, want %v", *tc.role.ID, got, tc.want)
+			}
+		})
+	}
+}
+
 func TestRemoveRolesNotFoundSkippedAndCounted(t *testing.T) {
 	var (
 		mu             sync.Mutex

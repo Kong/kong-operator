@@ -30,6 +30,11 @@ const (
 	// listing is done with raw HTTP requests paging through the results.
 	konnectUserRolesPageSize = 100
 
+	// konnectUserRolesMaxPages caps the number of pages fetched when listing
+	// user roles, so that a wrong server-reported total cannot allocate a huge
+	// page list or flood the API with page fetches.
+	konnectUserRolesMaxPages = 50000
+
 	// konnectCleanupConcurrencyDefault is the default number of parallel goroutines
 	// used for Konnect API calls (listing role pages, deleting roles).
 	konnectCleanupConcurrencyDefault = 8
@@ -85,9 +90,6 @@ func cleanupKonnectControlPlanes(sdk *sdkkonnectgo.SDK) func(ctx context.Context
 		}
 
 		userID := *me.User.ID
-		userID = "63da16fc-94e7-4cbf-bf12-1b2623e0c0d6"
-
-		log.Info("User", "user_id", userID)
 
 		// We have to manually delete roles created for the control plane because Konnect doesn't do it automatically.
 		// If we don't do it, we will eventually hit a problem with Konnect APIs answering our requests with 504s
@@ -96,14 +98,7 @@ func cleanupKonnectControlPlanes(sdk *sdkkonnectgo.SDK) func(ctx context.Context
 		//
 		// We can drop this once the automated cleanup is implemented on Konnect side:
 		// https://konghq.atlassian.net/browse/TPS-1453.
-		log.Info("Listing existing Control Planes", "user_id", userID)
-		existingCPIDs, err := listControlPlaneIDsPaged(ctx, log, sdk.ControlPlanes)
-		if err != nil {
-			return fmt.Errorf("failed to list existing control planes: %w", err)
-		}
-		log.Info("Listed existing control planes", "count", len(existingCPIDs))
-
-		if err := removeOrphanedControlPlaneRoles(ctx, log, sdk.Roles, userID, existingCPIDs, orphanedCPs); err != nil {
+		if err := removeOrphanedControlPlaneRoles(ctx, log, sdk, userID, orphanedCPs); err != nil {
 			return fmt.Errorf("failed to remove control plane roles: %w", err)
 		}
 

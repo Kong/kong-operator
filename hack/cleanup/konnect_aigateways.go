@@ -39,18 +39,10 @@ func cleanupKonnectAIGateways(sdk *sdkkonnectgo.SDK) func(ctx context.Context, l
 		}
 
 		userID := *me.User.ID
-		userID = "63da16fc-94e7-4cbf-bf12-1b2623e0c0d6"
 
 		// We do this but in the future this should be done automatically.
 		// Ref thread: https://kongstrong.slack.com/archives/CQK8J4VN3/p1791535821979929
-		log.Info("Listing existing AI Gateways", "user_id", userID)
-		existingAIGatewayIDs, err := listAIGatewayIDsPaged(ctx, log, sdk.AIGateways)
-		if err != nil {
-			return fmt.Errorf("failed to list existing AI Gateways: %w", err)
-		}
-		log.Info("Listed existing AI Gateways", "count", len(existingAIGatewayIDs))
-
-		if err := removeOrphanedAIGatewayRoles(ctx, log, sdk.Roles, userID, existingAIGatewayIDs); err != nil {
+		if err := removeOrphanedAIGatewayRoles(ctx, log, sdk, userID); err != nil {
 			return fmt.Errorf("failed to remove AI gateway roles: %w", err)
 		}
 
