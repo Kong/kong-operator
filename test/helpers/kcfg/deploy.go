@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 
 	"github.com/kong/kong-operator/v2/test"
@@ -93,13 +95,22 @@ func deployCRDs(ctx context.Context, cluster clusters.Cluster) error {
 	// object exists is not enough: there's a window between CRD creation and the API server
 	// starting to serve its resources, during which RESTMapper lookups fail with
 	// "no matches for kind".
+	// ponytail: retry.DefaultRetry (~50ms total) is only enough to wait for object
+	// existence - apply is synchronous. Established is set asynchronously by the
+	// naming controller, which needs a real budget under CI load.
+	crdEstablishedBackoff := wait.Backoff{
+		Duration: 200 * time.Millisecond,
+		Factor:   1.5,
+		Steps:    30,
+		Cap:      5 * time.Second,
+	}
 	for _, crd := range []string{
 		"gateways.gateway.networking.k8s.io",                         // GWAPI CRD
 		"dataplanes.gateway-operator.konghq.com",                     // kong-operator
 		"kongservicefacades.incubator.ingress-controller.konghq.com", // ingress-controller-incubator
 	} {
 		if err := retry.OnError(
-			retry.DefaultRetry,
+			crdEstablishedBackoff,
 			func(err error) bool {
 				return apierrors.IsNotFound(err) || errors.Is(err, errCRDNotEstablished)
 			},
