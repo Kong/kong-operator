@@ -173,6 +173,38 @@ func (b *KongRouteBuilder) WithPreserveHost(preserveHost bool) *KongRouteBuilder
 	return b
 }
 
+// WithRequestBuffering sets the request buffering option for the KongRoute. A nil value is a no-op.
+func (b *KongRouteBuilder) WithRequestBuffering(v *bool) *KongRouteBuilder {
+	if v != nil {
+		b.route.Spec.RequestBuffering = v
+	}
+	return b
+}
+
+// WithResponseBuffering sets the response buffering option for the KongRoute. A nil value is a no-op.
+func (b *KongRouteBuilder) WithResponseBuffering(v *bool) *KongRouteBuilder {
+	if v != nil {
+		b.route.Spec.ResponseBuffering = v
+	}
+	return b
+}
+
+// WithHTTPSRedirectStatusCode sets the HTTPS redirect status code for the KongRoute. A nil value is a no-op.
+func (b *KongRouteBuilder) WithHTTPSRedirectStatusCode(code *int64) *KongRouteBuilder {
+	if code != nil {
+		b.route.Spec.HTTPSRedirectStatusCode = new(sdkkonnectcomp.HTTPSRedirectStatusCode(*code))
+	}
+	return b
+}
+
+// WithPathHandling sets the path handling option for the KongRoute. A nil value is a no-op.
+func (b *KongRouteBuilder) WithPathHandling(v *string) *KongRouteBuilder {
+	if v != nil {
+		b.route.Spec.PathHandling = new(sdkkonnectcomp.PathHandling(*v))
+	}
+	return b
+}
+
 // WithSNIs sets the SNIs for the KongRoute.
 func (b *KongRouteBuilder) WithSNIs(snis []string) *KongRouteBuilder {
 	b.route.Spec.Snis = snis

@@ -1372,3 +1372,112 @@ func TestRoutesForHTTPRouteRule_MalformedAnnotations(t *testing.T) {
 		})
 	}
 }
+
+func TestRoutesForRouteRule_Annotations(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, gatewayv1.Install(scheme))
+
+	pRef := &gwtypes.ParentReference{
+		Name:      "test-gateway",
+		Namespace: (*gatewayv1.Namespace)(new("test-namespace")),
+	}
+	cpRef := &commonv1alpha1.ControlPlaneRef{
+		Type:                 commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{Name: "test-cp"},
+	}
+	gateway := &gatewayv1.Gateway{
+		Name: "test-gateway", Namespace: "test-namespace",
+		Spec: gatewayv1.GatewaySpec{
+			GatewayClassName: "test-class",
+			Listeners:        []gatewayv1.Listener{{Name: "http", Protocol: gatewayv1.HTTPProtocolType, Port: 80}},
+		},
+	}
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
+	parentRefs := []gatewayv1.ParentReference{{Name: "test-gateway"}}
+
+	build := map[string]func(anns map[string]string) ([]*configurationv1alpha1.KongRoute, error){
+		"HTTPRoute": func(anns map[string]string) ([]*configurationv1alpha1.KongRoute, error) {
+			rule := gwtypes.HTTPRouteRule{Matches: []gatewayv1.HTTPRouteMatch{{
+				Path: &gatewayv1.HTTPPathMatch{Type: new(gatewayv1.PathMatchPathPrefix), Value: new("/test")},
+			}}}
+			r := &gwtypes.HTTPRoute{
+				Name: "test-route", Namespace: "test-namespace", Annotations: anns,
+				Spec: gatewayv1.HTTPRouteSpec{CommonRouteSpec: gatewayv1.CommonRouteSpec{ParentRefs: parentRefs}},
+			}
+			return RoutesForHTTPRouteRule(ctx, logger, fakeClient, r, rule, 0, pRef, cpRef, nil, "test-service", nil)
+		},
+		"GRPCRoute": func(anns map[string]string) ([]*configurationv1alpha1.KongRoute, error) {
+			rule := gwtypes.GRPCRouteRule{Matches: []gatewayv1.GRPCRouteMatch{{
+				Method: &gatewayv1.GRPCMethodMatch{Service: new("foo.Service"), Method: new("Do")},
+			}}}
+			r := &gwtypes.GRPCRoute{
+				Name: "test-route", Namespace: "test-namespace", Annotations: anns,
+				Spec: gatewayv1.GRPCRouteSpec{
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{ParentRefs: parentRefs},
+					Rules:           []gatewayv1.GRPCRouteRule{rule},
+				},
+			}
+			return RoutesForGRPCRouteRule(ctx, logger, fakeClient, r, rule, 0, pRef, cpRef, nil, "test-service", nil)
+		},
+	}
+
+	for kind, fn := range build {
+		t.Run(kind+" defaults", func(t *testing.T) {
+			routes, err := fn(nil)
+			require.NoError(t, err)
+			require.Len(t, routes, 1)
+			spec := routes[0].Spec
+			if kind == "GRPCRoute" {
+				assert.Nil(t, spec.StripPath)
+			} else {
+				assert.Equal(t, new(false), spec.StripPath)
+			}
+			assert.Equal(t, new(true), spec.PreserveHost)
+			assert.Nil(t, spec.RequestBuffering)
+			assert.Nil(t, spec.ResponseBuffering)
+			assert.Nil(t, spec.HTTPSRedirectStatusCode)
+			assert.Nil(t, spec.PathHandling)
+		})
+
+		t.Run(kind+" annotations", func(t *testing.T) {
+			routes, err := fn(map[string]string{
+				"konghq.com/strip-path":                 "true",
+				"konghq.com/preserve-host":              "false",
+				"konghq.com/request-buffering":          "false",
+				"konghq.com/response-buffering":         "true",
+				"konghq.com/https-redirect-status-code": "307",
+				"konghq.com/path-handling":              "v0",
+			})
+			require.NoError(t, err)
+			require.Len(t, routes, 1)
+			spec := routes[0].Spec
+			if kind == "GRPCRoute" {
+				assert.Nil(t, spec.StripPath)
+			} else {
+				assert.Equal(t, new(true), spec.StripPath)
+			}
+			assert.Equal(t, new(false), spec.PreserveHost)
+			assert.Equal(t, new(false), spec.RequestBuffering)
+			assert.Equal(t, new(true), spec.ResponseBuffering)
+			assert.Equal(t, new(sdkkonnectcomp.HTTPSRedirectStatusCodeThreeHundredAndSeven), spec.HTTPSRedirectStatusCode)
+			assert.Equal(t, new(sdkkonnectcomp.PathHandlingV0), spec.PathHandling)
+		})
+
+		for _, key := range []string{
+			"strip-path", "preserve-host", "request-buffering", "response-buffering",
+			"https-redirect-status-code", "path-handling",
+		} {
+			t.Run(kind+" malformed "+key, func(t *testing.T) {
+				routes, err := fn(map[string]string{"konghq.com/" + key: "bogus"})
+				require.Error(t, err)
+				assert.ErrorIs(t, err, hgerrors.ErrMalformedAnnotation)
+				assert.Contains(t, err.Error(), key)
+				assert.Nil(t, routes)
+			})
+		}
+	}
+}

@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"testing"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -741,4 +742,34 @@ func TestKongRouteBuilder_WithGRPCRouteMatch_NoMethod(t *testing.T) {
 	assert.Equal(t, map[string][]string{
 		"version": {"v1"},
 	}, route.Spec.Headers)
+}
+
+func TestKongRouteBuilder_WithAnnotationDrivenOptions(t *testing.T) {
+	t.Run("nil values are no-ops", func(t *testing.T) {
+		route, err := NewKongRoute().
+			WithRequestBuffering(nil).
+			WithResponseBuffering(nil).
+			WithHTTPSRedirectStatusCode(nil).
+			WithPathHandling(nil).
+			Build()
+		require.NoError(t, err)
+		assert.Nil(t, route.Spec.RequestBuffering)
+		assert.Nil(t, route.Spec.ResponseBuffering)
+		assert.Nil(t, route.Spec.HTTPSRedirectStatusCode)
+		assert.Nil(t, route.Spec.PathHandling)
+	})
+
+	t.Run("values are set", func(t *testing.T) {
+		route, err := NewKongRoute().
+			WithRequestBuffering(new(false)).
+			WithResponseBuffering(new(true)).
+			WithHTTPSRedirectStatusCode(new(int64(308))).
+			WithPathHandling(new("v1")).
+			Build()
+		require.NoError(t, err)
+		assert.Equal(t, new(false), route.Spec.RequestBuffering)
+		assert.Equal(t, new(true), route.Spec.ResponseBuffering)
+		assert.Equal(t, new(sdkkonnectcomp.HTTPSRedirectStatusCodeThreeHundredAndEight), route.Spec.HTTPSRedirectStatusCode)
+		assert.Equal(t, new(sdkkonnectcomp.PathHandlingV1), route.Spec.PathHandling)
+	})
 }
