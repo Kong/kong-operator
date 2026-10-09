@@ -3673,44 +3673,63 @@ func TestValidateAnnotationsRouteAnnotations(t *testing.T) {
 	require.NoError(t, gatewayv1.Install(s))
 	cl := fake.NewClientBuilder().WithScheme(s).Build()
 
+	allValid := map[string]string{
+		"konghq.com/strip-path":                 "true",
+		"konghq.com/preserve-host":              "false",
+		"konghq.com/request-buffering":          "true",
+		"konghq.com/response-buffering":         "false",
+		"konghq.com/https-redirect-status-code": "301",
+		"konghq.com/path-handling":              "v1",
+	}
+	httpRoute := func(anns map[string]string) client.Object {
+		return &gwtypes.HTTPRoute{Namespace: "default", Name: "route", Annotations: anns}
+	}
+	grpcRoute := func(anns map[string]string) client.Object {
+		return &gwtypes.GRPCRoute{Namespace: "default", Name: "route", Annotations: anns}
+	}
+
 	tests := []struct {
 		name    string
-		anns    map[string]string
+		route   client.Object
 		wantErr bool
 	}{
-		{name: "none"},
-		{
-			name: "all valid",
-			anns: map[string]string{
-				"konghq.com/strip-path":                 "true",
-				"konghq.com/preserve-host":              "false",
-				"konghq.com/request-buffering":          "true",
-				"konghq.com/response-buffering":         "false",
-				"konghq.com/https-redirect-status-code": "301",
-				"konghq.com/path-handling":              "v1",
-			},
-		},
-		{name: "bad strip-path", anns: map[string]string{"konghq.com/strip-path": "x"}, wantErr: true},
-		{name: "bad preserve-host", anns: map[string]string{"konghq.com/preserve-host": "x"}, wantErr: true},
-		{name: "bad request-buffering", anns: map[string]string{"konghq.com/request-buffering": "x"}, wantErr: true},
-		{name: "bad response-buffering", anns: map[string]string{"konghq.com/response-buffering": "x"}, wantErr: true},
-		{name: "bad https-redirect-status-code", anns: map[string]string{"konghq.com/https-redirect-status-code": "200"}, wantErr: true},
-		{name: "bad path-handling", anns: map[string]string{"konghq.com/path-handling": "v2"}, wantErr: true},
+		{name: "HTTPRoute none", route: httpRoute(nil)},
+		{name: "GRPCRoute none", route: grpcRoute(nil)},
+		{name: "HTTPRoute all valid", route: httpRoute(allValid)},
+		{name: "GRPCRoute all valid", route: grpcRoute(allValid)},
+	}
+	for _, c := range []struct{ key, val string }{
+		{"strip-path", "x"},
+		{"preserve-host", "x"},
+		{"request-buffering", "x"},
+		{"response-buffering", "x"},
+		{"https-redirect-status-code", "200"},
+		{"path-handling", "v2"},
+	} {
+		anns := map[string]string{"konghq.com/" + c.key: c.val}
+		tests = append(tests,
+			struct {
+				name    string
+				route   client.Object
+				wantErr bool
+			}{"HTTPRoute bad " + c.key, httpRoute(anns), true},
+			struct {
+				name    string
+				route   client.Object
+				wantErr bool
+			}{"GRPCRoute bad " + c.key, grpcRoute(anns), true},
+		)
 	}
 
 	for _, tt := range tests {
-		t.Run("HTTPRoute "+tt.name, func(t *testing.T) {
-			route := &gwtypes.HTTPRoute{Namespace: "default", Name: "route", Annotations: tt.anns}
-			err := validateAnnotations(ctx, logger, cl, route)
-			if tt.wantErr {
-				require.ErrorIs(t, err, hybridgatewayerrors.ErrMalformedAnnotation)
-				return
+		t.Run(tt.name, func(t *testing.T) {
+			var err error
+			switch r := tt.route.(type) {
+			case *gwtypes.HTTPRoute:
+				err = validateAnnotations(ctx, logger, cl, r)
+			case *gwtypes.GRPCRoute:
+				err = validateAnnotations(ctx, logger, cl, r)
 			}
-			require.NoError(t, err)
-		})
-		t.Run("GRPCRoute "+tt.name, func(t *testing.T) {
-			route := &gwtypes.GRPCRoute{Namespace: "default", Name: "route", Annotations: tt.anns}
-			err := validateAnnotations(ctx, logger, cl, route)
 			if tt.wantErr {
 				require.ErrorIs(t, err, hybridgatewayerrors.ErrMalformedAnnotation)
 				return

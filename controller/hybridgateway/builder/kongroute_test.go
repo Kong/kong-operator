@@ -744,32 +744,76 @@ func TestKongRouteBuilder_WithGRPCRouteMatch_NoMethod(t *testing.T) {
 	}, route.Spec.Headers)
 }
 
-func TestKongRouteBuilder_WithAnnotationDrivenOptions(t *testing.T) {
-	t.Run("nil values are no-ops", func(t *testing.T) {
-		route, err := NewKongRoute().
-			WithRequestBuffering(nil).
-			WithResponseBuffering(nil).
-			WithHTTPSRedirectStatusCode(nil).
-			WithPathHandling(nil).
-			Build()
-		require.NoError(t, err)
-		assert.Nil(t, route.Spec.RequestBuffering)
-		assert.Nil(t, route.Spec.ResponseBuffering)
-		assert.Nil(t, route.Spec.HTTPSRedirectStatusCode)
-		assert.Nil(t, route.Spec.PathHandling)
-	})
+func TestKongRouteBuilder_WithRequestBuffering(t *testing.T) {
+	tests := []struct {
+		name  string
+		value *bool
+		want  *bool
+	}{
+		{name: "nil is a no-op", value: nil, want: nil},
+		{name: "true", value: new(true), want: new(true)},
+		{name: "false", value: new(false), want: new(false)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			route, err := NewKongRoute().WithRequestBuffering(tt.value).Build()
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, route.Spec.RequestBuffering)
+		})
+	}
+}
 
-	t.Run("values are set", func(t *testing.T) {
-		route, err := NewKongRoute().
-			WithRequestBuffering(new(false)).
-			WithResponseBuffering(new(true)).
-			WithHTTPSRedirectStatusCode(new(int64(308))).
-			WithPathHandling(new("v1")).
-			Build()
-		require.NoError(t, err)
-		assert.Equal(t, new(false), route.Spec.RequestBuffering)
-		assert.Equal(t, new(true), route.Spec.ResponseBuffering)
-		assert.Equal(t, new(sdkkonnectcomp.HTTPSRedirectStatusCodeThreeHundredAndEight), route.Spec.HTTPSRedirectStatusCode)
-		assert.Equal(t, new(sdkkonnectcomp.PathHandlingV1), route.Spec.PathHandling)
-	})
+func TestKongRouteBuilder_WithResponseBuffering(t *testing.T) {
+	tests := []struct {
+		name  string
+		value *bool
+		want  *bool
+	}{
+		{name: "nil is a no-op", value: nil, want: nil},
+		{name: "true", value: new(true), want: new(true)},
+		{name: "false", value: new(false), want: new(false)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			route, err := NewKongRoute().WithResponseBuffering(tt.value).Build()
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, route.Spec.ResponseBuffering)
+		})
+	}
+}
+
+func TestKongRouteBuilder_WithHTTPSRedirectStatusCode(t *testing.T) {
+	tests := []struct {
+		name  string
+		value *int64
+		want  *sdkkonnectcomp.HTTPSRedirectStatusCode
+	}{
+		{name: "nil is a no-op", value: nil, want: nil},
+		{name: "308", value: new(int64(308)), want: new(sdkkonnectcomp.HTTPSRedirectStatusCodeThreeHundredAndEight)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			route, err := NewKongRoute().WithHTTPSRedirectStatusCode(tt.value).Build()
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, route.Spec.HTTPSRedirectStatusCode)
+		})
+	}
+}
+
+func TestKongRouteBuilder_WithPathHandling(t *testing.T) {
+	tests := []struct {
+		name  string
+		value *string
+		want  *sdkkonnectcomp.PathHandling
+	}{
+		{name: "nil is a no-op", value: nil, want: nil},
+		{name: "v1", value: new("v1"), want: new(sdkkonnectcomp.PathHandlingV1)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			route, err := NewKongRoute().WithPathHandling(tt.value).Build()
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, route.Spec.PathHandling)
+		})
+	}
 }
