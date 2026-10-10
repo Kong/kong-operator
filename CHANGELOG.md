@@ -382,6 +382,15 @@
 
 ### Fixes
 
+- Certificate `Secret`s owned by `DataPlane`s and `ControlPlane`s are now
+  renewed in place (same name, replaced data) when their certificate is broken
+  or issued for a different subject. Previously the operator deleted the
+  `Secret` and created a new one under a different generated name, which
+  repointed the workload `Deployment`'s volume at the new `Secret` name and
+  triggered a needless rolling update, while the already running pods were
+  left mounting a `Secret` that no longer existed. TTL-expiry rotation keeps
+  the delete + recreate flow on purpose: the new `Secret` name is what triggers
+  the rolling restart that makes Kong load the renewed certificate.
 - Resolving `Secret`-sourced fields no longer writes the resolved values into
   the cached object when they sit under a union variant or in a list.
   [#5907](https://github.com/Kong/kong-operator/pull/5907)

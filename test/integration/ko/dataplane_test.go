@@ -952,10 +952,16 @@ func TestDataPlanePodDisruptionBudget(t *testing.T) {
 	pdb := policyv1.PodDisruptionBudget{}
 	require.Eventually(t, testutils.DataPlaneHasPodDisruptionBudget(t, ctx, dataplane, &pdb, clients, testutils.AnyPodDisruptionBudget()), waitTime, tickTime)
 
+	// NOTE: The PDB status is eventual - kube-controller-manager computes e.g.
+	// ExpectedPods as the current number of pods matching the selector (which
+	// includes surge/terminating pods during rollouts), so read it with Eventually
+	// instead of asserting on a single snapshot.
 	t.Log("verifying the PodDisruptionBudget status is as expected")
-	assert.EqualValues(t, 2, pdb.Status.ExpectedPods)
-	assert.EqualValues(t, 1, pdb.Status.DesiredHealthy)
-	assert.EqualValues(t, 1, pdb.Status.DisruptionsAllowed)
+	require.Eventually(t, testutils.DataPlaneHasPodDisruptionBudget(t, ctx, dataplane, &pdb, clients, func(pdb policyv1.PodDisruptionBudget) bool {
+		return pdb.Status.ExpectedPods == int32(2) &&
+			pdb.Status.DesiredHealthy == int32(1) &&
+			pdb.Status.DisruptionsAllowed == int32(1)
+	}), waitTime, tickTime)
 
 	t.Log("changing the PodDisruptionBudget spec in DataPlane")
 	require.Eventually(t, testutils.DataPlaneUpdateEventually(t, ctx, dataplaneName, clients.MgrClient, func(dp *operatorv1beta1.DataPlane) {
