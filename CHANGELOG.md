@@ -61,7 +61,7 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## [Unreleased]
+## Unreleased
 
 ### Fixed
 
