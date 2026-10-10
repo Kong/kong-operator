@@ -43,6 +43,7 @@ import (
 	gwconfigutils "github.com/kong/kong-operator/v2/internal/utils/gatewayconfig"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/pkg/ipfamily"
+	"github.com/kong/kong-operator/v2/pkg/metadata"
 	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	k8sreduce "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/reduce"
@@ -120,6 +121,7 @@ func (r *Reconciler) createControlPlane(
 func (r *Reconciler) createKonnectGatewayControlPlane(
 	ctx context.Context,
 	gateway *gwtypes.Gateway,
+	gatewayClass *gatewayv1.GatewayClass,
 	gatewayConfig *GatewayConfiguration,
 ) (*konnectv1alpha2.KonnectGatewayControlPlane, error) {
 	if gatewayConfig.Spec.Konnect == nil {
@@ -138,8 +140,17 @@ func (r *Reconciler) createKonnectGatewayControlPlane(
 	}
 
 	if gatewayConfig.Spec.Konnect.Mirror == nil {
+		cpLabels, err := resolveKonnectLabels(gateway, gatewayClass, metadata.AnnotationKeyKonnectCPLabels)
+		if err != nil {
+			return nil, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectCPLabels, err)
+		}
+		if err := validateCPLabels(cpLabels); err != nil {
+			return nil, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectCPLabels, err)
+		}
+
 		kgcp.Spec.CreateControlPlaneRequest = &sdkkonnectcomp.CreateControlPlaneRequest{
-			Name: konnectControlPlaneName(gateway, kgcpName),
+			Name:   konnectControlPlaneName(gateway, kgcpName),
+			Labels: cpLabels,
 		}
 	} else {
 		kgcp.Spec.Mirror = &konnectv1alpha2.MirrorSpec{
@@ -160,15 +171,20 @@ func (r *Reconciler) createKonnectGatewayControlPlane(
 }
 
 // enforceKonnectGatewayControlPlaneSpec ensures that the spec of the provided
-// KonnectGatewayControlPlane matches the desired state derived from the Gateway
-// and GatewayConfiguration. Any manual changes to enforced fields are overridden.
-// Returns true if the resource was patched.
+// KonnectGatewayControlPlane matches the desired state derived from the Gateway,
+// GatewayClass and GatewayConfiguration. Any manual changes to enforced fields
+// are overridden. Returns true if the resource was patched.
 //
 // Note: spec.konnect.authRef is only enforced when the control plane is not yet
-// Programmed, as the field becomes immutable once Programmed is True. Other fields
-// are skipped, because there are immutable in both GatewayConfiguration and KonnectGatewayControlPlane.
+// Programmed, as the field becomes immutable once Programmed is True.
+// spec.createControlPlaneRequest.clusterType and .source are immutable on the
+// KonnectGatewayControlPlane itself and are never re-enforced here. .labels is
+// mutable and is kept in sync with the Gateway/GatewayClass konnect-cp-labels annotation
+// on every reconcile.
 func (r *Reconciler) enforceKonnectGatewayControlPlaneSpec(
 	ctx context.Context,
+	gateway *gwtypes.Gateway,
+	gatewayClass *gatewayv1.GatewayClass,
 	kgcp *konnectv1alpha2.KonnectGatewayControlPlane,
 	gatewayConfig *GatewayConfiguration,
 ) (bool, error) {
@@ -191,6 +207,20 @@ func (r *Reconciler) enforceKonnectGatewayControlPlaneSpec(
 		}
 	}
 
+	if kgcp.Spec.CreateControlPlaneRequest != nil {
+		cpLabels, err := resolveKonnectLabels(gateway, gatewayClass, metadata.AnnotationKeyKonnectCPLabels)
+		if err != nil {
+			return false, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectCPLabels, err)
+		}
+		if err := validateCPLabels(cpLabels); err != nil {
+			return false, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectCPLabels, err)
+		}
+		if !maps.Equal(kgcp.Spec.CreateControlPlaneRequest.Labels, cpLabels) {
+			kgcp.Spec.CreateControlPlaneRequest.Labels = cpLabels
+			updated = true
+		}
+	}
+
 	if !updated {
 		return false, nil
 	}
@@ -204,8 +234,17 @@ func (r *Reconciler) enforceKonnectGatewayControlPlaneSpec(
 func (r *Reconciler) createKonnectExtension(
 	ctx context.Context,
 	gateway *gwtypes.Gateway,
+	gatewayClass *gatewayv1.GatewayClass,
 	konnectControlPlane *konnectv1alpha2.KonnectGatewayControlPlane,
 ) (*konnectv1alpha2.KonnectExtension, error) {
+	dpLabels, err := resolveKonnectLabels(gateway, gatewayClass, metadata.AnnotationKeyKonnectDPLabels)
+	if err != nil {
+		return nil, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectDPLabels, err)
+	}
+	if err := validateDPLabels(dpLabels); err != nil {
+		return nil, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectDPLabels, err)
+	}
+
 	konnectExt := &konnectv1alpha2.KonnectExtension{
 		Namespace:    gateway.Namespace,
 		GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-", gateway.Name)),
@@ -224,6 +263,16 @@ func (r *Reconciler) createKonnectExtension(
 		},
 	}
 
+	if len(dpLabels) > 0 {
+		labels := make(map[string]konnectv1alpha2.DataPlaneLabelValue, len(dpLabels))
+		for k, v := range dpLabels {
+			labels[k] = konnectv1alpha2.DataPlaneLabelValue(v)
+		}
+		konnectExt.Spec.Konnect.DataPlane = &konnectv1alpha2.KonnectExtensionDataPlane{
+			Labels: labels,
+		}
+	}
+
 	k8sutils.SetOwnerForObject(konnectExt, gateway)
 	gatewayutils.LabelObjectAsGatewayManaged(konnectExt, gateway.Name)
 
@@ -232,6 +281,53 @@ func (r *Reconciler) createKonnectExtension(
 	}
 
 	return konnectExt, nil
+}
+
+// enforceKonnectExtensionSpec ensures that the provided KonnectExtension's
+// spec.konnect.dataPlane.labels matches the desired state derived from the
+// Gateway/GatewayClass konnect-dp-labels annotation. Returns true if the resource was
+// patched.
+func (r *Reconciler) enforceKonnectExtensionSpec(
+	ctx context.Context,
+	gateway *gwtypes.Gateway,
+	gatewayClass *gatewayv1.GatewayClass,
+	konnectExt *konnectv1alpha2.KonnectExtension,
+) (bool, error) {
+	dpLabels, err := resolveKonnectLabels(gateway, gatewayClass, metadata.AnnotationKeyKonnectDPLabels)
+	if err != nil {
+		return false, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectDPLabels, err)
+	}
+	if err := validateDPLabels(dpLabels); err != nil {
+		return false, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectDPLabels, err)
+	}
+
+	desired := make(map[string]konnectv1alpha2.DataPlaneLabelValue, len(dpLabels))
+	for k, v := range dpLabels {
+		desired[k] = konnectv1alpha2.DataPlaneLabelValue(v)
+	}
+
+	var current map[string]konnectv1alpha2.DataPlaneLabelValue
+	if konnectExt.Spec.Konnect.DataPlane != nil {
+		current = konnectExt.Spec.Konnect.DataPlane.Labels
+	}
+	if maps.Equal(current, desired) {
+		return false, nil
+	}
+
+	old := konnectExt.DeepCopy()
+	switch {
+	case len(desired) == 0:
+		konnectExt.Spec.Konnect.DataPlane = nil
+	case konnectExt.Spec.Konnect.DataPlane == nil:
+		konnectExt.Spec.Konnect.DataPlane = &konnectv1alpha2.KonnectExtensionDataPlane{Labels: desired}
+	default:
+		konnectExt.Spec.Konnect.DataPlane.Labels = desired
+	}
+
+	if err := r.Patch(ctx, konnectExt, client.MergeFrom(old)); err != nil {
+		return false, fmt.Errorf("failed patching KonnectExtension %s spec: %w", konnectExt.Name, err)
+	}
+	return true, nil
 }
 
 func (r *Reconciler) getGatewayAddresses(
