@@ -321,6 +321,10 @@ func Watches(obj client.Object, cl client.Client, referenceGrantVersion schema.G
 				&corev1.Secret{},
 			},
 			{
+				MapGatewayForGatewayClass(cl),
+				&gwtypes.GatewayClass{},
+			},
+			{
 				MapGatewayForReferenceGrant(cl),
 				k8sutils.NewReferenceGrant(referenceGrantVersion),
 			},

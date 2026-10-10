@@ -113,6 +113,16 @@ func (b *KongPluginBindingBuilder) WithOwner(owner *gwtypes.HTTPRoute) *KongPlug
 	return b
 }
 
+// WithSpecTags sets the tags in the KongPluginBinding spec.
+// A nil or empty slice leaves Spec.Tags unset.
+func (b *KongPluginBindingBuilder) WithSpecTags(tags []string) *KongPluginBindingBuilder {
+	if len(tags) == 0 {
+		return b
+	}
+	b.binding.Spec.Tags = commonv1alpha1.Tags(tags)
+	return b
+}
+
 // Build returns the constructed KongPluginBinding resource and any accumulated errors.
 func (b *KongPluginBindingBuilder) Build() (configurationv1alpha1.KongPluginBinding, error) {
 	if len(b.errors) > 0 {
