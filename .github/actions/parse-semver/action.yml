@@ -1,0 +1,79 @@
+name: Parse semver
+description: >-
+  Extracts a semver string from an input string (optionally via a regex with
+  exactly one capture group) and parses it into its components.
+  In-repo replacement for the unmaintained booxmedialtd/ws-action-parse-semver
+  action, with an identical input/output interface.
+
+inputs:
+  input_string:
+    description: The string to parse as semver.
+    required: true
+  version_extractor_regex:
+    description: >-
+      Regex with exactly one capture group; the captured part is parsed as
+      semver. When empty, input_string is parsed as-is.
+    required: false
+    default: ''
+
+outputs:
+  fullversion:
+    description: The extracted version string as-is (not normalized).
+    value: ${{ steps.parse.outputs.fullversion }}
+  major:
+    description: The major version component.
+    value: ${{ steps.parse.outputs.major }}
+  minor:
+    description: The minor version component.
+    value: ${{ steps.parse.outputs.minor }}
+  patch:
+    description: The patch version component.
+    value: ${{ steps.parse.outputs.patch }}
+  prerelease:
+    description: The prerelease part, or an empty string.
+    value: ${{ steps.parse.outputs.prerelease }}
+  build:
+    description: The build metadata, or an empty string.
+    value: ${{ steps.parse.outputs.build }}
+
+runs:
+  using: composite
+  steps:
+    - name: Parse semver
+      id: parse
+      shell: bash
+      env:
+        INPUT_STRING: ${{ inputs.input_string }}
+        VERSION_EXTRACTOR_REGEX: ${{ inputs.version_extractor_regex }}
+      run: |
+        set -euo pipefail
+
+        extracted="$INPUT_STRING"
+        if [[ -n "$VERSION_EXTRACTOR_REGEX" ]]; then
+          regex="$VERSION_EXTRACTOR_REGEX"
+          if [[ ! "$INPUT_STRING" =~ $regex ]]; then
+            echo "::error::input_string '$INPUT_STRING' does not match version_extractor_regex '$regex'" >&2
+            exit 1
+          fi
+          if [[ -n "${BASH_REMATCH[2]+set}" ]]; then
+            echo "::error::version_extractor_regex '$regex' must have exactly one capture group" >&2
+            exit 1
+          fi
+          extracted="${BASH_REMATCH[1]}"
+        fi
+
+        # Official semver.org regex converted to bash ERE.
+        semver_regex='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-((0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*)(\.(0|[1-9][0-9]*|[0-9]*[a-zA-Z-][0-9a-zA-Z-]*))*))?(\+([0-9a-zA-Z-]+(\.[0-9a-zA-Z-]+)*))?$'
+        if [[ ! "$extracted" =~ $semver_regex ]]; then
+          echo "::error::'$extracted' is not a valid semver string" >&2
+          exit 1
+        fi
+
+        {
+          echo "fullversion=$extracted"
+          echo "major=${BASH_REMATCH[1]}"
+          echo "minor=${BASH_REMATCH[2]}"
+          echo "patch=${BASH_REMATCH[3]}"
+          echo "prerelease=${BASH_REMATCH[5]}"
+          echo "build=${BASH_REMATCH[10]}"
+        } >> "$GITHUB_OUTPUT"
