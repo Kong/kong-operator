@@ -22,6 +22,7 @@ import (
 // +kong:channels=kong-operator
 // +kubebuilder:validation:XValidation:rule="!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef", message="spec.aiGatewayRef is immutable when an entity is already Programmed"
 // +kubebuilder:validation:XValidation:rule="!has(self.spec.aiGatewayRef) || !has(self.spec.aiGatewayRef.kind) || self.spec.aiGatewayRef.kind in ['KonnectAIGateway', 'OnPremAIGateway']", message="spec.aiGatewayRef.kind must be one of: KonnectAIGateway, OnPremAIGateway"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec) || !has(oldSelf.spec.apiSpec) || !has(oldSelf.spec.apiSpec.type) || (has(self.spec) && has(self.spec.apiSpec) && has(self.spec.apiSpec.type) && self.spec.apiSpec.type == oldSelf.spec.apiSpec.type)",message="type is immutable",fieldPath=".spec.apiSpec.type"
 type AIGatewayCustomPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitzero"`
@@ -52,7 +53,6 @@ type AIGatewayCustomPolicySpec struct {
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
 	// +optional
-	// +kubebuilder:validation:XValidation:rule="!has(oldSelf.type) || self.type == oldSelf.type",message="type is immutable"
 	APISpec AIGatewayCustomPolicyAPISpec `json:"apiSpec,omitzero"`
 }
 

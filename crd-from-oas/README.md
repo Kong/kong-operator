@@ -45,6 +45,12 @@ apiGroupVersions:
             - parentPolicyID
 ```
 
+`cel._validations` attaches validation markers to the resource root. Nested
+`_validations` entries attach markers to the corresponding field. Transition
+rules that must prevent removal of optional fields belong at the resource root:
+a rule on an optional field is skipped when that field is removed, and a normal
+transition rule is also skipped when it is re-added without an old value.
+
 `dataSources` lets a field be provided inline or read from a Kubernetes
 object in the same (or, for Secrets, a granted) namespace. The field becomes a
 union struct with a `type` discriminator:

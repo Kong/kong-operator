@@ -4,6 +4,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -297,5 +303,72 @@ func TestAIGatewayCustomPolicy(t *testing.T) {
 				},
 			},
 		}.RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("type immutability across optional field removal", func(t *testing.T) {
+		cl, err := client.New(cfg, client.Options{Scheme: scheme})
+		require.NoError(t, err)
+
+		for _, variant := range []struct {
+			name    string
+			fixture func(string) *aiconfigurationv1alpha1.AIGatewayCustomPolicy
+		}{
+			{name: "installed", fixture: validAIGatewayCustomPolicyInstalled},
+			{name: "streaming", fixture: validAIGatewayCustomPolicyStreaming},
+		} {
+			for _, removal := range []struct {
+				name  string
+				patch string
+			}{
+				{name: "remove apiSpec", patch: `[{"op":"remove","path":"/spec/apiSpec"}]`},
+				{name: "null apiSpec", patch: `[{"op":"replace","path":"/spec/apiSpec","value":null}]`},
+				{name: "remove spec", patch: `[{"op":"remove","path":"/spec"}]`},
+				{name: "null spec", patch: `[{"op":"replace","path":"/spec","value":null}]`},
+			} {
+				t.Run(variant.name+"/"+removal.name, func(t *testing.T) {
+					t.Parallel()
+
+					obj := variant.fixture(ns.Name)
+					require.NoError(t, cl.Create(ctx, obj))
+					t.Cleanup(func() {
+						assert.NoError(t, client.IgnoreNotFound(cl.Delete(ctx, obj)))
+					})
+
+					uid := obj.UID
+					originalType := obj.Spec.APISpec.Type
+					err := cl.Patch(ctx, obj, client.RawPatch(types.JSONPatchType, []byte(removal.patch)))
+					require.True(t, apierrors.IsInvalid(err), "expected a validation error, got %v", err)
+					require.ErrorContains(t, err, "type is immutable")
+
+					require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(obj), obj))
+					require.Equal(t, uid, obj.UID)
+					require.NotNil(t, obj.Spec.APISpec.AIGatewayCustomPolicyConfig)
+					require.Equal(t, originalType, obj.Spec.APISpec.Type)
+				})
+			}
+		}
+	})
+
+	t.Run("initial apiSpec configuration", func(t *testing.T) {
+		var cases common.TestCasesGroup[*aiconfigurationv1alpha1.AIGatewayCustomPolicy]
+		for _, variant := range []struct {
+			name    string
+			fixture func(string) *aiconfigurationv1alpha1.AIGatewayCustomPolicy
+		}{
+			{name: "installed", fixture: validAIGatewayCustomPolicyInstalled},
+			{name: "streaming", fixture: validAIGatewayCustomPolicyStreaming},
+		} {
+			obj := variant.fixture(ns.Name)
+			apiSpec := obj.Spec.APISpec
+			obj.Spec.APISpec = aiconfigurationv1alpha1.AIGatewayCustomPolicyAPISpec{}
+			cases = append(cases, common.TestCase[*aiconfigurationv1alpha1.AIGatewayCustomPolicy]{
+				Name:       variant.name,
+				TestObject: obj,
+				Update: func(obj *aiconfigurationv1alpha1.AIGatewayCustomPolicy) {
+					obj.Spec.APISpec = apiSpec
+				},
+			})
+		}
+		cases.RunWithConfig(t, cfg, scheme)
 	})
 }

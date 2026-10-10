@@ -2904,6 +2904,11 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		typeXValidations = append(typeXValidations, parentRefAllowedKindsXValidation(parentRef))
 	}
 	typeXValidations = append(typeXValidations, injectIntoReferenceXValidations(g.config.References[entityName])...)
+	if g.config.FieldConfig != nil {
+		if entityConfig := g.config.FieldConfig.Entities[entityName]; entityConfig != nil {
+			typeXValidations = append(typeXValidations, entityConfig.Validations...)
+		}
+	}
 	// A same-type ObjectRefField reference (e.g. PortalPage's parentPageIDRef)
 	// must not point at the object itself: the reference can never resolve
 	// (the object is not programmed until the reference resolves). The CEL
