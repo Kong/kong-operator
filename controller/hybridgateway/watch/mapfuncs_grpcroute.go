@@ -65,9 +65,7 @@ func MapGRPCRouteForReferenceGrant(cl client.Client) handler.MapFunc {
 }
 
 // MapGRPCRouteForKongPlugin returns a handler.MapFunc that, given a KongPlugin object,
-// lists all GRPCRoutes that reference it. This includes both:
-// 1. GRPCRoutes that explicitly reference the KongPlugin via the konghq.com/plugins annotation
-// 2. GRPCRoutes that have generated KongPlugins from Gateway API extensionRef filters
+// lists all GRPCRoutes that reference it through Gateway API ExtensionRef filters.
 // It returns a slice of reconcile.Requests for each matching GRPCRoute, enabling efficient
 // event handling and reconciliation when a KongPlugin changes.
 func MapGRPCRouteForKongPlugin(cl client.Client) handler.MapFunc {

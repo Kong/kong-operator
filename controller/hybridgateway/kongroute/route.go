@@ -137,15 +137,9 @@ func RoutesForHTTPRouteRule(
 	setCaptureGroup := needsCaptureGroup(rule)
 	priorities := httpRouteMatchPriorities(httpRoute)
 
-	stripPath, err := metadata.ExtractStripPath(httpRoute.Annotations)
+	anns, err := ExtractRouteAnnotations(httpRoute)
 	if err != nil {
-		return nil, fmt.Errorf("%w: konghq.com/strip-path on %s/%s: %w",
-			hgerrors.ErrMalformedAnnotation, httpRoute.GetNamespace(), httpRoute.GetName(), err)
-	}
-	preserveHost, err := metadata.ExtractPreserveHost(httpRoute.Annotations)
-	if err != nil {
-		return nil, fmt.Errorf("%w: konghq.com/preserve-host on %s/%s: %w",
-			hgerrors.ErrMalformedAnnotation, httpRoute.GetNamespace(), httpRoute.GetName(), err)
+		return nil, err
 	}
 	tags := pkgmetadata.ExtractTags(httpRoute)
 
@@ -162,8 +156,12 @@ func RoutesForHTTPRouteRule(
 			WithSpecName(routeName).
 			WithProtocols(protocols...).
 			WithHosts(hostnames).
-			WithStripPath(stripPath).
-			WithPreserveHost(preserveHost).
+			WithStripPath(anns.StripPath).
+			WithPreserveHost(anns.PreserveHost).
+			WithRequestBuffering(anns.RequestBuffering).
+			WithResponseBuffering(anns.ResponseBuffering).
+			WithHTTPSRedirectStatusCode(anns.HTTPSRedirectStatusCode).
+			WithPathHandling(anns.PathHandling).
 			WithSpecTags(tags).
 			WithKongService(serviceName).
 			WithHTTPRouteMatch(match, setCaptureGroup)
@@ -221,6 +219,11 @@ func RoutesForGRPCRouteRule(
 		return nil, err
 	}
 
+	anns, err := ExtractRouteAnnotations(grpcRoute)
+	if err != nil {
+		return nil, err
+	}
+
 	priorities := grpcRouteMatchPriorities(grpcRoute)
 	tags := pkgmetadata.ExtractTags(grpcRoute)
 
@@ -239,6 +242,12 @@ func RoutesForGRPCRouteRule(
 			WithSpecName(routeName).
 			WithProtocols(protocols...).
 			WithHosts(hostnames).
+			// strip_path is not set: grpc(s) routes do not accept it (same as KIC).
+			WithPreserveHost(anns.PreserveHost).
+			WithRequestBuffering(anns.RequestBuffering).
+			WithResponseBuffering(anns.ResponseBuffering).
+			WithHTTPSRedirectStatusCode(anns.HTTPSRedirectStatusCode).
+			WithPathHandling(anns.PathHandling).
 			WithSpecTags(tags).
 			WithKongService(serviceName).
 			WithGRPCRouteMatch(match).
@@ -874,4 +883,48 @@ func isTLSRoutePassthrough(
 		}
 	}
 	return false, nil
+}
+
+// RouteAnnotations holds the konghq.com/* route annotations propagated to the KongRoute spec.
+type RouteAnnotations struct {
+	StripPath               bool
+	PreserveHost            bool
+	RequestBuffering        *bool
+	ResponseBuffering       *bool
+	HTTPSRedirectStatusCode *int64
+	PathHandling            *string
+}
+
+// ExtractRouteAnnotations parses the route annotations of obj.
+// It returns an error wrapping [hgerrors.ErrMalformedAnnotation] on the first malformed value.
+func ExtractRouteAnnotations(obj client.Object) (RouteAnnotations, error) {
+	var (
+		anns = obj.GetAnnotations()
+		out  RouteAnnotations
+		err  error
+	)
+	wrap := func(key string, err error) error {
+		return fmt.Errorf("%w: konghq.com/%s on %s/%s: %w",
+			hgerrors.ErrMalformedAnnotation, key, obj.GetNamespace(), obj.GetName(), err)
+	}
+
+	if out.StripPath, err = metadata.ExtractStripPath(anns); err != nil {
+		return out, wrap("strip-path", err)
+	}
+	if out.PreserveHost, err = metadata.ExtractPreserveHost(anns); err != nil {
+		return out, wrap("preserve-host", err)
+	}
+	if out.RequestBuffering, err = metadata.ExtractRequestBuffering(anns); err != nil {
+		return out, wrap("request-buffering", err)
+	}
+	if out.ResponseBuffering, err = metadata.ExtractResponseBuffering(anns); err != nil {
+		return out, wrap("response-buffering", err)
+	}
+	if out.HTTPSRedirectStatusCode, err = metadata.ExtractHTTPSRedirectStatusCode(anns); err != nil {
+		return out, wrap("https-redirect-status-code", err)
+	}
+	if out.PathHandling, err = metadata.ExtractPathHandling(anns); err != nil {
+		return out, wrap("path-handling", err)
+	}
+	return out, nil
 }

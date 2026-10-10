@@ -19,6 +19,7 @@ import (
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	routeconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/route"
 	hybridgatewayerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/kongroute"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/service"
@@ -855,13 +856,8 @@ func validateAnnotations[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePt
 	route TPtr) error {
 	switch r := any(route).(type) {
 	case *gwtypes.HTTPRoute:
-		if _, err := metadata.ExtractStripPath(route.GetAnnotations()); err != nil {
-			return fmt.Errorf("%w: konghq.com/strip-path on %s/%s: %w",
-				hybridgatewayerrors.ErrMalformedAnnotation, route.GetNamespace(), route.GetName(), err)
-		}
-		if _, err := metadata.ExtractPreserveHost(route.GetAnnotations()); err != nil {
-			return fmt.Errorf("%w: konghq.com/preserve-host on %s/%s: %w",
-				hybridgatewayerrors.ErrMalformedAnnotation, route.GetNamespace(), route.GetName(), err)
+		if _, err := kongroute.ExtractRouteAnnotations(route); err != nil {
+			return err
 		}
 		for _, rule := range r.Spec.Rules {
 			backendRefs := utils.HTTPBackendRefsToBackendRefs(rule.BackendRefs)
@@ -870,6 +866,9 @@ func validateAnnotations[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePt
 			}
 		}
 	case *gwtypes.GRPCRoute:
+		if _, err := kongroute.ExtractRouteAnnotations(route); err != nil {
+			return err
+		}
 		for _, rule := range r.Spec.Rules {
 			backendRefs := utils.GRPCBackendRefsToBackendRefs(rule.BackendRefs)
 			if err := service.ValidateBackendRefAnnotations(ctx, cl, route.GetNamespace(), backendRefs, logger); err != nil {
