@@ -123,7 +123,7 @@ func TestMergeLabelsWithCap(t *testing.T) {
 			expected: map[string]string{"a": "1", "b": "2"},
 		},
 		{
-			name: "over cap - base-only entries dropped in ascending key order",
+			name: "over cap - combined base and override count exceeds maxItems",
 			base: map[string]string{
 				"z-base": "1",
 				"a-base": "2",

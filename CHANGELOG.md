@@ -111,7 +111,7 @@
   (`CertificateProvisioned=False/SecretRefOperatorManaged`). The operator
   re-checks the certificate when it becomes valid and when it expires.
   [#5976](https://github.com/Kong/kong-operator/pull/5976)
-- Hybrid Gateway: Support `konghq.com/cp-labels` and `konghq.com/dp-labels`
+- Hybrid Gateway: Support `konghq.com/konnect-cp-labels` and `konghq.com/konnect-dp-labels`
   annotations in `Gateway`s and `GatewayClass`es to configure Konnect labels of
   control planes and dataplanes. The key and value in the label are separated by
   `=` and multiple labels in an annotation are separated by `,`.
