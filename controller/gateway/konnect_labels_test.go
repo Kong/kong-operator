@@ -281,6 +281,16 @@ func TestValidateCPLabels(t *testing.T) {
 			expectErr: true,
 		},
 		{
+			name:      "reserved key managed-by",
+			labels:    map[string]string{"managed-by": "value"},
+			expectErr: true,
+		},
+		{
+			name:      "reserved key managed-by as prefix",
+			labels:    map[string]string{"managed-by-something": "value"},
+			expectErr: false,
+		},
+		{
 			name:      "reserved key prefix k8s",
 			labels:    map[string]string{"k8s-team": "payments"},
 			expectErr: true,

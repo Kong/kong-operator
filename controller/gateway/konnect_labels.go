@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"maps"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -38,8 +39,10 @@ var (
 	cpLabelKeyPattern = regexp.MustCompile(`^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$`)
 
 	dpReservedKeyPrefixes = []string{"kong", "konnect", "insomnia", "mesh", "kic", "_"}
-	// `managed-by` is added to the list of reserved key prefixes for control plane labels since KO sets this label on the control plane.
-	cpReservedKeyPrefixes = []string{"k8s", "kong", "konnect", "mesh", "kic", "insomnia", "_", "managed-by"}
+	// `managed-by` is added to the list of reserved keys for control plane labels since KO sets this label on the control plane.
+	cpReservedKeys = []string{"managed-by"}
+
+	cpReservedKeyPrefixes = []string{"k8s", "kong", "konnect", "mesh", "kic", "insomnia", "_"}
 )
 
 // parseLabelsAnnotationValue parses a Konnect-labels annotation value of the
@@ -110,17 +113,17 @@ func resolveKonnectLabels(gateway *gwtypes.Gateway, gatewayClass *gatewayv1.Gate
 // validateDPLabels validates labels against the Konnect DataPlane label CEL
 // rules (see dpLabelKeyPattern/dpLabelValuePattern above).
 func validateDPLabels(labels map[string]string) error {
-	return validateKonnectLabels(labels, dpLabelKeyPattern, dpLabelValuePattern, dpReservedKeyPrefixes)
+	return validateKonnectLabels(labels, dpLabelKeyPattern, dpLabelValuePattern, nil, dpReservedKeyPrefixes)
 }
 
 // validateCPLabels validates labels against the Konnect control plane label
 // CEL rules (see cpLabelKeyPattern above). Unlike DataPlane labels, control
 // plane label values have no pattern restriction.
 func validateCPLabels(labels map[string]string) error {
-	return validateKonnectLabels(labels, cpLabelKeyPattern, nil, cpReservedKeyPrefixes)
+	return validateKonnectLabels(labels, cpLabelKeyPattern, nil, cpReservedKeys, cpReservedKeyPrefixes)
 }
 
-func validateKonnectLabels(labels map[string]string, keyPattern, valuePattern *regexp.Regexp, reservedPrefixes []string) error {
+func validateKonnectLabels(labels map[string]string, keyPattern, valuePattern *regexp.Regexp, reservedKeys []string, reservedPrefixes []string) error {
 	if len(labels) > maxKonnectLabels {
 		return fmt.Errorf("too many labels: %d exceeds the maximum of %d", len(labels), maxKonnectLabels)
 	}
@@ -133,7 +136,7 @@ func validateKonnectLabels(labels map[string]string, keyPattern, valuePattern *r
 	sort.Strings(keys)
 
 	for _, key := range keys {
-		if err := validateKonnectLabelKey(key, keyPattern, reservedPrefixes); err != nil {
+		if err := validateKonnectLabelKey(key, keyPattern, reservedKeys, reservedPrefixes); err != nil {
 			return err
 		}
 		if err := validateKonnectLabelValue(labels[key], valuePattern); err != nil {
@@ -143,12 +146,15 @@ func validateKonnectLabels(labels map[string]string, keyPattern, valuePattern *r
 	return nil
 }
 
-func validateKonnectLabelKey(key string, pattern *regexp.Regexp, reservedPrefixes []string) error {
+func validateKonnectLabelKey(key string, pattern *regexp.Regexp, reservedKeys []string, reservedPrefixes []string) error {
 	if len(key) == 0 || len(key) > konnectLabelMaxLen {
 		return fmt.Errorf("label key %q must be between 1 and %d characters", key, konnectLabelMaxLen)
 	}
 	if pattern != nil && !pattern.MatchString(key) {
 		return fmt.Errorf("label key %q does not match the required pattern %q", key, pattern.String())
+	}
+	if slices.Contains(reservedKeys, key) {
+		return fmt.Errorf("label key %q is reserved", key)
 	}
 	for _, prefix := range reservedPrefixes {
 		if strings.HasPrefix(key, prefix) {
