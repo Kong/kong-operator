@@ -38,7 +38,8 @@ var (
 	cpLabelKeyPattern = regexp.MustCompile(`^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$`)
 
 	dpReservedKeyPrefixes = []string{"kong", "konnect", "insomnia", "mesh", "kic", "_"}
-	cpReservedKeyPrefixes = []string{"k8s", "kong", "konnect", "mesh", "kic", "insomnia", "_"}
+	// `managed-by` is added to the list of reserved key prefixes for control plane labels since KO sets this label on the control plane.
+	cpReservedKeyPrefixes = []string{"k8s", "kong", "konnect", "mesh", "kic", "insomnia", "_", "managed-by"}
 )
 
 // parseLabelsAnnotationValue parses a Konnect-labels annotation value of the
