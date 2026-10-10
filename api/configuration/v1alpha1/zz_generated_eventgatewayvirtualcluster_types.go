@@ -105,7 +105,6 @@ type EventGatewayVirtualClusterAPISpec struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels Labels `json:"labels,omitzero"`
 
 	// The name of the virtual cluster.
