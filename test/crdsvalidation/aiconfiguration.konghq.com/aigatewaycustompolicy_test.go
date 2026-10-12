@@ -244,6 +244,18 @@ func TestAIGatewayCustomPolicy(t *testing.T) {
 				}(),
 			},
 			{
+				Name: "more than 5 managedBy entries is rejected",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayCustomPolicy {
+					obj := validAIGatewayCustomPolicyInstalled(ns.Name)
+					obj.Spec.APISpec.Installed.ManagedBy = aiconfigurationv1alpha1.ManagedBy{
+						"tool": "kong-operator", "env": "prod", "team": "a",
+						"b": "c", "d": "e", "f": "g",
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("spec.apiSpec.installed.managedBy: Too many: 6: must have at most 5 items"),
+			},
+			{
 				Name: "streaming variant with labels and managedBy is valid",
 				TestObject: func() *aiconfigurationv1alpha1.AIGatewayCustomPolicy {
 					obj := validAIGatewayCustomPolicyStreaming(ns.Name)

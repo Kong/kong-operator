@@ -181,6 +181,8 @@ func main() {
 	// TypeError kind is filtered out: it also collects benign type-check
 	// noise from partially loaded packages (e.g. "undefined: X" for files
 	// whose imports the loader does not need for CRD generation).
+	// Note that PrintErrors' filterKinds lists the error kinds to exclude,
+	// not to report.
 	if loader.PrintErrors(roots, packages.TypeError) {
 		log.Fatalf("errors occurred while generating CRDs")
 	}
