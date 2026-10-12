@@ -567,12 +567,7 @@ func kongExpressionRouteFromHTTPRouteMatchWithPriority(
 	// generate ATC matcher from split HTTPRouteMatch itself.
 	matchers = append(matchers, generateMatcherFromHTTPRouteMatch(match.Match, containReplacePrefixMatchURLRewriteFilter))
 
-	portMatchers := make([]atc.Matcher, 0, len(httpRouteMatchWithPriority.Match.Ports))
-	for _, p := range httpRouteMatchWithPriority.Match.Ports {
-		portMatcher, _ := atc.NewPredicate(atc.FieldNetDstPort, atc.OpEqual, atc.IntLiteral(int(p)))
-		portMatchers = append(portMatchers, portMatcher)
-	}
-	matchers = append(matchers, atc.Or(portMatchers...))
+	matchers = append(matchers, listenerPortMatcher(httpRouteMatchWithPriority.Match.Ports))
 
 	atc.ApplyExpression(&r.Route, atc.And(matchers...), httpRouteMatchWithPriority.Priority)
 

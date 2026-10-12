@@ -1193,7 +1193,7 @@ func TestKongExpressionRouteFromHTTPRouteMatchWithPriority(t *testing.T) {
 			priority:        RoutePriorityType(1024),
 			ports:           []int32{80},
 			routeName:       "httproute.default.exact-path-match._.0.0",
-			routeExpression: `(http.path == "/foo") && (net.dst.port == 80)`,
+			routeExpression: `(http.path == "/foo") && (http.headers.x_kong_listener_port == "80")`,
 			tags:            exactPathMatchRouteTags,
 		},
 		{
@@ -1202,7 +1202,7 @@ func TestKongExpressionRouteFromHTTPRouteMatchWithPriority(t *testing.T) {
 			priority:        RoutePriorityType(1024),
 			ports:           []int32{80, 443},
 			routeName:       "httproute.default.exact-path-match._.0.0",
-			routeExpression: `(http.path == "/foo") && ((net.dst.port == 80) || (net.dst.port == 443))`,
+			routeExpression: `(http.path == "/foo") && ((http.headers.x_kong_listener_port == "80") || (http.headers.x_kong_listener_port == "443"))`,
 			tags:            exactPathMatchRouteTags,
 		},
 		{
