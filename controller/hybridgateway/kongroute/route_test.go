@@ -2,6 +2,8 @@ package kongroute
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -988,7 +990,8 @@ func TestPrecedenceVariantsForHTTPRouteMatch(t *testing.T) {
 		}}}
 		priorities := httpRouteMatchPriorities(route)
 
-		variants := precedenceVariantsForHTTPRouteMatch(route, route.Spec.Rules[0].Matches[0], priorities, 0, 0)
+		variants, err := precedenceVariantsForHTTPRouteMatch(route, route.Spec.Rules[0].Matches[0], priorities, 0, 0, nil)
+		require.NoError(t, err)
 
 		require.Len(t, variants, 2)
 		assert.Nil(t, variants[0].Method)
@@ -1004,7 +1007,8 @@ func TestPrecedenceVariantsForHTTPRouteMatch(t *testing.T) {
 		}}}
 		priorities := httpRouteMatchPriorities(route)
 
-		variants := precedenceVariantsForHTTPRouteMatch(route, route.Spec.Rules[0].Matches[0], priorities, 0, 0)
+		variants, err := precedenceVariantsForHTTPRouteMatch(route, route.Spec.Rules[0].Matches[0], priorities, 0, 0, nil)
+		require.NoError(t, err)
 
 		require.Len(t, variants, 2)
 		assert.Empty(t, variants[0].Headers)
@@ -1018,10 +1022,66 @@ func TestPrecedenceVariantsForHTTPRouteMatch(t *testing.T) {
 		}}}
 		priorities := httpRouteMatchPriorities(route)
 
-		variants := precedenceVariantsForHTTPRouteMatch(route, route.Spec.Rules[0].Matches[0], priorities, 0, 0)
+		variants, err := precedenceVariantsForHTTPRouteMatch(route, route.Spec.Rules[0].Matches[0], priorities, 0, 0, nil)
+		require.NoError(t, err)
 
 		require.Len(t, variants, 1)
 	})
+}
+
+func TestPrecedenceVariantsForHTTPRouteMatchBoundsExpansion(t *testing.T) {
+	for _, lowerMatches := range []int{6, 7} {
+		t.Run(fmt.Sprintf("%d overlapping lower matches", lowerMatches), func(t *testing.T) {
+			httpRoute := httpRouteWithDisjointHeaderMatches(lowerMatches)
+			original := httpRoute.DeepCopy()
+			priorities := httpRouteMatchPriorities(httpRoute)
+
+			variants, err := precedenceVariantsForHTTPRouteMatch(httpRoute, httpRoute.Spec.Rules[0].Matches[0], priorities, 0, 0, nil)
+
+			if lowerMatches == 6 {
+				require.NoError(t, err)
+				require.Len(t, variants, 64)
+			} else {
+				require.ErrorContains(t, err, "HTTPRoute default/variant-fanout rule 0 match 0 exceeds limit of 64 precedence variants")
+				require.Nil(t, variants, "overflow must not silently return a partial match set")
+
+				cl := fake.NewClientBuilder().Build()
+				routes, err := RoutesForHTTPRouteRule(t.Context(), logr.Discard(), cl,
+					httpRoute, httpRoute.Spec.Rules[0], 0, &gwtypes.ParentReference{Name: "missing-gateway"},
+					nil, nil, "test-service", nil)
+				require.ErrorContains(t, err, "exceeds limit of 64 precedence variants")
+				require.Nil(t, routes, "reject excessive expansion before Kubernetes lookups or building routes")
+			}
+			assert.Equal(t, original, httpRoute)
+		})
+	}
+}
+
+func httpRouteWithDisjointHeaderMatches(lowerMatches int) *gwtypes.HTTPRoute {
+	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "variant-fanout",
+		Namespace: "default",
+		Spec: gatewayv1.HTTPRouteSpec{
+			Rules: []gatewayv1.HTTPRouteRule{{}},
+		},
+	}
+	for i := range lowerMatches + 1 {
+		match := gatewayv1.HTTPRouteMatch{
+			Path: &gatewayv1.HTTPPathMatch{
+				Type:  new(gatewayv1.PathMatchPathPrefix),
+				Value: new(strings.Repeat("/p", lowerMatches-i+1)),
+			},
+		}
+		for j := range i {
+			match.Headers = append(match.Headers, gatewayv1.HTTPHeaderMatch{
+				Name:  gatewayv1.HTTPHeaderName(fmt.Sprintf("header-%d-%d", i, j)),
+				Value: "one",
+			})
+		}
+		httpRoute.Spec.Rules[0].Matches = append(httpRoute.Spec.Rules[0].Matches, match)
+	}
+	return httpRoute
 }
 
 func TestHTTPRouteMatchPrioritiesForDefaultPathMethodMatching(t *testing.T) {

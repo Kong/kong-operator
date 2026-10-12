@@ -128,6 +128,19 @@ func RoutesForHTTPRouteRule(
 		rule.Matches = append(rule.Matches, match)
 	}
 
+	priorities := httpRouteMatchPriorities(httpRoute)
+	variantsByMatch := make([][]gatewayv1.HTTPRouteMatch, len(rule.Matches))
+	variantsCache := make(map[httpRouteMatchPriorityKey][]gatewayv1.HTTPRouteMatch)
+	for i, match := range rule.Matches {
+		variants, err := precedenceVariantsForHTTPRouteMatch(httpRoute, match, priorities, ruleIndex, i, variantsCache)
+		if err != nil {
+			log.Error(logger, err, "Failed to generate HTTPRoute precedence variants",
+				"ruleIndex", ruleIndex, "matchIndex", i)
+			return nil, err
+		}
+		variantsByMatch[i] = variants
+	}
+
 	// Derive protocols from the parent Gateway listener(s).
 	protocols, err := protocolsFromGatewayListener(ctx, cl, httpRoute, pRef)
 	if err != nil {
@@ -136,7 +149,6 @@ func RoutesForHTTPRouteRule(
 
 	// Check filters to determine if we need capture groups in paths.
 	setCaptureGroup := needsCaptureGroup(rule)
-	priorities := httpRouteMatchPriorities(httpRoute)
 
 	anns, err := ExtractRouteAnnotations(httpRoute)
 	if err != nil {
@@ -145,8 +157,7 @@ func RoutesForHTTPRouteRule(
 	tags := pkgmetadata.ExtractTags(httpRoute)
 
 	for i, match := range rule.Matches {
-		variants := precedenceVariantsForHTTPRouteMatch(httpRoute, match, priorities, ruleIndex, i)
-		for variantIndex, variant := range variants {
+		for variantIndex, variant := range variantsByMatch[i] {
 			nameIndex := i + variantIndex*len(rule.Matches)
 			routeName := namegen.NewKongRouteNameForMatch(httpRoute, cp, namingParentRef, variant, nameIndex)
 			mLog := logger.WithValues("kongroute", routeName, "matchIndex", i, "precedenceVariant", variantIndex)
@@ -482,6 +493,8 @@ func priorityForTraditionalHTTPRouteMatch(
 	return &priority
 }
 
+const maxHTTPRouteMatchPrecedenceVariants = 64
+
 // precedenceVariantsForHTTPRouteMatch returns the original match plus specialized copies that
 // include the non-path constraints of lower-priority matches and their variants it can overlap.
 // Kong's traditional router considers the number of populated match fields before regex_priority.
@@ -489,17 +502,21 @@ func priorityForTraditionalHTTPRouteMatch(
 // regardless of regex_priority. The specialized copy has at least the same native Kong specificity as the lower
 // match, after which path length/type and regex_priority preserve Gateway API precedence. The
 // original copy remains necessary for requests that do not satisfy any lower match's constraints.
+// Exceeding the expansion limit fails translation rather than dropping precedence constraints.
 func precedenceVariantsForHTTPRouteMatch(
 	httpRoute *gwtypes.HTTPRoute,
 	match gatewayv1.HTTPRouteMatch,
 	priorities map[httpRouteMatchPriorityKey]int64,
 	ruleIndex, matchIndex int,
-) []gatewayv1.HTTPRouteMatch {
-	variantsByMatch := make(map[httpRouteMatchPriorityKey][]gatewayv1.HTTPRouteMatch)
-	var variantsForMatch func(httpRouteMatchPriorityKey, gatewayv1.HTTPRouteMatch) []gatewayv1.HTTPRouteMatch
-	variantsForMatch = func(key httpRouteMatchPriorityKey, match gatewayv1.HTTPRouteMatch) []gatewayv1.HTTPRouteMatch {
+	variantsByMatch map[httpRouteMatchPriorityKey][]gatewayv1.HTTPRouteMatch,
+) ([]gatewayv1.HTTPRouteMatch, error) {
+	if variantsByMatch == nil {
+		variantsByMatch = make(map[httpRouteMatchPriorityKey][]gatewayv1.HTTPRouteMatch)
+	}
+	var variantsForMatch func(httpRouteMatchPriorityKey, gatewayv1.HTTPRouteMatch) ([]gatewayv1.HTTPRouteMatch, error)
+	variantsForMatch = func(key httpRouteMatchPriorityKey, match gatewayv1.HTTPRouteMatch) ([]gatewayv1.HTTPRouteMatch, error) {
 		if variants, ok := variantsByMatch[key]; ok {
-			return variants
+			return variants, nil
 		}
 		variants := []gatewayv1.HTTPRouteMatch{*match.DeepCopy()}
 		priority := priorityForHTTPRouteMatch(priorities, key.ruleIndex, key.matchIndex)
@@ -510,7 +527,11 @@ func precedenceVariantsForHTTPRouteMatch(
 					continue
 				}
 				lowerKey := httpRouteMatchPriorityKey{ruleIndex: lowerRuleIndex, matchIndex: lowerMatchIndex}
-				for _, lowerVariant := range variantsForMatch(lowerKey, lower) {
+				lowerVariants, err := variantsForMatch(lowerKey, lower)
+				if err != nil {
+					return nil, err
+				}
+				for _, lowerVariant := range lowerVariants {
 					if !needsPrecedenceVariant(match, lowerVariant) {
 						continue
 					}
@@ -520,12 +541,16 @@ func precedenceVariantsForHTTPRouteMatch(
 					}) {
 						continue
 					}
+					if len(variants) >= maxHTTPRouteMatchPrecedenceVariants {
+						return nil, fmt.Errorf("HTTPRoute %s/%s rule %d match %d exceeds limit of %d precedence variants",
+							httpRoute.Namespace, httpRoute.Name, key.ruleIndex, key.matchIndex, maxHTTPRouteMatchPrecedenceVariants)
+					}
 					variants = append(variants, variant)
 				}
 			}
 		}
 		variantsByMatch[key] = variants
-		return variants
+		return variants, nil
 	}
 
 	return variantsForMatch(httpRouteMatchPriorityKey{ruleIndex: ruleIndex, matchIndex: matchIndex}, match)

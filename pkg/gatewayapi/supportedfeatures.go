@@ -10,10 +10,7 @@ import (
 )
 
 var (
-	traditionalCompatibleRouterSupportedFeatures = append(slices.Clone(commonSupportedFeatures),
-		// HTTPRoute extended.
-		features.SupportHTTPRouteMethodMatching,
-	)
+	traditionalCompatibleRouterSupportedFeatures = slices.Clone(commonSupportedFeatures)
 
 	expressionsRouterSupportedFeatures = append(slices.Clone(commonSupportedFeatures),
 		// HTTPRoute extended.
@@ -50,14 +47,18 @@ var commonSupportedFeatures = []features.FeatureName{
 	// features.SupportTLSRouteModeMixed,
 }
 
-// GetSupportedFeatures returns the supported features for the given router type.
-func GetSupportedFeatures(routerType consts.RouterFlavor) ([]features.FeatureName, error) {
+// GetSupportedFeatures returns the supported features for the router type and gateway mode.
+func GetSupportedFeatures(routerType consts.RouterFlavor, isHybrid bool) ([]features.FeatureName, error) {
 	// Return a clone so callers cannot mutate the package-level slices
 	// (e.g. via slices.Sort), which are shared across all callers and would
 	// otherwise cause data races.
 	switch routerType {
 	case consts.RouterFlavorTraditionalCompatible:
-		return slices.Clone(traditionalCompatibleRouterSupportedFeatures), nil
+		supportedFeatures := slices.Clone(traditionalCompatibleRouterSupportedFeatures)
+		if isHybrid {
+			supportedFeatures = append(supportedFeatures, features.SupportHTTPRouteMethodMatching)
+		}
+		return supportedFeatures, nil
 	case consts.RouterFlavorExpressions:
 		return slices.Clone(expressionsRouterSupportedFeatures), nil
 	default:

@@ -299,12 +299,19 @@
   specialized Kong Routes for conflicting match combinations. Specialized
   variants use regex paths so their inherited priorities take effect, including
   when lower-priority variants combine method and header matches.
+  Expansion is limited to 64 variants per original match, including the original;
+  exceeding this limit fails translation with a `TranslationFailed` warning event
+  instead of silently dropping precedence constraints.
   Hybrid Gateway DataPlanes default to `KONG_ROUTE_MATCH_CALCULATION=strict`
   to avoid the legacy calculation overlapping native match fields with
   `regex_priority`. Explicit user settings are preserved; selecting `original`
   retains legacy precedence limitations.
+  The default Kong 3.16 image supports `strict`. Older pinned images that ignore
+  this unsupported setting retain their legacy calculation and cannot provide
+  corrected precedence; use an image supporting `strict` for these guarantees.
   This enables the `HTTPRouteMethodMatching` Gateway API conformance test for the
-  hybrid gateway. Generated priorities stay below `1 << 20` (`1048576`).
+  hybrid gateway, without advertising it for standard traditional-compatible
+  Gateways. Generated priorities stay below `1 << 20` (`1048576`).
   [#4715](https://github.com/Kong/kong-operator/pull/4715)
 - Konnect: fix hot retry loop when Konnect returns 5xx on entity update
   (e.g. Event Gateway update returning 500). The Konnect trace ID is now

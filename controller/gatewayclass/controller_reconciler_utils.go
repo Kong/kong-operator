@@ -15,6 +15,7 @@ import (
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
+	gwconfigutils "github.com/kong/kong-operator/v2/internal/utils/gatewayconfig"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	gatewayapipkg "github.com/kong/kong-operator/v2/pkg/gatewayapi"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
@@ -71,13 +72,14 @@ func getAcceptedCondition(ctx context.Context, cl client.Client, gwc *gatewayv1.
 }
 
 // setSupportedFeatures sets the supported features in the gatewayClass status.
-// The set of supported features depends on the router flavor.
+// The set of supported features depends on the router flavor and gateway mode.
 func setSupportedFeatures(ctx context.Context, cl client.Client, gwc *gatewayv1.GatewayClass, gatewayConfig *operatorv2beta1.GatewayConfiguration) error {
 	flavor, err := getRouterFlavor(ctx, cl, gatewayConfig)
 	if err != nil {
 		return err
 	}
-	supportedFeatures, err := gatewayapipkg.GetSupportedFeatures(flavor)
+	isHybrid := gatewayConfig != nil && gwconfigutils.IsGatewayHybrid(gatewayConfig)
+	supportedFeatures, err := gatewayapipkg.GetSupportedFeatures(flavor, isHybrid)
 	if err != nil {
 		return err
 	}
