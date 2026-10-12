@@ -3,8 +3,13 @@
 package v1alpha1
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectoper "github.com/Kong/sdk-konnect-go/models/operations"
@@ -234,15 +239,10 @@ func (s *EventGatewayVirtualClusterProducePolicyAPISpec) selectedSDKOpsPayload(p
 	return data, variant, nil
 }
 
-// ToCreateEventGatewayVirtualClusterProducePolicyRequest converts the EventGatewayVirtualClusterProducePolicyAPISpec to the SDK type
-// sdkkonnectoper.CreateEventGatewayVirtualClusterProducePolicyRequest using JSON marshal/unmarshal.
-// Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes
-// object references) are naturally excluded because they have different JSON names.
-func (s *EventGatewayVirtualClusterProducePolicyAPISpec) ToCreateEventGatewayVirtualClusterProducePolicyRequest() (*sdkkonnectoper.CreateEventGatewayVirtualClusterProducePolicyRequest, error) {
-	payload, err := s.marshalSDKOpsPayload()
-	if err != nil {
-		return nil, err
-	}
+// toCreateEventGatewayVirtualClusterProducePolicyRequestFromPayload builds the SDK request from an already-computed
+// SDK payload map, so resolved CR references can be injected into the payload
+// between computation and conversion.
+func (s *EventGatewayVirtualClusterProducePolicyAPISpec) toCreateEventGatewayVirtualClusterProducePolicyRequestFromPayload(payload map[string]any) (*sdkkonnectoper.CreateEventGatewayVirtualClusterProducePolicyRequest, error) {
 	data, variant, err := s.selectedSDKOpsPayload(payload)
 	if err != nil {
 		return nil, err
@@ -290,15 +290,10 @@ func (s *EventGatewayVirtualClusterProducePolicyAPISpec) ToCreateEventGatewayVir
 	}
 }
 
-// ToUpdateEventGatewayVirtualClusterProducePolicyRequest converts the EventGatewayVirtualClusterProducePolicyAPISpec to the SDK type
-// sdkkonnectoper.UpdateEventGatewayVirtualClusterProducePolicyRequest using JSON marshal/unmarshal.
-// Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes
-// object references) are naturally excluded because they have different JSON names.
-func (s *EventGatewayVirtualClusterProducePolicyAPISpec) ToUpdateEventGatewayVirtualClusterProducePolicyRequest() (*sdkkonnectoper.UpdateEventGatewayVirtualClusterProducePolicyRequest, error) {
-	payload, err := s.marshalSDKOpsPayload()
-	if err != nil {
-		return nil, err
-	}
+// toUpdateEventGatewayVirtualClusterProducePolicyRequestFromPayload builds the SDK request from an already-computed
+// SDK payload map, so resolved CR references can be injected into the payload
+// between computation and conversion.
+func (s *EventGatewayVirtualClusterProducePolicyAPISpec) toUpdateEventGatewayVirtualClusterProducePolicyRequestFromPayload(payload map[string]any) (*sdkkonnectoper.UpdateEventGatewayVirtualClusterProducePolicyRequest, error) {
 	data, variant, err := s.selectedSDKOpsPayload(payload)
 	if err != nil {
 		return nil, err
@@ -312,4 +307,431 @@ func (s *EventGatewayVirtualClusterProducePolicyAPISpec) ToUpdateEventGatewayVir
 	return &sdkkonnectoper.UpdateEventGatewayVirtualClusterProducePolicyRequest{
 		EventGatewayProducePolicyUpdate: &body,
 	}, nil
+}
+
+// RefsAtEventGatewayVirtualClusterProducePolicyEncryptConfigEncryptionKeyStaticKey returns the references at spec.apiSpec.encrypt.config.encryptionKey.static.key,
+// or nil when any ancestor is unset.
+func RefsAtEventGatewayVirtualClusterProducePolicyEncryptConfigEncryptionKeyStaticKey(obj *EventGatewayVirtualClusterProducePolicy) []EventGatewayStaticKeyRef {
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey.Static == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey.Static.Key == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.Type != EventGatewayVirtualClusterProducePolicyConfigTypeEncryptPolicy {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey.Type != EventGatewayEncryptConfigEncryptionKeyTypeStatic {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey.Static.Key.NamespacedRef == nil {
+		return nil
+	}
+	return []EventGatewayStaticKeyRef{*obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey.Static.Key.NamespacedRef}
+}
+
+// resolveEventGatewayVirtualClusterProducePolicyEncryptConfigEncryptionKeyStaticKey resolves the CR references in spec.apiSpec.encrypt.config.encryptionKey.static.key
+// to Konnect IDs.
+func resolveEventGatewayVirtualClusterProducePolicyEncryptConfigEncryptionKeyStaticKey(ctx context.Context, cl client.Client, obj *EventGatewayVirtualClusterProducePolicy) ([]string, error) {
+	refs := RefsAtEventGatewayVirtualClusterProducePolicyEncryptConfigEncryptionKeyStaticKey(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewayStaticKey"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		if ns != obj.GetNamespace() {
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
+		}
+		var referenced EventGatewayStaticKey
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "EventGatewayStaticKey", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced EventGatewayStaticKey %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "EventGatewayStaticKey", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		// EventGatewayStaticKey objects being deleted must not gain new users, which
+		// could keep their deletion blocked: a referrer not created in Konnect
+		// yet can't use them, while existing ones keep syncing until they drop
+		// the reference.
+		if !referenced.GetDeletionTimestamp().IsZero() && obj.GetKonnectID() == "" {
+			errs = append(errs, ReferenceBeingDeletedError{Kind: "EventGatewayStaticKey", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		id := referenced.GetKonnectID()
+		if id == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "EventGatewayStaticKey", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, id)
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtEventGatewayVirtualClusterProducePolicyEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey returns the references at spec.apiSpec.encryptFields.config.encryptFields.encryptionKey.static.key,
+// or nil when any ancestor is unset.
+func RefsAtEventGatewayVirtualClusterProducePolicyEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey(obj *EventGatewayVirtualClusterProducePolicy) []EventGatewayStaticKeyRef {
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordEncryptFieldsPolicyCreate == nil {
+		return nil
+	}
+	var refs []EventGatewayStaticKeyRef
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.Type != EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordEncryptFieldsPolicyCreate {
+		return nil
+	}
+	for i := range obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordEncryptFieldsPolicyCreate.Config.EncryptFields {
+		if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordEncryptFieldsPolicyCreate.Config.EncryptFields[i].EncryptionKey == nil {
+			continue
+		}
+		if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordEncryptFieldsPolicyCreate.Config.EncryptFields[i].EncryptionKey.Static == nil {
+			continue
+		}
+		if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordEncryptFieldsPolicyCreate.Config.EncryptFields[i].EncryptionKey.Type != EventGatewayParsedRecordEncryptionSelectorEncryptionKeyTypeStatic {
+			continue
+		}
+		if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordEncryptFieldsPolicyCreate.Config.EncryptFields[i].EncryptionKey.Static.Key == nil {
+			continue
+		}
+		if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordEncryptFieldsPolicyCreate.Config.EncryptFields[i].EncryptionKey.Static.Key.NamespacedRef == nil {
+			continue
+		}
+		refs = append(refs, *obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordEncryptFieldsPolicyCreate.Config.EncryptFields[i].EncryptionKey.Static.Key.NamespacedRef)
+	}
+	return refs
+}
+
+// resolveEventGatewayVirtualClusterProducePolicyEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey resolves the CR references in spec.apiSpec.encryptFields.config.encryptFields.encryptionKey.static.key
+// to Konnect IDs.
+func resolveEventGatewayVirtualClusterProducePolicyEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey(ctx context.Context, cl client.Client, obj *EventGatewayVirtualClusterProducePolicy) ([]string, error) {
+	refs := RefsAtEventGatewayVirtualClusterProducePolicyEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewayStaticKey"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		if ns != obj.GetNamespace() {
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
+		}
+		var referenced EventGatewayStaticKey
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "EventGatewayStaticKey", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced EventGatewayStaticKey %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "EventGatewayStaticKey", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		// EventGatewayStaticKey objects being deleted must not gain new users, which
+		// could keep their deletion blocked: a referrer not created in Konnect
+		// yet can't use them, while existing ones keep syncing until they drop
+		// the reference.
+		if !referenced.GetDeletionTimestamp().IsZero() && obj.GetKonnectID() == "" {
+			errs = append(errs, ReferenceBeingDeletedError{Kind: "EventGatewayStaticKey", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		id := referenced.GetKonnectID()
+		if id == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "EventGatewayStaticKey", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, id)
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// EventGatewayVirtualClusterProducePolicyRefsToEventGatewayStaticKey returns the keys of the EventGatewayStaticKey
+// objects obj references through spec.apiSpec.encrypt.config.encryptionKey.static.key, spec.apiSpec.encryptFields.config.encryptFields.encryptionKey.static.key, with the default namespace applied.
+func EventGatewayVirtualClusterProducePolicyRefsToEventGatewayStaticKey(obj *EventGatewayVirtualClusterProducePolicy) []client.ObjectKey {
+	var keys []client.ObjectKey
+	for _, ref := range RefsAtEventGatewayVirtualClusterProducePolicyEncryptConfigEncryptionKeyStaticKey(obj) {
+		if ref.Kind != "" && ref.Kind != "EventGatewayStaticKey" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
+	}
+	for _, ref := range RefsAtEventGatewayVirtualClusterProducePolicyEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey(obj) {
+		if ref.Kind != "" && ref.Kind != "EventGatewayStaticKey" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
+	}
+	return keys
+}
+
+// ResolveKonnectReferences resolves every CR reference declared on the spec and
+// returns the joined resolution errors, or nil when all references resolve.
+func (obj *EventGatewayVirtualClusterProducePolicy) ResolveKonnectReferences(ctx context.Context, cl client.Client) error {
+	var errs []error
+	if _, err := resolveEventGatewayVirtualClusterProducePolicyEncryptConfigEncryptionKeyStaticKey(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveEventGatewayVirtualClusterProducePolicyEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
+}
+
+// CrossNamespaceSiblingReferences returns every cross-namespace sibling
+// reference declared on obj's spec whose SupportCrossNamespaceReference is
+// enabled, for callers to authorize against KongReferenceGrant before
+// calling ResolveKonnectReferences.
+func (obj *EventGatewayVirtualClusterProducePolicy) CrossNamespaceSiblingReferences() []CrossNamespaceReferenceCheck {
+	var checks []CrossNamespaceReferenceCheck
+	return checks
+}
+
+// ToCreateEventGatewayVirtualClusterProducePolicyRequest converts the EventGatewayVirtualClusterProducePolicy to the SDK type
+// sdkkonnectoper.CreateEventGatewayVirtualClusterProducePolicyRequest, resolving referenced CRs via the provided client.
+func (obj *EventGatewayVirtualClusterProducePolicy) ToCreateEventGatewayVirtualClusterProducePolicyRequest(ctx context.Context, cl client.Client) (*sdkkonnectoper.CreateEventGatewayVirtualClusterProducePolicyRequest, error) {
+	spec := &obj.Spec.APISpec
+	payload, err := spec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, err
+	}
+	// spec.apiSpec.encrypt.config.encryptionKey.static.key may carry CR references: replace each reference object set to
+	// "namespaced_ref" in the SDK payload with one wrapping its resolved
+	// Konnect value under "id", leaving reference objects set by
+	// Konnect ID or name untouched. A nil CRD ancestor pointer means that part
+	// of the config wasn't set, so the payload is left untouched.
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey.Static != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey.Static.Key != nil {
+		encrypt, _ := payload["encrypt"].(map[string]any)
+		if encrypt != nil {
+			config, _ := encrypt["config"].(map[string]any)
+			if config != nil {
+				encryptionKey, _ := config["encryption_key"].(map[string]any)
+				if encryptionKey != nil {
+					static, _ := encryptionKey["static"].(map[string]any)
+					if static != nil {
+						resolvedEncryptConfigEncryptionKeyStaticKey, err := resolveEventGatewayVirtualClusterProducePolicyEncryptConfigEncryptionKeyStaticKey(ctx, cl, obj)
+						if err != nil {
+							return nil, fmt.Errorf("resolving spec.apiSpec.encrypt.config.encryptionKey.static.key references: %w", err)
+						}
+						if el, ok := static["key"].(map[string]any); ok {
+							if _, has := el["namespaced_ref"]; has {
+								// The reference is set in the payload: it must have resolved,
+								// or it would reach Konnect unresolved.
+								if len(resolvedEncryptConfigEncryptionKeyStaticKey) == 0 {
+									return nil, fmt.Errorf("resolving spec.apiSpec.encrypt.config.encryptionKey.static.key references: reference set in the payload but not resolved")
+								}
+								static["key"] = map[string]any{"id": resolvedEncryptConfigEncryptionKeyStaticKey[0]}
+							}
+						}
+						encryptionKey["static"] = static
+					}
+					config["encryption_key"] = encryptionKey
+				}
+				encrypt["config"] = config
+			}
+			payload["encrypt"] = encrypt
+		}
+	}
+	// spec.apiSpec.encryptFields.config.encryptFields.encryptionKey.static.key carries a CR reference: inject the resolved Konnect values into
+	// each element of the "encrypt_fields" array in the SDK payload, preserving
+	// sibling keys of its ancestors. A nil CRD ancestor pointer means that part
+	// of the config wasn't set, so the payload is left untouched.
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordEncryptFieldsPolicyCreate != nil {
+		encryptFields, _ := payload["encrypt_fields"].(map[string]any)
+		if encryptFields != nil {
+			config2, _ := encryptFields["config"].(map[string]any)
+			if config2 != nil {
+				resolvedEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey, err := resolveEventGatewayVirtualClusterProducePolicyEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey(ctx, cl, obj)
+				if err != nil {
+					return nil, fmt.Errorf("resolving spec.apiSpec.encryptFields.config.encryptFields.encryptionKey.static.key references: %w", err)
+				}
+				rewrittenEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey := 0
+				if arr, ok := config2["encrypt_fields"].([]any); ok {
+					for _, e := range arr {
+						el, ok := e.(map[string]any)
+						if !ok {
+							continue
+						}
+						encryptionKey2, ok := el["encryption_key"].(map[string]any)
+						if !ok {
+							continue
+						}
+						static2, ok := encryptionKey2["static"].(map[string]any)
+						if !ok {
+							continue
+						}
+						leaf, ok := static2["key"].(map[string]any)
+						if !ok {
+							continue
+						}
+						if _, has := leaf["namespaced_ref"]; !has {
+							continue
+						}
+						if rewrittenEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey >= len(resolvedEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey) {
+							return nil, fmt.Errorf("resolving spec.apiSpec.encryptFields.config.encryptFields.encryptionKey.static.key references: more references set than the %d resolved", len(resolvedEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey))
+						}
+						static2["key"] = map[string]any{"id": resolvedEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey[rewrittenEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey]}
+						rewrittenEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey++
+					}
+				}
+				// Every resolved reference must have been rewritten: a mismatch means
+				// the references and the payload disagree on which items carry one.
+				if rewrittenEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey != len(resolvedEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey) {
+					return nil, fmt.Errorf("resolving spec.apiSpec.encryptFields.config.encryptFields.encryptionKey.static.key references: %d resolved but %d set in the payload", len(resolvedEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey), rewrittenEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey)
+				}
+				encryptFields["config"] = config2
+			}
+			payload["encrypt_fields"] = encryptFields
+		}
+	}
+	return spec.toCreateEventGatewayVirtualClusterProducePolicyRequestFromPayload(payload)
+}
+
+// ToUpdateEventGatewayVirtualClusterProducePolicyRequest converts the EventGatewayVirtualClusterProducePolicy to the SDK type
+// sdkkonnectoper.UpdateEventGatewayVirtualClusterProducePolicyRequest, resolving referenced CRs via the provided client.
+func (obj *EventGatewayVirtualClusterProducePolicy) ToUpdateEventGatewayVirtualClusterProducePolicyRequest(ctx context.Context, cl client.Client) (*sdkkonnectoper.UpdateEventGatewayVirtualClusterProducePolicyRequest, error) {
+	spec := &obj.Spec.APISpec
+	payload, err := spec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, err
+	}
+	// spec.apiSpec.encrypt.config.encryptionKey.static.key may carry CR references: replace each reference object set to
+	// "namespaced_ref" in the SDK payload with one wrapping its resolved
+	// Konnect value under "id", leaving reference objects set by
+	// Konnect ID or name untouched. A nil CRD ancestor pointer means that part
+	// of the config wasn't set, so the payload is left untouched.
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey.Static != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy.Config.EncryptionKey.Static.Key != nil {
+		encrypt, _ := payload["encrypt"].(map[string]any)
+		if encrypt != nil {
+			config, _ := encrypt["config"].(map[string]any)
+			if config != nil {
+				encryptionKey, _ := config["encryption_key"].(map[string]any)
+				if encryptionKey != nil {
+					static, _ := encryptionKey["static"].(map[string]any)
+					if static != nil {
+						resolvedEncryptConfigEncryptionKeyStaticKey, err := resolveEventGatewayVirtualClusterProducePolicyEncryptConfigEncryptionKeyStaticKey(ctx, cl, obj)
+						if err != nil {
+							return nil, fmt.Errorf("resolving spec.apiSpec.encrypt.config.encryptionKey.static.key references: %w", err)
+						}
+						if el, ok := static["key"].(map[string]any); ok {
+							if _, has := el["namespaced_ref"]; has {
+								// The reference is set in the payload: it must have resolved,
+								// or it would reach Konnect unresolved.
+								if len(resolvedEncryptConfigEncryptionKeyStaticKey) == 0 {
+									return nil, fmt.Errorf("resolving spec.apiSpec.encrypt.config.encryptionKey.static.key references: reference set in the payload but not resolved")
+								}
+								static["key"] = map[string]any{"id": resolvedEncryptConfigEncryptionKeyStaticKey[0]}
+							}
+						}
+						encryptionKey["static"] = static
+					}
+					config["encryption_key"] = encryptionKey
+				}
+				encrypt["config"] = config
+			}
+			payload["encrypt"] = encrypt
+		}
+	}
+	// spec.apiSpec.encryptFields.config.encryptFields.encryptionKey.static.key carries a CR reference: inject the resolved Konnect values into
+	// each element of the "encrypt_fields" array in the SDK payload, preserving
+	// sibling keys of its ancestors. A nil CRD ancestor pointer means that part
+	// of the config wasn't set, so the payload is left untouched.
+	if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig != nil && obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordEncryptFieldsPolicyCreate != nil {
+		encryptFields, _ := payload["encrypt_fields"].(map[string]any)
+		if encryptFields != nil {
+			config2, _ := encryptFields["config"].(map[string]any)
+			if config2 != nil {
+				resolvedEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey, err := resolveEventGatewayVirtualClusterProducePolicyEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey(ctx, cl, obj)
+				if err != nil {
+					return nil, fmt.Errorf("resolving spec.apiSpec.encryptFields.config.encryptFields.encryptionKey.static.key references: %w", err)
+				}
+				rewrittenEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey := 0
+				if arr, ok := config2["encrypt_fields"].([]any); ok {
+					for _, e := range arr {
+						el, ok := e.(map[string]any)
+						if !ok {
+							continue
+						}
+						encryptionKey2, ok := el["encryption_key"].(map[string]any)
+						if !ok {
+							continue
+						}
+						static2, ok := encryptionKey2["static"].(map[string]any)
+						if !ok {
+							continue
+						}
+						leaf, ok := static2["key"].(map[string]any)
+						if !ok {
+							continue
+						}
+						if _, has := leaf["namespaced_ref"]; !has {
+							continue
+						}
+						if rewrittenEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey >= len(resolvedEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey) {
+							return nil, fmt.Errorf("resolving spec.apiSpec.encryptFields.config.encryptFields.encryptionKey.static.key references: more references set than the %d resolved", len(resolvedEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey))
+						}
+						static2["key"] = map[string]any{"id": resolvedEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey[rewrittenEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey]}
+						rewrittenEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey++
+					}
+				}
+				// Every resolved reference must have been rewritten: a mismatch means
+				// the references and the payload disagree on which items carry one.
+				if rewrittenEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey != len(resolvedEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey) {
+					return nil, fmt.Errorf("resolving spec.apiSpec.encryptFields.config.encryptFields.encryptionKey.static.key references: %d resolved but %d set in the payload", len(resolvedEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey), rewrittenEncryptFieldsConfigEncryptFieldsEncryptionKeyStaticKey)
+				}
+				encryptFields["config"] = config2
+			}
+			payload["encrypt_fields"] = encryptFields
+		}
+	}
+	return spec.toUpdateEventGatewayVirtualClusterProducePolicyRequestFromPayload(payload)
 }

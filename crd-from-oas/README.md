@@ -50,6 +50,8 @@ apiGroupVersions:
 rules that must prevent removal of optional fields belong at the resource root:
 a rule on an optional field is skipped when that field is removed, and a normal
 transition rule is also skipped when it is re-added without an old value.
+`_description` replaces the OAS description of one of `spec.apiSpec`'s direct
+fields, e.g. when it describes Konnect behavior that doesn't hold for the CR.
 
 `dataSources` lets a field be provided inline or read from a Kubernetes
 object in the same (or, for Secrets, a granted) namespace. The field becomes a

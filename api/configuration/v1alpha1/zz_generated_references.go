@@ -95,6 +95,28 @@ type EventGatewaySchemaRegistryRef struct {
 	Namespace string `json:"namespace,omitempty"`
 }
 
+// EventGatewayStaticKeyRef references an EventGatewayStaticKey in the cluster. The referenced
+// object's Konnect id is used where the Konnect API accepts it.
+type EventGatewayStaticKeyRef struct {
+	// Kind is the kind of the referenced object.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=EventGatewayStaticKey
+	// +kubebuilder:default=EventGatewayStaticKey
+	Kind string `json:"kind,omitempty"`
+
+	// Name is the name of the referenced object.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+
+	// Namespace is reserved for future cross-namespace support.
+	//
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+}
+
 // EventGatewayTLSTrustBundleRef references an EventGatewayTLSTrustBundle in the cluster. The referenced
 // object's Konnect id is used where the Konnect API accepts it.
 type EventGatewayTLSTrustBundleRef struct {

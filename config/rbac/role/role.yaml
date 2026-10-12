@@ -230,6 +230,7 @@ rules:
   - eventgatewaylistenerpolicies
   - eventgatewaylisteners
   - eventgatewayschemaregistries
+  - eventgatewaystatickeys
   - eventgatewaytlstrustbundles
   - eventgatewayvirtualclusterconsumepolicies
   - eventgatewayvirtualclusterpolicies
@@ -261,6 +262,8 @@ rules:
   - eventgatewaylisteners/status
   - eventgatewayschemaregistries/finalizers
   - eventgatewayschemaregistries/status
+  - eventgatewaystatickeys/finalizers
+  - eventgatewaystatickeys/status
   - eventgatewaytlstrustbundles/finalizers
   - eventgatewaytlstrustbundles/status
   - eventgatewayvirtualclusterconsumepolicies/finalizers
