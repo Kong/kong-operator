@@ -209,7 +209,7 @@ download.helm: mise ## Download helm locally if necessary.
 	$(MAKE) mise-install-global DEP_BIN=$(HELM) DEP_VER=aqua:helm/helm
 
 # NOTE: temporary override to work around:
-# export data version 4 is greater than maximum supported version 2
+# export data version 5 is greater than maximum supported version 2 (Go 1.27.2+)
 # Upstream issue: https://github.com/kubernetes-sigs/kube-api-linter/issues/260
 KUBE_API_LINTER_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["go:github.com/pmalek/kube-api-linter/cmd/golangci-lint-kube-api-linter"].version' < $(MISE_FILE))
 KUBE_API_LINTER = $(PROJECT_DIR)/bin/installs/go-github-com-pmalek-kube-api-linter-cmd-golangci-lint-kube-api-linter/$(KUBE_API_LINTER_VERSION)/bin/golangci-lint-kube-api-linter
