@@ -1,0 +1,185 @@
+# Upstream TLS verification driven by Service annotations. This is the
+# annotation-based counterpart of BackendTLSPolicy (see
+# gateway-backendtlspolicy.yaml), and the one Ingress users need, since
+# BackendTLSPolicy is Gateway API only.
+#
+# Apply ingress.yaml first: it provides the IngressClass, DataPlane and
+# ControlPlane that serve this Ingress.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: goecho
+  labels:
+    app: goecho
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: goecho
+  template:
+    metadata:
+      labels:
+        app: goecho
+    spec:
+      containers:
+      - name: goecho
+        image: kong/go-echo:0.5.0
+        ports:
+        - containerPort: 443
+        env:
+          - name: HTTPS_PORT
+            value: "443"
+          - name: TLS_CERT_FILE
+            value: "/etc/certs/tls.crt"
+          - name: TLS_KEY_FILE
+            value: "/etc/certs/tls.key"
+        volumeMounts:
+          - mountPath: /etc/certs
+            name: certs
+      volumes:
+        - name: certs
+          secret:
+            secretName: goecho-cert
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: goecho
+  name: goecho
+  annotations:
+    konghq.com/tls-verify: "true"            # Enable TLS verification of the upstream.
+    konghq.com/ca-certificates-secrets: "ca" # The CA root certificate secret used for verification.
+    konghq.com/protocol: "https"             # Has to be either https or tls when TLS verification is enabled.
+    konghq.com/host-header: "goecho"         # This will make Kong use `goecho` server name when validating server-presented TLS certificate.
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 443
+  selector:
+    app: goecho
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: goecho-ingress
+  annotations:
+    konghq.com/strip-path: "true"
+    konghq.com/preserve-host: "false"
+spec:
+  ingressClassName: kong
+  rules:
+  - host: goecho-2
+    http:
+      paths:
+      - path: /echo
+        pathType: Prefix
+        backend:
+          service:
+            name: goecho
+            port:
+              number: 443
+---
+# `konghq.com/ca-cert` marks this as a CA certificate and `id` pins the Kong CA
+# certificate entity's UUID. `konghq.com/secret` is required because the
+# operator runs the ControlPlane with
+# `--secret-label-selector=konghq.com/secret`.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ca
+  labels:
+    konghq.com/ca-cert: "true"
+    konghq.com/secret: "true"
+  annotations:
+    kubernetes.io/ingress.class: kong
+stringData:
+  id: "cce8c384-721f-4f58-85dd-50834e3e733a"
+  cert: |
+    -----BEGIN CERTIFICATE-----
+    MIIDbTCCAlWgAwIBAgIUVqWYdKxXFTJEgfsxg0NLgw8KdW0wDQYJKoZIhvcNAQEL
+    BQAwRTELMAkGA1UEBhMCVVMxEzARBgNVBAgMCkNhbGlmb3JuaWExITAfBgNVBAoM
+    GEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDAgFw0yNDEyMTExNDQ0MDFaGA8zMDI0
+    MDQxMzE0NDQwMVowRTELMAkGA1UEBhMCVVMxEzARBgNVBAgMCkNhbGlmb3JuaWEx
+    ITAfBgNVBAoMGEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDCCASIwDQYJKoZIhvcN
+    AQEBBQADggEPADCCAQoCggEBAKwhV817FJ+krSoQwOu+TBL6wy8UHJO7fC4bv8SI
+    TicWicZxEwUc+jS1hx9qtPlUya//f1va2Ii/Dg7dZpSlvmSKibNNKBq9ebBHQ6d8
+    F8UsjvRLH68gBCkJnpTzonW8ed2k25qlDoQ0Wm897A9B/MxQKtIKG/CcR0zw43uq
+    cCd7+q+XtMZXFiKer9qKNmwoUTrAfIe7Oivh2llLD7OmMdR3hJCHuQyM2Lg7cdJx
+    6HUpdy4oCq9/SVeYtxMJvAxUm88YTbeGfiHVWQCGX2UhYexLE69VvOq1ZH7Ic9YW
+    qu9o4mff3fLAJbkjjWoXdxrZIHJe64yimGzjuxmFLO3EBEcCAwEAAaNTMFEwHQYD
+    VR0OBBYEFFFKo6R1+2xojz3YdW7vvhCsHkVOMB8GA1UdIwQYMBaAFFFKo6R1+2xo
+    jz3YdW7vvhCsHkVOMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEB
+    AIYoKhB/NydPYfVBPw66wJ7KCLoowF+qcVn+P/zSqmjlC5ycpK5toe/BkxPCx0YH
+    ysTC4AGD3oxgNn24Bzkq96GcmwgXLscAOScGRlNzeT2WbVmYBDtqzst6mxbYTLWF
+    bHH1A+PBLfmxBS7oswc03bzayGqaRIHru7FWObhjI4s17BYEP4LQtCBIDU6QpR9a
+    1QV8JwDy2L+EMH80JURii801ZuKK6mzisZQEj4PJZvkYpRovc3a804eRvtk9cjDe
+    TChP2U1pgR5LtkWOWFEehLx7s46f68vlBaMV/zWaPjd52g+3ujfXWLYv7jX/3CAk
+    rewqAvVHqaj7J0YW8dWVRb8=
+    -----END CERTIFICATE-----
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: goecho-cert
+type: kubernetes.io/tls
+stringData:
+  # Signed with the CA above. Valid for CN `goecho`.
+  # Will be used by the upstream service to serve HTTPS.
+  # Regenerate the pair with:
+  #   openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -keyout ca.key -out ca.crt -subj "/CN=example-ca"
+  #   openssl req -newkey rsa:2048 -nodes -keyout tls.key -out tls.csr -subj "/CN=goecho"
+  #   openssl x509 -req -in tls.csr -CA ca.crt -CAkey ca.key -CAcreateserial -days 3650 -out tls.crt
+  tls.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIIDWjCCAkKgAwIBAgIBATANBgkqhkiG9w0BAQsFADBFMQswCQYDVQQGEwJVUzET
+    MBEGA1UECAwKQ2FsaWZvcm5pYTEhMB8GA1UECgwYSW50ZXJuZXQgV2lkZ2l0cyBQ
+    dHkgTHRkMCAXDTI0MTIxMTE0NDYxNFoYDzMwMjQwNDEzMTQ0NjE0WjBWMQswCQYD
+    VQQGEwJBVTETMBEGA1UECAwKU29tZS1TdGF0ZTEhMB8GA1UECgwYSW50ZXJuZXQg
+    V2lkZ2l0cyBQdHkgTHRkMQ8wDQYDVQQDDAZnb2VjaG8wggEiMA0GCSqGSIb3DQEB
+    AQUAA4IBDwAwggEKAoIBAQCDGzeYSF6Fs6cMKRVKjmSAQUetWLy6YzVeQWxvszs4
+    2idVihqW26+WTjkwoncAjjp4TOtje3/PxH2IvY+rfRsaaZkiorRgb7wtW1GYhPbV
+    n50NNs8cZGTm6ilmsglmc+MJYg4nIAv7+RofEOUD7U1l6RzpEOxM+PqY1AHEHTfg
+    zilH8HUHIlk1dqNUAwXD0LhlTONFw8orH1fU2XG0IthVyjtmjpSmneLA8dvLHxIz
+    xdK97/bwmEPuCEH23kzVEgWP2378TyZy6FSXc+RvuU1lB++wemxmvuR1giY133ps
+    wsxfEAKbOGXXXK2eaY0Mt10Ob8sPwp6OFt6oe04emxE7AgMBAAGjQjBAMB0GA1Ud
+    DgQWBBTfNaPtTxCsZRmlZBWmXBMrArKe4DAfBgNVHSMEGDAWgBRRSqOkdftsaI89
+    2HVu774QrB5FTjANBgkqhkiG9w0BAQsFAAOCAQEAYHrSM37c1rmN0m7Yj2+BFpAu
+    5Y7BKcrGlR5jRGSMEv4/dsjqDFuoN07XfZdx/d3uyM6u8Ed0HOUo/2eAdL5NoZkf
+    n//s8fUXQR5PsHmjekBLqM1/cLMBNHbI8oc0cajXCASEJ0Do+/eotMvlw0D2VckJ
+    6DvmS7Ir/u42GNDlegREY+ok2rihlCc6PK5NLplBqa+koLLBXQqQSUjSf4GZ43uy
+    uayYJFqkaqdNOql5GPl4txJIRMN9EVKzQip1TpI/toGkSILvi6dFj06ZS1uXxE8M
+    OEUdMT3otJZhODa1eTSSo0Yg4KTPAri/1xOujN3ocehEamvDMBEqd6LZLvCeFw==
+    -----END CERTIFICATE-----
+  tls.key: |
+    -----BEGIN PRIVATE KEY-----
+    MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCDGzeYSF6Fs6cM
+    KRVKjmSAQUetWLy6YzVeQWxvszs42idVihqW26+WTjkwoncAjjp4TOtje3/PxH2I
+    vY+rfRsaaZkiorRgb7wtW1GYhPbVn50NNs8cZGTm6ilmsglmc+MJYg4nIAv7+Rof
+    EOUD7U1l6RzpEOxM+PqY1AHEHTfgzilH8HUHIlk1dqNUAwXD0LhlTONFw8orH1fU
+    2XG0IthVyjtmjpSmneLA8dvLHxIzxdK97/bwmEPuCEH23kzVEgWP2378TyZy6FSX
+    c+RvuU1lB++wemxmvuR1giY133pswsxfEAKbOGXXXK2eaY0Mt10Ob8sPwp6OFt6o
+    e04emxE7AgMBAAECggEAFYMmRKj/RX38d3zYPwMNT5QmkDWCxiyYKa6ffdaRbZsy
+    IBGIml9SuN19+dJ2p1MvGeU5LHortyo9FO5RwChHhbZ1B59d7IL5BBI7WcTbgaLu
+    kKgBJN3+Rnt+rpig/TwfsT7zJo1WGhK+LAHIKjRKYmH1OfLqaxjheakz3vuSWyMM
+    uIugO06H/vZvh6nf+yOhizpmbEEQNbg9zXIx9kVF8jzd6LQOF+M2PpynZIjrKK5N
+    OZ+yDIYW40VJzeDepuKKPciFXUBhS7qNe++we9JS+AyNxTyzsgDJ5yqY/BlhrDYV
+    CXALK0TvCb2nk9uWhoG/cp3TNkPbQeN3egi0fIhXZQKBgQC4TtCNJOrqWc2BecIv
+    6GfOq3VWhn2lyeHLmgYcNA7Xp0Ih4Tm/HL6OIBDhabMpS+dyGTHxSOmQPEc1LP64
+    aokq68wQAKYPFjVPsO2BAd+Y/7i2a/+ogE9KLL/lfTgmP42L0H5woAYnxlrgoQzX
+    nkCCQQMSdxmJrNe+UTqU/tLMTwKBgQC2GqW81/k+eNrKynjWBfwK+YNU7gqmuVYg
+    jMQ7K+TQSJL5wv2EkClvpxUvWEjQmOR8bVjdjFmAa0uiz7CY9QK9IyS5g4dSL0TN
+    oniF75lKQkEZWS4A9UqZIXRqMuzrdno5iJpvfZGIBzTJOl+dqKPfkSEFfPvwQpW2
+    c2lGyglVVQKBgC9QTElviL7QfukWELurtbpgWab0r5y3zrctuxPSaV0DGv8HioN9
+    JY3mvW6ga9XWHnwz65Y9WXglgUItYtaEwuG51pDlGbwVv2nNyaqsiHIGc6yg3Ois
+    x64K/tgy5Q8skXGq/Ep9Shc73Gh974YKohTOC7PZzzyAmoHI6HkHUaYRAoGABbrE
+    6DIrZ2nKCINiVemOSpIbLbrnnuNJ8HA9ZFc3Nc5ywWT/MQKQKzEom3q9n8KPvdJ6
+    702RK1c05ASA2+8pjOXkK+oVgeJ22bl47U3iltGK1s9VgTY2iKbi0MyVY7swkUrZ
+    ARUEVTFU2df6Vi2OKmSYk2GhU6fkqf7rmwyUSpkCgYAMc/N3+jxW3y/O2XQ4BdLK
+    cBk9bvKL0ABpwVh7v9oK3gLt+LqX1fsqrwncBa3BQG9GhgLzLAB4OW1J0BrHP7yM
+    yvxQuKkRMCmOsk5UomHCGgT0uy68wuBx4je+D6CEiX8XkD/Ktse34iC6W4v8+1Kp
+    K4vazzZcTG7y6G/1ocPXGw==
+    -----END PRIVATE KEY-----
