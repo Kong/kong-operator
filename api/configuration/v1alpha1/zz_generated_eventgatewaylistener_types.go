@@ -83,7 +83,6 @@ type EventGatewayListenerAPISpec struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels Labels `json:"labels,omitzero"`
 
 	// The unique name of the listener.

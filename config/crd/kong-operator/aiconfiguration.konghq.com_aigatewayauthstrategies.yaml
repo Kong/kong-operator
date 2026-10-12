@@ -270,6 +270,7 @@ spec:
 
                           Keys must be of length 1-63 characters, and cannot start with "kong",
                           "konnect", "mesh", "kic", or "_".
+                        maxProperties: 50
                         type: object
                       managedBy:
                         additionalProperties:
@@ -284,6 +285,7 @@ spec:
 
                           Keys must be 1–63 characters long and start with an alphanumeric
                           character.
+                        maxProperties: 5
                         type: object
                       name:
                         description: |-
@@ -2807,6 +2809,7 @@ spec:
 
                           Keys must be of length 1-63 characters, and cannot start with "kong",
                           "konnect", "mesh", "kic", or "_".
+                        maxProperties: 50
                         type: object
                       managedBy:
                         additionalProperties:
@@ -2821,6 +2824,7 @@ spec:
 
                           Keys must be 1–63 characters long and start with an alphanumeric
                           character.
+                        maxProperties: 5
                         type: object
                       name:
                         description: |-

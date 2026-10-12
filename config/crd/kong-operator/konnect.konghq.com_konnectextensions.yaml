@@ -214,6 +214,7 @@ spec:
                           type: string
                         description: Labels is a set of labels that will be applied
                           to the Konnect DataPlane.
+                        maxProperties: 5
                         type: object
                         x-kubernetes-validations:
                         - message: keys must match the pattern '^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'.
@@ -581,6 +582,7 @@ spec:
                           type: string
                         description: Labels is a set of labels that will be applied
                           to the Konnect DataPlane.
+                        maxProperties: 5
                         type: object
                         x-kubernetes-validations:
                         - message: keys must match the pattern '^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'.

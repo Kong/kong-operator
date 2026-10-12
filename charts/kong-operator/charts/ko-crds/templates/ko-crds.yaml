@@ -18013,6 +18013,7 @@ spec:
                         properties:
                           id:
                             maxLength: 36
+                            minLength: 1
                             pattern: ^[0-9a-f]{8}(?:\-[0-9a-f]{4}){3}-[0-9a-f]{12}$
                             type: string
                         required:
@@ -18271,6 +18272,7 @@ spec:
                           minLength: 1
                           pattern: ^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$
                           type: string
+                        maxProperties: 5
                         type: object
                         x-kubernetes-validations:
                         - message: keys must match the pattern '^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'.
@@ -18514,6 +18516,7 @@ spec:
                           minLength: 1
                           pattern: ^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$
                           type: string
+                        maxProperties: 5
                         type: object
                         x-kubernetes-validations:
                         - message: keys must match the pattern '^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'.
@@ -18792,6 +18795,7 @@ spec:
                     properties:
                       id:
                         maxLength: 36
+                        minLength: 1
                         pattern: ^[0-9a-f]{8}(?:\-[0-9a-f]{4}){3}-[0-9a-f]{12}$
                         type: string
                     required:
@@ -19054,6 +19058,7 @@ spec:
                     properties:
                       id:
                         maxLength: 36
+                        minLength: 1
                         pattern: ^[0-9a-f]{8}(?:\-[0-9a-f]{4}){3}-[0-9a-f]{12}$
                         type: string
                     required:

@@ -104,7 +104,6 @@ type KonnectAIGatewayAPISpec struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 
 	// The minimum AI Gateway runtime version supported by this AI Gateway.

@@ -105,6 +105,7 @@ spec:
                           minLength: 1
                           pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
                           type: string
+                        maxProperties: 50
                         type: object
                       name:
                         maxLength: 255
@@ -193,6 +194,7 @@ spec:
                           minLength: 1
                           pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
                           type: string
+                        maxProperties: 50
                         type: object
                       name:
                         maxLength: 255
@@ -258,6 +260,7 @@ spec:
                           minLength: 1
                           pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
                           type: string
+                        maxProperties: 50
                         type: object
                       name:
                         maxLength: 255
@@ -447,6 +450,7 @@ spec:
                           minLength: 1
                           pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
                           type: string
+                        maxProperties: 50
                         type: object
                       name:
                         maxLength: 255
@@ -473,6 +477,7 @@ spec:
                           minLength: 1
                           pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
                           type: string
+                        maxProperties: 50
                         type: object
                       name:
                         maxLength: 255
