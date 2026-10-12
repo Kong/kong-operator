@@ -137,6 +137,12 @@ func testPushInstance(t *testing.T, objs ...client.Object) *Instance {
 	builder := fake.NewClientBuilder().
 		WithScheme(managerscheme.Get()).
 		WithReturnManagedFields().
+		// The fake client's built-in type converter treats every list as
+		// atomic, which breaks the per-condition-type SSA applies (each
+		// apply prunes the other instance-owned condition). Feed it the
+		// CRD-schema converter so the conditions list-map is applied
+		// granularly, as the real API server does.
+		WithTypeConverters(newTestTypeConverter()).
 		WithStatusSubresource(&aigatewayv1alpha1.OnPremAIGateway{}).
 		WithObjects(objs...)
 	for _, opts := range [][]index.Option{

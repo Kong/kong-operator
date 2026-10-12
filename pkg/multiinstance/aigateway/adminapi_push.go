@@ -58,11 +58,23 @@ func newMTLSClientAdapter(address, serverName string, certPEM, keyPEM, caPEM []b
 	return adminapi.NewMTLSClient(address, serverName, certPEM, keyPEM, caPEM)
 }
 
-// instanceFieldManager is the SSA field manager used by the instance to patch the
-// OnPremAIGateway status. It is distinct from controllerpkgssa.FieldManager (used by
-// the OnPremAIGateway controller) so that the instance only owns the conditions it
-// sets and never drops the conditions owned by the controller.
+// instanceFieldManager is the prefix of the SSA field managers used by the
+// instance to patch the OnPremAIGateway status. It is distinct from
+// controllerpkgssa.FieldManager (used by the OnPremAIGateway controller) so
+// that the instance never drops the conditions owned by the controller.
 const instanceFieldManager = "gateway-operator-aigateway-instance"
+
+// instanceFieldManagerFor returns the SSA field manager the instance uses to
+// apply the given condition type. A distinct manager per condition type makes
+// SSA cross-pruning impossible: an apply only prunes list-map entries owned by
+// the applying manager, so each instance-owned condition travels in its own
+// apply payload and can only be dropped by the report site that owns it — no
+// carry-over of the other instance-owned conditions (which would otherwise
+// require reading the stored status before every apply, exposing the payload
+// to informer cache lag).
+func instanceFieldManagerFor(t kcfgconsts.ConditionType) string {
+	return instanceFieldManager + "-" + string(t)
+}
 
 // pushClientCacheKey keys the Instance's push client cache. It includes the
 // certificate material so that a renewed Secret (even one replaced in place,
@@ -346,45 +358,24 @@ func (i *Instance) reportTranslationStatus(
 	}
 }
 
-// instanceOwnedConditionTypes lists the condition types the instance owns on the
-// OnPremAIGateway status under instanceFieldManager. Every apply must carry all
-// of them: an SSA apply payload omitting a list-map entry owned by the applying
-// field manager prunes it, so report sites applying disjoint conditions would
-// delete each other's conditions. A new instance-owned condition must be added
-// here (and removed from the OnPremAIGateway controller's apply payload).
-var instanceOwnedConditionTypes = []kcfgconsts.ConditionType{
-	aigatewayv1alpha1.OnPremAIGatewayDataPlanesConfiguredType,
-	aigatewayv1alpha1.OnPremAIGatewayConfigurationProgrammedType,
-}
-
-// applyInstanceConditions applies the provided instance-owned conditions to the
-// OnPremAIGateway status under instanceFieldManager. Conditions of the
-// instance-owned types that are not provided in this call are carried over from
-// the stored status verbatim, so that the apply does not prune them (see
-// instanceOwnedConditionTypes). It reports whether any of the provided
-// conditions changed (status, reason or message), so that callers can emit
-// events only when the reported state moved.
+// applyInstanceConditions applies the given condition to the OnPremAIGateway
+// status under the per-condition-type instance field manager (see
+// instanceFieldManagerFor). It reports whether the condition changed (status,
+// reason or message), so that callers can emit events only when the reported
+// state moved.
 //
-// The conditions of the instance-owned types not provided are merged without
-// the OnPremAIGateway controller's conditions (Ready, LicenseValid, ...), which
-// the controller owns under its own field manager.
+// The stored status is read from the cached client: the payload carries only
+// the reported condition, so the cached snapshot is used solely for change
+// detection and LastTransitionTime preservation, where staleness is benign (a
+// divergent snapshot costs at most a redundant patch or event on one sync).
 func (i *Instance) applyInstanceConditions(
 	ctx context.Context,
 	gwNN types.NamespacedName,
-	conditions ...metav1.Condition,
+	condition metav1.Condition,
 ) (bool, error) {
 	existing := &aigatewayv1alpha1.OnPremAIGateway{}
 	if err := i.client.Get(ctx, gwNN, existing); err != nil && !apierrors.IsNotFound(err) {
 		return false, fmt.Errorf("getting OnPremAIGateway %s: %w", gwNN, err)
-	}
-
-	// Seed the merged payload with every stored instance-owned condition, so
-	// the apply does not prune the ones this call does not report.
-	merged := make([]metav1.Condition, 0, len(instanceOwnedConditionTypes))
-	for _, t := range instanceOwnedConditionTypes {
-		if stored, ok := k8sutils.GetCondition(t, existing); ok {
-			merged = append(merged, stored)
-		}
 	}
 
 	// NewCondition stamps a fresh LastTransitionTime on every call. Reuse the
@@ -394,21 +385,13 @@ func (i *Instance) applyInstanceConditions(
 	// actually changed is decided from the stored state, not from the apply
 	// result: the comparison behind ApplyStatusIfChanged can report a change
 	// even when the applied content is identical.
-	var changed bool
-	for _, cond := range conditions {
-		cond, ch := k8sutils.UpdatedConditionPreservingLastTransitionTime(merged, cond)
-		changed = changed || ch
-		if idx := slices.IndexFunc(merged, func(c metav1.Condition) bool { return c.Type == cond.Type }); idx >= 0 {
-			merged[idx] = cond
-		} else {
-			merged = append(merged, cond)
-		}
-	}
+	cond, changed := k8sutils.UpdatedConditionPreservingLastTransitionTime(existing.Status.Conditions, condition)
 
 	gw := gatewayEventObject(gwNN)
-	gw.Status.Conditions = merged
+	gw.Status.Conditions = []metav1.Condition{cond}
 	if _, err := controllerpkgssa.ApplyStatusIfChanged(
-		ctx, i.logger, i.client, i.env.TypeConverter, gw, instanceFieldManager,
+		ctx, i.logger, i.client, i.env.TypeConverter, gw,
+		instanceFieldManagerFor(kcfgconsts.ConditionType(cond.Type)),
 	); err != nil {
 		return changed, fmt.Errorf("patching OnPremAIGateway status with the instance-owned conditions: %w", err)
 	}

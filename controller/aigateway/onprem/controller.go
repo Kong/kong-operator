@@ -438,7 +438,7 @@ func (r *Reconciler) initStatusToWaitingToBecomeReady(
 // applyStatus patches the OnPremAIGateway status subresource via SSA.
 //
 // The instance (pkg/multiinstance/aigateway) owns the DataPlanesConfigured condition
-// under its own field manager (instanceFieldManager), so it is excluded from the
+// under its own field manager (derived from instanceFieldManager), so it is excluded from the
 // controller's apply payload: applying the full cached status under ForceOwnership
 // would steal that condition's ownership on every reconcile with a stale cache, and
 // the instance would steal it back (flapping ownership, duplicate Warning events).
