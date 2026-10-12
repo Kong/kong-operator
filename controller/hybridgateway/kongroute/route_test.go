@@ -1057,6 +1057,225 @@ func TestPrecedenceVariantsForHTTPRouteMatchBoundsExpansion(t *testing.T) {
 	}
 }
 
+func TestPrecedenceVariantsForHTTPRouteMatchHeaderIntersections(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, gatewayv1.Install(scheme))
+	header := func(value string, matchType gatewayv1.HeaderMatchType) gatewayv1.HTTPHeaderMatch {
+		return gatewayv1.HTTPHeaderMatch{Name: "X-Flavour", Type: new(matchType), Value: value}
+	}
+	for _, tc := range []struct {
+		name       string
+		higher     gatewayv1.HTTPHeaderMatch
+		lower      gatewayv1.HTTPHeaderMatch
+		exactValue string
+		err        string
+	}{
+		{
+			name:       "higher regex accepts lower exact",
+			higher:     header("app.*", gatewayv1.HeaderMatchRegularExpression),
+			lower:      header("apple", gatewayv1.HeaderMatchExact),
+			exactValue: "apple",
+		},
+		{
+			name:       "higher exact accepted by lower regex",
+			higher:     header("apple", gatewayv1.HeaderMatchExact),
+			lower:      header("app.*", gatewayv1.HeaderMatchRegularExpression),
+			exactValue: "apple",
+		},
+		{
+			name:       "case-insensitive matching",
+			higher:     header("APP.*", gatewayv1.HeaderMatchRegularExpression),
+			lower:      header("aPPle", gatewayv1.HeaderMatchExact),
+			exactValue: "aPPle",
+		},
+		{
+			name:       "unanchored matching",
+			higher:     header("ppl", gatewayv1.HeaderMatchRegularExpression),
+			lower:      header("apple", gatewayv1.HeaderMatchExact),
+			exactValue: "apple",
+		},
+		{
+			name:   "anchored regex rejects exact",
+			higher: header("^app$", gatewayv1.HeaderMatchRegularExpression),
+			lower:  header("apple", gatewayv1.HeaderMatchExact),
+		},
+		{
+			name:   "different exact values remain disjoint",
+			higher: header("apple", gatewayv1.HeaderMatchExact),
+			lower:  header("pear", gatewayv1.HeaderMatchExact),
+		},
+		{
+			name:       "equivalent exact values after Kong case folding",
+			higher:     header("APPLE", gatewayv1.HeaderMatchExact),
+			lower:      header("apple", gatewayv1.HeaderMatchExact),
+			exactValue: "APPLE",
+		},
+		{
+			name:   "distinct regex intersections remain unsupported",
+			higher: header("app.*", gatewayv1.HeaderMatchRegularExpression),
+			lower:  header("app[a-z]+", gatewayv1.HeaderMatchRegularExpression),
+		},
+		{
+			name:       "implicit exact match and case-insensitive header names",
+			higher:     header("app.*", gatewayv1.HeaderMatchRegularExpression),
+			lower:      gatewayv1.HTTPHeaderMatch{Name: "x-flavour", Value: "apple"},
+			exactValue: "apple",
+		},
+		{
+			name:   "pattern lowering preserves non-ASCII literals",
+			higher: header("\u00c1", gatewayv1.HeaderMatchRegularExpression),
+			lower:  header("\u00e1", gatewayv1.HeaderMatchExact),
+		},
+		{
+			name:       "Kong lowers regex escape letters",
+			higher:     header(`\D`, gatewayv1.HeaderMatchRegularExpression),
+			lower:      header("123", gatewayv1.HeaderMatchExact),
+			exactValue: "123",
+		},
+		{
+			name:   "invalid regex fails explicitly",
+			higher: header("[", gatewayv1.HeaderMatchRegularExpression),
+			lower:  header("apple", gatewayv1.HeaderMatchExact),
+			err:    "cannot compile header regex",
+		},
+		{
+			name:   "invalid lower regex fails explicitly",
+			higher: header("apple", gatewayv1.HeaderMatchExact),
+			lower:  header("[", gatewayv1.HeaderMatchRegularExpression),
+			err:    "cannot compile header regex",
+		},
+		{
+			name:   "unsupported Rust regex syntax fails explicitly",
+			higher: header("(?x)app .*", gatewayv1.HeaderMatchRegularExpression),
+			lower:  header("apple", gatewayv1.HeaderMatchExact),
+			err:    "cannot compile header regex",
+		},
+		{
+			name:   "ambiguous Unicode shorthand class fails explicitly",
+			higher: header(`\w+`, gatewayv1.HeaderMatchRegularExpression),
+			lower:  header("\u00e1", gatewayv1.HeaderMatchExact),
+			err:    "ambiguous shorthand-class intersections are unsupported",
+		},
+		{
+			name:   "ambiguous vertical-tab whitespace fails explicitly",
+			higher: header(`\s`, gatewayv1.HeaderMatchRegularExpression),
+			lower:  header("\v", gatewayv1.HeaderMatchExact),
+			err:    "ambiguous shorthand-class intersections are unsupported",
+		},
+		{
+			name:       "escaped shorthand literal remains supported",
+			higher:     header(`\\w`, gatewayv1.HeaderMatchRegularExpression),
+			lower:      header("\u00e1\\w", gatewayv1.HeaderMatchExact),
+			exactValue: "\u00e1\\w",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			httpRoute := &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
+				Name:     "header-intersection", Namespace: "default",
+				Spec: gatewayv1.HTTPRouteSpec{Rules: []gatewayv1.HTTPRouteRule{
+					{Matches: []gatewayv1.HTTPRouteMatch{{
+						Path: &gatewayv1.HTTPPathMatch{
+							Type: new(gatewayv1.PathMatchPathPrefix), Value: new("/a"),
+						},
+						Headers: []gatewayv1.HTTPHeaderMatch{tc.higher},
+					}}},
+					{Matches: []gatewayv1.HTTPRouteMatch{{
+						Path: defaultRootPathMatch(), Method: new(gatewayv1.HTTPMethodGet),
+						Headers: []gatewayv1.HTTPHeaderMatch{tc.lower},
+					}}},
+				}},
+			}
+			original := httpRoute.DeepCopy()
+
+			variants, err := precedenceVariantsForHTTPRouteMatch(httpRoute,
+				httpRoute.Spec.Rules[0].Matches[0], httpRouteMatchPriorities(httpRoute), 0, 0, nil)
+
+			if tc.err != "" {
+				require.ErrorContains(t, err, tc.err)
+				require.ErrorContains(t, err, "HTTPRoute default/header-intersection rule 0 match 0")
+				require.Nil(t, variants)
+				cl := fake.NewClientBuilder().Build()
+				routes, err := RoutesForHTTPRouteRule(t.Context(), logr.Discard(), cl,
+					httpRoute, httpRoute.Spec.Rules[0], 0, &gwtypes.ParentReference{Name: "missing-gateway"},
+					nil, nil, "test-service", nil)
+				require.ErrorContains(t, err, tc.err)
+				require.Nil(t, routes, "reject unsupported intersections before lookups or building partial routes")
+			} else {
+				require.NoError(t, err)
+				if tc.exactValue == "" {
+					require.Len(t, variants, 1)
+				} else {
+					require.Len(t, variants, 2)
+					assert.Equal(t, httpRoute.Spec.Rules[0].Matches[0], variants[0])
+					assert.Equal(t, new(gatewayv1.HTTPMethodGet), variants[1].Method)
+					require.Len(t, variants[1].Headers, 1)
+					assert.Equal(t, tc.higher.Name, variants[1].Headers[0].Name)
+					assert.Equal(t, tc.exactValue, variants[1].Headers[0].Value)
+					if variants[1].Headers[0].Type != nil {
+						assert.Equal(t, gatewayv1.HeaderMatchExact, *variants[1].Headers[0].Type)
+					}
+
+					gateway := &gatewayv1.Gateway{
+						Name: "parent", Namespace: "default",
+						Spec: gatewayv1.GatewaySpec{Listeners: []gatewayv1.Listener{{
+							Name: "http", Protocol: gatewayv1.HTTPProtocolType, Port: 80,
+						}}},
+					}
+					cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
+					pRef := &gwtypes.ParentReference{Name: "parent", Namespace: new(gatewayv1.Namespace("default"))}
+					cpRef := &commonv1alpha1.ControlPlaneRef{
+						Type:                 commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{Name: "test-cp"},
+					}
+					routes, err := RoutesForRule(t.Context(), logr.Discard(), cl,
+						httpRoute, httpRoute.Spec.Rules[0], 0, pRef, cpRef, nil, "higher-service", nil)
+					require.NoError(t, err)
+					require.Len(t, routes, 2)
+					assert.Equal(t, map[string][]string{string(tc.higher.Name): {tc.exactValue}}, routes[1].Spec.Headers)
+					assert.Equal(t, []string{"GET"}, routes[1].Spec.Methods)
+					assert.Equal(t, []string{"~/a$", "~/a(/.*)"}, routes[1].Spec.Paths)
+					assert.Equal(t, routes[0].Spec.RegexPriority, routes[1].Spec.RegexPriority)
+					assert.Equal(t, routes[0].Spec.ServiceRef, routes[1].Spec.ServiceRef)
+					require.NotNil(t, routes[1].Spec.ServiceRef)
+					assert.Equal(t, "higher-service", routes[1].Spec.ServiceRef.NamespacedRef.Name)
+				}
+			}
+			assert.Equal(t, original, httpRoute)
+		})
+	}
+}
+
+func TestPrecedenceVariantsForHTTPRouteMatchDoesNotBroadenRegexIntersection(t *testing.T) {
+	path := func(value string) *gatewayv1.HTTPPathMatch {
+		return &gatewayv1.HTTPPathMatch{Type: new(gatewayv1.PathMatchPathPrefix), Value: new(value)}
+	}
+	regexHeader := func(value string) gatewayv1.HTTPHeaderMatch {
+		return gatewayv1.HTTPHeaderMatch{Name: "X-Flavour", Type: new(gatewayv1.HeaderMatchRegularExpression), Value: value}
+	}
+	httpRoute := &gwtypes.HTTPRoute{Spec: gatewayv1.HTTPRouteSpec{Rules: []gatewayv1.HTTPRouteRule{
+		{Matches: []gatewayv1.HTTPRouteMatch{{Path: path("/a/b"), Headers: []gatewayv1.HTTPHeaderMatch{regexHeader("^appliance$")}}}},
+		{Matches: []gatewayv1.HTTPRouteMatch{{Path: path("/a"), Headers: []gatewayv1.HTTPHeaderMatch{regexHeader("app.*")}}}},
+		{Matches: []gatewayv1.HTTPRouteMatch{{
+			Path: path("/"), Method: new(gatewayv1.HTTPMethodGet),
+			Headers: []gatewayv1.HTTPHeaderMatch{{Name: "X-Flavour", Value: "apple"}},
+		}}},
+	}}}
+	priorities := httpRouteMatchPriorities(httpRoute)
+	cache := make(map[httpRouteMatchPriorityKey][]gatewayv1.HTTPRouteMatch)
+
+	higher, err := precedenceVariantsForHTTPRouteMatch(httpRoute, httpRoute.Spec.Rules[0].Matches[0], priorities, 0, 0, cache)
+	require.NoError(t, err)
+	require.Len(t, higher, 1)
+	middle, err := precedenceVariantsForHTTPRouteMatch(httpRoute, httpRoute.Spec.Rules[1].Matches[0], priorities, 1, 0, cache)
+	require.NoError(t, err)
+	require.Len(t, middle, 2)
+	assert.Equal(t, "apple", middle[1].Headers[0].Value)
+	assert.Nil(t, middle[1].Headers[0].Type)
+	assert.Equal(t, new(gatewayv1.HTTPMethodGet), middle[1].Method)
+}
+
 func httpRouteWithDisjointHeaderMatches(lowerMatches int) *gwtypes.HTTPRoute {
 	httpRoute := &gwtypes.HTTPRoute{
 		TypeMeta:  httpRouteTypeMeta,

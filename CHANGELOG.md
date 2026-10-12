@@ -299,6 +299,10 @@
   specialized Kong Routes for conflicting match combinations. Specialized
   variants use regex paths so their inherited priorities take effect, including
   when lower-priority variants combine method and header matches.
+  Representable exact/regex header intersections are narrowed to the exact
+  constraint, retaining the higher-priority match's backend and priority.
+  Unsupported regex intersection checks fail translation explicitly instead
+  of silently omitting a required variant.
   Expansion is limited to 64 variants per original match, including the original;
   exceeding this limit fails translation with a `TranslationFailed` warning event
   instead of silently dropping precedence constraints.

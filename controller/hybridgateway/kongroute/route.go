@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -94,16 +95,16 @@ func RoutesForRule[
 }
 
 // RoutesForHTTPRouteRule creates or updates KongRoutes for the given HTTPRoute rule.
-// It generates one KongRoute per match in the rule.
+// It generates one KongRoute per precedence variant of each match in the rule.
 //
 // Gateway API semantics are:
 // - Within a single HTTPRouteRule, entries in .Matches are ORed
 // - Within a single HTTPRouteMatch, individual criteria (path/method/headers) are ANDed
 //
-// To faithfully represent this in Kong, we generate one KongRoute for each HTTPRouteMatch
-// and attach only that match's criteria to the route. All routes point to the same KongService.
-// This fixes Hybrid Gateway conformance failures such as HTTPRouteMatching, which includes
-// rules that combine independent path-only and header-only matches.
+// Each generated route retains the original match's backend and priority. Specialized variants
+// add overlapping lower-priority matches' method and header constraints so Kong's native field
+// weighting cannot override Gateway API precedence. Variants remain subsets of the original
+// match, preserving the OR semantics across independent matches.
 func RoutesForHTTPRouteRule(
 	ctx context.Context,
 	logger logr.Logger,
@@ -535,7 +536,11 @@ func precedenceVariantsForHTTPRouteMatch(
 					if !needsPrecedenceVariant(match, lowerVariant) {
 						continue
 					}
-					variant, changed, overlaps := augmentHTTPRouteMatch(match, lowerVariant)
+					variant, changed, overlaps, err := augmentHTTPRouteMatch(match, lowerVariant)
+					if err != nil {
+						return nil, fmt.Errorf("HTTPRoute %s/%s rule %d match %d: %w",
+							httpRoute.Namespace, httpRoute.Name, key.ruleIndex, key.matchIndex, err)
+					}
 					if !changed || !overlaps || slices.ContainsFunc(variants, func(existing gatewayv1.HTTPRouteMatch) bool {
 						return reflect.DeepEqual(existing, variant)
 					}) {
@@ -585,15 +590,15 @@ func traditionalKongMatchWeight(match gatewayv1.HTTPRouteMatch) int {
 func augmentHTTPRouteMatch(
 	higher gatewayv1.HTTPRouteMatch,
 	lower gatewayv1.HTTPRouteMatch,
-) (gatewayv1.HTTPRouteMatch, bool, bool) {
+) (gatewayv1.HTTPRouteMatch, bool, bool, error) {
 	if !httpRoutePathsCanOverlap(higher.Path, lower.Path) {
-		return gatewayv1.HTTPRouteMatch{}, false, false
+		return gatewayv1.HTTPRouteMatch{}, false, false, nil
 	}
 
 	variant := *higher.DeepCopy()
 	changed := false
 	if variant.Method != nil && lower.Method != nil && *variant.Method != *lower.Method {
-		return gatewayv1.HTTPRouteMatch{}, false, false
+		return gatewayv1.HTTPRouteMatch{}, false, false, nil
 	}
 	if variant.Method == nil && lower.Method != nil {
 		variant.Method = new(*lower.Method)
@@ -609,15 +614,73 @@ func augmentHTTPRouteMatch(
 			changed = true
 			continue
 		}
-		if !httpHeaderMatchesEqual(variant.Headers[matchingHeader], lowerHeader) {
-			// Exact matches with different values cannot overlap. Intersections involving
-			// regular-expression header matches cannot be represented by a KongRoute header
-			// value list (which is ORed), so leave those implementation-specific cases alone.
-			return gatewayv1.HTTPRouteMatch{}, false, false
+		higherHeader := variant.Headers[matchingHeader]
+		if httpHeaderMatchesEqual(higherHeader, lowerHeader) {
+			continue
+		}
+		higherRegex := higherHeader.Type != nil && *higherHeader.Type == gatewayv1.HeaderMatchRegularExpression
+		lowerRegex := lowerHeader.Type != nil && *lowerHeader.Type == gatewayv1.HeaderMatchRegularExpression
+		if higherRegex == lowerRegex {
+			// Different exact values are disjoint; distinct regex intersections cannot
+			// be represented by Kong's ORed header value lists.
+			return gatewayv1.HTTPRouteMatch{}, false, false, nil
+		}
+		regexHeader, exactHeader := higherHeader, lowerHeader
+		if lowerRegex {
+			regexHeader, exactHeader = lowerHeader, higherHeader
+		}
+		accepts, err := httpHeaderRegexAccepts(regexHeader, exactHeader)
+		if err != nil {
+			return gatewayv1.HTTPRouteMatch{}, false, false, err
+		}
+		if !accepts {
+			return gatewayv1.HTTPRouteMatch{}, false, false, nil
+		}
+		if higherRegex {
+			// The intersection is the exact value, not the broader original regex.
+			variant.Headers[matchingHeader] = *exactHeader.DeepCopy()
+			variant.Headers[matchingHeader].Name = higherHeader.Name
+			changed = true
 		}
 	}
 
-	return variant, changed, true
+	return variant, changed, true, nil
+}
+
+func httpHeaderRegexAccepts(regexHeader, exactHeader gatewayv1.HTTPHeaderMatch) (bool, error) {
+	normalizedPattern := lowerHTTPHeaderMatchValue(regexHeader.Value)
+	pattern, err := regexp.Compile(normalizedPattern)
+	if err != nil {
+		return false, fmt.Errorf("cannot compile header regex %q for %s: %w", regexHeader.Value, regexHeader.Name, err)
+	}
+	// Go's shorthand classes and word boundaries differ from Kong's for Unicode
+	// (and vertical-tab whitespace). Reject ambiguous intersections rather than
+	// incorrectly classifying them as disjoint.
+	if strings.IndexFunc(exactHeader.Value, func(c rune) bool { return c > 127 || c == '\v' }) >= 0 {
+		escaped := false
+		for _, c := range normalizedPattern {
+			if escaped {
+				if strings.ContainsRune("bdws", c) {
+					return false, fmt.Errorf("cannot evaluate header regex %q for %s: ambiguous shorthand-class intersections are unsupported",
+						regexHeader.Value, regexHeader.Name)
+				}
+				escaped = false
+			} else {
+				escaped = c == '\\'
+			}
+		}
+	}
+	return pattern.MatchString(lowerHTTPHeaderMatchValue(exactHeader.Value)), nil
+}
+
+// Kong lowercases configured header values and regex patterns with Lua's ASCII string.lower.
+func lowerHTTPHeaderMatchValue(value string) string {
+	return strings.Map(func(c rune) rune {
+		if c >= 'A' && c <= 'Z' {
+			return c + ('a' - 'A')
+		}
+		return c
+	}, value)
 }
 
 func httpHeaderMatchesEqual(a, b gatewayv1.HTTPHeaderMatch) bool {
@@ -629,7 +692,8 @@ func httpHeaderMatchesEqual(a, b gatewayv1.HTTPHeaderMatch) bool {
 	if b.Type != nil {
 		bType = *b.Type
 	}
-	return strings.EqualFold(string(a.Name), string(b.Name)) && aType == bType && a.Value == b.Value
+	return strings.EqualFold(string(a.Name), string(b.Name)) && aType == bType &&
+		lowerHTTPHeaderMatchValue(a.Value) == lowerHTTPHeaderMatchValue(b.Value)
 }
 
 func httpRoutePathsCanOverlap(a, b *gatewayv1.HTTPPathMatch) bool {
