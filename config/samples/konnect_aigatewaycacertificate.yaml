@@ -32,10 +32,29 @@ metadata:
     konghq.com/secret: "true"
 type: Opaque
 stringData:
-  # Replace with your own PEM-encoded CA certificate.
+  # Obviously fake sample CA certificate so the manifest applies out of the box. Replace with
+  # your own PEM-encoded CA certificate for anything real.
   ca.crt: |
     -----BEGIN CERTIFICATE-----
-    <PASTE YOUR PEM-ENCODED CA CERTIFICATE HERE>
+    MIIDdDCCAlygAwIBAgIUQktwO/hX0eW2BAjijJpEIg/ew2UwDQYJKoZIhvcNAQEL
+    BQAwWjEwMC4GA1UEAwwnRkFLRSBLb25nIE9wZXJhdG9yIFNhbXBsZSBDQSBETyBO
+    T1QgVVNFMRkwFwYDVQQKDBBLb25nIEZha2UgU2FtcGxlMQswCQYDVQQGEwJYWDAe
+    Fw0yNjEwMTIwOTExMjFaFw0zNjEwMDkwOTExMjFaMFoxMDAuBgNVBAMMJ0ZBS0Ug
+    S29uZyBPcGVyYXRvciBTYW1wbGUgQ0EgRE8gTk9UIFVTRTEZMBcGA1UECgwQS29u
+    ZyBGYWtlIFNhbXBsZTELMAkGA1UEBhMCWFgwggEiMA0GCSqGSIb3DQEBAQUAA4IB
+    DwAwggEKAoIBAQC8FjXfUWF6Z+A6ZFanps/hQlMXv1vWjnzsiqP7MJWPhH7b1m2d
+    lS37kVm1ErP/y/mFJBqxE44fgOo3gObCa7mMx7zCzuPVC8Z+GwZiu1uoUhBeQjSC
+    yCwrRDJ1W8qge0WP1qXd+LCJuQaL3icAEnxOZMhYGcAvK9rJKyWHrRLeVCEGj5/I
+    BaXldHH0c4jkLFXvwynzTKOILMY6GQt8Y/TbkElVaxWCzmAfi5z8Siu0GnJ6H6AK
+    njtT8wWXz69w3EwmZohJnzibQ4u9q7Xd/OOyTVvs9KF3qvly1JyCkB3YcmJOqUIG
+    BYRWTRH9HiXqs5aVQ4tNCK8Bkk0ioKSgPBGHAgMBAAGjMjAwMB0GA1UdDgQWBBQQ
+    J8AP8qlfC2kIXsMd07cBnCqxzjAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEB
+    CwUAA4IBAQAxGhR9Jypk38yJwinYzZnzCS8h0y6QP1XumKHZoeufuk58xsSpsctC
+    ScnbJIjwvmSa1+REXxBpmKAOVyMs9oMe6blAIAD98f/lLdic/t2ZxMyBILx1Tojn
+    OcP0ZbnErh37ANrQCYKCBlN+r3xdzHN1hamWFc9A9kXDZNT10ZoZByvWMmai5lGi
+    YgDLfFn7M9pg1pFJD7vHcbUTgGKlcxcd8D+DA52Am2VU2msygQo/bWuv9i6bJ3vV
+    F14WQgNgCIStvs14/sOSjulibNJzlGg0yi2ksN5c1DzOx8u5bwQcdxPB2GTY+vAD
+    az3g4k88Q9iNRYi9JEH5H5cFIshDv4Xt
     -----END CERTIFICATE-----
 ---
 kind: AIGatewayCACertificate

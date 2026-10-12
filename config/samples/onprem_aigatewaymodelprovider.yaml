@@ -1,0 +1,93 @@
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongLicense
+metadata:
+  name: kong-license
+enabled: true
+rawLicenseString: |
+  <paste your Kong license payload here>
+---
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: OnPremAIGateway
+metadata:
+  name: ai-gw-cp-onprem-1
+  namespace: default
+spec: {}
+---
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: AIGatewayDataPlane
+metadata:
+  name: ai-gw-dp-onprem-1
+  namespace: default
+spec:
+  controlPlaneRef:
+    type: onpremNamespacedRef
+    onpremNamespacedRef:
+      name: ai-gw-cp-onprem-1
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openai-credentials
+  namespace: default
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+data:
+  token: QmVhcmVyIHNrLXh4eHh4eHh4eHh4eHh4eHh4eHh4
+---
+kind: AIGatewayModelProvider
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-provider-openai
+  namespace: default
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ai-gw-cp-onprem-1
+  apiSpec:
+    type: openai
+    openai:
+      name: openai-provider
+      displayName: OpenAI
+      config:
+        auth:
+          headers:
+            - name: Authorization
+              # Credential referenced from a Kubernetes Secret. The Secret must
+              # exist in the same namespace as this AIGatewayModelProvider (or set
+              # secretRef.namespace) and contain the key below.
+              value:
+                type: secretRef
+                secretRef:
+                  name: openai-credentials
+                  key: token
+---
+kind: AIGatewayModelProvider
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-provider-gemini
+  namespace: default
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ai-gw-cp-onprem-1
+  apiSpec:
+    type: gemini
+    gemini:
+      name: gemini-provider
+      displayName: Gemini
+      config:
+        auth:
+          type: basic
+          basic:
+            headers:
+              - name: x-goog-api-key
+                # Credential provided inline. See the "ai-gw-provider-openai" sample
+                # above for referencing a Kubernetes Secret instead.
+                value:
+                  type: inline
+                  value: xxxxxxxxxxxxxxxxxxxx
