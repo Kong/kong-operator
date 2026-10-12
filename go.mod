@@ -5,7 +5,7 @@ go 1.27.2
 require (
 	cloud.google.com/go/container v1.54.0
 	dario.cat/mergo v1.0.2
-	github.com/Kong/ai-deck-converter v0.19.12
+	github.com/Kong/ai-deck-converter v0.20.0
 	github.com/Kong/sdk-konnect-go v0.73.1
 	github.com/avast/retry-go/v5 v5.0.0
 	github.com/blang/semver/v4 v4.0.0
@@ -45,7 +45,7 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/testcontainers/testcontainers-go v0.44.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.44.0
-	github.com/tidwall/gjson v1.19.1
+	github.com/tidwall/gjson v1.19.0
 	github.com/tonglil/buflogr v1.1.1
 	go.uber.org/goleak v1.3.0
 	go.uber.org/zap v1.28.0
@@ -67,8 +67,8 @@ require (
 	sigs.k8s.io/controller-runtime v0.25.2
 	sigs.k8s.io/controller-tools v0.22.0
 	sigs.k8s.io/e2e-framework v0.7.0
-	sigs.k8s.io/gateway-api v1.6.3
-	sigs.k8s.io/gateway-api/conformance v1.6.3
+	sigs.k8s.io/gateway-api v1.6.2
+	sigs.k8s.io/gateway-api/conformance v1.6.2
 	sigs.k8s.io/structured-merge-diff/v6 v6.4.2
 	sigs.k8s.io/yaml v1.6.0
 )
