@@ -115,19 +115,19 @@ func TestExtractPreserveHost(t *testing.T) {
 	tests := []struct {
 		name             string
 		annotations      map[string]string
-		expectedVal      bool
+		expectedVal      *bool
 		expectedErrExist bool
 	}{
 		{
 			name:             "nil annotations",
 			annotations:      nil,
-			expectedVal:      true,
+			expectedVal:      nil,
 			expectedErrExist: false,
 		},
 		{
 			name:             "empty annotations",
 			annotations:      map[string]string{},
-			expectedVal:      true,
+			expectedVal:      nil,
 			expectedErrExist: false,
 		},
 		{
@@ -135,7 +135,7 @@ func TestExtractPreserveHost(t *testing.T) {
 			annotations: map[string]string{
 				"konghq.com/preserve-host": "true",
 			},
-			expectedVal:      true,
+			expectedVal:      new(true),
 			expectedErrExist: false,
 		},
 		{
@@ -143,7 +143,7 @@ func TestExtractPreserveHost(t *testing.T) {
 			annotations: map[string]string{
 				"konghq.com/preserve-host": "false",
 			},
-			expectedVal:      false,
+			expectedVal:      new(false),
 			expectedErrExist: false,
 		},
 		{
@@ -151,7 +151,7 @@ func TestExtractPreserveHost(t *testing.T) {
 			annotations: map[string]string{
 				"konghq.com/preserve-host": "invalid",
 			},
-			expectedVal:      true,
+			expectedVal:      nil,
 			expectedErrExist: true,
 		},
 		{
@@ -159,7 +159,7 @@ func TestExtractPreserveHost(t *testing.T) {
 			annotations: map[string]string{
 				"konghq.com/preserve-host": "",
 			},
-			expectedVal:      true,
+			expectedVal:      nil,
 			expectedErrExist: false,
 		},
 		{
@@ -168,7 +168,7 @@ func TestExtractPreserveHost(t *testing.T) {
 				"other-annotation":         "value",
 				"konghq.com/preserve-host": "false",
 			},
-			expectedVal:      false,
+			expectedVal:      new(false),
 			expectedErrExist: false,
 		},
 	}
@@ -1644,6 +1644,114 @@ func TestISServiceUpstream(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := IsServiceUpstream(tt.svc)
 			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestExtractRequestBuffering(t *testing.T) {
+	const key = "konghq.com/request-buffering"
+	tests := []struct {
+		name    string
+		anns    map[string]string
+		want    *bool
+		wantErr bool
+	}{
+		{name: "absent", anns: map[string]string{}},
+		{name: "nil map"},
+		{name: "empty value", anns: map[string]string{key: ""}},
+		{name: "true", anns: map[string]string{key: "true"}, want: new(true)},
+		{name: "false", anns: map[string]string{key: "false"}, want: new(false)},
+		{name: "invalid", anns: map[string]string{key: "x"}, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ExtractRequestBuffering(tt.anns)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestExtractResponseBuffering(t *testing.T) {
+	const key = "konghq.com/response-buffering"
+	tests := []struct {
+		name    string
+		anns    map[string]string
+		want    *bool
+		wantErr bool
+	}{
+		{name: "absent", anns: map[string]string{}},
+		{name: "nil map"},
+		{name: "empty value", anns: map[string]string{key: ""}},
+		{name: "true", anns: map[string]string{key: "true"}, want: new(true)},
+		{name: "false", anns: map[string]string{key: "false"}, want: new(false)},
+		{name: "invalid", anns: map[string]string{key: "x"}, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ExtractResponseBuffering(tt.anns)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestExtractHTTPSRedirectStatusCode(t *testing.T) {
+	tests := []struct {
+		name    string
+		anns    map[string]string
+		want    *int64
+		wantErr bool
+	}{
+		{name: "absent"},
+		{name: "301", anns: map[string]string{"konghq.com/https-redirect-status-code": "301"}, want: new(int64(301))},
+		{name: "426", anns: map[string]string{"konghq.com/https-redirect-status-code": "426"}, want: new(int64(426))},
+		{name: "not allowed", anns: map[string]string{"konghq.com/https-redirect-status-code": "200"}, wantErr: true},
+		{name: "not a number", anns: map[string]string{"konghq.com/https-redirect-status-code": "abc"}, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ExtractHTTPSRedirectStatusCode(tt.anns)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestExtractPathHandling(t *testing.T) {
+	tests := []struct {
+		name    string
+		anns    map[string]string
+		want    *string
+		wantErr bool
+	}{
+		{name: "absent"},
+		{name: "empty", anns: map[string]string{"konghq.com/path-handling": ""}},
+		{name: "v0", anns: map[string]string{"konghq.com/path-handling": "v0"}, want: new("v0")},
+		{name: "v1", anns: map[string]string{"konghq.com/path-handling": "v1"}, want: new("v1")},
+		{name: "invalid", anns: map[string]string{"konghq.com/path-handling": "v2"}, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ExtractPathHandling(tt.anns)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

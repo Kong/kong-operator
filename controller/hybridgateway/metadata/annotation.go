@@ -18,20 +18,24 @@ import (
 
 // Annotation constants matching those in the ingress controller.
 const (
-	annotationPrefix          = "konghq.com"
-	stripPathKey              = "/strip-path"
-	preserveHostKey           = "/preserve-host"
-	protocolKey               = "/protocol"
-	pathKey                   = "/path"
-	tlsVerifyKey              = "/tls-verify"
-	tlsVerifyDepthKey         = "/tls-verify-depth"
-	connectTimeoutKey         = "/connect-timeout"
-	readTimeoutKey            = "/read-timeout"
-	writeTimeoutKey           = "/write-timeout"
-	retriesKey                = "/retries"
-	hostHeaderKey             = "/host-header"
-	clientCertKey             = "/client-cert"
-	serviceUpstreamAnnotation = "ingress.kubernetes.io/service-upstream"
+	annotationPrefix           = "konghq.com"
+	stripPathKey               = "/strip-path"
+	preserveHostKey            = "/preserve-host"
+	requestBufferingKey        = "/request-buffering"
+	responseBufferingKey       = "/response-buffering"
+	httpsRedirectStatusCodeKey = "/https-redirect-status-code"
+	pathHandlingKey            = "/path-handling"
+	protocolKey                = "/protocol"
+	pathKey                    = "/path"
+	tlsVerifyKey               = "/tls-verify"
+	tlsVerifyDepthKey          = "/tls-verify-depth"
+	connectTimeoutKey          = "/connect-timeout"
+	readTimeoutKey             = "/read-timeout"
+	writeTimeoutKey            = "/write-timeout"
+	retriesKey                 = "/retries"
+	hostHeaderKey              = "/host-header"
+	clientCertKey              = "/client-cert"
+	serviceUpstreamAnnotation  = "ingress.kubernetes.io/service-upstream"
 )
 
 const (
@@ -47,8 +51,8 @@ const (
 	// defaultStripPath is the default value for the strip-path annotation when not specified.
 	defaultStripPath = false
 
-	// defaultPreserveHost is the default value for the preserve-host annotation when not specified.
-	defaultPreserveHost = true
+	// DefaultPreserveHost is the default value for the preserve-host annotation when not specified.
+	DefaultPreserveHost = true
 )
 
 // ExtractStripPath extracts the strip-path annotation value and returns a boolean and an optional error.
@@ -62,15 +66,53 @@ func ExtractStripPath(anns map[string]string) (bool, error) {
 	return *stripPath, nil
 }
 
-// ExtractPreserveHost extracts the preserve-host annotation value and returns a boolean and an optional error.
-// Returns true by default if the annotation is not present or cannot be parsed
-// and non-nil error if the annotation cannot be parsed.
-func ExtractPreserveHost(anns map[string]string) (bool, error) {
-	preserveHost, err := parseAnnotationBool(anns, preserveHostKey)
-	if err != nil || preserveHost == nil {
-		return defaultPreserveHost, err
+// ExtractPreserveHost extracts the preserve-host annotation value.
+// Returns nil when absent (callers apply [DefaultPreserveHost] if needed)
+// and a non-nil error when it cannot be parsed.
+func ExtractPreserveHost(anns map[string]string) (*bool, error) {
+	return parseAnnotationBool(anns, preserveHostKey)
+}
+
+// ExtractRequestBuffering extracts the request-buffering annotation value.
+// Returns nil when absent and a non-nil error when it cannot be parsed.
+func ExtractRequestBuffering(anns map[string]string) (*bool, error) {
+	return parseAnnotationBool(anns, requestBufferingKey)
+}
+
+// ExtractResponseBuffering extracts the response-buffering annotation value.
+// Returns nil when absent and a non-nil error when it cannot be parsed.
+func ExtractResponseBuffering(anns map[string]string) (*bool, error) {
+	return parseAnnotationBool(anns, responseBufferingKey)
+}
+
+// ExtractHTTPSRedirectStatusCode extracts the https-redirect-status-code annotation value.
+// Returns nil when absent and a non-nil error when it is not one of 301, 302, 307, 308, 426.
+func ExtractHTTPSRedirectStatusCode(anns map[string]string) (*int64, error) {
+	code, err := parseAnnotationInt(anns, httpsRedirectStatusCodeKey)
+	if err != nil || code == nil {
+		return nil, err
 	}
-	return *preserveHost, nil
+	switch *code {
+	case 301, 302, 307, 308, 426:
+		return code, nil
+	default:
+		return nil, fmt.Errorf("annotation %s%s must be one of 301, 302, 307, 308, 426, got %d",
+			annotationPrefix, httpsRedirectStatusCodeKey, *code)
+	}
+}
+
+// ExtractPathHandling extracts the path-handling annotation value.
+// Returns nil when absent or empty and a non-nil error when it is not "v0" or "v1".
+func ExtractPathHandling(anns map[string]string) (*string, error) {
+	val := anns[annotationPrefix+pathHandlingKey]
+	if val == "" {
+		return nil, nil
+	}
+	if val != "v0" && val != "v1" {
+		return nil, fmt.Errorf("annotation %s%s must be \"v0\" or \"v1\", got %q",
+			annotationPrefix, pathHandlingKey, val)
+	}
+	return &val, nil
 }
 
 // ExtractProtocol extracts the protocol supplied in the konghq.com/protocol annotation.
