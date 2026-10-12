@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/require"
@@ -498,4 +499,21 @@ func TestReportTranslationStatus(t *testing.T) {
 		require.Equal(t, metav1.ConditionFalse,
 			getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayDataPlanesConfiguredType).Status)
 	})
+}
+
+func TestTruncateMessage(t *testing.T) {
+	require.Equal(t, "short", truncateMessage("short"))
+
+	// ASCII input is cut at the length limit minus the ellipsis.
+	long := strings.Repeat("a", maxConditionMessageLength+10)
+	truncated := truncateMessage(long)
+	require.Len(t, truncated, maxConditionMessageLength)
+	require.True(t, strings.HasSuffix(truncated, "..."))
+
+	// Multi-byte input cut at a rune boundary stays valid UTF-8: the boundary
+	// lands inside a multi-byte rune, which must not be split.
+	multibyte := strings.Repeat("ą", maxConditionMessageLength) // 'ą' is 2 bytes
+	truncated = truncateMessage(multibyte)
+	require.LessOrEqual(t, len(truncated), maxConditionMessageLength)
+	require.True(t, utf8.ValidString(truncated))
 }

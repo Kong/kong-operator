@@ -24,6 +24,7 @@ import (
 	"io"
 	"slices"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/kong/go-kong/kong"
 	corev1 "k8s.io/api/core/v1"
@@ -59,7 +60,7 @@ func newMTLSClientAdapter(address, serverName string, certPEM, keyPEM, caPEM []b
 
 // instanceFieldManager is the SSA field manager used by the instance to patch the
 // OnPremAIGateway status. It is distinct from controllerpkgssa.FieldManager (used by
-// the OnPremAIGateway controller) so that the instance only owns the condition it
+// the OnPremAIGateway controller) so that the instance only owns the conditions it
 // sets and never drops the conditions owned by the controller.
 const instanceFieldManager = "gateway-operator-aigateway-instance"
 
@@ -310,7 +311,9 @@ func (i *Instance) reportTranslationStatus(
 	changed, err := i.applyInstanceConditions(ctx, gwNN, condition)
 	if err != nil {
 		// A status patch failure must not fail the sync (it would be retried
-		// together with the next sync anyway), so only log it.
+		// together with the next sync anyway), so only log it. The failure
+		// event is suppressed too: the condition never landed, so every
+		// failing retry would otherwise see it as changed and emit again.
 		log.Error(i.logger, err, "failed to report the configuration translation result on the OnPremAIGateway status")
 	}
 	if i.eventRecorder == nil {
@@ -318,7 +321,7 @@ func (i *Instance) reportTranslationStatus(
 	}
 	// Only emit the failure event when the condition actually changed, so that
 	// recurring failures on the retry loop do not spam the event recorder.
-	if changed && len(failureMessages) > 0 {
+	if changed && err == nil && len(failureMessages) > 0 {
 		i.eventRecorder.Eventf(
 			gatewayEventObject(gwNN), nil, corev1.EventTypeWarning,
 			string(aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslationFailedReason),
@@ -430,13 +433,17 @@ func gatewayEventObject(gwNN types.NamespacedName) *aigatewayv1alpha1.OnPremAIGa
 // but a readable limit keeps the status and events usable).
 const maxConditionMessageLength = 512
 
-// truncateMessage truncates s to maxConditionMessageLength characters,
-// appending an ellipsis when truncated.
+// truncateMessage truncates s to maxConditionMessageLength bytes, cutting on
+// a rune boundary and appending an ellipsis when truncated.
 func truncateMessage(s string) string {
 	if len(s) <= maxConditionMessageLength {
 		return s
 	}
-	return s[:maxConditionMessageLength-3] + "..."
+	cut := maxConditionMessageLength - 3
+	for !utf8.RuneStart(s[cut]) {
+		cut--
+	}
+	return s[:cut] + "..."
 }
 
 // entityFailureDesc returns a "Kind/namespace/name: error" description of an
