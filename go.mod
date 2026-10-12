@@ -5,7 +5,7 @@ go 1.27.2
 require (
 	cloud.google.com/go/container v1.54.0
 	dario.cat/mergo v1.0.2
-	github.com/Kong/ai-deck-converter v0.19.9-0.20261001144049-e51034bba812
+	github.com/Kong/ai-deck-converter v0.19.12
 	github.com/Kong/sdk-konnect-go v0.73.1
 	github.com/avast/retry-go/v5 v5.0.0
 	github.com/blang/semver/v4 v4.0.0
