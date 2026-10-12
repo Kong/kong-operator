@@ -276,6 +276,37 @@ func aiGatewaySNIFixture(name, certName string) *aiconfigurationv1alpha1.AIGatew
 	}
 }
 
+func aiGatewayAgentFixture(name string) *aiconfigurationv1alpha1.AIGatewayAgent {
+	return &aiconfigurationv1alpha1.AIGatewayAgent{
+		Name: name, Namespace: "default",
+		Spec: aiconfigurationv1alpha1.AIGatewayAgentSpec{
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				Group:         aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+				Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gw"},
+			},
+			APISpec: aiconfigurationv1alpha1.AIGatewayAgentAPISpec{
+				Name:        aiconfigurationv1alpha1.AIGatewayEntityIdentifier(name),
+				DisplayName: name,
+				Type:        "http",
+				Config: aiconfigurationv1alpha1.AIGatewayAgentConfig{
+					URL: "http://upstream:8080",
+				},
+				// Resolves to the referenced entities' names (their spec names equal their
+				// k8s names in the fixtures).
+				Policies: []aiconfigurationv1alpha1.AIGatewayPolicyRef{{Name: "policy-" + name[len(name)-1:]}},
+				Access: aiconfigurationv1alpha1.AIGatewayAgentAccess{
+					Acls: &aiconfigurationv1alpha1.AIGatewayAgentAccessAcls{
+						Type:  aiconfigurationv1alpha1.AIGatewayAgentAccessAclsTypeAllow,
+						Allow: &aiconfigurationv1alpha1.AIGatewayAllowACL{Allow: []aiconfigurationv1alpha1.AIGatewayACLRef{{Name: "group-" + name[len(name)-1:]}}},
+					},
+					AuthStrategies: []aiconfigurationv1alpha1.AIGatewayAuthStrategyRef{{Name: "auth-strategy-" + name[len(name)-1:]}},
+				},
+			},
+		},
+	}
+}
+
 // TestBuildDocument covers listing, conversion and deterministic ordering: translateKind sorts
 // by k8s object name so the rendered payload (and its hash, which drives the drift loop in
 // controller.go) doesn't flap across List calls that return in a different order.
@@ -308,11 +339,13 @@ func TestBuildDocument(t *testing.T) {
 	sniA := aiGatewaySNIFixture("sni-a", "cert-a")
 	customPolicyB := aiGatewayCustomPolicyFixture("custom-policy-b")
 	customPolicyA := aiGatewayCustomPolicyFixture("custom-policy-a")
+	agentB := aiGatewayAgentFixture("agent-b")
+	agentA := aiGatewayAgentFixture("agent-a")
 
 	builder := fake.NewClientBuilder().WithScheme(scheme).
 		WithObjects(gw, modelB, modelA, providerB, providerA, policyB, policyA, groupB, groupA,
 			authStrategyB, authStrategyA, consumerB, consumerA, certB, certA, sniB, sniA,
-			customPolicyB, customPolicyA, caCertB, caCertA)
+			customPolicyB, customPolicyA, caCertB, caCertA, agentB, agentA)
 	for _, opt := range index.OptionsForAIGatewayModel() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
@@ -344,6 +377,9 @@ func TestBuildDocument(t *testing.T) {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	for _, opt := range index.OptionsForAIGatewayCustomPolicy() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayAgent() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	cl := builder.Build()
@@ -382,9 +418,17 @@ func TestBuildDocument(t *testing.T) {
 	require.Len(t, doc.CustomPolicies, 2)
 	require.Equal(t, "custom-policy-a", doc.CustomPolicies[0].Name)
 	require.Equal(t, "custom-policy-b", doc.CustomPolicies[1].Name)
+	require.Len(t, doc.Agents, 2)
+	require.Equal(t, "agent-a", doc.Agents[0].Name)
+	require.Equal(t, "agent-b", doc.Agents[1].Name)
+	// The agents' policy/ACL/auth-strategy references resolve to the referenced entities'
+	// names (their spec names equal their k8s names in the fixtures).
+	require.Equal(t, []string{"policy-a"}, doc.Agents[0].Policies)
+	require.Equal(t, []string{"group-a"}, doc.Agents[0].Access.ACLs.Allow)
+	require.Equal(t, []string{"auth-strategy-a"}, doc.Agents[0].Access.AuthStrategies)
 
 	// Every entity translated successfully, so all statuses are reported as such.
-	require.Len(t, statuses, 20)
+	require.Len(t, statuses, 22)
 	for _, s := range statuses {
 		require.NoError(t, s.Err)
 	}
@@ -472,6 +516,9 @@ func TestBuildDocument_NoModels(t *testing.T) {
 	for _, opt := range index.OptionsForAIGatewayCustomPolicy() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
+	for _, opt := range index.OptionsForAIGatewayAgent() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
 	cl := builder.Build()
 
 	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
@@ -544,6 +591,9 @@ func TestBuildDocument_PerEntityFailure(t *testing.T) {
 	for _, opt := range index.OptionsForAIGatewayCustomPolicy() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
+	for _, opt := range index.OptionsForAIGatewayAgent() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
 	cl := builder.Build()
 
 	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
@@ -599,6 +649,7 @@ func TestBuildDocument_CACertificateDuplicateContent(t *testing.T) {
 		index.OptionsForAIGatewayCertificate(),
 		index.OptionsForAIGatewaySNI(),
 		index.OptionsForAIGatewayCustomPolicy(),
+		index.OptionsForAIGatewayAgent(),
 	} {
 		for _, opt := range opts {
 			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
@@ -682,6 +733,9 @@ func TestBuildDocument_SNIFailsWhenReferencedCertificateFails(t *testing.T) {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	for _, opt := range index.OptionsForAIGatewayCustomPolicy() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayAgent() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	cl := builder.Build()
@@ -770,6 +824,9 @@ func TestBuildDocument_CrossNamespaceEntityRejected(t *testing.T) {
 	for _, opt := range index.OptionsForAIGatewayCustomPolicy() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
+	for _, opt := range index.OptionsForAIGatewayAgent() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
 	cl := builder.Build()
 
 	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
@@ -854,6 +911,7 @@ func TestBuildDocument_CredentialChangeRerender(t *testing.T) {
 		index.OptionsForAIGatewayCertificate(),
 		index.OptionsForAIGatewaySNI(),
 		index.OptionsForAIGatewayCustomPolicy(),
+		index.OptionsForAIGatewayAgent(),
 	} {
 		for _, opt := range opts {
 			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
