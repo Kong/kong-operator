@@ -176,6 +176,10 @@
   referencing an `OnPremAIGateway` are now translated into the pushed
   configuration document.
   [#5984](https://github.com/Kong/kong-operator/pull/5984)
+- On-prem AI Gateway: `AIGatewayMCPServer` configuration entities
+  referencing an `OnPremAIGateway` are now translated into the pushed
+  configuration document.
+  [#6040](https://github.com/Kong/kong-operator/pull/6040)
 - On-prem AI Gateway: `AIGatewayCustomPolicy` configuration entities
   referencing an `OnPremAIGateway` are now translated into the pushed
   configuration document. The entity gains an on-prem reconciler, and
