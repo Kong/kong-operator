@@ -109,13 +109,14 @@ func (b *KongPluginBuilder) MustBuild() configurationv1.KongPlugin {
 // sources into the KongPlugin being built. This ensures that when the generated
 // KongPlugin copy is later read by the Konnect ops layer (via metadata.ExtractTags),
 // the user-supplied tags are present. Multiple sources are merged and deduplicated.
+// Tags with prefixes reserved for the Kubernetes metadata tags (e.g. "k8s-uid:") are dropped.
 func (b *KongPluginBuilder) WithTagsFromAnnotations(sources ...pkgmetadata.ObjectWithAnnotations) *KongPluginBuilder {
 	var allTags []string
 	for _, src := range sources {
 		if src == nil {
 			continue
 		}
-		allTags = append(allTags, pkgmetadata.ExtractTags(src)...)
+		allTags = append(allTags, pkgmetadata.WithoutReservedTags(pkgmetadata.ExtractTags(src))...)
 	}
 	if len(allTags) == 0 {
 		return b
@@ -147,8 +148,9 @@ func (b *KongPluginBuilder) WithTagsFromAnnotations(sources ...pkgmetadata.Objec
 }
 
 // WithTags sets the spec.Tags field for the KongPlugin being built.
+// Tags with prefixes reserved for the Kubernetes metadata tags (e.g. "k8s-uid:") are dropped.
 func (b *KongPluginBuilder) WithTags(tags commonv1alpha1.Tags) *KongPluginBuilder {
-	b.plugin.Tags = tags
+	b.plugin.Tags = pkgmetadata.WithoutReservedTags(tags)
 	return b
 }
 

@@ -151,6 +151,43 @@ func TestKongTarget(t *testing.T) {
 				},
 				ExpectedErrorMessage: new("tags entries must not be longer than 128 characters"),
 			},
+			{
+				Name: "tags entries must not start with reserved prefix k8s-group:",
+				TestObject: &configurationv1alpha1.KongTarget{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongTargetSpec{
+						UpstreamRef: commonv1alpha1.NamespacedRef{
+							Name: "upstream",
+						},
+						KongTargetAPISpec: configurationv1alpha1.KongTargetAPISpec{
+							Target: "example.com",
+							Weight: 100,
+							Tags: []string{
+								"k8s-group:value",
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("tags entries must not start with reserved prefixes"),
+			},
+			{
+				Name: "tags entries starting with k8s- but not with a reserved prefix are allowed",
+				TestObject: &configurationv1alpha1.KongTarget{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongTargetSpec{
+						UpstreamRef: commonv1alpha1.NamespacedRef{
+							Name: "upstream",
+						},
+						KongTargetAPISpec: configurationv1alpha1.KongTargetAPISpec{
+							Target: "example.com",
+							Weight: 100,
+							Tags: []string{
+								"k8s-team:value",
+							},
+						},
+					},
+				},
+			},
 		}.
 			RunWithConfig(t, cfg, scheme)
 	})

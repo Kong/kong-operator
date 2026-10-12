@@ -14,6 +14,7 @@ import (
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	pkgmetadata "github.com/kong/kong-operator/v2/pkg/metadata"
 )
 
 // KongSNIBuilder is a builder for configurationv1alpha1.KongSNI resources.
@@ -104,8 +105,10 @@ func (b *KongSNIBuilder) WithOwner(owner *gwtypes.Gateway) *KongSNIBuilder {
 }
 
 // WithSpecTags sets the tags in the KongSNI spec.
-// A nil or empty slice leaves Spec.Tags unset.
+// Tags with prefixes reserved for the Kubernetes metadata tags (e.g. "k8s-uid:") are dropped.
+// A nil or empty slice (after dropping the reserved tags) leaves Spec.Tags unset.
 func (b *KongSNIBuilder) WithSpecTags(tags []string) *KongSNIBuilder {
+	tags = pkgmetadata.WithoutReservedTags(tags)
 	if len(tags) == 0 {
 		return b
 	}

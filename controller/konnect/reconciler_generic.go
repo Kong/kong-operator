@@ -690,6 +690,13 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 		return ctrl.Result{}, nil
 	}
 
+	// Do not create, update or adopt anything in Konnect when the tags contain
+	// tags reserved for the Kubernetes metadata of the object (e.g. "k8s-uid:").
+	// This is done after the deletion handling so that such objects can still be deleted.
+	if stop, res, err := handleReservedTags(ctx, r.Client, ent); err != nil || !res.IsZero() || stop {
+		return res, err
+	}
+
 	// Add the cleanup finalizer before creating anything in Konnect. This
 	// guarantees that, even if the operator is interrupted right after the
 	// Konnect entity is created, there is always a finalizer that triggers the

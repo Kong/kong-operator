@@ -291,6 +291,20 @@
   images. Kong Gateway versions older than 3.6 (previously 3.4.1) are no longer
   supported by the operator and has to be upgraded.
   [#5925](https://github.com/Kong/kong-operator/pull/5925)
+- Tags with prefixes reserved for the Kubernetes metadata tags the operator
+  attaches to Konnect entities (`k8s-group:`, `k8s-version:`, `k8s-kind:`,
+  `k8s-namespace:`, `k8s-name:`, `k8s-uid:`, `k8s-generation:` and `managed-by:`)
+  are no longer allowed, because they could make the operator match a Konnect
+  entity owned by another object.
+  - CRDs with a `tags` field (e.g. `KongService`, `KongRoute`, `KongUpstream`,
+    `KongTarget`, `KongPlugin`) reject such tags via CEL validation rules.
+  - Existing objects with such tags in `tags` or in the `konghq.com/tags`
+    annotation get the `Programmed` condition set to `False` with reason
+    `InvalidTags` and are not synced with Konnect until the tags are removed.
+  - Such tags in `konghq.com/tags` annotations of Gateway API routes, `Service`s
+    and `Secret`s are dropped when generating the corresponding Kong entities
+    for hybrid `Gateway`s.
+  [#6042](https://github.com/Kong/kong-operator/pull/6042)
 
 ### Fixes
 

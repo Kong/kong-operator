@@ -24,6 +24,10 @@ const (
 	// It is set when the entity's deletion is blocked by Konnect, e.g. when a
 	// KonnectConfigStore still holds secret entries that must be removed first.
 	KonnectEntityProgrammedReasonDeletionBlocked = "DeletionBlocked"
+	// KonnectEntityProgrammedReasonInvalidTags is the reason for the Programmed condition.
+	// It is set when the entity's tags (from spec or the konghq.com/tags annotation) contain
+	// tags with prefixes reserved for the Kubernetes metadata of the source object (e.g. "k8s-uid:").
+	KonnectEntityProgrammedReasonInvalidTags = "InvalidTags"
 
 	// KonnectGatewayControlPlaneProgrammedReasonFailedToSetControlPlaneGroupMembers is the reason for the Programmed
 	// condition. It is set when the control plane
