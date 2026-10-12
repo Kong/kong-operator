@@ -158,8 +158,8 @@ func BuildDocument(
 	// failed its own translation (e.g. a missing or unlabeled secretRef Secret) would leave its
 	// SNI reporting success while the converter drops the SNI from the pushed payload.
 	// The same silent-drop class remains for the pre-existing existence-only resolvers
-	// (consumer->policy, model->provider): a referenced entity excluded for its own failed
-	// translation still lets the referencing entity report success.
+	// (consumer->policy, model->provider, mcp server->sources): a referenced entity excluded
+	// for its own failed translation still lets the referencing entity report success.
 	translatedCertificates := make(map[string]struct{})
 
 	// CA cert PEMs already claimed by a translated AIGatewayCACertificate, mapped to the
@@ -201,6 +201,9 @@ func BuildDocument(
 		translateKind[aiconfigurationv1alpha1.AIGatewayAgentList](
 			cl, gw, index.IndexFieldAIGatewayAgentOnOnPremAIGatewayRef,
 			(*aiconfigurationv1alpha1.AIGatewayAgent).ToAIGWAgent, &doc.Agents),
+		translateKind[aiconfigurationv1alpha1.AIGatewayMCPServerList](
+			cl, gw, index.IndexFieldAIGatewayMCPServerOnOnPremAIGatewayRef,
+			(*aiconfigurationv1alpha1.AIGatewayMCPServer).ToAIGWMCPServer, &doc.MCPServers),
 		translateKind[aiconfigurationv1alpha1.AIGatewayCACertificateList](
 			cl, gw, index.IndexFieldAIGatewayCACertificateOnOnPremAIGatewayRef,
 			func(c *aiconfigurationv1alpha1.AIGatewayCACertificate, ctx context.Context, cl client.Client) (*aigw.CACertificate, error) {

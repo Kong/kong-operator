@@ -307,6 +307,37 @@ func aiGatewayAgentFixture(name string) *aiconfigurationv1alpha1.AIGatewayAgent 
 	}
 }
 
+func aiGatewayMCPServerFixture(name string) *aiconfigurationv1alpha1.AIGatewayMCPServer {
+	return &aiconfigurationv1alpha1.AIGatewayMCPServer{
+		Name: name, Namespace: "default",
+		Spec: aiconfigurationv1alpha1.AIGatewayMCPServerSpec{
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				Group:         aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+				Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gw"},
+			},
+			APISpec: aiconfigurationv1alpha1.AIGatewayMCPServerAPISpec{
+				AIGatewayMCPServerConfig: &aiconfigurationv1alpha1.AIGatewayMCPServerConfig{
+					// passthrough-listener, not conversion-only: an unexposed conversion-only
+					// server is pruned by the converter with a warning, which would break the
+					// pristine-render no-warnings assertion below.
+					Type: aiconfigurationv1alpha1.AIGatewayMCPServerConfigTypePassthroughListener,
+					PassthroughListener: &aiconfigurationv1alpha1.AIGatewayMCPServerPassthroughListener{
+						Name: aiconfigurationv1alpha1.AIGatewayEntityIdentifier(name),
+						Config: aiconfigurationv1alpha1.AIGatewayMCPServerWithUpstreamConfig{
+							URL:   "http://upstream:8080",
+							Route: aiconfigurationv1alpha1.AIGatewayMCPServerRouteWithMatcher{Paths: []string{"/mcp/" + name}},
+						},
+						// Resolves to the referenced entity's name (its spec name equals its
+						// k8s name in the fixtures).
+						Policies: []aiconfigurationv1alpha1.AIGatewayPolicyRef{{Name: "policy-" + name[len(name)-1:]}},
+					},
+				},
+			},
+		},
+	}
+}
+
 // TestBuildDocument covers listing, conversion and deterministic ordering: translateKind sorts
 // by k8s object name so the rendered payload (and its hash, which drives the drift loop in
 // controller.go) doesn't flap across List calls that return in a different order.
@@ -341,11 +372,13 @@ func TestBuildDocument(t *testing.T) {
 	customPolicyA := aiGatewayCustomPolicyFixture("custom-policy-a")
 	agentB := aiGatewayAgentFixture("agent-b")
 	agentA := aiGatewayAgentFixture("agent-a")
+	mcpServerB := aiGatewayMCPServerFixture("mcp-server-b")
+	mcpServerA := aiGatewayMCPServerFixture("mcp-server-a")
 
 	builder := fake.NewClientBuilder().WithScheme(scheme).
 		WithObjects(gw, modelB, modelA, providerB, providerA, policyB, policyA, groupB, groupA,
 			authStrategyB, authStrategyA, consumerB, consumerA, certB, certA, sniB, sniA,
-			customPolicyB, customPolicyA, caCertB, caCertA, agentB, agentA)
+			customPolicyB, customPolicyA, caCertB, caCertA, agentB, agentA, mcpServerB, mcpServerA)
 	for _, opt := range index.OptionsForAIGatewayModel() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
@@ -380,6 +413,9 @@ func TestBuildDocument(t *testing.T) {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	for _, opt := range index.OptionsForAIGatewayAgent() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayMCPServer() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	cl := builder.Build()
@@ -426,9 +462,16 @@ func TestBuildDocument(t *testing.T) {
 	require.Equal(t, []string{"policy-a"}, doc.Agents[0].Policies)
 	require.Equal(t, []string{"group-a"}, doc.Agents[0].Access.ACLs.Allow)
 	require.Equal(t, []string{"auth-strategy-a"}, doc.Agents[0].Access.AuthStrategies)
+	require.Len(t, doc.MCPServers, 2)
+	require.Equal(t, "mcp-server-a", doc.MCPServers[0].Name)
+	require.Equal(t, "mcp-server-b", doc.MCPServers[1].Name)
+	// The MCP servers' policy references resolve to the referenced entity's name and their
+	// config.url lands on the top-level UpstreamURL.
+	require.Equal(t, []string{"policy-a"}, doc.MCPServers[0].Policies)
+	require.Equal(t, "http://upstream:8080", doc.MCPServers[0].UpstreamURL)
 
 	// Every entity translated successfully, so all statuses are reported as such.
-	require.Len(t, statuses, 22)
+	require.Len(t, statuses, 24)
 	for _, s := range statuses {
 		require.NoError(t, s.Err)
 	}
@@ -519,6 +562,9 @@ func TestBuildDocument_NoModels(t *testing.T) {
 	for _, opt := range index.OptionsForAIGatewayAgent() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
+	for _, opt := range index.OptionsForAIGatewayMCPServer() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
 	cl := builder.Build()
 
 	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
@@ -594,6 +640,9 @@ func TestBuildDocument_PerEntityFailure(t *testing.T) {
 	for _, opt := range index.OptionsForAIGatewayAgent() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
+	for _, opt := range index.OptionsForAIGatewayMCPServer() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
 	cl := builder.Build()
 
 	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
@@ -650,6 +699,7 @@ func TestBuildDocument_CACertificateDuplicateContent(t *testing.T) {
 		index.OptionsForAIGatewaySNI(),
 		index.OptionsForAIGatewayCustomPolicy(),
 		index.OptionsForAIGatewayAgent(),
+		index.OptionsForAIGatewayMCPServer(),
 	} {
 		for _, opt := range opts {
 			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
@@ -736,6 +786,9 @@ func TestBuildDocument_SNIFailsWhenReferencedCertificateFails(t *testing.T) {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	for _, opt := range index.OptionsForAIGatewayAgent() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayMCPServer() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	cl := builder.Build()
@@ -827,6 +880,9 @@ func TestBuildDocument_CrossNamespaceEntityRejected(t *testing.T) {
 	for _, opt := range index.OptionsForAIGatewayAgent() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
+	for _, opt := range index.OptionsForAIGatewayMCPServer() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
 	cl := builder.Build()
 
 	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
@@ -912,6 +968,7 @@ func TestBuildDocument_CredentialChangeRerender(t *testing.T) {
 		index.OptionsForAIGatewaySNI(),
 		index.OptionsForAIGatewayCustomPolicy(),
 		index.OptionsForAIGatewayAgent(),
+		index.OptionsForAIGatewayMCPServer(),
 	} {
 		for _, opt := range opts {
 			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
