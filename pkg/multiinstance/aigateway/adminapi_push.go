@@ -31,9 +31,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/yaml"
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
+	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	adminapi "github.com/kong/kong-operator/v2/internal/adminapi"
@@ -242,6 +244,146 @@ func (i *Instance) reportPushStatus(
 		)
 	}
 
+	changed, err := i.applyInstanceConditions(ctx, gwNN, condition)
+	if err != nil {
+		return fmt.Errorf("patching OnPremAIGateway status with the configuration push result: %w", err)
+	}
+	// Only emit events when the condition actually changed, so that recurring
+	// failures on the retry loop do not spam the event recorder.
+	if changed && len(failures) > 0 && i.eventRecorder != nil {
+		i.eventRecorder.Eventf(
+			gatewayEventObject(gwNN), nil, corev1.EventTypeWarning,
+			string(aigatewayv1alpha1.OnPremAIGatewayConfigurationPushFailedReason),
+			string(aigatewayv1alpha1.OnPremAIGatewayConfigurationPushFailedReason),
+			truncateMessage(strings.Join(failures, "; ")),
+		)
+	}
+	return nil
+}
+
+// reportTranslationStatus patches the ConfigurationProgrammed condition of the
+// OnPremAIGateway with the outcome of the configuration translation (rendering
+// the aigw.Document into the dbless payload) and emits Warning events for the
+// translation failure and for the converter warnings.
+//
+// renderErr is the whole-document rendering failure (nil when the rendering
+// succeeded), entityFailures the per-entity translation failures, and warnings
+// the free-text warnings returned by the ai-deck-converter. Warnings never fail
+// the condition: it stays True and the warnings are carried by Warning events,
+// with only their count noted in the condition message.
+func (i *Instance) reportTranslationStatus(
+	ctx context.Context,
+	gwNN types.NamespacedName,
+	renderErr error,
+	entityFailures []EntityFailure,
+	warnings []string,
+) {
+	failureMessages := make([]string, 0, len(entityFailures)+1)
+	if renderErr != nil {
+		failureMessages = append(failureMessages, renderErr.Error())
+	}
+	for _, f := range entityFailures {
+		failureMessages = append(failureMessages, i.entityFailureDesc(f))
+	}
+
+	var condition metav1.Condition
+	if len(failureMessages) > 0 {
+		condition = k8sutils.NewCondition(
+			aigatewayv1alpha1.OnPremAIGatewayConfigurationProgrammedType,
+			metav1.ConditionFalse,
+			aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslationFailedReason,
+			truncateMessage(strings.Join(failureMessages, "; ")),
+		)
+	} else {
+		message := "Configuration translated successfully"
+		if len(warnings) > 0 {
+			message = fmt.Sprintf("Configuration translated with %d warnings (see events)", len(warnings))
+		}
+		condition = k8sutils.NewCondition(
+			aigatewayv1alpha1.OnPremAIGatewayConfigurationProgrammedType,
+			metav1.ConditionTrue,
+			aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedReason,
+			message,
+		)
+	}
+
+	changed, err := i.applyInstanceConditions(ctx, gwNN, condition)
+	if err != nil {
+		// A status patch failure must not fail the sync (it would be retried
+		// together with the next sync anyway), so only log it.
+		log.Error(i.logger, err, "failed to report the configuration translation result on the OnPremAIGateway status")
+	}
+	if i.eventRecorder == nil {
+		return
+	}
+	// Only emit the failure event when the condition actually changed, so that
+	// recurring failures on the retry loop do not spam the event recorder.
+	if changed && len(failureMessages) > 0 {
+		i.eventRecorder.Eventf(
+			gatewayEventObject(gwNN), nil, corev1.EventTypeWarning,
+			string(aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslationFailedReason),
+			string(aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslationFailedReason),
+			truncateMessage(strings.Join(failureMessages, "; ")),
+		)
+	}
+	for _, w := range warnings {
+		// Warnings are emitted on every sync without a change gate: the condition
+		// message only carries their count, so a swap of warnings (one disappears,
+		// another appears) would leave the condition unchanged and a gate would
+		// hide the new warning. The event recorder aggregates identical events,
+		// so steady-state syncs only bump the event counts.
+		log.Info(i.logger, "AI Gateway configuration warning",
+			"namespace", gwNN.Namespace, "name", gwNN.Name, "warning", w)
+		i.eventRecorder.Eventf(
+			gatewayEventObject(gwNN), nil, corev1.EventTypeWarning,
+			string(aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslationWarningReason),
+			string(aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslationWarningReason),
+			truncateMessage(w),
+		)
+	}
+}
+
+// instanceOwnedConditionTypes lists the condition types the instance owns on the
+// OnPremAIGateway status under instanceFieldManager. Every apply must carry all
+// of them: an SSA apply payload omitting a list-map entry owned by the applying
+// field manager prunes it, so report sites applying disjoint conditions would
+// delete each other's conditions. A new instance-owned condition must be added
+// here (and removed from the OnPremAIGateway controller's apply payload).
+var instanceOwnedConditionTypes = []kcfgconsts.ConditionType{
+	aigatewayv1alpha1.OnPremAIGatewayDataPlanesConfiguredType,
+	aigatewayv1alpha1.OnPremAIGatewayConfigurationProgrammedType,
+}
+
+// applyInstanceConditions applies the provided instance-owned conditions to the
+// OnPremAIGateway status under instanceFieldManager. Conditions of the
+// instance-owned types that are not provided in this call are carried over from
+// the stored status verbatim, so that the apply does not prune them (see
+// instanceOwnedConditionTypes). It reports whether any of the provided
+// conditions changed (status, reason or message), so that callers can emit
+// events only when the reported state moved.
+//
+// The conditions of the instance-owned types not provided are merged without
+// the OnPremAIGateway controller's conditions (Ready, LicenseValid, ...), which
+// the controller owns under its own field manager.
+func (i *Instance) applyInstanceConditions(
+	ctx context.Context,
+	gwNN types.NamespacedName,
+	conditions ...metav1.Condition,
+) (bool, error) {
+	existing := &aigatewayv1alpha1.OnPremAIGateway{}
+	if err := i.client.Get(ctx, gwNN, existing); err != nil && !apierrors.IsNotFound(err) {
+		return false, fmt.Errorf("getting OnPremAIGateway %s: %w", gwNN, err)
+	}
+
+	// Seed the merged payload with every stored instance-owned condition, so
+	// the apply does not prune the ones this call does not report.
+	merged := make([]metav1.Condition, 0, len(instanceOwnedConditionTypes))
+	for _, t := range instanceOwnedConditionTypes {
+		if stored, ok := k8sutils.GetCondition(t, existing); ok {
+			merged = append(merged, stored)
+		}
+	}
+
 	// NewCondition stamps a fresh LastTransitionTime on every call. Reuse the
 	// stored one when the condition state is unchanged, so that recurring
 	// failures on the retry loop are not seen as changes by ApplyStatusIfChanged
@@ -250,36 +392,62 @@ func (i *Instance) reportPushStatus(
 	// result: the comparison behind ApplyStatusIfChanged can report a change
 	// even when the applied content is identical.
 	var changed bool
-	existing := &aigatewayv1alpha1.OnPremAIGateway{}
-	if err := i.client.Get(ctx, gwNN, existing); err == nil {
-		condition, changed = k8sutils.UpdatedConditionPreservingLastTransitionTime(existing.Status.Conditions, condition)
-	} else if !apierrors.IsNotFound(err) {
-		return fmt.Errorf("getting OnPremAIGateway %s: %w", gwNN, err)
+	for _, cond := range conditions {
+		cond, ch := k8sutils.UpdatedConditionPreservingLastTransitionTime(merged, cond)
+		changed = changed || ch
+		if idx := slices.IndexFunc(merged, func(c metav1.Condition) bool { return c.Type == cond.Type }); idx >= 0 {
+			merged[idx] = cond
+		} else {
+			merged = append(merged, cond)
+		}
 	}
 
+	gw := gatewayEventObject(gwNN)
+	gw.Status.Conditions = merged
+	if _, err := controllerpkgssa.ApplyStatusIfChanged(
+		ctx, i.logger, i.client, i.env.TypeConverter, gw, instanceFieldManager,
+	); err != nil {
+		return changed, fmt.Errorf("patching OnPremAIGateway status with the instance-owned conditions: %w", err)
+	}
+	return changed, nil
+}
+
+// gatewayEventObject builds the OnPremAIGateway object used as the event
+// reference and the SSA apply target: a freshly constructed object has an empty
+// TypeMeta, and both the event recorder and the SSA apply need the GVK.
+func gatewayEventObject(gwNN types.NamespacedName) *aigatewayv1alpha1.OnPremAIGateway {
 	gw := &aigatewayv1alpha1.OnPremAIGateway{
 		Namespace: gwNN.Namespace,
 		Name:      gwNN.Name,
 	}
-	// The GVK is required for the SSA apply: a freshly constructed object has an
-	// empty TypeMeta.
 	gw.SetGroupVersionKind(aigatewayv1alpha1.GroupVersion.WithKind("OnPremAIGateway"))
-	gw.Status.Conditions = []metav1.Condition{condition}
+	return gw
+}
 
-	if _, err := controllerpkgssa.ApplyStatusIfChanged(
-		ctx, i.logger, i.client, i.env.TypeConverter, gw, instanceFieldManager,
-	); err != nil {
-		return fmt.Errorf("patching OnPremAIGateway status with the configuration push result: %w", err)
+// maxConditionMessageLength caps the condition and event messages the instance
+// reports: condition messages aggregate per-entity errors and could otherwise
+// grow without bound (the API server caps condition messages far above this,
+// but a readable limit keeps the status and events usable).
+const maxConditionMessageLength = 512
+
+// truncateMessage truncates s to maxConditionMessageLength characters,
+// appending an ellipsis when truncated.
+func truncateMessage(s string) string {
+	if len(s) <= maxConditionMessageLength {
+		return s
 	}
-	// Only emit events when the condition actually changed, so that recurring
-	// failures on the retry loop do not spam the event recorder.
-	if changed && len(failures) > 0 && i.eventRecorder != nil {
-		i.eventRecorder.Eventf(
-			gw, nil, corev1.EventTypeWarning,
-			string(aigatewayv1alpha1.OnPremAIGatewayConfigurationPushFailedReason),
-			string(aigatewayv1alpha1.OnPremAIGatewayConfigurationPushFailedReason),
-			strings.Join(failures, "; "),
-		)
+	return s[:maxConditionMessageLength-3] + "..."
+}
+
+// entityFailureDesc returns a "Kind/namespace/name: error" description of an
+// entity failure, used in the gateway's aggregated ConfigurationProgrammed
+// condition message. The GVK is resolved through the scheme because typed
+// cache objects carry no TypeMeta (the same reason EntityStatusReporter
+// resolves it for its status keys).
+func (i *Instance) entityFailureDesc(f EntityFailure) string {
+	kind := fmt.Sprintf("%T", f.Obj)
+	if gvk, err := apiutil.GVKForObject(f.Obj, i.env.Scheme); err == nil {
+		kind = gvk.Kind
 	}
-	return nil
+	return fmt.Sprintf("%s/%s/%s: %s", kind, f.Obj.GetNamespace(), f.Obj.GetName(), f.Err)
 }

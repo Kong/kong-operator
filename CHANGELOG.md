@@ -85,6 +85,13 @@
 
 ### Added
 
+- OnPremAIGateway status: added a `ConfigurationProgrammed` condition reporting
+  whether the gateway's configuration entities were successfully translated
+  into the declarative payload (aggregating per-entity translation failures,
+  with the failure details truncated). Translation failures and the warnings
+  reported by the AI Gateway configuration converter are also emitted as
+  Warning events on the OnPremAIGateway.
+  [#6051](https://github.com/Kong/kong-operator/pull/6051)
 - `--konnect-list-page-size` flag (default and maximum `100`): the page size
   the operator requests when listing Konnect entities to find the Konnect
   entity of an object, e.g. one whose Konnect ID was lost. It is a fallback in

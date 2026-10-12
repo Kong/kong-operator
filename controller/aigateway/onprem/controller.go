@@ -444,6 +444,7 @@ func (r *Reconciler) initStatusToWaitingToBecomeReady(
 // the instance would steal it back (flapping ownership, duplicate Warning events).
 func (r *Reconciler) applyStatus(ctx context.Context, logger logr.Logger, onprem *aigatewayv1alpha1.OnPremAIGateway) error {
 	k8sutils.RemoveCondition(aigatewayv1alpha1.OnPremAIGatewayDataPlanesConfiguredType, onprem)
+	k8sutils.RemoveCondition(aigatewayv1alpha1.OnPremAIGatewayConfigurationProgrammedType, onprem)
 	result, err := controllerpkgssa.ApplyStatusIfChanged(ctx, logger, r.Client, r.TypeConverter, onprem, controllerpkgssa.FieldManager)
 	if err != nil {
 		log.Error(logger, err, "failed to patch OnPremAIGateway status")

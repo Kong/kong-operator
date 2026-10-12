@@ -302,9 +302,10 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 }
 
 // TestOnPremAIGatewayReconciler_PreservesInstanceOwnedCondition verifies that the
-// controller's SSA status apply does not steal ownership of the DataPlanesConfigured
-// condition from the instance's field manager: applyStatus excludes that condition
-// from its payload, so a stale cached status cannot force-re-apply it under the
+// controller's SSA status apply does not steal ownership of the conditions the
+// instance owns (DataPlanesConfigured and ConfigurationProgrammed) from the
+// instance's field manager: applyStatus excludes those conditions from its
+// payload, so a stale cached status cannot force-re-apply them under the
 // controller's field manager.
 func TestOnPremAIGatewayReconciler_PreservesInstanceOwnedCondition(t *testing.T) {
 	t.Parallel()
@@ -363,8 +364,8 @@ func TestOnPremAIGatewayReconciler_PreservesInstanceOwnedCondition(t *testing.T)
 		assert.True(ct, k8sutils.HasConditionTrue(aigatewayv1alpha1.ReadyType, onprem))
 	}, waitTime, tickTime)
 
-	// Simulate the instance applying the DataPlanesConfigured condition under its own
-	// field manager, the same way reportPushStatus does.
+	// Simulate the instance applying its conditions under its own field
+	// manager, the same way reportPushStatus and reportTranslationStatus do.
 	gw := &aigatewayv1alpha1.OnPremAIGateway{
 		Namespace: onprem.Namespace,
 		Name:      onprem.Name,
@@ -378,6 +379,12 @@ func TestOnPremAIGatewayReconciler_PreservesInstanceOwnedCondition(t *testing.T)
 			metav1.ConditionTrue,
 			aigatewayv1alpha1.OnPremAIGatewayConfigurationPushSucceededReason,
 			"Configuration pushed to 1 Admin API endpoints",
+		),
+		k8sutils.NewCondition(
+			aigatewayv1alpha1.OnPremAIGatewayConfigurationProgrammedType,
+			metav1.ConditionTrue,
+			aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedReason,
+			"Configuration translated successfully",
 		),
 	}
 	_, err = controllerpkgssa.ApplyStatusIfChanged(
@@ -431,7 +438,7 @@ func TestOnPremAIGatewayReconciler_PreservesInstanceOwnedCondition(t *testing.T)
 		return false
 	}
 
-	t.Log("Expecting the instance-owned condition to survive the controller's status apply")
+	t.Log("Expecting the instance-owned conditions to survive the controller's status apply")
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
 		fresh := &aigatewayv1alpha1.OnPremAIGateway{}
 		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(onprem), fresh)) {
@@ -444,9 +451,23 @@ func TestOnPremAIGatewayReconciler_PreservesInstanceOwnedCondition(t *testing.T)
 			return
 		}
 		assert.Equal(ct, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationPushSucceededReason), cond.Reason)
-		assert.True(ct, managerEntryContains(fresh, instanceFieldManager, string(aigatewayv1alpha1.OnPremAIGatewayDataPlanesConfiguredType)),
-			"instance field manager must own the DataPlanesConfigured condition")
-		assert.False(ct, managerEntryContains(fresh, "gateway-operator", string(aigatewayv1alpha1.OnPremAIGatewayDataPlanesConfiguredType)),
-			"controller field manager must not own the DataPlanesConfigured condition")
+
+		translationCond := apimeta.FindStatusCondition(
+			fresh.Status.Conditions, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationProgrammedType),
+		)
+		if !assert.NotNil(ct, translationCond, "the ConfigurationProgrammed condition must not be pruned") {
+			return
+		}
+		assert.Equal(ct, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedReason), translationCond.Reason)
+
+		for _, condType := range []string{
+			string(aigatewayv1alpha1.OnPremAIGatewayDataPlanesConfiguredType),
+			string(aigatewayv1alpha1.OnPremAIGatewayConfigurationProgrammedType),
+		} {
+			assert.True(ct, managerEntryContains(fresh, instanceFieldManager, condType),
+				"instance field manager must own the %s condition", condType)
+			assert.False(ct, managerEntryContains(fresh, "gateway-operator", condType),
+				"controller field manager must not own the %s condition", condType)
+		}
 	}, waitTime, tickTime)
 }

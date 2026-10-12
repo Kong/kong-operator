@@ -246,6 +246,32 @@ const (
 )
 
 // -----------------------------------------------------------------------------
+// OnPremAIGateway - Configuration Translation Condition Constants
+// -----------------------------------------------------------------------------
+
+const (
+	// OnPremAIGatewayConfigurationProgrammedType indicates whether the
+	// configuration entities of the OnPremAIGateway were successfully
+	// translated into the declarative payload pushed to its data planes.
+	OnPremAIGatewayConfigurationProgrammedType consts.ConditionType = "ConfigurationProgrammed"
+
+	// OnPremAIGatewayConfigurationTranslatedReason indicates the configuration
+	// was translated successfully.
+	OnPremAIGatewayConfigurationTranslatedReason consts.ConditionReason = "ConfigurationTranslated"
+
+	// OnPremAIGatewayConfigurationTranslationFailedReason indicates the
+	// configuration translation failed for the document as a whole or for at
+	// least one configuration entity.
+	OnPremAIGatewayConfigurationTranslationFailedReason consts.ConditionReason = "ConfigurationTranslationFailed"
+
+	// OnPremAIGatewayConfigurationTranslationWarningReason is the event reason
+	// for translation warnings. Warnings never fail the condition: it stays
+	// True and the warnings are carried by Warning events (and the condition
+	// message carries their count).
+	OnPremAIGatewayConfigurationTranslationWarningReason consts.ConditionReason = "ConfigurationTranslationWarning"
+)
+
+// -----------------------------------------------------------------------------
 // DataPlane - License Condition Constants
 // -----------------------------------------------------------------------------
 
