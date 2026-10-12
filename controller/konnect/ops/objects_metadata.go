@@ -61,15 +61,21 @@ func GenerateTagsForObject(obj ObjectWithMetadata, additionalTags ...string) []s
 		maxAllowedTagsCount = 20
 	)
 
+	// User provided tags with prefixes reserved for the Kubernetes metadata tags (e.g. "k8s-uid:") are dropped
+	// so that they cannot be confused with the ones generated below.
+	// Objects with such tags are not expected to reach here as they are rejected by CEL validation rules
+	// (tags in spec) or by the reconciler (tags in annotations), so this is only a safety net.
+
 	// Truncate the tags from annotations as we do not validate their length in CEL validations rules.
 	var annotationTags []string
-	for _, tag := range metadata.ExtractTags(obj) {
+	for _, tag := range metadata.WithoutReservedTags(metadata.ExtractTags(obj)) {
 		annotationTags = append(annotationTags, truncate(tag, maxAllowedTagLength))
 	}
 
 	// Truncate the additional tags to ensure they are within the maximum allowed tag length.
-	truncatedAdditional := make([]string, 0, len(additionalTags))
-	for _, tag := range additionalTags {
+	userTags := metadata.WithoutReservedTags(additionalTags)
+	truncatedAdditional := make([]string, 0, len(userTags))
+	for _, tag := range userTags {
 		truncatedAdditional = append(truncatedAdditional, truncate(tag, maxAllowedTagLength))
 	}
 	k8sMetaTags := generateKubernetesMetadataTags(obj)

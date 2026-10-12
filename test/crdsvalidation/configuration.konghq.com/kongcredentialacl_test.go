@@ -180,6 +180,41 @@ func TestKongCredentialACL(t *testing.T) {
 				},
 				ExpectedErrorMessage: new("tags entries must not be longer than 128 characters"),
 			},
+			{
+				Name: "tags entries must not start with reserved prefix k8s-name:",
+				TestObject: &configurationv1alpha1.KongCredentialACL{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCredentialACLSpec{
+						ConsumerRef: corev1.LocalObjectReference{
+							Name: "test-kong-consumer",
+						},
+						KongCredentialACLAPISpec: configurationv1alpha1.KongCredentialACLAPISpec{
+							Group: "group1",
+							Tags: []string{
+								"k8s-name:value",
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("tags entries must not start with reserved prefixes"),
+			},
+			{
+				Name: "tags entries starting with k8s- but not with a reserved prefix are allowed",
+				TestObject: &configurationv1alpha1.KongCredentialACL{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCredentialACLSpec{
+						ConsumerRef: corev1.LocalObjectReference{
+							Name: "test-kong-consumer",
+						},
+						KongCredentialACLAPISpec: configurationv1alpha1.KongCredentialACLAPISpec{
+							Group: "group1",
+							Tags: []string{
+								"k8s-team:value",
+							},
+						},
+					},
+				},
+			},
 		}.
 			RunWithConfig(t, cfg, scheme)
 	})

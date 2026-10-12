@@ -15,6 +15,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	pkgmetadata "github.com/kong/kong-operator/v2/pkg/metadata"
 )
 
 const (
@@ -216,8 +217,10 @@ func (b *KongServiceBuilder) WithClientCertificateRef(ref *commonv1alpha1.Namesp
 }
 
 // WithSpecTags sets the tags in the KongService spec.
-// A nil or empty slice leaves Spec.Tags unset.
+// Tags with prefixes reserved for the Kubernetes metadata tags (e.g. "k8s-uid:") are dropped.
+// A nil or empty slice (after dropping the reserved tags) leaves Spec.Tags unset.
 func (b *KongServiceBuilder) WithSpecTags(tags []string) *KongServiceBuilder {
+	tags = pkgmetadata.WithoutReservedTags(tags)
 	if len(tags) == 0 {
 		return b
 	}
