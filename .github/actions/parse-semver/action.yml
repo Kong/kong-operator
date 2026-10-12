@@ -55,7 +55,7 @@ runs:
             echo "::error::input_string '$INPUT_STRING' does not match version_extractor_regex '$regex'" >&2
             exit 1
           fi
-          if [[ -n "${BASH_REMATCH[2]+set}" ]]; then
+          if [[ -n "${BASH_REMATCH[2]+set}" || -z "${BASH_REMATCH[1]+set}" ]]; then
             echo "::error::version_extractor_regex '$regex' must have exactly one capture group" >&2
             exit 1
           fi
@@ -74,6 +74,6 @@ runs:
           echo "major=${BASH_REMATCH[1]}"
           echo "minor=${BASH_REMATCH[2]}"
           echo "patch=${BASH_REMATCH[3]}"
-          echo "prerelease=${BASH_REMATCH[5]}"
-          echo "build=${BASH_REMATCH[10]}"
+          echo "prerelease=${BASH_REMATCH[5]:-}"
+          echo "build=${BASH_REMATCH[10]:-}"
         } >> "$GITHUB_OUTPUT"
