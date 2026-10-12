@@ -60,3 +60,57 @@ func TestExtractTags(t *testing.T) {
 		})
 	}
 }
+
+func TestReservedTags(t *testing.T) {
+	tests := []struct {
+		name             string
+		tags             []string
+		expectedReserved []string
+		expectedFiltered []string
+	}{
+		{
+			name: "nil tags",
+		},
+		{
+			name:             "no reserved tags",
+			tags:             []string{"tag1", "k8s-team:foo", "k8s-uid", "uid:k8s-uid:1234"},
+			expectedFiltered: []string{"tag1", "k8s-team:foo", "k8s-uid", "uid:k8s-uid:1234"},
+		},
+		{
+			name: "all reserved prefixes",
+			tags: []string{
+				"k8s-generation:1",
+				"k8s-group:configuration.konghq.com",
+				"k8s-kind:KongService",
+				"k8s-name:svc",
+				"k8s-namespace:default",
+				"k8s-uid:1234",
+				"k8s-version:v1alpha1",
+				"managed-by:kong-operator",
+			},
+			expectedReserved: []string{
+				"k8s-generation:1",
+				"k8s-group:configuration.konghq.com",
+				"k8s-kind:KongService",
+				"k8s-name:svc",
+				"k8s-namespace:default",
+				"k8s-uid:1234",
+				"k8s-version:v1alpha1",
+				"managed-by:kong-operator",
+			},
+		},
+		{
+			name:             "mixed tags with surrounding whitespace",
+			tags:             []string{"tag1", " k8s-uid:1234", "tag2", "managed-by:"},
+			expectedReserved: []string{" k8s-uid:1234", "managed-by:"},
+			expectedFiltered: []string{"tag1", "tag2"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expectedReserved, ReservedTags(tt.tags))
+			require.Equal(t, tt.expectedFiltered, WithoutReservedTags(tt.tags))
+		})
+	}
+}

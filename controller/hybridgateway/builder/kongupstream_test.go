@@ -287,4 +287,12 @@ func TestKongUpstreamBuilder_WithSpecTags(t *testing.T) {
 		upstream := NewKongUpstream().WithSpecTags([]string{"foo", "bar"}).MustBuild()
 		assert.Equal(t, commonv1alpha1.Tags{"foo", "bar"}, upstream.Spec.Tags)
 	})
+	t.Run("drops tags with reserved prefixes", func(t *testing.T) {
+		upstream := NewKongUpstream().WithSpecTags([]string{"foo", "k8s-uid:1234", "managed-by:someone-else"}).MustBuild()
+		assert.Equal(t, commonv1alpha1.Tags{"foo"}, upstream.Spec.Tags)
+	})
+	t.Run("only reserved tags leave tags unset", func(t *testing.T) {
+		upstream := NewKongUpstream().WithSpecTags([]string{"k8s-name:other"}).MustBuild()
+		assert.Nil(t, upstream.Spec.Tags)
+	})
 }
