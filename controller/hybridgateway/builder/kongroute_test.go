@@ -744,6 +744,25 @@ func TestKongRouteBuilder_WithGRPCRouteMatch_NoMethod(t *testing.T) {
 	}, route.Spec.Headers)
 }
 
+func TestKongRouteBuilder_WithPreserveHost(t *testing.T) {
+	tests := []struct {
+		name  string
+		value *bool
+		want  *bool
+	}{
+		{name: "nil is a no-op", value: nil, want: nil},
+		{name: "true", value: new(true), want: new(true)},
+		{name: "false", value: new(false), want: new(false)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			route, err := NewKongRoute().WithPreserveHost(tt.value).Build()
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, route.Spec.PreserveHost)
+		})
+	}
+}
+
 func TestKongRouteBuilder_WithRequestBuffering(t *testing.T) {
 	tests := []struct {
 		name  string

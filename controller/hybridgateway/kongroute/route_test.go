@@ -1380,7 +1380,7 @@ func TestExtractRouteAnnotations(t *testing.T) {
 		want      RouteAnnotations
 		wantErrIn string
 	}{
-		{name: "defaults", want: RouteAnnotations{PreserveHost: true}},
+		{name: "defaults (preserve-host nil when absent)", want: RouteAnnotations{}},
 		{
 			name: "all set",
 			anns: map[string]string{
@@ -1393,7 +1393,7 @@ func TestExtractRouteAnnotations(t *testing.T) {
 			},
 			want: RouteAnnotations{
 				StripPath:               true,
-				PreserveHost:            false,
+				PreserveHost:            new(false),
 				RequestBuffering:        new(false),
 				ResponseBuffering:       new(true),
 				HTTPSRedirectStatusCode: new(int64(307)),
@@ -1533,7 +1533,7 @@ func TestRoutesForGRPCRouteRule_Annotations(t *testing.T) {
 			name: "no annotations uses defaults",
 			check: func(t *testing.T, spec configurationv1alpha1.KongRouteSpec) {
 				assert.Nil(t, spec.StripPath)
-				assert.Equal(t, new(true), spec.PreserveHost)
+				assert.Nil(t, spec.PreserveHost)
 				assert.Nil(t, spec.RequestBuffering)
 				assert.Nil(t, spec.ResponseBuffering)
 				assert.Nil(t, spec.HTTPSRedirectStatusCode)
@@ -1550,6 +1550,20 @@ func TestRoutesForGRPCRouteRule_Annotations(t *testing.T) {
 				assert.Equal(t, new(true), spec.ResponseBuffering)
 				assert.Equal(t, new(sdkkonnectcomp.HTTPSRedirectStatusCodeThreeHundredAndSeven), spec.HTTPSRedirectStatusCode)
 				assert.Equal(t, new(sdkkonnectcomp.PathHandlingV0), spec.PathHandling)
+			},
+		},
+		{
+			name: "preserve-host true",
+			anns: map[string]string{"konghq.com/preserve-host": "true"},
+			check: func(t *testing.T, spec configurationv1alpha1.KongRouteSpec) {
+				assert.Equal(t, new(true), spec.PreserveHost)
+			},
+		},
+		{
+			name: "preserve-host false",
+			anns: map[string]string{"konghq.com/preserve-host": "false"},
+			check: func(t *testing.T, spec configurationv1alpha1.KongRouteSpec) {
+				assert.Equal(t, new(false), spec.PreserveHost)
 			},
 		},
 		{name: "malformed strip-path", anns: map[string]string{"konghq.com/strip-path": "bogus"}, wantErr: true},

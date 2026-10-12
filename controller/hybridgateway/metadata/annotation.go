@@ -51,8 +51,8 @@ const (
 	// defaultStripPath is the default value for the strip-path annotation when not specified.
 	defaultStripPath = false
 
-	// defaultPreserveHost is the default value for the preserve-host annotation when not specified.
-	defaultPreserveHost = true
+	// DefaultPreserveHost is the default value for the preserve-host annotation when not specified.
+	DefaultPreserveHost = true
 )
 
 // ExtractStripPath extracts the strip-path annotation value and returns a boolean and an optional error.
@@ -66,15 +66,11 @@ func ExtractStripPath(anns map[string]string) (bool, error) {
 	return *stripPath, nil
 }
 
-// ExtractPreserveHost extracts the preserve-host annotation value and returns a boolean and an optional error.
-// Returns true by default if the annotation is not present or cannot be parsed
-// and non-nil error if the annotation cannot be parsed.
-func ExtractPreserveHost(anns map[string]string) (bool, error) {
-	preserveHost, err := parseAnnotationBool(anns, preserveHostKey)
-	if err != nil || preserveHost == nil {
-		return defaultPreserveHost, err
-	}
-	return *preserveHost, nil
+// ExtractPreserveHost extracts the preserve-host annotation value.
+// Returns nil when absent (callers apply [DefaultPreserveHost] if needed)
+// and a non-nil error when it cannot be parsed.
+func ExtractPreserveHost(anns map[string]string) (*bool, error) {
+	return parseAnnotationBool(anns, preserveHostKey)
 }
 
 // ExtractRequestBuffering extracts the request-buffering annotation value.

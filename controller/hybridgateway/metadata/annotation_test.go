@@ -115,19 +115,19 @@ func TestExtractPreserveHost(t *testing.T) {
 	tests := []struct {
 		name             string
 		annotations      map[string]string
-		expectedVal      bool
+		expectedVal      *bool
 		expectedErrExist bool
 	}{
 		{
 			name:             "nil annotations",
 			annotations:      nil,
-			expectedVal:      true,
+			expectedVal:      nil,
 			expectedErrExist: false,
 		},
 		{
 			name:             "empty annotations",
 			annotations:      map[string]string{},
-			expectedVal:      true,
+			expectedVal:      nil,
 			expectedErrExist: false,
 		},
 		{
@@ -135,7 +135,7 @@ func TestExtractPreserveHost(t *testing.T) {
 			annotations: map[string]string{
 				"konghq.com/preserve-host": "true",
 			},
-			expectedVal:      true,
+			expectedVal:      new(true),
 			expectedErrExist: false,
 		},
 		{
@@ -143,7 +143,7 @@ func TestExtractPreserveHost(t *testing.T) {
 			annotations: map[string]string{
 				"konghq.com/preserve-host": "false",
 			},
-			expectedVal:      false,
+			expectedVal:      new(false),
 			expectedErrExist: false,
 		},
 		{
@@ -151,7 +151,7 @@ func TestExtractPreserveHost(t *testing.T) {
 			annotations: map[string]string{
 				"konghq.com/preserve-host": "invalid",
 			},
-			expectedVal:      true,
+			expectedVal:      nil,
 			expectedErrExist: true,
 		},
 		{
@@ -159,7 +159,7 @@ func TestExtractPreserveHost(t *testing.T) {
 			annotations: map[string]string{
 				"konghq.com/preserve-host": "",
 			},
-			expectedVal:      true,
+			expectedVal:      nil,
 			expectedErrExist: false,
 		},
 		{
@@ -168,7 +168,7 @@ func TestExtractPreserveHost(t *testing.T) {
 				"other-annotation":         "value",
 				"konghq.com/preserve-host": "false",
 			},
-			expectedVal:      false,
+			expectedVal:      new(false),
 			expectedErrExist: false,
 		},
 	}

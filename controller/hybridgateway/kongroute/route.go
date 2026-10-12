@@ -157,7 +157,7 @@ func RoutesForHTTPRouteRule(
 			WithProtocols(protocols...).
 			WithHosts(hostnames).
 			WithStripPath(anns.StripPath).
-			WithPreserveHost(anns.PreserveHost).
+			WithPreserveHost(new(anns.PreserveHostOrDefault())).
 			WithRequestBuffering(anns.RequestBuffering).
 			WithResponseBuffering(anns.ResponseBuffering).
 			WithHTTPSRedirectStatusCode(anns.HTTPSRedirectStatusCode).
@@ -243,6 +243,7 @@ func RoutesForGRPCRouteRule(
 			WithProtocols(protocols...).
 			WithHosts(hostnames).
 			// strip_path is not set: grpc(s) routes do not accept it (same as KIC).
+			// preserve_host is set only when annotated; nil keeps the Kong default (false) for upgrade compatibility.
 			WithPreserveHost(anns.PreserveHost).
 			WithRequestBuffering(anns.RequestBuffering).
 			WithResponseBuffering(anns.ResponseBuffering).
@@ -888,11 +889,19 @@ func isTLSRoutePassthrough(
 // RouteAnnotations holds the konghq.com/* route annotations propagated to the KongRoute spec.
 type RouteAnnotations struct {
 	StripPath               bool
-	PreserveHost            bool
+	PreserveHost            *bool
 	RequestBuffering        *bool
 	ResponseBuffering       *bool
 	HTTPSRedirectStatusCode *int64
 	PathHandling            *string
+}
+
+// PreserveHostOrDefault returns the preserve-host value, or the default when the annotation is absent.
+func (a RouteAnnotations) PreserveHostOrDefault() bool {
+	if a.PreserveHost == nil {
+		return metadata.DefaultPreserveHost
+	}
+	return *a.PreserveHost
 }
 
 // ExtractRouteAnnotations parses the route annotations of obj.

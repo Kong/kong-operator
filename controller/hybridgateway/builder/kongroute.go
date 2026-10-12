@@ -167,9 +167,11 @@ func (b *KongRouteBuilder) WithStripPath(stripPath bool) *KongRouteBuilder {
 	return b
 }
 
-// WithPreserveHost sets the preserve host option for the KongRoute.
-func (b *KongRouteBuilder) WithPreserveHost(preserveHost bool) *KongRouteBuilder {
-	b.route.Spec.PreserveHost = &preserveHost
+// WithPreserveHost sets the preserve host option for the KongRoute. A nil value is a no-op.
+func (b *KongRouteBuilder) WithPreserveHost(preserveHost *bool) *KongRouteBuilder {
+	if preserveHost != nil {
+		b.route.Spec.PreserveHost = preserveHost
+	}
 	return b
 }
 

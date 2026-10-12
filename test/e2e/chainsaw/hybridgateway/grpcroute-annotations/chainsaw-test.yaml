@@ -11,7 +11,7 @@ spec:
     This test validates that the hybrid gateway controller correctly processes
     annotations set directly on a GRPCRoute object.
     Supported GRPCRoute-level annotations:
-    - konghq.com/preserve-host:             <bool> (default: true) -> KongRoute.spec.preserve_host
+    - konghq.com/preserve-host:             <bool> (unset when absent) -> KongRoute.spec.preserve_host
     - konghq.com/request-buffering:         <bool>                 -> KongRoute.spec.request_buffering
     - konghq.com/response-buffering:        <bool>                 -> KongRoute.spec.response_buffering
     - konghq.com/https-redirect-status-code: 301|302|307|308|426   -> KongRoute.spec.https_redirect_status_code

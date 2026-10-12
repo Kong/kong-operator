@@ -127,7 +127,8 @@
 - Hybrid Gateway: support the `konghq.com/request-buffering`,
   `konghq.com/response-buffering`, `konghq.com/https-redirect-status-code` and
   `konghq.com/path-handling` annotations on `HTTPRoute` and `GRPCRoute`, and
-  `konghq.com/preserve-host` on `GRPCRoute`.
+  `konghq.com/preserve-host` on `GRPCRoute`. For `GRPCRoute`, `preserve_host` is
+  only set when the annotation is present (otherwise the Kong default `false` is unchanged).
   [#6027](https://github.com/Kong/kong-operator/pull/6027)
 
 ### Changed
