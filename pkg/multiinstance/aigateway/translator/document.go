@@ -23,6 +23,8 @@ import (
 	"slices"
 
 	"github.com/Kong/ai-deck-converter/aigw"
+	"github.com/Kong/ai-deck-converter/convert"
+	yaml "gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -137,7 +139,7 @@ func translateKind[
 //
 // Entity kinds join here as they gain their own ToAIGW* conversion; until then the rendered
 // Document (and the dbless payload built from it) has dangling references and
-// ConvertDocumentToDBLessYAML reports them as warnings, not errors.
+// RenderDBLessYAML reports them as warnings, not errors.
 //
 // The OnOnPremAIGatewayRef index extractor only matches entities whose aiGatewayRef resolves
 // to an OnPremAIGateway, so a KonnectAIGateway sharing namespace/name with this
@@ -257,4 +259,24 @@ func BuildDocument(
 	}
 
 	return doc, statuses, nil
+}
+
+// RenderDBLessYAML converts the translated AI Gateway document into the flattened
+// db-less YAML payload understood by Kong data planes. Unresolved references are
+// reported as warnings, not errors, unless opts.Strict is set.
+func RenderDBLessYAML(doc *aigw.Document, opts convert.Options) ([]byte, []string, error) {
+	// The converter's public entry point (convert.Convert) only accepts YAML bytes,
+	// so the document built by BuildDocument goes through a marshal/reparse
+	// round-trip: aigw.Document is the converter's file format, so it round-trips
+	// losslessly.
+	src, err := yaml.Marshal(doc)
+	if err != nil {
+		return nil, nil, fmt.Errorf("marshaling AI Gateway document: %w", err)
+	}
+	kongDoc, warnings, err := convert.Convert(src, opts)
+	if err != nil {
+		return nil, warnings, err
+	}
+	payload, err := kongDoc.ToDBLess().ToYAML()
+	return payload, warnings, err
 }

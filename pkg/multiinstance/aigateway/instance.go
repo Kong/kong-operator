@@ -341,7 +341,7 @@ func (i *Instance) sendConfig(
 	}
 	included, failures := splitEntityStatuses(entityStatuses)
 
-	payload, warnings, err := convert.ConvertDocumentToDBLessYAML(doc, convert.Options{Strict: false})
+	payload, warnings, err := translator.RenderDBLessYAML(doc, convert.Options{Strict: false})
 	if err != nil {
 		// The rendered payload is broken, so nothing gets pushed: every entity
 		// included in the document failed to be applied.

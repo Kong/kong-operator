@@ -479,7 +479,7 @@ func TestBuildDocument(t *testing.T) {
 	// Render the pristine document before the dangling provider reference is injected
 	// below. A converter failure to resolve an SNI's certificate surfaces only as a
 	// warning, so require none.
-	sniPayload, sniWarnings, err := convert.ConvertDocumentToDBLessYAML(doc, convert.Options{Strict: false})
+	sniPayload, sniWarnings, err := RenderDBLessYAML(doc, convert.Options{Strict: false})
 	require.NoError(t, err)
 	require.NotEmpty(t, sniPayload)
 	require.Empty(t, sniWarnings)
@@ -508,7 +508,7 @@ func TestBuildDocument(t *testing.T) {
 	// Non-strict rendering must not fail even once a dangling reference is introduced by the
 	// next slice - pinned here with a target that references a provider this test never creates.
 	doc.Models[0].TargetModels = []aigw.TargetModel{{Name: "t", Provider: "does-not-exist"}}
-	payload, warnings, err := convert.ConvertDocumentToDBLessYAML(doc, convert.Options{Strict: false})
+	payload, warnings, err := RenderDBLessYAML(doc, convert.Options{Strict: false})
 	require.NoError(t, err)
 	require.NotEmpty(t, payload)
 	require.NotEmpty(t, warnings)
