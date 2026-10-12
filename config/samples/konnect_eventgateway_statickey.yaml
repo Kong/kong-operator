@@ -22,9 +22,9 @@ metadata:
     konghq.com/secret: "true"
 type: Opaque
 stringData:
-  # A base64-encoded 256-bit key: replace the placeholder with your own key,
-  # e.g. generated with: openssl rand -base64 32
-  key: REPLACE-WITH-A-BASE64-ENCODED-256-BIT-KEY
+  # A base64-encoded 256-bit key. This one is an example: generate your own,
+  # e.g. with: openssl rand -base64 32
+  key: ZXhhbXBsZS1rZXktZG8tbm90LXVzZS1pbi1wcm9kISE=
 ---
 # A static encryption key. Konnect has no update API for static keys, so its
 # apiSpec is immutable once the key exists in Konnect: to rotate the key,
@@ -114,8 +114,6 @@ spec:
           type: static
           static:
             key:
-              # An EventGatewayStaticKey in the same namespace. A static key
-              # created outside the cluster can be referenced by its Konnect id
-              # or name instead.
+              # An EventGatewayStaticKey in the same namespace.
               namespacedRef:
                 name: cp-event-1-encryption-key

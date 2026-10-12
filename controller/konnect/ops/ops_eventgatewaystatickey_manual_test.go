@@ -598,7 +598,7 @@ func TestUpdateEventGatewayStaticKey(t *testing.T) {
 			Once()
 
 		obj := newStaticKey()
-		require.NoError(t, updateEventGatewayStaticKey(t.Context(), newClient(t, secret), sdk, obj))
+		require.NoError(t, updateEventGatewayStaticKey(t.Context(), newClient(t, secret.DeepCopy()), sdk, obj))
 		assert.Equal(t, "recreated-id", obj.GetKonnectID())
 	})
 
@@ -639,7 +639,7 @@ func TestUpdateEventGatewayStaticKey(t *testing.T) {
 			sdkkonnectcomp.EventGatewayStaticKey{ID: "recreated-id", Labels: map[string]string{KubernetesUIDLabelKey: "static-key-uid"}},
 		)
 
-		require.NoError(t, updateEventGatewayStaticKey(t.Context(), newClient(t, secret), sdk, obj))
+		require.NoError(t, updateEventGatewayStaticKey(t.Context(), newClient(t, secret.DeepCopy()), sdk, obj))
 		assert.Equal(t, "recreated-id", obj.GetKonnectID())
 	})
 
@@ -653,7 +653,7 @@ func TestUpdateEventGatewayStaticKey(t *testing.T) {
 			sdkkonnectcomp.EventGatewayStaticKey{ID: "other-id", Labels: map[string]string{KubernetesUIDLabelKey: "other-uid"}},
 		)
 
-		require.ErrorContains(t, updateEventGatewayStaticKey(t.Context(), newClient(t, secret), sdk, obj), "must be unique")
+		require.ErrorContains(t, updateEventGatewayStaticKey(t.Context(), newClient(t, secret.DeepCopy()), sdk, obj), "must be unique")
 		assert.Equal(t, staticKeyID, obj.GetKonnectID())
 	})
 
