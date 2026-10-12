@@ -73,7 +73,7 @@ version = "4.3.0"
 # Upstream issue: https://github.com/kubernetes-sigs/kube-api-linter/issues/260
 [tools."go:github.com/pmalek/kube-api-linter/cmd/golangci-lint-kube-api-linter"]
 # renovate: datasource=git-refs packageName=https://github.com/pmalek/kube-api-linter.git
-version = "e6766bffa4ab82b7b83cfcf0afcbc88e02b3b368"
+version = "092fe0c72997c3e7d6d78405211ed913e37a44e5"
 
 [tools."yq"]
 # renovate: datasource=github-releases depName=mikefarah/yq
