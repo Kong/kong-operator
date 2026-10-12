@@ -71,7 +71,7 @@ func (r *Reconciler) createDataPlane(
 	// Add the GEP-1762 gateway-name label unconditionally (after mergeInfrastructureIntoDataPlane
 	// so it cannot be overridden by spec.infrastructure).
 	setGatewayNameLabelInDataPlane(&dataplane.Spec.DataPlaneOptions, gateway.Name)
-	setDataPlaneOptionsDefaults(&dataplane.Spec.DataPlaneOptions, r.DefaultDataPlaneImage)
+	setDataPlaneOptionsDefaults(&dataplane.Spec.DataPlaneOptions, r.DefaultDataPlaneImage, gwconfigutils.IsGatewayHybrid(gatewayConfig))
 
 	if err := setDataPlaneOptionsForListeners(
 		&dataplane.Spec.DataPlaneOptions,

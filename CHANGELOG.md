@@ -296,11 +296,15 @@
 
 - Hybridgateway: preserve Gateway API precedence for overlapping path, method,
   and header matches by retaining native PathPrefix matching and generating
-  specialized Kong Routes for conflicting match combinations. This enables the
-  `HTTPRouteMethodMatching` Gateway API conformance test for the hybrid
-  gateway. Generated priorities stay below `1 << 20` (`1048576`) because Kong's
-  traditional-compatible router only retains the low 20 bits when calculating
-  route precedence.
+  specialized Kong Routes for conflicting match combinations. Specialized
+  variants use regex paths so their inherited priorities take effect, including
+  when lower-priority variants combine method and header matches.
+  Hybrid Gateway DataPlanes default to `KONG_ROUTE_MATCH_CALCULATION=strict`
+  to avoid the legacy calculation overlapping native match fields with
+  `regex_priority`. Explicit user settings are preserved; selecting `original`
+  retains legacy precedence limitations.
+  This enables the `HTTPRouteMethodMatching` Gateway API conformance test for the
+  hybrid gateway. Generated priorities stay below `1 << 20` (`1048576`).
   [#4715](https://github.com/Kong/kong-operator/pull/4715)
 - Konnect: fix hot retry loop when Konnect returns 5xx on entity update
   (e.g. Event Gateway update returning 500). The Konnect trace ID is now

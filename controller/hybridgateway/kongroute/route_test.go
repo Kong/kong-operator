@@ -209,7 +209,11 @@ func TestRoutesForRule(t *testing.T) {
 					continue
 				}
 
-				assert.Equal(t, []string{"~/test$", "/test/"}, result.Spec.Paths)
+				if len(result.Spec.Headers) > 0 {
+					assert.Equal(t, []string{"~/test$", "~/test(/.*)"}, result.Spec.Paths)
+				} else {
+					assert.Equal(t, []string{"~/test$", "/test/"}, result.Spec.Paths)
+				}
 				require.NotNil(t, result.Spec.RegexPriority)
 				assert.Equal(t, int64(1<<10), *result.Spec.RegexPriority)
 			}
@@ -808,101 +812,135 @@ func TestRoutesForRule_PrioritizesHeaderOnlyHTTPRouteMatches(t *testing.T) {
 }
 
 func TestRoutesForRule_PrioritizesDefaultPathMethodMatchesOverHeaderOnlyMatches(t *testing.T) {
-	ctx := context.Background()
-	logger := logr.Discard()
+	for _, tc := range []struct {
+		name           string
+		path           *gatewayv1.HTTPPathMatch
+		methodPaths    []string
+		pathRouteCount int
+	}{
+		{
+			name:           "implicit root prefix",
+			pathRouteCount: 3,
+		},
+		{
+			name:           "explicit root prefix",
+			path:           defaultRootPathMatch(),
+			methodPaths:    []string{"/"},
+			pathRouteCount: 4,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			logger := logr.Discard()
 
-	scheme := runtime.NewScheme()
-	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
-	require.NoError(t, gatewayv1.Install(scheme))
+			scheme := runtime.NewScheme()
+			require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+			require.NoError(t, gatewayv1.Install(scheme))
 
-	httpRoute := &gwtypes.HTTPRoute{
-		TypeMeta:  httpRouteTypeMeta,
-		Name:      "method-matching",
-		Namespace: "gateway-conformance-infra",
-		Spec: gatewayv1.HTTPRouteSpec{
-			CommonRouteSpec: gatewayv1.CommonRouteSpec{
-				ParentRefs: []gatewayv1.ParentReference{{Name: "same-namespace"}},
-			},
-			Rules: []gatewayv1.HTTPRouteRule{
-				{
-					Matches: []gatewayv1.HTTPRouteMatch{{
-						Path: &gatewayv1.HTTPPathMatch{
-							Type:  new(gatewayv1.PathMatchPathPrefix),
-							Value: new("/path5"),
+			httpRoute := &gwtypes.HTTPRoute{
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "method-matching",
+				Namespace: "gateway-conformance-infra",
+				Spec: gatewayv1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{
+						ParentRefs: []gatewayv1.ParentReference{{Name: "same-namespace"}},
+					},
+					Rules: []gatewayv1.HTTPRouteRule{
+						{
+							Matches: []gatewayv1.HTTPRouteMatch{{
+								Path: &gatewayv1.HTTPPathMatch{
+									Type:  new(gatewayv1.PathMatchPathPrefix),
+									Value: new("/path5"),
+								},
+							}},
 						},
-					}},
+						{
+							Matches: []gatewayv1.HTTPRouteMatch{{
+								Path:   tc.path,
+								Method: new(gatewayv1.HTTPMethodPatch),
+							}},
+						},
+						{
+							Matches: []gatewayv1.HTTPRouteMatch{{
+								Path:    tc.path,
+								Headers: []gatewayv1.HTTPHeaderMatch{{Name: "version", Value: "four"}},
+							}},
+						},
+					},
 				},
-				{
-					Matches: []gatewayv1.HTTPRouteMatch{{
-						Method: new(gatewayv1.HTTPMethodPatch),
-					}},
+			}
+			pRef := &gwtypes.ParentReference{
+				Name:      "same-namespace",
+				Namespace: (*gatewayv1.Namespace)(new("gateway-conformance-infra")),
+			}
+			cpRef := &commonv1alpha1.ControlPlaneRef{
+				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+					Name: "test-cp",
 				},
-				{
-					Matches: []gatewayv1.HTTPRouteMatch{{
-						Headers: []gatewayv1.HTTPHeaderMatch{{Name: "version", Value: "four"}},
-					}},
+			}
+			gateway := &gatewayv1.Gateway{
+				Name:      "same-namespace",
+				Namespace: "gateway-conformance-infra",
+				Spec: gatewayv1.GatewaySpec{
+					GatewayClassName: "test-class",
+					Listeners: []gatewayv1.Listener{
+						{Name: "http", Protocol: gatewayv1.HTTPProtocolType, Port: 80},
+					},
 				},
-			},
-		},
-	}
-	pRef := &gwtypes.ParentReference{
-		Name:      "same-namespace",
-		Namespace: (*gatewayv1.Namespace)(new("gateway-conformance-infra")),
-	}
-	cpRef := &commonv1alpha1.ControlPlaneRef{
-		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-			Name: "test-cp",
-		},
-	}
-	gateway := &gatewayv1.Gateway{
-		Name:      "same-namespace",
-		Namespace: "gateway-conformance-infra",
-		Spec: gatewayv1.GatewaySpec{
-			GatewayClassName: "test-class",
-			Listeners: []gatewayv1.Listener{
-				{Name: "http", Protocol: gatewayv1.HTTPProtocolType, Port: 80},
-			},
-		},
-	}
-	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
+			}
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
 
-	pathRoutes, err := RoutesForRule(ctx, logger, fakeClient, httpRoute, httpRoute.Spec.Rules[0], 0, pRef, cpRef, nil, "path-service", nil)
-	require.NoError(t, err)
-	require.Len(t, pathRoutes, 2)
-	methodOnlyRoutes, err := RoutesForRule(ctx, logger, fakeClient, httpRoute, httpRoute.Spec.Rules[1], 1, pRef, cpRef, nil, "method-only-service", nil)
-	require.NoError(t, err)
-	require.Len(t, methodOnlyRoutes, 2)
-	headerOnlyRoutes, err := RoutesForRule(ctx, logger, fakeClient, httpRoute, httpRoute.Spec.Rules[2], 2, pRef, cpRef, nil, "header-only-service", nil)
-	require.NoError(t, err)
-	require.Len(t, headerOnlyRoutes, 1)
+			pathRoutes, err := RoutesForRule(ctx, logger, fakeClient, httpRoute, httpRoute.Spec.Rules[0], 0, pRef, cpRef, nil, "path-service", nil)
+			require.NoError(t, err)
+			require.Len(t, pathRoutes, tc.pathRouteCount)
+			methodOnlyRoutes, err := RoutesForRule(ctx, logger, fakeClient, httpRoute, httpRoute.Spec.Rules[1], 1, pRef, cpRef, nil, "method-only-service", nil)
+			require.NoError(t, err)
+			require.Len(t, methodOnlyRoutes, 2)
+			headerOnlyRoutes, err := RoutesForRule(ctx, logger, fakeClient, httpRoute, httpRoute.Spec.Rules[2], 2, pRef, cpRef, nil, "header-only-service", nil)
+			require.NoError(t, err)
+			require.Len(t, headerOnlyRoutes, 1)
 
-	methodOnlyRoute := methodOnlyRoutes[0]
-	methodWithHeaderRoute := methodOnlyRoutes[1]
-	assert.Equal(t, []string{"PATCH"}, methodOnlyRoute.Spec.Methods)
-	assert.Empty(t, methodOnlyRoute.Spec.Paths)
-	assert.NotNil(t, methodOnlyRoute.Spec.RegexPriority)
-	assert.Nil(t, methodOnlyRoute.Spec.Headers)
-	assert.Equal(t, []string{"PATCH"}, methodWithHeaderRoute.Spec.Methods)
-	assert.Equal(t, map[string][]string{"version": {"four"}}, methodWithHeaderRoute.Spec.Headers)
-	assert.Empty(t, methodWithHeaderRoute.Spec.Paths)
+			methodOnlyRoute := methodOnlyRoutes[0]
+			methodWithHeaderRoute := methodOnlyRoutes[1]
+			assert.Equal(t, []string{"PATCH"}, methodOnlyRoute.Spec.Methods)
+			assert.Equal(t, tc.methodPaths, methodOnlyRoute.Spec.Paths)
+			require.NotNil(t, methodOnlyRoute.Spec.RegexPriority)
+			assert.Nil(t, methodOnlyRoute.Spec.Headers)
+			assert.Equal(t, []string{"PATCH"}, methodWithHeaderRoute.Spec.Methods)
+			assert.Equal(t, map[string][]string{"version": {"four"}}, methodWithHeaderRoute.Spec.Headers)
+			assert.Equal(t, []string{"~/(.*)"}, methodWithHeaderRoute.Spec.Paths)
+			require.NotNil(t, methodWithHeaderRoute.Spec.RegexPriority)
+			assert.Equal(t, methodOnlyRoute.Spec.RegexPriority, methodWithHeaderRoute.Spec.RegexPriority)
+			assert.Equal(t, methodOnlyRoute.Spec.ServiceRef, methodWithHeaderRoute.Spec.ServiceRef)
 
-	headerOnlyRoute := headerOnlyRoutes[0]
-	assert.Equal(t, []string{"~/(.*)"}, headerOnlyRoute.Spec.Paths)
-	assert.Empty(t, headerOnlyRoute.Spec.Methods)
-	assert.NotNil(t, headerOnlyRoute.Spec.RegexPriority)
-	require.NotNil(t, headerOnlyRoute.Spec.Headers)
-	assert.Equal(t, map[string][]string{"version": {"four"}}, headerOnlyRoute.Spec.Headers)
-	// Method matches rank above header-only matches per Gateway API precedence.
-	assert.Greater(t, *methodOnlyRoute.Spec.RegexPriority, *headerOnlyRoute.Spec.RegexPriority)
+			headerOnlyRoute := headerOnlyRoutes[0]
+			assert.Equal(t, []string{"~/(.*)"}, headerOnlyRoute.Spec.Paths)
+			assert.Empty(t, headerOnlyRoute.Spec.Methods)
+			require.NotNil(t, headerOnlyRoute.Spec.RegexPriority)
+			require.NotNil(t, headerOnlyRoute.Spec.Headers)
+			assert.Equal(t, map[string][]string{"version": {"four"}}, headerOnlyRoute.Spec.Headers)
+			// Method matches rank above header-only matches per Gateway API precedence.
+			assert.Greater(t, *methodWithHeaderRoute.Spec.RegexPriority, *headerOnlyRoute.Spec.RegexPriority)
+			assert.Less(t, *methodWithHeaderRoute.Spec.RegexPriority, int64(1<<20))
 
-	pathOnlyRoute := pathRoutes[0]
-	pathWithHeaderRoute := pathRoutes[1]
-	assert.Equal(t, []string{"~/path5$", "/path5/"}, pathOnlyRoute.Spec.Paths)
-	assert.Empty(t, pathOnlyRoute.Spec.Headers)
-	assert.Equal(t, pathOnlyRoute.Spec.Paths, pathWithHeaderRoute.Spec.Paths)
-	assert.Equal(t, map[string][]string{"version": {"four"}}, pathWithHeaderRoute.Spec.Headers)
-	assert.Equal(t, pathOnlyRoute.Spec.RegexPriority, pathWithHeaderRoute.Spec.RegexPriority)
+			pathOnlyRoute := pathRoutes[0]
+			pathWithHeaderRoute := pathRoutes[len(pathRoutes)-1]
+			assert.Equal(t, []string{"~/path5$", "/path5/"}, pathOnlyRoute.Spec.Paths)
+			assert.Empty(t, pathOnlyRoute.Spec.Headers)
+			assert.Equal(t, []string{"~/path5$", "~/path5(/.*)"}, pathWithHeaderRoute.Spec.Paths)
+			assert.Equal(t, map[string][]string{"version": {"four"}}, pathWithHeaderRoute.Spec.Headers)
+			assert.Equal(t, pathOnlyRoute.Spec.RegexPriority, pathWithHeaderRoute.Spec.RegexPriority)
+
+			pathWithMethodAndHeaderRoute := pathRoutes[len(pathRoutes)-2]
+			assert.Equal(t, pathWithHeaderRoute.Spec.Paths, pathWithMethodAndHeaderRoute.Spec.Paths)
+			assert.Equal(t, []string{"PATCH"}, pathWithMethodAndHeaderRoute.Spec.Methods)
+			assert.Equal(t, map[string][]string{"version": {"four"}}, pathWithMethodAndHeaderRoute.Spec.Headers)
+			assert.Equal(t, pathOnlyRoute.Spec.RegexPriority, pathWithMethodAndHeaderRoute.Spec.RegexPriority)
+			assert.Equal(t, pathOnlyRoute.Spec.ServiceRef, pathWithMethodAndHeaderRoute.Spec.ServiceRef)
+			assert.Greater(t, *pathWithMethodAndHeaderRoute.Spec.RegexPriority, *methodWithHeaderRoute.Spec.RegexPriority)
+		})
+	}
 }
 
 func TestHTTPRouteMatchPrioritiesIgnoreUnsupportedQueryParams(t *testing.T) {

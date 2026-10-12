@@ -152,6 +152,8 @@ func RoutesForHTTPRouteRule(
 			mLog := logger.WithValues("kongroute", routeName, "matchIndex", i, "precedenceVariant", variantIndex)
 			log.Debug(mLog, "Creating KongRoute for HTTPRoute match")
 
+			// Specialized non-root prefixes need regex paths for their inherited priority to take effect.
+			captureGroup := setCaptureGroup || variantIndex > 0 && !isDefaultPathHTTPRouteMatch(variant)
 			routeBuilder := builder.NewKongRoute().
 				WithName(routeName).
 				WithNamespace(metadata.NamespaceFromParentRef(httpRoute, pRef)).
@@ -168,8 +170,9 @@ func RoutesForHTTPRouteRule(
 				WithPathHandling(anns.PathHandling).
 				WithSpecTags(tags).
 				WithKongService(serviceName).
-				WithHTTPRouteMatch(variant, setCaptureGroup)
-			if priority := priorityForHeaderOnlyHTTPRouteMatch(match, priorities, ruleIndex, i); priority != nil {
+				WithHTTPRouteMatch(variant, captureGroup)
+			// Use the variant's match fields while retaining the original match's priority.
+			if priority := priorityForHeaderOnlyHTTPRouteMatch(variant, priorities, ruleIndex, i); priority != nil {
 				routeBuilder.WithRegexPriority(priority).WithHeaderOnlyRegexPath()
 			} else if priority := priorityForTraditionalHTTPRouteMatch(match, priorities, ruleIndex, i); priority != nil {
 				routeBuilder.WithRegexPriority(priority)
@@ -480,10 +483,10 @@ func priorityForTraditionalHTTPRouteMatch(
 }
 
 // precedenceVariantsForHTTPRouteMatch returns the original match plus specialized copies that
-// include the non-path constraints of lower-priority matches it can overlap. Kong's traditional
-// router considers the number of populated match fields before regex_priority. Without these
-// copies a less-specific method or header match can beat a more-specific path match regardless of
-// regex_priority. The specialized copy has at least the same native Kong specificity as the lower
+// include the non-path constraints of lower-priority matches and their variants it can overlap.
+// Kong's traditional router considers the number of populated match fields before regex_priority.
+// Without these copies a less-specific method or header match can beat a more-specific path match
+// regardless of regex_priority. The specialized copy has at least the same native Kong specificity as the lower
 // match, after which path length/type and regex_priority preserve Gateway API precedence. The
 // original copy remains necessary for requests that do not satisfy any lower match's constraints.
 func precedenceVariantsForHTTPRouteMatch(
@@ -492,28 +495,40 @@ func precedenceVariantsForHTTPRouteMatch(
 	priorities map[httpRouteMatchPriorityKey]int64,
 	ruleIndex, matchIndex int,
 ) []gatewayv1.HTTPRouteMatch {
-	variants := []gatewayv1.HTTPRouteMatch{*match.DeepCopy()}
-	priority := priorityForHTTPRouteMatch(priorities, ruleIndex, matchIndex)
-
-	for lowerRuleIndex, rule := range httpRoute.Spec.Rules {
-		for lowerMatchIndex, lower := range rule.Matches {
-			if priorityForHTTPRouteMatch(priorities, lowerRuleIndex, lowerMatchIndex) >= priority {
-				continue
-			}
-			if !needsPrecedenceVariant(match, lower) {
-				continue
-			}
-			variant, changed, overlaps := augmentHTTPRouteMatch(match, lower)
-			if !changed || !overlaps || slices.ContainsFunc(variants, func(existing gatewayv1.HTTPRouteMatch) bool {
-				return reflect.DeepEqual(existing, variant)
-			}) {
-				continue
-			}
-			variants = append(variants, variant)
+	variantsByMatch := make(map[httpRouteMatchPriorityKey][]gatewayv1.HTTPRouteMatch)
+	var variantsForMatch func(httpRouteMatchPriorityKey, gatewayv1.HTTPRouteMatch) []gatewayv1.HTTPRouteMatch
+	variantsForMatch = func(key httpRouteMatchPriorityKey, match gatewayv1.HTTPRouteMatch) []gatewayv1.HTTPRouteMatch {
+		if variants, ok := variantsByMatch[key]; ok {
+			return variants
 		}
+		variants := []gatewayv1.HTTPRouteMatch{*match.DeepCopy()}
+		priority := priorityForHTTPRouteMatch(priorities, key.ruleIndex, key.matchIndex)
+
+		for lowerRuleIndex, rule := range httpRoute.Spec.Rules {
+			for lowerMatchIndex, lower := range rule.Matches {
+				if priorityForHTTPRouteMatch(priorities, lowerRuleIndex, lowerMatchIndex) >= priority {
+					continue
+				}
+				lowerKey := httpRouteMatchPriorityKey{ruleIndex: lowerRuleIndex, matchIndex: lowerMatchIndex}
+				for _, lowerVariant := range variantsForMatch(lowerKey, lower) {
+					if !needsPrecedenceVariant(match, lowerVariant) {
+						continue
+					}
+					variant, changed, overlaps := augmentHTTPRouteMatch(match, lowerVariant)
+					if !changed || !overlaps || slices.ContainsFunc(variants, func(existing gatewayv1.HTTPRouteMatch) bool {
+						return reflect.DeepEqual(existing, variant)
+					}) {
+						continue
+					}
+					variants = append(variants, variant)
+				}
+			}
+		}
+		variantsByMatch[key] = variants
+		return variants
 	}
 
-	return variants
+	return variantsForMatch(httpRouteMatchPriorityKey{ruleIndex: ruleIndex, matchIndex: matchIndex}, match)
 }
 
 func needsPrecedenceVariant(higher, lower gatewayv1.HTTPRouteMatch) bool {
@@ -530,7 +545,7 @@ func needsPrecedenceVariant(higher, lower gatewayv1.HTTPRouteMatch) bool {
 // and protocols are omitted because they are identical for every match of the parent HTTPRoute.
 func traditionalKongMatchWeight(match gatewayv1.HTTPRouteMatch) int {
 	weight := 0
-	if match.Path != nil && match.Path.Value != nil {
+	if match.Path != nil && match.Path.Value != nil || isHeaderOnlyDefaultPathHTTPRouteMatch(match) {
 		weight++
 	}
 	if match.Method != nil {

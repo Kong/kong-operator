@@ -915,8 +915,82 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			setDataPlaneOptionsDefaults(&tc.input, consts.DefaultDataPlaneImage)
+			setDataPlaneOptionsDefaults(&tc.input, consts.DefaultDataPlaneImage, false)
 			require.Equal(t, tc.expected, tc.input)
+		})
+	}
+}
+
+func TestSetDataPlaneOptionsDefaultsRouteMatchCalculation(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		isHybrid    bool
+		env         []corev1.EnvVar
+		expectedEnv []corev1.EnvVar
+	}{
+		{
+			name: "standard Gateway retains Kong defaults",
+		},
+		{
+			name:        "hybrid Gateway uses corrected route priorities",
+			isHybrid:    true,
+			expectedEnv: []corev1.EnvVar{{Name: "KONG_ROUTE_MATCH_CALCULATION", Value: "strict"}},
+		},
+		{
+			name:     "hybrid Gateway preserves other container settings",
+			isHybrid: true,
+			env:      []corev1.EnvVar{{Name: "KONG_LOG_LEVEL", Value: "debug"}},
+			expectedEnv: []corev1.EnvVar{
+				{Name: "KONG_LOG_LEVEL", Value: "debug"},
+				{Name: "KONG_ROUTE_MATCH_CALCULATION", Value: "strict"},
+			},
+		},
+		{
+			name:        "hybrid Gateway preserves explicit legacy calculation",
+			isHybrid:    true,
+			env:         []corev1.EnvVar{{Name: "KONG_ROUTE_MATCH_CALCULATION", Value: "original"}},
+			expectedEnv: []corev1.EnvVar{{Name: "KONG_ROUTE_MATCH_CALCULATION", Value: "original"}},
+		},
+		{
+			name:     "hybrid Gateway preserves calculation from a configuration reference",
+			isHybrid: true,
+			env: []corev1.EnvVar{{
+				Name: "KONG_ROUTE_MATCH_CALCULATION",
+				ValueFrom: &corev1.EnvVarSource{
+					ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+						Name: "kong-config",
+						Key:  "route-match-calculation",
+					},
+				},
+			}},
+			expectedEnv: []corev1.EnvVar{{
+				Name: "KONG_ROUTE_MATCH_CALCULATION",
+				ValueFrom: &corev1.EnvVarSource{
+					ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+						Name: "kong-config",
+						Key:  "route-match-calculation",
+					},
+				},
+			}},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			opts := operatorv1beta1.DataPlaneOptions{}
+			if tc.env != nil {
+				opts.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{Containers: []corev1.Container{{
+						Name: consts.DataPlaneProxyContainerName,
+						Env:  tc.env,
+					}}},
+				}
+			}
+
+			for range 2 {
+				setDataPlaneOptionsDefaults(&opts, consts.DefaultDataPlaneImage, tc.isHybrid)
+				container := k8sutils.GetPodContainerByName(&opts.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+				require.NotNil(t, container)
+				assert.Equal(t, tc.expectedEnv, container.Env)
+			}
 		})
 	}
 }
