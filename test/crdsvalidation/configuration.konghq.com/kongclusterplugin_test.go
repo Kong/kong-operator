@@ -159,6 +159,23 @@ func TestKongClusterPlugin(t *testing.T) {
 				ExpectedErrorMessage: new("tags entries must not be longer than 128 characters"),
 			},
 			{
+				Name: "tags entries must not start with reserved prefix k8s-version:",
+				TestObject: &configurationv1.KongClusterPlugin{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					PluginName: "rate-limiting",
+					Tags:       []string{"tag1", "k8s-version:value"},
+				},
+				ExpectedErrorMessage: new("tags entries must not start with reserved prefixes"),
+			},
+			{
+				Name: "tags entries starting with k8s- but not with a reserved prefix are allowed",
+				TestObject: &configurationv1.KongClusterPlugin{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					PluginName: "rate-limiting",
+					Tags:       []string{"tag1", "k8s-team:value"},
+				},
+			},
+			{
 				Name: "tags field with too many tags should fail",
 				TestObject: &configurationv1.KongClusterPlugin{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),

@@ -171,6 +171,41 @@ func TestKongSNI(t *testing.T) {
 				},
 				ExpectedErrorMessage: new("tags entries must not be longer than 128 characters"),
 			},
+			{
+				Name: "tags entries must not start with reserved prefix managed-by:",
+				TestObject: &configurationv1alpha1.KongSNI{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongSNISpec{
+						CertificateRef: commonv1alpha1.NamespacedRef{
+							Name: "cert1",
+						},
+						KongSNIAPISpec: configurationv1alpha1.KongSNIAPISpec{
+							Name: "example.com",
+							Tags: []string{
+								"managed-by:value",
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("tags entries must not start with reserved prefixes"),
+			},
+			{
+				Name: "tags entries starting with k8s- but not with a reserved prefix are allowed",
+				TestObject: &configurationv1alpha1.KongSNI{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongSNISpec{
+						CertificateRef: commonv1alpha1.NamespacedRef{
+							Name: "cert1",
+						},
+						KongSNIAPISpec: configurationv1alpha1.KongSNIAPISpec{
+							Name: "example.com",
+							Tags: []string{
+								"k8s-team:value",
+							},
+						},
+					},
+				},
+			},
 		}.
 			RunWithConfig(t, cfg, scheme)
 	})
