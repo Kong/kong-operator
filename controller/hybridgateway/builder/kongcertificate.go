@@ -15,6 +15,7 @@ import (
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	pkgmetadata "github.com/kong/kong-operator/v2/pkg/metadata"
 )
 
 // KongCertificateBuilder is a builder for configurationv1alpha1.KongCertificate resources.
@@ -133,8 +134,10 @@ func (b *KongCertificateBuilder) WithOwner(owner *gwtypes.Gateway) *KongCertific
 }
 
 // WithSpecTags sets the tags in the KongCertificate spec.
-// A nil or empty slice leaves Spec.Tags unset.
+// Tags with prefixes reserved for the Kubernetes metadata tags (e.g. "k8s-uid:") are dropped.
+// A nil or empty slice (after dropping the reserved tags) leaves Spec.Tags unset.
 func (b *KongCertificateBuilder) WithSpecTags(tags []string) *KongCertificateBuilder {
+	tags = pkgmetadata.WithoutReservedTags(tags)
 	if len(tags) == 0 {
 		return b
 	}
