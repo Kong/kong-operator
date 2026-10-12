@@ -795,6 +795,8 @@ apiGroupVersions:
                   # Konnect's rule, which the OpenAPI spec doesn't declare
                   # (checked against the API): letters (incl. non-ASCII) and
                   # digits at both ends, spaces and _ . : / + ' - inside.
+                  # TODO: drop this once the OAS declares the pattern:
+                  # https://github.com/Kong/platform-api/issues/3703
                   - '+kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _.:/+''-]*[\p{L}\p{N}]$`'
               value:
                 # The OpenAPI description says plain text values are encrypted
