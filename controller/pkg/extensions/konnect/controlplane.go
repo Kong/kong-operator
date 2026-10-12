@@ -13,6 +13,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/extensions/processor"
 	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 // KonnectExtensionConfig holds the configuration for a KIC instance based on a KonnectExtension resource.
@@ -25,6 +26,7 @@ type KonnectExtensionConfig struct {
 // ControlPlaneKonnectExtensionProcessor processes Konnect extensions for ControlPlane resources.
 type ControlPlaneKonnectExtensionProcessor struct {
 	KonnectExtensionConfig *KonnectExtensionConfig
+	CertificateSecretName  string
 }
 
 // Compile-time check to ensure ControlPlaneKonnectExtensionProcessor implements the extensions.ExtensionProcessor interface.
@@ -64,11 +66,30 @@ func (p *ControlPlaneKonnectExtensionProcessor) Process(ctx context.Context, cl 
 			client.ObjectKeyFromObject(konnectExtension), client.ObjectKeyFromObject(cp), err)
 	}
 	p.KonnectExtensionConfig = config
+	p.CertificateSecretName = konnectExtension.Status.DataPlaneClientAuth.CertificateSecretRef.Name
 
 	// Apply the FillIDs feature gate to the ControlPlane.
 	applyFeatureGatesToControlPlane(cp)
 
 	return true, nil
+}
+
+// MarkCertificateApplied records the generation only after the running instance
+// is ready and its configuration matches the desired certificate.
+func (p *ControlPlaneKonnectExtensionProcessor) MarkCertificateApplied(ctx context.Context, cl client.Client, cp *gwtypes.ControlPlane) error {
+	if cp.Annotations[consts.KonnectClientCertificateSecretAnnotation] == p.CertificateSecretName {
+		return nil
+	}
+	old := cp.DeepCopy()
+	if cp.Annotations == nil {
+		cp.Annotations = make(map[string]string)
+	}
+	if p.CertificateSecretName == "" {
+		delete(cp.Annotations, consts.KonnectClientCertificateSecretAnnotation)
+	} else {
+		cp.Annotations[consts.KonnectClientCertificateSecretAnnotation] = p.CertificateSecretName
+	}
+	return cl.Patch(ctx, cp, client.MergeFromWithOptions(old, client.MergeFromWithOptimisticLock{}))
 }
 
 // GetKonnectConfig returns the KonnectConfig from the KonnectExtensionConfig.

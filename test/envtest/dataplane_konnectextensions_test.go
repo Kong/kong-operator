@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -13,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -36,6 +38,123 @@ import (
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
 )
+
+func TestKonnectExtensionManualSnapshotDeletion(t *testing.T) {
+	t.Parallel()
+	cfg, ns := Setup(t, t.Context(), scheme.Get())
+	apiClient, err := client.New(cfg, client.Options{Scheme: scheme.Get()})
+	require.NoError(t, err)
+	cl := client.NewNamespacedClient(apiClient, ns.Name)
+	auth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, t.Context(), cl)
+	cp := deploy.KonnectGatewayControlPlaneWithID(t, t.Context(), cl, auth)
+	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("manual-snapshot"))
+	source := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "manual-source", Namespace: ns.Name,
+			Labels: map[string]string{konnect.SecretKonnectDataPlaneCertificateLabel: "true"},
+		},
+		Type: corev1.SecretTypeTLS,
+		Data: map[string][]byte{corev1.TLSCertKey: cert, corev1.TLSPrivateKeyKey: key},
+	}
+	require.NoError(t, cl.Create(t.Context(), source))
+	ext := &konnectv1alpha2.KonnectExtension{
+		ObjectMeta: metav1.ObjectMeta{Name: "manual-snapshot", Namespace: ns.Name},
+		Spec: konnectv1alpha2.KonnectExtensionSpec{
+			ClientAuth: &konnectv1alpha2.KonnectExtensionClientAuth{
+				CertificateSecret: konnectv1alpha2.CertificateSecret{
+					Provisioning:         new(konnectv1alpha2.ManualSecretProvisioning),
+					CertificateSecretRef: &konnectv1alpha2.SecretRef{Name: source.Name},
+				},
+			},
+			Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+				ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+					Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+						Type:                 commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{Name: cp.Name},
+					},
+				},
+			},
+		},
+	}
+	require.NoError(t, cl.Create(t.Context(), ext))
+	r := &konnect.KonnectExtensionReconciler{Client: cl, SyncPeriod: time.Hour}
+	reconcile := func(program bool) {
+		t.Helper()
+		for range 16 {
+			require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(ext), ext))
+			_, err := r.Reconcile(t.Context(), ext)
+			require.NoError(t, err)
+			if program {
+				var registrations configurationv1alpha1.KongDataPlaneClientCertificateList
+				require.NoError(t, cl.List(t.Context(), &registrations))
+				for _, registration := range registrations.Items {
+					if registration.GetKonnectID() == "" {
+						registration.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{ID: "certificate-id"},
+							ControlPlaneID:      cp.Status.ID,
+						}
+						k8sutils.SetCondition(metav1.Condition{
+							Type: konnectv1alpha1.KonnectEntityProgrammedConditionType, Status: metav1.ConditionTrue,
+							Reason:             konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed,
+							ObservedGeneration: registration.Generation,
+							LastTransitionTime: metav1.Now(),
+						}, &registration)
+						require.NoError(t, cl.Status().Update(t.Context(), &registration))
+					}
+				}
+			}
+		}
+	}
+	reconcile(true)
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(ext), ext))
+	require.True(t, k8sutils.HasConditionTrue(konnectv1alpha2.KonnectExtensionReadyConditionType, ext))
+	var original corev1.Secret
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKey{
+		Namespace: ns.Name, Name: ext.Status.DataPlaneClientAuth.CertificateSecretRef.Name,
+	}, &original))
+	oldPod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{Name: "old-pod", Namespace: ns.Name, Finalizers: []string{"test.konghq.com/hold"}},
+		Spec: corev1.PodSpec{
+			Containers: []corev1.Container{{Name: "proxy", Image: consts.DefaultDataPlaneImage}},
+			Volumes: []corev1.Volume{{Name: consts.KongClusterCertVolume,
+				VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: original.Name}}}},
+		},
+	}
+	require.NoError(t, cl.Create(t.Context(), oldPod))
+	require.NoError(t, cl.Delete(t.Context(), &original))
+	reconcile(false)
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(ext), ext))
+	replacementName := ext.Status.DataPlaneClientAuth.CertificateSecretRef.Name
+	require.NotEqual(t, original.Name, replacementName)
+	var replacement corev1.Secret
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Namespace: ns.Name, Name: replacementName}, &replacement))
+	assert.NotEqual(t, original.UID, replacement.UID)
+	assert.Equal(t, new(true), replacement.Immutable)
+	assert.Equal(t, source.Data, replacement.Data)
+	var retained corev1.Secret
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(&original), &retained))
+	assert.False(t, retained.DeletionTimestamp.IsZero())
+	assert.Equal(t, original.Finalizers, retained.Finalizers)
+	require.NoError(t, cl.Delete(t.Context(), oldPod, client.GracePeriodSeconds(0)))
+	reconcile(false)
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(&original), &retained))
+	assert.Equal(t, original.Finalizers, retained.Finalizers, "terminating Pods must retain their mount")
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(oldPod), oldPod))
+	oldPod.Finalizers = nil
+	require.NoError(t, cl.Update(t.Context(), oldPod))
+	reconcile(false)
+	assert.True(t, apierrors.IsNotFound(cl.Get(t.Context(), client.ObjectKeyFromObject(&original), &retained)))
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(ext), ext))
+	assert.Equal(t, replacementName, ext.Status.DataPlaneClientAuth.CertificateSecretRef.Name)
+	assert.True(t, k8sutils.HasConditionTrue(konnectv1alpha2.KonnectExtensionReadyConditionType, ext))
+	var registrations configurationv1alpha1.KongDataPlaneClientCertificateList
+	require.NoError(t, cl.List(t.Context(), &registrations))
+	require.Len(t, registrations.Items, 1)
+	assert.Equal(t, "certificate-id", registrations.Items[0].GetKonnectID())
+	assert.True(t, registrations.Items[0].DeletionTimestamp.IsZero())
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(source), source))
+	assert.Empty(t, source.Finalizers)
+}
 
 func TestDataPlaneKonnectExtension(t *testing.T) {
 	t.Parallel()

@@ -9,7 +9,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -18,197 +17,36 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
-	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
-func TestGetCertificateSecretDuringCleanup(t *testing.T) {
-	testScheme := runtime.NewScheme()
-	require.NoError(t, corev1.AddToScheme(testScheme))
+func TestKonnectExtensionCleanupReleasesManualSourceAndSnapshot(t *testing.T) {
+	r, ext := dpCertTestReconciler(t, "certificate")
+	var source corev1.Secret
+	require.NoError(t, r.Get(t.Context(), client.ObjectKey{Namespace: ext.Namespace, Name: "certificate"}, &source))
+	source.Finalizers = []string{KonnectCleanupFinalizer, consts.KonnectExtensionSecretInUseFinalizer}
+	require.NoError(t, r.Update(t.Context(), &source))
+	_, snapshot, err := r.ensureCertificateSnapshot(t.Context(), ext, &source)
+	require.NoError(t, err)
+	snapshot.Finalizers = []string{KonnectCleanupFinalizer, consts.KonnectExtensionSecretInUseFinalizer}
+	require.NoError(t, r.Update(t.Context(), snapshot))
+	ext.Status.DataPlaneClientAuth = &konnectv1alpha2.DataPlaneClientAuthStatus{
+		CertificateSecretRef: &konnectv1alpha2.SecretRef{Name: snapshot.Name},
+	}
 
-	const (
-		namespace = "default"
-		ownerName = "test-extension"
-		ownerUID  = types.UID("test-extension-uid")
-	)
-	automatic := konnectv1alpha2.AutomaticSecretProvisioning
-	manual := konnectv1alpha2.ManualSecretProvisioning
-
-	t.Run("finds automatically provisioned Secret pending cleanup by owner", func(t *testing.T) {
-		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "generated-certificate",
-				Namespace: namespace,
-				Labels: map[string]string{
-					SecretKonnectDataPlaneCertificateLabel: "true",
-				},
-				OwnerReferences: []metav1.OwnerReference{
-					{
-						APIVersion: konnectv1alpha2.GroupVersion.String(),
-						Kind:       konnectv1alpha2.KonnectExtensionKind,
-						Name:       ownerName,
-						UID:        ownerUID,
-					},
-				},
-				Finalizers: []string{
-					consts.KonnectExtensionSecretInUseFinalizer,
-					KonnectCleanupFinalizer,
-				},
-			},
-		}
-		cleanSecret := secret.DeepCopy()
-		cleanSecret.Name = "older-generated-certificate"
-		cleanSecret.Finalizers = nil
-		reconciler := KonnectExtensionReconciler{
-			Client: fake.NewClientBuilder().
-				WithScheme(testScheme).
-				WithObjects(secret, cleanSecret).
-				Build(),
-		}
-		extension := konnectv1alpha2.KonnectExtension{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      ownerName,
-				Namespace: namespace,
-				UID:       ownerUID,
-			},
-			Spec: konnectv1alpha2.KonnectExtensionSpec{
-				ClientAuth: &konnectv1alpha2.KonnectExtensionClientAuth{
-					CertificateSecret: konnectv1alpha2.CertificateSecret{
-						Provisioning: &automatic,
-					},
-				},
-			},
-			Status: konnectv1alpha2.KonnectExtensionStatus{
-				DataPlaneClientAuth: &konnectv1alpha2.DataPlaneClientAuthStatus{
-					CertificateSecretRef: &konnectv1alpha2.SecretRef{
-						Name: "stale-certificate-reference",
-					},
-				},
-			},
-		}
-
-		res, got, err := reconciler.getCertificateSecret(t.Context(), extension, true)
+	for range 4 {
+		_, err = r.cleanupCertificateResources(t.Context(), ext)
 		require.NoError(t, err)
-		assert.Equal(t, op.Noop, res)
-		assert.Equal(t, secret.Name, got.Name)
-		assert.ElementsMatch(t, secret.Finalizers, got.Finalizers)
-	})
-
-	t.Run("uses the spec reference for a manually provisioned Secret when status is missing", func(t *testing.T) {
-		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "manual-certificate",
-				Namespace: namespace,
-			},
-		}
-		reconciler := KonnectExtensionReconciler{
-			Client: fake.NewClientBuilder().
-				WithScheme(testScheme).
-				WithObjects(secret).
-				Build(),
-		}
-		extension := konnectv1alpha2.KonnectExtension{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      ownerName,
-				Namespace: namespace,
-				UID:       ownerUID,
-			},
-			Spec: konnectv1alpha2.KonnectExtensionSpec{
-				ClientAuth: &konnectv1alpha2.KonnectExtensionClientAuth{
-					CertificateSecret: konnectv1alpha2.CertificateSecret{
-						Provisioning: &manual,
-						CertificateSecretRef: &konnectv1alpha2.SecretRef{
-							Name: secret.Name,
-						},
-					},
-				},
-			},
-		}
-
-		res, got, err := reconciler.getCertificateSecret(t.Context(), extension, true)
-		require.NoError(t, err)
-		assert.Equal(t, op.Noop, res)
-		assert.Equal(t, secret.Name, got.Name)
-	})
-
-	t.Run("uses the status reference for a manually provisioned Secret when available", func(t *testing.T) {
-		specSecret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "manual-certificate-from-spec",
-				Namespace: namespace,
-			},
-		}
-		statusSecret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "manual-certificate-from-status",
-				Namespace: namespace,
-			},
-		}
-		reconciler := KonnectExtensionReconciler{
-			Client: fake.NewClientBuilder().
-				WithScheme(testScheme).
-				WithObjects(specSecret, statusSecret).
-				Build(),
-		}
-		extension := konnectv1alpha2.KonnectExtension{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      ownerName,
-				Namespace: namespace,
-				UID:       ownerUID,
-			},
-			Spec: konnectv1alpha2.KonnectExtensionSpec{
-				ClientAuth: &konnectv1alpha2.KonnectExtensionClientAuth{
-					CertificateSecret: konnectv1alpha2.CertificateSecret{
-						Provisioning: &manual,
-						CertificateSecretRef: &konnectv1alpha2.SecretRef{
-							Name: specSecret.Name,
-						},
-					},
-				},
-			},
-			Status: konnectv1alpha2.KonnectExtensionStatus{
-				DataPlaneClientAuth: &konnectv1alpha2.DataPlaneClientAuthStatus{
-					CertificateSecretRef: &konnectv1alpha2.SecretRef{
-						Name: statusSecret.Name,
-					},
-				},
-			},
-		}
-
-		res, got, err := reconciler.getCertificateSecret(t.Context(), extension, true)
-		require.NoError(t, err)
-		assert.Equal(t, op.Noop, res)
-		assert.Equal(t, statusSecret.Name, got.Name)
-	})
-
-	t.Run("returns not found when an automatically provisioned Secret does not exist", func(t *testing.T) {
-		reconciler := KonnectExtensionReconciler{
-			Client: fake.NewClientBuilder().
-				WithScheme(testScheme).
-				Build(),
-		}
-		extension := konnectv1alpha2.KonnectExtension{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      ownerName,
-				Namespace: namespace,
-				UID:       ownerUID,
-			},
-			Spec: konnectv1alpha2.KonnectExtensionSpec{
-				ClientAuth: &konnectv1alpha2.KonnectExtensionClientAuth{
-					CertificateSecret: konnectv1alpha2.CertificateSecret{
-						Provisioning: &automatic,
-					},
-				},
-			},
-		}
-
-		res, _, err := reconciler.getCertificateSecret(t.Context(), extension, true)
-		assert.True(t, apierrors.IsNotFound(err))
-		assert.Equal(t, op.Noop, res)
-	})
+	}
+	for _, name := range []string{source.Name, snapshot.Name} {
+		var secret corev1.Secret
+		require.NoError(t, r.Get(t.Context(), client.ObjectKey{Namespace: ext.Namespace, Name: name}, &secret))
+		assert.NotContains(t, secret.Finalizers, KonnectCleanupFinalizer)
+		assert.NotContains(t, secret.Finalizers, consts.KonnectExtensionSecretInUseFinalizer)
+	}
 }
 
 func TestKonnectExtensionCleanupWaitsForCertificateSecret(t *testing.T) {

@@ -14,7 +14,9 @@ package konnect
 // +kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectextensions/finalizers,verbs=update;patch
 // +kubebuilder:rbac:groups="konnect.konghq.com",resources="konnectgatewaycontrolplanes",verbs=get;list;watch
 // +kubebuilder:rbac:groups="konnect.konghq.com",resources="konnectapiauthconfigurations",verbs=get;list;watch
-// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;patch;update
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=create;get;list;watch;patch;update;delete
+// +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=secrets/finalizers,verbs=patch;update
 // +kubebuilder:rbac:groups=configuration.konghq.com,resources=kongdataplaneclientcertificates,verbs=create;get;list;delete;update;patch;watch
 // +kubebuilder:rbac:groups=configuration.konghq.com,resources=kongdataplaneclientcertificates/status,verbs=get;list;watch

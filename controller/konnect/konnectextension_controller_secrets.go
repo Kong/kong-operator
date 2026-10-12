@@ -14,7 +14,6 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
-	"github.com/kong/kong-operator/v2/controller/pkg/patch"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
@@ -89,45 +88,6 @@ func (r *KonnectExtensionReconciler) certificateSecretUsage(
 		}
 	}
 	return nil, false, nil
-}
-
-// finishCertificateSecretCleanup is called after this extension's certificates
-// have been removed. Shared Secret finalizers must outlive every remaining user.
-func (r *KonnectExtensionReconciler) finishCertificateSecretCleanup(
-	ctx context.Context,
-	ext *konnectv1alpha2.KonnectExtension,
-	secret *corev1.Secret,
-) (ctrl.Result, error) {
-	requeue, err := r.finishOwnedCertificateSecretCleanup(ctx, ext, secret)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if requeue != nil {
-		return *requeue, nil
-	}
-
-	ownedSecrets, err := r.listOwnedCertificateSecrets(ctx, ext)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	for i := range ownedSecrets {
-		ownedSecret := &ownedSecrets[i]
-		if ownedSecret.Name == secret.Name {
-			continue
-		}
-		requeue, err := r.finishOwnedCertificateSecretCleanup(ctx, ext, ownedSecret)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		if requeue != nil {
-			return *requeue, nil
-		}
-	}
-
-	// This extension has finished its own cleanup. An active peer keeps the
-	// shared Secret protected without blocking deletion of this extension.
-	_, res, err := patch.WithoutFinalizer(ctx, r.Client, ext, KonnectCleanupFinalizer)
-	return res, client.IgnoreNotFound(err)
 }
 
 // finishOwnedCertificateSecretCleanup finishes cleanup for one Secret. When an

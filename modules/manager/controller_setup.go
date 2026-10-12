@@ -949,6 +949,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 					ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 					SecretLabelSelector:      c.SecretLabelSelector,
 					CertTTL:                  c.CertTTL,
+					CertExpirationMargin:     c.CertExpirationMargin,
 				},
 			},
 		)
