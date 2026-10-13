@@ -523,3 +523,74 @@ func TestHardenContainerWithSecurityContext(t *testing.T) {
 		})
 	}
 }
+
+func TestDeployment_WithoutContainerPort(t *testing.T) {
+	ports := func(names ...string) []corev1.ContainerPort {
+		out := make([]corev1.ContainerPort, 0, len(names))
+		for _, n := range names {
+			out = append(out, corev1.ContainerPort{Name: n})
+		}
+		return out
+	}
+	deploymentWith := func(containers ...corev1.Container) *Deployment {
+		return &Deployment{
+			Spec: appsv1.DeploymentSpec{
+				Template: corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{Containers: containers},
+				},
+			},
+		}
+	}
+
+	testCases := []struct {
+		name          string
+		deployment    *Deployment
+		portName      string
+		containerName string
+		expected      []corev1.Container
+	}{
+		{
+			name: "removes the named port from the container",
+			deployment: deploymentWith(
+				corev1.Container{Name: "proxy", Ports: ports("proxy", "admin-ssl", "metrics")},
+				corev1.Container{Name: "other", Ports: ports("admin-ssl")},
+			),
+			portName:      "admin-ssl",
+			containerName: "proxy",
+			expected: []corev1.Container{
+				{Name: "proxy", Ports: ports("proxy", "metrics")},
+				{Name: "other", Ports: ports("admin-ssl")},
+			},
+		},
+		{
+			name: "no-op when port does not exist",
+			deployment: deploymentWith(
+				corev1.Container{Name: "proxy", Ports: ports("proxy")},
+			),
+			portName:      "admin-ssl",
+			containerName: "proxy",
+			expected: []corev1.Container{
+				{Name: "proxy", Ports: ports("proxy")},
+			},
+		},
+		{
+			name: "no-op when container does not exist",
+			deployment: deploymentWith(
+				corev1.Container{Name: "proxy", Ports: ports("admin-ssl")},
+			),
+			portName:      "admin-ssl",
+			containerName: "missing",
+			expected: []corev1.Container{
+				{Name: "proxy", Ports: ports("admin-ssl")},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := tc.deployment.WithoutContainerPort(tc.portName, tc.containerName)
+			require.Same(t, tc.deployment, got)
+			require.Equal(t, tc.expected, got.Spec.Template.Spec.Containers)
+		})
+	}
+}
