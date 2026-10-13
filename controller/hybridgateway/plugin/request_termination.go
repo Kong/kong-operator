@@ -53,8 +53,9 @@ func RequestTerminationForBackendNotFound(
 		return nil, err
 	}
 
-	// This plugin is named after the KongService it terminates for, so it is shared by every route
-	// that shares that service: resolve the inherited tags from all of them.
+	// This plugin is named after the KongService it terminates for, whose name has no parentRef in
+	// it: the route builds the same plugin once per parent and the converter keeps only the first,
+	// so resolve the tags over every parent this controller accepted.
 	utils.AppendTagsAnnotation(logger, &plugin,
 		utils.InheritedTagsForKongObject(ctx, logger, cl, httpRoute, &plugin))
 

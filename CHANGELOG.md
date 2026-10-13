@@ -871,7 +871,7 @@ by the operator's semver:
   `konghq.com/tags` annotation are also now whitespace-trimmed with empty
   entries dropped, so an annotation written as `"a, b"` yields `["a", "b"]`
   rather than `["a", " b"]`; existing entities are rewritten once on upgrade.
-  [#5842](https://github.com/Kong/kong-operator/pull/5842)
+  [#5869](https://github.com/Kong/kong-operator/pull/5869)
 - Security: harden containers for `MCPServerDataPlane`'s `Deployment` with
   a tight security context:
   - disallows privilege escalation
