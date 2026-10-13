@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
@@ -432,12 +433,7 @@ func inheritedTagsForRouteKey(ctx context.Context, logger logr.Logger, cl client
 }
 
 func sortedKeys(keys map[string]struct{}) []string {
-	out := make([]string, 0, len(keys))
-	for key := range keys {
-		out = append(out, key)
-	}
-	slices.Sort(out)
-	return out
+	return slices.Sorted(maps.Keys(keys))
 }
 
 // routeCacheKey identifies a route by kind and object key. The kind comes from the concrete Go
