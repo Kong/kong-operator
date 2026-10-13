@@ -1,0 +1,79 @@
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongLicense
+metadata:
+  name: kong-license
+enabled: true
+rawLicenseString: |
+  <paste your Kong license payload here>
+---
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: OnPremAIGateway
+metadata:
+  name: ai-gw-cp-onprem-1
+  namespace: default
+spec: {}
+---
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: AIGatewayDataPlane
+metadata:
+  name: ai-gw-dp-onprem-1
+  namespace: default
+spec:
+  controlPlaneRef:
+    type: onpremNamespacedRef
+    onpremNamespacedRef:
+      name: ai-gw-cp-onprem-1
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ai-gw-ca-cert
+  namespace: default
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+stringData:
+  # Obviously fake sample CA certificate so the manifest applies out of the box. Replace with
+  # your own PEM-encoded CA certificate for anything real.
+  ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIIDdDCCAlygAwIBAgIUQktwO/hX0eW2BAjijJpEIg/ew2UwDQYJKoZIhvcNAQEL
+    BQAwWjEwMC4GA1UEAwwnRkFLRSBLb25nIE9wZXJhdG9yIFNhbXBsZSBDQSBETyBO
+    T1QgVVNFMRkwFwYDVQQKDBBLb25nIEZha2UgU2FtcGxlMQswCQYDVQQGEwJYWDAe
+    Fw0yNjEwMTIwOTExMjFaFw0zNjEwMDkwOTExMjFaMFoxMDAuBgNVBAMMJ0ZBS0Ug
+    S29uZyBPcGVyYXRvciBTYW1wbGUgQ0EgRE8gTk9UIFVTRTEZMBcGA1UECgwQS29u
+    ZyBGYWtlIFNhbXBsZTELMAkGA1UEBhMCWFgwggEiMA0GCSqGSIb3DQEBAQUAA4IB
+    DwAwggEKAoIBAQC8FjXfUWF6Z+A6ZFanps/hQlMXv1vWjnzsiqP7MJWPhH7b1m2d
+    lS37kVm1ErP/y/mFJBqxE44fgOo3gObCa7mMx7zCzuPVC8Z+GwZiu1uoUhBeQjSC
+    yCwrRDJ1W8qge0WP1qXd+LCJuQaL3icAEnxOZMhYGcAvK9rJKyWHrRLeVCEGj5/I
+    BaXldHH0c4jkLFXvwynzTKOILMY6GQt8Y/TbkElVaxWCzmAfi5z8Siu0GnJ6H6AK
+    njtT8wWXz69w3EwmZohJnzibQ4u9q7Xd/OOyTVvs9KF3qvly1JyCkB3YcmJOqUIG
+    BYRWTRH9HiXqs5aVQ4tNCK8Bkk0ioKSgPBGHAgMBAAGjMjAwMB0GA1UdDgQWBBQQ
+    J8AP8qlfC2kIXsMd07cBnCqxzjAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEB
+    CwUAA4IBAQAxGhR9Jypk38yJwinYzZnzCS8h0y6QP1XumKHZoeufuk58xsSpsctC
+    ScnbJIjwvmSa1+REXxBpmKAOVyMs9oMe6blAIAD98f/lLdic/t2ZxMyBILx1Tojn
+    OcP0ZbnErh37ANrQCYKCBlN+r3xdzHN1hamWFc9A9kXDZNT10ZoZByvWMmai5lGi
+    YgDLfFn7M9pg1pFJD7vHcbUTgGKlcxcd8D+DA52Am2VU2msygQo/bWuv9i6bJ3vV
+    F14WQgNgCIStvs14/sOSjulibNJzlGg0yi2ksN5c1DzOx8u5bwQcdxPB2GTY+vAD
+    az3g4k88Q9iNRYi9JEH5H5cFIshDv4Xt
+    -----END CERTIFICATE-----
+---
+kind: AIGatewayCACertificate
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-ca-cert
+  namespace: default
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ai-gw-cp-onprem-1
+  apiSpec:
+    # Name of the CA certificate. The name must be unique within the AI Gateway.
+    name: ai-gw-ca-cert
+    cert:
+      type: secretRef
+      secretRef:
+        name: ai-gw-ca-cert
+        key: ca.crt
