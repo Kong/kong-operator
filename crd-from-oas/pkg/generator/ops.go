@@ -505,9 +505,9 @@ func isSingletonNoID(schema *parser.Schema) bool {
 // when the labels map uses nullable string values (map[string]*string in the
 // SDK), which requires the pointer-valued helper variant.
 //
-// When the schema is a root-level discriminated union (no properties of its
-// own, only oneOf variants), tags/labels declared inside any variant also
-// count — unless the entity opted out via ops.skipRootUnionMetadataFields
+// When the schema is a root-level discriminated union, tags/labels declared
+// inside any variant also count, including when the union has sibling reference
+// fields — unless the entity opted out via ops.skipRootUnionMetadataFields
 // (see EntityOpsConfig.SkipRootUnionMetadataFields), which preserves prior
 // generated output for entities not yet reviewed for this behavior.
 func metadataFields(schema *parser.Schema, opsConfig *config.EntityOpsConfig) (hasTags, hasLabels, labelsPointer bool) {
@@ -515,7 +515,7 @@ func metadataFields(schema *parser.Schema, opsConfig *config.EntityOpsConfig) (h
 		return false, false, false
 	}
 	hasTags, hasLabels, labelsPointer = scanMetadataProperties(schema.Properties)
-	if len(schema.Properties) > 0 || len(schema.OneOf) == 0 {
+	if !hasRootOneOf(schema) {
 		return hasTags, hasLabels, labelsPointer
 	}
 	if opsConfig != nil && opsConfig.SkipRootUnionMetadataFields {

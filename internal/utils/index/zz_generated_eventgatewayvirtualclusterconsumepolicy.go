@@ -11,6 +11,8 @@ import (
 const (
 	// IndexFieldEventGatewayVirtualClusterConsumePolicyOnEventGatewayVirtualClusterRef is the index field for EventGatewayVirtualClusterConsumePolicy -> EventGatewayVirtualCluster.
 	IndexFieldEventGatewayVirtualClusterConsumePolicyOnEventGatewayVirtualClusterRef = "eventGatewayVirtualClusterConsumePolicyOnEventGatewayVirtualClusterRef"
+	// IndexFieldEventGatewayVirtualClusterConsumePolicyOnEventGatewayVirtualClusterConsumePolicyRef is the index field for EventGatewayVirtualClusterConsumePolicy -> EventGatewayVirtualClusterConsumePolicy.
+	IndexFieldEventGatewayVirtualClusterConsumePolicyOnEventGatewayVirtualClusterConsumePolicyRef = "eventGatewayVirtualClusterConsumePolicyOnEventGatewayVirtualClusterConsumePolicyRef"
 	// IndexFieldEventGatewayVirtualClusterConsumePolicyOnEventGatewaySchemaRegistryRef is the index field for EventGatewayVirtualClusterConsumePolicy -> EventGatewaySchemaRegistry.
 	IndexFieldEventGatewayVirtualClusterConsumePolicyOnEventGatewaySchemaRegistryRef = "eventGatewayVirtualClusterConsumePolicyOnEventGatewaySchemaRegistryRef"
 )
@@ -22,6 +24,11 @@ func OptionsForEventGatewayVirtualClusterConsumePolicy() []Option {
 			Object:         &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{},
 			Field:          IndexFieldEventGatewayVirtualClusterConsumePolicyOnEventGatewayVirtualClusterRef,
 			ExtractValueFn: eventGatewayVirtualClusterConsumePolicyOnEventGatewayVirtualClusterRef,
+		},
+		{
+			Object:         &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{},
+			Field:          IndexFieldEventGatewayVirtualClusterConsumePolicyOnEventGatewayVirtualClusterConsumePolicyRef,
+			ExtractValueFn: eventGatewayVirtualClusterConsumePolicyOnEventGatewayVirtualClusterConsumePolicyRef,
 		},
 		{
 			Object:         &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{},
@@ -46,6 +53,25 @@ func eventGatewayVirtualClusterConsumePolicyOnEventGatewayVirtualClusterRef(obje
 	}
 
 	return []string{refNamespace + "/" + ent.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Name}
+}
+
+func eventGatewayVirtualClusterConsumePolicyOnEventGatewayVirtualClusterConsumePolicyRef(object client.Object) []string {
+	ent, ok := object.(*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy)
+	if !ok {
+		return nil
+	}
+	var out []string
+	for _, ref := range configurationv1alpha1.RefsAtEventGatewayVirtualClusterConsumePolicyParentPolicyRef(ent) {
+		if ref.Kind != "" && ref.Kind != "EventGatewayVirtualClusterConsumePolicy" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
 }
 
 func eventGatewayVirtualClusterConsumePolicyOnEventGatewaySchemaRegistryRef(object client.Object) []string {

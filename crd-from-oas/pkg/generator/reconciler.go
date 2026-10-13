@@ -142,7 +142,13 @@ func enqueue{{$.EntityName}}For{{.RefKind}}(
 		}); err != nil {
 			return nil
 		}
-{{- if .LiteralTargets}}
+{{- if .ReverseSelf}}
+		reqs := objectListToReconcileRequests(l.Items)
+		for _, key := range {{$.APIGroupPackageAlias}}.{{$.EntityName}}RefsTo{{.RefKind}}(ref) {
+			reqs = append(reqs, reconcile.Request{NamespacedName: key})
+		}
+		return reqs
+{{- else if .LiteralTargets}}
 		reqs := objectListToReconcileRequests(l.Items)
 {{- range .LiteralTargets}}
 		// {{$.EntityName}} objects can also set {{.GoField}} literally to the
@@ -503,7 +509,13 @@ func enqueue{{$.EntityName}}For{{.RefKind}}(
 		}); err != nil {
 			return nil
 		}
-{{- if .LiteralTargets}}
+{{- if .ReverseSelf}}
+		reqs := objectListToReconcileRequests(l.Items)
+		for _, key := range {{$.APIGroupPackageAlias}}.{{$.EntityName}}RefsTo{{.RefKind}}(ref) {
+			reqs = append(reqs, reconcile.Request{NamespacedName: key})
+		}
+		return reqs
+{{- else if .LiteralTargets}}
 		reqs := objectListToReconcileRequests(l.Items)
 {{- range .LiteralTargets}}
 		// {{$.EntityName}} objects can also set {{.GoField}} literally to the
@@ -811,6 +823,9 @@ type crossRefWatchData struct {
 	// than []<RefType> slices. The extractor then reads the namespacedRef arm
 	// of each single ObjectRef instead of ranging a slice.
 	ObjectRefField bool
+	// ReverseSelf also enqueues this object's references for a same-kind
+	// reverse watch, without registering a duplicate watch/map function.
+	ReverseSelf bool
 }
 
 // crossRefLiteralTarget is an InjectInto target field an entity may set
@@ -1070,6 +1085,17 @@ func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.
 	// its controller watches them (enqueue<Entity>For<Referrer>), which must
 	// not collide with a forward enqueue function for the same kind.
 	reverseRefs := g.reverseWatchReferrers(metadata.EntityName)
+	reverseRefs = slices.DeleteFunc(reverseRefs, func(rw reverseWatchReferrer) bool {
+		if rw.Referrer != metadata.EntityName {
+			return false
+		}
+		for i := range crossRefs {
+			if crossRefs[i].RefKind == rw.Referrer {
+				crossRefs[i].ReverseSelf = true
+			}
+		}
+		return true
+	})
 	for _, rw := range reverseRefs {
 		for _, cr := range crossRefs {
 			if cr.RefKind == rw.Referrer {
@@ -1255,7 +1281,7 @@ func (g *Generator) buildCrossRefWatchData(entityName string) []crossRefWatchDat
 				cr.ObjectRefField = true
 			}
 			cr.AccessorExprs = append(cr.AccessorExprs, crossRefAccessorExpr{Expr: expr, List: ref.NestedArrayList})
-			if ref.InjectIntoGoFieldName != "" {
+			if ref.InjectIntoGoFieldName != "" && !g.hasRootUnionEntity(entityName) {
 				target := crossRefLiteralTarget{GoField: ref.InjectIntoGoFieldName, KonnectGetter: "GetKonnectID"}
 				if ref.ResolvesToName {
 					target.KonnectGetter = "GetKonnectName"

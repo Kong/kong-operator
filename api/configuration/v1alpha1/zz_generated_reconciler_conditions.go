@@ -114,4 +114,36 @@ const (
 	// condition type indicating that the referenced EventGatewayVirtualCluster exists but is not
 	// yet programmed in Konnect.
 	EventGatewayVirtualClusterRefReasonNotProgrammed = "NotProgrammed"
+
+	// EventGatewayVirtualClusterConsumePolicyRefValidConditionType is the type of the condition that indicates
+	// whether the EventGatewayVirtualClusterConsumePolicy reference is valid and points to an existing
+	// EventGatewayVirtualClusterConsumePolicy.
+	EventGatewayVirtualClusterConsumePolicyRefValidConditionType = "EventGatewayVirtualClusterConsumePolicyRefValid"
+
+	// EventGatewayVirtualClusterConsumePolicyRefReasonValid is the reason used with the EventGatewayVirtualClusterConsumePolicyRefValid
+	// condition type indicating that the EventGatewayVirtualClusterConsumePolicy reference is valid.
+	EventGatewayVirtualClusterConsumePolicyRefReasonValid = "Valid"
+	// EventGatewayVirtualClusterConsumePolicyRefReasonInvalid is the reason used with the EventGatewayVirtualClusterConsumePolicyRefValid
+	// condition type indicating that the EventGatewayVirtualClusterConsumePolicy reference is invalid.
+	EventGatewayVirtualClusterConsumePolicyRefReasonInvalid = "Invalid"
+	// EventGatewayVirtualClusterConsumePolicyRefReasonNotProgrammed is the reason used with the EventGatewayVirtualClusterConsumePolicyRefValid
+	// condition type indicating that the referenced EventGatewayVirtualClusterConsumePolicy exists but is not
+	// yet programmed in Konnect.
+	EventGatewayVirtualClusterConsumePolicyRefReasonNotProgrammed = "NotProgrammed"
+
+	// EventGatewayVirtualClusterProducePolicyRefValidConditionType is the type of the condition that indicates
+	// whether the EventGatewayVirtualClusterProducePolicy reference is valid and points to an existing
+	// EventGatewayVirtualClusterProducePolicy.
+	EventGatewayVirtualClusterProducePolicyRefValidConditionType = "EventGatewayVirtualClusterProducePolicyRefValid"
+
+	// EventGatewayVirtualClusterProducePolicyRefReasonValid is the reason used with the EventGatewayVirtualClusterProducePolicyRefValid
+	// condition type indicating that the EventGatewayVirtualClusterProducePolicy reference is valid.
+	EventGatewayVirtualClusterProducePolicyRefReasonValid = "Valid"
+	// EventGatewayVirtualClusterProducePolicyRefReasonInvalid is the reason used with the EventGatewayVirtualClusterProducePolicyRefValid
+	// condition type indicating that the EventGatewayVirtualClusterProducePolicy reference is invalid.
+	EventGatewayVirtualClusterProducePolicyRefReasonInvalid = "Invalid"
+	// EventGatewayVirtualClusterProducePolicyRefReasonNotProgrammed is the reason used with the EventGatewayVirtualClusterProducePolicyRefValid
+	// condition type indicating that the referenced EventGatewayVirtualClusterProducePolicy exists but is not
+	// yet programmed in Konnect.
+	EventGatewayVirtualClusterProducePolicyRefReasonNotProgrammed = "NotProgrammed"
 )

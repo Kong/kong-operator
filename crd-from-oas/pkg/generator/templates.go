@@ -148,6 +148,15 @@ type {{.EntityName}}APISpec struct {
 	//
 	// +optional
 	*{{.EntityName}}Config ` + "`" + `json:",inline"` + "`" + `
+{{- range .References}}
+{{- if .OptionalRef}}
+
+{{formatComment .Description}}
+	//
+	// +optional
+	{{.GoFieldName}} {{.TypeName}} ` + "`" + `json:"{{.JSONFieldName}},omitzero"` + "`" + `
+{{- end}}
+{{- end}}
 {{- else}}
 {{- range $i, $prop := .Schema.Properties}}
 {{- if not (skipProperty $prop)}}
@@ -173,6 +182,71 @@ type {{.EntityName}}APISpec struct {
 {{- end}}
 {{- end}}
 }
+{{- if hasRootOneOf .Schema}}
+{{- $hasRootRefs := false}}
+{{- range .References}}{{if .OptionalRef}}{{$hasRootRefs = true}}{{end}}{{end}}
+{{- if $hasRootRefs}}
+
+// MarshalJSON preserves the root union and its sibling references.
+func (s {{.EntityName}}APISpec) MarshalJSON() ([]byte, error) {
+	var payload map[string]json.RawMessage
+	if s.{{.EntityName}}Config != nil {
+		data, err := json.Marshal(s.{{.EntityName}}Config)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(data, &payload); err != nil {
+			return nil, err
+		}
+	} else {
+		payload = map[string]json.RawMessage{}
+	}
+{{- range .References}}
+{{- if .OptionalRef}}
+	if s.{{.GoFieldName}}.Name != "" {
+		data, err := json.Marshal(s.{{.GoFieldName}})
+		if err != nil {
+			return nil, err
+		}
+		payload["{{.JSONFieldName}}"] = data
+	}
+{{- end}}
+{{- end}}
+	return json.Marshal(payload)
+}
+
+// UnmarshalJSON decodes the root union and its sibling references.
+func (s *{{.EntityName}}APISpec) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling {{.EntityName}}APISpec: nil receiver")
+	}
+	var config {{.EntityName}}Config
+	if err := json.Unmarshal(data, &config); err != nil {
+		return err
+	}
+	var refs struct {
+{{- range .References}}
+{{- if .OptionalRef}}
+		{{.GoFieldName}} {{.TypeName}} ` + "`" + `json:"{{.JSONFieldName}}"` + "`" + `
+{{- end}}
+{{- end}}
+	}
+	if err := json.Unmarshal(data, &refs); err != nil {
+		return err
+	}
+	s.{{.EntityName}}Config = &config
+	if config.Type == "" {
+		s.{{.EntityName}}Config = nil
+	}
+{{- range .References}}
+{{- if .OptionalRef}}
+	s.{{.GoFieldName}} = refs.{{.GoFieldName}}
+{{- end}}
+{{- end}}
+	return nil
+}
+{{- end}}
+{{- end}}
 
 // {{.EntityName}}Status defines the observed state of {{.EntityName}}.
 type {{.EntityName}}Status struct {
@@ -1397,6 +1471,30 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 			errs = append(errs, fmt.Errorf("failed to get referenced {{.DefaultKind}} %s/%s: %w", ns, ref.Name, err))
 			continue
 		}
+{{- if .SameTypeRef}}
+		if ns == obj.GetNamespace() && ref.Name == obj.GetName() {
+			errs = append(errs, ReferenceSelfError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
+			continue
+		}
+{{- if .SameParentRefField}}
+		if {{$.ObjectRefTypePrefix}}ObjectRefsDiffer(obj.Spec.{{.SameParentRefField}}, referenced.Spec.{{.SameParentRefField}}, obj.GetNamespace(), ns) {
+			errs = append(errs, ReferenceDifferentParentError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name, ParentKind: "{{.SameParentRefKind}}"})
+			continue
+		}
+{{- end}}
+{{- if .SameParentIDGetter}}
+		if id := obj.{{.SameParentIDGetter}}(); id != "" && referenced.{{.SameParentIDGetter}}() != "" && id != referenced.{{.SameParentIDGetter}}() {
+			errs = append(errs, ReferenceDifferentParentError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name, ParentKind: "{{.SameParentRefKind}}"})
+			continue
+		}
+{{- end}}
+{{- end}}
+{{- if .RequiredAPISpecType}}
+		if referenced.Spec.APISpec.{{.DefaultKind}}Config == nil || string(referenced.Spec.APISpec.Type) != "{{.RequiredAPISpecType}}" {
+			errs = append(errs, fmt.Errorf("{{.DefaultKind}} %s/%s must have apiSpec.type {{.RequiredAPISpecType}}", ns, ref.Name))
+			continue
+		}
+{{- end}}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
@@ -1405,7 +1503,7 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 		// The resolved value replaces {{.InjectInto}}: {{.DefaultKind}} objects
 		// being deleted must not gain new users, which could keep their deletion
 		// blocked.
-		if !referenced.GetDeletionTimestamp().IsZero() {
+		if !referenced.GetDeletionTimestamp().IsZero(){{if .SameTypeRef}} && obj.GetKonnectID() == ""{{end}} {
 			errs = append(errs, ReferenceBeingDeletedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
 			continue
 		}
@@ -1988,6 +2086,13 @@ func (s *{{$.EntityName}}APISpec) selectedSDKOpsPayload(payload map[string]any) 
 	selected = flattenSDKUnions(selected)
 	{{- end}}
 	if selectedMap, ok := selected.(map[string]any); ok {
+{{- range $.References}}
+{{- if .OptionalRef}}
+		if value, ok := payload["{{.InjectIntoSDKJSONFieldName}}"]; ok {
+			selectedMap["{{.InjectIntoSDKJSONFieldName}}"] = value
+		}
+{{- end}}
+{{- end}}
 		if typeValue, ok := payload["type"]; ok {
 			if _, hasType := selectedMap["type"]; !hasType {
 				withType := make(map[string]any)
@@ -2160,6 +2265,18 @@ func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Clie
 	if err != nil {
 		return nil, err
 	}
+{{- range $.References}}
+{{- if .OptionalRef}}
+resolved{{.GoResolverName}}, err := resolve{{$.EntityName}}{{.GoResolverName}}(ctx, cl, obj)
+if err != nil {
+	return nil, fmt.Errorf("resolving {{.Path}} references: %w", err)
+}
+delete(payload, "{{.SDKJSONFieldName}}")
+if len(resolved{{.GoResolverName}}) > 0 {
+	payload["{{.InjectIntoSDKJSONFieldName}}"] = resolved{{.GoResolverName}}[0]
+}
+{{- end}}
+{{- end}}
 {{- template "sdkOpsRefInjections" $}}
 	return spec.{{.FromPayloadMethodName}}(payload)
 {{- else}}

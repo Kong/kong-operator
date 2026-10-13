@@ -115,6 +115,9 @@ type ReferenceConfig struct {
 	// set, so the target keeps accepting literal values (e.g. built-in plugin
 	// names) while the reference offers an in-cluster alternative.
 	InjectInto string `yaml:"injectInto,omitempty"`
+	// RequiredAPISpecType restricts the referenced root-union entity's
+	// apiSpec.type discriminator, e.g. schemaValidation for a policy parent.
+	RequiredAPISpecType string `yaml:"requiredAPISpecType,omitempty"`
 	// UnionMember makes this an additive reference for a field whose OAS type
 	// is a by-id/by-name reference object (anyOf, e.g. TLSTrustBundleReference)
 	// or an array of them: instead of replacing the field's type, the generated

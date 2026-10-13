@@ -78,6 +78,16 @@
   get stuck terminating when an ancestor has already been deleted. Their cleanup
   finalizer is now released during deletion if an ancestor no longer exists.
   [#6080](https://github.com/Kong/kong-operator/pull/6080)
+- Event Gateway `encryptFields` produce policies and `decryptFields` consume
+  policies can now reference a `schemaValidation` parent using
+  `spec.apiSpec.parentPolicyRef`. The operator waits for the parent to exist
+  in Konnect, resolves its ID, and blocks parent deletion while child policy
+  objects reference it. The reference is immutable after creation in Konnect
+  and is also supported by `modifyHeaders` and consume `skipRecord` policies.
+  Admission now requires this reference for `encryptFields` and `decryptFields`;
+  these policies were previously accepted by Kubernetes but could not be created
+  in Konnect.
+  [#6019](https://github.com/Kong/kong-operator/issues/6019)
 - CRDs generated from the Konnect OpenAPI spec now enforce the `maxProperties`
   constraint of shared label map types (`labels` accept at most 50 entries,
   `managedBy` at most 5). The constraint was previously emitted on the fields

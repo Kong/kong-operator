@@ -2,6 +2,7 @@ package generator
 
 import (
 	"go/format"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,6 +11,98 @@ import (
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/config"
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/parser"
 )
+
+func parentPolicyGenerator(t *testing.T) *Generator {
+	t.Helper()
+	const entity = "EventGatewayVirtualClusterProducePolicy"
+	variant := &parser.Schema{
+		Properties: []*parser.Property{
+			{Name: "parent_policy_id", Type: "string", Required: true},
+			{Name: "name", Type: "string"},
+			{Name: "labels", Type: "object"},
+		},
+	}
+	parsed := &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{
+			entity: {
+				OneOf: []*parser.Property{
+					{RefName: "EventGatewayParsedRecordEncryptFieldsPolicyCreate", Properties: variant.Properties},
+				},
+				DiscriminatorMapping: map[string]string{"encrypt_fields": "EventGatewayParsedRecordEncryptFieldsPolicyCreate"},
+			},
+		},
+		Schemas: map[string]*parser.Schema{"EventGatewayParsedRecordEncryptFieldsPolicyCreate": variant},
+	}
+	g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{
+		entity: {{
+			Path: "spec.apiSpec.parentPolicyRef", Kinds: []string{entity}, ResolvesTo: "id",
+			InjectInto: "parentPolicyID", RequiredAPISpecType: "schemaValidation", ReverseWatch: true,
+		}},
+	})
+	g.config.SchemaFieldOmissions = map[string]map[string]bool{
+		"EventGatewayParsedRecordEncryptFieldsPolicyCreate": {"parentPolicyID": true},
+	}
+	g.config.APIGroupPackagePath = "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	g.config.APIGroupPackageAlias = "configurationv1alpha1"
+	return g
+}
+
+func TestRootUnionInjectIntoReference(t *testing.T) {
+	const entity = "EventGatewayVirtualClusterProducePolicy"
+	t.Run("target must be omitted from the variants", func(t *testing.T) {
+		g := parentPolicyGenerator(t)
+		g.config.SchemaFieldOmissions = nil
+		require.ErrorContains(t, g.addInjectIntoReferenceProperties(g.parsed), "must be omitted")
+	})
+	t.Run("generates sibling JSON handling and SDK injection", func(t *testing.T) {
+		g := parentPolicyGenerator(t)
+		require.NoError(t, g.addInjectIntoReferenceProperties(g.parsed))
+		schema := g.parsed.RequestBodies[entity]
+		require.Len(t, schema.Properties, 1)
+		assert.Equal(t, "parent_policy_ref", schema.Properties[0].Name)
+		assert.False(t, schema.Properties[0].Required)
+		hasTags, hasLabels, _ := metadataFields(schema, nil)
+		assert.False(t, hasTags)
+		assert.True(t, hasLabels, "sibling reference fields must not hide variant metadata")
+		assert.True(t, schemaHasNameProperty(schema, nil))
+		content, err := g.generateCRDType(entity, schema)
+		require.NoError(t, err)
+		_, err = format.Source([]byte(content))
+		require.NoError(t, err)
+		assert.Equal(t, 1, strings.Count(content, "func (s EventGatewayVirtualClusterProducePolicyAPISpec) MarshalJSON"))
+		assert.Equal(t, 1, strings.Count(content, "func (s *EventGatewayVirtualClusterProducePolicyAPISpec) UnmarshalJSON"))
+		assert.Contains(t, content, `payload["parentPolicyRef"] = data`)
+		assert.NotContains(t, content, "exactly one of")
+		content, err = g.generateSDKOps(entity, schema, &config.EntityOpsConfig{
+			Ops: map[string]*config.OpConfig{
+				"create": {Path: "github.com/Kong/sdk-konnect-go/models/operations.CreateEventGatewayVirtualClusterProducePolicyRequest"},
+			},
+		})
+		require.NoError(t, err)
+		_, err = format.Source([]byte(content))
+		require.NoError(t, err)
+		assert.Contains(t, content, `payload["parent_policy_id"] = resolvedParentPolicyRef[0]`)
+		assert.Contains(t, content, `selectedMap["parent_policy_id"] = value`)
+		assert.Contains(t, content, `must have apiSpec.type schemaValidation`)
+		assert.Empty(t, g.literalTargetIndexes(entity))
+	})
+	t.Run("merges same-kind forward and reverse watches", func(t *testing.T) {
+		g := parentPolicyGenerator(t)
+		require.NoError(t, g.addInjectIntoReferenceProperties(g.parsed))
+		content, err := g.generateWatch(reconcilerEntityMetadata{
+			EntityName: entity, EntityNameLowerCamel: "eventGatewayVirtualClusterProducePolicy",
+			ParentEntityName: "EventGatewayVirtualCluster", ParentRefFieldName: "EventGatewayVirtualClusterRef",
+			APIGroupPackagePath: g.config.APIGroupPackagePath, APIGroupPackageAlias: g.config.APIGroupPackageAlias,
+			ParentAPIGroupPackagePath: g.config.APIGroupPackagePath, ParentAPIGroupPackageAlias: g.config.APIGroupPackageAlias,
+		}, &config.ReconcilerConfig{IsRoot: new(false), ParentEntityType: "EventGatewayVirtualCluster"})
+		require.NoError(t, err)
+		_, err = format.Source([]byte(content))
+		require.NoError(t, err)
+		assert.Equal(t, 1, strings.Count(content, "func enqueueEventGatewayVirtualClusterProducePolicyForEventGatewayVirtualClusterProducePolicy("))
+		assert.Contains(t, content, "RefsToEventGatewayVirtualClusterProducePolicy(ref)")
+		assert.NotContains(t, content, "referrer.Spec.APISpec.ParentPolicyID")
+	})
+}
 
 // policyParsedSpec builds a fixture whose AIGatewayPolicy schema mirrors the
 // relevant part of the real one: a required string "type" that an additive
@@ -144,7 +237,7 @@ func TestAddInjectIntoReferenceProperties(t *testing.T) {
 				parsed.RequestBodies["AIGatewayPolicy"].OneOf = []*parser.Property{{Name: "variant"}}
 			},
 			ref:     customPolicyRefConfig(),
-			wantErr: "not supported for root-union entities",
+			wantErr: "not found in root-union variants",
 		},
 	}
 	for _, tc := range errorCases {

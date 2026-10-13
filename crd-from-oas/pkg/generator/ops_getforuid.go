@@ -448,7 +448,7 @@ func schemaHasNameProperty(schema *parser.Schema, opsConfig *config.EntityOpsCon
 	if hasNameProperty(schema.Properties) {
 		return true
 	}
-	if len(schema.Properties) > 0 || len(schema.OneOf) == 0 {
+	if !hasRootOneOf(schema) {
 		return false
 	}
 	if opsConfig != nil && opsConfig.SkipRootUnionMetadataFields {

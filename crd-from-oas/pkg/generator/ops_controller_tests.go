@@ -182,6 +182,11 @@ func (g *Generator) buildOpsControllerTestFields(entityName string, props []*par
 		if skipProperty(prop) || prop.IsReference {
 			continue
 		}
+		if ref := g.referenceForField(entityName, jsonName(prop.Name)); ref != nil && ref.InjectInto != "" && g.hasRootUnionEntity(entityName) {
+			// Optional root-union references are covered by the API's
+			// reference tests; keep the standalone variant fixture.
+			continue
+		}
 		// The target of an additive (InjectInto) reference is mutually
 		// exclusive with it; the fixture sets the reference below instead.
 		if g.isInjectIntoTarget(entityName, jsonName(prop.Name)) {
