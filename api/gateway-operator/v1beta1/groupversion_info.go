@@ -54,6 +54,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&DataPlaneList{},
 		&GatewayConfiguration{},
 		&GatewayConfigurationList{},
+		&DBBackedHybridControlPlane{},
+		&DBBackedHybridControlPlaneList{},
 	)
 
 	metav1.AddToGroupVersion(scheme, GroupVersion)
