@@ -121,10 +121,9 @@ func TestSetReadySkippingLicenseCondition(t *testing.T) {
 
 func TestConfigFromSpec(t *testing.T) {
 	tests := []struct {
-		name     string
-		spec     aigatewayv1alpha1.OnPremAIGatewaySpec
-		want     multiinstanceai.Config
-		wantName string
+		name string
+		spec aigatewayv1alpha1.OnPremAIGatewaySpec
+		want multiinstanceai.Config
 	}{
 		{
 			name: "nil dataplaneSync",
@@ -171,6 +170,16 @@ func TestConfigFromSpec(t *testing.T) {
 			want: multiinstanceai.Config{
 				SyncTimeout: 30 * time.Second,
 			},
+		},
+		{
+			name: "explicit zero interval and timeout",
+			spec: aigatewayv1alpha1.OnPremAIGatewaySpec{
+				DataPlaneSync: &aigatewayv1alpha1.OnPremAIGatewayDataPlaneSync{
+					IntervalSeconds: new(int32(0)),
+					TimeoutSeconds:  new(int32(0)),
+				},
+			},
+			want: multiinstanceai.Config{},
 		},
 	}
 

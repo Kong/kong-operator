@@ -3,6 +3,7 @@ package aigateway
 import (
 	"context"
 	"errors"
+	"io"
 	"testing"
 	"time"
 
@@ -285,6 +286,38 @@ func TestSendConfig(t *testing.T) {
 		require.Empty(t, pending, "the skipped sync must still drop the gateway from pending")
 		require.Equal(t, status.ConfigurationStatusFailed, statusOf(instance, model))
 	})
+}
+
+// blockingPushClient blocks every push until its context is done, then returns
+// the context error. fakePushClient ignores the context, so it cannot exercise
+// the SyncTimeout branch of syncPending.
+type blockingPushClient struct{}
+
+func (blockingPushClient) ReloadDeclarativeRawConfig(ctx context.Context, _ io.Reader, _, _ bool) error {
+	<-ctx.Done()
+	return ctx.Err()
+}
+
+// TestSyncPendingTimeout exercises the SyncTimeout branch of syncPending: a push
+// that blocks past the configured timeout must fail the sync, leave the gateway
+// in pending so the next tick retries it, and report the entity as failed.
+func TestSyncPendingTimeout(t *testing.T) {
+	model := testAIGatewayModel("model-a")
+	instance := testPushInstance(t, adminClientCertSecret(), model)
+	instance.cfg.SyncTimeout = 50 * time.Millisecond
+	instance.newPushClient = func(_, _ string, _, _, _ []byte) (pusher, error) {
+		return blockingPushClient{}, nil
+	}
+	instance.setAdminAPIs(sets.New(adminAPI("https://10.0.0.1:8444")))
+
+	gwNN := types.NamespacedName{Namespace: testGatewayNamespace, Name: testGatewayName}
+	pending := map[types.NamespacedName]struct{}{gwNN: {}}
+	var lastSyncTS time.Time
+	instance.syncPending(context.Background(), pending, &lastSyncTS)
+
+	require.Contains(t, pending, gwNN, "the timed-out sync must leave the gateway in pending so the next tick retries it")
+	require.Equal(t, status.ConfigurationStatusFailed, instance.statusReporter.KubernetesObjectConfigurationStatus(model))
+	require.Contains(t, instance.statusReporter.KubernetesObjectConfigurationStatusMessage(model), "deadline exceeded")
 }
 
 // secretCacheCfg finds the cache config for corev1.Secret in opts.ByObject: its keys are

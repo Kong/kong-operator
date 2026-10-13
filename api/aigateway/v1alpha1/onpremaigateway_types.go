@@ -80,7 +80,7 @@ type OnPremAIGatewayDataPlaneSync struct {
 
 	// TimeoutSeconds is the timeout of a single run of syncing configuration with
 	// data planes, in seconds.
-	// If not specified, the default timeout as defined by the operator will be used.
+	// If not specified, no timeout is applied to a sync run.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0

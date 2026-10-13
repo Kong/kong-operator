@@ -330,7 +330,7 @@ configuration to the data planes referencing this OnPremAIGateway.
 | Field | Description |
 | --- | --- |
 | `intervalSeconds` _*int32_ | IntervalSeconds is the interval between two rounds of syncing configuration with data planes, in seconds. If not specified, the default interval as defined by the operator will be used. |
-| `timeoutSeconds` _*int32_ | TimeoutSeconds is the timeout of a single run of syncing configuration with data planes, in seconds. If not specified, the default timeout as defined by the operator will be used. |
+| `timeoutSeconds` _*int32_ | TimeoutSeconds is the timeout of a single run of syncing configuration with data planes, in seconds. If not specified, no timeout is applied to a sync run. |
 
 _Appears in:_
 

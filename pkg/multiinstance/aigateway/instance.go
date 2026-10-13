@@ -57,8 +57,8 @@ type Config struct {
 
 	// SyncTimeout is the timeout of a single run of syncing configuration with
 	// a gateway's data planes. Zero means no timeout is applied to a sync run.
-	// It's part of the hashed config so that changing it restarts the instance,
-	// whose sync loop reads it at start-up.
+	// It's part of the hashed config so that changing it restarts the instance
+	// with the new value.
 	SyncTimeout time.Duration
 
 	// AdminClientCertSecretNN is the reference to the mTLS client certificate Secret the
