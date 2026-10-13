@@ -113,16 +113,6 @@ func MergeTags(logger logr.Logger, groups ...[]string) []string {
 	return merged
 }
 
-// InheritedTagsForRoute returns the konghq.com/tags carried by every parent Gateway of route,
-// followed by the tags carried by those Gateways' GatewayClasses.
-//
-// It never fails: a parentRef that does not name a Gateway, a Gateway that cannot be read and a
-// missing GatewayClass all simply contribute no tags. Tag inheritance must never break translation.
-func InheritedTagsForRoute(ctx context.Context, logger logr.Logger, cl client.Client, route client.Object) []string {
-	pair := inheritedTagsForRoute(ctx, logger, cl, route)
-	return slices.Concat(pair.gateway, pair.gatewayClass)
-}
-
 // InheritedTagsForParentRef returns the konghq.com/tags carried by the Gateway that pRef names,
 // followed by the tags of that Gateway's GatewayClass. Use it for entities whose identity is
 // scoped to a single parentRef - a KongRoute and its KongPluginBindings - so they do not pick up
@@ -245,6 +235,11 @@ type inheritedTagPair struct {
 	gatewayClass []string
 }
 
+// InheritedTagsForRoute returns the konghq.com/tags carried by every parent Gateway of route,
+// followed by the tags carried by those Gateways' GatewayClasses.
+//
+// It never fails: a parentRef that does not name a Gateway, a Gateway that cannot be read and a
+// missing GatewayClass all simply contribute no tags. Tag inheritance must never break translation.
 func inheritedTagsForRoute(ctx context.Context, logger logr.Logger, cl client.Client, route client.Object) inheritedTagPair {
 	cacheKey := routeCacheKey(route)
 	cache := tagCacheFrom(ctx)

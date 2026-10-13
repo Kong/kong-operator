@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -209,7 +210,8 @@ func TestInheritedTagsForRoute(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithRuntimeObjects(tc.objects...).Build()
-			assert.Equal(t, tc.expected, InheritedTagsForRoute(context.Background(), logr.Discard(), cl, tc.route))
+			pair := inheritedTagsForRoute(context.Background(), logr.Discard(), cl, tc.route)
+			assert.Equal(t, tc.expected, slices.Concat(pair.gateway, pair.gatewayClass))
 		})
 	}
 }
@@ -263,7 +265,8 @@ func TestInheritedTagsForRoute_ParentRefResolution(t *testing.T) {
 			route.Spec.ParentRefs = []gwtypes.ParentReference{tc.parentRef}
 
 			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithRuntimeObjects(tc.objects...).Build()
-			assert.Equal(t, tc.expected, InheritedTagsForRoute(context.Background(), logr.Discard(), cl, route))
+			pair := inheritedTagsForRoute(context.Background(), logr.Discard(), cl, route)
+			assert.Equal(t, tc.expected, slices.Concat(pair.gateway, pair.gatewayClass))
 		})
 	}
 }
@@ -273,7 +276,8 @@ func TestInheritedTagsForRoute_ParentRefResolution(t *testing.T) {
 // build such clients.
 func TestInheritedTagsForRoute_SchemeWithoutGatewayAPI(t *testing.T) {
 	cl := fake.NewClientBuilder().WithScheme(runtime.NewScheme()).Build()
-	assert.Nil(t, InheritedTagsForRoute(context.Background(), logr.Discard(), cl, tagsHTTPRoute("route", "gw")))
+	pair := inheritedTagsForRoute(context.Background(), logr.Discard(), cl, tagsHTTPRoute("route", "gw"))
+	assert.Nil(t, slices.Concat(pair.gateway, pair.gatewayClass))
 }
 
 func TestTagsForGatewayClassOf(t *testing.T) {
@@ -457,8 +461,8 @@ func TestWithTagCache(t *testing.T) {
 	require.Nil(t, tagCacheFrom(plain), "the original context must not be modified")
 	require.Same(t, tagCacheFrom(cached), tagCacheFrom(WithTagCache(cached)), "an existing cache is reused")
 
-	want := InheritedTagsForRoute(plain, logr.Discard(), cl, route)
-	assert.Equal(t, want, InheritedTagsForRoute(cached, logr.Discard(), cl, route))
+	want := inheritedTagsForRoute(plain, logr.Discard(), cl, route)
+	assert.Equal(t, want, inheritedTagsForRoute(cached, logr.Discard(), cl, route))
 	// Second call comes from the cache.
-	assert.Equal(t, want, InheritedTagsForRoute(cached, logr.Discard(), cl, route))
+	assert.Equal(t, want, inheritedTagsForRoute(cached, logr.Discard(), cl, route))
 }
