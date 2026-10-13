@@ -13,7 +13,7 @@ runs:
         set -o pipefail
 
         sudo apt-get update -qq
-        sudo apt-get install -y jool-dkms jool-tools unbound
+        sudo apt-get install -y jool-dkms jool-tools unbound bind9-dnsutils
         sudo modprobe jool
 
         sudo sysctl -w net.ipv4.ip_forward=1
@@ -75,7 +75,44 @@ runs:
           # actually proven to work here: NAT64 onto the real IPv4 uplink.
           dns64-synthall: yes
         EOF
-        sudo systemctl restart unbound
+        # The resolvconf integration unit gets symlinked in by the package
+        # postinst but the resolvconf binary isn't installed on the runner,
+        # so the helper fails during unbound's start transaction and can
+        # fail the whole job. We manage resolv.conf ourselves here.
+        sudo systemctl disable --now unbound-resolvconf.service 2>/dev/null || true
+        sudo rm -f /etc/systemd/system/unbound.service.wants/unbound-resolvconf.service
+
+        # The package postinst sometimes fails to invoke systemd on hosted
+        # runners ("Could not execute systemctl"), leaving the unit in an
+        # unreliable state; a single restart issued right after races that
+        # start attempt and intermittently fails. Retry with diagnostics.
+        sudo unbound-checkconf
+        for i in 1 2 3 4 5; do
+          if sudo systemctl restart unbound; then
+            break
+          fi
+          echo "unbound restart attempt ${i} failed:" >&2
+          sudo journalctl -u unbound --no-pager -n 30 || true
+          if [ "$i" = 5 ]; then
+            exit 1
+          fi
+          sleep 5
+        done
+
+        # Prove DNS64 actually works before pointing CoreDNS at it, so a
+        # silently broken resolver fails here with a clear message instead
+        # of as confusing downstream test failures.
+        for i in $(seq 1 30); do
+          if dig +time=2 +tries=1 @"${GW}" example.com AAAA +short | grep -q '^64:ff9b::'; then
+            echo "DNS64 synthesis OK"
+            break
+          fi
+          if [ "$i" = 30 ]; then
+            echo "DNS64 never synthesized an AAAA via unbound at ${GW}" >&2
+            exit 1
+          fi
+          sleep 2
+        done
 
         NEW_COREFILE=$(kubectl -n kube-system get configmap coredns -o jsonpath='{.data.Corefile}' \
           | sed "s#forward \. /etc/resolv.conf#forward . ${GW}#")
