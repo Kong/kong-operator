@@ -114,6 +114,18 @@ func TestHash(t *testing.T) {
 		DBLessConfig:            base.DBLessConfig,
 		AdminClientCertSecretNN: types.NamespacedName{Namespace: "default", Name: "cert-2"},
 	}), "a renewed Secret under a new name must drift the hash")
+
+	require.NotEqual(t, hashOf(base), hashOf(Config{
+		DBLessConfig:            base.DBLessConfig,
+		AdminClientCertSecretNN: base.AdminClientCertSecretNN,
+		SyncInterval:            10 * time.Second,
+	}), "a changed sync interval must drift the hash so the instance restarts with it")
+
+	require.NotEqual(t, hashOf(base), hashOf(Config{
+		DBLessConfig:            base.DBLessConfig,
+		AdminClientCertSecretNN: base.AdminClientCertSecretNN,
+		SyncTimeout:             30 * time.Second,
+	}), "a changed sync timeout must drift the hash so the instance restarts with it")
 }
 
 // testAIGatewayModel returns a valid AIGatewayModel pointing at the test gateway.

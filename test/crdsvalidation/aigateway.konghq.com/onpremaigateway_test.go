@@ -52,6 +52,15 @@ func TestOnPremAIGateway(t *testing.T) {
 					}
 					return obj
 				}(),
+				Assert: func(t *testing.T, obj *aigatewayv1alpha1.OnPremAIGateway) {
+					t.Helper()
+					// The values must survive a read-back: the API server prunes
+					// fields missing from the CRD schema, so Create succeeding
+					// alone proves nothing about the schema.
+					require.NotNil(t, obj.Spec.DataPlaneSync)
+					require.Equal(t, 5*time.Second, obj.Spec.DataPlaneSync.Interval.Duration)
+					require.Equal(t, 30*time.Second, obj.Spec.DataPlaneSync.Timeout.Duration)
+				},
 			},
 			{
 				Name: "empty dataplaneSync - valid",
@@ -60,6 +69,14 @@ func TestOnPremAIGateway(t *testing.T) {
 					obj.Spec.DataPlaneSync = &aigatewayv1alpha1.OnPremAIGatewayDataPlaneSync{}
 					return obj
 				}(),
+				Assert: func(t *testing.T, obj *aigatewayv1alpha1.OnPremAIGateway) {
+					t.Helper()
+					// The API server materializes the empty object, so the pointer
+					// reads back non-nil; what matters is that no values leak in.
+					require.NotNil(t, obj.Spec.DataPlaneSync)
+					require.Nil(t, obj.Spec.DataPlaneSync.Interval)
+					require.Nil(t, obj.Spec.DataPlaneSync.Timeout)
+				},
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
