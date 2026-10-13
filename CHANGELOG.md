@@ -351,6 +351,13 @@
   images. Kong Gateway versions older than 3.6 (previously 3.4.1) are no longer
   supported by the operator and has to be upgraded.
   [#5925](https://github.com/Kong/kong-operator/pull/5925)
+- `DataPlane`s connected to a Konnect hybrid control plane (`KonnectExtension`
+  cluster type `ControlPlane` or `ControlPlaneGroup`, including hybrid
+  `Gateway`s) no longer expose the Kong Admin API: the admin `Service` and
+  admin certificate `Secret` are not created (existing ones are removed on
+  upgrade) and `KONG_ADMIN_LISTEN` defaults to `off`. It can be re-enabled by
+  setting `KONG_ADMIN_LISTEN` in the `DataPlane` pod template.
+  [#6082](https://github.com/Kong/kong-operator/pull/6082)
 
 ### Fixes
 
