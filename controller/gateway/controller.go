@@ -443,7 +443,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 		// Only create network policies if KO is running inside k8s.
 		// If the code is run outside of k8s (like in envtest or integration test), do not create network policies.
 		log.Trace(logger, "ensuring DataPlane's NetworkPolicy exists")
-		createdOrUpdated, err := r.ensureDataPlaneHasNetworkPolicy(ctx, gateway, dataplane)
+		createdOrUpdated, err := r.ensureDataPlaneHasNetworkPolicy(ctx, gateway, dataplane, !isHybridGateway)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -537,37 +537,40 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// List admin Services
-	adminServices, err := k8sutils.ListServicesForOwner(
-		ctx,
-		r.Client,
-		dataplane.Namespace,
-		dataplane.UID,
-		client.MatchingLabels{
-			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
-			consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneAdminServiceLabelValue),
-		},
-	)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+	// Hybrid DataPlanes have no admin Service.
+	if !isHybridGateway {
+		// List admin Services
+		adminServices, err := k8sutils.ListServicesForOwner(
+			ctx,
+			r.Client,
+			dataplane.Namespace,
+			dataplane.UID,
+			client.MatchingLabels{
+				consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+				consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneAdminServiceLabelValue),
+			},
+		)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 
-	count = len(adminServices)
-	// If too many dataplane services are found here, this is a temporary situation.
-	// The number of services will be reduced to 1 by the dataplane controller.
-	if count > 1 {
-		log.Info(logger,
-			fmt.Sprintf("found %d admin services found for dataplane, requeuing...", count),
-			"dataplane", client.ObjectKeyFromObject(dataplane),
-		)
-		return ctrl.Result{Requeue: true}, nil
-	}
-	if count == 0 {
-		log.Info(logger,
-			"no admin services found for dataplane",
-			"dataplane", client.ObjectKeyFromObject(dataplane),
-		)
-		return ctrl.Result{Requeue: true}, nil
+		count = len(adminServices)
+		// If too many dataplane services are found here, this is a temporary situation.
+		// The number of services will be reduced to 1 by the dataplane controller.
+		if count > 1 {
+			log.Info(logger,
+				fmt.Sprintf("found %d admin services found for dataplane, requeuing...", count),
+				"dataplane", client.ObjectKeyFromObject(dataplane),
+			)
+			return ctrl.Result{Requeue: true}, nil
+		}
+		if count == 0 {
+			log.Info(logger,
+				"no admin services found for dataplane",
+				"dataplane", client.ObjectKeyFromObject(dataplane),
+			)
+			return ctrl.Result{Requeue: true}, nil
+		}
 	}
 
 	// DataPlane and its Services are ready so we mark Gateway's listeners as Programmed.

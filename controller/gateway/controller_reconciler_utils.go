@@ -676,6 +676,7 @@ func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 	ctx context.Context,
 	gateway *gwtypes.Gateway,
 	dataplane *operatorv1beta1.DataPlane,
+	adminAPIEnabled bool,
 ) (createdOrUpdate bool, err error) {
 	networkPolicies, err := gatewayutils.ListNetworkPoliciesForGateway(ctx, r.Client, gateway)
 	if err != nil {
@@ -691,7 +692,7 @@ func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 	}
 
 	// generate the network policy that allows the KO pod to access the admin APIs of dataplane pods.
-	generatedPolicy, err := generateDataPlaneNetworkPolicy(r.Namespace, dataplane, r.PodLabels)
+	generatedPolicy, err := generateDataPlaneNetworkPolicy(r.Namespace, dataplane, r.PodLabels, adminAPIEnabled)
 	if err != nil {
 		return false, fmt.Errorf("failed generating network policy for DataPlane %s: %w", dataplane.Name, err)
 	}
@@ -720,10 +721,12 @@ func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 
 // generateDataPlaneNetworkPolicy generates the NetworkPolicy that allows the KO pod to access admin API of dataplane pods.
 // the params `namespace` and `podLabels` are namespace and labels of the KO pod itself, and `dataplane` is the target dataplane.
+// When `adminAPIEnabled` is false (e.g. Konnect hybrid), no admin API ingress rule is added.
 func generateDataPlaneNetworkPolicy(
 	namespace string,
 	dataplane *operatorv1beta1.DataPlane,
 	podLabels map[string]string,
+	adminAPIEnabled bool,
 ) (*networkingv1.NetworkPolicy, error) {
 	var (
 		protocolTCP          = corev1.ProtocolTCP
@@ -770,7 +773,9 @@ func generateDataPlaneNetworkPolicy(
 			return intstr.FromInt(ep.Port)
 		}))
 	}
-	if adminListen := k8sutils.EnvValueByName(container.Env, "KONG_ADMIN_LISTEN"); adminListen != "" {
+	if adminListen := strings.TrimSpace(k8sutils.EnvValueByName(container.Env, "KONG_ADMIN_LISTEN")); adminListen == "off" {
+		adminAPISSLPorts = nil
+	} else if adminListen != "" {
 		kongListenConfig, err := parseKongListenEnv(adminListen)
 		if err != nil {
 			return nil, fmt.Errorf("failed parsing KONG_ADMIN_LISTEN env: %w", err)
@@ -847,9 +852,12 @@ func generateDataPlaneNetworkPolicy(
 	}
 
 	ingressRules := []networkingv1.NetworkPolicyIngressRule{
-		limitAdminAPIIngress,
 		allowProxyIngress,
 		allowMetricsIngress,
+	}
+	// An empty ports list would allow all ports, so skip the rule when there are no admin ports.
+	if adminAPIEnabled && len(adminAPISSLPorts) > 0 {
+		ingressRules = append([]networkingv1.NetworkPolicyIngressRule{limitAdminAPIIngress}, ingressRules...)
 	}
 
 	// Add a rule to allow ingress traffics to listened ports for stream proxy on dataplane pods.
