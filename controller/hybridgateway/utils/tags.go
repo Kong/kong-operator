@@ -14,6 +14,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	pkgmetadata "github.com/kong/kong-operator/v2/pkg/metadata"
+	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
 const (
@@ -116,7 +117,11 @@ func MergeTags(logger logr.Logger, groups ...[]string) []string {
 // InheritedTagsForParentRef returns the konghq.com/tags carried by the Gateway that pRef names,
 // followed by the tags of that Gateway's GatewayClass. Use it for entities whose identity is
 // scoped to a single parentRef - a KongRoute and its KongPluginBindings - so they do not pick up
-// tags from the route's other parents, which need not even be Konnect Gateways.
+// tags from the route's other parents.
+//
+// Unlike InheritedTagsForRoute this does not check that pRef is one this controller reconciles:
+// the converter only ever iterates the parents getHybridGatewayParents already vetted, so by the
+// time a factory is called the parentRef in hand is known to be ours.
 //
 // Like the other resolvers it never fails: an unresolvable Gateway or GatewayClass simply
 // contributes no tags.
@@ -228,6 +233,57 @@ func TagsForGatewayClassOf(ctx context.Context, logger logr.Logger, cl client.Cl
 	return tags
 }
 
+// ParentRefEqual compares two ParentReference objects for equality.
+func ParentRefEqual(a, b gwtypes.ParentReference) bool {
+	// Compare Group
+	if (a.Group == nil) != (b.Group == nil) {
+		return false
+	}
+
+	if a.Group != nil && b.Group != nil && *a.Group != *b.Group {
+		return false
+	}
+
+	// Compare Kind
+	if (a.Kind == nil) != (b.Kind == nil) {
+		return false
+	}
+	if a.Kind != nil && b.Kind != nil && *a.Kind != *b.Kind {
+		return false
+	}
+
+	// Compare Name
+	if a.Name != b.Name {
+		return false
+	}
+
+	// Compare Namespace
+	if (a.Namespace == nil) != (b.Namespace == nil) {
+		return false
+	}
+	if a.Namespace != nil && b.Namespace != nil && *a.Namespace != *b.Namespace {
+		return false
+	}
+
+	// Compare SectionName
+	if (a.SectionName == nil) != (b.SectionName == nil) {
+		return false
+	}
+	if a.SectionName != nil && b.SectionName != nil && *a.SectionName != *b.SectionName {
+		return false
+	}
+
+	// Compare Port
+	if (a.Port == nil) != (b.Port == nil) {
+		return false
+	}
+	if a.Port != nil && b.Port != nil && *a.Port != *b.Port {
+		return false
+	}
+
+	return true
+}
+
 // inheritedTagPair keeps Gateway tags apart from GatewayClass tags so that an aggregation over
 // several routes can emit every Gateway tag before any GatewayClass tag.
 type inheritedTagPair struct {
@@ -251,6 +307,13 @@ func inheritedTagsForRoute(ctx context.Context, logger logr.Logger, cl client.Cl
 
 	var pair inheritedTagPair
 	for _, pRef := range parentRefsOf(route) {
+		// A route can be attached to Gateways owned by another implementation as well. Those
+		// Gateways produce none of these Kong entities, so their tags must not land on them.
+		if !acceptedByThisController(route, pRef) {
+			log.Trace(logger, "Skipping parentRef not reconciled by this controller for tag inheritance",
+				"route", client.ObjectKeyFromObject(route), "parentRef", pRef.Name)
+			continue
+		}
 		parent := inheritedTagsForParentRef(ctx, logger, cl, route, pRef)
 		pair.gateway = append(pair.gateway, parent.gateway...)
 		pair.gatewayClass = append(pair.gatewayClass, parent.gatewayClass...)
@@ -420,6 +483,40 @@ func newRouteForKind(kind string) client.Object {
 		return &gwtypes.TCPRoute{}
 	case "UDPRoute":
 		return &gwtypes.UDPRoute{}
+	}
+	return nil
+}
+
+// acceptedByThisController reports whether pRef is a parent this controller reconciles, by looking
+// for a status entry it owns.
+//
+// UpdateRouteStatus writes one RouteParentStatus per supported parentRef keyed on
+// vars.ControllerName() and removes the entry again for a parentRef it does not support, so that
+// list is authoritative. It is also already settled here: Reconcile updates the status in its
+// first phase and requeues whenever it changed, so translation only ever runs on a pass where the
+// status is persisted.
+func acceptedByThisController(route client.Object, pRef gwtypes.ParentReference) bool {
+	controllerName := vars.ControllerName()
+	for _, status := range parentStatusesOf(route) {
+		if string(status.ControllerName) == controllerName && ParentRefEqual(status.ParentRef, pRef) {
+			return true
+		}
+	}
+	return false
+}
+
+func parentStatusesOf(route client.Object) []gwtypes.RouteParentStatus {
+	switch r := route.(type) {
+	case *gwtypes.HTTPRoute:
+		return r.Status.Parents
+	case *gwtypes.GRPCRoute:
+		return r.Status.Parents
+	case *gwtypes.TLSRoute:
+		return r.Status.Parents
+	case *gwtypes.TCPRoute:
+		return r.Status.Parents
+	case *gwtypes.UDPRoute:
+		return r.Status.Parents
 	}
 	return nil
 }

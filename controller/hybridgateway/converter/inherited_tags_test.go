@@ -17,6 +17,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
 // tagsFixture wires up the standard Konnect Gateway objects plus a backend Service and its
@@ -40,6 +41,15 @@ func (f tagsFixture) build(t *testing.T) (*gwtypes.HTTPRoute, client.Client) {
 	}})
 	if f.routeTags != "" {
 		route.Annotations = map[string]string{"konghq.com/tags": f.routeTags}
+	}
+	// These tests drive Translate directly rather than through Reconcile, which would have
+	// settled the route status in its first phase. Only parents this controller accepted
+	// contribute tags, so the fixture supplies that status itself.
+	for _, pRef := range route.Spec.ParentRefs {
+		route.Status.Parents = append(route.Status.Parents, gwtypes.RouteParentStatus{
+			ParentRef:      pRef,
+			ControllerName: gwtypes.GatewayController(vars.ControllerName()),
+		})
 	}
 
 	gateway := newGatewayWithListenerHostnames()

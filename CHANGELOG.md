@@ -773,10 +773,15 @@
   at 20 entries, dropping from the end, so the least specific tags are lost
   first. This applies to `KongService`, `KongRoute`, `KongUpstream`,
   `KongTarget`, `KongCertificate`, `KongSNI`, `KongPlugin` and
-  `KongPluginBinding`. Entities that several routes share - a `KongService`,
-  `KongUpstream`, `KongTarget` or generated `KongPlugin` with the same backends
-  and ControlPlane - inherit the union over every attached route's parents, so
-  the value does not depend on which route is reconciled.
+  `KongPluginBinding`. Only parent `Gateway`s that this controller reconciles
+  contribute: a route attached to a `Gateway` owned by another implementation
+  does not pick up that Gateway's tags. Entities that several routes share - a
+  `KongService`, `KongUpstream`, `KongTarget` or generated `KongPlugin` with the
+  same backends and ControlPlane - inherit the union over every attached route's
+  parents, so the value does not depend on which route is reconciled. Known
+  limitation: a route attached to Konnect `Gateway`s on two different
+  ControlPlanes gets the union of both Gateways' tags on each ControlPlane's
+  entities.
   [#5842](https://github.com/Kong/kong-operator/pull/5842)
 
 ### Breaking changes

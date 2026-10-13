@@ -22,6 +22,7 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	pkgmetadata "github.com/kong/kong-operator/v2/pkg/metadata"
+	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
 var (
@@ -460,6 +461,13 @@ func TestPluginsForRule_InheritedTagsAnnotation(t *testing.T) {
 			},
 		},
 	}
+	// Translation only ever runs on a route whose status is already settled (Reconcile
+	// updates it first and requeues), so the fixture carries the accepted-parent entry
+	// that marks the parentRef as one this controller reconciles.
+	httpRoute.Status.Parents = []gwtypes.RouteParentStatus{{
+		ParentRef:      gwtypes.ParentReference{Name: "test-gateway"},
+		ControllerName: gwtypes.GatewayController(vars.ControllerName()),
+	}}
 	parentRef := &gwtypes.ParentReference{Name: "test-gateway"}
 	gateway := &gwtypes.Gateway{
 		Name:        "test-gateway",
