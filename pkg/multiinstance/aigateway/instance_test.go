@@ -181,8 +181,8 @@ func TestSendConfig(t *testing.T) {
 		require.Len(t, factory.clients["https://10.0.0.1:8444"].payloads, 1)
 
 		// The per-entity failure is aggregated on the gateway's
-		// ConfigurationProgrammed condition.
-		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationProgrammedType)
+		// ConfigurationTranslated condition.
+		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType)
 		require.Equal(t, metav1.ConditionFalse, condition.Status)
 		require.Equal(t, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslationFailedReason), condition.Reason)
 		require.Contains(t, condition.Message, "model-broken")
@@ -209,7 +209,7 @@ func TestSendConfig(t *testing.T) {
 
 		// A push failure does not alter the translation condition: it belongs
 		// to the DataPlanesConfigured condition.
-		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationProgrammedType)
+		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType)
 		require.Equal(t, metav1.ConditionTrue, condition.Status)
 		require.Equal(t, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedReason), condition.Reason)
 	})
@@ -244,7 +244,7 @@ func TestSendConfig(t *testing.T) {
 			require.Empty(t, messageOf(instance, m))
 		}
 
-		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationProgrammedType)
+		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType)
 		require.Equal(t, metav1.ConditionTrue, condition.Status)
 		require.Equal(t, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedReason), condition.Reason)
 	})

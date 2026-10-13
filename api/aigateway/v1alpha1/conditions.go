@@ -250,10 +250,10 @@ const (
 // -----------------------------------------------------------------------------
 
 const (
-	// OnPremAIGatewayConfigurationProgrammedType indicates whether the
+	// OnPremAIGatewayConfigurationTranslatedType indicates whether the
 	// configuration entities of the OnPremAIGateway were successfully
 	// translated into the declarative payload pushed to its data planes.
-	OnPremAIGatewayConfigurationProgrammedType consts.ConditionType = "ConfigurationProgrammed"
+	OnPremAIGatewayConfigurationTranslatedType consts.ConditionType = "ConfigurationTranslated"
 
 	// OnPremAIGatewayConfigurationTranslatedReason indicates the configuration
 	// was translated successfully.

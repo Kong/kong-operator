@@ -303,7 +303,7 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 
 // TestOnPremAIGatewayReconciler_PreservesInstanceOwnedCondition verifies that the
 // controller's SSA status apply does not steal ownership of the conditions the
-// instance owns (DataPlanesConfigured and ConfigurationProgrammed) from the
+// instance owns (DataPlanesConfigured and ConfigurationTranslated) from the
 // instance's field manager: applyStatus excludes those conditions from its
 // payload, so a stale cached status cannot force-re-apply them under the
 // controller's field manager.
@@ -312,9 +312,13 @@ func TestOnPremAIGatewayReconciler_PreservesInstanceOwnedCondition(t *testing.T)
 
 	const waitTime = time.Minute
 
-	// The instance's SSA field manager, as defined (unexported) in
-	// pkg/multiinstance/aigateway/adminapi_push.go.
-	const instanceFieldManager = "gateway-operator-aigateway-instance"
+	// The instance's SSA field managers, as defined (unexported) in
+	// pkg/multiinstance/aigateway/adminapi_push.go: one per condition type,
+	// exactly like instanceFieldManagerFor builds them.
+	const instanceFieldManagerPrefix = "gateway-operator-aigateway-instance"
+	instanceFieldManagerFor := func(condType string) string {
+		return instanceFieldManagerPrefix + "-" + condType
+	}
 
 	ctx := t.Context()
 	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
@@ -364,8 +368,9 @@ func TestOnPremAIGatewayReconciler_PreservesInstanceOwnedCondition(t *testing.T)
 		assert.True(ct, k8sutils.HasConditionTrue(aigatewayv1alpha1.ReadyType, onprem))
 	}, waitTime, tickTime)
 
-	// Simulate the instance applying its conditions under its own field
-	// manager, the same way reportPushStatus and reportTranslationStatus do.
+	// Simulate the instance applying each of its conditions under its own
+	// per-condition-type field manager, the same way reportPushStatus and
+	// reportTranslationStatus do through applyInstanceConditions.
 	gw := &aigatewayv1alpha1.OnPremAIGateway{
 		Namespace: onprem.Namespace,
 		Name:      onprem.Name,
@@ -380,15 +385,23 @@ func TestOnPremAIGatewayReconciler_PreservesInstanceOwnedCondition(t *testing.T)
 			aigatewayv1alpha1.OnPremAIGatewayConfigurationPushSucceededReason,
 			"Configuration pushed to 1 Admin API endpoints",
 		),
+	}
+	_, err = controllerpkgssa.ApplyStatusIfChanged(
+		ctx, mgr.GetLogger(), cl, ssaProvider, gw,
+		instanceFieldManagerFor(string(aigatewayv1alpha1.OnPremAIGatewayDataPlanesConfiguredType)),
+	)
+	require.NoError(t, err)
+	gw.Status.Conditions = []metav1.Condition{
 		k8sutils.NewCondition(
-			aigatewayv1alpha1.OnPremAIGatewayConfigurationProgrammedType,
+			aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType,
 			metav1.ConditionTrue,
 			aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedReason,
 			"Configuration translated successfully",
 		),
 	}
 	_, err = controllerpkgssa.ApplyStatusIfChanged(
-		ctx, mgr.GetLogger(), cl, ssaProvider, gw, instanceFieldManager,
+		ctx, mgr.GetLogger(), cl, ssaProvider, gw,
+		instanceFieldManagerFor(string(aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType)),
 	)
 	require.NoError(t, err)
 
@@ -453,19 +466,23 @@ func TestOnPremAIGatewayReconciler_PreservesInstanceOwnedCondition(t *testing.T)
 		assert.Equal(ct, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationPushSucceededReason), cond.Reason)
 
 		translationCond := apimeta.FindStatusCondition(
-			fresh.Status.Conditions, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationProgrammedType),
+			fresh.Status.Conditions, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType),
 		)
-		if !assert.NotNil(ct, translationCond, "the ConfigurationProgrammed condition must not be pruned") {
+		if !assert.NotNil(ct, translationCond, "the ConfigurationTranslated condition must not be pruned") {
 			return
 		}
 		assert.Equal(ct, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedReason), translationCond.Reason)
 
 		for _, condType := range []string{
 			string(aigatewayv1alpha1.OnPremAIGatewayDataPlanesConfiguredType),
-			string(aigatewayv1alpha1.OnPremAIGatewayConfigurationProgrammedType),
+			string(aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType),
 		} {
-			assert.True(ct, managerEntryContains(fresh, instanceFieldManager, condType),
-				"instance field manager must own the %s condition", condType)
+			// Each condition is owned by its own per-condition-type manager, and
+			// only by it.
+			assert.True(ct, managerEntryContains(fresh, instanceFieldManagerFor(condType), condType),
+				"instance field manager for %s must own the %s condition", condType, condType)
+			assert.False(ct, managerEntryContains(fresh, instanceFieldManagerPrefix, condType),
+				"the bare instance field manager prefix must not own the %s condition", condType)
 			assert.False(ct, managerEntryContains(fresh, "gateway-operator", condType),
 				"controller field manager must not own the %s condition", condType)
 		}

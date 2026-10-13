@@ -353,6 +353,12 @@ func (i *Instance) sendConfig(
 	}
 	i.statusReporter.Report(included, failures)
 
+	// The push succeeded, so the converter warnings are reported now: reporting
+	// them before the push would re-log and re-emit them on every retry of a
+	// failing push. The next successful push re-reports them anyway (the sync
+	// re-translates the configuration on every tick).
+	i.reportTranslationWarnings(*gw, warnings)
+
 	return nil
 
 }

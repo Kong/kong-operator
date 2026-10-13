@@ -72,6 +72,12 @@ const instanceFieldManager = "gateway-operator-aigateway-instance"
 // carry-over of the other instance-owned conditions (which would otherwise
 // require reading the stored status before every apply, exposing the payload
 // to informer cache lag).
+// On clusters upgraded from a version that applied every instance-owned
+// condition under the bare instanceFieldManager, the old manager's ownership
+// entry lingers on the conditions it owned for good: an apply that changes
+// nothing cannot move ownership. That is harmless — the entry only remains
+// listed in managedFields, and the conditions keep being reported under the
+// per-condition managers below.
 func instanceFieldManagerFor(t kcfgconsts.ConditionType) string {
 	return instanceFieldManager + "-" + string(t)
 }
@@ -262,7 +268,12 @@ func (i *Instance) reportPushStatus(
 		return fmt.Errorf("patching OnPremAIGateway status with the configuration push result: %w", err)
 	}
 	// Only emit events when the condition actually changed, so that recurring
-	// failures on the retry loop do not spam the event recorder.
+	// failures on the retry loop do not spam the event recorder. A changed
+	// failing-endpoint set carries a different event message, and the event
+	// broadcaster correlates events by their message among the other fields,
+	// so the new failure set is recorded as its own event rather than being
+	// folded into the previous one (identical messages only bump the count of
+	// the event already recorded for them).
 	if changed && len(failures) > 0 && i.eventRecorder != nil {
 		i.eventRecorder.Eventf(
 			gatewayEventObject(gwNN), nil, corev1.EventTypeWarning,
@@ -274,16 +285,20 @@ func (i *Instance) reportPushStatus(
 	return nil
 }
 
-// reportTranslationStatus patches the ConfigurationProgrammed condition of the
+// reportTranslationStatus patches the ConfigurationTranslated condition of the
 // OnPremAIGateway with the outcome of the configuration translation (rendering
-// the aigw.Document into the dbless payload) and emits Warning events for the
-// translation failure and for the converter warnings.
+// the aigw.Document into the dbless payload) and, when the translation itself
+// failed, emits Warning events for the failure and for the converter warnings.
 //
 // renderErr is the whole-document rendering failure (nil when the rendering
 // succeeded), entityFailures the per-entity translation failures, and warnings
 // the free-text warnings returned by the ai-deck-converter. Warnings never fail
-// the condition: it stays True and the warnings are carried by Warning events,
-// with only their count noted in the condition message.
+// the condition: it stays True and the warnings are carried by Warning events
+// (see reportTranslationWarnings), with only their count noted in the condition
+// message. On a successful translation the warnings are reported by the caller
+// once the push has run, so that a failing push does not re-emit them on every
+// retry (they are reported again on the next successful push anyway, because
+// the sync re-translates the configuration on every tick).
 func (i *Instance) reportTranslationStatus(
 	ctx context.Context,
 	gwNN types.NamespacedName,
@@ -302,7 +317,7 @@ func (i *Instance) reportTranslationStatus(
 	var condition metav1.Condition
 	if len(failureMessages) > 0 {
 		condition = k8sutils.NewCondition(
-			aigatewayv1alpha1.OnPremAIGatewayConfigurationProgrammedType,
+			aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType,
 			metav1.ConditionFalse,
 			aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslationFailedReason,
 			truncateMessage(strings.Join(failureMessages, "; ")),
@@ -313,7 +328,7 @@ func (i *Instance) reportTranslationStatus(
 			message = fmt.Sprintf("Configuration translated with %d warnings (see events)", len(warnings))
 		}
 		condition = k8sutils.NewCondition(
-			aigatewayv1alpha1.OnPremAIGatewayConfigurationProgrammedType,
+			aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType,
 			metav1.ConditionTrue,
 			aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedReason,
 			message,
@@ -332,7 +347,12 @@ func (i *Instance) reportTranslationStatus(
 		return
 	}
 	// Only emit the failure event when the condition actually changed, so that
-	// recurring failures on the retry loop do not spam the event recorder.
+	// recurring failures on the retry loop do not spam the event recorder. A
+	// changed failure set carries a different event message, and the event
+	// broadcaster correlates events by their message among the other fields,
+	// so the new failure set is recorded as its own event rather than being
+	// folded into the previous one (identical messages only bump the count of
+	// the event already recorded for them).
 	if changed && err == nil && len(failureMessages) > 0 {
 		i.eventRecorder.Eventf(
 			gatewayEventObject(gwNN), nil, corev1.EventTypeWarning,
@@ -341,12 +361,34 @@ func (i *Instance) reportTranslationStatus(
 			truncateMessage(strings.Join(failureMessages, "; ")),
 		)
 	}
+	if renderErr != nil {
+		// The rendering failed, so no push will happen this sync: report the
+		// warnings here instead of waiting for a push that never comes.
+		i.reportTranslationWarnings(gwNN, warnings)
+	}
+}
+
+// reportTranslationWarnings logs the given converter warnings and emits a
+// Warning event for each of them on the OnPremAIGateway.
+//
+// Warnings are emitted on every call without a change gate: the condition
+// message only carries their count, so a swap of warnings (one disappears,
+// another appears) would leave the condition unchanged and a gate would hide
+// the new warning. The event broadcaster correlates identical events (same
+// type, reason, object and message, among the other fields) by bumping their
+// count instead of recording them again, so steady-state syncs only bump the
+// event counts; distinct warning messages are recorded as distinct events,
+// and only once 10 distinct messages accumulate within 10 minutes do they
+// collapse into a single "(combined from similar events)" event carrying the
+// last message (client-go EventCorrelator defaults).
+func (i *Instance) reportTranslationWarnings(
+	gwNN types.NamespacedName,
+	warnings []string,
+) {
+	if i.eventRecorder == nil {
+		return
+	}
 	for _, w := range warnings {
-		// Warnings are emitted on every sync without a change gate: the condition
-		// message only carries their count, so a swap of warnings (one disappears,
-		// another appears) would leave the condition unchanged and a gate would
-		// hide the new warning. The event recorder aggregates identical events,
-		// so steady-state syncs only bump the event counts.
 		log.Info(i.logger, "AI Gateway configuration warning",
 			"namespace", gwNN.Namespace, "name", gwNN.Name, "warning", w)
 		i.eventRecorder.Eventf(
@@ -374,7 +416,13 @@ func (i *Instance) applyInstanceConditions(
 	condition metav1.Condition,
 ) (bool, error) {
 	existing := &aigatewayv1alpha1.OnPremAIGateway{}
-	if err := i.client.Get(ctx, gwNN, existing); err != nil && !apierrors.IsNotFound(err) {
+	if err := i.client.Get(ctx, gwNN, existing); err != nil {
+		if apierrors.IsNotFound(err) {
+			// The gateway is gone (or not yet visible to the cache): applying
+			// would recreate a status-only object instead of reporting, and
+			// there is nothing to report on anyway. The next sync re-reports.
+			return false, nil
+		}
 		return false, fmt.Errorf("getting OnPremAIGateway %s: %w", gwNN, err)
 	}
 
@@ -423,21 +471,29 @@ func truncateMessage(s string) string {
 		return s
 	}
 	cut := maxConditionMessageLength - 3
-	for !utf8.RuneStart(s[cut]) {
+	// The cut > 0 guard keeps the loop on rune boundaries of malformed input:
+	// valid UTF-8 runs at most 3 continuation bytes in a row, but arbitrary
+	// (non-UTF-8) bytes do not have to.
+	for cut > 0 && !utf8.RuneStart(s[cut]) {
 		cut--
 	}
 	return s[:cut] + "..."
 }
 
 // entityFailureDesc returns a "Kind/namespace/name: error" description of an
-// entity failure, used in the gateway's aggregated ConfigurationProgrammed
-// condition message. The GVK is resolved through the scheme because typed
-// cache objects carry no TypeMeta (the same reason EntityStatusReporter
-// resolves it for its status keys).
+// entity failure, used in the gateway's aggregated ConfigurationTranslated
+// condition message. Cluster-scoped objects drop the (empty) namespace segment.
+// The GVK is resolved through the scheme because typed cache objects carry no
+// TypeMeta (the same reason EntityStatusReporter resolves it for its status
+// keys).
 func (i *Instance) entityFailureDesc(f EntityFailure) string {
 	kind := fmt.Sprintf("%T", f.Obj)
 	if gvk, err := apiutil.GVKForObject(f.Obj, i.env.Scheme); err == nil {
 		kind = gvk.Kind
 	}
-	return fmt.Sprintf("%s/%s/%s: %s", kind, f.Obj.GetNamespace(), f.Obj.GetName(), f.Err)
+	name := f.Obj.GetName()
+	if ns := f.Obj.GetNamespace(); ns != "" {
+		name = ns + "/" + name
+	}
+	return fmt.Sprintf("%s/%s: %s", kind, name, f.Err)
 }

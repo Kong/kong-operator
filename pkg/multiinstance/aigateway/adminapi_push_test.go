@@ -363,7 +363,7 @@ func TestSendConfigToDataPlanes(t *testing.T) {
 	})
 }
 
-// TestReportTranslationStatus drives the ConfigurationProgrammed condition and
+// TestReportTranslationStatus drives the ConfigurationTranslated condition and
 // the translation events the instance reports on the OnPremAIGateway.
 func TestReportTranslationStatus(t *testing.T) {
 	ctx := context.Background()
@@ -387,7 +387,7 @@ func TestReportTranslationStatus(t *testing.T) {
 		instance := testPushInstance(t)
 		instance.reportTranslationStatus(ctx, gwNN, nil, nil, nil)
 
-		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationProgrammedType)
+		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType)
 		require.Equal(t, metav1.ConditionTrue, condition.Status)
 		require.Equal(t, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedReason), condition.Reason)
 		require.Equal(t, "Configuration translated successfully", condition.Message)
@@ -396,15 +396,24 @@ func TestReportTranslationStatus(t *testing.T) {
 
 	t.Run("successful translation with warnings emits an event per warning", func(t *testing.T) {
 		instance := testPushInstance(t)
-		instance.reportTranslationStatus(ctx, gwNN, nil, nil,
-			[]string{`model "m1" references unknown provider "p1"`, `sni "s1" references unknown certificate "c1"`})
+		warnings := []string{`model "m1" references unknown provider "p1"`, `sni "s1" references unknown certificate "c1"`}
+		instance.reportTranslationStatus(ctx, gwNN, nil, nil, warnings)
 
-		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationProgrammedType)
+		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType)
 		require.Equal(t, metav1.ConditionTrue, condition.Status)
 		require.Equal(t, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedReason), condition.Reason)
 		require.Contains(t, condition.Message, "translated with 2 warnings")
 
+		// On a successful translation the warnings are not emitted by
+		// reportTranslationStatus: the caller reports them once the push has
+		// run, so that a failing push does not re-emit them on every retry.
+		require.Empty(t, eventsOf(t, instance))
+
 		// One Warning event per warning, each carrying the warning text.
+		// FakeRecorder delivers every event as-is: it does not correlate or
+		// aggregate like the real event broadcaster, so these assertions cover
+		// the emission, not the broadcaster's grouping behavior.
+		instance.reportTranslationWarnings(gwNN, warnings)
 		events := eventsOf(t, instance)
 		require.Len(t, events, 2)
 		for i, w := range []string{"unknown provider", "unknown certificate"} {
@@ -418,7 +427,7 @@ func TestReportTranslationStatus(t *testing.T) {
 		instance.reportTranslationStatus(ctx, gwNN, errors.New("rendering failed: broken document"),
 			nil, []string{`model "m1" references unknown provider "p1"`})
 
-		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationProgrammedType)
+		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType)
 		require.Equal(t, metav1.ConditionFalse, condition.Status)
 		require.Equal(t, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslationFailedReason), condition.Reason)
 		require.Contains(t, condition.Message, "rendering failed: broken document")
@@ -438,7 +447,7 @@ func TestReportTranslationStatus(t *testing.T) {
 			{Obj: broken, Err: errors.New("spec.apiSpec is required")},
 		}, nil)
 
-		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationProgrammedType)
+		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType)
 		require.Equal(t, metav1.ConditionFalse, condition.Status)
 		require.Equal(t, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslationFailedReason), condition.Reason)
 		require.Contains(t, condition.Message, "AIGatewayModel/default/model-broken: spec.apiSpec is required")
@@ -452,13 +461,13 @@ func TestReportTranslationStatus(t *testing.T) {
 		instance := testPushInstance(t)
 		renderErr := errors.New("rendering failed: broken document")
 		instance.reportTranslationStatus(ctx, gwNN, renderErr, nil, nil)
-		first := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationProgrammedType)
+		first := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType)
 		require.Len(t, eventsOf(t, instance), 1)
 
 		// The retry loop re-reports the same failure on the next tick: the
 		// unchanged failure must not be reported as a change.
 		instance.reportTranslationStatus(ctx, gwNN, renderErr, nil, nil)
-		second := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationProgrammedType)
+		second := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType)
 
 		require.Equal(t, first.LastTransitionTime, second.LastTransitionTime)
 		require.Empty(t, eventsOf(t, instance))
@@ -469,7 +478,7 @@ func TestReportTranslationStatus(t *testing.T) {
 		long := strings.Repeat("x", maxConditionMessageLength*2)
 		instance.reportTranslationStatus(ctx, gwNN, errors.New(long), nil, nil)
 
-		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationProgrammedType)
+		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType)
 		require.Len(t, condition.Message, maxConditionMessageLength)
 		require.True(t, strings.HasSuffix(condition.Message, "..."))
 	})
@@ -480,7 +489,7 @@ func TestReportTranslationStatus(t *testing.T) {
 		instance.reportTranslationStatus(ctx, gwNN, errors.New("rendering failed"), nil,
 			[]string{"some warning"})
 
-		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationProgrammedType)
+		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType)
 		require.Equal(t, metav1.ConditionFalse, condition.Status)
 	})
 
@@ -491,7 +500,7 @@ func TestReportTranslationStatus(t *testing.T) {
 		instance.reportTranslationStatus(ctx, gwNN, errors.New("rendering failed"), nil, nil)
 		require.NoError(t, instance.reportPushStatus(ctx, gwNN, 1, nil))
 		require.Equal(t, metav1.ConditionFalse,
-			getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationProgrammedType).Status)
+			getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType).Status)
 		require.Equal(t, metav1.ConditionTrue,
 			getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayDataPlanesConfiguredType).Status)
 
@@ -501,7 +510,7 @@ func TestReportTranslationStatus(t *testing.T) {
 		require.NoError(t, instance.reportPushStatus(ctx, gwNN, 1, []string{"endpoint down"}))
 		instance.reportTranslationStatus(ctx, gwNN, nil, nil, nil)
 		require.Equal(t, metav1.ConditionTrue,
-			getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationProgrammedType).Status)
+			getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType).Status)
 		require.Equal(t, metav1.ConditionFalse,
 			getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayDataPlanesConfiguredType).Status)
 	})
@@ -522,4 +531,9 @@ func TestTruncateMessage(t *testing.T) {
 	truncated = truncateMessage(multibyte)
 	require.LessOrEqual(t, len(truncated), maxConditionMessageLength)
 	require.True(t, utf8.ValidString(truncated))
+
+	// Malformed input (a long run of continuation bytes) must not underflow
+	// the rune-boundary walk.
+	malformed := strings.Repeat("\x80", maxConditionMessageLength+10)
+	require.True(t, utf8.ValidString(truncateMessage(malformed)))
 }
