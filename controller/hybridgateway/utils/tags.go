@@ -292,7 +292,7 @@ type inheritedTagPair struct {
 	gatewayClass []string
 }
 
-// InheritedTagsForRoute returns the konghq.com/tags carried by every parent Gateway of route,
+// inheritedTagsForRoute returns the konghq.com/tags carried by every parent Gateway of route,
 // followed by the tags carried by those Gateways' GatewayClasses.
 //
 // It never fails: a parentRef that does not name a Gateway, a Gateway that cannot be read and a
