@@ -3,6 +3,7 @@ package crdsvalidation_test
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -33,6 +34,32 @@ func TestOnPremAIGateway(t *testing.T) {
 			{
 				Name:       "empty spec - valid",
 				TestObject: validOnPremAIGateway(ns.Name),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("spec.dataplaneSync", func(t *testing.T) {
+		t.Parallel()
+
+		common.TestCasesGroup[*aigatewayv1alpha1.OnPremAIGateway]{
+			{
+				Name: "dataplaneSync with interval and timeout - valid",
+				TestObject: func() *aigatewayv1alpha1.OnPremAIGateway {
+					obj := validOnPremAIGateway(ns.Name)
+					obj.Spec.DataPlaneSync = &aigatewayv1alpha1.OnPremAIGatewayDataPlaneSync{
+						Interval: &metav1.Duration{Duration: 5 * time.Second},
+						Timeout:  &metav1.Duration{Duration: 30 * time.Second},
+					}
+					return obj
+				}(),
+			},
+			{
+				Name: "empty dataplaneSync - valid",
+				TestObject: func() *aigatewayv1alpha1.OnPremAIGateway {
+					obj := validOnPremAIGateway(ns.Name)
+					obj.Spec.DataPlaneSync = &aigatewayv1alpha1.OnPremAIGatewayDataPlaneSync{}
+					return obj
+				}(),
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})

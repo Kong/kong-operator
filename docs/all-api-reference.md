@@ -7650,14 +7650,33 @@ _Appears in:_
 
 - [AIGatewayDataPlaneSpec](#aigateway-konghq-com-v1alpha1-types-aigatewaydataplanespec)
 
+#### OnPremAIGatewayDataPlaneSync
+
+
+OnPremAIGatewayDataPlaneSync defines the configuration for syncing
+configuration to the data planes referencing this OnPremAIGateway.
+
+
+
+| Field | Description |
+| --- | --- |
+| `interval` _*k8s.io/apimachinery/pkg/apis/meta/v1.Duration_ | Interval is the interval between two rounds of syncing configuration with data planes. If not specified, the default interval as defined by the operator will be used. |
+| `timeout` _*k8s.io/apimachinery/pkg/apis/meta/v1.Duration_ | Timeout is the timeout of a single run of syncing configuration with data planes. If not specified, the default timeout as defined by the operator will be used. |
+
+_Appears in:_
+
+- [OnPremAIGatewaySpec](#aigateway-konghq-com-v1alpha1-types-onpremaigatewayspec)
+
 #### OnPremAIGatewaySpec
 
 
-OnPremAIGatewaySpec defines the desired state of OnPremAIGateway.<br /><br />It is intentionally empty for now: fields land alongside the reconciler
-logic that consumes them.
+OnPremAIGatewaySpec defines the desired state of OnPremAIGateway.
 
 
 
+| Field | Description |
+| --- | --- |
+| `dataplaneSync` _[OnPremAIGatewayDataPlaneSync](#aigateway-konghq-com-v1alpha1-types-onpremaigatewaydataplanesync)_ | DataPlaneSync defines the configuration for syncing configuration to the data planes referencing this OnPremAIGateway. |
 
 _Appears in:_
 

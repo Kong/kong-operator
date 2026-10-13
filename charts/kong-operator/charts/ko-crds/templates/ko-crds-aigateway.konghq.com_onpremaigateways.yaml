@@ -42,6 +42,14 @@ spec:
           metadata:
             type: object
           spec:
+            properties:
+              dataplaneSync:
+                properties:
+                  interval:
+                    type: string
+                  timeout:
+                    type: string
+                type: object
             type: object
           status:
             properties:

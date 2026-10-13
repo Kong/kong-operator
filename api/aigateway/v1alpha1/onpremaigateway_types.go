@@ -59,10 +59,28 @@ type OnPremAIGatewayList struct {
 }
 
 // OnPremAIGatewaySpec defines the desired state of OnPremAIGateway.
-//
-// It is intentionally empty for now: fields land alongside the reconciler
-// logic that consumes them.
 type OnPremAIGatewaySpec struct {
+	// DataPlaneSync defines the configuration for syncing configuration
+	// to the data planes referencing this OnPremAIGateway.
+	//
+	// +optional
+	DataPlaneSync *OnPremAIGatewayDataPlaneSync `json:"dataplaneSync,omitempty"`
+}
+
+// OnPremAIGatewayDataPlaneSync defines the configuration for syncing
+// configuration to the data planes referencing this OnPremAIGateway.
+type OnPremAIGatewayDataPlaneSync struct {
+	// Interval is the interval between two rounds of syncing configuration with data planes.
+	// If not specified, the default interval as defined by the operator will be used.
+	//
+	// +optional
+	Interval *metav1.Duration `json:"interval,omitempty"`
+
+	// Timeout is the timeout of a single run of syncing configuration with data planes.
+	// If not specified, the default timeout as defined by the operator will be used.
+	//
+	// +optional
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
 }
 
 // OnPremAIGatewayStatus defines the observed state of OnPremAIGateway.
