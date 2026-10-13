@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -53,6 +54,95 @@ func TestReconcileWithMissingAncestorBeforeAPIAuthLookup(t *testing.T) {
 			},
 		)
 	})
+	t.Run("virtual cluster policy", func(t *testing.T) {
+		testReconcileWithMissingAncestorBeforeAPIAuthLookup[configurationv1alpha1.EventGatewayVirtualClusterPolicy](
+			t, func(ref commonv1alpha1.ObjectRef) *configurationv1alpha1.EventGatewayVirtualClusterPolicy {
+				return &configurationv1alpha1.EventGatewayVirtualClusterPolicy{
+					Name:      "virtual-cluster-policy",
+					Namespace: "default",
+					Spec: configurationv1alpha1.EventGatewayVirtualClusterPolicySpec{
+						EventGatewayVirtualClusterRef: ref,
+					},
+				}
+			},
+		)
+	})
+}
+
+func TestReconcileAIGatewayConsumerCredentialWithMissingGatewayBeforeAPIAuthLookup(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		deleting bool
+	}{
+		{name: "deleting credential releases finalizer", deleting: true},
+		{name: "active credential keeps finalizer"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			credential := &aiconfigurationv1alpha1.AIGatewayConsumerCredential{
+				Name:       "credential",
+				Namespace:  "default",
+				Finalizers: []string{KonnectCleanupFinalizer},
+				Spec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialSpec{
+					AIGatewayConsumerRef: testNamespacedObjectRef("consumer"),
+				},
+			}
+			credential.SetKonnectID("credential-id")
+			consumer := newTestAIGatewayConsumer(credential.Namespace, "consumer", "missing-gateway")
+			consumer.SetKonnectID("consumer-id")
+			consumer.SetParentID("gateway-id")
+			consumer.SetConditions([]metav1.Condition{{
+				Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
+				Status: metav1.ConditionTrue,
+			}})
+
+			consumerGets := 0
+			cl := fake.NewClientBuilder().
+				WithScheme(scheme.Get()).
+				WithObjects(credential, consumer).
+				WithStatusSubresource(credential).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Get: func(
+						ctx context.Context,
+						cl client.WithWatch,
+						key client.ObjectKey,
+						obj client.Object,
+						opts ...client.GetOption,
+					) error {
+						if _, ok := obj.(*aiconfigurationv1alpha1.AIGatewayConsumer); ok {
+							consumerGets++
+						}
+						return cl.Get(ctx, key, obj, opts...)
+					},
+				}).
+				Build()
+			key := client.ObjectKeyFromObject(credential)
+			if tc.deleting {
+				require.NoError(t, cl.Delete(t.Context(), credential))
+			}
+			require.NoError(t, cl.Get(t.Context(), key, credential))
+
+			reconciler := NewKonnectEntityReconciler[aiconfigurationv1alpha1.AIGatewayConsumerCredential](
+				nil, logging.DevelopmentMode, cl,
+			)
+			res, err := reconciler.Reconcile(t.Context(), credential)
+			assert.Equal(t, ctrl.Result{}, res)
+			assert.Equal(t, 2, consumerGets, "must reach the API auth parent-chain lookup")
+
+			var updated aiconfigurationv1alpha1.AIGatewayConsumerCredential
+			if tc.deleting {
+				require.NoError(t, err)
+				assert.True(t, apierrors.IsNotFound(cl.Get(t.Context(), key, &updated)),
+					"removing the cleanup finalizer must complete deletion")
+			} else {
+				require.Error(t, err)
+				missingAncestorErr, ok := errors.AsType[ReferencedObjectDoesNotExistError](err)
+				require.True(t, ok)
+				assert.Equal(t, client.ObjectKey{Namespace: credential.Namespace, Name: "missing-gateway"}, missingAncestorErr.Reference)
+				require.NoError(t, cl.Get(t.Context(), key, &updated))
+				assert.Contains(t, updated.Finalizers, KonnectCleanupFinalizer)
+			}
+		})
+	}
 }
 
 func testReconcileWithMissingAncestorBeforeAPIAuthLookup[
