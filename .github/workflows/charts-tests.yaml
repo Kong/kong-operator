@@ -151,7 +151,7 @@ jobs:
         with:
           python-version: "3.14"
 
-      - uses: helm/chart-testing-action@6ec842c01de15ebb84c8627d2744a0c2f2755c9f # v2.8.0
+      - uses: helm/chart-testing-action@720270857a28afd41e2426521a7801db09e9b510 # v2.9.0
         with:
           # Specify version to get https://github.com/helm/chart-testing/pull/721
           # --wait flag to helm uninstall
