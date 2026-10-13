@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -298,6 +299,45 @@ func (blockingPushClient) ReloadDeclarativeRawConfig(ctx context.Context, _ io.R
 	return ctx.Err()
 }
 
+// ctxCheckingClient fails every Get and status apply on an already-cancelled
+// context, as the real API server client does. The fake client ignores context
+// cancellation, so without this wrapper a report issued on the expired sync
+// deadline would silently succeed and the test could not catch the regression.
+type ctxCheckingClient struct {
+	client.Client
+}
+
+func (c ctxCheckingClient) Get(
+	ctx context.Context,
+	key client.ObjectKey,
+	obj client.Object,
+	opts ...client.GetOption,
+) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return c.Client.Get(ctx, key, obj, opts...)
+}
+
+func (c ctxCheckingClient) Status() client.SubResourceWriter {
+	return ctxCheckingStatusWriter{c.Client.Status()}
+}
+
+type ctxCheckingStatusWriter struct {
+	client.SubResourceWriter
+}
+
+func (w ctxCheckingStatusWriter) Apply(
+	ctx context.Context,
+	obj runtime.ApplyConfiguration,
+	opts ...client.SubResourceApplyOption,
+) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return w.SubResourceWriter.Apply(ctx, obj, opts...)
+}
+
 // TestSyncPendingTimeout exercises the SyncTimeout branch of syncPending: a push
 // that blocks past the configured timeout must fail the sync, leave the gateway
 // in pending so the next tick retries it, and report the entity as failed.
@@ -309,6 +349,7 @@ func TestSyncPendingTimeout(t *testing.T) {
 		return blockingPushClient{}, nil
 	}
 	instance.setAdminAPIs(sets.New(adminAPI("https://10.0.0.1:8444")))
+	instance.client = ctxCheckingClient{Client: instance.client}
 
 	gwNN := types.NamespacedName{Namespace: testGatewayNamespace, Name: testGatewayName}
 	pending := map[types.NamespacedName]struct{}{gwNN: {}}
@@ -318,6 +359,13 @@ func TestSyncPendingTimeout(t *testing.T) {
 	require.Contains(t, pending, gwNN, "the timed-out sync must leave the gateway in pending so the next tick retries it")
 	require.Equal(t, status.ConfigurationStatusFailed, instance.statusReporter.KubernetesObjectConfigurationStatus(model))
 	require.Contains(t, instance.statusReporter.KubernetesObjectConfigurationStatusMessage(model), "deadline exceeded")
+	// The sync deadline must not bound the status report: the expired sync
+	// context must not stop the DataPlanesConfigured condition from recording
+	// the push failure (a report failure is only logged, so the condition would
+	// keep its last value otherwise).
+	pushCondition := getGatewayPushCondition(t, instance)
+	require.Equal(t, metav1.ConditionFalse, pushCondition.Status)
+	require.Equal(t, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationPushFailedReason), pushCondition.Reason)
 }
 
 // secretCacheCfg finds the cache config for corev1.Secret in opts.ByObject: its keys are
