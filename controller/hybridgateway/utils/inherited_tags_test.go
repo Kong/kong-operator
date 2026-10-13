@@ -20,6 +20,7 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	pkgmetadata "github.com/kong/kong-operator/v2/pkg/metadata"
+	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
 const tagsAnnotation = "konghq.com/tags"
@@ -42,12 +43,25 @@ func tagsGatewayClass(name, tags string) *gwtypes.GatewayClass {
 }
 
 // tagsHTTPRoute builds an HTTPRoute in the "ns" namespace whose parentRefs point at the given
-// Gateway names in that same namespace.
+// Gateway names in that same namespace, each accepted by this controller. Translation only ever
+// runs on a route whose status is already settled, so the fixture carries the status entries
+// UpdateRouteStatus would have written.
 func tagsHTTPRoute(name string, parents ...string) *gwtypes.HTTPRoute {
 	route := &gwtypes.HTTPRoute{Name: name, Namespace: "ns"}
 	for _, parent := range parents {
 		route.Spec.ParentRefs = append(route.Spec.ParentRefs, gwtypes.ParentReference{
 			Name: gwtypes.ObjectName(parent),
+		})
+	}
+	return withAcceptedParents(route, parents...)
+}
+
+// withAcceptedParents adds a RouteParentStatus owned by this controller for each named parent.
+func withAcceptedParents(route *gwtypes.HTTPRoute, parents ...string) *gwtypes.HTTPRoute {
+	for _, parent := range parents {
+		route.Status.Parents = append(route.Status.Parents, gwtypes.RouteParentStatus{
+			ParentRef:      gwtypes.ParentReference{Name: gwtypes.ObjectName(parent)},
+			ControllerName: gwtypes.GatewayController(vars.ControllerName()),
 		})
 	}
 	return route
@@ -263,6 +277,10 @@ func TestInheritedTagsForRoute_ParentRefResolution(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			route := &gwtypes.HTTPRoute{Name: "route", Namespace: "ns"}
 			route.Spec.ParentRefs = []gwtypes.ParentReference{tc.parentRef}
+			route.Status.Parents = []gwtypes.RouteParentStatus{{
+				ParentRef:      tc.parentRef,
+				ControllerName: gwtypes.GatewayController(vars.ControllerName()),
+			}}
 
 			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithRuntimeObjects(tc.objects...).Build()
 			pair := inheritedTagsForRoute(context.Background(), logr.Discard(), cl, route)
@@ -278,6 +296,70 @@ func TestInheritedTagsForRoute_SchemeWithoutGatewayAPI(t *testing.T) {
 	cl := fake.NewClientBuilder().WithScheme(runtime.NewScheme()).Build()
 	pair := inheritedTagsForRoute(context.Background(), logr.Discard(), cl, tagsHTTPRoute("route", "gw"))
 	assert.Nil(t, slices.Concat(pair.gateway, pair.gatewayClass))
+}
+
+// TestInheritedTagsForRoute_OnlyParentsThisControllerReconciles is the regression guard for the
+// whole filter: a route can be attached to Gateways owned by another implementation, and those
+// produce none of the Kong entities being tagged.
+func TestInheritedTagsForRoute_OnlyParentsThisControllerReconciles(t *testing.T) {
+	objects := []runtime.Object{
+		tagsGateway("ns", "ours", "our-class", "our-tag"),
+		tagsGateway("ns", "theirs", "their-class", "their-tag"),
+		tagsGatewayClass("our-class", "our-class-tag"),
+		tagsGatewayClass("their-class", "their-class-tag"),
+	}
+
+	parentRef := func(name string) gwtypes.ParentReference {
+		return gwtypes.ParentReference{Name: gwtypes.ObjectName(name)}
+	}
+
+	tests := []struct {
+		name     string
+		statuses []gwtypes.RouteParentStatus
+		expected []string
+	}{
+		{
+			name: "a parent owned by another controller contributes nothing",
+			statuses: []gwtypes.RouteParentStatus{
+				{ParentRef: parentRef("ours"), ControllerName: gwtypes.GatewayController(vars.ControllerName())},
+				{ParentRef: parentRef("theirs"), ControllerName: "example.com/some-other-controller"},
+			},
+			expected: []string{"our-tag", "our-class-tag"},
+		},
+		{
+			name: "a parent with no status entry at all contributes nothing",
+			statuses: []gwtypes.RouteParentStatus{
+				{ParentRef: parentRef("ours"), ControllerName: gwtypes.GatewayController(vars.ControllerName())},
+			},
+			expected: []string{"our-tag", "our-class-tag"},
+		},
+		{
+			name:     "a route with no accepted parent inherits nothing",
+			statuses: nil,
+			expected: nil,
+		},
+		{
+			name: "both parents accepted by us are unioned",
+			statuses: []gwtypes.RouteParentStatus{
+				{ParentRef: parentRef("ours"), ControllerName: gwtypes.GatewayController(vars.ControllerName())},
+				{ParentRef: parentRef("theirs"), ControllerName: gwtypes.GatewayController(vars.ControllerName())},
+			},
+			// Every Gateway tag still precedes every GatewayClass tag.
+			expected: []string{"our-tag", "their-tag", "our-class-tag", "their-class-tag"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			route := &gwtypes.HTTPRoute{Name: "route", Namespace: "ns"}
+			route.Spec.ParentRefs = []gwtypes.ParentReference{parentRef("ours"), parentRef("theirs")}
+			route.Status.Parents = tc.statuses
+
+			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithRuntimeObjects(objects...).Build()
+			pair := inheritedTagsForRoute(context.Background(), logr.Discard(), cl, route)
+			assert.Equal(t, tc.expected, slices.Concat(pair.gateway, pair.gatewayClass))
+		})
+	}
 }
 
 func TestTagsForGatewayClassOf(t *testing.T) {
@@ -401,6 +483,39 @@ func TestInheritedTagsForKongObject_MemoizesRouteLookups(t *testing.T) {
 	assert.Equal(t, want, InheritedTagsForKongObject(ctx, logr.Discard(), cl, routeA, kongServiceAttachedTo(routeA, routeB)))
 	assert.Equal(t, 1, gets-afterFirst,
 		"only the Kong entity itself should be re-read; the routes, Gateways and GatewayClasses are memoized")
+}
+
+// TestInheritedTagsForKongObject_SkipsUnmanagedParents checks the filter still applies to the
+// other routes attached to a shared entity, not just to the route being reconciled.
+func TestInheritedTagsForKongObject_SkipsUnmanagedParents(t *testing.T) {
+	routeA := tagsHTTPRoute("route-a", "gw-a")
+
+	// routeB is attached to the same KongService but one of its parents belongs to another
+	// controller, so only gw-b contributes.
+	routeB := &gwtypes.HTTPRoute{Name: "route-b", Namespace: "ns"}
+	routeB.Spec.ParentRefs = []gwtypes.ParentReference{{Name: "gw-b"}, {Name: "theirs"}}
+	routeB.Status.Parents = []gwtypes.RouteParentStatus{
+		{ParentRef: gwtypes.ParentReference{Name: "gw-b"}, ControllerName: gwtypes.GatewayController(vars.ControllerName())},
+		{ParentRef: gwtypes.ParentReference{Name: "theirs"}, ControllerName: "example.com/some-other-controller"},
+	}
+
+	objects := []runtime.Object{
+		tagsGateway("ns", "gw-a", "gwc-a", "team-a"),
+		tagsGateway("ns", "gw-b", "gwc-b", "team-b"),
+		tagsGateway("ns", "theirs", "their-class", "their-tag"),
+		tagsGatewayClass("gwc-a", "class-a"),
+		tagsGatewayClass("gwc-b", "class-b"),
+		tagsGatewayClass("their-class", "their-class-tag"),
+		routeA, routeB, kongServiceAttachedTo(routeA, routeB),
+	}
+	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithRuntimeObjects(objects...).Build()
+
+	want := []string{"team-a", "team-b", "class-a", "class-b"}
+	assert.Equal(t, want,
+		InheritedTagsForKongObject(context.Background(), logr.Discard(), cl, routeA, kongServiceAttachedTo(routeA, routeB)))
+	assert.Equal(t, want,
+		InheritedTagsForKongObject(context.Background(), logr.Discard(), cl, routeB, kongServiceAttachedTo(routeA, routeB)),
+		"the value must not depend on which route is reconciled")
 }
 
 func TestAppendTagsAnnotation(t *testing.T) {

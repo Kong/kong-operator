@@ -21,6 +21,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
 var (
@@ -3478,6 +3479,13 @@ func TestServiceForRule_TagsAnnotation(t *testing.T) {
 					CommonRouteSpec: gatewayv1.CommonRouteSpec{ParentRefs: []gatewayv1.ParentReference{{Name: "test-gateway"}}},
 				},
 			}
+			// Translation only ever runs on a route whose status is already settled (Reconcile
+			// updates it first and requeues), so the fixture carries the accepted-parent entry
+			// that marks the parentRef as one this controller reconciles.
+			httpRoute.Status.Parents = []gwtypes.RouteParentStatus{{
+				ParentRef:      gwtypes.ParentReference{Name: "test-gateway"},
+				ControllerName: gwtypes.GatewayController(vars.ControllerName()),
+			}}
 			rule := gwtypes.HTTPRouteRule{
 				BackendRefs: tt.backendRefs,
 				Matches: []gatewayv1.HTTPRouteMatch{
