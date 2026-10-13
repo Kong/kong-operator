@@ -151,7 +151,8 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, dataplane *operator
 	// customize the dataplane with the extensions field
 
 	log.Trace(logger, "applying extensions")
-	stop, result, err := extensions.ApplyExtensions(ctx, r.Client, dataplane, r.KonnectEnabled, &extensionskonnect.DataPlaneKonnectExtensionProcessor{})
+	konnectProcessor := &extensionskonnect.DataPlaneKonnectExtensionProcessor{}
+	stop, result, err := extensions.ApplyExtensions(ctx, r.Client, dataplane, r.KonnectEnabled, konnectProcessor)
 	if err != nil {
 		if extensionserrors.IsKonnectExtensionError(err) {
 			log.Debug(logger, "failed to apply extensions", "err", err)
@@ -162,44 +163,64 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, dataplane *operator
 	if stop || !result.IsZero() {
 		return result, nil
 	}
+	// Konnect hybrid DataPlanes don't expose the Admin API.
+	adminAPIDisabled := konnectProcessor.AdminAPIDisabled()
 
-	// Ensure "preview" Admin API service.
-	res, dataplaneAdminService, err := r.ensurePreviewAdminAPIService(ctx, logger, dataplane)
-	if err != nil {
-		if apierrors.IsConflict(err) {
-			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+	var certSecretName string
+	if adminAPIDisabled {
+		// Both preview and live admin Services: live ones are otherwise only
+		// removed when delegating to the DataPlane controller.
+		if deleted, err := deleteAdminServicesForDataPlane(ctx, r.Client, dataplane, nil); err != nil {
+			return ctrl.Result{}, err
+		} else if deleted {
+			return ctrl.Result{}, nil // dataplane admin service deletion will trigger reconciliation
 		}
-		cErr := r.ensureRolledOutCondition(ctx, logger, dataplane, metav1.ConditionFalse, kcfgdataplane.DataPlaneConditionReasonRolloutFailed, "failed to ensure preview Admin API Service")
-		return ctrl.Result{}, fmt.Errorf("failed ensuring that preview Admin API Service exists for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, errors.Join(cErr, err))
-	} else if res == op.Created || res == op.Updated {
-		return ctrl.Result{}, nil // dataplane admin service creation/update will trigger reconciliation
-	}
 
-	if updated, err := r.ensureDataPlaneAdminAPIInRolloutStatus(ctx, logger, dataplane, dataplaneAdminService); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed updating rollout status with preview Admin API service addresses: %w", err)
-	} else if updated {
-		return ctrl.Result{}, nil
-	}
+		if updated, err := r.clearDataPlaneAdminAPIInRolloutStatus(ctx, logger, dataplane); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed clearing Admin API service from rollout status: %w", err)
+		} else if updated {
+			return ctrl.Result{}, nil
+		}
+	} else {
+		// Ensure "preview" Admin API service.
+		res, dataplaneAdminService, err := r.ensurePreviewAdminAPIService(ctx, logger, dataplane)
+		if err != nil {
+			if apierrors.IsConflict(err) {
+				return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+			}
+			cErr := r.ensureRolledOutCondition(ctx, logger, dataplane, metav1.ConditionFalse, kcfgdataplane.DataPlaneConditionReasonRolloutFailed, "failed to ensure preview Admin API Service")
+			return ctrl.Result{}, fmt.Errorf("failed ensuring that preview Admin API Service exists for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, errors.Join(cErr, err))
+		} else if res == op.Created || res == op.Updated {
+			return ctrl.Result{}, nil // dataplane admin service creation/update will trigger reconciliation
+		}
 
-	log.Trace(logger, "ensuring mTLS certificate")
-	res, certSecret, err := ensureDataPlaneCertificate(ctx, r.Client, dataplane,
-		types.NamespacedName{
-			Namespace: r.ClusterCASecretNamespace,
-			Name:      r.ClusterCASecretName,
-		},
-		types.NamespacedName{
-			Namespace: dataplaneAdminService.Namespace,
-			Name:      dataplaneAdminService.Name,
-		},
-		r.SecretLabelSelector,
-		r.CertTTL,
-	)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if res != op.Noop {
-		log.Debug(logger, "mTLS certificate created/updated")
-		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
+		if updated, err := r.ensureDataPlaneAdminAPIInRolloutStatus(ctx, logger, dataplane, dataplaneAdminService); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed updating rollout status with preview Admin API service addresses: %w", err)
+		} else if updated {
+			return ctrl.Result{}, nil
+		}
+
+		log.Trace(logger, "ensuring mTLS certificate")
+		res, certSecret, err := ensureDataPlaneCertificate(ctx, r.Client, dataplane,
+			types.NamespacedName{
+				Namespace: r.ClusterCASecretNamespace,
+				Name:      r.ClusterCASecretName,
+			},
+			types.NamespacedName{
+				Namespace: dataplaneAdminService.Namespace,
+				Name:      dataplaneAdminService.Name,
+			},
+			r.SecretLabelSelector,
+			r.CertTTL,
+		)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if res != op.Noop {
+			log.Debug(logger, "mTLS certificate created/updated")
+			return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
+		}
+		certSecretName = certSecret.Name
 	}
 
 	// Ensure "preview" Ingress service.
@@ -219,13 +240,22 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, dataplane *operator
 	}
 
 	// Ensure "preview" Deployment.
-	deployment, res, err := r.ensureDeploymentForDataPlane(ctx, logger, dataplane, certSecret)
+	deployment, res, err := r.ensureDeploymentForDataPlane(ctx, logger, dataplane, certSecretName, adminAPIDisabled)
 	if err != nil {
 		cErr := r.ensureRolledOutCondition(ctx, logger, dataplane, metav1.ConditionFalse, kcfgdataplane.DataPlaneConditionReasonRolloutFailed, "failed to ensure preview Deployment")
 		return ctrl.Result{}, fmt.Errorf("failed to ensure Deployment for DataPlane: %w", errors.Join(cErr, err))
 	} else if res == op.Created || res == op.Updated {
 		return ctrl.Result{}, nil // dataplane deployment creation/update will trigger reconciliation
-	} else if replicas := deployment.Spec.Replicas; replicas != nil && *replicas == 0 {
+	}
+
+	if adminAPIDisabled {
+		// Runs every reconcile so leftovers converge once no Deployment mounts them.
+		if err := deleteUnreferencedAdminCertSecrets(ctx, r.Client, dataplane); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	if replicas := deployment.Spec.Replicas; replicas != nil && *replicas == 0 {
 		return ctrl.Result{}, r.ensureRolledOutCondition(ctx, logger, dataplane, metav1.ConditionFalse, kcfgdataplane.DataPlaneConditionReasonRolloutWaitingForChange, "")
 	}
 
@@ -274,10 +304,11 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, dataplane *operator
 		"app":                        dataplane.Name,
 		consts.OperatorLabelSelector: dataplane.Status.RolloutStatus.Deployment.Selector,
 	}
-	for _, serviceType := range []consts.ServiceType{
-		consts.DataPlaneIngressServiceLabelValue,
-		consts.DataPlaneAdminServiceLabelValue,
-	} {
+	liveServiceTypes := []consts.ServiceType{consts.DataPlaneIngressServiceLabelValue}
+	if !adminAPIDisabled {
+		liveServiceTypes = append(liveServiceTypes, consts.DataPlaneAdminServiceLabelValue)
+	}
+	for _, serviceType := range liveServiceTypes {
 		if ok, err := r.waitForLiveServiceSelectorsPropagation(ctx,
 			dataplane,
 			serviceType,
@@ -504,7 +535,8 @@ func (r *BlueGreenReconciler) ensureDeploymentForDataPlane(
 	ctx context.Context,
 	logger logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
-	certSecret *corev1.Secret,
+	certSecretName string,
+	adminAPIDisabled bool,
 ) (*appsv1.Deployment, op.Result, error) {
 	deploymentOpts := []k8sresources.DeploymentOpt{
 		labelSelectorFromDataPlaneRolloutStatusSelectorDeploymentOpt(dataplane),
@@ -534,7 +566,8 @@ func (r *BlueGreenReconciler) ensureDeploymentForDataPlane(
 	}
 
 	deploymentBuilder := NewDeploymentBuilder(logger.WithName("deployment_builder"), r.Client).
-		WithClusterCertificate(certSecret.Name).
+		WithClusterCertificate(certSecretName).
+		WithAdminAPIDisabled(adminAPIDisabled).
 		WithOpts(deploymentOpts...).
 		WithDefaultImage(r.DefaultImage).
 		WithAdditionalLabels(deploymentLabels).
@@ -731,6 +764,21 @@ func (r *BlueGreenReconciler) ensureDataPlaneAdminAPIInRolloutStatus(
 
 	dataplane.Status.RolloutStatus.Services.AdminAPI.Addresses = addresses
 	dataplane.Status.RolloutStatus.Services.AdminAPI.Name = dataplaneAdminAPIService.Name
+	return r.patchRolloutStatus(ctx, log, old, dataplane)
+}
+
+// clearDataPlaneAdminAPIInRolloutStatus removes the Admin API service from the rollout status.
+func (r *BlueGreenReconciler) clearDataPlaneAdminAPIInRolloutStatus(
+	ctx context.Context,
+	log logr.Logger,
+	dataplane *operatorv1beta1.DataPlane,
+) (bool, error) {
+	if extractRolloutStatusServiceAdmin(dataplane) == nil {
+		return false, nil
+	}
+
+	old := dataplane.DeepCopy()
+	dataplane.Status.RolloutStatus.Services.AdminAPI = nil
 	return r.patchRolloutStatus(ctx, log, old, dataplane)
 }
 
