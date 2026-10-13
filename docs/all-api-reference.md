@@ -7660,8 +7660,8 @@ configuration to the data planes referencing this OnPremAIGateway.
 
 | Field | Description |
 | --- | --- |
-| `interval` _*k8s.io/apimachinery/pkg/apis/meta/v1.Duration_ | Interval is the interval between two rounds of syncing configuration with data planes. If not specified, the default interval as defined by the operator will be used. |
-| `timeout` _*k8s.io/apimachinery/pkg/apis/meta/v1.Duration_ | Timeout is the timeout of a single run of syncing configuration with data planes. If not specified, the default timeout as defined by the operator will be used. |
+| `intervalSeconds` _*int32_ | IntervalSeconds is the interval between two rounds of syncing configuration with data planes, in seconds. If not specified, the default interval as defined by the operator will be used. |
+| `timeoutSeconds` _*int32_ | TimeoutSeconds is the timeout of a single run of syncing configuration with data planes, in seconds. If not specified, the default timeout as defined by the operator will be used. |
 
 _Appears in:_
 

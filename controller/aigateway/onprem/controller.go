@@ -312,11 +312,11 @@ func (r *Reconciler) configFromSpec(
 ) multiinstanceai.Config {
 	cfg := multiinstanceai.Config{}
 	if dps := onprem.Spec.DataPlaneSync; dps != nil {
-		if dps.Interval != nil {
-			cfg.SyncInterval = dps.Interval.Duration
+		if dps.IntervalSeconds != nil {
+			cfg.SyncInterval = time.Duration(*dps.IntervalSeconds) * time.Second
 		}
-		if dps.Timeout != nil {
-			cfg.SyncTimeout = dps.Timeout.Duration
+		if dps.TimeoutSeconds != nil {
+			cfg.SyncTimeout = time.Duration(*dps.TimeoutSeconds) * time.Second
 		}
 	}
 	return cfg

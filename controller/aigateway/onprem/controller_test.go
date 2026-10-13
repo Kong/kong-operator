@@ -18,12 +18,14 @@ package onprem
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
+	multiinstanceai "github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
@@ -113,6 +115,70 @@ func TestSetReadySkippingLicenseCondition(t *testing.T) {
 			assert.Equal(t, tc.wantReason, ready.Reason)
 			assert.Equal(t, tc.wantMessage, ready.Message)
 			assert.Equal(t, onprem.GetGeneration(), ready.ObservedGeneration)
+		})
+	}
+}
+
+func TestConfigFromSpec(t *testing.T) {
+	tests := []struct {
+		name     string
+		spec     aigatewayv1alpha1.OnPremAIGatewaySpec
+		want     multiinstanceai.Config
+		wantName string
+	}{
+		{
+			name: "nil dataplaneSync",
+			want: multiinstanceai.Config{},
+		},
+		{
+			name: "nil interval and timeout",
+			spec: aigatewayv1alpha1.OnPremAIGatewaySpec{
+				DataPlaneSync: &aigatewayv1alpha1.OnPremAIGatewayDataPlaneSync{},
+			},
+			want: multiinstanceai.Config{},
+		},
+		{
+			name: "interval and timeout set",
+			spec: aigatewayv1alpha1.OnPremAIGatewaySpec{
+				DataPlaneSync: &aigatewayv1alpha1.OnPremAIGatewayDataPlaneSync{
+					IntervalSeconds: new(int32(10)),
+					TimeoutSeconds:  new(int32(60)),
+				},
+			},
+			want: multiinstanceai.Config{
+				SyncInterval: 10 * time.Second,
+				SyncTimeout:  60 * time.Second,
+			},
+		},
+		{
+			name: "only interval set",
+			spec: aigatewayv1alpha1.OnPremAIGatewaySpec{
+				DataPlaneSync: &aigatewayv1alpha1.OnPremAIGatewayDataPlaneSync{
+					IntervalSeconds: new(int32(5)),
+				},
+			},
+			want: multiinstanceai.Config{
+				SyncInterval: 5 * time.Second,
+			},
+		},
+		{
+			name: "only timeout set",
+			spec: aigatewayv1alpha1.OnPremAIGatewaySpec{
+				DataPlaneSync: &aigatewayv1alpha1.OnPremAIGatewayDataPlaneSync{
+					TimeoutSeconds: new(int32(30)),
+				},
+			},
+			want: multiinstanceai.Config{
+				SyncTimeout: 30 * time.Second,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			onprem := &aigatewayv1alpha1.OnPremAIGateway{Spec: tc.spec}
+			cfg := new(Reconciler).configFromSpec(onprem)
+			assert.Equal(t, tc.want, cfg)
 		})
 	}
 }

@@ -55,8 +55,8 @@ type Config struct {
 	// whose sync loop reads it at start-up.
 	SyncInterval time.Duration
 
-	// SyncTimeout is the timeout of a single run of syncing configuration with a
-	// data plane. Zero means no timeout is applied to a sync run.
+	// SyncTimeout is the timeout of a single run of syncing configuration with
+	// a gateway's data planes. Zero means no timeout is applied to a sync run.
 	// It's part of the hashed config so that changing it restarts the instance,
 	// whose sync loop reads it at start-up.
 	SyncTimeout time.Duration
@@ -78,9 +78,11 @@ func Hash(cfg Config) (string, error) {
 		h.Write([]byte(cfg.AdminClientCertSecretNN.String()))
 	}
 	if cfg.SyncInterval != 0 {
+		h.Write([]byte("interval:"))
 		h.Write([]byte(cfg.SyncInterval.String()))
 	}
 	if cfg.SyncTimeout != 0 {
+		h.Write([]byte("timeout:"))
 		h.Write([]byte(cfg.SyncTimeout.String()))
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
@@ -426,7 +428,8 @@ func (i *Instance) syncPending(
 	for nn := range pending {
 		// A per-gateway timeout keeps one slow sync from starving the other
 		// gateways in the round.
-		syncCtx, cancel := context.WithCancel(ctx)
+		syncCtx := ctx
+		cancel := func() {}
 		if i.cfg.SyncTimeout > 0 {
 			syncCtx, cancel = context.WithTimeout(ctx, i.cfg.SyncTimeout)
 		}
@@ -537,7 +540,9 @@ func (i *Instance) Run(ctx context.Context) error {
 	// config, so changing it restarts the instance (it's part of the hashed
 	// config).
 	syncInterval := i.cfg.SyncInterval
-	if syncInterval == 0 {
+	if syncInterval <= 0 {
+		// A non-positive interval would panic time.NewTicker. The CRD rejects
+		// negative values, but 0 is admitted and out-of-band writes exist.
 		syncInterval = DefaultSyncInterval
 	}
 	var (

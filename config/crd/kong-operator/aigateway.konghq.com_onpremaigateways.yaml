@@ -61,16 +61,22 @@ spec:
                   DataPlaneSync defines the configuration for syncing configuration
                   to the data planes referencing this OnPremAIGateway.
                 properties:
-                  interval:
+                  intervalSeconds:
                     description: |-
-                      Interval is the interval between two rounds of syncing configuration with data planes.
+                      IntervalSeconds is the interval between two rounds of syncing configuration
+                      with data planes, in seconds.
                       If not specified, the default interval as defined by the operator will be used.
-                    type: string
-                  timeout:
+                    format: int32
+                    minimum: 0
+                    type: integer
+                  timeoutSeconds:
                     description: |-
-                      Timeout is the timeout of a single run of syncing configuration with data planes.
+                      TimeoutSeconds is the timeout of a single run of syncing configuration with
+                      data planes, in seconds.
                       If not specified, the default timeout as defined by the operator will be used.
-                    type: string
+                    format: int32
+                    minimum: 0
+                    type: integer
                 type: object
             type: object
           status:

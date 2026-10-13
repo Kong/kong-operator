@@ -126,6 +126,18 @@ func TestHash(t *testing.T) {
 		AdminClientCertSecretNN: base.AdminClientCertSecretNN,
 		SyncTimeout:             30 * time.Second,
 	}), "a changed sync timeout must drift the hash so the instance restarts with it")
+
+	// The hash input is prefixed with a per-field discriminator: equal values on
+	// different fields must not collapse to the same hash.
+	require.NotEqual(t, hashOf(Config{
+		DBLessConfig:            base.DBLessConfig,
+		AdminClientCertSecretNN: base.AdminClientCertSecretNN,
+		SyncInterval:            30 * time.Second,
+	}), hashOf(Config{
+		DBLessConfig:            base.DBLessConfig,
+		AdminClientCertSecretNN: base.AdminClientCertSecretNN,
+		SyncTimeout:             30 * time.Second,
+	}), "equal interval and timeout values must produce different hashes")
 }
 
 // testAIGatewayModel returns a valid AIGatewayModel pointing at the test gateway.

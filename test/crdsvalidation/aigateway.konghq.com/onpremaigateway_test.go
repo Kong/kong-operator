@@ -3,7 +3,6 @@ package crdsvalidation_test
 import (
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -47,8 +46,8 @@ func TestOnPremAIGateway(t *testing.T) {
 				TestObject: func() *aigatewayv1alpha1.OnPremAIGateway {
 					obj := validOnPremAIGateway(ns.Name)
 					obj.Spec.DataPlaneSync = &aigatewayv1alpha1.OnPremAIGatewayDataPlaneSync{
-						Interval: &metav1.Duration{Duration: 5 * time.Second},
-						Timeout:  &metav1.Duration{Duration: 30 * time.Second},
+						IntervalSeconds: new(int32(5)),
+						TimeoutSeconds:  new(int32(30)),
 					}
 					return obj
 				}(),
@@ -58,8 +57,10 @@ func TestOnPremAIGateway(t *testing.T) {
 					// fields missing from the CRD schema, so Create succeeding
 					// alone proves nothing about the schema.
 					require.NotNil(t, obj.Spec.DataPlaneSync)
-					require.Equal(t, 5*time.Second, obj.Spec.DataPlaneSync.Interval.Duration)
-					require.Equal(t, 30*time.Second, obj.Spec.DataPlaneSync.Timeout.Duration)
+					require.NotNil(t, obj.Spec.DataPlaneSync.IntervalSeconds)
+					require.Equal(t, int32(5), *obj.Spec.DataPlaneSync.IntervalSeconds)
+					require.NotNil(t, obj.Spec.DataPlaneSync.TimeoutSeconds)
+					require.Equal(t, int32(30), *obj.Spec.DataPlaneSync.TimeoutSeconds)
 				},
 			},
 			{
@@ -74,9 +75,31 @@ func TestOnPremAIGateway(t *testing.T) {
 					// The API server materializes the empty object, so the pointer
 					// reads back non-nil; what matters is that no values leak in.
 					require.NotNil(t, obj.Spec.DataPlaneSync)
-					require.Nil(t, obj.Spec.DataPlaneSync.Interval)
-					require.Nil(t, obj.Spec.DataPlaneSync.Timeout)
+					require.Nil(t, obj.Spec.DataPlaneSync.IntervalSeconds)
+					require.Nil(t, obj.Spec.DataPlaneSync.TimeoutSeconds)
 				},
+			},
+			{
+				Name: "negative intervalSeconds - invalid",
+				TestObject: func() *aigatewayv1alpha1.OnPremAIGateway {
+					obj := validOnPremAIGateway(ns.Name)
+					obj.Spec.DataPlaneSync = &aigatewayv1alpha1.OnPremAIGatewayDataPlaneSync{
+						IntervalSeconds: new(int32(-1)),
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("Invalid value"),
+			},
+			{
+				Name: "negative timeoutSeconds - invalid",
+				TestObject: func() *aigatewayv1alpha1.OnPremAIGateway {
+					obj := validOnPremAIGateway(ns.Name)
+					obj.Spec.DataPlaneSync = &aigatewayv1alpha1.OnPremAIGatewayDataPlaneSync{
+						TimeoutSeconds: new(int32(-1)),
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("Invalid value"),
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})

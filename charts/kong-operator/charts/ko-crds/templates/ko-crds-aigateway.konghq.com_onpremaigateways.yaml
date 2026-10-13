@@ -45,10 +45,14 @@ spec:
             properties:
               dataplaneSync:
                 properties:
-                  interval:
-                    type: string
-                  timeout:
-                    type: string
+                  intervalSeconds:
+                    format: int32
+                    minimum: 0
+                    type: integer
+                  timeoutSeconds:
+                    format: int32
+                    minimum: 0
+                    type: integer
                 type: object
             type: object
           status:

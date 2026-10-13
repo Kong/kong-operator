@@ -70,17 +70,21 @@ type OnPremAIGatewaySpec struct {
 // OnPremAIGatewayDataPlaneSync defines the configuration for syncing
 // configuration to the data planes referencing this OnPremAIGateway.
 type OnPremAIGatewayDataPlaneSync struct {
-	// Interval is the interval between two rounds of syncing configuration with data planes.
+	// IntervalSeconds is the interval between two rounds of syncing configuration
+	// with data planes, in seconds.
 	// If not specified, the default interval as defined by the operator will be used.
 	//
 	// +optional
-	Interval *metav1.Duration `json:"interval,omitempty"`
+	// +kubebuilder:validation:Minimum=0
+	IntervalSeconds *int32 `json:"intervalSeconds,omitempty"`
 
-	// Timeout is the timeout of a single run of syncing configuration with data planes.
+	// TimeoutSeconds is the timeout of a single run of syncing configuration with
+	// data planes, in seconds.
 	// If not specified, the default timeout as defined by the operator will be used.
 	//
 	// +optional
-	Timeout *metav1.Duration `json:"timeout,omitempty"`
+	// +kubebuilder:validation:Minimum=0
+	TimeoutSeconds *int32 `json:"timeoutSeconds,omitempty"`
 }
 
 // OnPremAIGatewayStatus defines the observed state of OnPremAIGateway.
