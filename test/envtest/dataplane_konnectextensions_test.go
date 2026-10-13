@@ -1,8 +1,10 @@
 package envtest
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -34,6 +36,7 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
@@ -326,17 +329,8 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 					volumes := createdDeployment.Spec.Template.Spec.Volumes
 					volumeMounts := dpContainer.VolumeMounts
 
-					hasClusterCertVolume := lo.ContainsBy(createdDeployment.Spec.Template.Spec.Volumes, func(v corev1.Volume) bool {
-						return v.Name == consts.ClusterCertificateVolume
-					})
-					require.Truef(t, hasClusterCertVolume, "expected deployment spec to have cluster certificate volume, got: %+v", volumes)
-
-					hasClusterCertVolumeMount := lo.ContainsBy(dpContainer.VolumeMounts, func(vm corev1.VolumeMount) bool {
-						return vm.Name == consts.ClusterCertificateVolume &&
-							vm.MountPath == consts.ClusterCertificateVolumeMountPath &&
-							vm.ReadOnly == true
-					})
-					require.True(t, hasClusterCertVolumeMount, "expected deployment spec to have cluster certificate volume mount, got: %+v", volumeMounts)
+					// Hybrid DataPlanes don't get the admin API cluster certificate.
+					assertNoAdminAPIInDeployment(t, createdDeployment)
 
 					hasKongClusterCertVolume := lo.ContainsBy(createdDeployment.Spec.Template.Spec.Volumes, func(v corev1.Volume) bool {
 						return v.Name == consts.KongClusterCertVolume
@@ -398,6 +392,12 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 					for _, expectedEnvVar := range expectedEnvVars {
 						assert.Contains(t, dpContainer.Env, expectedEnvVar)
 					}
+				}, waitTime, tickTime)
+
+				t.Logf("Verifying no admin API Service nor admin certificate Secret is created for the hybrid DataPlane")
+				require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(&dp), &dp))
+				require.EventuallyWithT(t, func(t *assert.CollectT) {
+					assertNoAdminAPIResources(t, ctx, cl, &dp)
 				}, waitTime, tickTime)
 
 				t.Logf("Waiting for DataPlane to have KonnectExtensionApplied condition")
@@ -525,10 +525,7 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 					volumes := createdDeployment.Spec.Template.Spec.Volumes
 					volumeMounts := dpContainer.VolumeMounts
 
-					hasClusterCertVolume := lo.ContainsBy(createdDeployment.Spec.Template.Spec.Volumes, func(v corev1.Volume) bool {
-						return v.Name == consts.ClusterCertificateVolume
-					})
-					require.Truef(t, hasClusterCertVolume, "expected deployment spec to have cluster certificate volume, got: %+v", volumes)
+					assertNoAdminAPIInDeployment(t, createdDeployment)
 
 					hasCustomVolume := lo.ContainsBy(createdDeployment.Spec.Template.Spec.Volumes, func(v corev1.Volume) bool {
 						return v.Name == "custom-volume"
@@ -540,13 +537,6 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 							vm.MountPath == "/var/custom-volume"
 					})
 					require.True(t, hasCustomVolumeMount, "expected deployment spec to have custom volume mount, got: %+v", volumeMounts)
-
-					hasClusterCertVolumeMount := lo.ContainsBy(dpContainer.VolumeMounts, func(vm corev1.VolumeMount) bool {
-						return vm.Name == consts.ClusterCertificateVolume &&
-							vm.MountPath == consts.ClusterCertificateVolumeMountPath &&
-							vm.ReadOnly == true
-					})
-					require.True(t, hasClusterCertVolumeMount, "expected deployment spec to have cluster certificate volume mount, got: %+v", volumeMounts)
 
 					hasKongClusterCertVolume := lo.ContainsBy(createdDeployment.Spec.Template.Spec.Volumes, func(v corev1.Volume) bool {
 						return v.Name == consts.KongClusterCertVolume
@@ -566,6 +556,131 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 					require.True(t, lo.ContainsBy(dp.Status.Conditions, func(c metav1.Condition) bool {
 						return c.Type == string(konnect2.KonnectExtensionAppliedType) && c.Status == metav1.ConditionTrue
 					}), "expected DataPlane to have KonnectExtensionApplied condition, got: %+v", dp.Status.Conditions)
+				}, waitTime, tickTime)
+			})
+
+			t.Run("switching from K8sIngressController to hybrid removes admin API resources", func(t *testing.T) {
+				const (
+					konnectControlPlaneID = "aee0667a-90c6-45a6-a2d8-575e1e487b89"
+					dpCertID              = "111111111111111111111111111111111-3"
+				)
+
+				sdk.EXPECT().CreateDataplaneCertificate(mock.Anything, konnectControlPlaneID, mock.Anything).
+					Return(&sdkkonnectops.CreateDataplaneCertificateResponse{
+						DataPlaneClientCertificateResponse: &sdkkonnectcomp.DataPlaneClientCertificateResponse{
+							Item: &sdkkonnectcomp.DataPlaneClientCertificate{
+								ID:   new(dpCertID),
+								Cert: new(deploy.TestValidCACertPEM),
+							},
+						},
+					}, nil)
+
+				t.Logf("Creating KonnectAPIAuthConfiguration")
+				konnectAPIAuthConfiguration := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
+
+				t.Logf("Creating KonnectControlPlane with K8sIngressController cluster type")
+				cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, cl, konnectAPIAuthConfiguration,
+					deploy.WithKonnectID(konnectControlPlaneID),
+					func(obj client.Object) {
+						obj.(*konnectv1alpha2.KonnectGatewayControlPlane).Status.ClusterType = sdkkonnectcomp.ControlPlaneClusterTypeClusterTypeK8SIngressController
+					},
+				)
+
+				t.Logf("Creating KonnectExtension")
+				konnectExtension := konnectv1alpha2.KonnectExtension{
+					GenerateName: "ke-",
+					Namespace:    ns.Name,
+					Spec: konnectv1alpha2.KonnectExtensionSpec{
+						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+									Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: cp.Name,
+									},
+								},
+							},
+						},
+					},
+				}
+				require.NoError(t, cl.Create(ctx, &konnectExtension))
+
+				t.Logf("Creating DataPlane with KonnectExtension reference")
+				dp := operatorv1beta1.DataPlane{
+					GenerateName: "dp-",
+					Namespace:    ns.Name,
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Extensions: []commonv1alpha1.ExtensionRef{
+								{
+									Group: konnectv1alpha1.GroupVersion.Group,
+									Kind:  "KonnectExtension",
+									Name:  konnectExtension.Name,
+								},
+							},
+							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+								DeploymentOptions: operatorv1beta1.DeploymentOptions{
+									PodTemplateSpec: &corev1.PodTemplateSpec{
+										Spec: corev1.PodSpec{
+											Containers: []corev1.Container{
+												{
+													Name:  consts.DataPlaneProxyContainerName,
+													Image: consts.DefaultDataPlaneImage,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+				require.NoError(t, cl.Create(ctx, &dp))
+
+				t.Logf("Waiting for the K8sIngressController DataPlane to get admin API resources")
+				require.EventuallyWithT(t, func(t *assert.CollectT) {
+					require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(&konnectExtension), &konnectExtension))
+					require.NotNil(t, konnectExtension.Status.Konnect)
+					require.Equal(t, konnectv1alpha2.ClusterTypeK8sIngressController, konnectExtension.Status.Konnect.ClusterType)
+
+					adminSvcs, adminSecrets := listAdminAPIResources(t, ctx, cl, &dp)
+					require.Len(t, adminSvcs, 1)
+					require.Contains(t, adminSvcs[0].Finalizers, consts.DataPlaneOwnedWaitForOwnerFinalizer)
+					require.NotEmpty(t, adminSecrets)
+
+					deployment := getDataPlaneDeployment(t, ctx, cl, &dp)
+					require.True(t, lo.ContainsBy(deployment.Spec.Template.Spec.Volumes, func(v corev1.Volume) bool {
+						return v.Name == consts.ClusterCertificateVolume
+					}))
+					dpContainer := k8sutils.GetPodContainerByName(&deployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
+					require.NotNil(t, dpContainer)
+					require.True(t, lo.ContainsBy(dpContainer.Ports, func(p corev1.ContainerPort) bool {
+						return p.Name == k8sresources.DataPlaneAdminAPIContainerPortName
+					}))
+				}, waitTime, tickTime)
+
+				t.Logf("Switching KonnectControlPlane cluster type to ControlPlane (hybrid)")
+				require.EventuallyWithT(t, func(t *assert.CollectT) {
+					require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(cp), cp))
+					cp.Status.ClusterType = sdkkonnectcomp.ControlPlaneClusterTypeClusterTypeControlPlane
+					require.NoError(t, cl.Status().Update(ctx, cp))
+				}, waitTime, tickTime)
+
+				t.Logf("Waiting for the Deployment to drop the admin API")
+				var deploymentName string
+				require.EventuallyWithT(t, func(t *assert.CollectT) {
+					deployment := getDataPlaneDeployment(t, ctx, cl, &dp)
+					assertNoAdminAPIInDeployment(t, deployment)
+					deploymentName = deployment.Name
+				}, waitTime, tickTime)
+
+				// No Deployment controller in envtest: mark the rollout as complete
+				// so the leftover admin certificate can be removed.
+				setDeploymentRolloutStatus(t, ctx, cl, dp.Namespace, deploymentName)
+
+				t.Logf("Waiting for admin API resources to be removed")
+				require.EventuallyWithT(t, func(t *assert.CollectT) {
+					assertNoAdminAPIResources(t, ctx, cl, &dp)
 				}, waitTime, tickTime)
 			})
 
@@ -725,4 +840,61 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 		})
 	}
 
+}
+
+// getDataPlaneDeployment returns the single Deployment of the DataPlane.
+func getDataPlaneDeployment(t require.TestingT, ctx context.Context, cl client.Client, dp *operatorv1beta1.DataPlane) *appsv1.Deployment {
+	var deployments appsv1.DeploymentList
+	require.NoError(t, cl.List(ctx, &deployments,
+		client.InNamespace(dp.Namespace),
+		client.MatchingLabels{"app": dp.Name},
+	))
+	require.Len(t, deployments.Items, 1)
+	return &deployments.Items[0]
+}
+
+// listAdminAPIResources returns the admin API Services and admin certificate Secrets owned by the DataPlane.
+func listAdminAPIResources(t require.TestingT, ctx context.Context, cl client.Client, dp *operatorv1beta1.DataPlane) ([]corev1.Service, []corev1.Secret) {
+	services, err := k8sutils.ListServicesForOwner(ctx, cl, dp.Namespace, dp.UID,
+		client.MatchingLabels{consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneAdminServiceLabelValue)},
+	)
+	require.NoError(t, err)
+	secrets, err := k8sutils.ListSecretsForOwner(ctx, cl, dp.UID,
+		client.InNamespace(dp.Namespace),
+		client.HasLabels{consts.ServiceSecretLabel},
+	)
+	require.NoError(t, err)
+	return services, secrets
+}
+
+// assertNoAdminAPIResources asserts the DataPlane owns no admin API Service nor admin certificate Secret.
+func assertNoAdminAPIResources(t require.TestingT, ctx context.Context, cl client.Client, dp *operatorv1beta1.DataPlane) {
+	services, secrets := listAdminAPIResources(t, ctx, cl, dp)
+	require.Empty(t, services, "expected no admin API Service owned by DataPlane")
+	require.Empty(t, secrets, "expected no admin certificate Secret owned by DataPlane")
+}
+
+// assertNoAdminAPIInDeployment asserts the DataPlane Deployment doesn't expose nor configure the admin API.
+func assertNoAdminAPIInDeployment(t require.TestingT, deployment *appsv1.Deployment) {
+	podSpec := &deployment.Spec.Template.Spec
+	require.False(t, lo.ContainsBy(podSpec.Volumes, func(v corev1.Volume) bool {
+		return v.Name == consts.ClusterCertificateVolume
+	}), "expected no cluster certificate volume, got: %+v", podSpec.Volumes)
+
+	dpContainer := k8sutils.GetPodContainerByName(podSpec, consts.DataPlaneProxyContainerName)
+	require.NotNil(t, dpContainer)
+	require.False(t, lo.ContainsBy(dpContainer.VolumeMounts, func(vm corev1.VolumeMount) bool {
+		return vm.Name == consts.ClusterCertificateVolume || vm.MountPath == consts.ClusterCertificateVolumeMountPath
+	}), "expected no cluster certificate volume mount, got: %+v", dpContainer.VolumeMounts)
+	require.False(t, lo.ContainsBy(dpContainer.Ports, func(p corev1.ContainerPort) bool {
+		return p.Name == k8sresources.DataPlaneAdminAPIContainerPortName || p.ContainerPort == consts.DataPlaneAdminAPIPort
+	}), "expected no admin API container port, got: %+v", dpContainer.Ports)
+
+	require.Contains(t, dpContainer.Env, corev1.EnvVar{Name: "KONG_ADMIN_LISTEN", Value: "off"})
+	for _, e := range dpContainer.Env {
+		require.Falsef(t,
+			strings.HasPrefix(e.Name, "KONG_ADMIN_SSL_") || strings.HasPrefix(e.Name, "KONG_NGINX_ADMIN_SSL_"),
+			"unexpected admin TLS env var %s", e.Name,
+		)
+	}
 }
