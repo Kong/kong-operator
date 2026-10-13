@@ -2,6 +2,7 @@ package converter
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -14,6 +15,7 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -183,7 +185,7 @@ func TestHTTPRouteConverter_TranslateTruncatesInheritedTags(t *testing.T) {
 	}
 
 	fixture := tagsFixture{
-		routeTags:        joinTags(routeTags),
+		routeTags:        strings.Join(routeTags, ","),
 		gatewayTags:      "gw-a,gw-b,gw-c",
 		gatewayClassTags: "class-a",
 	}
@@ -202,13 +204,75 @@ func TestHTTPRouteConverter_TranslateTruncatesInheritedTags(t *testing.T) {
 	assert.NotContains(t, kongRouteTags, "class-a")
 }
 
-func joinTags(tags []string) string {
-	out := ""
-	for i, tag := range tags {
-		if i > 0 {
-			out += ","
+// TestHTTPRouteConverter_TranslateBackendNotFoundBindingKeepsAllParentsTags covers a route attached
+// to two Gateways on the same ControlPlane whose rule resolves to no backend. The rule's
+// request-termination KongPluginBinding is named after the backend-not-found KongService, which
+// has no parentRef in its name, so the translate loop builds it once per parent and
+// deduplicateOutputStore keeps only the first. Its tags must therefore be the same whichever parent
+// built it, or the second Gateway's tags would be silently lost.
+func TestHTTPRouteConverter_TranslateBackendNotFoundBindingKeepsAllParentsTags(t *testing.T) {
+	gatewayA := newGatewayWithListenerHostnames()
+	gatewayA.Name = "gw-a"
+	gatewayA.UID = types.UID("gw-a-uid")
+	gatewayA.Annotations = map[string]string{"konghq.com/tags": "team-a"}
+
+	gatewayB := newGatewayWithListenerHostnames()
+	gatewayB.Name = "gw-b"
+	gatewayB.UID = types.UID("gw-b-uid")
+	gatewayB.Annotations = map[string]string{"konghq.com/tags": "team-b"}
+
+	// The standard objects wire gw-a to the "default" ControlPlane. gw-b gets its own
+	// KonnectExtension, owned by gw-b, pointing at that same ControlPlane.
+	objects := newKonnectGatewayStandardObjects(gatewayA)
+	for _, obj := range objects {
+		ext, ok := obj.(*konnectv1alpha2.KonnectExtension)
+		if !ok {
+			continue
 		}
-		out += tag
+		extB := ext.DeepCopy()
+		extB.Name = "test-extension-b"
+		extB.OwnerReferences[0].Name = gatewayB.Name
+		extB.OwnerReferences[0].UID = gatewayB.UID
+		objects = append(objects, extB)
+		break
 	}
-	return out
+	objects = append(objects, gatewayB)
+
+	parentRef := func(name string) gwtypes.ParentReference {
+		return gwtypes.ParentReference{
+			Name:  gwtypes.ObjectName(name),
+			Kind:  new(gwtypes.Kind("Gateway")),
+			Group: new(gwtypes.Group(gwtypes.GroupName)),
+		}
+	}
+	// The backendRef names a Service that does not exist, so the rule resolves to no target and
+	// takes the backend-not-found path.
+	route := newHTTPRouteWithRules(nil, []gwtypes.HTTPRouteRule{{
+		Matches: []gwtypes.HTTPRouteMatch{{
+			Path: &gatewayv1.HTTPPathMatch{Type: new(gatewayv1.PathMatchExact), Value: new("/one")},
+		}},
+		BackendRefs: []gwtypes.HTTPBackendRef{newBackendRef("")},
+	}})
+	route.Spec.ParentRefs = []gwtypes.ParentReference{parentRef("gw-a"), parentRef("gw-b")}
+	for _, pRef := range route.Spec.ParentRefs {
+		route.Status.Parents = append(route.Status.Parents, gwtypes.RouteParentStatus{
+			ParentRef:      pRef,
+			ControllerName: gwtypes.GatewayController(vars.ControllerName()),
+		})
+	}
+
+	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
+	converter := newHTTPRouteConverter(route, cl, false, "", testReferenceGrantVersion)
+	_, err := converter.Translate(t.Context(), logr.Discard())
+	require.NoError(t, err)
+
+	var serviceBindings []*configurationv1alpha1.KongPluginBinding
+	for _, obj := range converter.(*httpRouteConverter).outputStore {
+		if b, ok := obj.(*configurationv1alpha1.KongPluginBinding); ok && b.Spec.Targets.ServiceReference != nil {
+			serviceBindings = append(serviceBindings, b)
+		}
+	}
+	require.Len(t, serviceBindings, 1, "both parents build the same binding, which is deduplicated")
+	assert.Equal(t, commonv1alpha1.Tags{"team-a", "team-b"}, serviceBindings[0].Spec.Tags,
+		"the surviving binding must carry both Gateways' tags, not just the first parent's")
 }

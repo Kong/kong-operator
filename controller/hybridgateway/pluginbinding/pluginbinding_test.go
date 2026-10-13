@@ -17,6 +17,7 @@ import (
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
 var (
@@ -231,9 +232,16 @@ func TestBindingForPluginAndRoute(t *testing.T) {
 	}
 }
 
-// TestBindingsForPlugin_InheritedTags pins that a KongPluginBinding inherits the tags of the
-// parent Gateway it was generated for, and of that Gateway's GatewayClass. A binding is scoped to
-// one route and one parentRef, so the route's other parents must not contribute.
+// TestBindingsForPlugin_InheritedTags pins the two binding kinds' different scoping.
+//
+// A per-KongRoute binding is named after its KongRoute, which is named per parentRef, so it takes
+// the tags of the one parent Gateway it was generated for.
+//
+// The per-KongService binding is not: it is named after the backend-not-found KongService, whose
+// name has no parentRef in it, so a route attached to several Gateways on one ControlPlane builds
+// the same binding once per parent and the converter keeps only the first. It must therefore carry
+// the same tags whichever parent built it - the union over every parent this controller accepted -
+// or the tags of all but one Gateway would be silently dropped.
 func TestBindingsForPlugin_InheritedTags(t *testing.T) {
 	ctx := context.Background()
 	logger := logr.Discard()
@@ -249,18 +257,36 @@ func TestBindingsForPlugin_InheritedTags(t *testing.T) {
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(
 		newGateway("gw-a", "class-a", "team-a"),
 		newGateway("gw-b", "class-b", "team-b"),
+		newGateway("theirs", "their-class", "their-tag"),
 		&gwtypes.GatewayClass{Name: "class-a", Annotations: map[string]string{"konghq.com/tags": "class-a-tag"}},
 		&gwtypes.GatewayClass{Name: "class-b", Annotations: map[string]string{"konghq.com/tags": "class-b-tag"}},
+		&gwtypes.GatewayClass{Name: "their-class", Annotations: map[string]string{"konghq.com/tags": "their-class-tag"}},
 	).Build()
 
+	accepted := func(name string) gwtypes.RouteParentStatus {
+		return gwtypes.RouteParentStatus{
+			ParentRef:      gwtypes.ParentReference{Name: gwtypes.ObjectName(name)},
+			ControllerName: gwtypes.GatewayController(vars.ControllerName()),
+		}
+	}
 	httpRoute := &gwtypes.HTTPRoute{
 		TypeMeta:  httpRouteTypeMeta,
 		Name:      "test-route",
 		Namespace: "test-namespace",
 		Spec: gwtypes.HTTPRouteSpec{
 			CommonRouteSpec: gwtypes.CommonRouteSpec{
-				ParentRefs: []gwtypes.ParentReference{{Name: "gw-a"}, {Name: "gw-b"}},
+				ParentRefs: []gwtypes.ParentReference{{Name: "gw-a"}, {Name: "gw-b"}, {Name: "theirs"}},
 			},
+		},
+	}
+	// gw-a and gw-b are ours; "theirs" belongs to another implementation. Translation only runs on
+	// a route whose status is settled, so the fixture carries it.
+	httpRoute.Status.Parents = []gwtypes.RouteParentStatus{
+		accepted("gw-a"),
+		accepted("gw-b"),
+		{
+			ParentRef:      gwtypes.ParentReference{Name: "theirs"},
+			ControllerName: "example.com/some-other-controller",
 		},
 	}
 	cpRef := &commonv1alpha1.ControlPlaneRef{
@@ -268,25 +294,37 @@ func TestBindingsForPlugin_InheritedTags(t *testing.T) {
 		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{Name: "test-cp"},
 	}
 
-	tests := []struct {
-		parentRef string
-		expected  commonv1alpha1.Tags
-	}{
-		{parentRef: "gw-a", expected: commonv1alpha1.Tags{"team-a", "class-a-tag"}},
-		{parentRef: "gw-b", expected: commonv1alpha1.Tags{"team-b", "class-b-tag"}},
-		{parentRef: "ghost", expected: nil},
-	}
-	for _, tt := range tests {
-		t.Run(tt.parentRef, func(t *testing.T) {
-			pRef := &gwtypes.ParentReference{Name: gwtypes.ObjectName(tt.parentRef)}
+	t.Run("per-KongRoute binding takes its own parent's tags", func(t *testing.T) {
+		for _, tt := range []struct {
+			parentRef string
+			expected  commonv1alpha1.Tags
+		}{
+			{parentRef: "gw-a", expected: commonv1alpha1.Tags{"team-a", "class-a-tag"}},
+			{parentRef: "gw-b", expected: commonv1alpha1.Tags{"team-b", "class-b-tag"}},
+			{parentRef: "ghost", expected: nil},
+		} {
+			t.Run(tt.parentRef, func(t *testing.T) {
+				pRef := &gwtypes.ParentReference{Name: gwtypes.ObjectName(tt.parentRef)}
+				binding, err := BindingForPluginAndRoute(ctx, logger, fakeClient, httpRoute, pRef, cpRef, "test-plugin", "test-kong-route-"+tt.parentRef)
+				require.NoError(t, err)
+				assert.Equal(t, tt.expected, binding.Spec.Tags)
+			})
+		}
+	})
 
-			routeBinding, err := BindingForPluginAndRoute(ctx, logger, fakeClient, httpRoute, pRef, cpRef, "test-plugin", "test-kong-route")
-			require.NoError(t, err)
-			assert.Equal(t, tt.expected, routeBinding.Spec.Tags)
+	t.Run("per-KongService binding carries every accepted parent's tags whichever parent built it", func(t *testing.T) {
+		// Every Gateway tag precedes every GatewayClass tag; the unmanaged Gateway contributes nothing.
+		want := commonv1alpha1.Tags{"team-a", "team-b", "class-a-tag", "class-b-tag"}
 
-			serviceBinding, err := BindingForPluginAndService(ctx, logger, fakeClient, httpRoute, pRef, cpRef, "test-plugin", "test-kong-service")
+		var names []string
+		for _, parent := range []string{"gw-a", "gw-b"} {
+			pRef := &gwtypes.ParentReference{Name: gwtypes.ObjectName(parent)}
+			binding, err := BindingForPluginAndService(ctx, logger, fakeClient, httpRoute, pRef, cpRef, "test-plugin", "test-kong-service")
 			require.NoError(t, err)
-			assert.Equal(t, tt.expected, serviceBinding.Spec.Tags)
-		})
-	}
+			assert.Equal(t, want, binding.Spec.Tags, "built for parent %s", parent)
+			names = append(names, binding.Name)
+		}
+		// This is why the tags must not depend on the parent: both parents produce one object.
+		require.Equal(t, names[0], names[1], "both parents must build the same binding")
+	})
 }
