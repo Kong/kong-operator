@@ -77,7 +77,7 @@
   already been deleted. Policies and other entities that resolve Konnect API
   authentication through a parent chain now release their cleanup finalizer
   during deletion if an ancestor no longer exists.
-  [#6017](https://github.com/Kong/kong-operator/issues/6017)
+  [#6080](https://github.com/Kong/kong-operator/pull/6080)
 - CRDs generated from the Konnect OpenAPI spec now enforce the `maxProperties`
   constraint of shared label map types (`labels` accept at most 50 entries,
   `managedBy` at most 5). The constraint was previously emitted on the fields

@@ -871,6 +871,10 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 	}, nil
 }
 
+// removeCleanupFinalizerIfAncestorIsGone handles missing parents anywhere in the
+// API auth reference chain, not only ControlPlanes. For backward compatibility,
+// a missing ControlPlane releases the finalizer even on active entities; other
+// missing ancestors only release it on deleting entities.
 func removeCleanupFinalizerIfAncestorIsGone[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
