@@ -157,7 +157,7 @@ var config = shareddataplane.Config[
 		SetStatusAddresses: setStatusAddresses,
 	},
 
-	HPAScalingSpec:    hpaScalingSpec,
+	HorizontalScaling: horizontalScaling,
 	SetStatusReplicas: setStatusReplicas,
 }
 
@@ -202,21 +202,15 @@ func replicas(egdp *eventgatewayv1alpha1.KegDataPlane) *int32 {
 	return nil
 }
 
-// hpaScalingSpec returns the HPA scaling spec, or nil when horizontal scaling
-// is not configured.
-func hpaScalingSpec(egdp *eventgatewayv1alpha1.KegDataPlane) *k8sresources.HPAScalingSpec {
+// horizontalScaling returns the horizontal scaling options, or nil when
+// horizontal scaling is not configured.
+func horizontalScaling(egdp *eventgatewayv1alpha1.KegDataPlane) *commonv1alpha1.HorizontalScaling {
 	if egdp.Spec.Deployment == nil ||
 		egdp.Spec.Deployment.Scaling == nil ||
 		egdp.Spec.Deployment.Scaling.HorizontalScaling == nil {
 		return nil
 	}
-	hs := egdp.Spec.Deployment.Scaling.HorizontalScaling
-	return &k8sresources.HPAScalingSpec{
-		MinReplicas: hs.MinReplicas,
-		MaxReplicas: hs.MaxReplicas,
-		Metrics:     hs.Metrics,
-		Behavior:    hs.Behavior,
-	}
+	return egdp.Spec.Deployment.Scaling.HorizontalScaling
 }
 
 func setStatusReplicas(egdp *eventgatewayv1alpha1.KegDataPlane, replicas, readyReplicas int32) {

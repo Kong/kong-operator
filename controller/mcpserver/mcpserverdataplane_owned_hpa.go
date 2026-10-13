@@ -60,13 +60,7 @@ func (r *MCPServerDataPlaneReconciler) ensureHPA(
 		return nil
 	}
 
-	hs := mcpDataPlane.Spec.Deployment.Scaling.HorizontalScaling
-	generatedHPA, err := k8sresources.GenerateHPA(mcpDataPlane, &k8sresources.HPAScalingSpec{
-		MinReplicas: hs.MinReplicas,
-		MaxReplicas: hs.MaxReplicas,
-		Metrics:     hs.Metrics,
-		Behavior:    hs.Behavior,
-	}, deploymentName)
+	generatedHPA, err := k8sresources.GenerateHPA(mcpDataPlane, mcpDataPlane.Spec.Deployment.Scaling.HorizontalScaling, deploymentName)
 	if err != nil {
 		return err
 	}

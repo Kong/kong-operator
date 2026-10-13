@@ -221,7 +221,7 @@ var testConfig = Config[
 		SetStatusAddresses: testSetStatusAddresses,
 	},
 
-	HPAScalingSpec:    testHPAScalingSpec,
+	HorizontalScaling: testHorizontalScaling,
 	SetStatusReplicas: testSetStatusReplicas,
 }
 
@@ -242,19 +242,11 @@ func testReplicas(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *int32 {
 	return nil
 }
 
-func testHPAScalingSpec(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *k8sresources.HPAScalingSpec {
-	if aigwdp.Spec.Deployment == nil ||
-		aigwdp.Spec.Deployment.Scaling == nil ||
-		aigwdp.Spec.Deployment.Scaling.HorizontalScaling == nil {
+func testHorizontalScaling(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *commonv1alpha1.HorizontalScaling {
+	if aigwdp.Spec.Deployment == nil || aigwdp.Spec.Deployment.Scaling == nil {
 		return nil
 	}
-	hs := aigwdp.Spec.Deployment.Scaling.HorizontalScaling
-	return &k8sresources.HPAScalingSpec{
-		MinReplicas: hs.MinReplicas,
-		MaxReplicas: hs.MaxReplicas,
-		Metrics:     hs.Metrics,
-		Behavior:    hs.Behavior,
-	}
+	return aigwdp.Spec.Deployment.Scaling.HorizontalScaling
 }
 
 func testSetStatusReplicas(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane, replicas, readyReplicas int32) {

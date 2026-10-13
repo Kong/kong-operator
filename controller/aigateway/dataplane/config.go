@@ -225,7 +225,7 @@ var config = shareddataplane.Config[
 		CertificateLabelKey: consts.SecretAIGatewayDataPlaneAdminCertificateLabel,
 	},
 
-	HPAScalingSpec:    hpaScalingSpec,
+	HorizontalScaling: horizontalScaling,
 	SetStatusReplicas: setStatusReplicas,
 }
 
@@ -270,21 +270,15 @@ func replicas(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *int32 {
 	return nil
 }
 
-// hpaScalingSpec returns the HPA scaling spec, or nil when horizontal scaling
-// is not configured.
-func hpaScalingSpec(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *k8sresources.HPAScalingSpec {
+// horizontalScaling returns the horizontal scaling options, or nil when
+// horizontal scaling is not configured.
+func horizontalScaling(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *commonv1alpha1.HorizontalScaling {
 	if aigwdp.Spec.Deployment == nil ||
 		aigwdp.Spec.Deployment.Scaling == nil ||
 		aigwdp.Spec.Deployment.Scaling.HorizontalScaling == nil {
 		return nil
 	}
-	hs := aigwdp.Spec.Deployment.Scaling.HorizontalScaling
-	return &k8sresources.HPAScalingSpec{
-		MinReplicas: hs.MinReplicas,
-		MaxReplicas: hs.MaxReplicas,
-		Metrics:     hs.Metrics,
-		Behavior:    hs.Behavior,
-	}
+	return aigwdp.Spec.Deployment.Scaling.HorizontalScaling
 }
 
 func setStatusReplicas(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane, replicas, readyReplicas int32) {
