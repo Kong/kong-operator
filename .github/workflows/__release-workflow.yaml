@@ -13,9 +13,9 @@ on:
       gpg-passphrase:
         required: true
         description: "The GPG passphrase to sign the commits"
-      gh-pat:
+      gh-app-private-key:
         required: true
-        description: "The GitHub Personal Access Token to create the release PR"
+        description: "The GitHub App private key to create the release PR"
       konnect-pat:
         required: true
         description: "The Konnect PAT to use in the tests"
@@ -123,7 +123,6 @@ jobs:
     uses: ./.github/workflows/__build-workflow.yaml
     secrets:
       dockerhub-token: ${{ secrets.dockerhub-push-token }}
-      gh-pat: ${{ secrets.gh-pat }}
     with:
       registry: docker.io
       username: ${{ inputs.dockerhub-push-username }}
@@ -147,9 +146,6 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
-
-      - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
-        run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
 
       - name: Setup golang
         uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v5
@@ -208,9 +204,6 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
-
-      - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
-        run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
 
       - name: Setup golang
         uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v5
@@ -292,8 +285,15 @@ jobs:
           fetch-depth: 0
           ref: ${{ inputs.base }}
 
-      - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
-        run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
+      # Mint the token in the same job that uses it: app tokens do not survive being passed between jobs or through reusable-workflow boundaries.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
+          private-key: ${{ secrets.gh-app-private-key }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            kong-operator
 
       - uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v5
         with:
@@ -349,7 +349,7 @@ jobs:
       - name: Create a release PR
         uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v7.0.6
         with:
-          token: ${{ secrets.gh-pat }}
+          token: ${{ steps.app-token.outputs.token }}
           path: .
           branch: release/${{ needs.semver.outputs.fullversion }}/pr-${{ inputs.base }}
           base: ${{ inputs.base }}
@@ -391,6 +391,17 @@ jobs:
         with:
           repository: ${{ github.repository_owner }}/${{ env.DOCS_REPO }}
           path: ${{ env.DOCS_REPO }}
+
+      # Mint the token in the same job that uses it: app tokens do not survive being passed between jobs or through reusable-workflow boundaries.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
+          private-key: ${{ secrets.gh-app-private-key }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            kong-operator
+            developer.konghq.com
 
       - name: update cli argument docs
         run: |
@@ -436,8 +447,7 @@ jobs:
           delete-branch: true
           title: "docs(${{github.repository}}): update ${{github.repository}} docs"
           draft: false
-          # TODO: use actions/create-github-app-token for short lived tokens
-          token: ${{ secrets.gh-pat }}
+          token: ${{ steps.app-token.outputs.token }}
           committer: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
           author: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
           labels: team-k8s, product-kgo
