@@ -46,9 +46,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
-	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/v2/controller/pkg/address"
+	"github.com/kong/kong-operator/v2/controller/pkg/hpa"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
@@ -60,6 +60,7 @@ import (
 type Object interface {
 	client.Object
 	k8sutils.ConditionsAware
+	hpa.Owner
 }
 
 // CertificateObject is the constraint for the Konnect certificate types
@@ -177,8 +178,8 @@ type DeploymentConfig[T Object] struct {
 	DeploymentLabels func(T) map[string]string
 	// DeploymentAnnotations returns the user-provided Deployment annotations, or nil.
 	DeploymentAnnotations func(T) map[string]string
-	// Replicas returns the replica count to seed on the Deployment: the static
-	// replica count, or the HPA minReplicas when horizontal scaling is configured.
+	// Replicas returns the user-provided static replica count, or nil. It is
+	// ignored when horizontal scaling is configured.
 	Replicas func(T) *int32
 
 	// BuildContainer builds the DataPlane container and the additional volumes
@@ -420,9 +421,6 @@ type Config[T Object, Cert CertificateObject] struct {
 	// wire the admin listener to it.
 	AdminAPI *AdminAPIConfig[T]
 
-	// HorizontalScaling returns the horizontal scaling options, or nil when
-	// horizontal scaling is not configured.
-	HorizontalScaling func(T) *commonv1alpha1.HorizontalScaling
 	// SetStatusReplicas copies the Deployment replica counts into the DataPlane status.
 	SetStatusReplicas func(dp T, replicas, readyReplicas int32)
 }
@@ -724,7 +722,7 @@ func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Res
 	}
 
 	// Reconcile the HPA if horizontal scaling is configured.
-	if err := r.ensureHPA(ctx, logger, dp, dp.GetName()); err != nil {
+	if _, err := hpa.Ensure(ctx, r.Client, logger, dp, dp.GetName()); err != nil {
 		return ctrl.Result{}, err
 	}
 

@@ -10,7 +10,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -56,68 +55,6 @@ func ensureDataPlaneCertificate(
 		matchingLabels,
 		certTTL,
 	)
-}
-
-func ensureHPAForDataPlane(
-	ctx context.Context,
-	cl client.Client,
-	log logr.Logger,
-	dataplane *operatorv1beta1.DataPlane,
-	deploymentName string,
-) (res op.Result, hpa *autoscalingv2.HorizontalPodAutoscaler, err error) {
-	matchingLabels := k8sresources.GetManagedLabelForOwner(dataplane)
-	hpas, err := k8sutils.ListHPAsForOwner(
-		ctx,
-		cl,
-		dataplane.Namespace,
-		dataplane.UID,
-		matchingLabels,
-	)
-	if err != nil {
-		return op.Noop, nil, fmt.Errorf("failed listing HPAs for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
-	}
-
-	if scaling := dataplane.Spec.Deployment.Scaling; scaling == nil || scaling.HorizontalScaling == nil {
-		if err := k8sreduce.ReduceHPAs(ctx, cl, hpas, k8sreduce.FilterNone); err != nil {
-			return op.Noop, nil, fmt.Errorf("failed reducing HPAs for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
-		}
-		return op.Noop, nil, nil
-	}
-
-	if len(hpas) > 1 {
-		if err := k8sreduce.ReduceHPAs(ctx, cl, hpas, k8sreduce.FilterHPAs); err != nil {
-			return op.Noop, nil, fmt.Errorf("failed reducing HPAs for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
-		}
-		return op.Noop, nil, nil
-	}
-
-	generatedHPA, err := k8sresources.GenerateHPA(dataplane, dataplane.Spec.Deployment.Scaling.HorizontalScaling, deploymentName)
-	if err != nil {
-		return op.Noop, nil, err
-	}
-
-	if len(hpas) == 1 {
-		var updated bool
-		existingHPA := &hpas[0]
-		oldExistingHPA := existingHPA.DeepCopy()
-
-		// ensure that object metadata is up to date
-		updated, existingHPA.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingHPA.ObjectMeta, generatedHPA.ObjectMeta)
-
-		// ensure that rollout strategy is up to date
-		if !cmp.Equal(existingHPA.Spec, generatedHPA.Spec) {
-			existingHPA.Spec = generatedHPA.Spec
-			updated = true
-		}
-
-		return patch.ApplyPatchIfNotEmpty(ctx, cl, log, existingHPA, oldExistingHPA, updated)
-	}
-
-	if err = cl.Create(ctx, generatedHPA); err != nil {
-		return op.Noop, nil, fmt.Errorf("failed creating HPA for DataPlane %s: %w", dataplane.Name, err)
-	}
-
-	return op.Created, nil, nil
 }
 
 func ensurePodDisruptionBudgetForDataPlane(

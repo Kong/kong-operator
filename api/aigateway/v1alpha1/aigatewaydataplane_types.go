@@ -465,3 +465,12 @@ func (a *AIGatewayDataPlane) GetConditions() []metav1.Condition {
 func (a *AIGatewayDataPlane) SetConditions(conditions []metav1.Condition) {
 	a.Status.Conditions = conditions
 }
+
+// GetHorizontalScaling returns the AIGatewayDataPlane horizontal scaling options, or nil
+// when horizontal scaling is not configured.
+func (a *AIGatewayDataPlane) GetHorizontalScaling() *commonv1alpha1.HorizontalScaling {
+	if a.Spec.Deployment == nil || a.Spec.Deployment.Scaling == nil {
+		return nil
+	}
+	return a.Spec.Deployment.Scaling.HorizontalScaling
+}

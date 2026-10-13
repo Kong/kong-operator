@@ -225,7 +225,6 @@ var config = shareddataplane.Config[
 		CertificateLabelKey: consts.SecretAIGatewayDataPlaneAdminCertificateLabel,
 	},
 
-	HorizontalScaling: horizontalScaling,
 	SetStatusReplicas: setStatusReplicas,
 }
 
@@ -250,35 +249,11 @@ func deploymentAnnotations(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) map[str
 	return aigwdp.Spec.Deployment.Annotations
 }
 
-// replicas returns the replica count to seed on the Deployment: the static
-// replica count, or the HPA minReplicas when horizontal scaling is configured
-// so the Deployment scales up immediately before the HPA's first evaluation.
 func replicas(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *int32 {
 	if aigwdp.Spec.Deployment == nil {
 		return nil
 	}
-	var hs *aigatewayv1alpha1.HorizontalScaling
-	if aigwdp.Spec.Deployment.Scaling != nil {
-		hs = aigwdp.Spec.Deployment.Scaling.HorizontalScaling
-	}
-	switch {
-	case hs == nil:
-		return aigwdp.Spec.Deployment.Replicas
-	case hs.MinReplicas != nil:
-		return hs.MinReplicas
-	}
-	return nil
-}
-
-// horizontalScaling returns the horizontal scaling options, or nil when
-// horizontal scaling is not configured.
-func horizontalScaling(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *commonv1alpha1.HorizontalScaling {
-	if aigwdp.Spec.Deployment == nil ||
-		aigwdp.Spec.Deployment.Scaling == nil ||
-		aigwdp.Spec.Deployment.Scaling.HorizontalScaling == nil {
-		return nil
-	}
-	return aigwdp.Spec.Deployment.Scaling.HorizontalScaling
+	return aigwdp.Spec.Deployment.Replicas
 }
 
 func setStatusReplicas(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane, replicas, readyReplicas int32) {

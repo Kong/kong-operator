@@ -25,6 +25,7 @@ import (
 	konnectcontroller "github.com/kong/kong-operator/v2/controller/konnect"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/konnect/server"
+	"github.com/kong/kong-operator/v2/controller/pkg/hpa"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
@@ -228,7 +229,7 @@ func (r *MCPServerDataPlaneReconciler) Reconcile(ctx context.Context, mcpDataPla
 	}
 
 	// Ensure the HPA (or its absence) matches spec.deployment.scaling.horizontal.
-	if err := r.ensureHPA(ctx, logger, mcpDataPlane, generateWorkloadNN(mcpDataPlane).Name); err != nil {
+	if _, err := hpa.Ensure(ctx, r.Client, logger, mcpDataPlane, generateWorkloadNN(mcpDataPlane).Name); err != nil {
 		return ctrl.Result{}, err
 	}
 

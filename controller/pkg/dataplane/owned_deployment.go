@@ -274,7 +274,7 @@ func GenerateBaseDeployment[T Object, Cert CertificateObject](
 		Namespace:  dp.GetNamespace(),
 		Labels:     labels,
 		Spec: appsv1.DeploymentSpec{
-			Replicas: cfg.Deployment.Replicas(dp),
+			Replicas: replicas(dp, cfg.Deployment),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: selector,
 			},
@@ -342,4 +342,14 @@ func certChecksumAnnotation(checksum, key string) map[string]string {
 		return nil
 	}
 	return map[string]string{key: checksum}
+}
+
+// replicas returns the replica count to seed on the Deployment: the static
+// replica count, or the HPA minReplicas when horizontal scaling is configured
+// so the Deployment scales up immediately before the HPA's first evaluation.
+func replicas[T Object](dp T, cfg DeploymentConfig[T]) *int32 {
+	if hs := dp.GetHorizontalScaling(); hs != nil {
+		return hs.MinReplicas
+	}
+	return cfg.Replicas(dp)
 }
