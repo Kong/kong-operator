@@ -68,12 +68,9 @@ macos-arm64 = { asset_pattern = "telepresence-darwin-arm64" }
 # renovate: datasource=github-releases depName=helm/helm
 version = "4.3.0"
 
-# NOTE: temporary override to work around:
-# export data version 5 is greater than maximum supported version 2 (Go 1.27.2+)
-# Upstream issue: https://github.com/kubernetes-sigs/kube-api-linter/issues/260
-[tools."go:github.com/pmalek/kube-api-linter/cmd/golangci-lint-kube-api-linter"]
-# renovate: datasource=git-refs packageName=https://github.com/pmalek/kube-api-linter.git
-version = "e6766bffa4ab82b7b83cfcf0afcbc88e02b3b368"
+[tools."go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"]
+# renovate: datasource=git-refs packageName=https://github.com/kubernetes-sigs/kube-api-linter.git
+version = "79b557aa8c8dc08e801a1d3e6109881e3551bf30"
 
 [tools."yq"]
 # renovate: datasource=github-releases depName=mikefarah/yq
