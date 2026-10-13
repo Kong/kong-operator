@@ -29,7 +29,6 @@ import (
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	aigwonpremconfig "github.com/kong/kong-operator/v2/controller/aigateway/onpremconfig"
-	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	adminapi "github.com/kong/kong-operator/v2/internal/adminapi"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
@@ -323,8 +322,15 @@ func (i *Instance) sendConfig(
 		// The rendered payload is broken, so nothing gets pushed: every entity
 		// included in the document failed to be applied.
 		i.statusReporter.Report(nil, append(failuresForAll(included, err), failures...))
+		// Surface the translation failure (and any warnings the converter
+		// reported before failing) on the gateway status and events.
+		i.reportTranslationStatus(ctx, *gw, err, failures, warnings)
 		return fmt.Errorf("rendering dbless configuration: %w", err)
 	}
+	// The translation outcome is fully known here: report it before the push, so
+	// that push failures - which belong to the DataPlanesConfigured condition -
+	// do not alter it.
+	i.reportTranslationStatus(ctx, *gw, nil, failures, warnings)
 
 	pushed, err := i.sendConfigToDataPlanes(ctx, *gw, payload)
 	if err != nil {
@@ -347,12 +353,12 @@ func (i *Instance) sendConfig(
 	}
 	i.statusReporter.Report(included, failures)
 
-	for _, w := range warnings {
-		// TODO: https://github.com/Kong/kong-operator/issues/5664
-		// - emit warnings as events on the OnPremAIGateway resource
-		// - emit warnings somewhere in OnPremAIGateway status
-		log.Info(i.logger, "AI Gateway configuration warning", "warning", w)
-	}
+	// The push succeeded, so the converter warnings are reported now: reporting
+	// them before the push would re-log and re-emit them on every retry of a
+	// failing push. The next successful push re-reports them anyway (the sync
+	// re-translates the configuration on every tick).
+	i.reportTranslationWarnings(*gw, warnings)
+
 	return nil
 
 }

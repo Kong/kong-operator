@@ -9,6 +9,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -16,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
+	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/status"
@@ -177,6 +179,13 @@ func TestSendConfig(t *testing.T) {
 		// The payload was still pushed for the surviving entity.
 		require.Len(t, factory.built, 1)
 		require.Len(t, factory.clients["https://10.0.0.1:8444"].payloads, 1)
+
+		// The per-entity failure is aggregated on the gateway's
+		// ConfigurationTranslated condition.
+		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType)
+		require.Equal(t, metav1.ConditionFalse, condition.Status)
+		require.Equal(t, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslationFailedReason), condition.Reason)
+		require.Contains(t, condition.Message, "model-broken")
 	})
 
 	t.Run("reports all entities as failed when the push fails", func(t *testing.T) {
@@ -197,6 +206,12 @@ func TestSendConfig(t *testing.T) {
 			require.Equal(t, status.ConfigurationStatusFailed, statusOf(instance, m))
 			require.Contains(t, messageOf(instance, m), "connection refused")
 		}
+
+		// A push failure does not alter the translation condition: it belongs
+		// to the DataPlanesConfigured condition.
+		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType)
+		require.Equal(t, metav1.ConditionTrue, condition.Status)
+		require.Equal(t, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedReason), condition.Reason)
 	})
 
 	t.Run("reports all entities as failed when no endpoints are discovered", func(t *testing.T) {
@@ -228,6 +243,10 @@ func TestSendConfig(t *testing.T) {
 			require.Equal(t, status.ConfigurationStatusSucceeded, statusOf(instance, m))
 			require.Empty(t, messageOf(instance, m))
 		}
+
+		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType)
+		require.Equal(t, metav1.ConditionTrue, condition.Status)
+		require.Equal(t, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedReason), condition.Reason)
 	})
 
 	t.Run("the skip path lets syncPending drop the gateway from pending", func(t *testing.T) {
