@@ -7,6 +7,27 @@ on:
         description: "Kind node image version"
         type: string
         required: true
+      aigw-dp-image:
+        description: "AIGatewayDataPlane image to test with (repository:tag). Defaults
+          to the image defined in test/test_dependencies.yaml."
+        type: string
+        required: false
+        default: ""
+      suites:
+        description: "JSON array of matrix entries ({suite, ip_family}) to run."
+        type: string
+        required: false
+        default: >-
+          [
+            {"suite": "gateway"},
+            {"suite": "gateway", "ip_family": "ipv6"},
+            {"suite": "hybridgateway"},
+            {"suite": "hybridgateway", "ip_family": "ipv6"},
+            {"suite": "konnect"},
+            {"suite": "aigateway"},
+            {"suite": "eventgateway"},
+            {"suite": "conversion-webhook"}
+          ]
 
 permissions:
   contents: read
@@ -28,17 +49,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-        - suite: gateway
-        - suite: gateway
-          ip_family: ipv6
-        - suite: hybridgateway
-        - suite: hybridgateway
-          ip_family: ipv6
-        - suite: konnect
-        - suite: aigateway
-        - suite: eventgateway
-        - suite: conversion-webhook
+        include: ${{ fromJSON(inputs.suites) }}
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
@@ -118,6 +129,7 @@ jobs:
         KONNECT_TOKEN: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
         KONNECT_SERVER_URL: us.api.konghq.tech
         TEST_ID: ${{ env.TEST_ID }}
+        AIGW_DP_IMAGE: ${{ inputs.aigw-dp-image }}
         CHAINSAW_TEST_DIR: test/e2e/chainsaw/${{ matrix.suite }}
         CHAINSAW_CONFIG: test/e2e/chainsaw/.chainsaw.yaml
         EXPECTED_DEFAULT_STREAM_LISTEN: ${{ matrix.ip_family == 'ipv6' && '[::]:8899 ssl reuseport' || '0.0.0.0:8899 ssl reuseport' }}
