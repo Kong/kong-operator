@@ -311,6 +311,26 @@
   on-prem: a Konnect Config Store has no self-managed gateway equivalent.
   [#6148](https://github.com/Kong/kong-operator/pull/6148)
   [#6159](https://github.com/Kong/kong-operator/pull/6159)
+- Konnect hybrid gateways: Kong entities translated from `HTTPRoute`, `GRPCRoute`,
+  `TLSRoute`, `TCPRoute` and `UDPRoute` now also inherit the `konghq.com/tags`
+  annotation from the route's parent `Gateway` and from that Gateway's
+  `GatewayClass`, so a whole Gateway's worth of traffic can be tagged in one
+  place. Inherited tags are merged after the entity's own tags (the route's, the
+  backend `Service`'s or the referenced `Secret`'s annotation), then the
+  Gateway's, then the GatewayClass's; the merged set is deduplicated and capped
+  at 20 entries, dropping from the end, so the least specific tags are lost
+  first. This applies to `KongService`, `KongRoute`, `KongUpstream`,
+  `KongTarget`, `KongCertificate`, `KongSNI`, `KongPlugin` and
+  `KongPluginBinding`. Only parent `Gateway`s that this controller reconciles
+  contribute: a route attached to a `Gateway` owned by another implementation
+  does not pick up that Gateway's tags. Entities that several routes share - a
+  `KongService`, `KongUpstream`, `KongTarget` or generated `KongPlugin` with the
+  same backends and ControlPlane - inherit the union over every attached route's
+  parents, so the value does not depend on which route is reconciled. Known
+  limitation: a route attached to Konnect `Gateway`s on two different
+  ControlPlanes gets the union of both Gateways' tags on each ControlPlane's
+  entities.
+  [#5869](https://github.com/Kong/kong-operator/pull/5869)
 
 ### Changed
 
@@ -763,26 +783,6 @@
   `AIGatewayConsumer`, and the other `aiconfiguration.konghq.com` kinds) target an
   `OnPremAIGateway` via `spec.aiGatewayRef`.
   [#5834](https://github.com/Kong/kong-operator/pull/5834)
-- Konnect hybrid gateways: Kong entities translated from `HTTPRoute`, `GRPCRoute`,
-  `TLSRoute`, `TCPRoute` and `UDPRoute` now also inherit the `konghq.com/tags`
-  annotation from the route's parent `Gateway` and from that Gateway's
-  `GatewayClass`, so a whole Gateway's worth of traffic can be tagged in one
-  place. Inherited tags are merged after the entity's own tags (the route's, the
-  backend `Service`'s or the referenced `Secret`'s annotation), then the
-  Gateway's, then the GatewayClass's; the merged set is deduplicated and capped
-  at 20 entries, dropping from the end, so the least specific tags are lost
-  first. This applies to `KongService`, `KongRoute`, `KongUpstream`,
-  `KongTarget`, `KongCertificate`, `KongSNI`, `KongPlugin` and
-  `KongPluginBinding`. Only parent `Gateway`s that this controller reconciles
-  contribute: a route attached to a `Gateway` owned by another implementation
-  does not pick up that Gateway's tags. Entities that several routes share - a
-  `KongService`, `KongUpstream`, `KongTarget` or generated `KongPlugin` with the
-  same backends and ControlPlane - inherit the union over every attached route's
-  parents, so the value does not depend on which route is reconciled. Known
-  limitation: a route attached to Konnect `Gateway`s on two different
-  ControlPlanes gets the union of both Gateways' tags on each ControlPlane's
-  entities.
-  [#5842](https://github.com/Kong/kong-operator/pull/5842)
 
 ### Breaking changes
 
