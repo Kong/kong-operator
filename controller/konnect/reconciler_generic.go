@@ -514,13 +514,10 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 
 	apiAuthRef, err := GetAPIAuthRefNN(ctx, r.Client, ent)
 	if err != nil {
-		// Entities such as KongTargets resolve API authentication through their
-		// parent resource. The parent ControlPlane can disappear between the
-		// reference checks above and this lookup. In that case the ControlPlane's
-		// deletion has already removed its Konnect entities, so keeping the child
-		// cleanup finalizer would only leave the Kubernetes resource terminating
-		// forever.
-		if handled, res, finalizerErr := removeCleanupFinalizerIfControlPlaneIsGone(ctx, r.Client, ent, err); handled {
+		// API authentication can resolve through a chain of parents. If an
+		// ancestor is gone, its Konnect deletion has already removed the child,
+		// so a deleting child no longer needs its cleanup finalizer.
+		if handled, res, finalizerErr := removeCleanupFinalizerIfAncestorIsGone(ctx, r.Client, ent, err); handled {
 			return res, finalizerErr
 		}
 
@@ -874,7 +871,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 	}, nil
 }
 
-func removeCleanupFinalizerIfControlPlaneIsGone[
+func removeCleanupFinalizerIfAncestorIsGone[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
 ](
@@ -883,7 +880,9 @@ func removeCleanupFinalizerIfControlPlaneIsGone[
 	ent TEnt,
 	err error,
 ) (bool, ctrl.Result, error) {
-	if _, ok := errors.AsType[controlplane.ReferencedControlPlaneDoesNotExistError](err); !ok {
+	_, controlPlaneIsGone := errors.AsType[controlplane.ReferencedControlPlaneDoesNotExistError](err)
+	_, ancestorIsGone := errors.AsType[ReferencedObjectDoesNotExistError](err)
+	if !controlPlaneIsGone && (!ancestorIsGone || ent.GetDeletionTimestamp().IsZero()) {
 		return false, ctrl.Result{}, nil
 	}
 
