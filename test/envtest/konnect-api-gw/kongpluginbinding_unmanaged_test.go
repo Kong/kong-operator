@@ -18,6 +18,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/konnect"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/pkg/metadata"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/test/envtest"
 	"github.com/kong/kong-operator/v2/test/envtest/consts"
@@ -779,6 +780,57 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			cond, ok := k8sutils.GetCondition(konnectv1alpha1.KongPluginRefValidConditionType, k)
 			return ok && cond.Status == "False" && cond.Reason == konnectv1alpha1.KongPluginRefReasonInvalid
 		}, "KongPluginBinding didn't get PluginRefValid=False/Invalid condition")
+
+		require.NoError(t, clientNamespaced.Delete(ctx, kpb))
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, apierrors.IsNotFound(
+				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kpb), kpb),
+			))
+		}, consts.WaitTime, consts.TickTime, "KongPluginBinding did not get deleted but should have")
+
+		require.NoError(t, clientNamespaced.Delete(ctx, kongService))
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, apierrors.IsNotFound(
+				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kongService), kongService),
+			))
+		}, consts.WaitTime, consts.TickTime)
+
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PluginSDK, consts.WaitTime, consts.TickTime)
+	})
+
+	t.Run("binding to KongService with KongPlugin having reserved tags in konghq.com/tags annotation gets Programmed=False/InvalidTags", func(t *testing.T) {
+		w := envtest.SetupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		serviceID := uuid.NewString()
+
+		proxyCacheKongPlugin := deploy.ProxyCachePlugin(t, ctx, clientNamespaced)
+		pluginWithReservedTags := proxyCacheKongPlugin.DeepCopy()
+		pluginWithReservedTags.Annotations = map[string]string{
+			metadata.AnnotationKeyTags: "tag1,k8s-uid:spoofed-uid",
+		}
+		require.NoError(t, clientNamespaced.Patch(ctx, pluginWithReservedTags, client.MergeFrom(proxyCacheKongPlugin)))
+
+		kongService := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		)
+		envtest.UpdateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
+
+		kpb := deploy.KongPluginBinding(t, ctx, clientNamespaced,
+			konnect.NewKongPluginBindingBuilder().
+				WithControlPlaneRefKonnectNamespaced(cp.Name).
+				WithPluginRefName(proxyCacheKongPlugin.Name).
+				WithServiceTarget(kongService.Name).
+				Build(),
+		)
+
+		t.Log("Waiting for KongPluginBinding to get Programmed=False/InvalidTags condition")
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(k *configurationv1alpha1.KongPluginBinding) bool {
+			if k.GetName() != kpb.GetName() || k.GetNamespace() != kpb.GetNamespace() {
+				return false
+			}
+			cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, k)
+			return ok && cond.Status == "False" && cond.Reason == konnectv1alpha1.KonnectEntityProgrammedReasonInvalidTags
+		}, "KongPluginBinding didn't get Programmed=False/InvalidTags condition")
 
 		require.NoError(t, clientNamespaced.Delete(ctx, kpb))
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {

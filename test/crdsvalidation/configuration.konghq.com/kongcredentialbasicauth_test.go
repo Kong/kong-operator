@@ -204,6 +204,43 @@ func TestKongCredentialBasicAuth(t *testing.T) {
 				},
 				ExpectedErrorMessage: new("tags entries must not be longer than 128 characters"),
 			},
+			{
+				Name: "tags entries must not start with reserved prefix k8s-generation:",
+				TestObject: &configurationv1alpha1.KongCredentialBasicAuth{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCredentialBasicAuthSpec{
+						ConsumerRef: corev1.LocalObjectReference{
+							Name: "test-kong-consumer",
+						},
+						KongCredentialBasicAuthAPISpec: configurationv1alpha1.KongCredentialBasicAuthAPISpec{
+							Password: "pass",
+							Username: "user",
+							Tags: []string{
+								"k8s-generation:value",
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("tags entries must not start with reserved prefixes"),
+			},
+			{
+				Name: "tags entries starting with k8s- but not with a reserved prefix are allowed",
+				TestObject: &configurationv1alpha1.KongCredentialBasicAuth{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCredentialBasicAuthSpec{
+						ConsumerRef: corev1.LocalObjectReference{
+							Name: "test-kong-consumer",
+						},
+						KongCredentialBasicAuthAPISpec: configurationv1alpha1.KongCredentialBasicAuthAPISpec{
+							Password: "pass",
+							Username: "user",
+							Tags: []string{
+								"k8s-team:value",
+							},
+						},
+					},
+				},
+			},
 		}.
 			RunWithConfig(t, cfg, scheme)
 	})

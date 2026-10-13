@@ -619,6 +619,14 @@ func TestKongRouteBuilder_WithSpecTags(t *testing.T) {
 		route := NewKongRoute().WithSpecTags([]string{"foo", "bar"}).MustBuild()
 		assert.Equal(t, commonv1alpha1.Tags{"foo", "bar"}, route.Spec.Tags)
 	})
+	t.Run("drops tags with reserved prefixes", func(t *testing.T) {
+		route := NewKongRoute().WithSpecTags([]string{"foo", "k8s-uid:1234", "managed-by:someone-else"}).MustBuild()
+		assert.Equal(t, commonv1alpha1.Tags{"foo"}, route.Spec.Tags)
+	})
+	t.Run("only reserved tags leave tags unset", func(t *testing.T) {
+		route := NewKongRoute().WithSpecTags([]string{"k8s-name:other"}).MustBuild()
+		assert.Nil(t, route.Spec.Tags)
+	})
 }
 
 func TestGenerateKongRoutePathFromGRPCMethodMatch(t *testing.T) {

@@ -150,6 +150,43 @@ func TestKongConsumer(t *testing.T) {
 				},
 				ExpectedErrorMessage: new("tags entries must not be longer than 128 characters"),
 			},
+			{
+				Name: "tags entries must not start with reserved prefix k8s-kind:",
+				TestObject: &configurationv1.KongConsumer{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Username:   "username-1",
+					Spec: configurationv1.KongConsumerSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						Tags: []string{
+							"k8s-kind:value",
+						},
+					},
+				},
+				ExpectedErrorMessage: new("tags entries must not start with reserved prefixes"),
+			},
+			{
+				Name: "tags entries starting with k8s- but not with a reserved prefix are allowed",
+				TestObject: &configurationv1.KongConsumer{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Username:   "username-1",
+					Spec: configurationv1.KongConsumerSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						Tags: []string{
+							"k8s-team:value",
+						},
+					},
+				},
+			},
 		}.
 			RunWithConfig(t, cfg, scheme)
 	})
