@@ -107,7 +107,11 @@ func TestDataPlaneKonnectExtensionProcessor_Process(t *testing.T) {
 		wantProcessed   bool
 		wantErr         bool
 		wantErrContains string
-		checkAssertions func(t *testing.T, dp *operatorv1beta1.DataPlane)
+		// wantAdminAPIDisabled is the expected AdminAPIDisabled() result after Process.
+		wantAdminAPIDisabled bool
+		// wantClusterCertificateVol is whether the cluster-certificate volume and mount are expected.
+		wantClusterCertificateVol bool
+		checkAssertions           func(t *testing.T, dp *operatorv1beta1.DataPlane)
 	}{
 		{
 			name:   "success - KonnectExtension with status filled",
@@ -115,37 +119,11 @@ func TestDataPlaneKonnectExtensionProcessor_Process(t *testing.T) {
 			setupClient: func(t *testing.T) client.Client {
 				return clientWithObjects(s, createValidKonnectExtension())
 			},
-			wantProcessed: true,
-			wantErr:       false,
+			wantProcessed:        true,
+			wantAdminAPIDisabled: true,
 			checkAssertions: func(t *testing.T, dp *operatorv1beta1.DataPlane) {
-				require.NotNil(t, dp.Spec.Deployment.PodTemplateSpec)
-
-				volumes := dp.Spec.Deployment.PodTemplateSpec.Spec.Volumes
-				hasClusterCertVolume := lo.ContainsBy(volumes, func(v corev1.Volume) bool {
-					return v.Name == consts.KongClusterCertVolume
-				})
-				assert.True(t, hasClusterCertVolume, "expected KongClusterCertVolume to be present")
-
-				hasClusterCertificateVolume := lo.ContainsBy(volumes, func(v corev1.Volume) bool {
-					return v.Name == consts.ClusterCertificateVolume
-				})
-				assert.True(t, hasClusterCertificateVolume, "expected ClusterCertificateVolume to be present")
-
 				container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 				require.NotNil(t, container)
-
-				hasClusterCertVolumeMount := lo.ContainsBy(container.VolumeMounts, func(vm corev1.VolumeMount) bool {
-					return vm.Name == consts.KongClusterCertVolume &&
-						vm.MountPath == consts.KongClusterCertVolumeMountPath
-				})
-				assert.True(t, hasClusterCertVolumeMount, "expected KongClusterCertVolume mount to be present")
-
-				hasClusterCertificateVolumeMount := lo.ContainsBy(container.VolumeMounts, func(vm corev1.VolumeMount) bool {
-					return vm.Name == consts.ClusterCertificateVolume &&
-						vm.MountPath == consts.ClusterCertificateVolumeMountPath
-				})
-				assert.True(t, hasClusterCertificateVolumeMount, "expected ClusterCertificateVolume mount to be present")
-
 				require.NotEmpty(t, container.Env, "expected environment variables to be set")
 
 				envMap := make(map[string]string)
@@ -158,6 +136,42 @@ func TestDataPlaneKonnectExtensionProcessor_Process(t *testing.T) {
 				assert.Contains(t, envMap, "KONG_CLUSTER_MTLS", "expected KONG_CLUSTER_MTLS env var")
 				assert.Equal(t, "pki", envMap["KONG_CLUSTER_MTLS"])
 			},
+		},
+		{
+			name:   "success - ClusterType ControlPlaneGroup",
+			object: createValidDataPlane(),
+			setupClient: func(t *testing.T) client.Client {
+				ext := createValidKonnectExtension()
+				ext.Status.Konnect.ClusterType = konnectv1alpha2.ClusterTypeControlPlaneGroup
+				return clientWithObjects(s, ext)
+			},
+			wantProcessed:        true,
+			wantAdminAPIDisabled: true,
+		},
+		{
+			name:   "success - ClusterType K8sIngressController",
+			object: createValidDataPlane(),
+			setupClient: func(t *testing.T) client.Client {
+				ext := createValidKonnectExtension()
+				ext.Status.Konnect.ClusterType = konnectv1alpha2.ClusterTypeK8sIngressController
+				return clientWithObjects(s, ext)
+			},
+			wantProcessed:             true,
+			wantAdminAPIDisabled:      false,
+			wantClusterCertificateVol: true,
+		},
+		{
+			name: "no KonnectExtension referenced",
+			object: func() *operatorv1beta1.DataPlane {
+				dp := createValidDataPlane()
+				dp.Spec.Extensions = nil
+				return dp
+			}(),
+			setupClient: func(t *testing.T) client.Client {
+				return clientWithObjects(s)
+			},
+			wantProcessed:        false,
+			wantAdminAPIDisabled: false,
 		},
 		{
 			name:   "failure - KonnectExtension status not filled",
@@ -198,6 +212,29 @@ func TestDataPlaneKonnectExtensionProcessor_Process(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantProcessed, processed)
+			assert.Equal(t, tt.wantAdminAPIDisabled, p.AdminAPIDisabled())
+
+			if tt.wantProcessed {
+				require.NotNil(t, tt.object.Spec.Deployment.PodTemplateSpec)
+				podSpec := &tt.object.Spec.Deployment.PodTemplateSpec.Spec
+				container := k8sutils.GetPodContainerByName(podSpec, consts.DataPlaneProxyContainerName)
+				require.NotNil(t, container)
+
+				// kong-cluster-cert is always injected.
+				assert.True(t, lo.ContainsBy(podSpec.Volumes, func(v corev1.Volume) bool {
+					return v.Name == consts.KongClusterCertVolume
+				}), "expected KongClusterCertVolume to be present")
+				assert.True(t, lo.ContainsBy(container.VolumeMounts, func(vm corev1.VolumeMount) bool {
+					return vm.Name == consts.KongClusterCertVolume && vm.MountPath == consts.KongClusterCertVolumeMountPath
+				}), "expected KongClusterCertVolume mount to be present")
+
+				assert.Equal(t, tt.wantClusterCertificateVol, lo.ContainsBy(podSpec.Volumes, func(v corev1.Volume) bool {
+					return v.Name == consts.ClusterCertificateVolume
+				}), "unexpected ClusterCertificateVolume presence")
+				assert.Equal(t, tt.wantClusterCertificateVol, lo.ContainsBy(container.VolumeMounts, func(vm corev1.VolumeMount) bool {
+					return vm.Name == consts.ClusterCertificateVolume && vm.MountPath == consts.ClusterCertificateVolumeMountPath
+				}), "unexpected ClusterCertificateVolume mount presence")
+			}
 
 			if tt.checkAssertions != nil {
 				tt.checkAssertions(t, tt.object)

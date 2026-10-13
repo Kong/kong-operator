@@ -42,3 +42,13 @@ func getExtension(ctx context.Context, cl client.Client, objNamespace string, ex
 
 	return &konnectExt, nil
 }
+
+// IsHybridClusterType returns true for Konnect hybrid cluster types, whose DataPlanes don't need the admin API.
+func IsHybridClusterType(ct konnectv1alpha2.KonnectExtensionClusterType) bool {
+	switch ct {
+	case konnectv1alpha2.ClusterTypeControlPlane, konnectv1alpha2.ClusterTypeControlPlaneGroup:
+		return true
+	default:
+		return false
+	}
+}
