@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	shareddataplane "github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 )
 
@@ -44,4 +45,27 @@ func TestBuildContainerWithoutControlPlane(t *testing.T) {
 	_, _, err := buildContainer(newReconcileEGDP(), shareddataplane.ResolvedControlPlane{}, "image", "cert", "")
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "has no resolved KonnectEventGateway")
+}
+
+func TestBuildEventGatewayDataPlaneCertificate(t *testing.T) {
+	egdp := newReconcileEGDP()
+	cert := buildEventGatewayDataPlaneCertificate(
+		egdp,
+		shareddataplane.ResolvedControlPlane{Kind: konnectEventGatewayKind.Kind, IsKonnect: true, Object: newProgrammedKEG()},
+		"cert-secret", "checksum",
+	)
+
+	// The gateway is referenced through spec.parentRef only: the deprecated
+	// spec.gatewayRef must stay unset, as exactly one of the two is allowed.
+	assert.Equal(t, &commonv1alpha1.GatewayRef{
+		Group: "konnect.konghq.com",
+		Kind:  "KonnectEventGateway",
+		Name:  reconcileTestKEGName,
+	}, cert.Spec.ParentRef)
+	assert.Zero(t, cert.Spec.GatewayRef)
+
+	assert.Equal(t, egdp.Namespace, cert.Namespace)
+	assert.Equal(t, shareddataplane.CertEntityName(egdp.Name, "checksum"), cert.Name)
+	require.NotNil(t, cert.Spec.APISpec.Certificate.SecretRef)
+	assert.Equal(t, "cert-secret", cert.Spec.APISpec.Certificate.SecretRef.Name)
 }

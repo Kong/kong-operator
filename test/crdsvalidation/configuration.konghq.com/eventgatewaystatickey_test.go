@@ -5,6 +5,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	common "github.com/kong/kong-operator/v2/test/crdsvalidation/common"
@@ -139,6 +140,36 @@ func TestEventGatewayStaticKey(t *testing.T) {
 					obj.Spec.GatewayRef.NamespacedRef.Name = "another-gateway"
 				},
 				ExpectedUpdateErrorMessage: new("gatewayRef is immutable once the static key has been created in Konnect"),
+			},
+			{
+				Name: "changing the parentRef gateway once in Konnect fails, even when not Programmed",
+				TestObject: func() *configurationv1alpha1.EventGatewayStaticKey {
+					obj := inKonnect()
+					obj.Spec.GatewayRef = commonv1alpha1.ObjectRef{}
+					obj.Spec.ParentRef = &commonv1alpha1.GatewayRef{Group: "konnect.konghq.com", Kind: "KonnectEventGateway", Name: "my-event-gateway"}
+					return obj
+				}(),
+				Update: func(obj *configurationv1alpha1.EventGatewayStaticKey) {
+					obj.Spec.ParentRef.Name = "another-gateway"
+				},
+				ExpectedUpdateErrorMessage: new("parentRef is immutable once the static key has been created in Konnect"),
+			},
+			{
+				Name:       "replacing gatewayRef by a parentRef to the same gateway once in Konnect passes",
+				TestObject: inKonnect(),
+				Update: func(obj *configurationv1alpha1.EventGatewayStaticKey) {
+					obj.Spec.ParentRef = &commonv1alpha1.GatewayRef{Group: "konnect.konghq.com", Kind: "KonnectEventGateway", Name: obj.Spec.GatewayRef.NamespacedRef.Name}
+					obj.Spec.GatewayRef = commonv1alpha1.ObjectRef{}
+				},
+			},
+			{
+				Name:       "replacing gatewayRef by a parentRef to another gateway once in Konnect fails, even when not Programmed",
+				TestObject: inKonnect(),
+				Update: func(obj *configurationv1alpha1.EventGatewayStaticKey) {
+					obj.Spec.GatewayRef = commonv1alpha1.ObjectRef{}
+					obj.Spec.ParentRef = &commonv1alpha1.GatewayRef{Group: "konnect.konghq.com", Kind: "KonnectEventGateway", Name: "another-gateway"}
+				},
+				ExpectedUpdateErrorMessage: new("gatewayRef can only be replaced by a parentRef referencing the same gateway once the static key has been created in Konnect"),
 			},
 			{
 				// The generic gatewayRef rule needs a status, which the

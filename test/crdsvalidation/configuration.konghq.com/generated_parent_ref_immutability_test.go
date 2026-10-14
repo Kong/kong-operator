@@ -19,6 +19,42 @@ func generatedParentRef() commonv1alpha1.ObjectRef {
 	}
 }
 
+func validDataPlaneCertificate(ns string) *configurationv1alpha1.EventGatewayDataPlaneCertificate {
+	return &configurationv1alpha1.EventGatewayDataPlaneCertificate{
+		ObjectMeta: common.CommonObjectMeta(ns),
+		Spec: configurationv1alpha1.EventGatewayDataPlaneCertificateSpec{
+			GatewayRef: generatedParentRef(),
+			APISpec: configurationv1alpha1.EventGatewayDataPlaneCertificateAPISpec{
+				Certificate: configurationv1alpha1.SensitiveDataSource{
+					Type:  configurationv1alpha1.SensitiveDataSourceTypeInline,
+					Value: new("certificate-pem-data"),
+				},
+			},
+		},
+	}
+}
+
+func validSchemaRegistry(ns string) *configurationv1alpha1.EventGatewaySchemaRegistry {
+	return &configurationv1alpha1.EventGatewaySchemaRegistry{
+		ObjectMeta: common.CommonObjectMeta(ns),
+		Spec: configurationv1alpha1.EventGatewaySchemaRegistrySpec{
+			GatewayRef: generatedParentRef(),
+			APISpec: configurationv1alpha1.EventGatewaySchemaRegistryAPISpec{
+				EventGatewaySchemaRegistryConfig: &configurationv1alpha1.EventGatewaySchemaRegistryConfig{
+					Type: configurationv1alpha1.EventGatewaySchemaRegistryConfigTypeSchemaRegistryConfluent,
+					SchemaRegistryConfluent: &configurationv1alpha1.SchemaRegistryConfluent{
+						Config: configurationv1alpha1.SchemaRegistryConfluentConfig{
+							Endpoint:   "https://schema-registry.example.com",
+							SchemaType: "json",
+						},
+						Name: "schema-registry",
+					},
+				},
+			},
+		},
+	}
+}
+
 func TestGeneratedParentRefImmutability(t *testing.T) {
 	t.Parallel()
 
@@ -27,18 +63,7 @@ func TestGeneratedParentRefImmutability(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("EventGatewayDataPlaneCertificate", func(t *testing.T) {
-		obj := &configurationv1alpha1.EventGatewayDataPlaneCertificate{
-			ObjectMeta: common.CommonObjectMeta(ns.Name),
-			Spec: configurationv1alpha1.EventGatewayDataPlaneCertificateSpec{
-				GatewayRef: generatedParentRef(),
-				APISpec: configurationv1alpha1.EventGatewayDataPlaneCertificateAPISpec{
-					Certificate: configurationv1alpha1.SensitiveDataSource{
-						Type:  configurationv1alpha1.SensitiveDataSourceTypeInline,
-						Value: new("certificate-pem-data"),
-					},
-				},
-			},
-		}
+		obj := validDataPlaneCertificate(ns.Name)
 
 		common.NewCRDValidationTestCasesGroupParentRefChange(t, cfg, obj).RunWithConfig(t, cfg, scheme)
 	})
@@ -52,24 +77,7 @@ func TestGeneratedParentRefImmutability(t *testing.T) {
 	})
 
 	t.Run("EventGatewaySchemaRegistry", func(t *testing.T) {
-		obj := &configurationv1alpha1.EventGatewaySchemaRegistry{
-			ObjectMeta: common.CommonObjectMeta(ns.Name),
-			Spec: configurationv1alpha1.EventGatewaySchemaRegistrySpec{
-				GatewayRef: generatedParentRef(),
-				APISpec: configurationv1alpha1.EventGatewaySchemaRegistryAPISpec{
-					EventGatewaySchemaRegistryConfig: &configurationv1alpha1.EventGatewaySchemaRegistryConfig{
-						Type: configurationv1alpha1.EventGatewaySchemaRegistryConfigTypeSchemaRegistryConfluent,
-						SchemaRegistryConfluent: &configurationv1alpha1.SchemaRegistryConfluent{
-							Config: configurationv1alpha1.SchemaRegistryConfluentConfig{
-								Endpoint:   "https://schema-registry.example.com",
-								SchemaType: "json",
-							},
-							Name: "schema-registry",
-						},
-					},
-				},
-			},
-		}
+		obj := validSchemaRegistry(ns.Name)
 
 		common.NewCRDValidationTestCasesGroupParentRefChange(t, cfg, obj).RunWithConfig(t, cfg, scheme)
 	})

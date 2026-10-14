@@ -444,11 +444,10 @@ func buildEventGatewayDataPlaneCertificate(
 		Namespace:  egdp.Namespace,
 		Labels:     selectorLabelsForKegDataPlane(egdp),
 		Spec: configurationv1alpha1.EventGatewayDataPlaneCertificateSpec{
-			GatewayRef: commonv1alpha1.ObjectRef{
-				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
-				NamespacedRef: &commonv1alpha1.NamespacedRef{
-					Name: keg.Name,
-				},
+			ParentRef: &commonv1alpha1.GatewayRef{
+				Group: konnectv1alpha1.GroupVersion.Group,
+				Kind:  "KonnectEventGateway",
+				Name:  keg.Name,
 			},
 			APISpec: configurationv1alpha1.EventGatewayDataPlaneCertificateAPISpec{
 				Certificate: configurationv1alpha1.SensitiveDataSource{

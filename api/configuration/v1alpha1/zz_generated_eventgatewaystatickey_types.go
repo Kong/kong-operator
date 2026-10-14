@@ -19,8 +19,14 @@ import (
 // +kubebuilder:storageversion
 // +apireference:kgo:include
 // +kong:channels=kong-operator
-// +kubebuilder:validation:XValidation:rule="!has(self.spec.gatewayRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.gatewayRef == self.spec.gatewayRef", message="spec.gatewayRef is immutable when an entity is already Programmed"
-// +kubebuilder:validation:XValidation:rule="!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.gatewayRef == oldSelf.spec.gatewayRef",message="gatewayRef is immutable once the static key has been created in Konnect",fieldPath=".spec.gatewayRef"
+// +kubebuilder:validation:XValidation:rule="has(self.spec.gatewayRef) != has(self.spec.parentRef)", message="exactly one of spec.gatewayRef and spec.parentRef must be set"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.parentRef) || has(self.spec.parentRef)", message="spec.parentRef cannot be replaced by the deprecated spec.gatewayRef"
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.gatewayRef) || !has(oldSelf.spec.gatewayRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.gatewayRef == self.spec.gatewayRef", message="spec.gatewayRef is immutable when an entity is already Programmed"
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.parentRef) || !has(oldSelf.spec.parentRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.parentRef == self.spec.parentRef", message="spec.parentRef is immutable when an entity is already Programmed"
+// +kubebuilder:validation:XValidation:rule="!has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || !has(self.spec.parentRef) || has(oldSelf.spec.parentRef) || (has(oldSelf.spec.gatewayRef) && has(oldSelf.spec.gatewayRef.namespacedRef) && self.spec.parentRef.name == oldSelf.spec.gatewayRef.namespacedRef.name && has(self.spec.parentRef.__namespace__) == has(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) && (!has(self.spec.parentRef.__namespace__) || self.spec.parentRef.__namespace__ == oldSelf.spec.gatewayRef.namespacedRef.__namespace__))", message="spec.gatewayRef can only be replaced by a spec.parentRef referencing the same gateway once an entity is already Programmed"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.status) || !has(oldSelf.status.id) || !has(self.spec.gatewayRef) || !has(oldSelf.spec.gatewayRef) || self.spec.gatewayRef == oldSelf.spec.gatewayRef",message="gatewayRef is immutable once the static key has been created in Konnect",fieldPath=".spec.gatewayRef"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.status) || !has(oldSelf.status.id) || !has(self.spec.parentRef) || !has(oldSelf.spec.parentRef) || self.spec.parentRef == oldSelf.spec.parentRef",message="parentRef is immutable once the static key has been created in Konnect",fieldPath=".spec.parentRef"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.status) || !has(oldSelf.status.id) || !has(self.spec.parentRef) || has(oldSelf.spec.parentRef) || (has(oldSelf.spec.gatewayRef) && has(oldSelf.spec.gatewayRef.namespacedRef) && self.spec.parentRef.name == oldSelf.spec.gatewayRef.namespacedRef.name && has(self.spec.parentRef.__namespace__) == has(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) && (!has(self.spec.parentRef.__namespace__) || self.spec.parentRef.__namespace__ == oldSelf.spec.gatewayRef.namespacedRef.__namespace__))",message="gatewayRef can only be replaced by a parentRef referencing the same gateway once the static key has been created in Konnect",fieldPath=".spec.parentRef"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.apiSpec == oldSelf.spec.apiSpec",message="apiSpec is immutable once the static key has been created in Konnect: Konnect static keys can't be updated, create a new EventGatewayStaticKey instead",fieldPath=".spec.apiSpec"
 type EventGatewayStaticKey struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -45,9 +51,19 @@ type EventGatewayStaticKeyList struct {
 // EventGatewayStaticKeySpec defines the desired state of EventGatewayStaticKey.
 type EventGatewayStaticKeySpec struct {
 	// GatewayRef is the reference to the parent Gateway object.
+	// This field is deprecated, use parentRef instead. Exactly one of
+	// gatewayRef and parentRef must be set.
 	//
-	// +required
+	// +optional
 	GatewayRef commonv1alpha1.ObjectRef `json:"gatewayRef,omitzero"`
+
+	// ParentRef is the reference to the gateway (control plane) this object
+	// belongs to. Supported kinds: KonnectEventGateway.
+	// Exactly one of gatewayRef and parentRef must be set.
+	//
+	// +optional
+	// +kubebuilder:validation:XValidation:rule="(self.group == 'konnect.konghq.com' && self.kind == 'KonnectEventGateway')", message="parentRef must reference one of: konnect.konghq.com/KonnectEventGateway"
+	ParentRef *commonv1alpha1.GatewayRef `json:"parentRef,omitempty"`
 
 	// APISpec defines the desired state of the resource's API spec fields.
 	//

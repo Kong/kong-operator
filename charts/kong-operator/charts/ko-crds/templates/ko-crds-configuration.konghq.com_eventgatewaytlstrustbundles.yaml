@@ -145,8 +145,32 @@ spec:
                   rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
                 - message: when type is konnectID, namespacedRef must not be set
                   rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
-            required:
-            - gatewayRef
+              parentRef:
+                properties:
+                  group:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  kind:
+                    maxLength: 63
+                    minLength: 1
+                    type: string
+                  name:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  namespace:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                required:
+                - group
+                - kind
+                - name
+                type: object
+                x-kubernetes-validations:
+                - message: 'parentRef must reference one of: konnect.konghq.com/KonnectEventGateway'
+                  rule: (self.group == 'konnect.konghq.com' && self.kind == 'KonnectEventGateway')
             type: object
           status:
             properties:
@@ -211,10 +235,29 @@ spec:
             type: object
         type: object
         x-kubernetes-validations:
+        - message: exactly one of spec.gatewayRef and spec.parentRef must be set
+          rule: has(self.spec.gatewayRef) != has(self.spec.parentRef)
+        - message: spec.parentRef cannot be replaced by the deprecated spec.gatewayRef
+          rule: '!has(oldSelf.spec.parentRef) || has(self.spec.parentRef)'
         - message: spec.gatewayRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.gatewayRef) || !has(self.status.conditions) || !self.status.conditions.exists(c,
-            c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.gatewayRef
+          rule: '!has(self.spec.gatewayRef) || !has(oldSelf.spec.gatewayRef) || !has(self.status)
+            || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type
+            == ''Programmed'' && c.status == ''True'') || oldSelf.spec.gatewayRef
             == self.spec.gatewayRef'
+        - message: spec.parentRef is immutable when an entity is already Programmed
+          rule: '!has(self.spec.parentRef) || !has(oldSelf.spec.parentRef) || !has(self.status)
+            || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type
+            == ''Programmed'' && c.status == ''True'') || oldSelf.spec.parentRef ==
+            self.spec.parentRef'
+        - message: spec.gatewayRef can only be replaced by a spec.parentRef referencing
+            the same gateway once an entity is already Programmed
+          rule: '!has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c,
+            c.type == ''Programmed'' && c.status == ''True'') || !has(self.spec.parentRef)
+            || has(oldSelf.spec.parentRef) || (has(oldSelf.spec.gatewayRef) && has(oldSelf.spec.gatewayRef.namespacedRef)
+            && self.spec.parentRef.name == oldSelf.spec.gatewayRef.namespacedRef.name
+            && has(self.spec.parentRef.__namespace__) == has(oldSelf.spec.gatewayRef.namespacedRef.__namespace__)
+            && (!has(self.spec.parentRef.__namespace__) || self.spec.parentRef.__namespace__
+            == oldSelf.spec.gatewayRef.namespacedRef.__namespace__))'
     served: true
     storage: true
     subresources:

@@ -732,6 +732,10 @@ apiGroupVersions:
           parentEntityGVK:
             kind: KonnectEventGateway
             group: konnect.konghq.com
+          # Adds spec.parentRef, a reference to the gateway by group, kind and
+          # name, next to the deprecated spec.gatewayRef.
+          gatewayRef:
+            fieldName: parentRef
       - path: /v1/event-gateways/{gatewayId}/schema-registries
         name: EventGatewaySchemaRegistry
         dataSources:
@@ -750,6 +754,10 @@ apiGroupVersions:
           parentEntityGVK:
             kind: KonnectEventGateway
             group: konnect.konghq.com
+          # Adds spec.parentRef, a reference to the gateway by group, kind and
+          # name, next to the deprecated spec.gatewayRef.
+          gatewayRef:
+            fieldName: parentRef
       - path: /v1/event-gateways/{gatewayId}/tls-trust-bundles
         name: EventGatewayTLSTrustBundle
         dataSources:
@@ -768,6 +776,10 @@ apiGroupVersions:
           parentEntityGVK:
             kind: KonnectEventGateway
             group: konnect.konghq.com
+          # Adds spec.parentRef, a reference to the gateway by group, kind and
+          # name, next to the deprecated spec.gatewayRef.
+          gatewayRef:
+            fieldName: parentRef
       - path: /v1/event-gateways/{gatewayId}/static-keys
         name: EventGatewayStaticKey
         dataSources:
@@ -778,7 +790,7 @@ apiGroupVersions:
         # editable before (e.g. to fix a value Konnect rejected). To rotate a
         # key, create a new EventGatewayStaticKey and point the policies at it
         # (data encrypted with the old key stays decryptable while it exists).
-        # gatewayRef is immutable from then on too, not only while it's
+        # gatewayRef and parentRef are immutable from then on too, not only while it's
         # Programmed: a static key whose deletion is blocked isn't Programmed,
         # and repointing it would orphan it in the old gateway, still in use.
         # status.id isn't cleared if the key is later deleted from Konnect and
@@ -786,7 +798,11 @@ apiGroupVersions:
         cel:
           # Rules on the resource root, spanning spec and status.
           _validations:
-            - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.gatewayRef == oldSelf.spec.gatewayRef\",message=\"gatewayRef is immutable once the static key has been created in Konnect\",fieldPath=\".spec.gatewayRef\""
+            - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || !has(self.spec.gatewayRef) || !has(oldSelf.spec.gatewayRef) || self.spec.gatewayRef == oldSelf.spec.gatewayRef\",message=\"gatewayRef is immutable once the static key has been created in Konnect\",fieldPath=\".spec.gatewayRef\""
+            - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || !has(self.spec.parentRef) || !has(oldSelf.spec.parentRef) || self.spec.parentRef == oldSelf.spec.parentRef\",message=\"parentRef is immutable once the static key has been created in Konnect\",fieldPath=\".spec.parentRef\""
+            # The deprecated gatewayRef can still be replaced by a parentRef to
+            # the same gateway.
+            - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || !has(self.spec.parentRef) || has(oldSelf.spec.parentRef) || (has(oldSelf.spec.gatewayRef) && has(oldSelf.spec.gatewayRef.namespacedRef) && self.spec.parentRef.name == oldSelf.spec.gatewayRef.namespacedRef.name && has(self.spec.parentRef.__namespace__) == has(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) && (!has(self.spec.parentRef.__namespace__) || self.spec.parentRef.__namespace__ == oldSelf.spec.gatewayRef.namespacedRef.__namespace__))\",message=\"gatewayRef can only be replaced by a parentRef referencing the same gateway once the static key has been created in Konnect\",fieldPath=\".spec.parentRef\""
             - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.apiSpec == oldSelf.spec.apiSpec\",message=\"apiSpec is immutable once the static key has been created in Konnect: Konnect static keys can't be updated, create a new EventGatewayStaticKey instead\",fieldPath=\".spec.apiSpec\""
           spec:
             apiSpec:
@@ -821,6 +837,10 @@ apiGroupVersions:
           parentEntityGVK:
             kind: KonnectEventGateway
             group: konnect.konghq.com
+          # Adds spec.parentRef, a reference to the gateway by group, kind and
+          # name, next to the deprecated spec.gatewayRef.
+          gatewayRef:
+            fieldName: parentRef
       - path: /v1/event-gateways/{gatewayId}/listeners
         name: EventGatewayListener
         ops:
@@ -836,6 +856,10 @@ apiGroupVersions:
           parentEntityGVK:
             kind: KonnectEventGateway
             group: konnect.konghq.com
+          # Adds spec.parentRef, a reference to the gateway by group, kind and
+          # name, next to the deprecated spec.gatewayRef.
+          gatewayRef:
+            fieldName: parentRef
       - path: /v1/event-gateways/{gatewayId}/listeners/{eventGatewayListenerId}/policies
         name: EventGatewayListenerPolicy
         references:
@@ -907,6 +931,10 @@ apiGroupVersions:
           parentEntityGVK:
             kind: KonnectEventGateway
             group: konnect.konghq.com
+          # Adds spec.parentRef, a reference to the gateway by group, kind and
+          # name, next to the deprecated spec.gatewayRef.
+          gatewayRef:
+            fieldName: parentRef
         dataSources:
           - path: spec.apiSpec.tls.clientIdentity.certificate
             type: Secret

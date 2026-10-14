@@ -1,0 +1,46 @@
+# Template for verifying that the Konnect entity behind a CR exists: the entity
+# with the ID recorded in the CR's status.id is found in the Konnect collection
+# built from the CR itself.
+#
+# Required bindings:
+#   - cr_resource: Resource type of the CR, e.g. eventgatewaylisteners.configuration.konghq.com.
+#   - cr_name: Name of the CR.
+#   - collection_path_jq: jq expression, evaluated against the CR, yielding the
+#     Konnect API path of the entity collection (see konnect_entity_of_resource.sh).
+#   - konnect_token: Konnect API token.
+#   - konnect_url: Konnect API host, e.g. eu.api.konghq.tech.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-konnect-entity-of-resource
+spec:
+  try:
+    - script:
+        env:
+          - name: RESOURCE_TYPE
+            value: ($cr_resource)
+          - name: RESOURCE_NAME
+            value: ($cr_name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: COLLECTION_PATH_JQ
+            value: ($collection_path_jq)
+        content: |
+          bash ../../common/scripts/konnect_entity_of_resource.sh
+        outputs:
+          - name: entity
+            value: (json_parse($stdout))
+    - script:
+        env:
+          - name: KONNECT_TOKEN
+            value: ($konnect_token)
+          - name: KONNECT_URL
+            value: ($konnect_url)
+          - name: API_PATH
+            value: ($entity.entity_path)
+          - name: WANT_ID
+            value: ($entity.id)
+          - name: EXPECTED_JQ
+            value: .id == $ENV.WANT_ID
+        content: |
+          bash ../../common/scripts/konnect_api_request.sh

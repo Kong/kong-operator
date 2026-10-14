@@ -29,14 +29,16 @@ func eventGatewayBackendClusterOnKonnectEventGatewayRef(object client.Object) []
 	if !ok {
 		return nil
 	}
-	if ent.Spec.GatewayRef.NamespacedRef == nil {
+	// The reference comes from spec.parentRef or the deprecated spec.gatewayRef.
+	ref := ent.GetParentRef()
+	if ref.NamespacedRef == nil {
 		return nil
 	}
 
 	refNamespace := ent.GetNamespace()
-	if ent.Spec.GatewayRef.NamespacedRef.Namespace != nil && *ent.Spec.GatewayRef.NamespacedRef.Namespace != "" {
-		refNamespace = *ent.Spec.GatewayRef.NamespacedRef.Namespace
+	if ref.NamespacedRef.Namespace != nil && *ref.NamespacedRef.Namespace != "" {
+		refNamespace = *ref.NamespacedRef.Namespace
 	}
 
-	return []string{refNamespace + "/" + ent.Spec.GatewayRef.NamespacedRef.Name}
+	return []string{refNamespace + "/" + ref.NamespacedRef.Name}
 }

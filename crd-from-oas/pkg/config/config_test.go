@@ -784,6 +784,56 @@ func TestTypeConfig_ValidateAssociations(t *testing.T) {
 	})
 }
 
+func TestTypeConfig_ValidateGatewayRef(t *testing.T) {
+	newTypeConfig := func(mutate func(*ReconcilerConfig)) *TypeConfig {
+		rc := &ReconcilerConfig{
+			ParentEntityGVK: &EntityGVKConfig{Group: "konnect.konghq.com", Kind: "KonnectEventGateway"},
+			GatewayRef: &GatewayRefConfig{
+				FieldName: "parentRef",
+				AdditionalKinds: []EntityGVKConfig{
+					{Group: "eventgateway.konghq.com", Version: "v1alpha1", Kind: "OnPremEventGateway"},
+				},
+			},
+		}
+		if mutate != nil {
+			mutate(rc)
+		}
+		return &TypeConfig{Path: "/v1/event-gateways/{gatewayId}/listeners", Reconciler: rc}
+	}
+
+	t.Run("valid", func(t *testing.T) {
+		require.NoError(t, newTypeConfig(nil).validate())
+	})
+	t.Run("fieldName is required", func(t *testing.T) {
+		tc := newTypeConfig(func(rc *ReconcilerConfig) { rc.GatewayRef.FieldName = "" })
+		require.ErrorContains(t, tc.validate(), "fieldName is required")
+	})
+	t.Run("parentRef is mutually exclusive", func(t *testing.T) {
+		tc := newTypeConfig(func(rc *ReconcilerConfig) { rc.ParentRef = &ParentRefConfig{FieldName: "gatewayRef"} })
+		require.ErrorContains(t, tc.validate(), "mutually exclusive")
+	})
+	t.Run("parentEntityGVK is required", func(t *testing.T) {
+		tc := newTypeConfig(func(rc *ReconcilerConfig) { rc.ParentEntityGVK = nil })
+		require.ErrorContains(t, tc.validate(), "parentEntityGVK with kind and group is required")
+	})
+	t.Run("parentEntityGVK group is required", func(t *testing.T) {
+		tc := newTypeConfig(func(rc *ReconcilerConfig) { rc.ParentEntityGVK.Group = "" })
+		require.ErrorContains(t, tc.validate(), "parentEntityGVK with kind and group is required")
+	})
+	t.Run("additionalKinds is optional", func(t *testing.T) {
+		tc := newTypeConfig(func(rc *ReconcilerConfig) { rc.GatewayRef.AdditionalKinds = nil })
+		require.NoError(t, tc.validate())
+	})
+	t.Run("additionalKinds entries need a version", func(t *testing.T) {
+		tc := newTypeConfig(func(rc *ReconcilerConfig) { rc.GatewayRef.AdditionalKinds[0].Version = "" })
+		require.ErrorContains(t, tc.validate(), "require group, version and kind")
+	})
+	t.Run("additionalKinds must not repeat the Konnect kind", func(t *testing.T) {
+		tc := newTypeConfig(func(rc *ReconcilerConfig) { rc.GatewayRef.AdditionalKinds[0].Kind = "KonnectEventGateway" })
+		require.ErrorContains(t, tc.validate(), `kind "KonnectEventGateway" is listed more than once`)
+	})
+}
+
 func TestTypeConfig_ValidateDataSources(t *testing.T) {
 	t.Run("Secret and ConfigMap types are valid", func(t *testing.T) {
 		tc := &TypeConfig{DataSources: []DataSourceConfig{

@@ -361,12 +361,12 @@ import (
 {{- if or .HasSecretRefs .HasConfigMapRefs}}
 	corev1 "k8s.io/api/core/v1"
 {{- end}}
-{{- if .ParentRefCustomTypeName}}
+{{- if or .ParentRefCustomTypeName .SkipsKonnectReconciliation}}
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 {{- end}}
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-{{- if .ParentRefCustomTypeName}}
+{{- if or .ParentRefCustomTypeName .SkipsKonnectReconciliation}}
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 {{- end}}
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -394,6 +394,22 @@ func {{.EntityName}}ReconciliationWatchOptions(
 			// it: they are handled by the on-prem controllers where supported,
 			// or rejected at admission when the entity restricts its parent
 			// kinds.
+			return b.For(
+				&{{.APIGroupPackageAlias}}.{{.EntityName}}{},
+				builder.WithPredicates(
+					predicate.NewPredicateFuncs(func(object client.Object) bool {
+						ent, ok := object.(*{{.APIGroupPackageAlias}}.{{.EntityName}})
+						if !ok {
+							return true
+						}
+						return !ent.SkipKonnectReconciliation()
+					}),
+				),
+			)
+{{- else if .SkipsKonnectReconciliation}}
+			// Entities referencing a gateway other than a {{.GatewayRef.KonnectKind}} are
+			// not managed by the Konnect reconciler and must never be enqueued
+			// into it.
 			return b.For(
 				&{{.APIGroupPackageAlias}}.{{.EntityName}}{},
 				builder.WithPredicates(
@@ -582,6 +598,12 @@ const (
 	// IndexField{{.EntityName}}OnOnPremAIGatewayRef is the index field for {{.EntityName}} -> OnPremAIGateway.
 	IndexField{{.EntityName}}OnOnPremAIGatewayRef = "{{.EntityNameLowerCamel}}OnOnPremAIGatewayRef"
 	{{- end}}
+	{{- if .GatewayRef}}
+	{{- range .GatewayRef.AdditionalKinds}}
+	// IndexField{{$.EntityName}}On{{.Kind}}Ref is the index field for {{$.EntityName}} -> {{.Kind}}.
+	IndexField{{$.EntityName}}On{{.Kind}}Ref = "{{$.EntityNameLowerCamel}}On{{.Kind}}Ref"
+	{{- end}}
+	{{- end}}
 	{{- range .CrossRefs}}
 	// IndexField{{$.EntityName}}On{{.RefKind}}Ref is the index field for {{$.EntityName}} -> {{.RefKind}}.
 	IndexField{{$.EntityName}}On{{.RefKind}}Ref = "{{$.EntityNameLowerCamel}}On{{.RefKind}}Ref"
@@ -613,6 +635,15 @@ func OptionsFor{{.EntityName}}() []Option {
 			ExtractValueFn: {{.EntityNameLowerCamel}}OnOnPremAIGatewayRef,
 		},
 		{{- end}}
+		{{- if .GatewayRef}}
+		{{- range .GatewayRef.AdditionalKinds}}
+		{
+			Object:         &{{$.APIGroupPackageAlias}}.{{$.EntityName}}{},
+			Field:          IndexField{{$.EntityName}}On{{.Kind}}Ref,
+			ExtractValueFn: {{$.EntityNameLowerCamel}}On{{.Kind}}Ref,
+		},
+		{{- end}}
+		{{- end}}
 		{{- range .CrossRefs}}
 		{
 			Object:         &{{$.APIGroupPackageAlias}}.{{$.EntityName}}{},
@@ -636,6 +667,55 @@ func OptionsFor{{.EntityName}}() []Option {
 		{{- end}}
 	}
 }
+
+{{- if .GatewayRef}}
+
+func {{.EntityNameLowerCamel}}On{{.ParentEntityName}}Ref(object client.Object) []string {
+	ent, ok := object.(*{{.APIGroupPackageAlias}}.{{.EntityName}})
+	if !ok {
+		return nil
+	}
+{{- if .GatewayRef.AdditionalKinds}}
+	// Only entities referencing a {{.GatewayRef.KonnectKind}} are visible to the Konnect
+	// reconciler: the others are indexed separately.
+	if ent.SkipKonnectReconciliation() {
+		return nil
+	}
+{{- end}}
+	// The reference comes from spec.{{.GatewayRef.JSONFieldName}} or the deprecated spec.{{.GatewayRef.LegacyJSONFieldName}}.
+	ref := ent.GetParentRef()
+	if ref.NamespacedRef == nil {
+		return nil
+	}
+
+	refNamespace := ent.GetNamespace()
+	if ref.NamespacedRef.Namespace != nil && *ref.NamespacedRef.Namespace != "" {
+		refNamespace = *ref.NamespacedRef.Namespace
+	}
+
+	return []string{refNamespace + "/" + ref.NamespacedRef.Name}
+}
+{{- range .GatewayRef.AdditionalKinds}}
+
+func {{$.EntityNameLowerCamel}}On{{.Kind}}Ref(object client.Object) []string {
+	ent, ok := object.(*{{$.APIGroupPackageAlias}}.{{$.EntityName}})
+	if !ok {
+		return nil
+	}
+	ref := ent.Spec.{{$.GatewayRef.GoFieldName}}
+	if ref == nil || !ref.IsGroupKind("{{.Group}}", "{{.Kind}}") {
+		return nil
+	}
+
+	refNamespace := ent.GetNamespace()
+	if ref.Namespace != nil && *ref.Namespace != "" {
+		refNamespace = *ref.Namespace
+	}
+
+	return []string{refNamespace + "/" + ref.Name}
+}
+{{- end}}
+{{- else}}
 
 func {{.EntityNameLowerCamel}}On{{.ParentEntityName}}Ref(object client.Object) []string {
 	ent, ok := object.(*{{.APIGroupPackageAlias}}.{{.EntityName}})
@@ -682,6 +762,7 @@ func {{.EntityNameLowerCamel}}OnOnPremAIGatewayRef(object client.Object) []strin
 
 	return []string{refNamespace + "/" + ent.Spec.{{.ParentRefFieldName}}.NamespacedRef.Name}
 }
+{{- end}}
 {{- end}}
 {{range .CrossRefs}}
 func {{$.EntityNameLowerCamel}}On{{.RefKind}}Ref(object client.Object) []string {
@@ -838,11 +919,14 @@ type crossRefAccessorExpr struct {
 }
 
 type reconcilerEntityMetadata struct {
-	EntityName                 string
-	EntityNameLowerCamel       string
-	ParentEntityName           string
-	ParentEntityVersion        string
-	ParentRefFieldName         string
+	EntityName           string
+	EntityNameLowerCamel string
+	ParentEntityName     string
+	ParentEntityVersion  string
+	ParentRefFieldName   string
+	// GatewayRef is set when the entity carries a GatewayRef typed parent
+	// reference field next to the OpenAPI-derived one.
+	GatewayRef                 *gatewayRefTemplateData
 	APIGroupPackagePath        string
 	APIGroupPackageAlias       string
 	ParentAPIGroupPackagePath  string
@@ -1080,12 +1164,16 @@ func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.
 
 	var buf strings.Builder
 	data := struct {
-		EntityName                 string
-		EntityNameLowerCamel       string
-		ParentEntityName           string
-		ParentEntityVersion        string
-		ParentRefFieldName         string
-		ParentRefCustomTypeName    string
+		EntityName              string
+		EntityNameLowerCamel    string
+		ParentEntityName        string
+		ParentEntityVersion     string
+		ParentRefFieldName      string
+		ParentRefCustomTypeName string
+		GatewayRef              *gatewayRefTemplateData
+		// SkipsKonnectReconciliation is true when the entity's GatewayRef
+		// field can reference gateways the Konnect reconciler does not manage.
+		SkipsKonnectReconciliation bool
 		APIAuthPackageAlias        string
 		NeedsSeparateAPIAuthImport bool
 		APIGroupPackagePath        string
@@ -1103,12 +1191,14 @@ func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.
 		ParentEntityName:     metadata.ParentEntityName,
 		ParentEntityVersion:  metadata.ParentEntityVersion,
 		ParentRefFieldName:   metadata.ParentRefFieldName,
+		GatewayRef:           metadata.GatewayRef,
 		ParentRefCustomTypeName: func() string {
 			if rc != nil && rc.ParentRef != nil {
 				return rc.ParentRef.TypeName
 			}
 			return ""
 		}(),
+		SkipsKonnectReconciliation: metadata.GatewayRef != nil && len(metadata.GatewayRef.AdditionalKinds) > 0,
 		APIAuthPackageAlias:        apiAuthPackageAlias,
 		NeedsSeparateAPIAuthImport: needsSeparateAPIAuthImport,
 		APIGroupPackagePath:        metadata.APIGroupPackagePath,
@@ -1175,6 +1265,7 @@ func (g *Generator) generateIndex(metadata reconcilerEntityMetadata, rc *config.
 		ParentEntityName        string
 		ParentRefFieldName      string
 		ParentRefCustomTypeName string
+		GatewayRef              *gatewayRefTemplateData
 		APIGroupPackagePath     string
 		APIGroupPackageAlias    string
 		CrossRefs               []crossRefWatchData
@@ -1189,6 +1280,7 @@ func (g *Generator) generateIndex(metadata reconcilerEntityMetadata, rc *config.
 		EntityNameLowerCamel: metadata.EntityNameLowerCamel,
 		ParentEntityName:     metadata.ParentEntityName,
 		ParentRefFieldName:   metadata.ParentRefFieldName,
+		GatewayRef:           metadata.GatewayRef,
 		ParentRefCustomTypeName: func() string {
 			if rc != nil && rc.ParentRef != nil {
 				return rc.ParentRef.TypeName
@@ -1310,6 +1402,7 @@ func (g *Generator) reconcilerEntityMetadata(
 	if rc.ParentRef != nil {
 		metadata.ParentRefFieldName = goFieldName(rc.ParentRef.FieldName)
 	}
+	metadata.GatewayRef = g.gatewayRefData(rc, parentDep)
 
 	return metadata, nil
 }
