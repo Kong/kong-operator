@@ -231,8 +231,8 @@ func runGatewayParentRefTestCases[
 			Update:     setRefs(konnectRef(gatewayName), commonv1alpha1.ObjectRef{}),
 		},
 		{
-			Name:                       "gatewayRef with an empty namespace cannot be replaced by a parentRef in another namespace when programmed",
-			TestObject:                 programmed(withRefs(nil, gatewayRefInNamespace(""))),
+			Name:       "gatewayRef with an empty namespace cannot be replaced by a parentRef in another namespace when programmed",
+			TestObject: programmed(withRefs(nil, gatewayRefInNamespace(""))),
 			Update: func(obj T) {
 				ref := konnectRef(gatewayName)
 				ref.Namespace = new("other")
