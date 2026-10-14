@@ -137,24 +137,26 @@ func TestEventGatewayParentPolicyLifecycle(t *testing.T) {
 			require.NoError(t, cl.Delete(ctx, parent))
 			waitForPolicyCondition(t, cl, parent, "Programmed", "DeletionBlocked")
 
+			// Deletion is idempotent: reconciliation may repeat before the
+			// cache observes that the cleanup finalizer has been removed.
 			if side == "produce" {
 				factory.SDK.EventGatewayVirtualClusterProducePoliciesSDK.EXPECT().
 					DeleteEventGatewayVirtualClusterProducePolicy(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.DeleteEventGatewayVirtualClusterProducePolicyRequest) bool {
 						return req.PolicyID == "produce-child-id"
-					})).Return(&sdkkonnectops.DeleteEventGatewayVirtualClusterProducePolicyResponse{}, nil).Once()
+					})).Return(&sdkkonnectops.DeleteEventGatewayVirtualClusterProducePolicyResponse{}, nil)
 				factory.SDK.EventGatewayVirtualClusterProducePoliciesSDK.EXPECT().
 					DeleteEventGatewayVirtualClusterProducePolicy(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.DeleteEventGatewayVirtualClusterProducePolicyRequest) bool {
 						return req.PolicyID == "produce-parent-id"
-					})).Return(&sdkkonnectops.DeleteEventGatewayVirtualClusterProducePolicyResponse{}, nil).Once()
+					})).Return(&sdkkonnectops.DeleteEventGatewayVirtualClusterProducePolicyResponse{}, nil)
 			} else {
 				factory.SDK.EventGatewayVirtualClusterConsumePoliciesSDK.EXPECT().
 					DeleteEventGatewayVirtualClusterConsumePolicy(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.DeleteEventGatewayVirtualClusterConsumePolicyRequest) bool {
 						return req.PolicyID == "consume-child-id"
-					})).Return(&sdkkonnectops.DeleteEventGatewayVirtualClusterConsumePolicyResponse{}, nil).Once()
+					})).Return(&sdkkonnectops.DeleteEventGatewayVirtualClusterConsumePolicyResponse{}, nil)
 				factory.SDK.EventGatewayVirtualClusterConsumePoliciesSDK.EXPECT().
 					DeleteEventGatewayVirtualClusterConsumePolicy(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.DeleteEventGatewayVirtualClusterConsumePolicyRequest) bool {
 						return req.PolicyID == "consume-parent-id"
-					})).Return(&sdkkonnectops.DeleteEventGatewayVirtualClusterConsumePolicyResponse{}, nil).Once()
+					})).Return(&sdkkonnectops.DeleteEventGatewayVirtualClusterConsumePolicyResponse{}, nil)
 			}
 			require.NoError(t, cl.Delete(ctx, child))
 			// Shorter than the blocked-deletion retry period: the child watch,
