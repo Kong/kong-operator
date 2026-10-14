@@ -1,0 +1,53 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: onpremaigateway-lifecycle
+spec:
+  description: |
+    Smoke test for the on-prem AI Gateway flow. Creates an OnPremAIGateway
+    control plane and waits for it to become Ready, creates one
+    AIGatewayModelProvider + AIGatewayModel attached to it, then creates an
+    AIGatewayDataPlane attached via controlPlaneRef.onpremNamespacedRef.
+    Asserts that the model is Programmed (its rendered configuration was
+    pushed to the data plane) and that the data plane becomes Ready with a
+    service address.
+
+    A configuration entity is required: a Kong DB-less data plane reports
+    not-ready while its applied configuration is empty, and the control plane
+    pushes an empty configuration when there are no entities. No traffic is
+    driven here — the routable end-to-end flow is covered by the
+    config-push test.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'onprem-cp']))
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+    - name: model_name
+      value: (join('-', [($test_name), 'model']))
+    - name: provider_name
+      value: (join('-', [($test_name), 'provider']))
+    - name: provider_credentials_name
+      value: (join('-', [($provider_name), 'credentials']))
+  steps:
+    - name: Create-onprem-aigateway
+      use:
+        template: ../../common/_step_templates/apply-assert-onpremAIGateway.yaml
+    - name: Create-provider-and-model
+      try:
+        - apply:
+            file: 02-provider-and-model.yaml
+    - name: Create-aigateway-dataplane
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+        with:
+          bindings:
+            - name: control_plane_ref
+              value: "({type: 'onpremNamespacedRef', onpremNamespacedRef: {name: ($aigw_cp_name)}})"
+    - name: Assert-model-pushed-to-dataplane
+      try:
+        - assert:
+            file: 02-provider-and-model-assert.yaml
