@@ -5,7 +5,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"maps"
 	"net/http"
+	"slices"
 	"sync"
 	"time"
 
@@ -66,6 +68,16 @@ type Config struct {
 	// hashed config so that a renewed Secret - recreated under a new GenerateName by
 	// EnsureCertificate - drifts the hash and restarts the instance with the new reference.
 	AdminClientCertSecretNN types.NamespacedName
+
+	// SecretLabelFilters are the matchLabels from the OnPremAIGateway's
+	// spec.objectFilters.secrets.matchLabels. They are ANDed with the operator's
+	// SecretLabelSelector on the instance's Secret cache, so user entity Secrets
+	// must carry both. The Admin API client certificate Secret is stamped with
+	// them by the OnPremAIGateway controller, so it always stays visible.
+	// They are part of the hashed config so that changing them restarts the
+	// instance: its cache is built at manager start and cannot pick the new
+	// filters up otherwise.
+	SecretLabelFilters map[string]string
 }
 
 // Hash computes a hash of the given config. It's used to detect configuration drift of running instances.
@@ -84,6 +96,12 @@ func Hash(cfg Config) (string, error) {
 	if cfg.SyncTimeout != 0 {
 		h.Write([]byte("timeout:"))
 		h.Write([]byte(cfg.SyncTimeout.String()))
+	}
+	if len(cfg.SecretLabelFilters) > 0 {
+		// Sorted so the hash is stable regardless of map iteration order.
+		for _, k := range slices.Sorted(maps.Keys(cfg.SecretLabelFilters)) {
+			h.Write([]byte("secretFilter:" + k + "=" + cfg.SecretLabelFilters[k]))
+		}
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
@@ -304,23 +322,42 @@ func (i *Instance) cacheOpts() cache.Options {
 // secretSelector mirrors the main manager's Secret cache filter (modules/manager's
 // setByObjectFor): Secrets must carry the configured label key with value "true" or
 // "internal". When no selector is configured, no label filter is applied, exactly
-// like the main manager's cache.
+// like the main manager's cache. The OnPremAIGateway's spec.objectFilters.secrets
+// matchLabels (cfg.SecretLabelFilters) are ANDed on top, so user entity Secrets must
+// satisfy both; the Admin API client certificate Secret is stamped with them by the
+// OnPremAIGateway controller.
 func (i *Instance) secretSelector() labels.Selector {
-	if i.env.SecretLabelSelector == "" {
+	selector := labels.NewSelector()
+	if i.env.SecretLabelSelector != "" {
+		req, err := labels.NewRequirement(
+			i.env.SecretLabelSelector,
+			selection.In,
+			[]string{mgrconfig.LabelValueForSelectorTrue, mgrconfig.LabelValueForSelectorInternal},
+		)
+		if err != nil {
+			// The label key comes from operator configuration; an invalid key means a
+			// broken deployment, but returning a never-matching selector keeps the
+			// manager startable instead of crashing it here.
+			return labels.Nothing()
+		}
+		selector = selector.Add(*req)
+	}
+	for _, k := range slices.Sorted(maps.Keys(i.cfg.SecretLabelFilters)) {
+		// Sorted so the selector is deterministic for a given config.
+		req, err := labels.NewRequirement(k, selection.Equals, []string{i.cfg.SecretLabelFilters[k]})
+		if err != nil {
+			// The CRD rejects invalid keys/values, but out-of-band writes exist: a
+			// never-matching selector keeps the manager startable instead of
+			// crashing it here.
+			return labels.Nothing()
+		}
+		selector = selector.Add(*req)
+	}
+	// No requirement at all: no label filter, exactly like the main manager's cache.
+	if selector.Empty() {
 		return nil
 	}
-	req, err := labels.NewRequirement(
-		i.env.SecretLabelSelector,
-		selection.In,
-		[]string{mgrconfig.LabelValueForSelectorTrue, mgrconfig.LabelValueForSelectorInternal},
-	)
-	if err != nil {
-		// The label key comes from operator configuration; an invalid key means a
-		// broken deployment, but returning a never-matching selector keeps the
-		// manager startable instead of crashing it here.
-		return labels.Nothing()
-	}
-	return labels.NewSelector().Add(*req)
+	return selector
 }
 
 func (i *Instance) sendConfig(

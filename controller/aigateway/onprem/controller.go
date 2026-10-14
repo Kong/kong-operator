@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -201,6 +202,34 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 		string(aigatewayv1alpha1.LicenseMissingReason),
 	)
 
+	// Validate the gateway's options against the operator's configuration. If they
+	// are not valid (e.g. the secret label selectors of spec.objectFilters conflict
+	// with the operator's secret label selector), the OnPremAIGateway is marked
+	// invalid and the reconciliation stops.
+	log.Trace(logger, "validating OnPremAIGateway's options with the reconciler's configuration")
+	msg, ok := r.validateOnPremAIGatewayOptions(onprem)
+	if !ok {
+		k8sutils.SetCondition(
+			k8sutils.NewCondition(
+				aigatewayv1alpha1.OnPremAIGatewayOptionsValidType,
+				metav1.ConditionFalse,
+				aigatewayv1alpha1.OnPremAIGatewayOptionsInvalidReason,
+				msg,
+			),
+			onprem,
+		)
+		return ctrl.Result{}, r.applyStatus(ctx, logger, onprem)
+	}
+	k8sutils.SetCondition(
+		k8sutils.NewCondition(
+			aigatewayv1alpha1.OnPremAIGatewayOptionsValidType,
+			metav1.ConditionTrue,
+			aigatewayv1alpha1.OnPremAIGatewayOptionsValidReason,
+			"Controller options are valid",
+		),
+		onprem,
+	)
+
 	// The mTLS client certificate is what the instance presents to the data planes'
 	// Admin API when pushing configuration. Provision it before scheduling the
 	// instance: an instance without it cannot push, and the push loop would only
@@ -319,7 +348,30 @@ func (r *Reconciler) configFromSpec(
 			cfg.SyncTimeout = time.Duration(*dps.TimeoutSeconds) * time.Second
 		}
 	}
+	if of := onprem.Spec.ObjectFilters; of != nil && of.Secrets != nil {
+		cfg.SecretLabelFilters = of.Secrets.MatchLabels
+	}
 	return cfg
+}
+
+// validateOnPremAIGatewayOptions checks if the OnPremAIGateway's options are valid with
+// the operator specific configuration. It returns a boolean as the validation result and
+// a string as the error message when the validation fails. For example, it fails when a
+// matchLabels key of spec.objectFilters.secrets conflicts with the operator's secret
+// label selector or with the operator-managed Admin API client certificate label.
+func (r *Reconciler) validateOnPremAIGatewayOptions(onprem *aigatewayv1alpha1.OnPremAIGateway) (string, bool) {
+	if onprem.Spec.ObjectFilters == nil || onprem.Spec.ObjectFilters.Secrets == nil {
+		return "", true
+	}
+	for key := range onprem.Spec.ObjectFilters.Secrets.MatchLabels {
+		if r.SecretLabelSelector != "" && key == r.SecretLabelSelector {
+			return fmt.Sprintf("secret label selector in spec.objectFilters conflicts with operator's secret label filter '%s'", r.SecretLabelSelector), false
+		}
+		if key == consts.SecretOnPremAIGatewayAdminClientCertificateLabel {
+			return fmt.Sprintf("secret label selector in spec.objectFilters conflicts with the operator-managed label '%s'", key), false
+		}
+	}
+	return "", true
 }
 
 // scheduleInstance creates a new control plane instance and schedules it in the multi-instance manager.
@@ -373,6 +425,13 @@ func (r *Reconciler) ensureAdminClientCertificateSecret(
 	}
 	if r.SecretLabelSelector != "" {
 		matchingLabels[r.SecretLabelSelector] = "true"
+	}
+	// Stamp the user's spec.objectFilters.secrets matchLabels onto the cert Secret so
+	// it always matches the instance's filtered Secret cache (validated in
+	// validateOnPremAIGatewayOptions, so it cannot collide with the operator-managed
+	// labels above).
+	if filters := onprem.Spec.ObjectFilters; filters != nil && filters.Secrets != nil {
+		maps.Copy(matchingLabels, filters.Secrets.MatchLabels)
 	}
 	_, secret, err := secrets.EnsureCertificate(
 		ctx,

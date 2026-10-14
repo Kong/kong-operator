@@ -10,6 +10,13 @@ spec:
   dataplaneSync:
     intervalSeconds: 5
     timeoutSeconds: 3
+  # Optional filters limiting the Secrets the gateway's instance watches.
+  # Secrets must carry ALL of these labels (ANDed with the operator's secret
+  # label selector) to be reconciled.
+  objectFilters:
+    secrets:
+      matchLabels:
+        konghq.com/ingestable: "true"
 ---
 apiVersion: aigateway.konghq.com/v1alpha1
 kind: AIGatewayDataPlane

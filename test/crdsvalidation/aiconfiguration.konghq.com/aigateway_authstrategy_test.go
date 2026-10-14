@@ -33,7 +33,7 @@ func TestAIGatewayAuthStrategy(t *testing.T) {
 						Type: aiconfigurationv1alpha1.AIGatewayAuthStrategyConfigTypeKeyAuth,
 						KeyAuth: &aiconfigurationv1alpha1.AIGatewayAuthStrategyKeyAuth{
 							Name:        "provider1",
-							DisplayName: "Test Identity Provider",
+							DisplayName: "Test Auth Strategy",
 						},
 					},
 				},

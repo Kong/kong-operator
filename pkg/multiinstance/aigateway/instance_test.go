@@ -140,6 +140,22 @@ func TestHash(t *testing.T) {
 		AdminClientCertSecretNN: base.AdminClientCertSecretNN,
 		SyncTimeout:             30 * time.Second,
 	}), "equal interval and timeout values must produce different hashes")
+
+	require.Equal(t, hashOf(Config{
+		DBLessConfig:            base.DBLessConfig,
+		AdminClientCertSecretNN: base.AdminClientCertSecretNN,
+		SecretLabelFilters:      map[string]string{"a": "1", "b": "2"},
+	}), hashOf(Config{
+		DBLessConfig:            base.DBLessConfig,
+		AdminClientCertSecretNN: base.AdminClientCertSecretNN,
+		SecretLabelFilters:      map[string]string{"b": "2", "a": "1"},
+	}), "filters must hash order-independently")
+
+	require.NotEqual(t, hashOf(base), hashOf(Config{
+		DBLessConfig:            base.DBLessConfig,
+		AdminClientCertSecretNN: base.AdminClientCertSecretNN,
+		SecretLabelFilters:      map[string]string{"team": "foo"},
+	}), "changed object filters must drift the hash so the instance restarts with the new cache")
 }
 
 // testAIGatewayModel returns a valid AIGatewayModel pointing at the test gateway.
@@ -404,6 +420,51 @@ func TestCacheOpts(t *testing.T) {
 		secretCfg, ok := secretCacheCfg(opts)
 		require.True(t, ok)
 		require.Nil(t, secretCfg.Label)
+	})
+
+	t.Run("spec.objectFilters.secrets matchLabels are ANDed with the operator label", func(t *testing.T) {
+		i := Instance{
+			env: Env{
+				GatewayNN:           types.NamespacedName{Namespace: "ns", Name: "gw"},
+				SecretLabelSelector: "app",
+			},
+			cfg: Config{SecretLabelFilters: map[string]string{"team": "foo"}},
+		}
+		opts := i.cacheOpts()
+		secretCfg, ok := secretCacheCfg(opts)
+		require.True(t, ok)
+		require.NotNil(t, secretCfg.Label)
+		require.True(t, secretCfg.Label.Matches(labels.Set{"app": "true", "team": "foo"}))
+		require.True(t, secretCfg.Label.Matches(labels.Set{"app": "internal", "team": "foo"}))
+		require.False(t, secretCfg.Label.Matches(labels.Set{"app": "true"}), "missing the user filter label")
+		require.False(t, secretCfg.Label.Matches(labels.Set{"team": "foo"}), "missing the operator label")
+	})
+
+	t.Run("spec.objectFilters.secrets matchLabels without an operator selector", func(t *testing.T) {
+		i := Instance{
+			env: Env{GatewayNN: types.NamespacedName{Namespace: "ns", Name: "gw"}},
+			cfg: Config{SecretLabelFilters: map[string]string{"team": "foo"}},
+		}
+		opts := i.cacheOpts()
+		secretCfg, ok := secretCacheCfg(opts)
+		require.True(t, ok)
+		require.NotNil(t, secretCfg.Label)
+		require.True(t, secretCfg.Label.Matches(labels.Set{"team": "foo"}))
+		require.False(t, secretCfg.Label.Matches(labels.Set{"team": "bar"}))
+	})
+
+	t.Run("invalid matchLabels: never-matching selector keeps the manager startable", func(t *testing.T) {
+		// The CRD rejects invalid keys/values, but out-of-band writes exist: an
+		// empty key makes labels.NewRequirement fail, which must not crash the
+		// instance manager.
+		i := Instance{
+			env: Env{GatewayNN: types.NamespacedName{Namespace: "ns", Name: "gw"}},
+			cfg: Config{SecretLabelFilters: map[string]string{"": "v"}},
+		}
+		secretCfg, ok := secretCacheCfg(i.cacheOpts())
+		require.True(t, ok)
+		require.NotNil(t, secretCfg.Label)
+		require.False(t, secretCfg.Label.Matches(labels.Set{"a": "b"}))
 	})
 
 	t.Run("namespace scoping of the other objects", func(t *testing.T) {
