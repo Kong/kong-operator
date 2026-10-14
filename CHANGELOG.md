@@ -78,6 +78,7 @@
   until consumers migrate, without removing the unchanged Konnect registration.
   The extension remains unready until its current certificate is programmed.
   [#5982](https://github.com/Kong/kong-operator/pull/5982)
+  [#6045](https://github.com/Kong/kong-operator/pull/6045)
 
 ## [v2.2.6]
 
