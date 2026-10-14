@@ -9,6 +9,7 @@
 Package v1alpha1 contains API Schema definitions for the eventgateway.konghq.com v1alpha1 API group.
 
 - [KegDataPlane](#eventgateway-konghq-com-v1alpha1-kegdataplane)
+- [OnPremEventGateway](#eventgateway-konghq-com-v1alpha1-onpremeventgateway)
 
 ### KegDataPlane
 
@@ -26,6 +27,25 @@ referenced KonnectEventGateway resource.
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KegDataPlaneSpec](#eventgateway-konghq-com-v1alpha1-types-kegdataplanespec)_ | Spec defines the desired state of KegDataPlane. |
 | `status` _[KegDataPlaneStatus](#eventgateway-konghq-com-v1alpha1-types-kegdataplanestatus)_ | Status defines the observed state of KegDataPlane. |
+
+### OnPremEventGateway
+
+
+OnPremEventGateway is the Schema for the on-prem Event Gateway control planes API.
+It stands for one Event Gateway whose control plane is gw-admin, running in
+the cluster, instead of Konnect: Kong Operator pushes the configuration of
+the entities that reference it to gw-admin, and the data planes pull it
+from there.
+
+<!-- on_prem_event_gateway description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `eventgateway.konghq.com/v1alpha1`
+| `kind` _string_ | `OnPremEventGateway`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[OnPremEventGatewaySpec](#eventgateway-konghq-com-v1alpha1-types-onpremeventgatewayspec)_ | Spec defines the desired state of OnPremEventGateway. |
+| `status` _[OnPremEventGatewayStatus](#eventgateway-konghq-com-v1alpha1-types-onpremeventgatewaystatus)_ | Status defines the observed state of OnPremEventGateway. |
 
 ### Types
 
@@ -202,6 +222,37 @@ _Appears in:_
 
 - [KegDataPlaneSpec](#eventgateway-konghq-com-v1alpha1-types-kegdataplanespec)
 
+#### GWAdmin
+
+
+GWAdmin configures how Kong Operator reaches gw-admin.
+
+
+
+| Field | Description |
+| --- | --- |
+| `service` _[GWAdminService](#eventgateway-konghq-com-v1alpha1-types-gwadminservice)_ | Service is the Service in front of the gw-admin pods, in the namespace of the OnPremEventGateway. Kong Operator pushes the configuration to each pod of this Service. |
+
+_Appears in:_
+
+- [OnPremEventGatewaySpec](#eventgateway-konghq-com-v1alpha1-types-onpremeventgatewayspec)
+
+#### GWAdminService
+
+
+GWAdminService identifies the gw-admin Service and its port.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the name of the Service. |
+| `portName` _string_ | PortName is the name of the Service port gw-admin serves its API on. |
+
+_Appears in:_
+
+- [GWAdmin](#eventgateway-konghq-com-v1alpha1-types-gwadmin)
+
 
 
 #### KegDataPlaneConfiguration
@@ -352,6 +403,38 @@ ObservabilityConfig configures logging, metrics, and tracing for KEG.
 _Appears in:_
 
 - [KegDataPlaneConfiguration](#eventgateway-konghq-com-v1alpha1-types-kegdataplaneconfiguration)
+
+#### OnPremEventGatewaySpec
+
+
+OnPremEventGatewaySpec defines the desired state of OnPremEventGateway.
+
+
+
+| Field | Description |
+| --- | --- |
+| `gwAdmin` _[GWAdmin](#eventgateway-konghq-com-v1alpha1-types-gwadmin)_ | GWAdmin configures how Kong Operator reaches the gw-admin of this gateway. |
+
+_Appears in:_
+
+- [OnPremEventGateway](#eventgateway-konghq-com-v1alpha1-onpremeventgateway)
+
+#### OnPremEventGatewayStatus
+
+
+OnPremEventGatewayStatus defines the observed state of OnPremEventGateway.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the OnPremEventGateway. |
+| `serverURL` _string_ | ServerURL is the address the data planes of this gateway use to reach gw-admin. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed. |
+
+_Appears in:_
+
+- [OnPremEventGateway](#eventgateway-konghq-com-v1alpha1-onpremeventgateway)
 
 #### RuntimeOptions
 

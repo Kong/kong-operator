@@ -119,6 +119,11 @@
   operator creates for a `KegDataPlane` keeps using `spec.gatewayRef`, so it
   is not affected.
   [#6097](https://github.com/Kong/kong-operator/pull/6097)
+- Added `OnPremEventGateway` CRD: an Event Gateway whose control plane is
+  gw-admin, running in the cluster, instead of Konnect. `spec.gwAdmin` names
+  the Service and port of the gw-admin pods Kong Operator pushes the
+  configuration to. This change only adds the CRD; it is not reconciled yet.
+  [#6114](https://github.com/Kong/kong-operator/pull/6114)
 - `--konnect-list-page-size` flag (default and maximum `100`): the page size
   the operator requests when listing Konnect entities to find the Konnect
   entity of an object, e.g. one whose Konnect ID was lost. It is a fallback in
