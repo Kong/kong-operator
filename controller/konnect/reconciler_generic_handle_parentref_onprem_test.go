@@ -300,7 +300,10 @@ func TestHandleParentRef_RemovesKonnectConditions(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
 		programmed metav1.Condition
-		wantKept   []string
+		// konnectID is the Konnect ID the entity got when it was reconciled
+		// against Konnect before.
+		konnectID string
+		wantKept  []string
 	}{
 		{
 			name:       "Programmed set by the Konnect reconciler is removed",
@@ -310,6 +313,18 @@ func TestHandleParentRef_RemovesKonnectConditions(t *testing.T) {
 			name:       "Programmed set by another controller is kept",
 			programmed: condition("Programmed", "Pushed"),
 			wantKept:   []string{"Programmed"},
+		},
+		{
+			name:       "Programmed with reason Programmed and no Konnect ID is kept",
+			programmed: condition("Programmed", konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed),
+			wantKept:   []string{"Programmed"},
+		},
+		{
+			// E.g. a parent deleted in Konnect, then recreated under an
+			// OnPremEventGateway: Programmed=True and the Konnect ID are stale.
+			name:       "Programmed and the Konnect status are removed when the entity has a Konnect ID",
+			programmed: condition("Programmed", konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed),
+			konnectID:  "policy-konnect-id",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -322,6 +337,7 @@ func TestHandleParentRef_RemovesKonnectConditions(t *testing.T) {
 				condition(configurationv1alpha1.KonnectReferencesResolvedConditionType, configurationv1alpha1.KonnectReferencesResolvedReasonNotProgrammed),
 				tc.programmed,
 			}
+			policy.SetKonnectID(tc.konnectID)
 
 			cl := fake.NewClientBuilder().
 				WithScheme(scheme.Get()).
@@ -340,6 +356,7 @@ func TestHandleParentRef_RemovesKonnectConditions(t *testing.T) {
 				kept = append(kept, c.Type)
 			}
 			require.Equal(t, tc.wantKept, kept)
+			require.Empty(t, updated.GetKonnectID(), "the Konnect status must be cleared")
 		})
 	}
 }

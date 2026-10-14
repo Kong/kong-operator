@@ -16,6 +16,7 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
@@ -396,8 +397,9 @@ func skipsKonnectReconciliation(ctx context.Context, cl client.Client, obj clien
 }
 
 // konnectProgrammedReasons are the reasons of the Programmed condition that
-// only the Konnect reconciler sets. Programmed with another reason, e.g. one
-// set by an on-prem controller, is left alone.
+// only the Konnect reconciler sets: the on-prem status writers use their own,
+// e.g. Programmed and Invalid. Without a Konnect ID, Programmed with another
+// reason is left alone: it may come from an on-prem controller.
 var konnectProgrammedReasons = map[string]struct{}{
 	konnectv1alpha1.KonnectEntityProgrammedReasonConditionWithStatusFalseExists:             {},
 	konnectv1alpha1.KonnectEntityProgrammedReasonKonnectAPIOpFailed:                         {},
@@ -425,7 +427,16 @@ func removeKonnectConditions(ctx context.Context, cl client.Client, obj objectWi
 		}
 	}
 	programmed := consts.ConditionType(konnectv1alpha1.KonnectEntityProgrammedConditionType)
-	if cond, ok := k8sutils.GetCondition(programmed, obj); ok {
+	// A Konnect ID means the entity was reconciled against Konnect before, e.g.
+	// under a Konnect parent that was deleted and recreated under an on-prem
+	// gateway: its Programmed condition, whatever the reason, and its Konnect
+	// status are stale. Both are cleared together, so this happens once and
+	// never removes a Programmed condition an on-prem controller sets later.
+	if konnectStatus := konnectEntityStatusOf(obj); konnectStatus != nil && konnectStatus.GetKonnectID() != "" {
+		k8sutils.RemoveCondition(programmed, obj)
+		*konnectStatus = konnectv1alpha2.KonnectEntityStatus{}
+		removed = true
+	} else if cond, ok := k8sutils.GetCondition(programmed, obj); ok {
 		if _, isKonnect := konnectProgrammedReasons[cond.Reason]; isKonnect && k8sutils.RemoveCondition(programmed, obj) {
 			removed = true
 		}
@@ -444,4 +455,16 @@ func removeKonnectConditions(ctx context.Context, cl client.Client, obj objectWi
 		return ctrl.Result{}, fmt.Errorf("failed to remove Konnect conditions: %w", err)
 	}
 	return ctrl.Result{}, nil
+}
+
+// konnectEntityStatusOf returns the Konnect entity status of obj, or nil when
+// it has none.
+func konnectEntityStatusOf(obj client.Object) *konnectv1alpha2.KonnectEntityStatus {
+	withStatus, ok := obj.(interface {
+		GetKonnectStatus() *konnectv1alpha2.KonnectEntityStatus
+	})
+	if !ok {
+		return nil
+	}
+	return withStatus.GetKonnectStatus()
 }

@@ -392,3 +392,48 @@ spec:
 		assert.NotEqual(t, "EventGatewayTLSTrustBundle", fields["controller"], "unexpected reconciliation error: %v", fields["error"])
 	}
 }
+
+// TestEventGatewayChildProgrammedInKonnectMovedUnderOnPremAncestor covers a
+// child that was programmed in Konnect, whose parent was deleted and then
+// recreated attached to an OnPremEventGateway: its Programmed=True and Konnect
+// ID are stale, and are removed.
+func TestEventGatewayChildProgrammedInKonnectMovedUnderOnPremAncestor(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := envtest.Context(t, t.Context())
+	defer cancel()
+	cl, ns := startEventGatewayReconcilers(t, ctx)
+
+	t.Log("Creating a virtual cluster as left behind by a deleted Konnect backend cluster")
+	vc := virtualCluster(t, ns.Name, "virtual-cluster", `{name: backend}`)
+	createVisible(t, ctx, cl, vc)
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(vc), vc)) {
+			return
+		}
+		vc.Status.Conditions = []metav1.Condition{envtest.ProgrammedCondition(vc.GetGeneration())}
+		vc.Status.KonnectEntityStatus = konnectv1alpha2.KonnectEntityStatus{
+			ID:        "virtual-cluster-12345",
+			ServerURL: sdkmocks.SDKServerURL,
+			OrgID:     "org-id",
+		}
+		assert.NoError(ct, cl.Status().Update(ctx, vc))
+	}, consts.WaitTime, consts.TickTime)
+	// The Konnect reconciler reports the missing backend cluster, and keeps
+	// Programmed=True and the Konnect ID, as it does today for a deleted parent.
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(vc), vc)) {
+			return
+		}
+		assert.NotNil(ct, meta.FindStatusCondition(vc.Status.Conditions, vc.GetStatusConditionTypeParentRefValid()))
+		assert.True(ct, meta.IsStatusConditionTrue(vc.Status.Conditions, "Programmed"))
+		assert.NotEmpty(ct, vc.GetKonnectID())
+	}, consts.WaitTime, consts.TickTime)
+
+	t.Log("Recreating the backend cluster, attached to an OnPremEventGateway")
+	createVisible(t, ctx, cl, onPremBackendCluster(t, ns.Name, "backend"))
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		assert.Empty(ct, konnectStatusOf(ctx, cl, vc))
+		assert.Empty(ct, vc.GetKonnectID(), "the Konnect status must be cleared")
+	}, consts.WaitTime, consts.TickTime, "the stale Programmed condition and Konnect status must be removed")
+	requireNoKonnectStatus(t, ctx, cl, 3*time.Second, vc)
+}
