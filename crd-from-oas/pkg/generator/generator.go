@@ -2907,7 +2907,12 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	// dependency (e.g. KonnectConfigStore's controlPlaneRef), which are mutually
 	// exclusive and emit the same spec field.
 	var typeXValidations []string
-	if fn := parentRefImmutableFieldName(parentRef, immediateParentDep); fn != "" {
+	gatewayRef := g.gatewayRefData(rc, rootParentDep)
+	if gatewayRef != nil {
+		// The GatewayRef field and the legacy parent ref field are validated
+		// together.
+		typeXValidations = gatewayRef.TypeXValidations()
+	} else if fn := parentRefImmutableFieldName(parentRef, immediateParentDep); fn != "" {
 		// Entities whose parent reference may target an OnPremAIGateway (the
 		// custom AIGatewayRef type) are updated by the on-prem machinery via
 		// typed clients before any status is written, and the client's omitzero
@@ -2970,6 +2975,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ParentRefGoFieldName      string
 		ParentRefJSONFieldName    string
 		ParentRefCustomTypeName   string
+		GatewayRef                *gatewayRefTemplateData
 		SetParentIDEntityName     string
 		ParentStatusEntityName    string
 		EmitParentRefStatusField  bool
@@ -2999,6 +3005,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ParentRefGoFieldName:      parentRefGoFieldName,
 		ParentRefJSONFieldName:    parentRefJSONName,
 		ParentRefCustomTypeName:   parentRefCustomTypeName,
+		GatewayRef:                gatewayRef,
 		SetParentIDEntityName:     setParentIDEntityName,
 		ParentStatusEntityName:    parentStatusEntityName,
 		EmitParentRefStatusField:  emitParentRefStatusField,
@@ -3257,6 +3264,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		ParentRef                          *config.ParentRefConfig
 		ParentRefGoFieldName               string
 		ParentRefCustomTypeName            string
+		GatewayRef                         *gatewayRefTemplateData
 		SetParentIDEntityName              string
 		ParentStatusEntityName             string
 		EmitParentRefStatusField           bool
@@ -3299,6 +3307,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		ParentRef:                funcsParentRef,
 		ParentRefGoFieldName:     funcsParentRefGoFieldName,
 		ParentRefCustomTypeName:  funcsParentRefCustomTypeName,
+		GatewayRef:               g.gatewayRefData(rc, rootRefDependency),
 		SetParentIDEntityName:    funcsSetParentIDEntityName,
 		ParentStatusEntityName:   funcsParentStatusEntityName,
 		EmitParentRefStatusField: emitParentRefStatusField,
@@ -3341,6 +3350,130 @@ func parentRefImmutableFieldName(parentRef *config.ParentRefConfig, immediatePar
 		return immediateParentDep.JSONName
 	}
 	return ""
+}
+
+// gatewayRefTemplateData describes the GatewayRef typed parent reference
+// field an entity carries next to its OpenAPI-derived (legacy) parent ref
+// field, see config.GatewayRefConfig.
+type gatewayRefTemplateData struct {
+	// GoFieldName and JSONFieldName name the GatewayRef field, e.g.
+	// "ParentRef" and "parentRef".
+	GoFieldName   string
+	JSONFieldName string
+	// LegacyGoFieldName and LegacyJSONFieldName name the OpenAPI-derived
+	// ObjectRef field, e.g. "GatewayRef" and "gatewayRef".
+	LegacyGoFieldName   string
+	LegacyJSONFieldName string
+	// TypeName is the qualified Go type of the field, e.g.
+	// "commonv1alpha1.GatewayRef".
+	TypeName string
+	// KonnectGroup and KonnectKind identify the Konnect gateway, the only
+	// one the legacy field can reference.
+	KonnectGroup string
+	KonnectKind  string
+	// AdditionalKinds are the other gateways the field can reference.
+	AdditionalKinds []config.EntityGVKConfig
+}
+
+// gatewayRefData returns the gatewayRefTemplateData for an entity, or nil when
+// the entity has no gatewayRef configured.
+func (g *Generator) gatewayRefData(rc *config.ReconcilerConfig, dep *parser.Dependency) *gatewayRefTemplateData {
+	if rc == nil || rc.GatewayRef == nil || dep == nil {
+		return nil
+	}
+	typeName := "GatewayRef"
+	if g.objectRefImported() {
+		typeName = g.importedTypePrefix() + typeName
+	}
+	return &gatewayRefTemplateData{
+		GoFieldName:         goFieldName(rc.GatewayRef.FieldName),
+		JSONFieldName:       rc.GatewayRef.FieldName,
+		LegacyGoFieldName:   dep.FieldName,
+		LegacyJSONFieldName: dep.JSONName,
+		TypeName:            typeName,
+		KonnectGroup:        rc.ParentEntityGVK.Group,
+		KonnectKind:         rc.ParentEntityGVK.Kind,
+		AdditionalKinds:     rc.GatewayRef.AdditionalKinds,
+	}
+}
+
+// FieldXValidation returns the CEL marker, emitted on the GatewayRef field,
+// that restricts it to the group and kind pairs the entity supports.
+func (d *gatewayRefTemplateData) FieldXValidation() string {
+	pairs := []string{fmt.Sprintf("(self.group == '%s' && self.kind == '%s')", d.KonnectGroup, d.KonnectKind)}
+	names := []string{d.KonnectGroup + "/" + d.KonnectKind}
+	for _, gvk := range d.AdditionalKinds {
+		pairs = append(pairs, fmt.Sprintf("(self.group == '%s' && self.kind == '%s')", gvk.Group, gvk.Kind))
+		names = append(names, gvk.Group+"/"+gvk.Kind)
+	}
+	return fmt.Sprintf(
+		`+kubebuilder:validation:XValidation:rule="%s", message="%s must reference one of: %s"`,
+		strings.Join(pairs, " || "), d.JSONFieldName, strings.Join(names, ", "),
+	)
+}
+
+// TypeXValidations returns the type-level CEL markers tying the GatewayRef
+// field and the legacy parent ref field together:
+//
+//   - exactly one of the two is set,
+//   - the kind of the referenced gateway never changes (the legacy field
+//     always references the Konnect kind), when there is more than one kind,
+//   - the GatewayRef field is never replaced by the legacy field,
+//   - once the entity is Programmed neither field changes, except for replacing
+//     the legacy field with a GatewayRef to the same gateway, which is how
+//     objects migrate off the legacy field.
+func (d *gatewayRefTemplateData) TypeXValidations() []string {
+	const notProgrammed = `!has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')`
+	legacy, field := d.LegacyJSONFieldName, d.JSONFieldName
+
+	kindOf := func(obj string) string {
+		return fmt.Sprintf("(has(%[1]s.spec.%[2]s) ? %[1]s.spec.%[2]s.kind : '%[3]s')", obj, field, d.KonnectKind)
+	}
+	immutable := func(fn string) string {
+		return fmt.Sprintf(
+			`+kubebuilder:validation:XValidation:rule="!has(self.spec.%[1]s) || !has(oldSelf.spec.%[1]s) || %[2]s || oldSelf.spec.%[1]s == self.spec.%[1]s", message="spec.%[1]s is immutable when an entity is already Programmed"`,
+			fn, notProgrammed,
+		)
+	}
+	// sameGateway compares the GatewayRef of fieldObj with the legacy ref of
+	// legacyObj. An empty namespace counts as unset, and an unset namespace
+	// only matches an unset or empty one: the object's own namespace is not
+	// available to CEL. "namespace" is a reserved word in CEL, hence the
+	// __namespace__ escaping. The empty namespace is checked with size()
+	// because an empty string literal does not survive the marker quoting.
+	sameGateway := func(fieldObj, legacyObj string) string {
+		f := fieldObj + ".spec." + field
+		l := legacyObj + ".spec." + legacy
+		return fmt.Sprintf(
+			"(has(%[2]s) && has(%[2]s.namespacedRef) && %[1]s.name == %[2]s.namespacedRef.name && (has(%[1]s.__namespace__) ? (has(%[2]s.namespacedRef.__namespace__) && %[1]s.__namespace__ == %[2]s.namespacedRef.__namespace__) : (!has(%[2]s.namespacedRef.__namespace__) || size(%[2]s.namespacedRef.__namespace__) == 0)))",
+			f, l,
+		)
+	}
+
+	rules := []string{
+		fmt.Sprintf(
+			`+kubebuilder:validation:XValidation:rule="has(self.spec.%[1]s) != has(self.spec.%[2]s)", message="exactly one of spec.%[1]s and spec.%[2]s must be set"`,
+			legacy, field,
+		),
+	}
+	if len(d.AdditionalKinds) > 0 {
+		rules = append(rules, fmt.Sprintf(
+			`+kubebuilder:validation:XValidation:rule="%s == %s", message="the kind of the referenced gateway is immutable"`,
+			kindOf("self"), kindOf("oldSelf"),
+		))
+	}
+	return append(rules,
+		fmt.Sprintf(
+			`+kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.%[1]s) || has(self.spec.%[1]s)", message="spec.%[1]s cannot be replaced by the deprecated spec.%[2]s"`,
+			field, legacy,
+		),
+		immutable(legacy),
+		immutable(field),
+		fmt.Sprintf(
+			`+kubebuilder:validation:XValidation:rule="%[1]s || !has(self.spec.%[2]s) || has(oldSelf.spec.%[2]s) || %[3]s", message="spec.%[4]s can only be replaced by a spec.%[2]s referencing the same gateway, with the same name and namespace as spec.%[4]s, once an entity is already Programmed"`,
+			notProgrammed, field, sameGateway("self", "oldSelf"), legacy,
+		),
+	)
 }
 
 // parentRefAllowedKindsXValidation returns the type-level CEL marker that

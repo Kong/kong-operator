@@ -103,9 +103,26 @@ type {{.EntityName}}Spec struct {
 {{- else}}
 {{- with .ImmediateParentDependency}}
 	// {{.FieldName}} is the reference to the parent {{.EntityName}} object.
+{{- if $.GatewayRef}}
+	// This field is deprecated, use {{$.GatewayRef.JSONFieldName}} instead. Exactly one of
+	// {{.JSONName}} and {{$.GatewayRef.JSONFieldName}} must be set.
+	//
+	// +optional
+{{- else}}
 	//
 	// +required
+{{- end}}
 	{{.FieldName}} {{objectRefTypeName}} ` + "`" + `json:"{{.JSONName}},omitzero"` + "`" + `
+{{- end}}
+{{- with .GatewayRef}}
+
+	// {{.GoFieldName}} is the reference to the gateway (control plane) this object
+	// belongs to. Supported kinds: {{.KonnectKind}}{{range .AdditionalKinds}}, {{.Kind}}{{end}}.
+	// Exactly one of {{.LegacyJSONFieldName}} and {{.JSONFieldName}} must be set.
+	//
+	// +optional
+	// {{.FieldXValidation}}
+	{{.GoFieldName}} *{{.TypeName}} ` + "`" + `json:"{{.JSONFieldName}},omitempty"` + "`" + `
 {{- end}}
 {{- end}}
 {{- range .Associations}}
@@ -440,14 +457,27 @@ func (obj *{{.EntityName}}) SetParentID(id string) {
 {{- else}}
 
 // Get{{.RootRefDependency.EntityName}}Ref returns the reference to the root {{.RootRefDependency.EntityName}}.
+{{- with .GatewayRef}}
+// It is taken from spec.{{.JSONFieldName}} when set, and from the deprecated
+// spec.{{.LegacyJSONFieldName}} otherwise.
+{{- end}}
 func (obj *{{.EntityName}}) Get{{.RootRefDependency.EntityName}}Ref() {{.RootRefTypeName}} {
+{{- with .GatewayRef}}
+	if ref := obj.Spec.{{.GoFieldName}}; ref != nil {
+		return ref.ToObjectRef()
+	}
+{{- end}}
 	return obj.Spec.{{.RootRefDependency.FieldName}}
 }
 {{- if and .RootRefAccessorEntityName (ne .RootRefAccessorEntityName .RootRefDependency.EntityName)}}
 
 // Get{{.RootRefAccessorEntityName}}Ref returns the reference to the root {{.RootRefAccessorEntityName}}.
 func (obj *{{.EntityName}}) Get{{.RootRefAccessorEntityName}}Ref() {{.RootRefTypeName}} {
+{{- if .GatewayRef}}
+	return obj.Get{{.RootRefDependency.EntityName}}Ref()
+{{- else}}
 	return obj.Spec.{{.RootRefDependency.FieldName}}
+{{- end}}
 }
 {{- end}}
 
@@ -461,9 +491,28 @@ func (obj *{{.EntityName}}) GetParentRef() {{.RootRefTypeName}} {
 }
 
 // SetParentRef sets the reference to the parent entity.
+{{- with .GatewayRef}}
+// It sets the deprecated spec.{{.LegacyJSONFieldName}}, which is the one holding an
+// ObjectRef, and clears spec.{{.JSONFieldName}}.
+{{- end}}
 func (obj *{{.EntityName}}) SetParentRef(ref {{.RootRefTypeName}}) {
+{{- with .GatewayRef}}
+	obj.Spec.{{.GoFieldName}} = nil
+{{- end}}
 	obj.Spec.{{.RootRefDependency.FieldName}} = ref
 }
+{{- with .GatewayRef}}
+{{- if .AdditionalKinds}}
+
+// SkipKonnectReconciliation reports whether the entity references a gateway
+// other than a {{.KonnectKind}}: such entities are not managed by the
+// Konnect reconciler.
+func (obj *{{$.EntityName}}) SkipKonnectReconciliation() bool {
+	ref := obj.Spec.{{.GoFieldName}}
+	return ref != nil && !ref.IsGroupKind("{{.KonnectGroup}}", "{{.KonnectKind}}")
+}
+{{- end}}
+{{- end}}
 
 // SetParentID sets the Konnect ID of the immediate parent entity.
 func (obj *{{.EntityName}}) SetParentID(id string) {
@@ -476,6 +525,17 @@ func (obj *{{.EntityName}}) GetParentGVK() schema.GroupVersionKind {
 {{- if .ParentRefCustomTypeName}}
 	return obj.Spec.{{.ParentRefGoFieldName}}.ParentGVK()
 {{- else}}
+{{- with .GatewayRef}}
+	{{- range .AdditionalKinds}}
+	if ref := obj.Spec.{{$.GatewayRef.GoFieldName}}; ref != nil && ref.IsGroupKind("{{.Group}}", "{{.Kind}}") {
+		return schema.GroupVersionKind{
+			Group:   "{{.Group}}",
+			Version: "{{.Version}}",
+			Kind:    "{{.Kind}}",
+		}
+	}
+	{{- end}}
+{{- end}}
 	return schema.GroupVersionKind{
 		Group:   "{{.ParentGroup}}",
 		Version: {{if .ParentEntityVersion}}"{{.ParentEntityVersion}}"{{else}}GroupVersion.Version{{end}},

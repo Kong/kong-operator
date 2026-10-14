@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -355,6 +356,80 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 				Name:      fmt.Sprintf("%s-kafka", egdp.Name),
 				Namespace: ns.Name,
 			}, svc))
+		}, waitTime, tickTime)
+	})
+
+	t.Run("certificate reference field: gatewayRef for new certificates, parentRef kept when already in use", func(t *testing.T) {
+		t.Parallel()
+
+		kep := &konnectv1alpha1.KonnectEventGateway{
+			Name:      "kep-cert-ref-field",
+			Namespace: ns.Name,
+		}
+		require.NoError(t, cl.Create(ctx, kep))
+		UpdateKonnectEventGatewayStatusWithProgrammed(t, ctx, cl, kep, "konnect-id-cert-ref-field")
+
+		egdp := &eventgatewayv1alpha1.KegDataPlane{
+			Name:      "egdp-cert-ref-field",
+			Namespace: ns.Name,
+			Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
+				ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
+					Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
+					KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
+						Name: kep.Name,
+					},
+				},
+			},
+		}
+		require.NoError(t, cl.Create(ctx, egdp))
+
+		t.Log("a new certificate references the gateway through the deprecated spec.gatewayRef")
+		konnectCert := waitForKEGCertificate(t, ctx, cl, egdp)
+		require.NotNil(t, konnectCert.Spec.GatewayRef.NamespacedRef)
+		assert.Equal(t, kep.Name, konnectCert.Spec.GatewayRef.NamespacedRef.Name)
+		assert.Nil(t, konnectCert.Spec.ParentRef)
+		updateEventGatewayDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, konnectCert)
+
+		t.Log("moving the Programmed certificate to spec.parentRef, as a newer operator version or a user would")
+		const managedByLabel = consts.GatewayOperatorManagedByNameLabel
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			cert := &configurationv1alpha1.EventGatewayDataPlaneCertificate{}
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(konnectCert), cert)) {
+				return
+			}
+			cert.Spec.ParentRef = &commonv1alpha1.GatewayRef{
+				Group: konnectv1alpha1.GroupVersion.Group,
+				Kind:  "KonnectEventGateway",
+				Name:  kep.Name,
+			}
+			cert.Spec.GatewayRef = commonv1alpha1.ObjectRef{}
+			// Dropping a label the operator manages forces its next reconcile
+			// to apply the certificate instead of finding nothing to change.
+			delete(cert.Labels, managedByLabel)
+			assert.NoError(ct, cl.Update(ctx, cert))
+		}, waitTime, tickTime)
+
+		t.Log("the operator restores its label and keeps spec.parentRef: an apply with gatewayRef would be rejected")
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			cert := &configurationv1alpha1.EventGatewayDataPlaneCertificate{}
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(konnectCert), cert)) {
+				return
+			}
+			assert.Equal(ct, egdp.Name, cert.Labels[managedByLabel])
+			if assert.NotNil(ct, cert.Spec.ParentRef) {
+				assert.Equal(ct, kep.Name, cert.Spec.ParentRef.Name)
+			}
+			assert.Zero(ct, cert.Spec.GatewayRef)
+		}, waitTime, tickTime)
+
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(egdp), egdp)) {
+				return
+			}
+			cond := apimeta.FindStatusCondition(egdp.Status.Conditions, string(eventgatewayv1alpha1.KonnectCertificateRegisteredType))
+			if assert.NotNil(ct, cond) {
+				assert.Equal(ct, metav1.ConditionTrue, cond.Status)
+			}
 		}, waitTime, tickTime)
 	})
 

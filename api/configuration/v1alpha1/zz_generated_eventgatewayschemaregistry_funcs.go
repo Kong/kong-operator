@@ -81,13 +81,18 @@ func (obj *EventGatewaySchemaRegistry) SetGatewayID(id string) {
 }
 
 // GetGatewayRef returns the reference to the root Gateway.
+// It is taken from spec.parentRef when set, and from the deprecated
+// spec.gatewayRef otherwise.
 func (obj *EventGatewaySchemaRegistry) GetGatewayRef() commonv1alpha1.ObjectRef {
+	if ref := obj.Spec.ParentRef; ref != nil {
+		return ref.ToObjectRef()
+	}
 	return obj.Spec.GatewayRef
 }
 
 // GetEventGatewayRef returns the reference to the root EventGateway.
 func (obj *EventGatewaySchemaRegistry) GetEventGatewayRef() commonv1alpha1.ObjectRef {
-	return obj.Spec.GatewayRef
+	return obj.GetGatewayRef()
 }
 
 // GetParentRef returns the reference to the parent entity.
@@ -96,7 +101,10 @@ func (obj *EventGatewaySchemaRegistry) GetParentRef() commonv1alpha1.ObjectRef {
 }
 
 // SetParentRef sets the reference to the parent entity.
+// It sets the deprecated spec.gatewayRef, which is the one holding an
+// ObjectRef, and clears spec.parentRef.
 func (obj *EventGatewaySchemaRegistry) SetParentRef(ref commonv1alpha1.ObjectRef) {
+	obj.Spec.ParentRef = nil
 	obj.Spec.GatewayRef = ref
 }
 

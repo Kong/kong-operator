@@ -144,6 +144,16 @@ func TestHandleParentRef_EventGatewayChildren(t *testing.T) {
 		},
 	}
 
+	// The entities directly under a gateway reference it through the
+	// deprecated spec.gatewayRef or through spec.parentRef.
+	parentRef := &commonv1alpha1.GatewayRef{
+		Group: konnectv1alpha1.GroupVersion.Group,
+		Kind:  "KonnectEventGateway",
+		Name:  parentName,
+	}
+	getGatewayID := func(o client.Object) string {
+		return o.(interface{ GetGatewayID() string }).GetGatewayID()
+	}
 	children := []childEntry{
 		{
 			name: "EventGatewayListener",
@@ -151,9 +161,7 @@ func TestHandleParentRef_EventGatewayChildren(t *testing.T) {
 				Name: "child", Namespace: childNS,
 				Spec: configurationv1alpha1.EventGatewayListenerSpec{GatewayRef: gatewayRef(parentName)},
 			},
-			getParentID: func(o client.Object) string {
-				return o.(*configurationv1alpha1.EventGatewayListener).GetGatewayID()
-			},
+			getParentID: getGatewayID,
 		},
 		{
 			name: "EventGatewayDataPlaneCertificate",
@@ -161,9 +169,7 @@ func TestHandleParentRef_EventGatewayChildren(t *testing.T) {
 				Name: "child", Namespace: childNS,
 				Spec: configurationv1alpha1.EventGatewayDataPlaneCertificateSpec{GatewayRef: gatewayRef(parentName)},
 			},
-			getParentID: func(o client.Object) string {
-				return o.(*configurationv1alpha1.EventGatewayDataPlaneCertificate).GetGatewayID()
-			},
+			getParentID: getGatewayID,
 		},
 		{
 			name: "EventGatewayBackendCluster",
@@ -171,9 +177,55 @@ func TestHandleParentRef_EventGatewayChildren(t *testing.T) {
 				Name: "child", Namespace: childNS,
 				Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{GatewayRef: gatewayRef(parentName)},
 			},
-			getParentID: func(o client.Object) string {
-				return o.(*configurationv1alpha1.EventGatewayBackendCluster).GetGatewayID()
+			getParentID: getGatewayID,
+		},
+		{
+			name: "EventGatewayListener with parentRef",
+			obj: &configurationv1alpha1.EventGatewayListener{
+				Name: "child", Namespace: childNS,
+				Spec: configurationv1alpha1.EventGatewayListenerSpec{ParentRef: parentRef},
 			},
+			getParentID: getGatewayID,
+		},
+		{
+			name: "EventGatewayDataPlaneCertificate with parentRef",
+			obj: &configurationv1alpha1.EventGatewayDataPlaneCertificate{
+				Name: "child", Namespace: childNS,
+				Spec: configurationv1alpha1.EventGatewayDataPlaneCertificateSpec{ParentRef: parentRef},
+			},
+			getParentID: getGatewayID,
+		},
+		{
+			name: "EventGatewayBackendCluster with parentRef",
+			obj: &configurationv1alpha1.EventGatewayBackendCluster{
+				Name: "child", Namespace: childNS,
+				Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{ParentRef: parentRef},
+			},
+			getParentID: getGatewayID,
+		},
+		{
+			name: "EventGatewaySchemaRegistry with parentRef",
+			obj: &configurationv1alpha1.EventGatewaySchemaRegistry{
+				Name: "child", Namespace: childNS,
+				Spec: configurationv1alpha1.EventGatewaySchemaRegistrySpec{ParentRef: parentRef},
+			},
+			getParentID: getGatewayID,
+		},
+		{
+			name: "EventGatewayTLSTrustBundle with parentRef",
+			obj: &configurationv1alpha1.EventGatewayTLSTrustBundle{
+				Name: "child", Namespace: childNS,
+				Spec: configurationv1alpha1.EventGatewayTLSTrustBundleSpec{ParentRef: parentRef},
+			},
+			getParentID: getGatewayID,
+		},
+		{
+			name: "EventGatewayStaticKey with parentRef",
+			obj: &configurationv1alpha1.EventGatewayStaticKey{
+				Name: "child", Namespace: childNS,
+				Spec: configurationv1alpha1.EventGatewayStaticKeySpec{ParentRef: parentRef},
+			},
+			getParentID: getGatewayID,
 		},
 	}
 

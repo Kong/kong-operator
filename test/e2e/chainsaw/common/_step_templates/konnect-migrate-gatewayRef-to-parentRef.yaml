@@ -1,0 +1,131 @@
+# Template for migrating an Event Gateway entity from the deprecated
+# spec.gatewayRef to spec.parentRef: creates the CR with spec.gatewayRef, waits
+# for it to be Programmed, replaces spec.gatewayRef with a spec.parentRef to the
+# same KonnectEventGateway and checks that the CR keeps its Konnect entity.
+# Finally checks that moving back to spec.gatewayRef is rejected.
+#
+# Required bindings:
+#   - cr_api_version: API version of the CR, e.g. configuration.konghq.com/v1alpha1.
+#   - cr_kind: Kind of the CR, e.g. EventGatewayBackendCluster.
+#   - cr_resource: Resource type of the CR, e.g. eventgatewaybackendclusters.configuration.konghq.com.
+#   - cr_name: Name of the CR to create.
+#   - cr_spec: The CR's spec (an object), referencing the gateway through
+#     spec.gatewayRef by name only.
+#   - keg_cp_name: Name of the KonnectEventGateway (same namespace).
+#   - collection_path_jq: jq expression, evaluated against the CR, yielding the
+#     Konnect API path of the entity collection (see konnect_entity_of_resource.sh).
+#   - konnect_token: Konnect API token.
+#   - konnect_url: Konnect API host, e.g. eu.api.konghq.tech.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: konnect-migrate-gatewayref-to-parentref
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: ($cr_api_version)
+          kind: ($cr_kind)
+          metadata:
+            name: ($cr_name)
+            namespace: ($namespace)
+          spec: ($cr_spec)
+    - assert:
+        resource:
+          apiVersion: ($cr_api_version)
+          kind: ($cr_kind)
+          metadata:
+            name: ($cr_name)
+            namespace: ($namespace)
+          spec:
+            (parentRef == null): true
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+            (id != null): true
+    - script:
+        env:
+          - name: RESOURCE_TYPE
+            value: ($cr_resource)
+          - name: RESOURCE_NAME
+            value: ($cr_name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: COLLECTION_PATH_JQ
+            value: ($collection_path_jq)
+        content: |
+          bash ../../common/scripts/konnect_entity_of_resource.sh
+        outputs:
+          - name: before
+            value: (json_parse($stdout))
+    - description: Replace spec.gatewayRef with a spec.parentRef to the same gateway.
+      script:
+        env:
+          - name: RESOURCE_TYPE
+            value: ($cr_resource)
+          - name: RESOURCE_NAME
+            value: ($cr_name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: KEG_CP_NAME
+            value: ($keg_cp_name)
+        content: |
+          kubectl patch "${RESOURCE_TYPE}" "${RESOURCE_NAME}" -n "${NAMESPACE}" --type=merge -p "$(jq -cn '{
+            spec: {
+              gatewayRef: null,
+              parentRef: {group: "konnect.konghq.com", kind: "KonnectEventGateway", name: $ENV.KEG_CP_NAME}
+            }
+          }')"
+    - assert:
+        resource:
+          apiVersion: ($cr_api_version)
+          kind: ($cr_kind)
+          metadata:
+            name: ($cr_name)
+            namespace: ($namespace)
+          spec:
+            (gatewayRef == null): true
+            parentRef:
+              group: konnect.konghq.com
+              kind: KonnectEventGateway
+              name: ($keg_cp_name)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+            id: ($before.id)
+    - description: The same Konnect entity is kept.
+      script:
+        env:
+          - name: KONNECT_TOKEN
+            value: ($konnect_token)
+          - name: KONNECT_URL
+            value: ($konnect_url)
+          - name: API_PATH
+            value: ($before.entity_path)
+          - name: WANT_ID
+            value: ($before.id)
+          - name: EXPECTED_JQ
+            value: .id == $ENV.WANT_ID
+        content: |
+          bash ../../common/scripts/konnect_api_request.sh
+    - description: The CR cannot move back to the deprecated spec.gatewayRef.
+      script:
+        env:
+          - name: RESOURCE_TYPE
+            value: ($cr_resource)
+          - name: RESOURCE_NAME
+            value: ($cr_name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: KEG_CP_NAME
+            value: ($keg_cp_name)
+        content: |
+          kubectl patch "${RESOURCE_TYPE}" "${RESOURCE_NAME}" -n "${NAMESPACE}" --type=merge -p "$(jq -cn '{
+            spec: {
+              parentRef: null,
+              gatewayRef: {type: "namespacedRef", namespacedRef: {name: $ENV.KEG_CP_NAME}}
+            }
+          }')"
+        check:
+          ($error != null): true
+          (contains($stderr, 'spec.parentRef cannot be replaced by the deprecated spec.gatewayRef')): true

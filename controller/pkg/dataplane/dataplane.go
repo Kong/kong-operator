@@ -308,6 +308,12 @@ type CertificateConfig[T Object, Cert CertificateObject] struct {
 	// instead of mutating the previous one in place.
 	// Only called for Konnect-backed control planes (cp.IsKonnect).
 	Build func(dp T, cp ResolvedControlPlane, certSecretName, certChecksum string) Cert
+	// AdaptToExisting, when non-nil, is called with the desired certificate
+	// built by Build and the certificate currently stored in the cluster
+	// (only when one exists) before the desired one is applied. It lets the
+	// controller keep fields of the existing object that must not change,
+	// e.g. which of two equivalent reference fields is in use.
+	AdaptToExisting func(desired, existing Cert)
 	// Ensure provisions (or finds) the DataPlane's TLS certificate Secrets,
 	// signed by the cluster CA: the mTLS client certificate Secret, and the
 	// Admin API TLS server certificate Secret when AdminAPI is

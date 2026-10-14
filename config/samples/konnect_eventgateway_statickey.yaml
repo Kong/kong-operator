@@ -46,10 +46,10 @@ spec:
       secretRef:
         name: cp-event-1-encryption-key
         key: key
-  gatewayRef:
-    type: namespacedRef
-    namespacedRef:
-      name: cp-event-1
+  parentRef:
+    group: konnect.konghq.com
+    kind: KonnectEventGateway
+    name: cp-event-1
 ---
 kind: EventGatewayBackendCluster
 apiVersion: configuration.konghq.com/v1alpha1
@@ -57,10 +57,10 @@ metadata:
   name: cp-event-1-backend-cluster
   namespace: default
 spec:
-  gatewayRef:
-    type: namespacedRef
-    namespacedRef:
-      name: cp-event-1
+  parentRef:
+    group: konnect.konghq.com
+    kind: KonnectEventGateway
+    name: cp-event-1
   apiSpec:
     name: cp-event-1-backend-cluster
     authentication:

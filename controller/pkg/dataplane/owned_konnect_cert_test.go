@@ -285,3 +285,81 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 		})
 	}
 }
+
+func TestEnsureKonnectCertificateAdaptToExisting(t *testing.T) {
+	certName := CertEntityName(newTestAIGWDP().Name, CertificateChecksum(newTestCertSecret()))
+	const adaptedLabel = "adapted-from-existing"
+
+	newReconciler := func(cl client.Client, calls *int) *testReconciler {
+		cfg := testConfig
+		cfg.Certificate.AdaptToExisting = func(desired, existing *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate) {
+			*calls++
+			desired.Labels[adaptedLabel] = existing.Name
+		}
+		return &testReconciler{
+			Config:        cfg,
+			Client:        cl,
+			TypeConverter: managedfields.NewDeducedTypeConverter(),
+			EventRecorder: events.NewFakeRecorder(10),
+		}
+	}
+	newClient := func(objs []client.Object, funcs interceptor.Funcs) client.Client {
+		return interceptor.NewClient(fake.NewClientBuilder().
+			WithScheme(managerscheme.Get()).
+			WithStatusSubresource(&aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}).
+			WithObjects(objs...).
+			Build(), funcs)
+	}
+	getCert := func(t *testing.T, cl client.Client) aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate {
+		t.Helper()
+		var cert aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate
+		require.NoError(t, cl.Get(t.Context(), types.NamespacedName{Name: certName, Namespace: "default"}, &cert))
+		return cert
+	}
+
+	t.Run("not called when no certificate exists yet", func(t *testing.T) {
+		aigwdp, certSecret := newTestAIGWDP(), newTestCertSecret()
+		cl := newClient([]client.Object{aigwdp}, interceptor.Funcs{})
+		var calls int
+		_, err := newReconciler(cl, &calls).ensureKonnectCertificate(t.Context(), logr.Discard(), aigwdp, resolvedTestCP(newTestAIGWCP()), certSecret, CertificateChecksum(certSecret))
+		require.NoError(t, err)
+		assert.Zero(t, calls)
+		assert.NotContains(t, getCert(t, cl).Labels, adaptedLabel)
+	})
+
+	t.Run("called with the existing certificate before applying", func(t *testing.T) {
+		aigwdp, certSecret := newTestAIGWDP(), newTestCertSecret()
+		cl := newClient([]client.Object{aigwdp}, interceptor.Funcs{})
+		var calls int
+		r := newReconciler(cl, &calls)
+		// The first call creates the certificate, the second one finds it.
+		_, err := r.ensureKonnectCertificate(t.Context(), logr.Discard(), aigwdp, resolvedTestCP(newTestAIGWCP()), certSecret, CertificateChecksum(certSecret))
+		require.NoError(t, err)
+		_, err = r.ensureKonnectCertificate(t.Context(), logr.Discard(), aigwdp, resolvedTestCP(newTestAIGWCP()), certSecret, CertificateChecksum(certSecret))
+		require.NoError(t, err)
+		assert.Equal(t, 1, calls)
+		assert.Equal(t, certName, getCert(t, cl).Labels[adaptedLabel])
+	})
+
+	t.Run("error reading the existing certificate is returned without applying", func(t *testing.T) {
+		aigwdp, certSecret := newTestAIGWDP(), newTestCertSecret()
+		var applied bool
+		cl := newClient([]client.Object{aigwdp}, interceptor.Funcs{
+			Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+				if _, ok := obj.(*aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate); ok {
+					return assert.AnError
+				}
+				return c.Get(ctx, key, obj, opts...)
+			},
+			Apply: func(ctx context.Context, c client.WithWatch, obj runtime.ApplyConfiguration, opts ...client.ApplyOption) error {
+				applied = true
+				return c.Apply(ctx, obj, opts...)
+			},
+		})
+		var calls int
+		_, err := newReconciler(cl, &calls).ensureKonnectCertificate(t.Context(), logr.Discard(), aigwdp, resolvedTestCP(newTestAIGWCP()), certSecret, CertificateChecksum(certSecret))
+		require.ErrorContains(t, err, "failed to get AIGatewayDataPlaneCertificate")
+		assert.Zero(t, calls)
+		assert.False(t, applied)
+	})
+}

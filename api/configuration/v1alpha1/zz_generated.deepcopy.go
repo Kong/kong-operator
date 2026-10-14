@@ -795,6 +795,11 @@ func (in *EventGatewayBackendClusterSDKOpsBoolField) DeepCopy() *EventGatewayBac
 func (in *EventGatewayBackendClusterSpec) DeepCopyInto(out *EventGatewayBackendClusterSpec) {
 	*out = *in
 	in.GatewayRef.DeepCopyInto(&out.GatewayRef)
+	if in.ParentRef != nil {
+		in, out := &in.ParentRef, &out.ParentRef
+		*out = new(commonv1alpha1.GatewayRef)
+		(*in).DeepCopyInto(*out)
+	}
 	in.APISpec.DeepCopyInto(&out.APISpec)
 }
 
@@ -1162,6 +1167,11 @@ func (in *EventGatewayDataPlaneCertificateList) DeepCopyObject() runtime.Object 
 func (in *EventGatewayDataPlaneCertificateSpec) DeepCopyInto(out *EventGatewayDataPlaneCertificateSpec) {
 	*out = *in
 	in.GatewayRef.DeepCopyInto(&out.GatewayRef)
+	if in.ParentRef != nil {
+		in, out := &in.ParentRef, &out.ParentRef
+		*out = new(commonv1alpha1.GatewayRef)
+		(*in).DeepCopyInto(*out)
+	}
 	in.APISpec.DeepCopyInto(&out.APISpec)
 }
 
@@ -1725,6 +1735,11 @@ func (in *EventGatewayListenerPolicyStatus) DeepCopy() *EventGatewayListenerPoli
 func (in *EventGatewayListenerSpec) DeepCopyInto(out *EventGatewayListenerSpec) {
 	*out = *in
 	in.GatewayRef.DeepCopyInto(&out.GatewayRef)
+	if in.ParentRef != nil {
+		in, out := &in.ParentRef, &out.ParentRef
+		*out = new(commonv1alpha1.GatewayRef)
+		(*in).DeepCopyInto(*out)
+	}
 	in.APISpec.DeepCopyInto(&out.APISpec)
 }
 
@@ -2659,6 +2674,11 @@ func (in *EventGatewaySchemaRegistryRef) DeepCopy() *EventGatewaySchemaRegistryR
 func (in *EventGatewaySchemaRegistrySpec) DeepCopyInto(out *EventGatewaySchemaRegistrySpec) {
 	*out = *in
 	in.GatewayRef.DeepCopyInto(&out.GatewayRef)
+	if in.ParentRef != nil {
+		in, out := &in.ParentRef, &out.ParentRef
+		*out = new(commonv1alpha1.GatewayRef)
+		(*in).DeepCopyInto(*out)
+	}
 	in.APISpec.DeepCopyInto(&out.APISpec)
 }
 
@@ -2838,6 +2858,11 @@ func (in *EventGatewayStaticKeySource) DeepCopy() *EventGatewayStaticKeySource {
 func (in *EventGatewayStaticKeySpec) DeepCopyInto(out *EventGatewayStaticKeySpec) {
 	*out = *in
 	in.GatewayRef.DeepCopyInto(&out.GatewayRef)
+	if in.ParentRef != nil {
+		in, out := &in.ParentRef, &out.ParentRef
+		*out = new(commonv1alpha1.GatewayRef)
+		(*in).DeepCopyInto(*out)
+	}
 	in.APISpec.DeepCopyInto(&out.APISpec)
 }
 
@@ -3049,6 +3074,11 @@ func (in *EventGatewayTLSTrustBundleRef) DeepCopy() *EventGatewayTLSTrustBundleR
 func (in *EventGatewayTLSTrustBundleSpec) DeepCopyInto(out *EventGatewayTLSTrustBundleSpec) {
 	*out = *in
 	in.GatewayRef.DeepCopyInto(&out.GatewayRef)
+	if in.ParentRef != nil {
+		in, out := &in.ParentRef, &out.ParentRef
+		*out = new(commonv1alpha1.GatewayRef)
+		(*in).DeepCopyInto(*out)
+	}
 	in.APISpec.DeepCopyInto(&out.APISpec)
 }
 

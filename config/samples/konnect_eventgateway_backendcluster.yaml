@@ -68,10 +68,10 @@ metadata:
   name: cp-event-1-listener-1
   namespace: default
 spec:
-  gatewayRef:
-    type: namespacedRef
-    namespacedRef:
-      name: cp-event-1
+  parentRef:
+    group: konnect.konghq.com
+    kind: KonnectEventGateway
+    name: cp-event-1
   apiSpec:
     name: cp-event-1-backend-cluster-1
     description: Test Event Gateway Backend Cluster

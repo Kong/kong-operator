@@ -347,6 +347,46 @@ type ParentRefConfig struct {
 	AllowedKinds []string `yaml:"allowedKinds,omitempty"`
 }
 
+// GatewayRefConfig adds a second parent reference field of the common
+// GatewayRef type (group, kind, name, namespace) next to the OpenAPI-derived
+// parent ref field, which is kept, deprecated and made optional: exactly one
+// of the two must be set. Unlike the OpenAPI-derived field, the new one can
+// also reference gateways other than the Konnect one named by parentEntityGVK.
+type GatewayRefConfig struct {
+	// FieldName is the lowerCamelCase JSON name of the new spec field,
+	// e.g. "parentRef".
+	FieldName string `yaml:"fieldName"`
+	// AdditionalKinds optionally lists the gateway kinds the field may
+	// reference besides parentEntityGVK, e.g. OnPremEventGateway. Entities
+	// referencing one of them are not reconciled against Konnect. Group,
+	// version and kind are all required. When empty, the field only accepts
+	// parentEntityGVK.
+	AdditionalKinds []EntityGVKConfig `yaml:"additionalKinds,omitempty"`
+}
+
+func (c *GatewayRefConfig) validate(rc *ReconcilerConfig) error {
+	if c.FieldName == "" {
+		return fmt.Errorf("gatewayRef: fieldName is required")
+	}
+	if rc.ParentRef != nil {
+		return fmt.Errorf("gatewayRef: gatewayRef and parentRef are mutually exclusive")
+	}
+	if rc.ParentEntityGVK == nil || rc.ParentEntityGVK.Kind == "" || rc.ParentEntityGVK.Group == "" {
+		return fmt.Errorf("gatewayRef: parentEntityGVK with kind and group is required")
+	}
+	seen := map[string]bool{rc.ParentEntityGVK.Kind: true}
+	for _, gvk := range c.AdditionalKinds {
+		if gvk.Group == "" || gvk.Version == "" || gvk.Kind == "" {
+			return fmt.Errorf("gatewayRef: additionalKinds entries require group, version and kind, got %+v", gvk)
+		}
+		if seen[gvk.Kind] {
+			return fmt.Errorf("gatewayRef: kind %q is listed more than once", gvk.Kind)
+		}
+		seen[gvk.Kind] = true
+	}
+	return nil
+}
+
 // ReconcilerConfig holds configuration for reconciler code generation.
 type ReconcilerConfig struct {
 	// IsRoot indicates this is a root entity that directly references
@@ -368,6 +408,9 @@ type ReconcilerConfig struct {
 	// operate on. Requires a parent entity kind override when the immediate parent
 	// kind should differ from the OpenAPI-derived dependency name.
 	ParentRef *ParentRefConfig `yaml:"parentRef,omitempty"`
+	// GatewayRef, when set, adds a GatewayRef typed parent reference field next
+	// to the OpenAPI-derived one. See GatewayRefConfig.
+	GatewayRef *GatewayRefConfig `yaml:"gatewayRef,omitempty"`
 	// AncestorEntityGVKs lists the ancestor entity kinds and optional API groups
 	// for each OpenAPI-derived path-parameter dependency in URL order
 	// (outermost first). Only the Kind values are used by current ancestor-ID
@@ -1019,6 +1062,11 @@ func validateFieldDescriptions(fields map[string]*FieldConfig, path []string) er
 }
 
 func (tc *TypeConfig) validate() error {
+	if rc := tc.Reconciler; rc != nil && rc.GatewayRef != nil {
+		if err := rc.GatewayRef.validate(rc); err != nil {
+			return err
+		}
+	}
 	if tc.CEL != nil {
 		if err := validateFieldDescriptions(tc.CEL.Fields, nil); err != nil {
 			return err

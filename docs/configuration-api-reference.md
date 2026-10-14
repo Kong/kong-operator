@@ -1493,7 +1493,8 @@ EventGatewayBackendClusterSpec defines the desired state of EventGatewayBackendC
 
 | Field | Description |
 | --- | --- |
-| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. This field is deprecated, use parentRef instead. Exactly one of gatewayRef and parentRef must be set. |
+| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway. Exactly one of gatewayRef and parentRef must be set. |
 | `apiSpec` _[EventGatewayBackendClusterAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -1808,7 +1809,8 @@ EventGatewayDataPlaneCertificateSpec defines the desired state of EventGatewayDa
 
 | Field | Description |
 | --- | --- |
-| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. This field is deprecated, use parentRef instead. Exactly one of gatewayRef and parentRef must be set. |
+| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway. Exactly one of gatewayRef and parentRef must be set. |
 | `apiSpec` _[EventGatewayDataPlaneCertificateAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificateapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -2203,7 +2205,8 @@ EventGatewayListenerSpec defines the desired state of EventGatewayListener.
 
 | Field | Description |
 | --- | --- |
-| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. This field is deprecated, use parentRef instead. Exactly one of gatewayRef and parentRef must be set. |
+| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway. Exactly one of gatewayRef and parentRef must be set. |
 | `apiSpec` _[EventGatewayListenerAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -3155,7 +3158,8 @@ EventGatewaySchemaRegistrySpec defines the desired state of EventGatewaySchemaRe
 
 | Field | Description |
 | --- | --- |
-| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. This field is deprecated, use parentRef instead. Exactly one of gatewayRef and parentRef must be set. |
+| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway. Exactly one of gatewayRef and parentRef must be set. |
 | `apiSpec` _[EventGatewaySchemaRegistryAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -3256,7 +3260,8 @@ EventGatewayStaticKeySpec defines the desired state of EventGatewayStaticKey.
 
 | Field | Description |
 | --- | --- |
-| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. This field is deprecated, use parentRef instead. Exactly one of gatewayRef and parentRef must be set. |
+| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway. Exactly one of gatewayRef and parentRef must be set. |
 | `apiSpec` _[EventGatewayStaticKeyAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaystatickeyapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -3386,7 +3391,8 @@ EventGatewayTLSTrustBundleSpec defines the desired state of EventGatewayTLSTrust
 
 | Field | Description |
 | --- | --- |
-| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. This field is deprecated, use parentRef instead. Exactly one of gatewayRef and parentRef must be set. |
+| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway. Exactly one of gatewayRef and parentRef must be set. |
 | `apiSpec` _[EventGatewayTLSTrustBundleAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundleapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_

@@ -98,6 +98,27 @@
   reported by the AI Gateway configuration converter are also emitted as
   Warning events on the OnPremAIGateway.
   [#6051](https://github.com/Kong/kong-operator/pull/6051)
+- Event Gateway: `EventGatewayBackendCluster`, `EventGatewayDataPlaneCertificate`,
+  `EventGatewayListener`, `EventGatewaySchemaRegistry`, `EventGatewayStaticKey`
+  and `EventGatewayTLSTrustBundle` gained `spec.parentRef`, a reference to the
+  gateway (control plane) they belong to by `group`, `kind`, `name` and an
+  optional `namespace`. It accepts a `KonnectEventGateway`.
+  `spec.gatewayRef` is deprecated and now optional: exactly one of
+  `spec.gatewayRef` and `spec.parentRef` must be set, so existing manifests
+  keep working unchanged. `spec.gatewayRef` can be replaced by a
+  `spec.parentRef` referencing the same gateway, but not the other way around.
+  With server-side apply, `spec.gatewayRef` is only removed if the applying
+  field manager is its only owner. If the apply is rejected with
+  "exactly one of spec.gatewayRef and spec.parentRef must be set", e.g. because
+  another tool created the object, switch the object with a single patch
+  first, then apply as usual:
+  `kubectl patch <kind> <name> --type=merge -p '{"spec":{"gatewayRef":null,"parentRef":{"group":"konnect.konghq.com","kind":"KonnectEventGateway","name":"<gateway>"}}}'`.
+  Releases without `spec.parentRef` drop it from objects that use it, so after
+  moving an object to `spec.parentRef`, rolling back to such a release
+  requires recreating that object. The `EventGatewayDataPlaneCertificate` the
+  operator creates for a `KegDataPlane` keeps using `spec.gatewayRef`, so it
+  is not affected.
+  [#6097](https://github.com/Kong/kong-operator/pull/6097)
 - `--konnect-list-page-size` flag (default and maximum `100`): the page size
   the operator requests when listing Konnect entities to find the Konnect
   entity of an object, e.g. one whose Konnect ID was lost. It is a fallback in

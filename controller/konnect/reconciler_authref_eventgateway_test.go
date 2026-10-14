@@ -61,6 +61,55 @@ func TestGetAPIAuthRef(t *testing.T) {
 			wantNN: wantAPIAuth,
 		},
 		{
+			name: "event gateway child resolves API auth via event gateway parent referenced with parentRef",
+			objects: []client.Object{
+				newTestAPIAuthConfiguration(namespace, apiAuthName),
+				newTestEventGateway(namespace, eventGatewayName, apiAuthName),
+			},
+			resolve: func(ctx context.Context, cl client.Client) (types.NamespacedName, error) {
+				return getAPIAuthRef(ctx, cl, &configurationv1alpha1.EventGatewayBackendCluster{
+					Name:      backendClusterName,
+					Namespace: namespace,
+					Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
+						ParentRef: &commonv1alpha1.GatewayRef{
+							Group: konnectv1alpha1.GroupVersion.Group,
+							Kind:  "KonnectEventGateway",
+							Name:  eventGatewayName,
+						},
+					},
+				})
+			},
+			wantNN: wantAPIAuth,
+		},
+		{
+			name: "event gateway grandchild resolves API auth via a parent referencing its gateway with parentRef",
+			objects: []client.Object{
+				newTestAPIAuthConfiguration(namespace, apiAuthName),
+				newTestEventGateway(namespace, eventGatewayName, apiAuthName),
+				&configurationv1alpha1.EventGatewayListener{
+					Name:      listenerName,
+					Namespace: namespace,
+					Spec: configurationv1alpha1.EventGatewayListenerSpec{
+						ParentRef: &commonv1alpha1.GatewayRef{
+							Group: konnectv1alpha1.GroupVersion.Group,
+							Kind:  "KonnectEventGateway",
+							Name:  eventGatewayName,
+						},
+					},
+				},
+			},
+			resolve: func(ctx context.Context, cl client.Client) (types.NamespacedName, error) {
+				return getAPIAuthRef(ctx, cl, &configurationv1alpha1.EventGatewayListenerPolicy{
+					Name:      "listener-policy",
+					Namespace: namespace,
+					Spec: configurationv1alpha1.EventGatewayListenerPolicySpec{
+						EventGatewayListenerRef: testNamespacedObjectRef(listenerName),
+					},
+				})
+			},
+			wantNN: wantAPIAuth,
+		},
+		{
 			name: "event gateway child resolves cross-namespace API auth via event gateway parent with grant",
 			objects: []client.Object{
 				newTestAPIAuthConfiguration(apiAuthNamespace, apiAuthName),
