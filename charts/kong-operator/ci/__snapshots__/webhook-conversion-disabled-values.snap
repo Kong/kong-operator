@@ -24255,8 +24255,8 @@ spec:
                 - name
                 type: object
                 x-kubernetes-validations:
-                - message: 'parentRef must reference one of: konnect.konghq.com/KonnectEventGateway'
-                  rule: (self.group == 'konnect.konghq.com' && self.kind == 'KonnectEventGateway')
+                - message: 'parentRef must reference one of: konnect.konghq.com/KonnectEventGateway, eventgateway.konghq.com/OnPremEventGateway'
+                  rule: (self.group == 'konnect.konghq.com' && self.kind == 'KonnectEventGateway') || (self.group == 'eventgateway.konghq.com' && self.kind == 'OnPremEventGateway')
             type: object
           status:
             properties:
@@ -24323,6 +24323,8 @@ spec:
         x-kubernetes-validations:
         - message: exactly one of spec.gatewayRef and spec.parentRef must be set
           rule: has(self.spec.gatewayRef) != has(self.spec.parentRef)
+        - message: the kind of the referenced gateway is immutable
+          rule: '(has(self.spec.parentRef) ? self.spec.parentRef.kind : ''KonnectEventGateway'') == (has(oldSelf.spec.parentRef) ? oldSelf.spec.parentRef.kind : ''KonnectEventGateway'')'
         - message: spec.parentRef cannot be replaced by the deprecated spec.gatewayRef
           rule: '!has(oldSelf.spec.parentRef) || has(self.spec.parentRef)'
         - message: spec.gatewayRef is immutable when an entity is already Programmed
@@ -24488,8 +24490,8 @@ spec:
                 - name
                 type: object
                 x-kubernetes-validations:
-                - message: 'parentRef must reference one of: konnect.konghq.com/KonnectEventGateway'
-                  rule: (self.group == 'konnect.konghq.com' && self.kind == 'KonnectEventGateway')
+                - message: 'parentRef must reference one of: konnect.konghq.com/KonnectEventGateway, eventgateway.konghq.com/OnPremEventGateway'
+                  rule: (self.group == 'konnect.konghq.com' && self.kind == 'KonnectEventGateway') || (self.group == 'eventgateway.konghq.com' && self.kind == 'OnPremEventGateway')
             type: object
           status:
             properties:
@@ -24556,6 +24558,8 @@ spec:
         x-kubernetes-validations:
         - message: exactly one of spec.gatewayRef and spec.parentRef must be set
           rule: has(self.spec.gatewayRef) != has(self.spec.parentRef)
+        - message: the kind of the referenced gateway is immutable
+          rule: '(has(self.spec.parentRef) ? self.spec.parentRef.kind : ''KonnectEventGateway'') == (has(oldSelf.spec.parentRef) ? oldSelf.spec.parentRef.kind : ''KonnectEventGateway'')'
         - message: spec.parentRef cannot be replaced by the deprecated spec.gatewayRef
           rule: '!has(oldSelf.spec.parentRef) || has(self.spec.parentRef)'
         - message: spec.gatewayRef is immutable when an entity is already Programmed
@@ -25136,8 +25140,8 @@ spec:
                 - name
                 type: object
                 x-kubernetes-validations:
-                - message: 'parentRef must reference one of: konnect.konghq.com/KonnectEventGateway'
-                  rule: (self.group == 'konnect.konghq.com' && self.kind == 'KonnectEventGateway')
+                - message: 'parentRef must reference one of: konnect.konghq.com/KonnectEventGateway, eventgateway.konghq.com/OnPremEventGateway'
+                  rule: (self.group == 'konnect.konghq.com' && self.kind == 'KonnectEventGateway') || (self.group == 'eventgateway.konghq.com' && self.kind == 'OnPremEventGateway')
             type: object
           status:
             properties:
@@ -25204,6 +25208,8 @@ spec:
         x-kubernetes-validations:
         - message: exactly one of spec.gatewayRef and spec.parentRef must be set
           rule: has(self.spec.gatewayRef) != has(self.spec.parentRef)
+        - message: the kind of the referenced gateway is immutable
+          rule: '(has(self.spec.parentRef) ? self.spec.parentRef.kind : ''KonnectEventGateway'') == (has(oldSelf.spec.parentRef) ? oldSelf.spec.parentRef.kind : ''KonnectEventGateway'')'
         - message: spec.parentRef cannot be replaced by the deprecated spec.gatewayRef
           rule: '!has(oldSelf.spec.parentRef) || has(self.spec.parentRef)'
         - message: spec.gatewayRef is immutable when an entity is already Programmed
@@ -25429,8 +25435,8 @@ spec:
                 - name
                 type: object
                 x-kubernetes-validations:
-                - message: 'parentRef must reference one of: konnect.konghq.com/KonnectEventGateway'
-                  rule: (self.group == 'konnect.konghq.com' && self.kind == 'KonnectEventGateway')
+                - message: 'parentRef must reference one of: konnect.konghq.com/KonnectEventGateway, eventgateway.konghq.com/OnPremEventGateway'
+                  rule: (self.group == 'konnect.konghq.com' && self.kind == 'KonnectEventGateway') || (self.group == 'eventgateway.konghq.com' && self.kind == 'OnPremEventGateway')
             type: object
           status:
             properties:
@@ -25497,6 +25503,8 @@ spec:
         x-kubernetes-validations:
         - message: exactly one of spec.gatewayRef and spec.parentRef must be set
           rule: has(self.spec.gatewayRef) != has(self.spec.parentRef)
+        - message: the kind of the referenced gateway is immutable
+          rule: '(has(self.spec.parentRef) ? self.spec.parentRef.kind : ''KonnectEventGateway'') == (has(oldSelf.spec.parentRef) ? oldSelf.spec.parentRef.kind : ''KonnectEventGateway'')'
         - message: spec.parentRef cannot be replaced by the deprecated spec.gatewayRef
           rule: '!has(oldSelf.spec.parentRef) || has(self.spec.parentRef)'
         - message: spec.gatewayRef is immutable when an entity is already Programmed
@@ -25673,8 +25681,8 @@ spec:
                 - name
                 type: object
                 x-kubernetes-validations:
-                - message: 'parentRef must reference one of: konnect.konghq.com/KonnectEventGateway'
-                  rule: (self.group == 'konnect.konghq.com' && self.kind == 'KonnectEventGateway')
+                - message: 'parentRef must reference one of: konnect.konghq.com/KonnectEventGateway, eventgateway.konghq.com/OnPremEventGateway'
+                  rule: (self.group == 'konnect.konghq.com' && self.kind == 'KonnectEventGateway') || (self.group == 'eventgateway.konghq.com' && self.kind == 'OnPremEventGateway')
             type: object
           status:
             properties:
@@ -25741,6 +25749,8 @@ spec:
         x-kubernetes-validations:
         - message: exactly one of spec.gatewayRef and spec.parentRef must be set
           rule: has(self.spec.gatewayRef) != has(self.spec.parentRef)
+        - message: the kind of the referenced gateway is immutable
+          rule: '(has(self.spec.parentRef) ? self.spec.parentRef.kind : ''KonnectEventGateway'') == (has(oldSelf.spec.parentRef) ? oldSelf.spec.parentRef.kind : ''KonnectEventGateway'')'
         - message: spec.parentRef cannot be replaced by the deprecated spec.gatewayRef
           rule: '!has(oldSelf.spec.parentRef) || has(self.spec.parentRef)'
         - message: spec.gatewayRef is immutable when an entity is already Programmed
@@ -25933,8 +25943,8 @@ spec:
                 - name
                 type: object
                 x-kubernetes-validations:
-                - message: 'parentRef must reference one of: konnect.konghq.com/KonnectEventGateway'
-                  rule: (self.group == 'konnect.konghq.com' && self.kind == 'KonnectEventGateway')
+                - message: 'parentRef must reference one of: konnect.konghq.com/KonnectEventGateway, eventgateway.konghq.com/OnPremEventGateway'
+                  rule: (self.group == 'konnect.konghq.com' && self.kind == 'KonnectEventGateway') || (self.group == 'eventgateway.konghq.com' && self.kind == 'OnPremEventGateway')
             type: object
           status:
             properties:
@@ -26001,6 +26011,8 @@ spec:
         x-kubernetes-validations:
         - message: exactly one of spec.gatewayRef and spec.parentRef must be set
           rule: has(self.spec.gatewayRef) != has(self.spec.parentRef)
+        - message: the kind of the referenced gateway is immutable
+          rule: '(has(self.spec.parentRef) ? self.spec.parentRef.kind : ''KonnectEventGateway'') == (has(oldSelf.spec.parentRef) ? oldSelf.spec.parentRef.kind : ''KonnectEventGateway'')'
         - message: spec.parentRef cannot be replaced by the deprecated spec.gatewayRef
           rule: '!has(oldSelf.spec.parentRef) || has(self.spec.parentRef)'
         - message: spec.gatewayRef is immutable when an entity is already Programmed

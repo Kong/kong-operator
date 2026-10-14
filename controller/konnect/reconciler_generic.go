@@ -149,6 +149,16 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 		logger = logger.WithValues("konnect_id", id)
 	}
 	ctx = ctrllog.IntoContext(ctx, logger)
+
+	// Entities referencing a gateway the Konnect reconciler does not manage,
+	// e.g. an OnPremEventGateway, are kept out of its work queue by the watch
+	// predicates and map functions. This covers any other way they could be
+	// enqueued, e.g. by a reverse watch from an entity referencing them.
+	if skipper, ok := any(ent).(konnectReconciliationSkipper); ok && skipper.SkipKonnectReconciliation() {
+		log.Debug(logger, "not managed by the Konnect reconciler, skipping")
+		return ctrl.Result{}, nil
+	}
+
 	log.Debug(logger, "reconciling")
 
 	// If a type has a ControlPlane ref, handle it.

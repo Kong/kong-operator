@@ -6046,6 +6046,10 @@ func TestGenerateSDKOps_ClientRequestMethodsResolveReferences(t *testing.T) {
 	require.Contains(t, content, `if apierrors.IsNotFound(err) {`)
 	require.Contains(t, content, `errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, Err: err})`)
 	require.Contains(t, content, `errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayPolicy %s/%s: %w", ns, ref.Name, err))`)
+	// A referenced object the Konnect reconciler does not manage is rejected
+	// instead of waiting for a Konnect ID it never gets.
+	require.Contains(t, content, "if skipper, ok := any(&referenced).(interface{ SkipKonnectReconciliation() bool }); ok && skipper.SkipKonnectReconciliation() {")
+	require.Contains(t, content, `errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name})`)
 	require.Contains(t, content, `errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})`)
 	require.Contains(t, content, `errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name})`)
 	require.Contains(t, content, "if err := errors.Join(errs...); err != nil {")
@@ -6916,6 +6920,7 @@ func TestGenerateReferencesFile(t *testing.T) {
 	require.Contains(t, out, "type ReferenceNotProgrammedError = commonv1alpha1.ReferenceNotProgrammedError")
 	require.Contains(t, out, "type ReferenceCrossNamespaceError = commonv1alpha1.ReferenceCrossNamespaceError")
 	require.Contains(t, out, "type ReferenceDifferentGatewayError = commonv1alpha1.ReferenceDifferentGatewayError")
+	require.Contains(t, out, "type ReferenceNotKonnectManagedError = commonv1alpha1.ReferenceNotKonnectManagedError")
 }
 
 func TestGenerateReferencesFile_MultiKind(t *testing.T) {

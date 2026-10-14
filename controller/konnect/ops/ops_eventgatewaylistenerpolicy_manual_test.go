@@ -156,6 +156,19 @@ func TestEventGatewayListenerPolicyTLSTrustBundleReferenceResolutionErrors(t *te
 			},
 		},
 		{
+			name: "referenced trust bundle attached to an OnPremEventGateway",
+			objects: []client.Object{trustBundle(func(tb *configurationv1alpha1.EventGatewayTLSTrustBundle) {
+				tb.Spec.ParentRef = &commonv1alpha1.GatewayRef{Group: "eventgateway.konghq.com", Kind: "OnPremEventGateway", Name: "onprem-gw"}
+				tb.Status = configurationv1alpha1.EventGatewayTLSTrustBundleStatus{}
+			})},
+			policy: withRef(configurationv1alpha1.EventGatewayTLSTrustBundleRef{Name: "trust-bundle"}),
+			assertErr: func(t *testing.T, err error) {
+				var target configurationv1alpha1.ReferenceNotKonnectManagedError
+				assert.ErrorAs(t, err, &target)
+				assert.EqualError(t, target, "EventGatewayTLSTrustBundle default/trust-bundle is not attached to a Konnect gateway")
+			},
+		},
+		{
 			name: "referenced trust bundle being deleted, policy not created in Konnect yet",
 			objects: []client.Object{trustBundle(func(tb *configurationv1alpha1.EventGatewayTLSTrustBundle) {
 				tb.DeletionTimestamp = &metav1.Time{Time: time.Now()}

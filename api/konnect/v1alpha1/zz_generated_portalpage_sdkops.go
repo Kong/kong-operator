@@ -78,6 +78,10 @@ func resolvePortalPageParentPageIDRef(ctx context.Context, cl client.Client, obj
 			}
 			return nil, fmt.Errorf("failed to get referenced PortalPage %s/%s: %w", ns, name, err)
 		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if skipper, ok := any(&referenced).(interface{ SkipKonnectReconciliation() bool }); ok && skipper.SkipKonnectReconciliation() {
+			return nil, ReferenceNotKonnectManagedError{Kind: "PortalPage", Namespace: ns, Name: name}
+		}
 		// Same-type references embed the referenced object's Konnect ID in a
 		// request scoped to the referrer's parent, so both objects must belong
 		// to the same parent.

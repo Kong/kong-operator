@@ -82,6 +82,11 @@ func resolveAIGatewaySNICertificate(ctx context.Context, cl client.Client, obj *
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayCertificate %s/%s: %w", ns, ref.Name, err))
 			continue
 		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if skipper, ok := any(&referenced).(interface{ SkipKonnectReconciliation() bool }); ok && skipper.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayCertificate", Namespace: ns, Name: ref.Name})
+			continue
+		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayCertificate", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue

@@ -167,11 +167,32 @@ func (prh parentRefHandler[p, pPTr]) handleParentRef(
 	parentType := constraints.EntityTypeName[p]()
 
 	parentRef := obj.GetParentRef()
+
+	// The parent may be outside the Konnect reconciler's scope entirely (e.g. an
+	// AIGatewayConsumer targeting an OnPremAIGateway). This entity is then not
+	// Konnect-managed either: clear the conditions the Konnect reconciler set on
+	// it and stop before any Konnect interaction. Returning the sentinel error
+	// (instead of a zero result) is what makes handleRefResult stop the
+	// reconciliation.
+	// The check covers the parent's ancestors too: an EventGatewayVirtualClusterPolicy
+	// is out of scope when its virtual cluster's backend cluster targets an
+	// OnPremEventGateway. It runs before the KongReferenceGrant check, which
+	// only applies to Konnect-managed entities.
+	parent, nn, err := getParentForRef[p, pPTr](ctx, cl, parentRef, obj.GetNamespace())
+	if err == nil && skipsKonnectReconciliation(ctx, cl, parent) {
+		if res, errStatus := removeKonnectConditions(ctx, cl, obj); errStatus != nil || !res.IsZero() {
+			return res, errStatus
+		}
+		return ctrl.Result{}, ReferencedObjectNotKonnectManagedError{
+			Reference: nn,
+			TypeName:  parentType,
+		}
+	}
+
 	if res, err := ensureKongReferenceGrantForParentRef(ctx, cl, obj, parentRef, obj.GetParentGVK()); err != nil || !res.IsZero() {
 		return res, err
 	}
 
-	parent, nn, err := getParentForRef[p, pPTr](ctx, cl, parentRef, obj.GetNamespace())
 	if err != nil {
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, obj,
@@ -183,24 +204,6 @@ func (prh parentRefHandler[p, pPTr]) handleParentRef(
 			return res, errStatus
 		}
 		return ctrl.Result{}, err
-	}
-
-	// The parent may be outside the Konnect reconciler's scope entirely (e.g. an
-	// AIGatewayConsumer targeting an OnPremAIGateway). This entity is then not
-	// Konnect-managed either: clear any stale parent-ref condition and stop before
-	// any Konnect interaction. Returning the sentinel error (instead of a zero
-	// result) is what makes handleRefResult stop the reconciliation.
-	if skipper, ok := any(parent).(konnectReconciliationSkipper); ok && skipper.SkipKonnectReconciliation() {
-		if res, errStatus := patch.StatusWithoutCondition(
-			ctx, cl, obj,
-			string(consts.ConditionType(obj.GetStatusConditionTypeParentRefValid())),
-		); errStatus != nil || !res.IsZero() {
-			return res, errStatus
-		}
-		return ctrl.Result{}, ReferencedObjectNotKonnectManagedError{
-			Reference: nn,
-			TypeName:  parentType,
-		}
 	}
 
 	if delTimestamp := parent.GetDeletionTimestamp(); !delTimestamp.IsZero() {
@@ -339,4 +342,106 @@ func getParentForRef[
 	default:
 		return nil, types.NamespacedName{}, fmt.Errorf("unsupported ref type %q", ref.Type)
 	}
+}
+
+// maxAncestorDepth bounds the walk of skipsKonnectReconciliation. The deepest
+// chain is a policy, its virtual cluster, the backend cluster and the gateway.
+const maxAncestorDepth = 4
+
+// objectWithParentGVK is an entity that can name its parent.
+type objectWithParentGVK interface {
+	GetParentRef() commonv1alpha1.ObjectRef
+	GetParentGVK() schema.GroupVersionKind
+}
+
+// skipsKonnectReconciliation reports whether obj, or one of its ancestors, is
+// not managed by the Konnect reconciler, e.g. an EventGatewayBackendCluster
+// targeting an OnPremEventGateway. The walk stops at the first ancestor that
+// cannot be resolved, e.g. one that does not exist (yet): the regular parent
+// handling reports it.
+func skipsKonnectReconciliation(ctx context.Context, cl client.Client, obj client.Object) bool {
+	for range maxAncestorDepth {
+		if skipper, ok := obj.(konnectReconciliationSkipper); ok && skipper.SkipKonnectReconciliation() {
+			return true
+		}
+		child, ok := obj.(objectWithParentGVK)
+		if !ok {
+			return false
+		}
+		ref := child.GetParentRef()
+		if ref.Type != commonv1alpha1.ObjectRefTypeNamespacedRef || ref.NamespacedRef == nil {
+			return false
+		}
+		o, err := cl.Scheme().New(child.GetParentGVK())
+		if err != nil {
+			return false
+		}
+		parent, ok := o.(client.Object)
+		if !ok {
+			return false
+		}
+		nn := types.NamespacedName{
+			Namespace: obj.GetNamespace(),
+			Name:      ref.NamespacedRef.Name,
+		}
+		if ns := ref.NamespacedRef.Namespace; ns != nil && *ns != "" {
+			nn.Namespace = *ns
+		}
+		if err := cl.Get(ctx, nn, parent); err != nil {
+			return false
+		}
+		obj = parent
+	}
+	return false
+}
+
+// konnectProgrammedReasons are the reasons of the Programmed condition that
+// only the Konnect reconciler sets. Programmed with another reason, e.g. one
+// set by an on-prem controller, is left alone.
+var konnectProgrammedReasons = map[string]struct{}{
+	konnectv1alpha1.KonnectEntityProgrammedReasonConditionWithStatusFalseExists:             {},
+	konnectv1alpha1.KonnectEntityProgrammedReasonKonnectAPIOpFailed:                         {},
+	konnectv1alpha1.KonnectEntityProgrammedReasonFailedToResolveConsumerGroupRefs:           {},
+	konnectv1alpha1.KonnectEntityProgrammedReasonFailedToReconcileConsumerGroupsWithKonnect: {},
+	konnectv1alpha1.KonnectEntityProgrammedReasonDeletionBlocked:                            {},
+}
+
+// removeKonnectConditions removes the conditions the Konnect reconciler may
+// have set on an entity that turns out not to be Konnect-managed, e.g. while
+// its on-prem ancestor did not exist yet.
+func removeKonnectConditions(ctx context.Context, cl client.Client, obj objectWithParentRef) (ctrl.Result, error) {
+	old, ok := obj.DeepCopyObject().(client.Object)
+	if !ok {
+		return ctrl.Result{}, fmt.Errorf("failed to copy %T", obj)
+	}
+	removed := false
+	for _, conditionType := range []string{
+		obj.GetStatusConditionTypeParentRefValid(),
+		configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs,
+		commonv1alpha1.KonnectReferencesResolvedConditionType,
+	} {
+		if k8sutils.RemoveCondition(consts.ConditionType(conditionType), obj) {
+			removed = true
+		}
+	}
+	programmed := consts.ConditionType(konnectv1alpha1.KonnectEntityProgrammedConditionType)
+	if cond, ok := k8sutils.GetCondition(programmed, obj); ok {
+		if _, isKonnect := konnectProgrammedReasons[cond.Reason]; isKonnect && k8sutils.RemoveCondition(programmed, obj) {
+			removed = true
+		}
+	}
+	if !removed {
+		return ctrl.Result{}, nil
+	}
+
+	// Optimistic lock: a JSON merge patch replaces the whole conditions array,
+	// so patching from a stale cached object would drop conditions persisted by
+	// more recent writes.
+	if err := cl.Status().Patch(ctx, obj, client.MergeFromWithOptions(old, client.MergeFromWithOptimisticLock{})); err != nil {
+		if apierrors.IsConflict(err) {
+			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+		}
+		return ctrl.Result{}, fmt.Errorf("failed to remove Konnect conditions: %w", err)
+	}
+	return ctrl.Result{}, nil
 }

@@ -20,6 +20,7 @@ import (
 // +apireference:kgo:include
 // +kong:channels=kong-operator
 // +kubebuilder:validation:XValidation:rule="has(self.spec.gatewayRef) != has(self.spec.parentRef)", message="exactly one of spec.gatewayRef and spec.parentRef must be set"
+// +kubebuilder:validation:XValidation:rule="(has(self.spec.parentRef) ? self.spec.parentRef.kind : 'KonnectEventGateway') == (has(oldSelf.spec.parentRef) ? oldSelf.spec.parentRef.kind : 'KonnectEventGateway')", message="the kind of the referenced gateway is immutable"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.parentRef) || has(self.spec.parentRef)", message="spec.parentRef cannot be replaced by the deprecated spec.gatewayRef"
 // +kubebuilder:validation:XValidation:rule="!has(self.spec.gatewayRef) || !has(oldSelf.spec.gatewayRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.gatewayRef == self.spec.gatewayRef", message="spec.gatewayRef is immutable when an entity is already Programmed"
 // +kubebuilder:validation:XValidation:rule="!has(self.spec.parentRef) || !has(oldSelf.spec.parentRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.parentRef == self.spec.parentRef", message="spec.parentRef is immutable when an entity is already Programmed"
@@ -54,11 +55,11 @@ type EventGatewayTLSTrustBundleSpec struct {
 	GatewayRef commonv1alpha1.ObjectRef `json:"gatewayRef,omitzero"`
 
 	// ParentRef is the reference to the gateway (control plane) this object
-	// belongs to. Supported kinds: KonnectEventGateway.
+	// belongs to. Supported kinds: KonnectEventGateway, OnPremEventGateway.
 	// Exactly one of gatewayRef and parentRef must be set.
 	//
 	// +optional
-	// +kubebuilder:validation:XValidation:rule="(self.group == 'konnect.konghq.com' && self.kind == 'KonnectEventGateway')", message="parentRef must reference one of: konnect.konghq.com/KonnectEventGateway"
+	// +kubebuilder:validation:XValidation:rule="(self.group == 'konnect.konghq.com' && self.kind == 'KonnectEventGateway') || (self.group == 'eventgateway.konghq.com' && self.kind == 'OnPremEventGateway')", message="parentRef must reference one of: konnect.konghq.com/KonnectEventGateway, eventgateway.konghq.com/OnPremEventGateway"
 	ParentRef *commonv1alpha1.GatewayRef `json:"parentRef,omitempty"`
 
 	// APISpec defines the desired state of the resource's API spec fields.

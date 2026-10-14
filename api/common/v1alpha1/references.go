@@ -107,6 +107,21 @@ func (e ReferenceCrossNamespaceError) Error() string {
 	return fmt.Sprintf("%s %s/%s uses cross-namespace reference from namespace %s, which is not supported yet", e.Kind, e.Namespace, e.Name, e.ReferrerNamespace)
 }
 
+// ReferenceNotKonnectManagedError is returned when a reference points to a CR
+// the Konnect reconciler does not manage, e.g. one attached to an on-prem
+// gateway: it never gets a Konnect ID, so a Konnect entity can't reference it.
+//
+// +kubebuilder:object:generate=false
+type ReferenceNotKonnectManagedError struct {
+	Kind      string
+	Namespace string
+	Name      string
+}
+
+func (e ReferenceNotKonnectManagedError) Error() string {
+	return fmt.Sprintf("%s %s/%s is not attached to a Konnect gateway", e.Kind, e.Namespace, e.Name)
+}
+
 // ReferenceDifferentGatewayError is returned when a reference points to a CR
 // programmed under a different AIGatewayControlPlane. References must stay
 // within the same Konnect Gateway because Konnect only accepts policy and ACL

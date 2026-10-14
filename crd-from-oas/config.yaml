@@ -736,6 +736,10 @@ apiGroupVersions:
           # name, next to the deprecated spec.gatewayRef.
           gatewayRef:
             fieldName: parentRef
+            additionalKinds:
+              - group: eventgateway.konghq.com
+                version: v1alpha1
+                kind: OnPremEventGateway
       - path: /v1/event-gateways/{gatewayId}/schema-registries
         name: EventGatewaySchemaRegistry
         dataSources:
@@ -758,6 +762,10 @@ apiGroupVersions:
           # name, next to the deprecated spec.gatewayRef.
           gatewayRef:
             fieldName: parentRef
+            additionalKinds:
+              - group: eventgateway.konghq.com
+                version: v1alpha1
+                kind: OnPremEventGateway
       - path: /v1/event-gateways/{gatewayId}/tls-trust-bundles
         name: EventGatewayTLSTrustBundle
         dataSources:
@@ -780,6 +788,10 @@ apiGroupVersions:
           # name, next to the deprecated spec.gatewayRef.
           gatewayRef:
             fieldName: parentRef
+            additionalKinds:
+              - group: eventgateway.konghq.com
+                version: v1alpha1
+                kind: OnPremEventGateway
       - path: /v1/event-gateways/{gatewayId}/static-keys
         name: EventGatewayStaticKey
         dataSources:
@@ -841,6 +853,10 @@ apiGroupVersions:
           # name, next to the deprecated spec.gatewayRef.
           gatewayRef:
             fieldName: parentRef
+            additionalKinds:
+              - group: eventgateway.konghq.com
+                version: v1alpha1
+                kind: OnPremEventGateway
       - path: /v1/event-gateways/{gatewayId}/listeners
         name: EventGatewayListener
         ops:
@@ -860,6 +876,10 @@ apiGroupVersions:
           # name, next to the deprecated spec.gatewayRef.
           gatewayRef:
             fieldName: parentRef
+            additionalKinds:
+              - group: eventgateway.konghq.com
+                version: v1alpha1
+                kind: OnPremEventGateway
       - path: /v1/event-gateways/{gatewayId}/listeners/{eventGatewayListenerId}/policies
         name: EventGatewayListenerPolicy
         references:
@@ -935,6 +955,10 @@ apiGroupVersions:
           # name, next to the deprecated spec.gatewayRef.
           gatewayRef:
             fieldName: parentRef
+            additionalKinds:
+              - group: eventgateway.konghq.com
+                version: v1alpha1
+                kind: OnPremEventGateway
         dataSources:
           - path: spec.apiSpec.tls.clientIdentity.certificate
             type: Secret

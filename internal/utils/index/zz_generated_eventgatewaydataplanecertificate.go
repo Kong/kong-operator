@@ -11,6 +11,8 @@ import (
 const (
 	// IndexFieldEventGatewayDataPlaneCertificateOnKonnectEventGatewayRef is the index field for EventGatewayDataPlaneCertificate -> KonnectEventGateway.
 	IndexFieldEventGatewayDataPlaneCertificateOnKonnectEventGatewayRef = "eventGatewayDataPlaneCertificateOnKonnectEventGatewayRef"
+	// IndexFieldEventGatewayDataPlaneCertificateOnOnPremEventGatewayRef is the index field for EventGatewayDataPlaneCertificate -> OnPremEventGateway.
+	IndexFieldEventGatewayDataPlaneCertificateOnOnPremEventGatewayRef = "eventGatewayDataPlaneCertificateOnOnPremEventGatewayRef"
 )
 
 // OptionsForEventGatewayDataPlaneCertificate returns required Index options for EventGatewayDataPlaneCertificate reconciler.
@@ -21,12 +23,22 @@ func OptionsForEventGatewayDataPlaneCertificate() []Option {
 			Field:          IndexFieldEventGatewayDataPlaneCertificateOnKonnectEventGatewayRef,
 			ExtractValueFn: eventGatewayDataPlaneCertificateOnKonnectEventGatewayRef,
 		},
+		{
+			Object:         &configurationv1alpha1.EventGatewayDataPlaneCertificate{},
+			Field:          IndexFieldEventGatewayDataPlaneCertificateOnOnPremEventGatewayRef,
+			ExtractValueFn: eventGatewayDataPlaneCertificateOnOnPremEventGatewayRef,
+		},
 	}
 }
 
 func eventGatewayDataPlaneCertificateOnKonnectEventGatewayRef(object client.Object) []string {
 	ent, ok := object.(*configurationv1alpha1.EventGatewayDataPlaneCertificate)
 	if !ok {
+		return nil
+	}
+	// Only entities referencing a KonnectEventGateway are visible to the Konnect
+	// reconciler: the others are indexed separately.
+	if ent.SkipKonnectReconciliation() {
 		return nil
 	}
 	// The reference comes from spec.parentRef or the deprecated spec.gatewayRef.
@@ -41,4 +53,22 @@ func eventGatewayDataPlaneCertificateOnKonnectEventGatewayRef(object client.Obje
 	}
 
 	return []string{refNamespace + "/" + ref.NamespacedRef.Name}
+}
+
+func eventGatewayDataPlaneCertificateOnOnPremEventGatewayRef(object client.Object) []string {
+	ent, ok := object.(*configurationv1alpha1.EventGatewayDataPlaneCertificate)
+	if !ok {
+		return nil
+	}
+	ref := ent.Spec.ParentRef
+	if ref == nil || !ref.IsGroupKind("eventgateway.konghq.com", "OnPremEventGateway") {
+		return nil
+	}
+
+	refNamespace := ent.GetNamespace()
+	if ref.Namespace != nil && *ref.Namespace != "" {
+		refNamespace = *ref.Namespace
+	}
+
+	return []string{refNamespace + "/" + ref.Name}
 }

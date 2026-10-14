@@ -83,6 +83,8 @@ func runGatewayParentRefTestCases[
 	const (
 		konnectGroup = "konnect.konghq.com"
 		konnectKind  = "KonnectEventGateway"
+		onPremGroup  = "eventgateway.konghq.com"
+		onPremKind   = "OnPremEventGateway"
 	)
 	_, validGatewayRef := refs(valid)
 	gatewayName := validGatewayRef.NamespacedRef.Name
@@ -103,6 +105,9 @@ func runGatewayParentRefTestCases[
 	konnectRef := func(name string) *commonv1alpha1.GatewayRef {
 		return &commonv1alpha1.GatewayRef{Group: konnectGroup, Kind: konnectKind, Name: name}
 	}
+	onPremRef := func(name string) *commonv1alpha1.GatewayRef {
+		return &commonv1alpha1.GatewayRef{Group: onPremGroup, Kind: onPremKind, Name: name}
+	}
 	withParentRef := func(group, kind, name string) T {
 		return withRefs(&commonv1alpha1.GatewayRef{Group: group, Kind: kind, Name: name}, commonv1alpha1.ObjectRef{})
 	}
@@ -121,6 +126,7 @@ func runGatewayParentRefTestCases[
 			NamespacedRef: &commonv1alpha1.NamespacedRef{Name: gatewayName, Namespace: &namespace},
 		}
 	}
+	const kindImmutable = "the kind of the referenced gateway is immutable"
 	const sameGatewayOnly = "spec.gatewayRef can only be replaced by a spec.parentRef referencing the same gateway"
 
 	common.TestCasesGroup[T]{
@@ -137,9 +143,16 @@ func runGatewayParentRefTestCases[
 			}(),
 		},
 		{
-			Name:                 "OnPremEventGateway is not supported yet",
-			TestObject:           withParentRef("eventgateway.konghq.com", "OnPremEventGateway", gatewayName),
-			ExpectedErrorMessage: new("parentRef must reference one of: konnect.konghq.com/KonnectEventGateway"),
+			Name:       "OnPremEventGateway is accepted",
+			TestObject: withParentRef(onPremGroup, onPremKind, gatewayName),
+		},
+		{
+			Name: "OnPremEventGateway with a namespace is accepted",
+			TestObject: func() T {
+				ref := onPremRef(gatewayName)
+				ref.Namespace = new("other")
+				return withRefs(ref, commonv1alpha1.ObjectRef{})
+			}(),
 		},
 		{
 			Name:                 "kind of another group is rejected",
@@ -149,7 +162,7 @@ func runGatewayParentRefTestCases[
 		{
 			Name:                 "unsupported kind is rejected",
 			TestObject:           withParentRef(konnectGroup, "KonnectGatewayControlPlane", gatewayName),
-			ExpectedErrorMessage: new("parentRef must reference one of"),
+			ExpectedErrorMessage: new("parentRef must reference one of: konnect.konghq.com/KonnectEventGateway, eventgateway.konghq.com/OnPremEventGateway"),
 		},
 		{
 			Name:                 "group is required",
@@ -266,6 +279,42 @@ func runGatewayParentRefTestCases[
 			TestObject:                 programmed(withParentRef(konnectGroup, konnectKind, gatewayName)),
 			Update:                     setRefs(nil, *validGatewayRef),
 			ExpectedUpdateErrorMessage: new("spec.parentRef cannot be replaced by the deprecated spec.gatewayRef"),
+		},
+		{
+			Name:       "on-prem parentRef name can change when not programmed",
+			TestObject: withParentRef(onPremGroup, onPremKind, gatewayName),
+			Update:     setRefs(onPremRef("different"), commonv1alpha1.ObjectRef{}),
+		},
+		{
+			Name:                       "on-prem parentRef name cannot change when programmed",
+			TestObject:                 programmed(withParentRef(onPremGroup, onPremKind, gatewayName)),
+			Update:                     setRefs(onPremRef("different"), commonv1alpha1.ObjectRef{}),
+			ExpectedUpdateErrorMessage: new("spec.parentRef is immutable when an entity is already Programmed"),
+		},
+		{
+			Name:                       "a KonnectEventGateway parentRef cannot be replaced by an OnPremEventGateway one",
+			TestObject:                 withParentRef(konnectGroup, konnectKind, gatewayName),
+			Update:                     setRefs(onPremRef(gatewayName), commonv1alpha1.ObjectRef{}),
+			ExpectedUpdateErrorMessage: new(kindImmutable),
+		},
+		{
+			Name:                       "an OnPremEventGateway parentRef cannot be replaced by a KonnectEventGateway one",
+			TestObject:                 withParentRef(onPremGroup, onPremKind, gatewayName),
+			Update:                     setRefs(konnectRef(gatewayName), commonv1alpha1.ObjectRef{}),
+			ExpectedUpdateErrorMessage: new(kindImmutable),
+		},
+		{
+			// The deprecated gatewayRef always references a KonnectEventGateway.
+			Name:                       "gatewayRef cannot be replaced by an OnPremEventGateway parentRef",
+			TestObject:                 valid.DeepCopy(),
+			Update:                     setRefs(onPremRef(gatewayName), commonv1alpha1.ObjectRef{}),
+			ExpectedUpdateErrorMessage: new(kindImmutable),
+		},
+		{
+			Name:                       "an OnPremEventGateway parentRef cannot be replaced by gatewayRef",
+			TestObject:                 withParentRef(onPremGroup, onPremKind, gatewayName),
+			Update:                     setRefs(nil, *validGatewayRef),
+			ExpectedUpdateErrorMessage: new(kindImmutable),
 		},
 	}.RunWithConfig(t, cfg, scheme.Get())
 }

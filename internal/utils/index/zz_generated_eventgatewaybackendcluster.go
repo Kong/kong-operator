@@ -11,6 +11,8 @@ import (
 const (
 	// IndexFieldEventGatewayBackendClusterOnKonnectEventGatewayRef is the index field for EventGatewayBackendCluster -> KonnectEventGateway.
 	IndexFieldEventGatewayBackendClusterOnKonnectEventGatewayRef = "eventGatewayBackendClusterOnKonnectEventGatewayRef"
+	// IndexFieldEventGatewayBackendClusterOnOnPremEventGatewayRef is the index field for EventGatewayBackendCluster -> OnPremEventGateway.
+	IndexFieldEventGatewayBackendClusterOnOnPremEventGatewayRef = "eventGatewayBackendClusterOnOnPremEventGatewayRef"
 )
 
 // OptionsForEventGatewayBackendCluster returns required Index options for EventGatewayBackendCluster reconciler.
@@ -21,12 +23,22 @@ func OptionsForEventGatewayBackendCluster() []Option {
 			Field:          IndexFieldEventGatewayBackendClusterOnKonnectEventGatewayRef,
 			ExtractValueFn: eventGatewayBackendClusterOnKonnectEventGatewayRef,
 		},
+		{
+			Object:         &configurationv1alpha1.EventGatewayBackendCluster{},
+			Field:          IndexFieldEventGatewayBackendClusterOnOnPremEventGatewayRef,
+			ExtractValueFn: eventGatewayBackendClusterOnOnPremEventGatewayRef,
+		},
 	}
 }
 
 func eventGatewayBackendClusterOnKonnectEventGatewayRef(object client.Object) []string {
 	ent, ok := object.(*configurationv1alpha1.EventGatewayBackendCluster)
 	if !ok {
+		return nil
+	}
+	// Only entities referencing a KonnectEventGateway are visible to the Konnect
+	// reconciler: the others are indexed separately.
+	if ent.SkipKonnectReconciliation() {
 		return nil
 	}
 	// The reference comes from spec.parentRef or the deprecated spec.gatewayRef.
@@ -41,4 +53,22 @@ func eventGatewayBackendClusterOnKonnectEventGatewayRef(object client.Object) []
 	}
 
 	return []string{refNamespace + "/" + ref.NamespacedRef.Name}
+}
+
+func eventGatewayBackendClusterOnOnPremEventGatewayRef(object client.Object) []string {
+	ent, ok := object.(*configurationv1alpha1.EventGatewayBackendCluster)
+	if !ok {
+		return nil
+	}
+	ref := ent.Spec.ParentRef
+	if ref == nil || !ref.IsGroupKind("eventgateway.konghq.com", "OnPremEventGateway") {
+		return nil
+	}
+
+	refNamespace := ent.GetNamespace()
+	if ref.Namespace != nil && *ref.Namespace != "" {
+		refNamespace = *ref.Namespace
+	}
+
+	return []string{refNamespace + "/" + ref.Name}
 }

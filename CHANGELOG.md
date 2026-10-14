@@ -88,6 +88,13 @@
   policies. Existing parent-less policies remain editable and deletable after an
   upgrade, though they cannot be programmed until a parent is added.
   [#6086](https://github.com/Kong/kong-operator/pull/6086)
+- AI Gateway: a Konnect entity referencing an entity attached to an
+  `OnPremAIGateway`, e.g. an `AIGatewayAgent` listing an `AIGatewayPolicy` of an
+  on-prem gateway, now reports the reference as invalid in its
+  `KonnectReferencesResolved` condition (reason `ReferenceInvalid`). It used to
+  wait for the referenced entity to be programmed in Konnect, which never
+  happens, with reason `ReferenceNotProgrammed`.
+  [#6116](https://github.com/Kong/kong-operator/issues/6116)
 - CRDs generated from the Konnect OpenAPI spec now enforce the `maxProperties`
   constraint of shared label map types (`labels` accept at most 50 entries,
   `managedBy` at most 5). The constraint was previously emitted on the fields
@@ -145,6 +152,18 @@
   the Service and port of the gw-admin pods Kong Operator pushes the
   configuration to. This change only adds the CRD; it is not reconciled yet.
   [#6114](https://github.com/Kong/kong-operator/pull/6114)
+- Event Gateway: `spec.parentRef` of `EventGatewayBackendCluster`,
+  `EventGatewayDataPlaneCertificate`, `EventGatewayListener`,
+  `EventGatewaySchemaRegistry`, `EventGatewayStaticKey` and
+  `EventGatewayTLSTrustBundle` accepts an `OnPremEventGateway`. The Konnect
+  controllers leave these entities alone, and their children too (virtual
+  clusters and policies). The kind of the referenced gateway can't be changed:
+  an entity can't be moved between a `KonnectEventGateway` and an
+  `OnPremEventGateway`. A Konnect entity that references an entity attached to
+  an `OnPremEventGateway`, e.g. a listener policy referencing its TLS trust
+  bundle, reports the reference as invalid in its `KonnectReferencesResolved`
+  condition instead of waiting for it to be programmed in Konnect.
+  [#6116](https://github.com/Kong/kong-operator/issues/6116)
 - `--konnect-list-page-size` flag (default and maximum `100`): the page size
   the operator requests when listing Konnect entities to find the Konnect
   entity of an object, e.g. one whose Konnect ID was lost. It is a fallback in

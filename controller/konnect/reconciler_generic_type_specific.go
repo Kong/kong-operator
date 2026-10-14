@@ -350,6 +350,9 @@ func isExpectedKonnectReferenceResolutionError(err error) bool {
 	if _, ok := errors.AsType[commonv1alpha1.ReferenceDifferentGatewayError](err); ok {
 		return true
 	}
+	if _, ok := errors.AsType[commonv1alpha1.ReferenceNotKonnectManagedError](err); ok {
+		return true
+	}
 	if _, ok := errors.AsType[commonv1alpha1.ReferenceDifferentParentError](err); ok {
 		return true
 	}
@@ -367,6 +370,9 @@ func hasInvalidKonnectReferenceResolutionError(err error) bool {
 		return true
 	}
 	if _, ok := errors.AsType[commonv1alpha1.ReferenceDifferentGatewayError](err); ok {
+		return true
+	}
+	if _, ok := errors.AsType[commonv1alpha1.ReferenceNotKonnectManagedError](err); ok {
 		return true
 	}
 	if _, ok := errors.AsType[commonv1alpha1.ReferenceDifferentParentError](err); ok {
