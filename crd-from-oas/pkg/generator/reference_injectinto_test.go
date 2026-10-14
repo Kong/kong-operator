@@ -72,6 +72,7 @@ func TestRootUnionInjectIntoReference(t *testing.T) {
 		assert.Equal(t, 1, strings.Count(content, "func (s EventGatewayVirtualClusterProducePolicyAPISpec) MarshalJSON"))
 		assert.Equal(t, 1, strings.Count(content, "func (s *EventGatewayVirtualClusterProducePolicyAPISpec) UnmarshalJSON"))
 		assert.Contains(t, content, `payload["parentPolicyRef"] = data`)
+		assert.Contains(t, content, `!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef)`)
 		assert.NotContains(t, content, "exactly one of")
 		content, err = g.generateSDKOps(entity, schema, &config.EntityOpsConfig{
 			Ops: map[string]*config.OpConfig{

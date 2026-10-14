@@ -84,10 +84,10 @@
   in Konnect, resolves its ID, and blocks parent deletion while child policy
   objects reference it. The reference is immutable after creation in Konnect
   and is also supported by `modifyHeaders` and consume `skipRecord` policies.
-  Admission now requires this reference for `encryptFields` and `decryptFields`;
-  these policies were previously accepted by Kubernetes but could not be created
-  in Konnect.
-  [#6019](https://github.com/Kong/kong-operator/issues/6019)
+  Admission requires this reference for new `encryptFields` and `decryptFields`
+  policies. Existing parent-less policies remain editable and deletable after an
+  upgrade, though they cannot be programmed until a parent is added.
+  [#6086](https://github.com/Kong/kong-operator/pull/6086)
 - CRDs generated from the Konnect OpenAPI spec now enforce the `maxProperties`
   constraint of shared label map types (`labels` accept at most 50 entries,
   `managedBy` at most 5). The constraint was previously emitted on the fields

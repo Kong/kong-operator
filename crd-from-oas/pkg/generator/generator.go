@@ -2946,7 +2946,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		if ref.SameTypeRef && !ref.ObjectRefField {
 			p := "self.spec.apiSpec." + ref.JSONFieldName
 			typeXValidations = append(typeXValidations, fmt.Sprintf(
-				`+kubebuilder:validation:XValidation:rule="!has(%s) || %s.name != self.metadata.name", message="%s must not reference the %s itself"`,
+				`+kubebuilder:validation:XValidation:rule="!has(self.spec.apiSpec) || !has(%s) || %s.name != self.metadata.name", message="%s must not reference the %s itself"`,
 				p, p, ref.JSONFieldName, entityName,
 			))
 		}

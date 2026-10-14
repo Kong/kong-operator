@@ -1027,21 +1027,27 @@ spec:
         - fieldPath: .spec.apiSpec.parentPolicyRef
           message: parentPolicyRef is immutable once the policy has been created in
             Konnect
-          rule: '!has(oldSelf.status) || !has(oldSelf.status.id) || (has(self.spec.apiSpec.parentPolicyRef)
-            == has(oldSelf.spec.apiSpec.parentPolicyRef) && (!has(self.spec.apiSpec.parentPolicyRef)
-            || self.spec.apiSpec.parentPolicyRef == oldSelf.spec.apiSpec.parentPolicyRef))'
+          rule: '!has(oldSelf.status) || !has(oldSelf.status.id) || (has(self.spec.apiSpec)
+            && has(self.spec.apiSpec.parentPolicyRef) ? has(oldSelf.spec.apiSpec)
+            && has(oldSelf.spec.apiSpec.parentPolicyRef) && self.spec.apiSpec.parentPolicyRef
+            == oldSelf.spec.apiSpec.parentPolicyRef : !has(oldSelf.spec.apiSpec) ||
+            !has(oldSelf.spec.apiSpec.parentPolicyRef))'
         - fieldPath: .spec.apiSpec.parentPolicyRef
           message: parentPolicyRef is required for encryptFields
+          optionalOldSelf: true
           rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.type) || self.spec.apiSpec.type
-            != ''encryptFields'' || has(self.spec.apiSpec.parentPolicyRef)'
+            != ''encryptFields'' || has(self.spec.apiSpec.parentPolicyRef) || (oldSelf.hasValue()
+            && has(oldSelf.value().spec.apiSpec) && has(oldSelf.value().spec.apiSpec.type)
+            && oldSelf.value().spec.apiSpec.type == ''encryptFields'' && !has(oldSelf.value().spec.apiSpec.parentPolicyRef))'
         - fieldPath: .spec.apiSpec.parentPolicyRef
           message: parentPolicyRef is only supported for encryptFields and modifyHeaders
-          rule: '!has(self.spec.apiSpec.parentPolicyRef) || self.spec.apiSpec.type
-            in [''encryptFields'', ''modifyHeaders'']'
+          rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef)
+            || (has(self.spec.apiSpec.type) && self.spec.apiSpec.type in [''encryptFields'',
+            ''modifyHeaders''])'
         - message: parentPolicyRef must not reference the EventGatewayVirtualClusterProducePolicy
             itself
-          rule: '!has(self.spec.apiSpec.parentPolicyRef) || self.spec.apiSpec.parentPolicyRef.name
-            != self.metadata.name'
+          rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef)
+            || self.spec.apiSpec.parentPolicyRef.name != self.metadata.name'
     served: true
     storage: true
     subresources:

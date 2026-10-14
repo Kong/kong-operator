@@ -101,6 +101,11 @@ func TestEventGatewayParentPolicyLifecycle(t *testing.T) {
 
 			if side == "produce" {
 				sdk := factory.SDK.EventGatewayVirtualClusterProducePoliciesSDK
+				sdk.EXPECT().GetEventGatewayVirtualClusterProducePolicy(mock.Anything,
+					sdkkonnectops.GetEventGatewayVirtualClusterProducePolicyRequest{GatewayID: "gateway-id", VirtualClusterID: "vc-id", PolicyID: "produce-parent-id"}).
+					Return(&sdkkonnectops.GetEventGatewayVirtualClusterProducePolicyResponse{
+						EventGatewayPolicy: &sdkkonnectcomp.EventGatewayPolicy{ID: "produce-parent-id", Type: "schema_validation"},
+					}, nil)
 				sdk.EXPECT().CreateEventGatewayVirtualClusterProducePolicy(mock.Anything,
 					mock.MatchedBy(func(req sdkkonnectops.CreateEventGatewayVirtualClusterProducePolicyRequest) bool {
 						return req.EventGatewayProducePolicyCreate.EventGatewayProduceSchemaValidationPolicy != nil
@@ -116,6 +121,11 @@ func TestEventGatewayParentPolicyLifecycle(t *testing.T) {
 				}, nil).Once()
 			} else {
 				sdk := factory.SDK.EventGatewayVirtualClusterConsumePoliciesSDK
+				sdk.EXPECT().GetEventGatewayVirtualClusterConsumePolicy(mock.Anything,
+					sdkkonnectops.GetEventGatewayVirtualClusterConsumePolicyRequest{GatewayID: "gateway-id", VirtualClusterID: "vc-id", PolicyID: "consume-parent-id"}).
+					Return(&sdkkonnectops.GetEventGatewayVirtualClusterConsumePolicyResponse{
+						EventGatewayPolicy: &sdkkonnectcomp.EventGatewayPolicy{ID: "consume-parent-id", Type: "schema_validation"},
+					}, nil)
 				sdk.EXPECT().CreateEventGatewayVirtualClusterConsumePolicy(mock.Anything,
 					mock.MatchedBy(func(req sdkkonnectops.CreateEventGatewayVirtualClusterConsumePolicyRequest) bool {
 						return req.EventGatewayConsumePolicyCreate.EventGatewayConsumeSchemaValidationPolicy != nil

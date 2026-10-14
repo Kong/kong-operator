@@ -985,22 +985,28 @@ spec:
         - fieldPath: .spec.apiSpec.parentPolicyRef
           message: parentPolicyRef is immutable once the policy has been created in
             Konnect
-          rule: '!has(oldSelf.status) || !has(oldSelf.status.id) || (has(self.spec.apiSpec.parentPolicyRef)
-            == has(oldSelf.spec.apiSpec.parentPolicyRef) && (!has(self.spec.apiSpec.parentPolicyRef)
-            || self.spec.apiSpec.parentPolicyRef == oldSelf.spec.apiSpec.parentPolicyRef))'
+          rule: '!has(oldSelf.status) || !has(oldSelf.status.id) || (has(self.spec.apiSpec)
+            && has(self.spec.apiSpec.parentPolicyRef) ? has(oldSelf.spec.apiSpec)
+            && has(oldSelf.spec.apiSpec.parentPolicyRef) && self.spec.apiSpec.parentPolicyRef
+            == oldSelf.spec.apiSpec.parentPolicyRef : !has(oldSelf.spec.apiSpec) ||
+            !has(oldSelf.spec.apiSpec.parentPolicyRef))'
         - fieldPath: .spec.apiSpec.parentPolicyRef
           message: parentPolicyRef is required for decryptFields
+          optionalOldSelf: true
           rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.type) || self.spec.apiSpec.type
-            != ''decryptFields'' || has(self.spec.apiSpec.parentPolicyRef)'
+            != ''decryptFields'' || has(self.spec.apiSpec.parentPolicyRef) || (oldSelf.hasValue()
+            && has(oldSelf.value().spec.apiSpec) && has(oldSelf.value().spec.apiSpec.type)
+            && oldSelf.value().spec.apiSpec.type == ''decryptFields'' && !has(oldSelf.value().spec.apiSpec.parentPolicyRef))'
         - fieldPath: .spec.apiSpec.parentPolicyRef
           message: parentPolicyRef is only supported for decryptFields, modifyHeaders
             and skipRecord
-          rule: '!has(self.spec.apiSpec.parentPolicyRef) || self.spec.apiSpec.type
-            in [''decryptFields'', ''modifyHeaders'', ''skipRecord'']'
+          rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef)
+            || (has(self.spec.apiSpec.type) && self.spec.apiSpec.type in [''decryptFields'',
+            ''modifyHeaders'', ''skipRecord''])'
         - message: parentPolicyRef must not reference the EventGatewayVirtualClusterConsumePolicy
             itself
-          rule: '!has(self.spec.apiSpec.parentPolicyRef) || self.spec.apiSpec.parentPolicyRef.name
-            != self.metadata.name'
+          rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef)
+            || self.spec.apiSpec.parentPolicyRef.name != self.metadata.name'
     served: true
     storage: true
     subresources:

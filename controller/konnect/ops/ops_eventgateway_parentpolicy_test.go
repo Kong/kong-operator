@@ -1,9 +1,12 @@
 package ops
 
 import (
+	"errors"
 	"testing"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -40,6 +43,12 @@ func TestDeleteEventGatewayParentPolicy(t *testing.T) {
 						}
 						cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(child).Build()
 						sdk := mocks.NewMockEventGatewayVirtualClusterProducePoliciesSDK(t)
+						sdk.EXPECT().GetEventGatewayVirtualClusterProducePolicy(mock.Anything,
+							sdkkonnectops.GetEventGatewayVirtualClusterProducePolicyRequest{
+								GatewayID: parent.GetGatewayID(), VirtualClusterID: parent.GetVirtualClusterID(), PolicyID: parent.GetKonnectID(),
+							}).Return(&sdkkonnectops.GetEventGatewayVirtualClusterProducePolicyResponse{
+							EventGatewayPolicy: &sdkkonnectcomp.EventGatewayPolicy{Type: "schema_validation"},
+						}, nil).Once()
 						err := deleteEventGatewayVirtualClusterProducePolicyGuarded(t.Context(), sdk, cl, parent)
 						var blocked EventGatewayParentPolicyInUseError
 						require.ErrorAs(t, err, &blocked)
@@ -70,6 +79,12 @@ func TestDeleteEventGatewayParentPolicy(t *testing.T) {
 						}
 						cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(child).Build()
 						sdk := mocks.NewMockEventGatewayVirtualClusterConsumePoliciesSDK(t)
+						sdk.EXPECT().GetEventGatewayVirtualClusterConsumePolicy(mock.Anything,
+							sdkkonnectops.GetEventGatewayVirtualClusterConsumePolicyRequest{
+								GatewayID: parent.GetGatewayID(), VirtualClusterID: parent.GetVirtualClusterID(), PolicyID: parent.GetKonnectID(),
+							}).Return(&sdkkonnectops.GetEventGatewayVirtualClusterConsumePolicyResponse{
+							EventGatewayPolicy: &sdkkonnectcomp.EventGatewayPolicy{Type: "schema_validation"},
+						}, nil).Once()
 						err := deleteEventGatewayVirtualClusterConsumePolicyGuarded(t.Context(), sdk, cl, parent)
 						var blocked EventGatewayParentPolicyInUseError
 						require.ErrorAs(t, err, &blocked)
@@ -82,6 +97,90 @@ func TestDeleteEventGatewayParentPolicy(t *testing.T) {
 						sdk.EXPECT().DeleteEventGatewayVirtualClusterConsumePolicy(mock.Anything, mock.Anything).
 							Return(&sdkkonnectops.DeleteEventGatewayVirtualClusterConsumePolicyResponse{}, nil).Once()
 						require.NoError(t, deleteEventGatewayVirtualClusterConsumePolicyGuarded(t.Context(), sdk, cl, parent))
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestDeleteEventGatewayReferencedPolicyType(t *testing.T) {
+	t.Parallel()
+	lookupError := errors.New("failed to read policy")
+	for _, side := range []string{"produce", "consume"} {
+		t.Run(side, func(t *testing.T) {
+			for _, tc := range []struct {
+				name        string
+				policy      *sdkkonnectcomp.EventGatewayPolicy
+				nilResponse bool
+				lookupErr   error
+				wantErr     error
+				wantDelete  bool
+			}{
+				{name: "non-schema policy", policy: &sdkkonnectcomp.EventGatewayPolicy{Type: "modify_headers"}, wantDelete: true},
+				{name: "already gone", lookupErr: &sdkkonnecterrs.NotFoundError{}},
+				{name: "read failure", lookupErr: lookupError, wantErr: lookupError},
+				{name: "nil response", nilResponse: true, wantErr: ErrNilResponse},
+				{name: "missing policy response", wantErr: ErrNilResponse},
+				{name: "missing policy type", policy: &sdkkonnectcomp.EventGatewayPolicy{}, wantErr: ErrNilResponse},
+			} {
+				t.Run(tc.name, func(t *testing.T) {
+					var err error
+					if side == "produce" {
+						parent := testEventGatewayVirtualClusterProducePolicy()
+						// A desired schemaValidation type is not proof that the
+						// remote policy was created with that type.
+						parent.Spec.APISpec.Type = configurationv1alpha1.EventGatewayVirtualClusterProducePolicyConfigTypeProduceSchemaValidationPolicy
+						child := &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{
+							Name: "child", Namespace: parent.Namespace,
+							Spec: configurationv1alpha1.EventGatewayVirtualClusterProducePolicySpec{
+								APISpec: configurationv1alpha1.EventGatewayVirtualClusterProducePolicyAPISpec{
+									ParentPolicyRef: configurationv1alpha1.EventGatewayVirtualClusterProducePolicyRef{Name: parent.Name},
+								},
+							},
+						}
+						cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(child).Build()
+						sdk := mocks.NewMockEventGatewayVirtualClusterProducePoliciesSDK(t)
+						resp := &sdkkonnectops.GetEventGatewayVirtualClusterProducePolicyResponse{EventGatewayPolicy: tc.policy}
+						if tc.nilResponse {
+							resp = nil
+						}
+						sdk.EXPECT().GetEventGatewayVirtualClusterProducePolicy(mock.Anything, mock.Anything).
+							Return(resp, tc.lookupErr).Once()
+						if tc.wantDelete {
+							sdk.EXPECT().DeleteEventGatewayVirtualClusterProducePolicy(mock.Anything, mock.Anything).
+								Return(&sdkkonnectops.DeleteEventGatewayVirtualClusterProducePolicyResponse{}, nil).Once()
+						}
+						err = deleteEventGatewayVirtualClusterProducePolicyGuarded(t.Context(), sdk, cl, parent)
+					} else {
+						parent := testEventGatewayVirtualClusterConsumePolicy()
+						parent.Spec.APISpec.Type = configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyConfigTypeConsumeSchemaValidationPolicy
+						child := &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{
+							Name: "child", Namespace: parent.Namespace,
+							Spec: configurationv1alpha1.EventGatewayVirtualClusterConsumePolicySpec{
+								APISpec: configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyAPISpec{
+									ParentPolicyRef: configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyRef{Name: parent.Name},
+								},
+							},
+						}
+						cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(child).Build()
+						sdk := mocks.NewMockEventGatewayVirtualClusterConsumePoliciesSDK(t)
+						resp := &sdkkonnectops.GetEventGatewayVirtualClusterConsumePolicyResponse{EventGatewayPolicy: tc.policy}
+						if tc.nilResponse {
+							resp = nil
+						}
+						sdk.EXPECT().GetEventGatewayVirtualClusterConsumePolicy(mock.Anything, mock.Anything).
+							Return(resp, tc.lookupErr).Once()
+						if tc.wantDelete {
+							sdk.EXPECT().DeleteEventGatewayVirtualClusterConsumePolicy(mock.Anything, mock.Anything).
+								Return(&sdkkonnectops.DeleteEventGatewayVirtualClusterConsumePolicyResponse{}, nil).Once()
+						}
+						err = deleteEventGatewayVirtualClusterConsumePolicyGuarded(t.Context(), sdk, cl, parent)
+					}
+					if tc.wantErr != nil {
+						require.ErrorIs(t, err, tc.wantErr)
+					} else {
+						require.NoError(t, err)
 					}
 				})
 			}

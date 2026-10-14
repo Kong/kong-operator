@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -47,6 +48,20 @@ func deleteEventGatewayVirtualClusterProducePolicyGuarded(
 		}
 	}
 	if len(users) > 0 {
+		// The spec may have changed since programming. Only the actual
+		// Konnect policy type tells us whether deletion can cascade.
+		resp, err := sdk.GetEventGatewayVirtualClusterProducePolicy(ctx, sdkkonnectops.GetEventGatewayVirtualClusterProducePolicyRequest{
+			GatewayID: obj.GetGatewayID(), VirtualClusterID: obj.GetVirtualClusterID(), PolicyID: obj.GetKonnectID(),
+		})
+		if err != nil {
+			return handleDeleteError(ctx, wrapErrIfKonnectOpFailed(err, GetOp, obj), obj)
+		}
+		if resp == nil || resp.EventGatewayPolicy == nil || resp.EventGatewayPolicy.Type == "" {
+			return fmt.Errorf("failed getting %s: %w", obj.GetTypeName(), ErrNilResponse)
+		}
+		if resp.EventGatewayPolicy.Type != "schema_validation" {
+			return deleteEventGatewayVirtualClusterProducePolicy(ctx, sdk, obj)
+		}
 		slices.Sort(users)
 		return EventGatewayParentPolicyInUseError{Users: users}
 	}
@@ -71,6 +86,18 @@ func deleteEventGatewayVirtualClusterConsumePolicyGuarded(
 		}
 	}
 	if len(users) > 0 {
+		resp, err := sdk.GetEventGatewayVirtualClusterConsumePolicy(ctx, sdkkonnectops.GetEventGatewayVirtualClusterConsumePolicyRequest{
+			GatewayID: obj.GetGatewayID(), VirtualClusterID: obj.GetVirtualClusterID(), PolicyID: obj.GetKonnectID(),
+		})
+		if err != nil {
+			return handleDeleteError(ctx, wrapErrIfKonnectOpFailed(err, GetOp, obj), obj)
+		}
+		if resp == nil || resp.EventGatewayPolicy == nil || resp.EventGatewayPolicy.Type == "" {
+			return fmt.Errorf("failed getting %s: %w", obj.GetTypeName(), ErrNilResponse)
+		}
+		if resp.EventGatewayPolicy.Type != "schema_validation" {
+			return deleteEventGatewayVirtualClusterConsumePolicy(ctx, sdk, obj)
+		}
 		slices.Sort(users)
 		return EventGatewayParentPolicyInUseError{Users: users}
 	}
