@@ -299,6 +299,11 @@
   specialized Kong Routes for conflicting match combinations. Specialized
   variants use regex paths so their inherited priorities take effect, including
   when lower-priority variants combine method and header matches.
+  User-provided RegularExpression paths and their variants now receive the same
+  explicit priority from the original match. Within an HTTPRoute, regex paths
+  use implementation-specific ordering ahead of Exact and PathPrefix matches,
+  then longer configured patterns, method matches, more headers, and earlier rules,
+  matching the precedence-variant generator instead of defaulting to priority 0.
   Representable exact/regex header intersections are narrowed to the exact
   constraint, retaining the higher-priority match's backend and priority.
   Unsupported regex intersection checks fail translation explicitly instead

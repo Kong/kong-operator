@@ -482,14 +482,8 @@ func priorityForTraditionalHTTPRouteMatch(
 	if match.Path == nil || match.Path.Value == nil {
 		return nil
 	}
-	pathType := gatewayv1.PathMatchPathPrefix
-	if match.Path.Type != nil {
-		pathType = *match.Path.Type
-	}
-	// Gateway API leaves RegularExpression precedence implementation-specific.
-	if pathType == gatewayv1.PathMatchRegularExpression {
-		return nil
-	}
+	// Include RegularExpression paths so originals and variants use the same
+	// implementation-specific ordering as httpRouteMatchPriorities.
 	priority := priorityForHTTPRouteMatch(priorities, ruleIndex, matchIndex)
 	return &priority
 }
@@ -498,7 +492,7 @@ const maxHTTPRouteMatchPrecedenceVariants = 64
 
 // precedenceVariantsForHTTPRouteMatch returns the original match plus specialized copies that
 // include the non-path constraints of lower-priority matches and their variants it can overlap.
-// Kong's traditional router considers the number of populated match fields before regex_priority.
+// Kong's traditional-compatible router considers the number of populated match fields before regex_priority.
 // Without these copies a less-specific method or header match can beat a more-specific path match
 // regardless of regex_priority. The specialized copy has at least the same native Kong specificity as the lower
 // match, after which path length/type and regex_priority preserve Gateway API precedence. The
@@ -673,7 +667,9 @@ func httpHeaderRegexAccepts(regexHeader, exactHeader gatewayv1.HTTPHeaderMatch) 
 	return pattern.MatchString(lowerHTTPHeaderMatchValue(exactHeader.Value)), nil
 }
 
-// Kong lowercases configured header values and regex patterns with Lua's ASCII string.lower.
+// Kong's traditional-compatible transform.lua lowercases configured header values
+// and regex patterns with Lua's ASCII string.lower. Unlike traditional.lua, it folds
+// pattern text too; this is not equivalent to regexp ignore-case flags.
 func lowerHTTPHeaderMatchValue(value string) string {
 	return strings.Map(func(c rune) rune {
 		if c >= 'A' && c <= 'Z' {
@@ -809,6 +805,7 @@ func comparePathTypePriority(a, b gatewayv1.PathMatchType) int {
 func pathTypePriority(t gatewayv1.PathMatchType) int {
 	switch t {
 	case gatewayv1.PathMatchRegularExpression:
+		// Gateway API leaves regex-path ordering implementation-specific.
 		return 3
 	case gatewayv1.PathMatchExact:
 		return 2

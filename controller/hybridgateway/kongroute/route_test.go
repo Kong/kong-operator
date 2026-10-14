@@ -945,6 +945,112 @@ func TestRoutesForRule_PrioritizesDefaultPathMethodMatchesOverHeaderOnlyMatches(
 	}
 }
 
+func TestRoutesForRule_RegexPathPriorities(t *testing.T) {
+	path := func(matchType gatewayv1.PathMatchType, value string) *gatewayv1.HTTPPathMatch {
+		return &gatewayv1.HTTPPathMatch{Type: new(matchType), Value: new(value)}
+	}
+	regexPath := path(gatewayv1.PathMatchRegularExpression, "/a/[0-9]+$")
+	headers := []gatewayv1.HTTPHeaderMatch{{Name: "color", Value: "blue"}}
+	for _, tc := range []struct {
+		name           string
+		higher         gatewayv1.HTTPRouteMatch
+		lower          gatewayv1.HTTPRouteMatch
+		variants       int
+		higherPriority int64
+	}{
+		{
+			name:   "regex before exact with method and header",
+			higher: gatewayv1.HTTPRouteMatch{Path: regexPath},
+			lower: gatewayv1.HTTPRouteMatch{
+				Path: path(gatewayv1.PathMatchExact, "/a/123"), Method: new(gatewayv1.HTTPMethodGet), Headers: headers,
+			},
+			variants: 2, higherPriority: 2 << 10,
+		},
+		{
+			name:   "regex before prefix with method and header",
+			higher: gatewayv1.HTTPRouteMatch{Path: regexPath},
+			lower: gatewayv1.HTTPRouteMatch{
+				Path: path(gatewayv1.PathMatchPathPrefix, "/a"), Method: new(gatewayv1.HTTPMethodGet), Headers: headers,
+			},
+			variants: 2, higherPriority: 2 << 10,
+		},
+		{
+			name:   "longer regex before shorter regex with method and header",
+			higher: gatewayv1.HTTPRouteMatch{Path: regexPath},
+			lower: gatewayv1.HTTPRouteMatch{
+				Path: path(gatewayv1.PathMatchRegularExpression, "/a/.*"), Method: new(gatewayv1.HTTPMethodGet), Headers: headers,
+			},
+			variants: 2, higherPriority: 2 << 10,
+		},
+		{
+			name:     "same regex method before header",
+			higher:   gatewayv1.HTTPRouteMatch{Path: regexPath, Method: new(gatewayv1.HTTPMethodGet)},
+			lower:    gatewayv1.HTTPRouteMatch{Path: regexPath, Headers: headers},
+			variants: 2, higherPriority: 2 << 10,
+		},
+		{
+			name:   "earlier rule breaks equal specificity ties",
+			higher: gatewayv1.HTTPRouteMatch{Path: regexPath, Method: new(gatewayv1.HTTPMethodGet), Headers: headers},
+			lower: gatewayv1.HTTPRouteMatch{
+				Path: path(gatewayv1.PathMatchRegularExpression, "/a/[1-9]+$"), Method: new(gatewayv1.HTTPMethodGet), Headers: headers,
+			},
+			variants: 1, higherPriority: 1<<10 + 1,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			scheme := runtime.NewScheme()
+			require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+			require.NoError(t, gatewayv1.Install(scheme))
+			httpRoute := &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta, Name: "regex-priority", Namespace: "default",
+				Spec: gatewayv1.HTTPRouteSpec{Rules: []gatewayv1.HTTPRouteRule{
+					{Matches: []gatewayv1.HTTPRouteMatch{tc.higher}},
+					{Matches: []gatewayv1.HTTPRouteMatch{tc.lower}},
+					{Matches: []gatewayv1.HTTPRouteMatch{{Path: defaultRootPathMatch()}}},
+				}},
+			}
+			original := httpRoute.DeepCopy()
+			gateway := &gatewayv1.Gateway{
+				Name: "parent", Namespace: "default",
+				Spec: gatewayv1.GatewaySpec{Listeners: []gatewayv1.Listener{{
+					Name: "http", Protocol: gatewayv1.HTTPProtocolType, Port: 80,
+				}}},
+			}
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
+			pRef := &gwtypes.ParentReference{Name: "parent", Namespace: new(gatewayv1.Namespace("default"))}
+			cpRef := &commonv1alpha1.ControlPlaneRef{
+				Type:                 commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{Name: "test-cp"},
+			}
+
+			higher, err := RoutesForRule(t.Context(), logr.Discard(), cl,
+				httpRoute, httpRoute.Spec.Rules[0], 0, pRef, cpRef, nil, "higher-service", nil)
+			require.NoError(t, err)
+			require.Len(t, higher, tc.variants)
+			lower, err := RoutesForRule(t.Context(), logr.Discard(), cl,
+				httpRoute, httpRoute.Spec.Rules[1], 1, pRef, cpRef, nil, "lower-service", nil)
+			require.NoError(t, err)
+			require.Len(t, lower, 1)
+			require.NotNil(t, lower[0].Spec.RegexPriority)
+			assert.Equal(t, int64(1<<10), *lower[0].Spec.RegexPriority)
+			for _, route := range higher {
+				require.NotNil(t, route.Spec.RegexPriority)
+				assert.Equal(t, tc.higherPriority, *route.Spec.RegexPriority)
+				assert.Greater(t, *route.Spec.RegexPriority, *lower[0].Spec.RegexPriority)
+				assert.Less(t, *route.Spec.RegexPriority, int64(1<<20))
+				assert.Equal(t, []string{"~/a/[0-9]+$"}, route.Spec.Paths)
+				require.NotNil(t, route.Spec.ServiceRef)
+				assert.Equal(t, "higher-service", route.Spec.ServiceRef.NamespacedRef.Name)
+			}
+			if tc.variants > 1 {
+				assert.Equal(t, []string{"GET"}, higher[1].Spec.Methods)
+				assert.Equal(t, map[string][]string{"color": {"blue"}}, higher[1].Spec.Headers)
+			}
+			assert.Equal(t, original, httpRoute)
+		})
+	}
+}
+
 func TestHTTPRouteMatchPrioritiesIgnoreUnsupportedQueryParams(t *testing.T) {
 	httpRoute := &gwtypes.HTTPRoute{
 		Spec: gatewayv1.HTTPRouteSpec{
