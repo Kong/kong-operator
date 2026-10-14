@@ -717,7 +717,7 @@ func (r *Reconciler) provisionDataPlane(
 		expectedDataPlaneOptions = gatewayConfigDataPlaneOptionsToDataPlaneOptions(gatewayConfig.Namespace, *gatewayConfig.Spec.DataPlaneOptions)
 	}
 	// Don't require setting defaults for DataPlane when using Gateway CRD.
-	setDataPlaneOptionsDefaults(expectedDataPlaneOptions, r.DefaultDataPlaneImage)
+	setDataPlaneOptionsDefaults(expectedDataPlaneOptions, r.DefaultDataPlaneImage, gwconfigutils.IsGatewayHybrid(gatewayConfig))
 	// Merge Gateway.spec.infrastructure labels/annotations on top of GatewayConfig options.
 	mergeInfrastructureIntoDataPlane(expectedDataPlaneOptions, gateway.Spec.Infrastructure)
 	// Add the GEP-1762 gateway-name label unconditionally (after mergeInfrastructureIntoDataPlane
@@ -1098,7 +1098,7 @@ func (r *Reconciler) provisionKonnectExtension(
 
 // setDataPlaneOptionsDefaults sets the default DataPlane options not overriding
 // what's been provided only filling in those fields that were unset or empty.
-func setDataPlaneOptionsDefaults(opts *operatorv1beta1.DataPlaneOptions, defaultImage string) {
+func setDataPlaneOptionsDefaults(opts *operatorv1beta1.DataPlaneOptions, defaultImage string, isHybrid bool) {
 	if opts.Deployment.PodTemplateSpec == nil {
 		opts.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
 	}
@@ -1130,6 +1130,18 @@ func setDataPlaneOptionsDefaults(opts *operatorv1beta1.DataPlaneOptions, default
 			Name:           consts.DataPlaneProxyContainerName,
 			Image:          defaultImage,
 			ReadinessProbe: k8sresources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
+		})
+		container = &opts.Deployment.PodTemplateSpec.Spec.Containers[len(opts.Deployment.PodTemplateSpec.Spec.Containers)-1]
+	}
+
+	const routeMatchCalculationEnvKey = "KONG_ROUTE_MATCH_CALCULATION"
+	if isHybrid && !slices.ContainsFunc(container.Env, func(env corev1.EnvVar) bool {
+		return env.Name == routeMatchCalculationEnvKey
+	}) {
+		// The original calculation overlaps regex_priority with native match-field bits.
+		container.Env = append(container.Env, corev1.EnvVar{
+			Name:  routeMatchCalculationEnvKey,
+			Value: "strict",
 		})
 	}
 

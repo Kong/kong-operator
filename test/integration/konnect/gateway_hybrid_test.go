@@ -135,7 +135,7 @@ func TestGatewayHybridFull(t *testing.T) {
 	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, "http://"+gatewayIPAddress), testutils.SubresourceReadinessWait, time.Second)
 
 	t.Log("verifying GatewayClass has supportedFeatures set")
-	requiredFeatures, err := gatewayapi.GetSupportedFeatures(consts.RouterFlavorTraditionalCompatible)
+	requiredFeatures, err := gatewayapi.GetSupportedFeatures(consts.RouterFlavorTraditionalCompatible, true)
 	require.NoError(t, err)
 	require.Eventually(t, testutils.GatewayClassHasSupportedFeatures(t, ctx, string(gateway.Spec.GatewayClassName), integration.GetClients(), requiredFeatures...), testutils.SubresourceReadinessWait, time.Second)
 

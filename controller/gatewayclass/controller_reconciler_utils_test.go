@@ -10,9 +10,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	"sigs.k8s.io/gateway-api/pkg/features"
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
@@ -125,6 +127,84 @@ func TestGetAcceptedCondition(t *testing.T) {
 			assert.Equal(t, tt.expectedStatus, condition.Status)
 			assert.Equal(t, tt.expectedReason, condition.Reason)
 			assert.Equal(t, tt.expectedMsg, condition.Message)
+		})
+	}
+}
+
+func TestSetSupportedFeaturesMethodMatching(t *testing.T) {
+	for _, tc := range []struct {
+		name          string
+		nilConfig     bool
+		isHybrid      bool
+		routerFlavor  consts.RouterFlavor
+		methodSupport bool
+	}{
+		{
+			name:      "no configuration uses standard defaults",
+			nilConfig: true,
+		},
+		{
+			name: "standard Gateway with default router",
+		},
+		{
+			name:          "hybrid Gateway with default router",
+			isHybrid:      true,
+			methodSupport: true,
+		},
+		{
+			name:         "standard traditional-compatible Gateway",
+			routerFlavor: consts.RouterFlavorTraditionalCompatible,
+		},
+		{
+			name:          "hybrid traditional-compatible Gateway",
+			isHybrid:      true,
+			routerFlavor:  consts.RouterFlavorTraditionalCompatible,
+			methodSupport: true,
+		},
+		{
+			name:          "standard expressions Gateway",
+			routerFlavor:  consts.RouterFlavorExpressions,
+			methodSupport: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			config := &operatorv2beta1.GatewayConfiguration{}
+			if tc.nilConfig {
+				config = nil
+			} else {
+				if tc.isHybrid {
+					config.Spec.Konnect = &operatorv2beta1.KonnectOptions{
+						APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{Name: "test-auth"},
+					}
+				}
+				if tc.routerFlavor != "" {
+					config.Spec.DataPlaneOptions = &operatorv2beta1.GatewayConfigDataPlaneOptions{
+						Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv2beta1.DeploymentOptions{
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{Containers: []corev1.Container{{
+										Name: consts.DataPlaneProxyContainerName,
+										Env:  []corev1.EnvVar{{Name: consts.RouterFlavorEnvKey, Value: string(tc.routerFlavor)}},
+									}}},
+								},
+							},
+						},
+					}
+				}
+			}
+			methodFeature := gatewayv1.SupportedFeature{Name: gatewayv1.FeatureName(features.SupportHTTPRouteMethodMatching)}
+			gwc := &gatewayv1.GatewayClass{
+				Status: gatewayv1.GatewayClassStatus{SupportedFeatures: []gatewayv1.SupportedFeature{methodFeature}},
+			}
+			cl := fake.NewClientBuilder().Build()
+
+			require.NoError(t, setSupportedFeatures(t.Context(), cl, gwc, config))
+
+			if tc.methodSupport {
+				require.Contains(t, gwc.Status.SupportedFeatures, methodFeature)
+			} else {
+				require.NotContains(t, gwc.Status.SupportedFeatures, methodFeature)
+			}
 		})
 	}
 }

@@ -60,15 +60,15 @@ func TestGatewayConformance(t *testing.T) {
 		t.Fatalf("unsupported KongRouterFlavor: %s", kongRouterFlavor)
 	}
 
-	supportedFeatures, err := gatewayapipkg.GetSupportedFeatures(kongRouterFlavor)
-	require.NoError(t, err)
-
 	gwType := gatewayType(test.ConformanceGatewayType())
 	switch gwType {
 	case standardGateway, hybridGateway:
 	default:
 		t.Fatalf("unsupported KONG_TEST_CONFORMANCE_GATEWAY_TYPE: %s", gwType)
 	}
+
+	supportedFeatures, err := gatewayapipkg.GetSupportedFeatures(kongRouterFlavor, gwType == hybridGateway)
+	require.NoError(t, err)
 
 	// hybrid gateway does not support expressions router flavor since we do not support expression routes in KongRoute:
 	// https://github.com/Kong/kong-operator/issues/2673
@@ -80,7 +80,7 @@ func TestGatewayConformance(t *testing.T) {
 		t.Fatal("hybrid gateway type requires KONG_TEST_KONNECT_ACCESS_TOKEN to be set")
 	}
 
-	skippedTests := skippedTestsForConfig(gwType)
+	skippedTests := skippedTestsForConfig(kongRouterFlavor, gwType)
 	runConformance(t, gwType, kongRouterFlavor, supportedFeatures, cleanupResources, skippedTests)
 }
 
