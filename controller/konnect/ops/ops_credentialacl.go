@@ -204,7 +204,8 @@ func getKongCredentialACLForUID(
 	}
 	x := sliceToEntityWithIDPtrSlice(resp.Object.Data)
 
-	return getMatchingEntryFromListResponseData(x, cred)
+	_, id, err := getMatchingEntryFromListResponseData(x, cred)
+	return id, err
 }
 
 func credentialACLMatch(
