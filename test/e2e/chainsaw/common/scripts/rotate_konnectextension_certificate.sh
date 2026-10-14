@@ -185,11 +185,18 @@ jq -e --arg name "$new_certificate" 'length == 1 and .[0].metadata.name == $name
 kubectl rollout status deployment "$deployment" -n "$NAMESPACE" --timeout=180s >&2
 selector="$(kubectl get deployment "$deployment" -n "$NAMESPACE" -o json |
   jq -r '.spec.selector.matchLabels | to_entries | map(.key + "=" + .value) | join(",")')"
-pods="$(kubectl get pod -n "$NAMESPACE" -l "$selector" -o json)"
-jq -e --arg secret "$new_secret" '(.items | length == 2) and all(.items[];
+# rollout status ignores terminating Pods, but they still match the selector
+# until their graceful shutdown finishes, so wait for them to disappear.
+pods_ready='(.items | length == 2) and all(.items[];
   .metadata.deletionTimestamp == null and
   any(.status.conditions[]?; .type == "Ready" and .status == "True") and
-  any(.spec.volumes[]; .name == "kong-cluster-cert" and .secret.secretName == $secret))' <<< "$pods" >/dev/null ||
+  any(.spec.volumes[]; .name == "kong-cluster-cert" and .secret.secretName == $secret))'
+for attempt in $(seq 1 "$MAX_RETRIES"); do
+  pods="$(kubectl get pod -n "$NAMESPACE" -l "$selector" -o json)"
+  jq -e --arg secret "$new_secret" "$pods_ready" <<< "$pods" >/dev/null && break
+  sleep 1
+done
+jq -e --arg secret "$new_secret" "$pods_ready" <<< "$pods" >/dev/null ||
   fail "Not all replicas are ready using the registered certificate"
 
 cp_id="$(extension | jq -er '.status.konnect.controlPlaneID')"
