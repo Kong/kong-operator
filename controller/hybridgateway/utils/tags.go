@@ -22,6 +22,7 @@ const (
 	// MaxTags mirrors the kubebuilder validation:MaxItems=20 marker on commonv1alpha1.Tags.
 	// Merged tag sets are capped here because exceeding the limit makes the Server-Side Apply of
 	// the Kong resource fail CRD validation, which would take the whole route down.
+	// NOTE: KO would add 8 implicit tags, so the effective limit for user-specified tags is 12.
 	MaxTags = 20
 
 	// maxTagLength mirrors the CEL rule "size(tag) >= 1 && size(tag) <= 128" on
@@ -108,7 +109,7 @@ func MergeTags(logger logr.Logger, groups ...[]string) []string {
 	}
 
 	if len(dropped) > 0 {
-		log.Info(logger, "Dropped tags exceeding the maximum allowed count",
+		log.Trace(logger, "Dropped tags exceeding the maximum allowed count",
 			"max", MaxTags, "kept", merged, "dropped", dropped)
 	}
 
@@ -120,7 +121,7 @@ func MergeTags(logger logr.Logger, groups ...[]string) []string {
 // scoped to a single parentRef - a KongRoute and its KongPluginBindings - so they do not pick up
 // tags from the route's other parents.
 //
-// Unlike InheritedTagsForRoute this does not check that pRef is one this controller reconciles:
+// Unlike inheritedTagsForRoute this does not check that pRef is one this controller reconciles:
 // the converter only ever iterates the parents getHybridGatewayParents already vetted, so by the
 // time a factory is called the parentRef in hand is known to be ours.
 //
