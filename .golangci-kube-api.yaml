@@ -134,19 +134,19 @@ linters:
         path: api/(common/v1alpha1|konnect/v1alpha1|konnect/v1alpha2)/.*
         text: 'maxlength: field .* must have a maximum length, add kubebuilder:validation:(items:)?MaxLength marker'
 
-      # NOTE: HorizontalScaling.MaxReplicas and ServicePort.Port intentionally mirror
-      # upstream k8s types (int32, no omitempty) and have no meaningful zero value.
+      # NOTE: ServicePort.Port intentionally mirrors upstream k8s types
+      # (int32, no omitempty) and has no meaningful zero value.
       - linters:
           - kubeapilinter
         path: api/(eventgateway|aigateway|mcp)/.*
-        text: 'requiredfields: field .*(MaxReplicas|Port) should have the omitempty tag'
+        text: 'requiredfields: field .*Port should have the omitempty tag'
 
-      # NOTE: HorizontalScaling.MaxReplicas mirrors upstream k8s autoscaling/v2 which
-      # does not add a minimum marker. Zero is not a valid value by convention.
+      # NOTE: HorizontalScaling.MaxReplicas mirrors upstream k8s autoscaling/v2
+      # (int32, no omitempty, no minimum marker). Zero is not a valid value by convention.
       - linters:
           - kubeapilinter
-        path: api/(eventgateway|aigateway|mcp)/.*
-        text: 'requiredfields: field HorizontalScaling.MaxReplicas has a valid zero value'
+        path: api/common/v1alpha1/horizontalscaling_types.go
+        text: 'requiredfields: field (HorizontalScaling\.)?MaxReplicas (should have the omitempty tag|has a valid zero value)'
 
       # TODO: remove this.
       # NOTE: konnectconfigstoresync_types.go is also excluded because its Spec's required

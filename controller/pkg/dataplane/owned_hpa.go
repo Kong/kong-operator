@@ -43,7 +43,7 @@ func (r *Reconciler[T, Cert]) ensureHPA(
 		return fmt.Errorf("failed listing HPAs for %s %s/%s: %w", r.Config.Kind, dp.GetNamespace(), dp.GetName(), err)
 	}
 
-	scalingSpec := r.Config.HPAScalingSpec(dp)
+	scalingSpec := r.Config.HorizontalScaling(dp)
 	if scalingSpec == nil {
 		if err := k8sreduce.ReduceHPAs(ctx, r.Client, hpas, k8sreduce.FilterNone); err != nil {
 			return fmt.Errorf("failed reducing HPAs for %s %s/%s: %w", r.Config.Kind, dp.GetNamespace(), dp.GetName(), err)

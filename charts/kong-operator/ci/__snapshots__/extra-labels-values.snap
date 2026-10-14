@@ -43500,6 +43500,7 @@ spec:
                               required:
                               - type
                               type: object
+                            maxItems: 32
                             type: array
                             x-kubernetes-list-type: atomic
                           minReplicas:
@@ -48449,7 +48450,7 @@ spec:
                               required:
                               - type
                               type: object
-                            maxItems: 8
+                            maxItems: 32
                             type: array
                             x-kubernetes-list-type: atomic
                           minReplicas:
@@ -61473,6 +61474,7 @@ spec:
                                   required:
                                   - type
                                   type: object
+                                maxItems: 32
                                 type: array
                                 x-kubernetes-list-type: atomic
                               minReplicas:
@@ -66292,7 +66294,7 @@ spec:
                                   required:
                                   - type
                                   type: object
-                                maxItems: 8
+                                maxItems: 32
                                 type: array
                                 x-kubernetes-list-type: atomic
                               minReplicas:

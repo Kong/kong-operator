@@ -4,6 +4,7 @@
 
 - [aiconfiguration.konghq.com/v1alpha1](#aiconfiguration-konghq-com-v1alpha1)
 - [aigateway.konghq.com/v1alpha1](#aigateway-konghq-com-v1alpha1)
+- [common.konghq.com/v1alpha1](#common-konghq-com-v1alpha1)
 - [configuration.konghq.com/v1](#configuration-konghq-com-v1)
 - [configuration.konghq.com/v1alpha1](#configuration-konghq-com-v1alpha1)
 - [configuration.konghq.com/v1beta1](#configuration-konghq-com-v1beta1)
@@ -7572,25 +7573,7 @@ _Appears in:_
 
 - [AIGatewayDataPlaneSpec](#aigateway-konghq-com-v1alpha1-types-aigatewaydataplanespec)
 
-#### HorizontalScaling
 
-
-HorizontalScaling defines horizontal scaling options for the deployment.
-It holds all the options from the HorizontalPodAutoscalerSpec besides the
-ScaleTargetRef which is being controlled by the Operator.
-
-
-
-| Field | Description |
-| --- | --- |
-| `minReplicas` _*int32_ | minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.  It defaults to 1 pod.  minReplicas is allowed to be 0 if the alpha feature gate HPAScaleToZero is enabled and at least one Object or External metric is configured.  Scaling is active as long as at least one metric value is available. |
-| `maxReplicas` _int32_ | maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up. It cannot be less than minReplicas. |
-| `metrics` _[MetricSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#metricspec-v2-autoscaling) array_ | metrics contains the specifications for which to use to calculate the desired replica count (the maximum replica count across all metrics will be used).  The desired replica count is calculated multiplying the ratio between the target value and the current value by the current number of pods.  Ergo, metrics used must decrease as the pod count is increased, and vice-versa.  See the individual metric source types for more information about how each type of metric must respond. If not set, the default metric will be set to 80% average CPU utilization. |
-| `behavior` _[HorizontalPodAutoscalerBehavior](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#horizontalpodautoscalerbehavior-v2-autoscaling)_ | behavior configures the scaling behavior of the target in both Up and Down directions (scaleUp and scaleDown fields respectively). If not set, the default HPAScalingRules for scale up and scale down are used. |
-
-_Appears in:_
-
-- [Scaling](#aigateway-konghq-com-v1alpha1-types-scaling)
 
 #### LabelName
 
@@ -7688,7 +7671,7 @@ Scaling defines the scaling options for the deployment.
 
 | Field | Description |
 | --- | --- |
-| `horizontal` _[HorizontalScaling](#aigateway-konghq-com-v1alpha1-types-horizontalscaling)_ | HorizontalScaling defines horizontal scaling options for the deployment. |
+| `horizontal` _[HorizontalScaling](#common-konghq-com-v1alpha1-types-horizontalscaling)_ | HorizontalScaling defines horizontal scaling options for the deployment. |
 
 _Appears in:_
 
@@ -7764,6 +7747,469 @@ Services configures the Kubernetes Services created for an AI Gateway pod.
 _Appears in:_
 
 - [NetworkOptions](#aigateway-konghq-com-v1alpha1-types-networkoptions)
+
+## common.konghq.com/v1alpha1
+
+Package v1alpha1 contains API Schema definitions for the common v1alpha1 API group.
+### Types
+
+In this section you will find types that the CRDs rely on.
+#### AdoptKonnectOptions
+
+
+AdoptKonnectOptions specifies the options for adopting the entity from Konnect.
+
+
+
+| Field | Description |
+| --- | --- |
+| `id` _string_ | ID is the Konnect ID of the entity. |
+
+_Appears in:_
+
+- [AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)
+
+#### AdoptMode
+
+_Underlying type:_ `string`
+
+AdoptMode is the strategy used when adopting an existing entity.<br /><br />The set of supported modes may be extended in the future. At present the
+only value is "match", which requires exact (semantically equivalent)
+alignment between the CR spec and the remote entity before adoption.
+No mutations are performed against the remote system during adoption.
+If any relevant field differs, adoption fails and the operator will not
+take ownership until the spec is aligned.
+
+
+
+
+_Appears in:_
+
+- [AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `match` | AdoptModeMatch enforces read-only adoption: the operator will only adopt<br />the remote entity when the CR spec matches the remote configuration; no<br />write operations are issued to the remote system during adoption.<br /> |
+| `override` | AdoptModeOverride indicates that the operator will override the existing entity<br />with the spec of the Kubernetes object. If the configuration does not match,<br />the operator will update the remote entity in to match the spec of the Kubernetes object.<br /> |
+
+#### AdoptOptions
+
+
+AdoptOptions is the options for CRDs to attach to an existing Kong entity.
+
+
+
+| Field | Description |
+| --- | --- |
+| `from` _[AdoptSource](#common-konghq-com-v1alpha1-types-adoptsource)_ | From is the source of the entity to adopt from. Now 'konnect' is supported. |
+| `mode` _[AdoptMode](#common-konghq-com-v1alpha1-types-adoptmode)_ | Mode selects how the operator adopts an already-existing entity (for example, a Konnect resource) instead of creating a new one.<br /><br />Supported values: - "match": the operator retrieves the remote entity referenced by the   corresponding Adopt* options (for example, adopt.konnect.id) and performs a   field-by-field comparison against this CR's spec (ignoring server-assigned   metadata). If the specification matches the remote state, the operator   adopts the entity: it sets the status identifier and marks the resource as   ready/programmed without issuing any write operation to the remote system.   If the specification does not match the remote state, adoption fails: the   operator does not modify the remote entity and surfaces a failure   condition, allowing the user to align the spec with the existing entity if   adoption is desired.<br /><br />- "override": the operator overrides the remote entity by the CR's spec.   If the entity with the ID and type exists, and it is not managed   by another CR (matching by the metadata.uid of the CR and the "k8s-uid"   label or tag of the Konnect entity), the operator updates the remote entity   by the CR's spec. |
+| `konnect` _[AdoptKonnectOptions](#common-konghq-com-v1alpha1-types-adoptkonnectoptions)_ | Konnect is the options for adopting the entity from Konnect. Required when from == 'konnect'. |
+
+_Appears in:_
+
+- [KongCACertificateSpec](#configuration-konghq-com-v1alpha1-types-kongcacertificatespec)
+- [KongCertificateSpec](#configuration-konghq-com-v1alpha1-types-kongcertificatespec)
+- [KongConsumerGroupSpec](#configuration-konghq-com-v1beta1-types-kongconsumergroupspec)
+- [KongConsumerSpec](#configuration-konghq-com-v1-types-kongconsumerspec)
+- [KongCredentialACLSpec](#configuration-konghq-com-v1alpha1-types-kongcredentialaclspec)
+- [KongCredentialAPIKeySpec](#configuration-konghq-com-v1alpha1-types-kongcredentialapikeyspec)
+- [KongCredentialBasicAuthSpec](#configuration-konghq-com-v1alpha1-types-kongcredentialbasicauthspec)
+- [KongCredentialHMACSpec](#configuration-konghq-com-v1alpha1-types-kongcredentialhmacspec)
+- [KongCredentialJWTSpec](#configuration-konghq-com-v1alpha1-types-kongcredentialjwtspec)
+- [KongDataPlaneClientCertificateSpec](#configuration-konghq-com-v1alpha1-types-kongdataplaneclientcertificatespec)
+- [KongKeySetSpec](#configuration-konghq-com-v1alpha1-types-kongkeysetspec)
+- [KongKeySpec](#configuration-konghq-com-v1alpha1-types-kongkeyspec)
+- [KongPluginBindingSpec](#configuration-konghq-com-v1alpha1-types-kongpluginbindingspec)
+- [KongRouteSpec](#configuration-konghq-com-v1alpha1-types-kongroutespec)
+- [KongSNISpec](#configuration-konghq-com-v1alpha1-types-kongsnispec)
+- [KongServiceSpec](#configuration-konghq-com-v1alpha1-types-kongservicespec)
+- [KongTargetSpec](#configuration-konghq-com-v1alpha1-types-kongtargetspec)
+- [KongUpstreamSpec](#configuration-konghq-com-v1alpha1-types-kongupstreamspec)
+- [KongVaultSpec](#configuration-konghq-com-v1alpha1-types-kongvaultspec)
+- [KonnectCloudGatewayDataPlaneGroupConfigurationSpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationspec)
+- [KonnectCloudGatewayNetworkSpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkspec)
+- [KonnectCloudGatewayTransitGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewayspec)
+
+#### AdoptSource
+
+_Underlying type:_ `string`
+
+AdoptSource is the type to define the source of the entity to adopt from.
+
+
+
+
+_Appears in:_
+
+- [AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `konnect` | AdoptSourceKonnect indicates that the entity is adopted from Konnect.<br /> |
+
+#### ControlPlaneRef
+
+
+ControlPlaneRef is the schema for the ControlPlaneRef type.
+It is used to reference a Control Plane entity.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _string_ | Type indicates the type of the control plane being referenced. Allowed values: - konnectNamespacedRef - kic<br /><br />The default is kic, which implies that the Control Plane is KIC. |
+| `konnectNamespacedRef` _[KonnectNamespacedRef](#common-konghq-com-v1alpha1-types-konnectnamespacedref)_ | KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster. It contains the name of the Konnect Control Plane. It can't reference Control Plane Groups, because they are read-only. This field is required when the Type is konnectNamespacedRef. |
+
+_Appears in:_
+
+- [ControlPlaneRef](#configuration-konghq-com-v1alpha1-types-controlplaneref)
+- [KongCACertificateSpec](#configuration-konghq-com-v1alpha1-types-kongcacertificatespec)
+- [KongCertificateSpec](#configuration-konghq-com-v1alpha1-types-kongcertificatespec)
+- [KongConsumerGroupSpec](#configuration-konghq-com-v1beta1-types-kongconsumergroupspec)
+- [KongConsumerSpec](#configuration-konghq-com-v1-types-kongconsumerspec)
+- [KongDataPlaneClientCertificateSpec](#configuration-konghq-com-v1alpha1-types-kongdataplaneclientcertificatespec)
+- [KongKeySetSpec](#configuration-konghq-com-v1alpha1-types-kongkeysetspec)
+- [KongKeySpec](#configuration-konghq-com-v1alpha1-types-kongkeyspec)
+- [KongPluginBindingSpec](#configuration-konghq-com-v1alpha1-types-kongpluginbindingspec)
+- [KongRouteSpec](#configuration-konghq-com-v1alpha1-types-kongroutespec)
+- [KongServiceSpec](#configuration-konghq-com-v1alpha1-types-kongservicespec)
+- [KongUpstreamSpec](#configuration-konghq-com-v1alpha1-types-kongupstreamspec)
+- [KongVaultSpec](#configuration-konghq-com-v1alpha1-types-kongvaultspec)
+- [KonnectCloudGatewayDataPlaneGroupConfigurationSpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationspec)
+- [KonnectExtensionControlPlane](#konnect-konghq-com-v1alpha1-types-konnectextensioncontrolplane)
+- [MCPServerSpec](#konnect-konghq-com-v1alpha1-types-mcpserverspec)
+
+
+
+#### EntitySource
+
+_Underlying type:_ `string`
+
+EntitySource is the type for all the entity types.
+
+
+
+
+_Appears in:_
+
+- [KonnectAIGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnectaigatewayspec)
+- [KonnectEventGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnecteventgatewayspec)
+- [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
+- [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha2-types-konnectgatewaycontrolplanespec)
+- [KonnectOptions](#gateway-operator-konghq-com-v2beta1-types-konnectoptions)
+- [MCPServerSpec](#konnect-konghq-com-v1alpha1-types-mcpserverspec)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `Origin` | EntitySourceOrigin is the type for Origin entities.<br />Origin entities are the source of truth for the data.<br /> |
+| `Mirror` | EntitySourceMirror is the type for Mirror entities.<br />Mirror entities are local mirrors of the remote konnect resource.<br /> |
+
+#### ExtensionRef
+
+
+ExtensionRef corresponds to another resource in the Kubernetes cluster which
+defines extended behavior for a resource (e.g. ControlPlane).
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the name of the referred resource. |
+| `namespace` _*string_ | Namespace is the namespace of the referred resource.<br /><br />For namespace-scoped resources if no Namespace is provided then the namespace of the parent object MUST be used.<br /><br />This field MUST not be set when referring to cluster-scoped resources. |
+| `group` _string_ | Group is the group of the extension resource. |
+| `kind` _string_ | Kind is kind of the extension resource. |
+
+_Appears in:_
+
+- [ControlPlaneOptions](#gateway-operator-konghq-com-v1beta1-types-controlplaneoptions)
+- [ControlPlaneSpec](#gateway-operator-konghq-com-v1beta1-types-controlplanespec)
+- [ControlPlaneSpec](#gateway-operator-konghq-com-v2beta1-types-controlplanespec)
+- [DataPlaneOptions](#gateway-operator-konghq-com-v1beta1-types-dataplaneoptions)
+- [DataPlaneSpec](#gateway-operator-konghq-com-v1beta1-types-dataplanespec)
+- [GatewayConfigDataPlaneOptions](#gateway-operator-konghq-com-v1beta1-types-gatewayconfigdataplaneoptions)
+- [GatewayConfigurationSpec](#gateway-operator-konghq-com-v1beta1-types-gatewayconfigurationspec)
+- [GatewayConfigurationSpec](#gateway-operator-konghq-com-v2beta1-types-gatewayconfigurationspec)
+
+#### GatewayRef
+
+
+GatewayRef is a reference to the gateway (control plane) object that an
+entity belongs to. It identifies the gateway by its API group, kind and name,
+so that the same field can target gateways of different kinds, e.g. a
+Konnect-hosted one or an on-prem one.<br /><br />The set of group and kind pairs an entity accepts is defined by the entity
+which embeds the reference.
+
+
+
+| Field | Description |
+| --- | --- |
+| `group` _string_ | Group is the API group of the referred gateway, e.g. konnect.konghq.com. |
+| `kind` _string_ | Kind is the kind of the referred gateway, e.g. KonnectEventGateway. |
+| `name` _string_ | Name is the name of the referred gateway. |
+| `namespace` _*string_ | Namespace is the namespace of the referred gateway.<br /><br />If no Namespace is provided then the namespace of the referring object is used. |
+
+_Appears in:_
+
+- [EventGatewayBackendClusterSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterspec)
+- [EventGatewayDataPlaneCertificateSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificatespec)
+- [EventGatewayListenerSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerspec)
+- [EventGatewaySchemaRegistrySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryspec)
+- [EventGatewayStaticKeySpec](#configuration-konghq-com-v1alpha1-types-eventgatewaystatickeyspec)
+- [EventGatewayTLSTrustBundleSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundlespec)
+
+#### HardeningState
+
+_Underlying type:_ `string`
+
+HardeningState controls whether the operator applies a hardened
+security context to a DataPlane's proxy container.
+
+
+
+
+_Appears in:_
+
+- [DataPlaneDeploymentOptions](#gateway-operator-konghq-com-v1beta1-types-dataplanedeploymentoptions)
+- [DataPlaneDeploymentOptions](#gateway-operator-konghq-com-v2beta1-types-dataplanedeploymentoptions)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `enabled` | HardeningStateEnabled enables the hardened security context.<br /> |
+| `disabled` | HardeningStateDisabled disables the hardened security context (default).<br /> |
+
+#### HorizontalScaling
+
+
+HorizontalScaling defines horizontal scaling options for the deployment.
+It holds all the options from the HorizontalPodAutoscalerSpec besides the
+ScaleTargetRef which is being controlled by the Operator.
+
+
+
+| Field | Description |
+| --- | --- |
+| `minReplicas` _*int32_ | minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.  It defaults to 1 pod.  minReplicas is allowed to be 0 if the alpha feature gate HPAScaleToZero is enabled and at least one Object or External metric is configured.  Scaling is active as long as at least one metric value is available. |
+| `maxReplicas` _int32_ | maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up. It cannot be less than minReplicas. |
+| `metrics` _[MetricSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#metricspec-v2-autoscaling) array_ | metrics contains the specifications for which to use to calculate the desired replica count (the maximum replica count across all metrics will be used).  The desired replica count is calculated multiplying the ratio between the target value and the current value by the current number of pods.  Ergo, metrics used must decrease as the pod count is increased, and vice-versa.  See the individual metric source types for more information about how each type of metric must respond. If not set, the default metric will be set to 80% average CPU utilization. |
+| `behavior` _[HorizontalPodAutoscalerBehavior](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#horizontalpodautoscalerbehavior-v2-autoscaling)_ | behavior configures the scaling behavior of the target in both Up and Down directions (scaleUp and scaleDown fields respectively). If not set, the default HPAScalingRules for scale up and scale down are used. |
+
+_Appears in:_
+
+- [Scaling](#aigateway-konghq-com-v1alpha1-types-scaling)
+- [Scaling](#eventgateway-konghq-com-v1alpha1-types-scaling)
+- [Scaling](#gateway-operator-konghq-com-v1beta1-types-scaling)
+- [Scaling](#gateway-operator-konghq-com-v2beta1-types-scaling)
+- [Scaling](#mcp-konghq-com-v1alpha1-types-scaling)
+
+#### KonnectExtensionControlPlaneRef
+
+
+KonnectExtensionControlPlaneRef is the schema for the ControlPlaneRef type used by Konnect Extensions.
+It is used to reference a Control Plane entity.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _string_ | Type indicates the type of the control plane being referenced. Allowed values: - konnectNamespacedRef |
+| `konnectNamespacedRef` _[KonnectNamespacedRef](#common-konghq-com-v1alpha1-types-konnectnamespacedref)_ | KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster. It contains the name of the Konnect Control Plane. This field is required when the Type is konnectNamespacedRef. |
+
+_Appears in:_
+
+- [KonnectExtensionControlPlane](#konnect-konghq-com-v1alpha2-types-konnectextensioncontrolplane)
+
+#### KonnectIDType
+
+_Underlying type:_ `string`
+
+KonnectIDType is the schema for the KonnectID type.
+
+
+
+
+_Appears in:_
+
+- [MirrorKonnect](#konnect-konghq-com-v1alpha1-types-mirrorkonnect)
+- [MirrorKonnect](#konnect-konghq-com-v1alpha2-types-mirrorkonnect)
+
+#### KonnectNamespacedRef
+
+
+KonnectNamespacedRef is the schema for the KonnectNamespacedRef type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the name of the Konnect Control Plane. |
+| `namespace` _string_ | Namespace is the namespace where the Konnect Control Plane is in. Currently the following resources are allowed to set this: - cluster scoped resources (KongVault) - KongService - KongCertificate - KongCACertificate - KongConsumerGroup - KongUpstream - KongKeySet - KongDataPlaneClientCertificate |
+
+_Appears in:_
+
+- [ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)
+- [KonnectExtensionControlPlaneRef](#common-konghq-com-v1alpha1-types-konnectextensioncontrolplaneref)
+
+#### NameRef
+
+
+NameRef is a reference to another object representing a Kong entity with deterministic type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the name of the entity. |
+
+_Appears in:_
+
+- [KeySetRef](#configuration-konghq-com-v1alpha1-types-keysetref)
+
+#### NamespacedRef
+
+
+NamespacedRef is a reference to a namespaced resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the name of the referred resource. |
+| `namespace` _*string_ | Namespace is the namespace of the referred resource.<br /><br />For namespace-scoped resources if no Namespace is provided then the namespace of the parent object MUST be used.<br /><br />This field MUST not be set when referring to cluster-scoped resources. |
+
+_Appears in:_
+
+- [AIGatewayRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayref)
+- [DataPlaneMetricsExtensionStatus](#gateway-operator-konghq-com-v1alpha1-types-dataplanemetricsextensionstatus)
+- [ExtensionRef](#common-konghq-com-v1alpha1-types-extensionref)
+- [KongCACertificateSpec](#configuration-konghq-com-v1alpha1-types-kongcacertificatespec)
+- [KongCertificateSpec](#configuration-konghq-com-v1alpha1-types-kongcertificatespec)
+- [KongSNISpec](#configuration-konghq-com-v1alpha1-types-kongsnispec)
+- [KongServiceAPISpec](#configuration-konghq-com-v1alpha1-types-kongserviceapispec)
+- [KongServiceSpec](#configuration-konghq-com-v1alpha1-types-kongservicespec)
+- [KongTargetSpec](#configuration-konghq-com-v1alpha1-types-kongtargetspec)
+- [KongUpstreamAPISpec](#configuration-konghq-com-v1alpha1-types-kongupstreamapispec)
+- [KongUpstreamSpec](#configuration-konghq-com-v1alpha1-types-kongupstreamspec)
+- [KonnectConfigStoreSyncSpec](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncspec)
+- [KonnectExtensionStatus](#konnect-konghq-com-v1alpha1-types-konnectextensionstatus)
+- [KonnectExtensionStatus](#konnect-konghq-com-v1alpha2-types-konnectextensionstatus)
+- [ObjectRef](#common-konghq-com-v1alpha1-types-objectref)
+- [ServiceRef](#configuration-konghq-com-v1alpha1-types-serviceref)
+
+#### ObjectRef
+
+
+ObjectRef is the schema for the ObjectRef type.
+It is used to reference an entity. Currently it is possible to reference
+a remote Konnect entity by its ID or a local in cluster entity by its namespaced name.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[ObjectRefType](#common-konghq-com-v1alpha1-types-objectreftype)_ | Type defines type of the object which is referenced. It can be one of:<br /><br />- konnectID - namespacedRef |
+| `konnectID` _*string_ | KonnectID is the schema for the KonnectID type. This field is required when the Type is konnectID. |
+| `namespacedRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | NamespacedRef is a reference to a KeySet entity inside the cluster. This field is required when the Type is namespacedRef. |
+
+_Appears in:_
+
+- [AIGatewayConsumerCredentialSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumercredentialspec)
+- [EventGatewayBackendClusterSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterspec)
+- [EventGatewayDataPlaneCertificateSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificatespec)
+- [EventGatewayListenerPolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicyspec)
+- [EventGatewayListenerSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerspec)
+- [EventGatewaySchemaRegistrySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryspec)
+- [EventGatewayStaticKeySpec](#configuration-konghq-com-v1alpha1-types-eventgatewaystatickeyspec)
+- [EventGatewayTLSTrustBundleSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundlespec)
+- [EventGatewayVirtualClusterConsumePolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyspec)
+- [EventGatewayVirtualClusterPolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyspec)
+- [EventGatewayVirtualClusterProducePolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyspec)
+- [EventGatewayVirtualClusterSpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterspec)
+- [KonnectCloudGatewayTransitGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewayspec)
+- [KonnectConfigStoreSpec](#konnect-konghq-com-v1alpha1-types-konnectconfigstorespec)
+- [KonnectConfigurationDataPlaneGroup](#konnect-konghq-com-v1alpha1-types-konnectconfigurationdataplanegroup)
+- [PortalAPISpec](#konnect-konghq-com-v1alpha1-types-portalapispec)
+- [PortalCustomDomainSpec](#konnect-konghq-com-v1alpha1-types-portalcustomdomainspec)
+- [PortalCustomizationSpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationspec)
+- [PortalEmailConfigSpec](#konnect-konghq-com-v1alpha1-types-portalemailconfigspec)
+- [PortalIPAllowListSpec](#konnect-konghq-com-v1alpha1-types-portalipallowlistspec)
+- [PortalIdentityProviderRequestSpec](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestspec)
+- [PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)
+- [PortalPageSpec](#konnect-konghq-com-v1alpha1-types-portalpagespec)
+- [PortalTeamSpec](#konnect-konghq-com-v1alpha1-types-portalteamspec)
+
+#### ObjectRefType
+
+_Underlying type:_ `string`
+
+ObjectRefType is the enum type for the ObjectRef.
+
+
+
+
+_Appears in:_
+
+- [ObjectRef](#common-konghq-com-v1alpha1-types-objectref)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `konnectID` | ObjectRefTypeKonnectID is the type for the KonnectID KonnectRef.<br />It is used to reference an entity by its ID on the Konnect platform.<br /> |
+| `namespacedRef` | ObjectRefTypeNamespacedRef is the type for the KonnectRef.<br />It is used to reference an entity inside the cluster<br />using a namespaced reference.<br /> |
+
+#### Tags
+
+_Underlying type:_ `string array`
+
+Tags is a type for a list of tags applied to a Kong entity.
+
+
+
+
+_Appears in:_
+
+- [KongCACertificateAPISpec](#configuration-konghq-com-v1alpha1-types-kongcacertificateapispec)
+- [KongCACertificateSpec](#configuration-konghq-com-v1alpha1-types-kongcacertificatespec)
+- [KongCertificateAPISpec](#configuration-konghq-com-v1alpha1-types-kongcertificateapispec)
+- [KongCertificateSpec](#configuration-konghq-com-v1alpha1-types-kongcertificatespec)
+- [KongClusterPlugin](#configuration-konghq-com-v1-kongclusterplugin)
+- [KongConsumerGroupSpec](#configuration-konghq-com-v1beta1-types-kongconsumergroupspec)
+- [KongConsumerSpec](#configuration-konghq-com-v1-types-kongconsumerspec)
+- [KongCredentialACLAPISpec](#configuration-konghq-com-v1alpha1-types-kongcredentialaclapispec)
+- [KongCredentialACLSpec](#configuration-konghq-com-v1alpha1-types-kongcredentialaclspec)
+- [KongCredentialAPIKeyAPISpec](#configuration-konghq-com-v1alpha1-types-kongcredentialapikeyapispec)
+- [KongCredentialAPIKeySpec](#configuration-konghq-com-v1alpha1-types-kongcredentialapikeyspec)
+- [KongCredentialBasicAuthAPISpec](#configuration-konghq-com-v1alpha1-types-kongcredentialbasicauthapispec)
+- [KongCredentialBasicAuthSpec](#configuration-konghq-com-v1alpha1-types-kongcredentialbasicauthspec)
+- [KongCredentialHMACAPISpec](#configuration-konghq-com-v1alpha1-types-kongcredentialhmacapispec)
+- [KongCredentialHMACSpec](#configuration-konghq-com-v1alpha1-types-kongcredentialhmacspec)
+- [KongCredentialJWTAPISpec](#configuration-konghq-com-v1alpha1-types-kongcredentialjwtapispec)
+- [KongCredentialJWTSpec](#configuration-konghq-com-v1alpha1-types-kongcredentialjwtspec)
+- [KongKeyAPISpec](#configuration-konghq-com-v1alpha1-types-kongkeyapispec)
+- [KongKeySetAPISpec](#configuration-konghq-com-v1alpha1-types-kongkeysetapispec)
+- [KongKeySetSpec](#configuration-konghq-com-v1alpha1-types-kongkeysetspec)
+- [KongKeySpec](#configuration-konghq-com-v1alpha1-types-kongkeyspec)
+- [KongPlugin](#configuration-konghq-com-v1-kongplugin)
+- [KongPluginBindingSpec](#configuration-konghq-com-v1alpha1-types-kongpluginbindingspec)
+- [KongRouteAPISpec](#configuration-konghq-com-v1alpha1-types-kongrouteapispec)
+- [KongRouteSpec](#configuration-konghq-com-v1alpha1-types-kongroutespec)
+- [KongSNIAPISpec](#configuration-konghq-com-v1alpha1-types-kongsniapispec)
+- [KongSNISpec](#configuration-konghq-com-v1alpha1-types-kongsnispec)
+- [KongServiceAPISpec](#configuration-konghq-com-v1alpha1-types-kongserviceapispec)
+- [KongServiceSpec](#configuration-konghq-com-v1alpha1-types-kongservicespec)
+- [KongTargetAPISpec](#configuration-konghq-com-v1alpha1-types-kongtargetapispec)
+- [KongTargetSpec](#configuration-konghq-com-v1alpha1-types-kongtargetspec)
+- [KongUpstreamAPISpec](#configuration-konghq-com-v1alpha1-types-kongupstreamapispec)
+- [KongUpstreamSpec](#configuration-konghq-com-v1alpha1-types-kongupstreamspec)
+- [KongVaultSpec](#configuration-konghq-com-v1alpha1-types-kongvaultspec)
 
 ## configuration.konghq.com/v1
 
@@ -14527,25 +14973,7 @@ _Appears in:_
 
 - [KegDataPlaneSpec](#eventgateway-konghq-com-v1alpha1-types-kegdataplanespec)
 
-#### HorizontalScaling
 
-
-HorizontalScaling defines horizontal scaling options for the deployment.
-It holds all the options from the HorizontalPodAutoscalerSpec besides the
-ScaleTargetRef which is being controlled by the Operator.
-
-
-
-| Field | Description |
-| --- | --- |
-| `minReplicas` _*int32_ | minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.  It defaults to 1 pod.  minReplicas is allowed to be 0 if the alpha feature gate HPAScaleToZero is enabled and at least one Object or External metric is configured.  Scaling is active as long as at least one metric value is available. |
-| `maxReplicas` _int32_ | maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up. It cannot be less than minReplicas. |
-| `metrics` _[MetricSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#metricspec-v2-autoscaling) array_ | metrics contains the specifications for which to use to calculate the desired replica count (the maximum replica count across all metrics will be used).  The desired replica count is calculated multiplying the ratio between the target value and the current value by the current number of pods.  Ergo, metrics used must decrease as the pod count is increased, and vice-versa.  See the individual metric source types for more information about how each type of metric must respond. If not set, the default metric will be set to 80% average CPU utilization. |
-| `behavior` _[HorizontalPodAutoscalerBehavior](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#horizontalpodautoscalerbehavior-v2-autoscaling)_ | behavior configures the scaling behavior of the target in both Up and Down directions (scaleUp and scaleDown fields respectively). If not set, the default HPAScalingRules for scale up and scale down are used. |
-
-_Appears in:_
-
-- [Scaling](#eventgateway-konghq-com-v1alpha1-types-scaling)
 
 #### KegDataPlaneConfiguration
 
@@ -14722,7 +15150,7 @@ Scaling defines the scaling options for the deployment.
 
 | Field | Description |
 | --- | --- |
-| `horizontal` _[HorizontalScaling](#eventgateway-konghq-com-v1alpha1-types-horizontalscaling)_ | HorizontalScaling defines horizontal scaling options for the deployment. |
+| `horizontal` _[HorizontalScaling](#common-konghq-com-v1alpha1-types-horizontalscaling)_ | HorizontalScaling defines horizontal scaling options for the deployment. |
 
 _Appears in:_
 
@@ -15989,25 +16417,7 @@ _Appears in:_
 
 
 
-#### HorizontalScaling
 
-
-HorizontalScaling defines horizontal scaling options for the deployment.
-It holds all the options from the HorizontalPodAutoscalerSpec besides the
-ScaleTargetRef which is being controlled by the Operator.
-
-
-
-| Field | Description |
-| --- | --- |
-| `minReplicas` _*int32_ | minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.  It defaults to 1 pod.  minReplicas is allowed to be 0 if the alpha feature gate HPAScaleToZero is enabled and at least one Object or External metric is configured.  Scaling is active as long as at least one metric value is available. |
-| `maxReplicas` _int32_ | maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up. It cannot be less that minReplicas. |
-| `metrics` _[MetricSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#metricspec-v2-autoscaling) array_ | metrics contains the specifications for which to use to calculate the desired replica count (the maximum replica count across all metrics will be used).  The desired replica count is calculated multiplying the ratio between the target value and the current value by the current number of pods.  Ergo, metrics used must decrease as the pod count is increased, and vice-versa.  See the individual metric source types for more information about how each type of metric must respond. If not set, the default metric will be set to 80% average CPU utilization. |
-| `behavior` _[HorizontalPodAutoscalerBehavior](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#horizontalpodautoscalerbehavior-v2-autoscaling)_ | behavior configures the scaling behavior of the target in both Up and Down directions (scaleUp and scaleDown fields respectively). If not set, the default HPAScalingRules for scale up and scale down are used. |
-
-_Appears in:_
-
-- [Scaling](#gateway-operator-konghq-com-v1beta1-types-scaling)
 
 #### KonnectCertificateOptions
 
@@ -16260,7 +16670,7 @@ Scaling defines the scaling options for the deployment.
 
 | Field | Description |
 | --- | --- |
-| `horizontal` _[HorizontalScaling](#gateway-operator-konghq-com-v1beta1-types-horizontalscaling)_ | HorizontalScaling defines horizontal scaling options for the deployment. |
+| `horizontal` _[HorizontalScaling](#common-konghq-com-v1alpha1-types-horizontalscaling)_ | HorizontalScaling defines horizontal scaling options for the deployment. |
 
 _Appears in:_
 
@@ -17169,25 +17579,7 @@ _Appears in:_
 
 
 
-#### HorizontalScaling
 
-
-HorizontalScaling defines horizontal scaling options for the deployment.
-It holds all the options from the HorizontalPodAutoscalerSpec besides the
-ScaleTargetRef which is being controlled by the Operator.
-
-
-
-| Field | Description |
-| --- | --- |
-| `minReplicas` _*int32_ | minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.  It defaults to 1 pod.  minReplicas is allowed to be 0 if the alpha feature gate HPAScaleToZero is enabled and at least one Object or External metric is configured.  Scaling is active as long as at least one metric value is available. |
-| `maxReplicas` _int32_ | maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up. It cannot be less that minReplicas. |
-| `metrics` _[MetricSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#metricspec-v2-autoscaling) array_ | metrics contains the specifications for which to use to calculate the desired replica count (the maximum replica count across all metrics will be used).  The desired replica count is calculated multiplying the ratio between the target value and the current value by the current number of pods.  Ergo, metrics used must decrease as the pod count is increased, and vice-versa.  See the individual metric source types for more information about how each type of metric must respond. If not set, the default metric will be set to 80% average CPU utilization. |
-| `behavior` _[HorizontalPodAutoscalerBehavior](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#horizontalpodautoscalerbehavior-v2-autoscaling)_ | behavior configures the scaling behavior of the target in both Up and Down directions (scaleUp and scaleDown fields respectively). If not set, the default HPAScalingRules for scale up and scale down are used. |
-
-_Appears in:_
-
-- [Scaling](#gateway-operator-konghq-com-v2beta1-types-scaling)
 
 #### KonnectOptions
 
@@ -17418,7 +17810,7 @@ Scaling defines the scaling options for the deployment.
 
 | Field | Description |
 | --- | --- |
-| `horizontal` _[HorizontalScaling](#gateway-operator-konghq-com-v2beta1-types-horizontalscaling)_ | HorizontalScaling defines horizontal scaling options for the deployment. |
+| `horizontal` _[HorizontalScaling](#common-konghq-com-v1alpha1-types-horizontalscaling)_ | HorizontalScaling defines horizontal scaling options for the deployment. |
 
 _Appears in:_
 
@@ -20794,25 +21186,7 @@ _Appears in:_
 
 - [MCPServerDataPlaneSpec](#mcp-konghq-com-v1alpha1-types-mcpserverdataplanespec)
 
-#### HorizontalScaling
 
-
-HorizontalScaling defines horizontal scaling options for the deployment.
-It holds all the options from the HorizontalPodAutoscalerSpec besides the
-ScaleTargetRef which is being controlled by the Operator.
-
-
-
-| Field | Description |
-| --- | --- |
-| `minReplicas` _*int32_ | minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.  It defaults to 1 pod.  minReplicas is allowed to be 0 if the alpha feature gate HPAScaleToZero is enabled and at least one Object or External metric is configured.  Scaling is active as long as at least one metric value is available. |
-| `maxReplicas` _int32_ | maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up. It cannot be less that minReplicas. |
-| `metrics` _[MetricSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#metricspec-v2-autoscaling) array_ | metrics contains the specifications for which to use to calculate the desired replica count (the maximum replica count across all metrics will be used).  The desired replica count is calculated multiplying the ratio between the target value and the current value by the current number of pods.  Ergo, metrics used must decrease as the pod count is increased, and vice-versa.  See the individual metric source types for more information about how each type of metric must respond. If not set, the default metric will be set to 80% average CPU utilization. |
-| `behavior` _[HorizontalPodAutoscalerBehavior](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#horizontalpodautoscalerbehavior-v2-autoscaling)_ | behavior configures the scaling behavior of the target in both Up and Down directions (scaleUp and scaleDown fields respectively). If not set, the default HPAScalingRules for scale up and scale down are used. |
-
-_Appears in:_
-
-- [Scaling](#mcp-konghq-com-v1alpha1-types-scaling)
 
 #### KonnectNamespacedRef
 
@@ -20977,7 +21351,7 @@ Scaling defines the scaling options for the deployment.
 
 | Field | Description |
 | --- | --- |
-| `horizontal` _[HorizontalScaling](#mcp-konghq-com-v1alpha1-types-horizontalscaling)_ | HorizontalScaling defines horizontal scaling options for the deployment. |
+| `horizontal` _[HorizontalScaling](#common-konghq-com-v1alpha1-types-horizontalscaling)_ | HorizontalScaling defines horizontal scaling options for the deployment. |
 
 _Appears in:_
 

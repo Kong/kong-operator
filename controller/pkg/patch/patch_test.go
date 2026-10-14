@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -79,7 +80,7 @@ func TestApplyPatchIfNonEmpty(t *testing.T) {
 			},
 			generateHPAFunc: func(t *testing.T, dataplane *operatorv1beta1.DataPlane) *autoscalingv2.HorizontalPodAutoscaler {
 				hs := dataplane.Spec.Deployment.Scaling.HorizontalScaling
-				hpa, err := k8sresources.GenerateHPA(dataplane, &k8sresources.HPAScalingSpec{
+				hpa, err := k8sresources.GenerateHPA(dataplane, &commonv1alpha1.HorizontalScaling{
 					MinReplicas: hs.MinReplicas,
 					MaxReplicas: hs.MaxReplicas,
 					Metrics:     hs.Metrics,
@@ -141,7 +142,7 @@ func TestApplyPatchIfNonEmpty(t *testing.T) {
 			},
 			generateHPAFunc: func(t *testing.T, dataplane *operatorv1beta1.DataPlane) *autoscalingv2.HorizontalPodAutoscaler {
 				hs := dataplane.Spec.Deployment.Scaling.HorizontalScaling
-				hpa, err := k8sresources.GenerateHPA(dataplane, &k8sresources.HPAScalingSpec{
+				hpa, err := k8sresources.GenerateHPA(dataplane, &commonv1alpha1.HorizontalScaling{
 					MinReplicas: hs.MinReplicas,
 					MaxReplicas: hs.MaxReplicas,
 					Metrics:     hs.Metrics,
