@@ -163,6 +163,13 @@
   an `OnPremEventGateway`, e.g. a listener policy referencing its TLS trust
   bundle, reports the reference as invalid in its `KonnectReferencesResolved`
   condition instead of waiting for it to be programmed in Konnect.
+  The parent reference of `EventGatewayVirtualCluster`,
+  `EventGatewayListenerPolicy`, `EventGatewayVirtualClusterPolicy`,
+  `EventGatewayVirtualClusterConsumePolicy` and
+  `EventGatewayVirtualClusterProducePolicy` is now immutable once the entity
+  has been created in Konnect (`status.id` set), not only while it is
+  `Programmed`, so an entity that exists in Konnect can't be moved under
+  another parent.
   [#6116](https://github.com/Kong/kong-operator/issues/6116)
 - `--konnect-list-page-size` flag (default and maximum `100`): the page size
   the operator requests when listing Konnect entities to find the Konnect

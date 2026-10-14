@@ -723,6 +723,11 @@ spec:
           rule: '!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status.conditions)
             || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
             == ''True'') || oldSelf.spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef'
+        - fieldPath: .spec.eventGatewayVirtualClusterRef
+          message: spec.eventGatewayVirtualClusterRef is immutable once the entity
+            has been created in Konnect
+          rule: '!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayVirtualClusterRef
+            == oldSelf.spec.eventGatewayVirtualClusterRef'
     served: true
     storage: true
     subresources:
