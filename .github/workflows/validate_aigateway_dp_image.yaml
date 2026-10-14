@@ -1,0 +1,80 @@
+name: "validate AIGateway dataplane image (targeted)"
+run-name: "validate AIGateway dataplane ${{ format('{0}:{1}',
+  github.event.inputs.aigateway-image-repo, github.event.inputs.aigateway-image-tag) }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      aigateway-image-repo:
+        description: AIGateway dataplane Docker image to test with (repository).
+        type: string
+        required: true
+        default: "kong/kong-ai-gateway-dev"
+      aigateway-image-tag:
+        description: AIGateway dataplane Docker image to test with (tag).
+        type: string
+        required: true
+        default: "latest"
+
+permissions:
+  contents: read
+
+jobs:
+  resolve-k8s-version:
+    runs-on: ubuntu-latest
+    outputs:
+      latest: ${{ steps.set-latest.outputs.latest }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: set-latest
+        run: |
+          (
+            echo 'latest<<EOF'
+            yq eval -r -o=json '. | sort | reverse | .[0]' .github/supported_k8s_node_versions.yaml
+            echo 'EOF'
+          ) >> "${GITHUB_OUTPUT}"
+
+  build-e2e-image:
+    runs-on: ubuntu-latest
+    env:
+      IMG: kong-operator
+      TAG: e2e-${{ github.sha }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      - name: checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: setup golang
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: build docker image
+        run: make docker.build
+
+      - name: save docker image as artifact
+        run: docker save "$IMG:$TAG" -o kong-operator_e2e.tar
+
+      - name: upload docker image artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: kong-operator-e2e-image-${{ github.run_id }}
+          path: kong-operator_e2e.tar
+          retention-days: 1
+          if-no-files-found: error
+
+  run-aigateway-chainsaw-tests:
+    needs:
+      - resolve-k8s-version
+      - build-e2e-image
+    uses: ./.github/workflows/__e2e_chainsaw_tests.yaml
+    secrets: inherit
+    with:
+      node_image_version: ${{ needs.resolve-k8s-version.outputs.latest }}
+      aigw-dp-image: ${{ format('{0}:{1}', github.event.inputs.aigateway-image-repo,
+        github.event.inputs.aigateway-image-tag) }}
+      suites: '[{"suite": "aigateway"}]'
