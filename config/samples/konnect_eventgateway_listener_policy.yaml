@@ -42,10 +42,10 @@ spec:
     labels:
       app: test1
       env: test
-  gatewayRef:
-    type: namespacedRef
-    namespacedRef:
-      name: cp-event-1
+  parentRef:
+    group: konnect.konghq.com
+    kind: KonnectEventGateway
+    name: cp-event-1
 ---
 apiVersion: v1
 kind: Secret

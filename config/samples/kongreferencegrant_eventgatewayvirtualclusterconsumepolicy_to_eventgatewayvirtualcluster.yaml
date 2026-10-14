@@ -102,10 +102,10 @@ metadata:
   name: shared-backend-cluster
   namespace: event-gateways
 spec:
-  gatewayRef:
-    type: namespacedRef
-    namespacedRef:
-      name: shared-event-gateway
+  parentRef:
+    group: konnect.konghq.com
+    kind: KonnectEventGateway
+    name: shared-event-gateway
   apiSpec:
     name: shared-backend-cluster
     description: Backend Cluster shared across namespaces

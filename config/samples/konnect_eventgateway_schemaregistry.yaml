@@ -51,9 +51,9 @@ spec:
         endpoint: https://test-schema-registry.konghq.tech
         schemaType: json
         timeoutSeconds: 10
-  gatewayRef:
-    type: namespacedRef
-    namespacedRef:
-      name: cp-event-1
+  parentRef:
+    group: konnect.konghq.com
+    kind: KonnectEventGateway
+    name: cp-event-1
 
 
