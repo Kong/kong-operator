@@ -84,7 +84,8 @@
   Manual snapshot creates a replacement and preserves the original mount
   until consumers migrate, without removing the unchanged Konnect registration.
   The extension remains unready until its current certificate is programmed.
-  [#5982](https://github.com/Kong/kong-operator/pull/5982)
+  [#5982](https://github.com/Kong/kong-operator/pull/5982),
+  [#6096](https://github.com/Kong/kong-operator/pull/6096)
 
 ## [v2.4.0-rapid.1]
 
