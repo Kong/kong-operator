@@ -3436,14 +3436,16 @@ func (d *gatewayRefTemplateData) TypeXValidations() []string {
 		)
 	}
 	// sameGateway compares the GatewayRef of fieldObj with the legacy ref of
-	// legacyObj. An unset namespace only matches an unset namespace: the
-	// object's own namespace is not available to CEL. "namespace" is a
-	// reserved word in CEL, hence the __namespace__ escaping.
+	// legacyObj. An empty namespace counts as unset, and an unset namespace
+	// only matches an unset or empty one: the object's own namespace is not
+	// available to CEL. "namespace" is a reserved word in CEL, hence the
+	// __namespace__ escaping. The empty namespace is checked with size()
+	// because an empty string literal does not survive the marker quoting.
 	sameGateway := func(fieldObj, legacyObj string) string {
 		f := fieldObj + ".spec." + field
 		l := legacyObj + ".spec." + legacy
 		return fmt.Sprintf(
-			"(has(%[2]s) && has(%[2]s.namespacedRef) && %[1]s.name == %[2]s.namespacedRef.name && has(%[1]s.__namespace__) == has(%[2]s.namespacedRef.__namespace__) && (!has(%[1]s.__namespace__) || %[1]s.__namespace__ == %[2]s.namespacedRef.__namespace__))",
+			"(has(%[2]s) && has(%[2]s.namespacedRef) && %[1]s.name == %[2]s.namespacedRef.name && (has(%[1]s.__namespace__) ? (has(%[2]s.namespacedRef.__namespace__) && %[1]s.__namespace__ == %[2]s.namespacedRef.__namespace__) : (!has(%[2]s.namespacedRef.__namespace__) || size(%[2]s.namespacedRef.__namespace__) == 0)))",
 			f, l,
 		)
 	}
@@ -3468,7 +3470,7 @@ func (d *gatewayRefTemplateData) TypeXValidations() []string {
 		immutable(legacy),
 		immutable(field),
 		fmt.Sprintf(
-			`+kubebuilder:validation:XValidation:rule="%[1]s || !has(self.spec.%[2]s) || has(oldSelf.spec.%[2]s) || %[3]s", message="spec.%[4]s can only be replaced by a spec.%[2]s referencing the same gateway once an entity is already Programmed"`,
+			`+kubebuilder:validation:XValidation:rule="%[1]s || !has(self.spec.%[2]s) || has(oldSelf.spec.%[2]s) || %[3]s", message="spec.%[4]s can only be replaced by a spec.%[2]s referencing the same gateway, with the same name and namespace as spec.%[4]s, once an entity is already Programmed"`,
 			notProgrammed, field, sameGateway("self", "oldSelf"), legacy,
 		),
 	)

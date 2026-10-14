@@ -74,10 +74,13 @@ func TestGenerate_GatewayRef(t *testing.T) {
 		assert.Contains(t, content, `message="spec.gatewayRef is immutable when an entity is already Programmed"`)
 		assert.Contains(t, content, `message="spec.parentRef is immutable when an entity is already Programmed"`)
 		assert.Contains(t, content, `rule="!has(oldSelf.spec.parentRef) || has(self.spec.parentRef)", message="spec.parentRef cannot be replaced by the deprecated spec.gatewayRef"`)
-		assert.Contains(t, content, `message="spec.gatewayRef can only be replaced by a spec.parentRef referencing the same gateway once an entity is already Programmed"`)
-		// "namespace" is a reserved word in CEL and must be escaped.
-		assert.Contains(t, content, "self.spec.parentRef.__namespace__ == oldSelf.spec.gatewayRef.namespacedRef.__namespace__")
+		assert.Contains(t, content, `message="spec.gatewayRef can only be replaced by a spec.parentRef referencing the same gateway, with the same name and namespace as spec.gatewayRef, once an entity is already Programmed"`)
+		// "namespace" is a reserved word in CEL and must be escaped. An empty
+		// namespace counts as unset.
+		assert.Contains(t, content, "(has(self.spec.parentRef.__namespace__) ? (has(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) && self.spec.parentRef.__namespace__ == oldSelf.spec.gatewayRef.namespacedRef.__namespace__) : (!has(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) || size(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) == 0))")
 		assert.NotContains(t, content, "parentRef.namespace")
+		// String literals must survive the marker quoting.
+		assert.NotContains(t, content, "”")
 	})
 
 	t.Run("funcs", func(t *testing.T) {

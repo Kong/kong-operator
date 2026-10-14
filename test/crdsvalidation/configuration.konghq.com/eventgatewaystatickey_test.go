@@ -169,7 +169,19 @@ func TestEventGatewayStaticKey(t *testing.T) {
 					obj.Spec.GatewayRef = commonv1alpha1.ObjectRef{}
 					obj.Spec.ParentRef = &commonv1alpha1.GatewayRef{Group: "konnect.konghq.com", Kind: "KonnectEventGateway", Name: "another-gateway"}
 				},
-				ExpectedUpdateErrorMessage: new("gatewayRef can only be replaced by a parentRef referencing the same gateway once the static key has been created in Konnect"),
+				ExpectedUpdateErrorMessage: new("gatewayRef can only be replaced by a parentRef referencing the same gateway, with the same name and namespace as gatewayRef, once the static key has been created in Konnect"),
+			},
+			{
+				Name: "replacing a gatewayRef with an empty namespace by a parentRef without one once in Konnect passes",
+				TestObject: func() *configurationv1alpha1.EventGatewayStaticKey {
+					obj := inKonnect()
+					obj.Spec.GatewayRef.NamespacedRef.Namespace = new("")
+					return obj
+				}(),
+				Update: func(obj *configurationv1alpha1.EventGatewayStaticKey) {
+					obj.Spec.ParentRef = &commonv1alpha1.GatewayRef{Group: "konnect.konghq.com", Kind: "KonnectEventGateway", Name: obj.Spec.GatewayRef.NamespacedRef.Name}
+					obj.Spec.GatewayRef = commonv1alpha1.ObjectRef{}
+				},
 			},
 			{
 				// The generic gatewayRef rule needs a status, which the

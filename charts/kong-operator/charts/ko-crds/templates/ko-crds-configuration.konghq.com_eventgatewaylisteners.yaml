@@ -222,14 +222,16 @@ spec:
             == ''Programmed'' && c.status == ''True'') || oldSelf.spec.parentRef ==
             self.spec.parentRef'
         - message: spec.gatewayRef can only be replaced by a spec.parentRef referencing
-            the same gateway once an entity is already Programmed
+            the same gateway, with the same name and namespace as spec.gatewayRef,
+            once an entity is already Programmed
           rule: '!has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c,
             c.type == ''Programmed'' && c.status == ''True'') || !has(self.spec.parentRef)
             || has(oldSelf.spec.parentRef) || (has(oldSelf.spec.gatewayRef) && has(oldSelf.spec.gatewayRef.namespacedRef)
             && self.spec.parentRef.name == oldSelf.spec.gatewayRef.namespacedRef.name
-            && has(self.spec.parentRef.__namespace__) == has(oldSelf.spec.gatewayRef.namespacedRef.__namespace__)
-            && (!has(self.spec.parentRef.__namespace__) || self.spec.parentRef.__namespace__
-            == oldSelf.spec.gatewayRef.namespacedRef.__namespace__))'
+            && (has(self.spec.parentRef.__namespace__) ? (has(oldSelf.spec.gatewayRef.namespacedRef.__namespace__)
+            && self.spec.parentRef.__namespace__ == oldSelf.spec.gatewayRef.namespacedRef.__namespace__)
+            : (!has(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) || size(oldSelf.spec.gatewayRef.namespacedRef.__namespace__)
+            == 0)))'
     served: true
     storage: true
     subresources:

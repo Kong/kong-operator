@@ -221,6 +221,23 @@ func runGatewayParentRefTestCases[
 			Name:                       "gatewayRef with a namespace cannot be replaced by a parentRef without one when programmed",
 			TestObject:                 programmed(withRefs(nil, gatewayRefInNamespace("other"))),
 			Update:                     setRefs(konnectRef(gatewayName), commonv1alpha1.ObjectRef{}),
+			ExpectedUpdateErrorMessage: new(sameGatewayOnly + ", with the same name and namespace as spec.gatewayRef, once an entity is already Programmed"),
+		},
+		{
+			// An empty namespace means the object's own namespace, like an
+			// unset one; parentRef can't hold an empty namespace.
+			Name:       "gatewayRef with an empty namespace can be replaced by a parentRef without one when programmed",
+			TestObject: programmed(withRefs(nil, gatewayRefInNamespace(""))),
+			Update:     setRefs(konnectRef(gatewayName), commonv1alpha1.ObjectRef{}),
+		},
+		{
+			Name:                       "gatewayRef with an empty namespace cannot be replaced by a parentRef in another namespace when programmed",
+			TestObject:                 programmed(withRefs(nil, gatewayRefInNamespace(""))),
+			Update: func(obj T) {
+				ref := konnectRef(gatewayName)
+				ref.Namespace = new("other")
+				setRefs(ref, commonv1alpha1.ObjectRef{})(obj)
+			},
 			ExpectedUpdateErrorMessage: new(sameGatewayOnly),
 		},
 		{
