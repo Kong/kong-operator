@@ -503,6 +503,189 @@ func TestDeploymentBuilder_BuildAndDeploy_ScalingOnlyChangeIsNoop(t *testing.T) 
 		"or it pre-empts the DataPlane controller's HPA reconciliation for a reconcile pass")
 }
 
+func TestDeploymentBuilder_BuildAndDeploy_PreservesHPAReplicas(t *testing.T) {
+	testCases := []struct {
+		name        string
+		minReplicas *int32
+		scaledTo    int32
+		expected    int32
+	}{
+		{
+			name:        "scaled above minReplicas: keeps current",
+			minReplicas: new(int32(2)),
+			scaledTo:    4,
+			expected:    4,
+		},
+		{
+			name:        "scaled below minReplicas: raised to minReplicas",
+			minReplicas: new(int32(2)),
+			scaledTo:    1,
+			expected:    2,
+		},
+		{
+			name:     "no minReplicas: keeps current",
+			scaledTo: 4,
+			expected: 4,
+		},
+		{
+			name:     "no minReplicas and scaled to 0: raised to HPA default of 1",
+			scaledTo: 0,
+			expected: 1,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dataplane := &operatorv1beta1.DataPlane{
+				Name:      "test-dataplane",
+				Namespace: "default",
+				UID:       "test-uid",
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+								Scaling: &operatorv1beta1.Scaling{
+									HorizontalScaling: &operatorv1beta1.HorizontalScaling{
+										MinReplicas: tc.minReplicas,
+										MaxReplicas: 5,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			scheme := runtime.NewScheme()
+			require.NoError(t, corev1.AddToScheme(scheme))
+			require.NoError(t, appsv1.AddToScheme(scheme))
+			require.NoError(t, operatorv1beta1.AddToScheme(scheme))
+
+			fakeClient := fakectrlruntimeclient.
+				NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(dataplane).
+				Build()
+
+			builder := NewDeploymentBuilder(logr.Discard(), fakeClient).
+				WithIPFamily(ipfamily.IPv4).
+				WithOpts(
+					labelSelectorFromDataPlaneStatusSelectorDeploymentOpt(dataplane),
+				)
+
+			deployment, res, err := builder.BuildAndDeploy(t.Context(), dataplane, true, false)
+			require.NoError(t, err)
+			require.Equal(t, op.Created, res)
+
+			// Act as the HPA controller: scale the Deployment.
+			var current appsv1.Deployment
+			require.NoError(t, fakeClient.Get(t.Context(), client.ObjectKeyFromObject(deployment), &current))
+			current.Spec.Replicas = new(tc.scaledTo)
+			require.NoError(t, fakeClient.Update(t.Context(), &current, client.FieldOwner("horizontal-pod-autoscaler")))
+
+			_, _, err = builder.BuildAndDeploy(t.Context(), dataplane, true, false)
+			require.NoError(t, err)
+
+			require.NoError(t, fakeClient.Get(t.Context(), client.ObjectKeyFromObject(deployment), &current))
+			require.NotNil(t, current.Spec.Replicas)
+			assert.Equal(t, tc.expected, *current.Spec.Replicas)
+		})
+	}
+}
+
+func TestDeploymentBuilder_BuildAndDeploy_ForcedReplicasWinOverHPASeed(t *testing.T) {
+	testCases := []struct {
+		name string
+		// forced is the replica count forced by an additional DeploymentOpt,
+		// nil for none.
+		forced *int32
+		// expectedOnCreate is expected when the Deployment is created, the seed
+		// being minReplicas.
+		expectedOnCreate int32
+		// expectedOnUpdate is expected after the Deployment has been scaled to
+		// 3, the seed then keeping the current count.
+		expectedOnUpdate int32
+	}{
+		{
+			name:             "no forcing opt: seeded replicas",
+			expectedOnCreate: 2,
+			expectedOnUpdate: 3,
+		},
+		{
+			name:             "forcing opt wins over seeded replicas",
+			forced:           new(int32(0)),
+			expectedOnCreate: 0,
+			expectedOnUpdate: 0,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dataplane := &operatorv1beta1.DataPlane{
+				Name:      "test-dataplane",
+				Namespace: "default",
+				UID:       "test-uid",
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+								Scaling: &operatorv1beta1.Scaling{
+									HorizontalScaling: &operatorv1beta1.HorizontalScaling{
+										MinReplicas: new(int32(2)),
+										MaxReplicas: 5,
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			scheme := runtime.NewScheme()
+			require.NoError(t, corev1.AddToScheme(scheme))
+			require.NoError(t, appsv1.AddToScheme(scheme))
+			require.NoError(t, operatorv1beta1.AddToScheme(scheme))
+
+			fakeClient := fakectrlruntimeclient.
+				NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(dataplane).
+				Build()
+
+			opts := []k8sresources.DeploymentOpt{
+				labelSelectorFromDataPlaneStatusSelectorDeploymentOpt(dataplane),
+			}
+			if tc.forced != nil {
+				opts = append(opts, func(d *appsv1.Deployment) {
+					d.Spec.Replicas = new(*tc.forced)
+				})
+			}
+			builder := NewDeploymentBuilder(logr.Discard(), fakeClient).
+				WithIPFamily(ipfamily.IPv4).
+				WithOpts(opts...)
+
+			deployment, res, err := builder.BuildAndDeploy(t.Context(), dataplane, true, false)
+			require.NoError(t, err)
+			require.Equal(t, op.Created, res)
+
+			var current appsv1.Deployment
+			require.NoError(t, fakeClient.Get(t.Context(), client.ObjectKeyFromObject(deployment), &current))
+			require.NotNil(t, current.Spec.Replicas)
+			assert.Equal(t, tc.expectedOnCreate, *current.Spec.Replicas)
+
+			current.Spec.Replicas = new(int32(3))
+			require.NoError(t, fakeClient.Update(t.Context(), &current))
+
+			_, _, err = builder.BuildAndDeploy(t.Context(), dataplane, true, false)
+			require.NoError(t, err)
+
+			require.NoError(t, fakeClient.Get(t.Context(), client.ObjectKeyFromObject(deployment), &current))
+			require.NotNil(t, current.Spec.Replicas)
+			assert.Equal(t, tc.expectedOnUpdate, *current.Spec.Replicas)
+		})
+	}
+}
+
 // TestDeploymentBuilder_BuildAndDeploy_ProbeDeleteWithoutEnforceConfig is a regression
 // test for the readinessProbe/livenessProbe/startupProbe: {} delete sentinel (see
 // StrategicMergePatchPodTemplateSpec) silently no-oping under --enforce-config=false.
@@ -662,7 +845,7 @@ func TestGenerateDataPlaneDeployment(t *testing.T) {
 			additionalLabels := map[string]string{}
 			maps.Copy(additionalLabels, tc.additionalLabels)
 
-			deployment, err := generateDataPlaneDeployment(logr.Discard(), tc.validateDataPlaneImage, tc.dataplane, tc.defaultImage, additionalLabels)
+			deployment, err := generateDataPlaneDeployment(logr.Discard(), tc.validateDataPlaneImage, tc.dataplane, nil, tc.defaultImage, additionalLabels)
 
 			if tc.expectError {
 				assert.Error(t, err)
@@ -722,7 +905,7 @@ func TestGenerateDataPlaneDeployment_LabelsAndAnnotations(t *testing.T) {
 		},
 	}
 
-	deployment, err := generateDataPlaneDeployment(logr.Discard(), false, dataplane, "kong:3.0", nil)
+	deployment, err := generateDataPlaneDeployment(logr.Discard(), false, dataplane, nil, "kong:3.0", nil)
 	require.NoError(t, err)
 	require.NotNil(t, deployment)
 

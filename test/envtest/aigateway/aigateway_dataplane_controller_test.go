@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -629,6 +630,74 @@ func TestAIGatewayDataPlaneReconciler_HPA(t *testing.T) {
 				return
 			}
 			assert.Equal(ct, int32(10), hpa.Spec.MaxReplicas)
+		}, waitTime, tickTime)
+	})
+
+	t.Run("HPA can scale the Deployment above minReplicas", func(t *testing.T) {
+		t.Parallel()
+
+		const (
+			minReplicas    = int32(2)
+			scaledReplicas = int32(4)
+		)
+
+		aigwdp := setupProgrammedAIGWDP(t, ctx, cl, ns.Name,
+			"aigwcp-hpa-scale-up", "konnect-id-hpa-scale-up", "aigwdp-hpa-scale-up",
+			aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+				Deployment: &aigatewayv1alpha1.DeploymentOptions{
+					Scaling: &aigatewayv1alpha1.Scaling{
+						HorizontalScaling: &aigatewayv1alpha1.HorizontalScaling{
+							MinReplicas: new(minReplicas),
+							MaxReplicas: maxReplicas,
+						},
+					},
+				},
+			},
+		)
+		_ = waitForAIGWHPA(t, ctx, cl, ns.Name, aigwdp.Name)
+		deploy := waitForAIGWDeployment(t, ctx, cl, ns.Name, aigwdp.Name)
+
+		// envtest runs no kube-controller-manager, so act as the HPA controller:
+		// scale the Deployment through its scale subresource. Like the HPA,
+		// which re-asserts its count on every sync, scale it again when it has
+		// been reverted: a reconcile working from a cache that has not observed
+		// the scale yet may revert it once.
+		var scaledAt time.Time
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			scale := &autoscalingv1.Scale{}
+			if !assert.NoError(ct, cl.SubResource("scale").Get(ctx, &deploy, scale)) {
+				return
+			}
+			if scale.Spec.Replicas != scaledReplicas {
+				scale.Spec.Replicas = scaledReplicas
+				assert.NoError(ct, cl.SubResource("scale").Update(ctx, &deploy,
+					client.WithSubResourceBody(scale),
+					client.FieldOwner("horizontal-pod-autoscaler"),
+				))
+				scaledAt = time.Now()
+				ct.Errorf("Deployment scaled to %d replicas, waiting for the count to stay", scaledReplicas)
+				return
+			}
+			assert.GreaterOrEqual(ct, time.Since(scaledAt), 10*time.Second,
+				"Deployment replicas set by the HPA must stay for 10s")
+		}, waitTime, tickTime)
+
+		// An unrelated change applies the Deployment again, now without
+		// spec.replicas, which the HPA scale took over: the scale must stay.
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(aigwdp), aigwdp)) {
+				return
+			}
+			aigwdp.Spec.Deployment.Labels = map[string]string{"hpa-test": "true"}
+			assert.NoError(ct, cl.Update(ctx, aigwdp))
+		}, waitTime, tickTime)
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			var d appsv1.Deployment
+			if !assert.NoError(ct, mgr.GetAPIReader().Get(ctx, client.ObjectKeyFromObject(&deploy), &d)) {
+				return
+			}
+			assert.Equal(ct, "true", d.Labels["hpa-test"])
+			assert.Equal(ct, new(scaledReplicas), d.Spec.Replicas, "operator reverted the Deployment replicas set by the HPA")
 		}, waitTime, tickTime)
 	})
 }
