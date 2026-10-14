@@ -67,7 +67,7 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## [Unreleased]
+## Unreleased
 
 ### Fixes
 
@@ -87,7 +87,8 @@
   Manual snapshot creates a replacement and preserves the original mount
   until consumers migrate, without removing the unchanged Konnect registration.
   The extension remains unready until its current certificate is programmed.
-  [#5982](https://github.com/Kong/kong-operator/pull/5982)
+  [#5982](https://github.com/Kong/kong-operator/pull/5982),
+  [#6095](https://github.com/Kong/kong-operator/pull/6095)
 
 ## [v2.4.0-rapid.2.0]
 
