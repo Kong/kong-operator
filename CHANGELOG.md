@@ -109,7 +109,7 @@
   `spec.parentRef` referencing the same gateway, but not the other way around.
   The `EventGatewayDataPlaneCertificate` the operator creates for a
   `KegDataPlane` now uses `spec.parentRef`.
-  [#TODO](https://github.com/Kong/kong-operator/pull/TODO)
+  [#6097](https://github.com/Kong/kong-operator/pull/6097)
 - `--konnect-list-page-size` flag (default and maximum `100`): the page size
   the operator requests when listing Konnect entities to find the Konnect
   entity of an object, e.g. one whose Konnect ID was lost. It is a fallback in
