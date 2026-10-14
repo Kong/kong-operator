@@ -1328,10 +1328,12 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 			}
 			return nil, fmt.Errorf("failed to get referenced {{.DefaultKind}} %s/%s: %w", ns, name, err)
 		}
+{{- if index .SkipsKonnectReconciliation .DefaultKind}}
 		// An object the Konnect reconciler does not manage never gets a Konnect ID.
-		if skipper, ok := any(&referenced).(interface{ SkipKonnectReconciliation() bool }); ok && skipper.SkipKonnectReconciliation() {
+		if referenced.SkipKonnectReconciliation() {
 			return nil, ReferenceNotKonnectManagedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name}
 		}
+{{- end}}
 {{- if .SameParentRefField}}
 		// Same-type references embed the referenced object's Konnect ID in a
 		// request scoped to the referrer's parent, so both objects must belong
@@ -1514,11 +1516,13 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 				errs = append(errs, fmt.Errorf("failed to get referenced {{.}} %s/%s: %w", ns, ref.Name, err))
 				continue
 			}
+{{- if index $ref.SkipsKonnectReconciliation .}}
 			// An object the Konnect reconciler does not manage never gets a Konnect ID.
-			if skipper, ok := any(&referenced).(interface{ SkipKonnectReconciliation() bool }); ok && skipper.SkipKonnectReconciliation() {
+			if referenced.SkipKonnectReconciliation() {
 				errs = append(errs, ReferenceNotKonnectManagedError{Kind: "{{.}}", Namespace: ns, Name: ref.Name})
 				continue
 			}
+{{- end}}
 			konnectID = referenced.GetKonnectID()
 			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 				errs = append(errs, ReferenceDifferentGatewayError{Kind: "{{.}}", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
@@ -1573,11 +1577,13 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 			continue
 		}
 {{- end}}
+{{- if index .SkipsKonnectReconciliation .DefaultKind}}
 		// An object the Konnect reconciler does not manage never gets a Konnect ID.
-		if skipper, ok := any(&referenced).(interface{ SkipKonnectReconciliation() bool }); ok && skipper.SkipKonnectReconciliation() {
+		if referenced.SkipKonnectReconciliation() {
 			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
 			continue
 		}
+{{- end}}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue

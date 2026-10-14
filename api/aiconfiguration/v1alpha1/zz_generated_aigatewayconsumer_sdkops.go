@@ -82,7 +82,7 @@ func resolveAIGatewayConsumerPolicies(ctx context.Context, cl client.Client, obj
 			continue
 		}
 		// An object the Konnect reconciler does not manage never gets a Konnect ID.
-		if skipper, ok := any(&referenced).(interface{ SkipKonnectReconciliation() bool }); ok && skipper.SkipKonnectReconciliation() {
+		if referenced.SkipKonnectReconciliation() {
 			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name})
 			continue
 		}

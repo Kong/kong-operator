@@ -396,11 +396,6 @@ func resolveEventGatewayVirtualClusterConsumePolicyParentPolicyRef(ctx context.C
 			errs = append(errs, fmt.Errorf("EventGatewayVirtualClusterConsumePolicy %s/%s must have apiSpec.type schemaValidation", ns, ref.Name))
 			continue
 		}
-		// An object the Konnect reconciler does not manage never gets a Konnect ID.
-		if skipper, ok := any(&referenced).(interface{ SkipKonnectReconciliation() bool }); ok && skipper.SkipKonnectReconciliation() {
-			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "EventGatewayVirtualClusterConsumePolicy", Namespace: ns, Name: ref.Name})
-			continue
-		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "EventGatewayVirtualClusterConsumePolicy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
@@ -479,7 +474,7 @@ func resolveEventGatewayVirtualClusterConsumePolicySchemaValidationConfigJSONSch
 			continue
 		}
 		// An object the Konnect reconciler does not manage never gets a Konnect ID.
-		if skipper, ok := any(&referenced).(interface{ SkipKonnectReconciliation() bool }); ok && skipper.SkipKonnectReconciliation() {
+		if referenced.SkipKonnectReconciliation() {
 			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name})
 			continue
 		}
@@ -553,7 +548,7 @@ func resolveEventGatewayVirtualClusterConsumePolicySchemaValidationConfigConflue
 			continue
 		}
 		// An object the Konnect reconciler does not manage never gets a Konnect ID.
-		if skipper, ok := any(&referenced).(interface{ SkipKonnectReconciliation() bool }); ok && skipper.SkipKonnectReconciliation() {
+		if referenced.SkipKonnectReconciliation() {
 			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name})
 			continue
 		}

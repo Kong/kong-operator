@@ -461,7 +461,7 @@ func resolveAIGatewayModelAPIPolicies(ctx context.Context, cl client.Client, obj
 			continue
 		}
 		// An object the Konnect reconciler does not manage never gets a Konnect ID.
-		if skipper, ok := any(&referenced).(interface{ SkipKonnectReconciliation() bool }); ok && skipper.SkipKonnectReconciliation() {
+		if referenced.SkipKonnectReconciliation() {
 			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name})
 			continue
 		}
@@ -526,7 +526,7 @@ func resolveAIGatewayModelModelPolicies(ctx context.Context, cl client.Client, o
 			continue
 		}
 		// An object the Konnect reconciler does not manage never gets a Konnect ID.
-		if skipper, ok := any(&referenced).(interface{ SkipKonnectReconciliation() bool }); ok && skipper.SkipKonnectReconciliation() {
+		if referenced.SkipKonnectReconciliation() {
 			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name})
 			continue
 		}
@@ -593,7 +593,7 @@ func resolveAIGatewayModelAPIAccessAclsAllowAllow(ctx context.Context, cl client
 			continue
 		}
 		// An object the Konnect reconciler does not manage never gets a Konnect ID.
-		if skipper, ok := any(&referenced).(interface{ SkipKonnectReconciliation() bool }); ok && skipper.SkipKonnectReconciliation() {
+		if referenced.SkipKonnectReconciliation() {
 			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
 			continue
 		}
@@ -660,7 +660,7 @@ func resolveAIGatewayModelAPIAccessAclsDenyDeny(ctx context.Context, cl client.C
 			continue
 		}
 		// An object the Konnect reconciler does not manage never gets a Konnect ID.
-		if skipper, ok := any(&referenced).(interface{ SkipKonnectReconciliation() bool }); ok && skipper.SkipKonnectReconciliation() {
+		if referenced.SkipKonnectReconciliation() {
 			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
 			continue
 		}
@@ -727,7 +727,7 @@ func resolveAIGatewayModelModelAccessAclsAllowAllow(ctx context.Context, cl clie
 			continue
 		}
 		// An object the Konnect reconciler does not manage never gets a Konnect ID.
-		if skipper, ok := any(&referenced).(interface{ SkipKonnectReconciliation() bool }); ok && skipper.SkipKonnectReconciliation() {
+		if referenced.SkipKonnectReconciliation() {
 			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
 			continue
 		}
@@ -794,7 +794,7 @@ func resolveAIGatewayModelModelAccessAclsDenyDeny(ctx context.Context, cl client
 			continue
 		}
 		// An object the Konnect reconciler does not manage never gets a Konnect ID.
-		if skipper, ok := any(&referenced).(interface{ SkipKonnectReconciliation() bool }); ok && skipper.SkipKonnectReconciliation() {
+		if referenced.SkipKonnectReconciliation() {
 			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
 			continue
 		}
@@ -863,7 +863,7 @@ func resolveAIGatewayModelAPITargetsProvider(ctx context.Context, cl client.Clie
 			continue
 		}
 		// An object the Konnect reconciler does not manage never gets a Konnect ID.
-		if skipper, ok := any(&referenced).(interface{ SkipKonnectReconciliation() bool }); ok && skipper.SkipKonnectReconciliation() {
+		if referenced.SkipKonnectReconciliation() {
 			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayModelProvider", Namespace: ns, Name: ref.Name})
 			continue
 		}
@@ -932,7 +932,7 @@ func resolveAIGatewayModelModelTargetsProvider(ctx context.Context, cl client.Cl
 			continue
 		}
 		// An object the Konnect reconciler does not manage never gets a Konnect ID.
-		if skipper, ok := any(&referenced).(interface{ SkipKonnectReconciliation() bool }); ok && skipper.SkipKonnectReconciliation() {
+		if referenced.SkipKonnectReconciliation() {
 			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayModelProvider", Namespace: ns, Name: ref.Name})
 			continue
 		}
@@ -997,7 +997,7 @@ func resolveAIGatewayModelAPIAccessAuthStrategies(ctx context.Context, cl client
 			continue
 		}
 		// An object the Konnect reconciler does not manage never gets a Konnect ID.
-		if skipper, ok := any(&referenced).(interface{ SkipKonnectReconciliation() bool }); ok && skipper.SkipKonnectReconciliation() {
+		if referenced.SkipKonnectReconciliation() {
 			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayAuthStrategy", Namespace: ns, Name: ref.Name})
 			continue
 		}
@@ -1062,7 +1062,7 @@ func resolveAIGatewayModelModelAccessAuthStrategies(ctx context.Context, cl clie
 			continue
 		}
 		// An object the Konnect reconciler does not manage never gets a Konnect ID.
-		if skipper, ok := any(&referenced).(interface{ SkipKonnectReconciliation() bool }); ok && skipper.SkipKonnectReconciliation() {
+		if referenced.SkipKonnectReconciliation() {
 			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayAuthStrategy", Namespace: ns, Name: ref.Name})
 			continue
 		}
