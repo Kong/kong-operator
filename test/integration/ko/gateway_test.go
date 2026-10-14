@@ -682,9 +682,14 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	)
 
 	t.Log("verifying that the DataPlane's proxy ingress traffic is allowed")
+	// Kong proxy listens on the ports the Gateway's listeners
+	// are mapped to exposed as the ingress Service target ports.
 	var expectAllowProxyIngress networkPolicyIngressRuleDecorator
-	expectAllowProxyIngress.withTCPPort(consts.DataPlaneProxyPort)
-	expectAllowProxyIngress.withTCPPort(consts.DataPlaneProxySSLPort)
+	require.NotNil(t, dataplane.Spec.Network.Services)
+	require.NotNil(t, dataplane.Spec.Network.Services.Ingress)
+	for _, p := range dataplane.Spec.Network.Services.Ingress.Ports {
+		expectAllowProxyIngress.withTCPPort(p.TargetPort.IntValue())
+	}
 
 	t.Log("verifying that the DataPlane's metrics ingress traffic is allowed")
 	var expectAllowMetricsIngress networkPolicyIngressRuleDecorator

@@ -21,3 +21,13 @@ func TestGetSupportedFeaturesIncludesTCPRoute(t *testing.T) {
 		})
 	}
 }
+
+func TestGetSupportedFeaturesHTTPRouteParentRefPort(t *testing.T) {
+	expressions, err := GetSupportedFeatures(consts.RouterFlavorExpressions)
+	require.NoError(t, err)
+	require.Contains(t, expressions, features.SupportHTTPRouteParentRefPort)
+
+	traditionalCompatible, err := GetSupportedFeatures(consts.RouterFlavorTraditionalCompatible)
+	require.NoError(t, err)
+	require.NotContains(t, traditionalCompatible, features.SupportHTTPRouteParentRefPort)
+}

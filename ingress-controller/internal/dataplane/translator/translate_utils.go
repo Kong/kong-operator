@@ -126,3 +126,16 @@ func applyExpressionToIngressRules(result *ingressRules) {
 		}
 	}
 }
+
+// servicesUseListenerPort returns true if any route of the given services
+// matches on the listener port (see subtranslator.ListenerPortHeader).
+func servicesUseListenerPort(services []kongstate.Service) bool {
+	for _, svc := range services {
+		for _, r := range svc.Routes {
+			if r.Expression != nil && subtranslator.ExpressionUsesListenerPort(*r.Expression) {
+				return true
+			}
+		}
+	}
+	return false
+}

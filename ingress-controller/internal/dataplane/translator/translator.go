@@ -12,6 +12,7 @@ import (
 	dpconf "github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/config"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/license"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
@@ -239,6 +240,15 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 	result.FillPlugins(t.logger, t.storer, t.failuresCollector)
 	for i := range result.Plugins {
 		t.registerSuccessfullyTranslatedObject(result.Plugins[i].K8sParent)
+	}
+	// Added after the registration above, as it isn't generated from a Kubernetes object
+	// (or is a copy of an already registered one when merged into a user's global plugin).
+	if t.featureFlags.ExpressionRoutes && servicesUseListenerPort(result.Services) {
+		if plugin, i := subtranslator.ListenerPortPlugin(result.Plugins); i >= 0 {
+			result.Plugins[i] = plugin
+		} else {
+			result.Plugins = append(result.Plugins, plugin)
+		}
 	}
 
 	// process custom entities
