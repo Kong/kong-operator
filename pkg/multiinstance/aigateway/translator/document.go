@@ -33,6 +33,13 @@ import (
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
+// defaultMinRuntimeVersion is the minimum AI Gateway runtime version declared for
+// rendered configurations when the caller does not specify one: the oldest release
+// that must run the pushed output. Pinned to the converter README's example value;
+// TODO: derive it from the actual data plane version tag set on AIGatewayDataPlane
+// (tracked as a sub-issue of Kong/kong-operator#5402).
+const defaultMinRuntimeVersion = "2.1"
+
 // EntityStatus is the per-entity outcome of the document translation: Err is
 // nil for entities that were translated and included in the document, and the
 // conversion error for the ones that were not (they are excluded from the
@@ -138,8 +145,8 @@ func translateKind[
 // the entity's status.
 //
 // Entity kinds join here as they gain their own ToAIGW* conversion; until then the rendered
-// Document (and the dbless payload built from it) has dangling references and
-// RenderDBLessYAML reports them as warnings, not errors.
+// Document (and the dbless payload built from it) has dangling references, which
+// RenderDBLessYAML reports as converter issues instead of errors.
 //
 // The OnOnPremAIGatewayRef index extractor only matches entities whose aiGatewayRef resolves
 // to an OnPremAIGateway, so a KonnectAIGateway sharing namespace/name with this
@@ -262,9 +269,20 @@ func BuildDocument(
 }
 
 // RenderDBLessYAML converts the translated AI Gateway document into the flattened
-// db-less YAML payload understood by Kong data planes. Unresolved references are
-// reported as warnings, not errors, unless opts.Strict is set.
-func RenderDBLessYAML(doc *aigw.Document, opts convert.Options) ([]byte, []string, error) {
+// db-less YAML payload understood by Kong data planes. Alongside the payload it
+// returns the typed conversion issues reported by the converter: a Warning issue
+// means the converter worked around a problem (the output is valid but may not
+// fully match the intent), while an Error issue means the offending entity was
+// left out of the output entirely - the caller is expected to attribute those
+// back to the entities' CRs (see the aigateway package's attributeConversionIssues).
+func RenderDBLessYAML(doc *aigw.Document, opts convert.Options) ([]byte, []convert.ConversionIssue, error) {
+	if opts.MinRuntimeVersion == "" {
+		// The converter requires a minimum AI Gateway runtime version: the oldest
+		// release that must run the pushed output. It gates which features the
+		// converter emits. Pinned for now; follow-up issue tracks deriving it from
+		// the actual data plane version tag set on AIGatewayDataPlane.
+		opts.MinRuntimeVersion = defaultMinRuntimeVersion
+	}
 	// The converter's public entry point (convert.Convert) only accepts YAML bytes,
 	// so the document built by BuildDocument goes through a marshal/reparse
 	// round-trip: aigw.Document is the converter's file format, so it round-trips
@@ -273,10 +291,10 @@ func RenderDBLessYAML(doc *aigw.Document, opts convert.Options) ([]byte, []strin
 	if err != nil {
 		return nil, nil, fmt.Errorf("marshaling AI Gateway document: %w", err)
 	}
-	kongDoc, warnings, err := convert.Convert(src, opts)
+	result, err := convert.Convert(src, opts)
 	if err != nil {
-		return nil, warnings, err
+		return nil, nil, err
 	}
-	payload, err := kongDoc.ToDBLess().ToYAML()
-	return payload, warnings, err
+	payload, err := result.Output.ToDBLess().ToYAML()
+	return payload, result.Issues, err
 }

@@ -96,8 +96,8 @@ func (obj *AIGatewayModel) ToAIGWModel(ctx context.Context, cl client.Client) (*
 	if err != nil {
 		return nil, fmt.Errorf("resolving AIGatewayModel %s/%s access.authStrategies: %w", obj.Namespace, obj.Name, err)
 	}
-	// aigw.ModelAccess.UnmarshalYAML already folded the deprecated identity_providers key into
-	// Access.AuthStrategies; current-key refs come first.
+	// marshalAIGWPayload renamed the deprecated identity_providers key to auth_strategies
+	// (aigw rejects the old key); resolved current-key refs are re-attached first.
 	model.Access.AuthStrategies = append(authStrategies, model.Access.AuthStrategies...)
 
 	if access.Acls != nil {
@@ -163,6 +163,13 @@ func (spec *AIGatewayModelAPISpec) marshalAIGWPayload() ([]byte, error) {
 	if a, ok := cfg["access"].(map[string]any); ok {
 		delete(a, "auth_strategies")
 		delete(a, "acls")
+		// The deprecated identity_providers carries plain strings with no CR references;
+		// aigw no longer folds the key into AuthStrategies (it rejects it), so do the
+		// rename here: ToAIGWModel re-attaches the resolved refs first, these last.
+		if idps, ok := a["identity_providers"]; ok {
+			delete(a, "identity_providers")
+			a["auth_strategies"] = idps
+		}
 	}
 	if ts, ok := cfg["targets"].([]any); ok {
 		for _, t := range ts {

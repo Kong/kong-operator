@@ -233,9 +233,9 @@ func mcpServerRefs(refs []AIGatewayMCPServerRef) []namespacedRef {
 //   - strips the CR-reference keys (policies, sources, access.acls,
 //     access.default_tool_acls, access.auth_strategies, tools[].access.acls: they carry
 //     {kind,name} references, aigw wants plain resolved names, re-attached in
-//     ToAIGWMCPServer). The deprecated access.identity_providers stays: it carries plain
-//     strings with no CR references, and aigw.MCPAccess.UnmarshalYAML folds it into
-//     AuthStrategies,
+//     ToAIGWMCPServer). The deprecated access.identity_providers is renamed to
+//     access.auth_strategies: it carries plain strings with no CR references, and aigw
+//     no longer folds the old key (it rejects it),
 //   - moves the variant's config.url to the top-level upstream_url the aigw document
 //     carries it under (the listener variant has no config.url and needs no move),
 //   - drops config.cache and config.allowed_versions: they have no aigw slot, the on-prem
@@ -267,6 +267,13 @@ func (obj *AIGatewayMCPServer) marshalAIGWMCPServerPayload() ([]byte, error) {
 		delete(a, "auth_strategies")
 		delete(a, "acls")
 		delete(a, "default_tool_acls")
+		// The deprecated identity_providers carries plain strings with no CR references;
+		// aigw no longer folds the key into AuthStrategies (it rejects it), so do the
+		// rename here: ToAIGWMCPServer re-attaches the resolved refs first, these last.
+		if idps, ok := a["identity_providers"]; ok {
+			delete(a, "identity_providers")
+			a["auth_strategies"] = idps
+		}
 	}
 	if ts, ok := cfg["tools"].([]any); ok {
 		for _, t := range ts {

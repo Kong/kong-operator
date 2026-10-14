@@ -31,7 +31,7 @@ func wantMCPServerFromYAML(t *testing.T, literal string) *aigw.MCPServer {
 // test below), the CR reference resolution (deliberately without any SetKonnectID on the
 // referenced entities, pinning that the on-prem translation uses the name-only resolver),
 // the config.url -> upstream_url move, the Enabled/Disabled boolean normalization and the
-// deprecated identity_providers folding into AuthStrategies. (The managed_by drop and the
+// deprecated identity_providers renaming to auth_strategies. (The managed_by drop and the
 // cache/allowed_versions drop are pinned by the strict round-trip test below, the only
 // decode that can see those keys.)
 func TestAIGatewayMCPServer_ToAIGWMCPServer(t *testing.T) {
@@ -192,7 +192,7 @@ tools:
 `,
 		},
 		{
-			name: "listener: sources resolved, consumer access with server and default-tool ACLs, auth strategies, identity_providers folded; cache and allowed_versions dropped",
+			name: "listener: sources resolved, consumer access with server and default-tool ACLs, auth strategies, identity_providers renamed; cache and allowed_versions dropped",
 			obj: newMCPServer(&AIGatewayMCPServerConfig{
 				Type: AIGatewayMCPServerConfigTypeListener,
 				Listener: &AIGatewayMCPServerListener{

@@ -341,16 +341,22 @@ func (i *Instance) sendConfig(
 	}
 	included, failures := splitEntityStatuses(entityStatuses)
 
-	payload, warnings, err := translator.RenderDBLessYAML(doc, convert.Options{Strict: false})
+	payload, issues, err := translator.RenderDBLessYAML(doc, convert.Options{})
 	if err != nil {
 		// The rendered payload is broken, so nothing gets pushed: every entity
 		// included in the document failed to be applied.
 		i.statusReporter.Report(nil, append(failuresForAll(included, err), failures...))
 		// Surface the translation failure (and any warnings the converter
 		// reported before failing) on the gateway status and events.
-		i.reportTranslationStatus(ctx, *gw, err, failures, warnings)
+		i.reportTranslationStatus(ctx, *gw, err, failures, conversionIssueWarnings(issues))
 		return fmt.Errorf("rendering dbless configuration: %w", err)
 	}
+	// The converter's WARNING issues mean it worked around a problem, so they are
+	// only reported as events. Its ERROR issues mean it dropped the offending
+	// entity from the payload: those are attributed back to the entities' CRs, so
+	// that their Programmed condition reports the drop while the rest of the
+	// payload is still pushed.
+	included, failures, warnings := attributeConversionIssues(included, failures, issues)
 	// The translation outcome is fully known here: report it before the push, so
 	// that push failures - which belong to the DataPlanesConfigured condition -
 	// do not alter it.
@@ -410,6 +416,109 @@ func failuresForAll(objs []client.Object, err error) []EntityFailure {
 		failures = append(failures, EntityFailure{Obj: obj, Err: err})
 	}
 	return failures
+}
+
+// conversionIssueKindToCRTypeName maps a conversion issue's Source.Kind (the
+// converter's singular document keys, public API in ai-deck-converter) to the
+// aiconfiguration CR type name (GetTypeName) the entity is translated from.
+// Kinds with no entry degrade their ERROR issues to warnings: a model
+// provider's problems surface as issues on the model referencing it, and
+// certificates report no issues.
+var conversionIssueKindToCRTypeName = map[string]string{
+	"model":          "AIGatewayModel",
+	"mcp_server":     "AIGatewayMCPServer",
+	"agent":          "AIGatewayAgent",
+	"policy":         "AIGatewayPolicy",
+	"custom_policy":  "AIGatewayCustomPolicy",
+	"auth_strategy":  "AIGatewayAuthStrategy",
+	"consumer":       "AIGatewayConsumer",
+	"consumer_group": "AIGatewayConsumerGroup",
+	"sni":            "AIGatewaySNI",
+}
+
+// attributeConversionIssues applies the converter's issues to the sync's entity
+// status. An ERROR-severity issue means the converter dropped the offending
+// entity from the rendered payload, so the entity's CR is attributed the failure
+// (its Programmed condition reports the drop) and removed from the included set:
+// the issue's Source.Kind and Source.Name match the CR's type name (GetTypeName)
+// and AI Gateway name (GetKonnectName). The remaining payload is still pushed.
+//
+// It returns the warning texts to report as events: every WARNING-severity issue
+// (the converter worked around the problem), plus - defensively, since today
+// every issue Source.Kind is a kind translated into the document and a dropped
+// entity is always included - any ERROR issue matching no included entity, which
+// would otherwise be silently lost.
+func attributeConversionIssues(
+	included []client.Object,
+	failures []EntityFailure,
+	issues []convert.ConversionIssue,
+) (remainingIncluded []client.Object, remainingFailures []EntityFailure, warnings []string) {
+	// GetKonnectName derives from the CR's spec, not its metadata name, so two
+	// CRs of one kind can share a key (and a nil AIGatewayModelConfig yields
+	// ""). Map the key to all matching CRs and attribute the issue to each of
+	// them: they translate into the same document entity, whose drop is
+	// reported against the shared name.
+	type key struct{ typeName, konnectName string }
+	byKey := make(map[key][]client.Object, len(included))
+	for _, obj := range included {
+		// Every aiconfiguration CR carries the generated GetTypeName and
+		// GetKonnectName methods.
+		typeNamer, ok1 := obj.(interface{ GetTypeName() string })
+		nameNamer, ok2 := obj.(interface{ GetKonnectName() string })
+		if !ok1 || !ok2 {
+			continue
+		}
+		k := key{typeNamer.GetTypeName(), nameNamer.GetKonnectName()}
+		byKey[k] = append(byKey[k], obj)
+	}
+
+	dropped := make(map[client.Object]struct{})
+	warnings = make([]string, 0, len(issues))
+	for _, issue := range issues {
+		if issue.Severity != convert.Error {
+			warnings = append(warnings, issue.String())
+			continue
+		}
+		var matches []client.Object
+		if typeName, ok := conversionIssueKindToCRTypeName[issue.Source.Kind]; ok {
+			matches = byKey[key{typeName, issue.Source.Name}]
+		}
+		if len(matches) == 0 {
+			warnings = append(warnings, issue.String())
+			continue
+		}
+		for _, obj := range matches {
+			if _, already := dropped[obj]; already {
+				continue
+			}
+			dropped[obj] = struct{}{}
+			failures = append(failures, EntityFailure{
+				Obj: obj,
+				Err: fmt.Errorf("the converter dropped the entity from the rendered configuration: %s", issue),
+			})
+		}
+	}
+	if len(dropped) == 0 {
+		return included, failures, warnings
+	}
+	remainingIncluded = make([]client.Object, 0, len(included)-len(dropped))
+	for _, obj := range included {
+		if _, drop := dropped[obj]; !drop {
+			remainingIncluded = append(remainingIncluded, obj)
+		}
+	}
+	return remainingIncluded, failures, warnings
+}
+
+// conversionIssueWarnings formats the given converter issues as one-line warning
+// texts, used when the rendering failed as a whole and the issues cannot be
+// attributed to entities (nothing gets pushed anyway).
+func conversionIssueWarnings(issues []convert.ConversionIssue) []string {
+	warnings := make([]string, 0, len(issues))
+	for _, issue := range issues {
+		warnings = append(warnings, issue.String())
+	}
+	return warnings
 }
 
 // syncPending re-renders the configuration for every gateway with pending changes and removes
