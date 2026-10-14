@@ -107,8 +107,11 @@
   `spec.gatewayRef` and `spec.parentRef` must be set, so existing manifests
   keep working unchanged. `spec.gatewayRef` can be replaced by a
   `spec.parentRef` referencing the same gateway, but not the other way around.
-  The `EventGatewayDataPlaneCertificate` the operator creates for a
-  `KegDataPlane` now uses `spec.parentRef`.
+  Releases without `spec.parentRef` drop it from objects that use it, so after
+  moving an object to `spec.parentRef`, rolling back to such a release
+  requires recreating that object. The `EventGatewayDataPlaneCertificate` the
+  operator creates for a `KegDataPlane` keeps using `spec.gatewayRef`, so it
+  is not affected.
   [#6097](https://github.com/Kong/kong-operator/pull/6097)
 - `--konnect-list-page-size` flag (default and maximum `100`): the page size
   the operator requests when listing Konnect entities to find the Konnect

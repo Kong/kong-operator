@@ -49,6 +49,18 @@ func (r *Reconciler[T, Cert]) ensureKonnectCertificate(
 
 	k8sutils.SetOwnerForObject(desired, dp)
 
+	if adapt := r.Config.Certificate.AdaptToExisting; adapt != nil {
+		existing := r.Config.NewCertificateObject()
+		err := r.Get(ctx, client.ObjectKeyFromObject(desired), existing)
+		switch {
+		case err == nil:
+			adapt(desired, existing)
+		case !apierrors.IsNotFound(err):
+			return false, fmt.Errorf("failed to get %s %s/%s: %w",
+				r.Config.Certificate.Kind, desired.GetNamespace(), desired.GetName(), err)
+		}
+	}
+
 	result, err := controllerpkgssa.ApplyIfChanged(ctx, logger, r.Client, r.TypeConverter, desired, controllerpkgssa.FieldManager)
 	if err != nil {
 		setStatusCondition(dp, metav1.Condition{

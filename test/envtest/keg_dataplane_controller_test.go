@@ -359,6 +359,80 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 		}, waitTime, tickTime)
 	})
 
+	t.Run("certificate reference field: gatewayRef for new certificates, parentRef kept when already in use", func(t *testing.T) {
+		t.Parallel()
+
+		kep := &konnectv1alpha1.KonnectEventGateway{
+			Name:      "kep-cert-ref-field",
+			Namespace: ns.Name,
+		}
+		require.NoError(t, cl.Create(ctx, kep))
+		UpdateKonnectEventGatewayStatusWithProgrammed(t, ctx, cl, kep, "konnect-id-cert-ref-field")
+
+		egdp := &eventgatewayv1alpha1.KegDataPlane{
+			Name:      "egdp-cert-ref-field",
+			Namespace: ns.Name,
+			Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
+				ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
+					Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
+					KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
+						Name: kep.Name,
+					},
+				},
+			},
+		}
+		require.NoError(t, cl.Create(ctx, egdp))
+
+		t.Log("a new certificate references the gateway through the deprecated spec.gatewayRef")
+		konnectCert := waitForKEGCertificate(t, ctx, cl, egdp)
+		require.NotNil(t, konnectCert.Spec.GatewayRef.NamespacedRef)
+		assert.Equal(t, kep.Name, konnectCert.Spec.GatewayRef.NamespacedRef.Name)
+		assert.Nil(t, konnectCert.Spec.ParentRef)
+		updateEventGatewayDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, konnectCert)
+
+		t.Log("moving the Programmed certificate to spec.parentRef, as a newer operator version or a user would")
+		const managedByLabel = consts.GatewayOperatorManagedByNameLabel
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			cert := &configurationv1alpha1.EventGatewayDataPlaneCertificate{}
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(konnectCert), cert)) {
+				return
+			}
+			cert.Spec.ParentRef = &commonv1alpha1.GatewayRef{
+				Group: konnectv1alpha1.GroupVersion.Group,
+				Kind:  "KonnectEventGateway",
+				Name:  kep.Name,
+			}
+			cert.Spec.GatewayRef = commonv1alpha1.ObjectRef{}
+			// Dropping a label the operator manages forces its next reconcile
+			// to apply the certificate instead of finding nothing to change.
+			delete(cert.Labels, managedByLabel)
+			assert.NoError(ct, cl.Update(ctx, cert))
+		}, waitTime, tickTime)
+
+		t.Log("the operator restores its label and keeps spec.parentRef: an apply with gatewayRef would be rejected")
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			cert := &configurationv1alpha1.EventGatewayDataPlaneCertificate{}
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(konnectCert), cert)) {
+				return
+			}
+			assert.Equal(ct, egdp.Name, cert.Labels[managedByLabel])
+			if assert.NotNil(ct, cert.Spec.ParentRef) {
+				assert.Equal(ct, kep.Name, cert.Spec.ParentRef.Name)
+			}
+			assert.Zero(ct, cert.Spec.GatewayRef)
+		}, waitTime, tickTime)
+
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(egdp), egdp)) {
+				return
+			}
+			cond := apimeta.FindStatusCondition(egdp.Status.Conditions, string(eventgatewayv1alpha1.KonnectCertificateRegisteredType))
+			if assert.NotNil(ct, cond) {
+				assert.Equal(ct, metav1.ConditionTrue, cond.Status)
+			}
+		}, waitTime, tickTime)
+	})
+
 	t.Run("deletion: owned Deployment and EventGatewayDataPlaneCertificate are GC'd", func(t *testing.T) {
 		t.Parallel()
 
@@ -1455,115 +1529,4 @@ func TestKEGDataPlaneReconciler_ManualCertificateSecret(t *testing.T) {
 		}, waitTime, tickTime)
 		assert.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(userSecret), &corev1.Secret{}))
 	})
-}
-
-// TestKEGDataPlaneCertificateGatewayRefUpgrade covers the upgrade of an
-// EventGatewayDataPlaneCertificate created by an operator version which
-// referenced the gateway through the now deprecated spec.gatewayRef: applying
-// the certificate as the operator builds it today must move it to
-// spec.parentRef, also when it is already Programmed.
-func TestKEGDataPlaneCertificateGatewayRefUpgrade(t *testing.T) {
-	t.Parallel()
-
-	ctx := t.Context()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
-
-	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, kegCRDGroups)
-	require.NoError(t, err)
-	StartReconcilers(ctx, t, mgr, logs,
-		&crdschema.Reconciler{
-			Client:   mgr.GetClient(),
-			Provider: ssaProvider,
-		},
-	)
-	cl := mgr.GetClient()
-
-	const (
-		certName    = "keg-dp-cert"
-		gatewayName = "keg"
-	)
-	newCert := func() *configurationv1alpha1.EventGatewayDataPlaneCertificate {
-		return &configurationv1alpha1.EventGatewayDataPlaneCertificate{
-			APIVersion: configurationv1alpha1.GroupVersion.String(),
-			Kind:       "EventGatewayDataPlaneCertificate",
-			Name:       certName,
-			Namespace:  ns.Name,
-			Spec: configurationv1alpha1.EventGatewayDataPlaneCertificateSpec{
-				APISpec: configurationv1alpha1.EventGatewayDataPlaneCertificateAPISpec{
-					Certificate: configurationv1alpha1.SensitiveDataSource{
-						Type:      configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
-						SecretRef: &configurationv1alpha1.SensitiveDataSecretRef{Name: "cert-secret", Key: corev1.TLSCertKey},
-					},
-					Name: certName,
-				},
-			},
-		}
-	}
-	// apply applies the certificate like the DataPlane reconciler does and
-	// returns the outcome. The TypeConverter is (re)built asynchronously from
-	// the installed CRDs, which can fail the comparison preceding the apply:
-	// like the reconciler, retry until it goes through.
-	apply := func(cert *configurationv1alpha1.EventGatewayDataPlaneCertificate) string {
-		var res string
-		require.EventuallyWithT(t, func(ct *assert.CollectT) {
-			r, err := controllerpkgssa.ApplyIfChanged(ctx, mgr.GetLogger(), cl, ssaProvider, cert.DeepCopy(), controllerpkgssa.FieldManager)
-			if assert.NoError(ct, err) {
-				res = string(r)
-			}
-		}, waitTime, tickTime)
-		return res
-	}
-
-	t.Log("creating the certificate as the previous operator version did, with spec.gatewayRef")
-	legacy := newCert()
-	legacy.Spec.GatewayRef = commonv1alpha1.ObjectRef{
-		Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
-		NamespacedRef: &commonv1alpha1.NamespacedRef{Name: gatewayName},
-	}
-	require.Equal(t, "created", apply(legacy))
-
-	t.Log("marking the certificate Programmed")
-	// The manager's client reads from a cache: wait for it to catch up.
-	existing := &configurationv1alpha1.EventGatewayDataPlaneCertificate{}
-	require.EventuallyWithT(t, func(ct *assert.CollectT) {
-		assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(legacy), existing))
-	}, waitTime, tickTime)
-	require.NotNil(t, existing.Spec.GatewayRef.NamespacedRef)
-	existing.Status.Conditions = []metav1.Condition{{
-		Type:               string(konnectv1alpha1.KonnectEntityProgrammedConditionType),
-		Status:             metav1.ConditionTrue,
-		Reason:             "Programmed",
-		LastTransitionTime: metav1.Now(),
-	}}
-	existing.Status.ID = "konnect-cert-id"
-	require.NoError(t, cl.Status().Update(ctx, existing))
-	require.EventuallyWithT(t, func(ct *assert.CollectT) {
-		cert := &configurationv1alpha1.EventGatewayDataPlaneCertificate{}
-		if assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(legacy), cert)) {
-			assert.Equal(ct, "konnect-cert-id", cert.Status.ID)
-		}
-	}, waitTime, tickTime)
-
-	t.Log("applying the certificate as the operator builds it now, with spec.parentRef")
-	desired := newCert()
-	desired.Spec.ParentRef = &commonv1alpha1.GatewayRef{
-		Group: konnectv1alpha1.GroupVersion.Group,
-		Kind:  "KonnectEventGateway",
-		Name:  gatewayName,
-	}
-	require.Equal(t, "updated", apply(desired))
-
-	require.EventuallyWithT(t, func(ct *assert.CollectT) {
-		upgraded := &configurationv1alpha1.EventGatewayDataPlaneCertificate{}
-		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(desired), upgraded)) {
-			return
-		}
-		assert.Equal(ct, desired.Spec.ParentRef, upgraded.Spec.ParentRef)
-		assert.Zero(ct, upgraded.Spec.GatewayRef, "the deprecated spec.gatewayRef must be dropped")
-		assert.Equal(ct, "konnect-cert-id", upgraded.Status.ID, "the Konnect entity must be kept")
-	}, waitTime, tickTime)
-
-	t.Log("applying it again is a no-op")
-	require.Equal(t, "noop", apply(desired))
 }

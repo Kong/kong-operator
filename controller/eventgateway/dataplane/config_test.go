@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	shareddataplane "github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 )
 
@@ -55,17 +56,54 @@ func TestBuildEventGatewayDataPlaneCertificate(t *testing.T) {
 		"cert-secret", "checksum",
 	)
 
-	// The gateway is referenced through spec.parentRef only: the deprecated
-	// spec.gatewayRef must stay unset, as exactly one of the two is allowed.
-	assert.Equal(t, &commonv1alpha1.GatewayRef{
-		Group: "konnect.konghq.com",
-		Kind:  "KonnectEventGateway",
-		Name:  reconcileTestKEGName,
-	}, cert.Spec.ParentRef)
-	assert.Zero(t, cert.Spec.GatewayRef)
+	// New certificates reference the gateway through the deprecated
+	// spec.gatewayRef, which CRDs of releases without parentRef understand, so
+	// that rolling the operator back leaves them intact.
+	assert.Equal(t, commonv1alpha1.ObjectRef{
+		Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+		NamespacedRef: &commonv1alpha1.NamespacedRef{Name: reconcileTestKEGName},
+	}, cert.Spec.GatewayRef)
+	assert.Nil(t, cert.Spec.ParentRef)
 
 	assert.Equal(t, egdp.Namespace, cert.Namespace)
 	assert.Equal(t, shareddataplane.CertEntityName(egdp.Name, "checksum"), cert.Name)
 	require.NotNil(t, cert.Spec.APISpec.Certificate.SecretRef)
 	assert.Equal(t, "cert-secret", cert.Spec.APISpec.Certificate.SecretRef.Name)
+}
+
+func TestKeepEventGatewayDataPlaneCertificateRefField(t *testing.T) {
+	build := func() *configurationv1alpha1.EventGatewayDataPlaneCertificate {
+		return buildEventGatewayDataPlaneCertificate(
+			newReconcileEGDP(),
+			shareddataplane.ResolvedControlPlane{Kind: konnectEventGatewayKind.Kind, IsKonnect: true, Object: newProgrammedKEG()},
+			"cert-secret", "checksum",
+		)
+	}
+	gatewayRef := commonv1alpha1.ObjectRef{
+		Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+		NamespacedRef: &commonv1alpha1.NamespacedRef{Name: reconcileTestKEGName},
+	}
+	parentRef := &commonv1alpha1.GatewayRef{
+		Group: "konnect.konghq.com",
+		Kind:  "KonnectEventGateway",
+		Name:  reconcileTestKEGName,
+	}
+
+	t.Run("existing certificate using gatewayRef keeps gatewayRef", func(t *testing.T) {
+		desired := build()
+		existing := build()
+		keepEventGatewayDataPlaneCertificateRefField(desired, existing)
+		assert.Equal(t, gatewayRef, desired.Spec.GatewayRef)
+		assert.Nil(t, desired.Spec.ParentRef)
+	})
+
+	t.Run("existing certificate using parentRef keeps parentRef", func(t *testing.T) {
+		desired := build()
+		existing := build()
+		existing.Spec.GatewayRef = commonv1alpha1.ObjectRef{}
+		existing.Spec.ParentRef = parentRef.DeepCopy()
+		keepEventGatewayDataPlaneCertificateRefField(desired, existing)
+		assert.Equal(t, parentRef, desired.Spec.ParentRef)
+		assert.Zero(t, desired.Spec.GatewayRef)
+	})
 }

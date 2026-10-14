@@ -119,10 +119,11 @@ var config = shareddataplane.Config[
 		*eventgatewayv1alpha1.KegDataPlane,
 		*configurationv1alpha1.EventGatewayDataPlaneCertificate,
 	]{
-		LabelKey: consts.SecretKEGDataPlaneCertificateLabel,
-		Kind:     "EventGatewayDataPlaneCertificate",
-		Build:    buildEventGatewayDataPlaneCertificate,
-		Ensure:   secrets.EnsureCertificate[*eventgatewayv1alpha1.KegDataPlane],
+		LabelKey:        consts.SecretKEGDataPlaneCertificateLabel,
+		Kind:            "EventGatewayDataPlaneCertificate",
+		Build:           buildEventGatewayDataPlaneCertificate,
+		AdaptToExisting: keepEventGatewayDataPlaneCertificateRefField,
+		Ensure:          secrets.EnsureCertificate[*eventgatewayv1alpha1.KegDataPlane],
 		// Requested is left nil: KEG always needs a certificate to connect to
 		// its (Konnect-backed) control plane, so an unresolved one always
 		// blocks the Deployment.
@@ -444,10 +445,15 @@ func buildEventGatewayDataPlaneCertificate(
 		Namespace:  egdp.Namespace,
 		Labels:     selectorLabelsForKegDataPlane(egdp),
 		Spec: configurationv1alpha1.EventGatewayDataPlaneCertificateSpec{
-			ParentRef: &commonv1alpha1.GatewayRef{
-				Group: konnectv1alpha1.GroupVersion.Group,
-				Kind:  "KonnectEventGateway",
-				Name:  keg.Name,
+			// The deprecated gatewayRef is used on purpose: CRDs of releases
+			// without parentRef drop it, which would leave the certificate
+			// with no reference after a rollback. See
+			// keepEventGatewayDataPlaneCertificateRefField.
+			GatewayRef: commonv1alpha1.ObjectRef{
+				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
+					Name: keg.Name,
+				},
 			},
 			APISpec: configurationv1alpha1.EventGatewayDataPlaneCertificateAPISpec{
 				Certificate: configurationv1alpha1.SensitiveDataSource{
@@ -461,6 +467,26 @@ func buildEventGatewayDataPlaneCertificate(
 			},
 		},
 	}
+}
+
+// keepEventGatewayDataPlaneCertificateRefField makes the desired certificate
+// reference its KonnectEventGateway through the same field as the existing
+// one. The CRD never allows replacing parentRef with gatewayRef, so a
+// certificate that already uses parentRef (e.g. created by a newer operator
+// before a rollback, or migrated by a user) must keep it; otherwise every
+// apply would be rejected.
+func keepEventGatewayDataPlaneCertificateRefField(
+	desired, existing *configurationv1alpha1.EventGatewayDataPlaneCertificate,
+) {
+	if existing.Spec.ParentRef == nil || desired.Spec.ParentRef != nil {
+		return
+	}
+	desired.Spec.ParentRef = &commonv1alpha1.GatewayRef{
+		Group: konnectv1alpha1.GroupVersion.Group,
+		Kind:  "KonnectEventGateway",
+		Name:  desired.Spec.GatewayRef.NamespacedRef.Name,
+	}
+	desired.Spec.GatewayRef = commonv1alpha1.ObjectRef{}
 }
 
 // selectorLabelsForKegDataPlane returns the labels identifying the
