@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -1271,6 +1273,78 @@ func TestKEGDataPlaneReconciler_HPA(t *testing.T) {
 				return
 			}
 			assert.Equal(ct, int32(10), hpa.Spec.MaxReplicas)
+		}, waitTime, tickTime)
+	})
+
+	t.Run("HPA can scale the Deployment above minReplicas", func(t *testing.T) {
+		t.Parallel()
+
+		const (
+			minReplicas    = int32(2)
+			scaledReplicas = int32(4)
+		)
+
+		egdp := setupProgrammedKEGDP(t, ctx, cl, ns.Name,
+			"keg-hpa-scale-up", "konnect-id-hpa-scale-up", "egdp-hpa-scale-up",
+			eventgatewayv1alpha1.KegDataPlaneSpec{
+				Deployment: &eventgatewayv1alpha1.DeploymentOptions{
+					Scaling: &eventgatewayv1alpha1.Scaling{
+						HorizontalScaling: &eventgatewayv1alpha1.HorizontalScaling{
+							MinReplicas: new(minReplicas),
+							MaxReplicas: maxReplicas,
+						},
+					},
+				},
+			},
+		)
+		_ = waitForKEGHPA(t, ctx, cl, ns.Name, egdp.Name)
+		deploy := waitForKEGDeployment(t, ctx, cl, ns.Name, egdp.Name)
+
+		// envtest runs no kube-controller-manager, so act as the HPA controller:
+		// scale the Deployment through its scale subresource under the HPA's
+		// field manager.
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			scale := &autoscalingv1.Scale{}
+			if !assert.NoError(ct, cl.SubResource("scale").Get(ctx, &deploy, scale)) {
+				return
+			}
+			scale.Spec.Replicas = scaledReplicas
+			assert.NoError(ct, cl.SubResource("scale").Update(ctx, &deploy,
+				client.WithSubResourceBody(scale),
+				client.FieldOwner("horizontal-pod-autoscaler"),
+			))
+		}, waitTime, tickTime)
+
+		// The scale-up triggers a reconcile through the owned Deployment watch.
+		// The operator must leave the HPA-managed replica count alone. Read
+		// through the API reader, as the cache may briefly lag behind the update.
+		observed := scaledReplicas
+		assert.Never(t, func() bool {
+			var d appsv1.Deployment
+			if err := mgr.GetAPIReader().Get(ctx, client.ObjectKeyFromObject(&deploy), &d); err != nil || d.Spec.Replicas == nil {
+				return false
+			}
+			observed = *d.Spec.Replicas
+			return observed != scaledReplicas
+		}, 5*time.Second, tickTime)
+		assert.Equal(t, scaledReplicas, observed, "operator reverted the Deployment replicas set by the HPA")
+
+		// An unrelated change applies the Deployment again, now without
+		// spec.replicas, which the HPA scale took over: the scale must stay.
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(egdp), egdp)) {
+				return
+			}
+			egdp.Spec.Deployment.Labels = map[string]string{"hpa-test": "true"}
+			assert.NoError(ct, cl.Update(ctx, egdp))
+		}, waitTime, tickTime)
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			var d appsv1.Deployment
+			if !assert.NoError(ct, mgr.GetAPIReader().Get(ctx, client.ObjectKeyFromObject(&deploy), &d)) {
+				return
+			}
+			assert.Equal(ct, "true", d.Labels["hpa-test"])
+			assert.Equal(ct, new(scaledReplicas), d.Spec.Replicas, "operator reverted the Deployment replicas set by the HPA")
 		}, waitTime, tickTime)
 	})
 }

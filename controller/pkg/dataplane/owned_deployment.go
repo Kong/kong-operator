@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/managedfields"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/kong-operator/v2/controller/pkg/hpa"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/controller/pkg/reservedkeys"
@@ -54,6 +55,21 @@ func (r *Reconciler[T, Cert]) ensureDeployment(
 	desired, err := BuildDeployment(logger, r.TypeConverter, dp, cp, image, certSecretName, adminCertSecretName, certChecksum, r.Config)
 	if err != nil {
 		return fmt.Errorf("failed to build Deployment for %s %s/%s: %w",
+			r.Config.Kind, dp.GetNamespace(), dp.GetName(), err)
+	}
+
+	// With horizontal scaling the HPA owns the replica count: keep the current
+	// value instead of applying minReplicas, which would revert every scale-up,
+	// and once the HPA has scaled the Deployment, do not apply it at all.
+	desiredReplicas, err := hpa.DesiredDeploymentReplicas(ctx, r.Client, dp, client.ObjectKeyFromObject(desired))
+	if err != nil {
+		return fmt.Errorf("failed to resolve Deployment replicas for %s %s/%s: %w",
+			r.Config.Kind, dp.GetNamespace(), dp.GetName(), err)
+	}
+	if desiredReplicas == nil {
+		unstructured.RemoveNestedField(desired.Object, "spec", "replicas")
+	} else if err := unstructured.SetNestedField(desired.Object, int64(*desiredReplicas), "spec", "replicas"); err != nil {
+		return fmt.Errorf("failed to set Deployment replicas for %s %s/%s: %w",
 			r.Config.Kind, dp.GetNamespace(), dp.GetName(), err)
 	}
 
@@ -274,7 +290,7 @@ func GenerateBaseDeployment[T Object, Cert CertificateObject](
 		Namespace:  dp.GetNamespace(),
 		Labels:     labels,
 		Spec: appsv1.DeploymentSpec{
-			Replicas: replicas(dp, cfg.Deployment),
+			Replicas: hpa.DeploymentReplicas(dp, nil),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: selector,
 			},
@@ -342,14 +358,4 @@ func certChecksumAnnotation(checksum, key string) map[string]string {
 		return nil
 	}
 	return map[string]string{key: checksum}
-}
-
-// replicas returns the replica count to seed on the Deployment: the static
-// replica count, or the HPA minReplicas when horizontal scaling is configured
-// so the Deployment scales up immediately before the HPA's first evaluation.
-func replicas[T Object](dp T, cfg DeploymentConfig[T]) *int32 {
-	if hs := dp.GetHorizontalScaling(); hs != nil {
-		return hs.MinReplicas
-	}
-	return cfg.Replicas(dp)
 }

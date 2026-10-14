@@ -19,6 +19,7 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	mcpv1alpha1 "github.com/kong/kong-operator/v2/api/mcp/v1alpha1"
 	konnectcontroller "github.com/kong/kong-operator/v2/controller/konnect"
+	"github.com/kong/kong-operator/v2/controller/pkg/hpa"
 	log "github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/controller/pkg/reservedkeys"
@@ -207,6 +208,16 @@ func (r *MCPServerDataPlaneReconciler) ensureDeployment(
 
 	desired := generateDeployment(logger, mcpDataPlane, mcpMetadata, tokenSecret, apiURL)
 
+	// With horizontal scaling the HPA owns the replica count: keep the current
+	// value instead of applying minReplicas, which would revert every scale-up,
+	// and once the HPA has scaled the Deployment, do not apply it at all (nil).
+	replicas, err := hpa.DesiredDeploymentReplicas(ctx, r.Client, mcpDataPlane, client.ObjectKeyFromObject(desired))
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve Deployment replicas for MCPServer %s/%s: %w",
+			mcpDataPlane.Namespace, mcpDataPlane.Name, err)
+	}
+	desired.Spec.Replicas = replicas
+
 	result, err := controllerpkgssa.ApplyIfChanged(ctx, logger, r.Client, r.TypeConverter, desired, controllerpkgssa.FieldManager)
 	if err != nil {
 		r.eventRecorder.Eventf(mcpDataPlane, nil, corev1.EventTypeWarning, "DeploymentFailed", "ApplyDeployment",
@@ -271,35 +282,6 @@ func generateDeployment(
 		consts.GatewayOperatorManagedByNameLabel: mcpDataPlane.Name,
 	}
 
-	// dpOpts may be nil since spec.deployment is optional, unlike DataPlane's
-	// always-present spec.deployment.
-	dpOpts := mcpDataPlane.Spec.Deployment
-	var replicas *int32
-	switch {
-	// When the replicas are set and scaling is unset then set the replicas
-	// to the value of the replicas field.
-	case dpOpts != nil && dpOpts.Replicas != nil && dpOpts.Scaling == nil:
-		replicas = dpOpts.Replicas
-
-	// When replicas field is unset and scaling is set, we set the replicas
-	// to the minReplicas value (if it's specified).
-	// We do this to ensure immediate scaling up to the minReplicas value
-	// before the HPA kicks in.
-	case dpOpts != nil &&
-		dpOpts.Replicas == nil &&
-		dpOpts.Scaling != nil &&
-		dpOpts.Scaling.HorizontalScaling != nil &&
-		dpOpts.Scaling.HorizontalScaling.MinReplicas != nil:
-		replicas = dpOpts.Scaling.HorizontalScaling.MinReplicas
-
-	// We set the default to 1 if no replicas or scaling is specified because
-	// we cannot set the default in the CRD due to the fact that the default
-	// would prevent us from being able to use CRD Validation Rules to enforce
-	// either replicas or scaling sections specified.
-	case dpOpts == nil || (dpOpts.Replicas == nil && dpOpts.Scaling == nil):
-		replicas = new(int32(1))
-	}
-
 	const (
 		mcpServerVolumeName      = "mcp-server-code"
 		mcpServerVolumeMountPath = "/mcp-server"
@@ -312,7 +294,7 @@ func generateDeployment(
 		Namespace:   nn.Namespace,
 		Annotations: mcpRolloutAnnotations(mcpMetadata),
 		Spec: appsv1.DeploymentSpec{
-			Replicas: replicas,
+			Replicas: hpa.DeploymentReplicas(mcpDataPlane, nil),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: selectorLabels,
 			},

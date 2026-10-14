@@ -121,31 +121,6 @@ func GenerateNewDeploymentForDataPlane(
 		},
 	}
 
-	dpOpts := dataplane.Spec.Deployment
-	switch {
-	// When the replicas are set and scaling is unset then set the replicas
-	// to the value of the replicas field.
-	case dpOpts.Replicas != nil && dpOpts.Scaling == nil:
-		deployment.Spec.Replicas = dpOpts.Replicas
-
-	// When replicas field is unset and scaling is set, we set the replicas
-	// to the minReplicas value (if it's specified).
-	// We do this to ensure immediate scaling up to the minReplicas value
-	// before the HPA kicks in.
-	case dpOpts.Replicas == nil &&
-		dpOpts.Scaling != nil &&
-		dpOpts.Scaling.HorizontalScaling != nil &&
-		dpOpts.Scaling.HorizontalScaling.MinReplicas != nil:
-		deployment.Spec.Replicas = dpOpts.Scaling.HorizontalScaling.MinReplicas
-
-	// We set the default to 1 if no replicas or scaling is specified because
-	// we cannot set the default in the CRD due to the fact that the default
-	// would prevent us from being able to use CRD Validation Rules to enforce
-	// wither replicas or scaling sections specified.
-	case dpOpts.Replicas == nil && dpOpts.Scaling == nil:
-		deployment.Spec.Replicas = new(int32(1))
-	}
-
 	SetDefaultsPodTemplateSpec(&deployment.Spec.Template)
 	LabelObjectAsDataPlaneManaged(deployment)
 
