@@ -83,6 +83,10 @@ jobs:
         run: |
           echo "TEST_KONG_EFFECTIVE_VERSION=$KONG_EFFECTIVE_VERSION" >> $GITHUB_ENV
 
+      - name: set AI Gateway image version
+        run: |
+          echo "TEST_AIGW_TAG=$(yq -ojson -r '.kongintegration.aigw-dp' < test/test_dependencies.yaml )" >> $GITHUB_ENV
+
       - uses: ./.github/actions/setup-mise
         with:
           install: false

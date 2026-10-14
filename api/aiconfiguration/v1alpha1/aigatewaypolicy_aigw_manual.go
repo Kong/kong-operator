@@ -11,14 +11,15 @@ import (
 
 	"github.com/Kong/ai-deck-converter/aigw"
 	"gopkg.in/yaml.v3"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ToAIGWPolicy converts the AIGatewayPolicy into ai-deck-converter's aigw.Policy.
 //
-// Unlike AIGatewayModel.ToAIGWModel, no CR reference resolution is needed: the datastore
-// references are plain names, passed through as-is (there is no AIGatewayDatastore CR yet).
-// The client is only used for the config secretRef resolution.
+// The client is used for the config secretRef resolution and for resolving
+// spec.apiSpec.customPolicyRef into the referenced custom policy's Konnect
+// name (which is sent as the policy's type, per the CRD field's contract).
 func (obj *AIGatewayPolicy) ToAIGWPolicy(ctx context.Context, cl client.Client) (*aigw.Policy, error) {
 	if err := rejectCrossNamespaceSecretRefs(obj); err != nil {
 		return nil, fmt.Errorf("AIGatewayPolicy %s/%s: %w", obj.Namespace, obj.Name, err)
@@ -39,6 +40,18 @@ func (obj *AIGatewayPolicy) ToAIGWPolicy(ctx context.Context, cl client.Client) 
 	var policy aigw.Policy
 	if err := yaml.Unmarshal(data, &policy); err != nil {
 		return nil, fmt.Errorf("decoding AIGatewayPolicy %s/%s as aigw.Policy: %w", obj.Namespace, obj.Name, err)
+	}
+
+	if ref := obj.Spec.APISpec.CustomPolicyRef; ref.Name != "" {
+		if policy.Type != "" {
+			return nil, fmt.Errorf("AIGatewayPolicy %s/%s: type and customPolicyRef are mutually exclusive", obj.Namespace, obj.Name)
+		}
+		var customPolicy AIGatewayCustomPolicy
+		nn := types.NamespacedName{Namespace: obj.Namespace, Name: ref.Name}
+		if err := cl.Get(ctx, nn, &customPolicy); err != nil {
+			return nil, fmt.Errorf("resolving AIGatewayPolicy %s/%s customPolicyRef %q: %w", obj.Namespace, obj.Name, ref.Name, err)
+		}
+		policy.Type = customPolicy.GetKonnectName()
 	}
 	return &policy, nil
 }
