@@ -42,6 +42,18 @@ spec:
           metadata:
             type: object
           spec:
+            properties:
+              dataplaneSync:
+                properties:
+                  intervalSeconds:
+                    format: int32
+                    minimum: 0
+                    type: integer
+                  timeoutSeconds:
+                    format: int32
+                    minimum: 0
+                    type: integer
+                type: object
             type: object
           status:
             properties:

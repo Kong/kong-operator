@@ -55,6 +55,29 @@ spec:
             type: object
           spec:
             description: Spec defines the desired state of OnPremAIGateway.
+            properties:
+              dataplaneSync:
+                description: |-
+                  DataPlaneSync defines the configuration for syncing configuration
+                  to the data planes referencing this OnPremAIGateway.
+                properties:
+                  intervalSeconds:
+                    description: |-
+                      IntervalSeconds is the interval between two rounds of syncing configuration
+                      with data planes, in seconds.
+                      If not specified, the default interval as defined by the operator will be used.
+                    format: int32
+                    minimum: 0
+                    type: integer
+                  timeoutSeconds:
+                    description: |-
+                      TimeoutSeconds is the timeout of a single run of syncing configuration with
+                      data planes, in seconds.
+                      If not specified, no timeout is applied to a sync run.
+                    format: int32
+                    minimum: 0
+                    type: integer
+                type: object
             type: object
           status:
             description: Status defines the observed state of OnPremAIGateway.

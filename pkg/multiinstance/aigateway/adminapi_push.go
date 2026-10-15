@@ -246,6 +246,10 @@ func (i *Instance) reportPushStatus(
 	total int,
 	failures []string,
 ) error {
+	// The report must land even when the sync deadline expired: a status patch
+	// failure is only logged, so the gateway condition would keep its last
+	// value while every push keeps timing out.
+	ctx = context.WithoutCancel(ctx)
 	var condition metav1.Condition
 	if len(failures) == 0 {
 		condition = k8sutils.NewCondition(

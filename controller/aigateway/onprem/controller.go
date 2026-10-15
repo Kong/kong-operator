@@ -212,31 +212,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 		return ctrl.Result{}, fmt.Errorf("failed to ensure the Admin API client certificate Secret: %w", err)
 	}
 
-	cfg, err := r.configFromSpec(ctx, logger, onprem)
-	if err != nil {
-		log.Debug(logger, "failed to render OnPremAIGateway configuration", "error", err)
-		k8sutils.SetCondition(
-			k8sutils.NewCondition(
-				aigatewayv1alpha1.ReadyType,
-				metav1.ConditionFalse,
-				aigatewayv1alpha1.ConfigurationInvalidReason,
-				err.Error(),
-			),
-			onprem,
-		)
-		if err := r.applyStatus(ctx, logger, onprem); err != nil {
-			return ctrl.Result{}, err
-		}
-		// A bad reference or malformed entity is a user-fixable input error, not a transient
-		// failure: don't requeue with backoff. Re-rendering on input changes is handled by the
-		// instance's own configuration-entity controllers via its ChangeNotifier, not by a
-		// watch on this controller.
-
-		// TODO: https://github.com/Kong/kong-operator/issues/5665
-		// return the error so controller-runtime retries with backoff and
-		// keep the no-requeue path only for reference-resolution errors.
-		return ctrl.Result{}, nil
-	}
+	cfg := r.configFromSpec(onprem)
 	// Part of the hashed instance config: when the Secret is renewed under a new
 	// name, the hash drifts and the instance restarts with the new reference.
 	cfg.AdminClientCertSecretNN = client.ObjectKeyFromObject(adminClientCertSecret)
@@ -328,14 +304,22 @@ func setReadySkippingLicenseCondition(onprem *aigatewayv1alpha1.OnPremAIGateway)
 // AIGatewayModel assembly and dbless rendering live in Instance.sendConfig, which converts
 // non-strict until spec.conversion options drive convert.Options: dangling references are
 // warnings, not fatal errors.
-// TODO: https://github.com/Kong/kong-operator/issues/5569
+// TODO: https://github.com/Kong/kong-operator/issues/5569 - fill in the remaining config
+// from the spec; restore the (context, logger, error) signature and the caller's
+// error-handling branch when config building can fail.
 func (r *Reconciler) configFromSpec(
-	ctx context.Context,
-	logger logr.Logger,
 	onprem *aigatewayv1alpha1.OnPremAIGateway,
-) (multiinstanceai.Config, error) {
-	// TODO: fill this in based on the OnPremAIGateway spec.
-	return multiinstanceai.Config{}, nil
+) multiinstanceai.Config {
+	cfg := multiinstanceai.Config{}
+	if dps := onprem.Spec.DataPlaneSync; dps != nil {
+		if dps.IntervalSeconds != nil {
+			cfg.SyncInterval = time.Duration(*dps.IntervalSeconds) * time.Second
+		}
+		if dps.TimeoutSeconds != nil {
+			cfg.SyncTimeout = time.Duration(*dps.TimeoutSeconds) * time.Second
+		}
+	}
+	return cfg
 }
 
 // scheduleInstance creates a new control plane instance and schedules it in the multi-instance manager.

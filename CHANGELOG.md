@@ -101,6 +101,11 @@
 
 ### Added
 
+- OnPremAIGateway spec: added a `dataplaneSync` field with optional
+  `intervalSeconds` and `timeoutSeconds` (non-negative integers, in seconds) to
+  tune the cadence of and the timeout for pushing configuration to the data
+  planes referencing the gateway.
+  [#6081](https://github.com/Kong/kong-operator/pull/6081)
 - OnPremAIGateway status: added a `ConfigurationProgrammed` condition reporting
   whether the gateway's configuration entities were successfully translated
   into the declarative payload (aggregating per-entity translation failures,

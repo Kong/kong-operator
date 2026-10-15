@@ -39,11 +39,27 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/multiinstance/manager"
 )
 
+// DefaultSyncInterval is the interval between two rounds of syncing configuration
+// with the data planes used when the OnPremAIGateway doesn't specify one.
+const DefaultSyncInterval = 3 * time.Second
+
 // Config is the resolved configuration of a single on-prem AI Gateway control plane instance.
 type Config struct {
 	// DBLessConfig is the rendered dbless declarative payload for this gateway, ready to be
 	// pushed to its data planes' Admin API.
 	DBLessConfig []byte
+
+	// SyncInterval is the interval between two rounds of syncing configuration with the
+	// data planes. Zero means the operator default (DefaultSyncInterval) applies.
+	// It's part of the hashed config so that changing it restarts the instance,
+	// whose sync loop reads it at start-up.
+	SyncInterval time.Duration
+
+	// SyncTimeout is the timeout of a single run of syncing configuration with
+	// a gateway's data planes. Zero means no timeout is applied to a sync run.
+	// It's part of the hashed config so that changing it restarts the instance
+	// with the new value.
+	SyncTimeout time.Duration
 
 	// AdminClientCertSecretNN is the reference to the mTLS client certificate Secret the
 	// instance reads when pushing configuration to its data planes. It is part of the
@@ -60,6 +76,14 @@ func Hash(cfg Config) (string, error) {
 	// zero NN's String() is "/", which would otherwise shift every hash.
 	if cfg.AdminClientCertSecretNN != (types.NamespacedName{}) {
 		h.Write([]byte(cfg.AdminClientCertSecretNN.String()))
+	}
+	if cfg.SyncInterval != 0 {
+		h.Write([]byte("interval:"))
+		h.Write([]byte(cfg.SyncInterval.String()))
+	}
+	if cfg.SyncTimeout != 0 {
+		h.Write([]byte("timeout:"))
+		h.Write([]byte(cfg.SyncTimeout.String()))
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
@@ -402,7 +426,16 @@ func (i *Instance) syncPending(
 	}
 	*lastSyncTS = time.Now()
 	for nn := range pending {
-		if err := i.sendConfig(ctx, &nn); err != nil {
+		// A per-gateway timeout keeps one slow sync from starving the other
+		// gateways in the round.
+		syncCtx := ctx
+		cancel := func() {}
+		if i.cfg.SyncTimeout > 0 {
+			syncCtx, cancel = context.WithTimeout(ctx, i.cfg.SyncTimeout)
+		}
+		err := i.sendConfig(syncCtx, &nn)
+		cancel()
+		if err != nil {
 			i.logger.Error(err, "Failed to send configuration",
 				"namespace", nn.Namespace, "name", nn.Name)
 			continue
@@ -503,14 +536,21 @@ func (i *Instance) Run(ctx context.Context) error {
 		}
 	}()
 
+	// The sync interval comes from the OnPremAIGateway spec via the instance
+	// config, so changing it restarts the instance (it's part of the hashed
+	// config).
+	syncInterval := i.cfg.SyncInterval
+	if syncInterval <= 0 {
+		// A non-positive interval would panic time.NewTicker. The CRD rejects
+		// negative values, but 0 is admitted and out-of-band writes exist.
+		syncInterval = DefaultSyncInterval
+	}
 	var (
 		ch         = i.cn.NotifyChannel()
 		lastSyncTS time.Time
 		// TODO: make this configurable
 		minimumInterval = time.Second
-		// TODO: make this configurable
-		syncInterval = 3 * time.Second
-		timer        = time.NewTicker(syncInterval)
+		timer           = time.NewTicker(syncInterval)
 		// pending holds the gateways with configuration changes that have not been synced
 		// yet. Changes arriving within the debounce window land here and are re-driven by
 		// the timer instead of being dropped, as are syncs that failed.
