@@ -252,6 +252,9 @@ func BuildDocument(
 				if err != nil {
 					return nil, err
 				}
+				if err := checkTranslatedRefs(translatedPolicies, "AIGatewayPolicy", group.Policies); err != nil {
+					return nil, err
+				}
 				translatedConsumerGroups[g.GetKonnectName()] = struct{}{}
 				return group, nil
 			},
@@ -352,8 +355,15 @@ func BuildDocument(
 						return nil, err
 					}
 				}
-				translatedMCPServers[s.GetKonnectName()] = struct{}{}
-				translatedMCPCRByName[s.GetKonnectName()] = s
+				name := s.GetKonnectName()
+				if _, dup := translatedMCPServers[name]; dup {
+					return nil, fmt.Errorf(
+						"duplicate AIGatewayMCPServer entity name %q: entity names must be unique across AIGatewayMCPServer CRs",
+						name,
+					)
+				}
+				translatedMCPServers[name] = struct{}{}
+				translatedMCPCRByName[name] = s
 				return mcpServer, nil
 			},
 			&doc.MCPServers),
@@ -442,7 +452,7 @@ func BuildDocument(
 			for i := range statuses {
 				if statuses[i].Obj == cr {
 					statuses[i].Err = fmt.Errorf(
-						"referenced AIGatewayMCPServer %q was excluded from the document: its own translation failed",
+						"referenced AIGatewayMCPServer %q was excluded from the document: its own translation failed, or it references an excluded server",
 						missing,
 					)
 				}

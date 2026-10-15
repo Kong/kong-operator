@@ -1147,6 +1147,49 @@ func TestBuildDocument_ConsumerFailsWhenReferencedPolicyFails(t *testing.T) {
 	require.NoError(t, findStatusByName(t, statuses, "consumer-healthy").Err)
 }
 
+// TestBuildDocument_ConsumerGroupFailsWhenReferencedPolicyFails pins the translated-reference
+// check for consumer-group policy references: a consumer group referencing an AIGatewayPolicy
+// that failed its own translation must be excluded with a per-entity error.
+func TestBuildDocument_ConsumerGroupFailsWhenReferencedPolicyFails(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	// A policy with a cross-namespace secretRef fails its own translation while keeping its
+	// entity name intact.
+	brokenPolicy := aiGatewayPolicyFixture("policy-broken")
+	brokenPolicy.Spec.APISpec.Config = aiconfigurationv1alpha1.AIGatewayPolicyConfigDataSource{
+		Type:      aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+		SecretRef: &aiconfigurationv1alpha1.SensitiveDataSecretRef{Name: "creds", Key: "key", Namespace: new("other-ns")},
+	}
+	healthyPolicy := aiGatewayPolicyFixture("policy-healthy")
+
+	groupBroken := aiGatewayConsumerGroupFixture("group-broken")
+	groupBroken.Spec.APISpec.Policies = []aiconfigurationv1alpha1.AIGatewayPolicyRef{{Name: "policy-broken"}}
+	groupHealthy := aiGatewayConsumerGroupFixture("group-healthy")
+	groupHealthy.Spec.APISpec.Policies = []aiconfigurationv1alpha1.AIGatewayPolicyRef{{Name: "policy-healthy"}}
+
+	cl := newTestBuilder(scheme, gw, brokenPolicy, healthyPolicy, groupBroken, groupHealthy).Build()
+
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	require.NoError(t, err)
+
+	require.Len(t, doc.Policies, 1)
+	require.Equal(t, "policy-healthy", doc.Policies[0].Name)
+	require.Len(t, doc.ConsumerGroups, 1)
+	require.Equal(t, "group-healthy", doc.ConsumerGroups[0].Name)
+	require.Equal(t, []string{"policy-healthy"}, doc.ConsumerGroups[0].Policies)
+
+	require.Len(t, statuses, 4)
+	require.Contains(t, findStatusByName(t, statuses, "policy-broken").Err.Error(), "cross-namespace secretRef")
+	require.Contains(t, findStatusByName(t, statuses, "group-broken").Err.Error(),
+		`referenced AIGatewayPolicy "policy-broken" was excluded from the document`)
+	require.NoError(t, findStatusByName(t, statuses, "group-healthy").Err)
+}
+
 // TestBuildDocument_AgentFailsWhenReferencedAuthStrategyFails pins the translated-reference
 // check for agent auth-strategy references: an agent referencing an AIGatewayAuthStrategy
 // that failed its own translation must be excluded with a per-entity error.
@@ -1339,9 +1382,6 @@ func TestBuildDocument_MCPServerListenerFailsWhenSourceFails(t *testing.T) {
 	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
 
 	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
-	// The broken source fails its own translation; the listener sourcing it and the listener
-	// sourcing that listener are both dropped (fixpoint cascade), while the listener sourcing
-	// the healthy source survives.
 	// The broken source fails its own translation (a policy ref to a nonexistent CR) while
 	// keeping its entity name intact; the listener sourcing it and the listener sourcing
 	// that listener are both dropped (fixpoint cascade), while the listener sourcing
@@ -1368,7 +1408,7 @@ func TestBuildDocument_MCPServerListenerFailsWhenSourceFails(t *testing.T) {
 	require.Contains(t, findStatusByName(t, statuses, "mcp-listener-broken").Err.Error(),
 		`referenced AIGatewayMCPServer "mcp-src-broken" was excluded from the document`)
 	require.Contains(t, findStatusByName(t, statuses, "mcp-listener-cascade").Err.Error(),
-		`referenced AIGatewayMCPServer "mcp-listener-broken" was excluded from the document`)
+		`referenced AIGatewayMCPServer "mcp-listener-broken" was excluded from the document: its own translation failed, or it references an excluded server`)
 	require.NoError(t, findStatusByName(t, statuses, "mcp-src-healthy").Err)
 	require.NoError(t, findStatusByName(t, statuses, "mcp-listener-healthy").Err)
 }
@@ -1402,4 +1442,36 @@ func TestBuildDocument_MCPServerSourceSortedLater(t *testing.T) {
 	for _, s := range statuses {
 		require.NoError(t, s.Err)
 	}
+}
+
+// TestBuildDocument_MCPServerDuplicateEntityNameRejected pins the duplicate entity-name
+// rejection: two AIGatewayMCPServer CRs sharing one spec name would render the same entity
+// twice and break the name-keyed maps, so the second CR is rejected with a per-entity error.
+func TestBuildDocument_MCPServerDuplicateEntityNameRejected(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	// Two CRs with distinct metadata names but the same spec `name` render the same
+	// entity name; "mcp-dup-a" sorts before "mcp-dup-b", so it wins.
+	first := aiGatewayMCPServerConversionOnlyFixture("mcp-dup")
+	first.Name = "mcp-dup-a"
+	second := aiGatewayMCPServerConversionOnlyFixture("mcp-dup")
+	second.Name = "mcp-dup-b"
+
+	cl := newTestBuilder(scheme, gw, first, second).Build()
+
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	require.NoError(t, err)
+
+	require.Len(t, doc.MCPServers, 1)
+	require.Equal(t, "mcp-dup", doc.MCPServers[0].Name)
+
+	require.Len(t, statuses, 2)
+	require.Contains(t, findStatusByName(t, statuses, "mcp-dup-b").Err.Error(),
+		`duplicate AIGatewayMCPServer entity name "mcp-dup"`)
+	require.NoError(t, findStatusByName(t, statuses, "mcp-dup-a").Err)
 }

@@ -308,8 +308,8 @@ func TestSendConfig(t *testing.T) {
 	t.Run("reports dangling provider references at translation and still pushes the rest", func(t *testing.T) {
 		// The provider CR exists (so the model's reference resolves) but fails its
 		// own translation, so it is excluded from the document. The model referencing
-		// it is now rejected at translation time (checkTranslatedRefs) instead of
-		// being silently dropped by the converter.
+		// it is rejected at translation time (checkTranslatedRefs) instead of failing
+		// later through a converter ERROR issue attributed back to the model.
 		model := testAIGatewayModel("model-a")
 		model.Spec.APISpec.Model.Targets = []aiconfigurationv1alpha1.AIGatewayTarget{{
 			Name:     "t",
@@ -328,8 +328,8 @@ func TestSendConfig(t *testing.T) {
 					NamespacedRef: &commonv1alpha1.NamespacedRef{Name: testGatewayName},
 				},
 				// No APISpec: the provider's translation fails, so it is excluded
-				// from the document and the converter drops the model's target
-				// referencing it.
+				// from the document and the model referencing it is rejected at
+				// translation time.
 			},
 		}
 		instance := testPushInstance(t, adminClientCertSecret(), model, brokenProvider)
