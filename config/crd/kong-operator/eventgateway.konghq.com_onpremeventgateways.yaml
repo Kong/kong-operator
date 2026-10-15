@@ -82,18 +82,17 @@ spec:
                             and ending with an alphanumeric character'
                           rule: self.matches('^[a-z]([-a-z0-9]*[a-z0-9])?$')
                       portName:
-                        description: PortName is the name of the Service port gw-admin
-                          serves its API on.
-                        maxLength: 15
+                        description: |-
+                          PortName is the name of the Service port gw-admin serves its API on.
+                          Service port names are DNS-1123 labels.
+                        maxLength: 63
                         minLength: 1
                         type: string
                         x-kubernetes-validations:
-                        - message: 'portName must be a valid port name: lowercase
-                            alphanumeric characters or ''-'', with at least one letter,
-                            no consecutive ''-'', starting and ending with an alphanumeric
-                            character'
-                          rule: self.matches('^[a-z0-9]([-a-z0-9]*[a-z0-9])?$') &&
-                            self.matches('[a-z]') && !self.contains('--')
+                        - message: 'portName must be a valid DNS-1123 label: lowercase
+                            alphanumeric characters or ''-'', starting and ending
+                            with an alphanumeric character'
+                          rule: self.matches('^[a-z0-9]([-a-z0-9]*[a-z0-9])?$')
                     required:
                     - name
                     - portName

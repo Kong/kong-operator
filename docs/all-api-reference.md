@@ -15018,7 +15018,7 @@ GWAdminService identifies the gw-admin Service and its port.
 | Field | Description |
 | --- | --- |
 | `name` _string_ | Name is the name of the Service. |
-| `portName` _string_ | PortName is the name of the Service port gw-admin serves its API on. |
+| `portName` _string_ | PortName is the name of the Service port gw-admin serves its API on. Service port names are DNS-1123 labels. |
 
 _Appears in:_
 

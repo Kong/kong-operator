@@ -92,16 +92,17 @@ func TestOnPremEventGateway(t *testing.T) {
 	})
 
 	t.Run("port name", func(t *testing.T) {
-		const msg = "portName must be a valid port name"
+		const msg = "portName must be a valid DNS-1123 label"
 		common.TestCasesGroup[*eventgatewayv1alpha1.OnPremEventGateway]{
 			{Name: "starts with a digit - valid", TestObject: withPortName("8443-admin")},
-			{Name: "15 characters - valid", TestObject: withPortName(strings.Repeat("a", 15))},
-			{Name: "16 characters - invalid", TestObject: withPortName(strings.Repeat("a", 16)), ExpectedErrorMessage: new("Too long: may not be")},
-			{Name: "digits only - invalid", TestObject: withPortName("8443"), ExpectedErrorMessage: new(msg)},
+			{Name: "digits only - valid", TestObject: withPortName("8443")},
+			{Name: "consecutive dashes - valid", TestObject: withPortName("gw--admin")},
+			{Name: "63 characters - valid", TestObject: withPortName(strings.Repeat("a", 63))},
+			{Name: "64 characters - invalid", TestObject: withPortName(strings.Repeat("a", 64)), ExpectedErrorMessage: new("Too long: may not be")},
 			{Name: "uppercase - invalid", TestObject: withPortName("Admin"), ExpectedErrorMessage: new(msg)},
 			{Name: "starts with a dash - invalid", TestObject: withPortName("-admin"), ExpectedErrorMessage: new(msg)},
 			{Name: "ends with a dash - invalid", TestObject: withPortName("admin-"), ExpectedErrorMessage: new(msg)},
-			{Name: "consecutive dashes - invalid", TestObject: withPortName("gw--admin"), ExpectedErrorMessage: new(msg)},
+			{Name: "contains a dot - invalid", TestObject: withPortName("gw.admin"), ExpectedErrorMessage: new(msg)},
 		}.RunWithConfig(t, cfg, scheme)
 	})
 

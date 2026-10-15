@@ -38819,12 +38819,12 @@ spec:
                         - message: 'name must be a valid DNS-1035 label: lowercase alphanumeric characters or ''-'', starting with a letter and ending with an alphanumeric character'
                           rule: self.matches('^[a-z]([-a-z0-9]*[a-z0-9])?$')
                       portName:
-                        maxLength: 15
+                        maxLength: 63
                         minLength: 1
                         type: string
                         x-kubernetes-validations:
-                        - message: 'portName must be a valid port name: lowercase alphanumeric characters or ''-'', with at least one letter, no consecutive ''-'', starting and ending with an alphanumeric character'
-                          rule: self.matches('^[a-z0-9]([-a-z0-9]*[a-z0-9])?$') && self.matches('[a-z]') && !self.contains('--')
+                        - message: 'portName must be a valid DNS-1123 label: lowercase alphanumeric characters or ''-'', starting and ending with an alphanumeric character'
+                          rule: self.matches('^[a-z0-9]([-a-z0-9]*[a-z0-9])?$')
                     required:
                     - name
                     - portName

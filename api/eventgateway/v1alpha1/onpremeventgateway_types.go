@@ -93,11 +93,12 @@ type GWAdminService struct {
 	Name string `json:"name,omitempty"`
 
 	// PortName is the name of the Service port gw-admin serves its API on.
+	// Service port names are DNS-1123 labels.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=63
-	// +kubebuilder:validation:XValidation:rule="self.matches('^[a-z0-9]([-a-z0-9]*[a-z0-9])?$') && self.matches('[a-z]') && !self.contains('--')",message="portName must be a valid port name: lowercase alphanumeric characters or '-', with at least one letter, no consecutive '-', starting and ending with an alphanumeric character"
+	// +kubebuilder:validation:XValidation:rule="self.matches('^[a-z0-9]([-a-z0-9]*[a-z0-9])?$')",message="portName must be a valid DNS-1123 label: lowercase alphanumeric characters or '-', starting and ending with an alphanumeric character"
 	PortName string `json:"portName,omitempty"`
 }
 
