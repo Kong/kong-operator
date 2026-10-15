@@ -74,7 +74,7 @@ version = "79b557aa8c8dc08e801a1d3e6109881e3551bf30"
 
 [tools."yq"]
 # renovate: datasource=github-releases depName=mikefarah/yq
-version = "v4.53.6"
+version = "v4.54.1"
 
 [tools."aqua:kyverno/chainsaw"]
 # renovate: datasource=git-refs packageName=https://github.com/kyverno/chainsaw.git
