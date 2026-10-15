@@ -1,0 +1,8 @@
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModel
+metadata:
+  name: ($model_name)
+  namespace: ($namespace)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: 'True'

@@ -25,6 +25,7 @@ on:
             {"suite": "hybridgateway", "ip_family": "ipv6"},
             {"suite": "konnect"},
             {"suite": "aigateway"},
+            {"suite": "onpremaigateway"},
             {"suite": "eventgateway"},
             {"suite": "conversion-webhook"}
           ]
@@ -115,6 +116,7 @@ jobs:
           --set env.enable_controller_konnect=true \
           --set env.enable_controller_kegdataplane=true \
           --set env.enable_controller_aigatewaydataplane=true \
+          --set env.enable_controller_onpremaigateway=true \
           --wait
 
     - name: Apply chainsaw suite prerequisites
