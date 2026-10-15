@@ -23,6 +23,8 @@ import (
 	"slices"
 
 	"github.com/Kong/ai-deck-converter/aigw"
+	"github.com/Kong/ai-deck-converter/convert"
+	yaml "gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,6 +32,13 @@ import (
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
+
+// defaultMinRuntimeVersion is the minimum AI Gateway runtime version declared for
+// rendered configurations when the caller does not specify one: the oldest release
+// that must run the pushed output. Pinned to the converter README's example value;
+// TODO: derive it from the actual data plane version tag set on AIGatewayDataPlane
+// TODO: https://github.com/Kong/kong-operator/issues/6120
+const defaultMinRuntimeVersion = "2.1"
 
 // EntityStatus is the per-entity outcome of the document translation: Err is
 // nil for entities that were translated and included in the document, and the
@@ -136,8 +145,8 @@ func translateKind[
 // the entity's status.
 //
 // Entity kinds join here as they gain their own ToAIGW* conversion; until then the rendered
-// Document (and the dbless payload built from it) has dangling references and
-// ConvertDocumentToDBLessYAML reports them as warnings, not errors.
+// Document (and the dbless payload built from it) has dangling references, which
+// RenderDBLessYAML reports as converter issues instead of errors.
 //
 // The OnOnPremAIGatewayRef index extractor only matches entities whose aiGatewayRef resolves
 // to an OnPremAIGateway, so a KonnectAIGateway sharing namespace/name with this
@@ -257,4 +266,37 @@ func BuildDocument(
 	}
 
 	return doc, statuses, nil
+}
+
+// RenderDBLessYAML converts the translated AI Gateway document into the flattened
+// db-less YAML payload understood by Kong data planes. Alongside the payload it
+// returns the typed conversion issues reported by the converter: a Warning issue
+// means the converter worked around a problem (the output is valid but may not
+// fully match the intent), while an Error issue means the offending entity was
+// left out of the output entirely - the caller is expected to attribute those
+// back to the entities' CRs (see the aigateway package's attributeConversionIssues).
+func RenderDBLessYAML(doc *aigw.Document, opts convert.Options) ([]byte, []convert.ConversionIssue, error) {
+	if opts.MinRuntimeVersion == "" {
+		// Pinned minimum; see defaultMinRuntimeVersion.
+		opts.MinRuntimeVersion = defaultMinRuntimeVersion
+	}
+	// The converter's public entry point (convert.Convert) only accepts YAML bytes,
+	// so the document built by BuildDocument goes through a marshal/reparse
+	// round-trip: aigw.Document is the converter's file format, so it round-trips
+	// losslessly.
+	src, err := yaml.Marshal(doc)
+	if err != nil {
+		return nil, nil, fmt.Errorf("marshaling AI Gateway document: %w", err)
+	}
+	result, err := convert.Convert(src, opts)
+	if err != nil {
+		// Pass any issues the converter reported before failing through to the
+		// caller, so they still reach the gateway status.
+		if result != nil {
+			return nil, result.Issues, err
+		}
+		return nil, nil, err
+	}
+	payload, err := result.Output.ToDBLess().ToYAML()
+	return payload, result.Issues, err
 }

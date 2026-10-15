@@ -30,10 +30,9 @@ func wantMCPServerFromYAML(t *testing.T, literal string) *aigw.MCPServer {
 // conversion-listener (only its payload marshaling is covered by the strict round-trip
 // test below), the CR reference resolution (deliberately without any SetKonnectID on the
 // referenced entities, pinning that the on-prem translation uses the name-only resolver),
-// the config.url -> upstream_url move, the Enabled/Disabled boolean normalization and the
-// deprecated identity_providers folding into AuthStrategies. (The managed_by drop and the
-// cache/allowed_versions drop are pinned by the strict round-trip test below, the only
-// decode that can see those keys.)
+// the config.url -> upstream_url move and the Enabled/Disabled boolean normalization.
+// (The managed_by drop and the cache/allowed_versions drop are pinned by the strict
+// round-trip test below, the only decode that can see those keys.)
 func TestAIGatewayMCPServer_ToAIGWMCPServer(t *testing.T) {
 	t.Parallel()
 
@@ -192,7 +191,7 @@ tools:
 `,
 		},
 		{
-			name: "listener: sources resolved, consumer access with server and default-tool ACLs, auth strategies, identity_providers folded; cache and allowed_versions dropped",
+			name: "listener: sources resolved, consumer access with server and default-tool ACLs, auth strategies; cache and allowed_versions dropped",
 			obj: newMCPServer(&AIGatewayMCPServerConfig{
 				Type: AIGatewayMCPServerConfigTypeListener,
 				Listener: &AIGatewayMCPServerListener{
@@ -210,8 +209,7 @@ tools:
 							DefaultToolAcls: AIGatewayMCPACLs{
 								Allow: []AIGatewayMCPACLRef{{Name: "ai-gw-consumer-group"}},
 							},
-							AuthStrategies:    []AIGatewayAuthStrategyRef{{Name: "ai-gw-auth-strategy"}},
-							IdentityProviders: []AIGatewayIdentityProviderReference{"legacy-idp"},
+							AuthStrategies: []AIGatewayAuthStrategyRef{{Name: "ai-gw-auth-strategy"}},
 						},
 					},
 					Config: AIGatewayMCPServerListenerConfig{
@@ -264,7 +262,7 @@ access:
   acl_attribute_type: consumer
   acls: {allow: [dev-users], deny: [denied-users]}
   default_tool_acls: {allow: [dev-users]}
-  auth_strategies: [key-auth-1, legacy-idp]
+  auth_strategies: [key-auth-1]
 `,
 		},
 		{
@@ -511,9 +509,8 @@ func TestAIGatewayMCPServer_ToAIGWMCPServer_StrictRoundTrip(t *testing.T) {
 						Access: &AIGatewayMCPServerConversionListenerAccess{
 							AclAttributeType: AIGatewayMCPServerConversionListenerAccessTypeConsumer,
 							Consumer: &AIGatewayMCPServerListenerConsumer{
-								Acls:              AIGatewayMCPACLs{Allow: []AIGatewayMCPACLRef{{Name: "ai-gw-consumer-group"}}},
-								AuthStrategies:    []AIGatewayAuthStrategyRef{{Name: "ai-gw-auth-strategy"}},
-								IdentityProviders: []AIGatewayIdentityProviderReference{"legacy-idp"},
+								Acls:           AIGatewayMCPACLs{Allow: []AIGatewayMCPACLRef{{Name: "ai-gw-consumer-group"}}},
+								AuthStrategies: []AIGatewayAuthStrategyRef{{Name: "ai-gw-auth-strategy"}},
 							},
 						},
 						Config: AIGatewayMCPServerConversionListenerConfig{
@@ -578,7 +575,6 @@ func TestAIGatewayMCPServer_ToAIGWMCPServer_StrictRoundTrip(t *testing.T) {
 	require.NotNil(t, mcp.Config.Upstream.Auth)
 	require.Equal(t, "aws", mcp.Config.Upstream.Auth.Type)
 	require.Equal(t, "us-east-1", mcp.Config.Upstream.Auth.Region)
-	require.Equal(t, "legacy-idp", mcp.Access.AuthStrategies[0])
 	require.Len(t, mcp.Tools, 1)
 	require.NotNil(t, mcp.Tools[0].Annotations["read_only_hint"])
 	require.True(t, mcp.Tools[0].Annotations["read_only_hint"].(bool))

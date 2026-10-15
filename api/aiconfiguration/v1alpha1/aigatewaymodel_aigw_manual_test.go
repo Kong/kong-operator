@@ -318,6 +318,12 @@ func TestAIGatewayModel_ToAIGWModel_StrictRoundTrip(t *testing.T) {
 				Name:        "gpt-4o-mini",
 				DisplayName: "GPT-4o Mini",
 				Formats:     []AIGatewayModelFormat{{Type: "openai"}},
+				// Access.acls/authStrategies are stripped by the payload builder (they
+				// are re-attached resolved by ToAIGWModel), so the strict decode must
+				// not see them.
+				Access: AIGatewayModelAccess{
+					AuthStrategies: []AIGatewayAuthStrategyRef{{Name: "ai-gw-model-auth-strategy"}},
+				},
 				Config: AIGatewayModelAPIConfig{
 					Route: AIGatewayModelRouteConfig{
 						Paths: []string{"/v1/chat/completions"},

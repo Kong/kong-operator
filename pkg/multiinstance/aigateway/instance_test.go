@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Kong/ai-deck-converter/convert"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -286,6 +287,182 @@ func TestSendConfig(t *testing.T) {
 
 		require.Empty(t, pending, "the skipped sync must still drop the gateway from pending")
 		require.Equal(t, status.ConfigurationStatusFailed, statusOf(instance, model))
+	})
+
+	t.Run("attributes converter ERROR issues to their entities and still pushes the rest", func(t *testing.T) {
+		// The provider CR exists (so the model's reference resolves) but fails its
+		// own translation, so it is excluded from the document. The converter then
+		// drops the model's target referencing it and reports an ERROR issue on the
+		// model, which sendConfig attributes back to the model CR.
+		model := testAIGatewayModel("model-a")
+		model.Spec.APISpec.Model.Targets = []aiconfigurationv1alpha1.AIGatewayTarget{{
+			Name:     "t",
+			Provider: aiconfigurationv1alpha1.AIGatewayModelProviderRef{Name: "broken-provider"},
+			Config: &aiconfigurationv1alpha1.AIGatewayTargetConfig{
+				Type:   aiconfigurationv1alpha1.AIGatewayTargetConfigTypeOpenai,
+				Openai: &aiconfigurationv1alpha1.AIGatewayTargetOpenaiConfig{UpstreamURL: "https://api.openai.com/v1"},
+			},
+		}}
+		brokenProvider := &aiconfigurationv1alpha1.AIGatewayModelProvider{
+			Name: "broken-provider", Namespace: testGatewayNamespace,
+			Spec: aiconfigurationv1alpha1.AIGatewayModelProviderSpec{
+				AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+					Group:         aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+					Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+					NamespacedRef: &commonv1alpha1.NamespacedRef{Name: testGatewayName},
+				},
+				// No APISpec: the provider's translation fails, so it is excluded
+				// from the document and the converter drops the model's target
+				// referencing it.
+			},
+		}
+		instance := testPushInstance(t, adminClientCertSecret(), model, brokenProvider)
+		factory := &fakePushClientFactory{}
+		instance.newPushClient = factory.newPushClient
+		instance.setAdminAPIs(sets.New(adminAPI("https://10.0.0.1:8444")))
+
+		require.NoError(t, instance.sendConfig(ctx, &gwNN))
+
+		// The model's Programmed condition reports the drop.
+		require.Equal(t, status.ConfigurationStatusFailed, statusOf(instance, model))
+		require.Contains(t, messageOf(instance, model), "dropped the entity from the rendered configuration")
+
+		// The provider's own translation failure is reported separately.
+		require.Equal(t, status.ConfigurationStatusFailed, statusOf(instance, brokenProvider))
+		require.Contains(t, messageOf(instance, brokenProvider), "spec.apiSpec is required")
+
+		// The rest of the payload was still pushed.
+		require.Len(t, factory.built, 1)
+
+		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType)
+		require.Equal(t, metav1.ConditionFalse, condition.Status)
+		require.Equal(t, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslationFailedReason), condition.Reason)
+		require.Contains(t, condition.Message, "model-a")
+	})
+}
+
+// namedCR is a minimal client.Object carrying the generated GetTypeName and
+// GetKonnectName methods attributeConversionIssues type-asserts: exercising the
+// attribution logic needs no full CR fixtures.
+type namedCR struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	typeName    string
+	konnectName string
+}
+
+func (c *namedCR) GetTypeName() string    { return c.typeName }
+func (c *namedCR) GetKonnectName() string { return c.konnectName }
+func (c *namedCR) DeepCopyObject() runtime.Object {
+	return c
+}
+
+// TestAttributeConversionIssues pins the converter-issue attribution: every
+// entry of conversionIssueKindToCRTypeName routes its kind's ERROR issues to the
+// matching CRs, CRs sharing a Konnect name fail together, and everything else
+// degrades to a warning.
+func TestAttributeConversionIssues(t *testing.T) {
+	i := &Instance{logger: logr.Discard()}
+
+	issue := func(severity convert.ConversionIssueSeverity, kind, name string) convert.ConversionIssue {
+		return convert.ConversionIssue{
+			Code:     convert.ConfigFieldInvalid,
+			Reason:   "test issue",
+			Source:   convert.ConversionIssueSource{Kind: kind, Name: name},
+			Severity: severity,
+		}
+	}
+	cr := func(typeName, konnectName string) *namedCR {
+		return &namedCR{typeName: typeName, konnectName: konnectName}
+	}
+
+	t.Run("every map value is a real CR type name", func(t *testing.T) {
+		// Zero-value CRs suffice: GetTypeName is constant per type.
+		crs := map[string]client.Object{
+			"AIGatewayModel":         new(aiconfigurationv1alpha1.AIGatewayModel),
+			"AIGatewayMCPServer":     new(aiconfigurationv1alpha1.AIGatewayMCPServer),
+			"AIGatewayAgent":         new(aiconfigurationv1alpha1.AIGatewayAgent),
+			"AIGatewayPolicy":        new(aiconfigurationv1alpha1.AIGatewayPolicy),
+			"AIGatewayCustomPolicy":  new(aiconfigurationv1alpha1.AIGatewayCustomPolicy),
+			"AIGatewayAuthStrategy":  new(aiconfigurationv1alpha1.AIGatewayAuthStrategy),
+			"AIGatewayConsumer":      new(aiconfigurationv1alpha1.AIGatewayConsumer),
+			"AIGatewayConsumerGroup": new(aiconfigurationv1alpha1.AIGatewayConsumerGroup),
+			"AIGatewaySNI":           new(aiconfigurationv1alpha1.AIGatewaySNI),
+		}
+		require.Len(t, conversionIssueKindToCRTypeName, len(crs))
+		for kind, typeName := range conversionIssueKindToCRTypeName {
+			obj, ok := crs[typeName]
+			require.True(t, ok, "kind %q maps to %q, which is no CR type name", kind, typeName)
+			typeNamer := obj.(interface{ GetTypeName() string })
+			require.Equal(t, typeName, typeNamer.GetTypeName(), "kind %q", kind)
+		}
+	})
+
+	t.Run("ERROR issues attribute the drop to the matching CRs", func(t *testing.T) {
+		for kind, typeName := range conversionIssueKindToCRTypeName {
+			obj := cr(typeName, "entity-"+kind)
+			included, failures, warnings := i.attributeConversionIssues(
+				[]client.Object{obj},
+				nil,
+				[]convert.ConversionIssue{issue(convert.Error, kind, "entity-"+kind)},
+			)
+			require.Empty(t, included, "kind %q", kind)
+			require.Len(t, failures, 1, "kind %q", kind)
+			require.Equal(t, obj, failures[0].Obj, "kind %q", kind)
+			require.Contains(t, failures[0].Err.Error(), "dropped the entity from the rendered configuration")
+			require.Empty(t, warnings, "kind %q", kind)
+		}
+	})
+
+	t.Run("CRs sharing a Konnect name all fail together", func(t *testing.T) {
+		// GetKonnectName derives from the spec, so two model CRs can share it; both
+		// translate into the same document entity, so one issue drops both.
+		a, b := cr("AIGatewayModel", "shared"), cr("AIGatewayModel", "shared")
+		included, failures, warnings := i.attributeConversionIssues(
+			[]client.Object{a, b},
+			nil,
+			[]convert.ConversionIssue{issue(convert.Error, "model", "shared")},
+		)
+		require.Empty(t, included)
+		require.Len(t, failures, 2)
+		require.Equal(t, a, failures[0].Obj)
+		require.Equal(t, b, failures[1].Obj)
+		require.Empty(t, warnings)
+	})
+
+	t.Run("ERROR issues matching no entity degrade to warnings", func(t *testing.T) {
+		obj := cr("AIGatewayModel", "model-a")
+		for _, tc := range []struct {
+			name  string
+			issue convert.ConversionIssue
+		}{
+			{"unmatched kind", issue(convert.Error, "option", "model-a")},
+			{"unmatched name", issue(convert.Error, "model", "other-model")},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				included, failures, warnings := i.attributeConversionIssues(
+					[]client.Object{obj},
+					nil,
+					[]convert.ConversionIssue{tc.issue},
+				)
+				require.Equal(t, []client.Object{obj}, included, "the CR stays included")
+				require.Empty(t, failures)
+				require.Equal(t, []string{tc.issue.String()}, warnings)
+			})
+		}
+	})
+
+	t.Run("WARNING issues become warnings", func(t *testing.T) {
+		obj := cr("AIGatewayModel", "model-a")
+		included, failures, warnings := i.attributeConversionIssues(
+			[]client.Object{obj},
+			nil,
+			[]convert.ConversionIssue{issue(convert.Warning, "model", "model-a")},
+		)
+		require.Equal(t, []client.Object{obj}, included)
+		require.Empty(t, failures)
+		require.Equal(t, []string{issue(convert.Warning, "model", "model-a").String()}, warnings)
 	})
 }
 

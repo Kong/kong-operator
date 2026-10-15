@@ -478,11 +478,11 @@ func TestBuildDocument(t *testing.T) {
 
 	// Render the pristine document before the dangling provider reference is injected
 	// below. A converter failure to resolve an SNI's certificate surfaces only as a
-	// warning, so require none.
-	sniPayload, sniWarnings, err := convert.ConvertDocumentToDBLessYAML(doc, convert.Options{Strict: false})
+	// warning issue, so require none.
+	sniPayload, sniIssues, err := RenderDBLessYAML(doc, convert.Options{})
 	require.NoError(t, err)
 	require.NotEmpty(t, sniPayload)
-	require.Empty(t, sniWarnings)
+	require.Empty(t, sniIssues)
 	// The CA certificates must reach the rendered payload with unique IDs: the converter
 	// derives each entity ID from the cert content, so a tag-only match wouldn't catch an
 	// ID collision. Parse the payload and check the rendered ca_certificates themselves.
@@ -505,13 +505,27 @@ func TestBuildDocument(t *testing.T) {
 	require.Contains(t, tags, "ai-gateway-name:ca-cert-a")
 	require.Contains(t, tags, "ai-gateway-name:ca-cert-b")
 
-	// Non-strict rendering must not fail even once a dangling reference is introduced by the
-	// next slice - pinned here with a target that references a provider this test never creates.
+	// Rendering must not fail even once a dangling reference is introduced by the
+	// next slice - pinned here with a target that references a provider this test never
+	// creates. The converter no longer fails the render for it: the target's model is left
+	// without a convertible target, so it is dropped from the output and reported as an
+	// ERROR-severity issue, while the rest of the document still renders.
 	doc.Models[0].TargetModels = []aigw.TargetModel{{Name: "t", Provider: "does-not-exist"}}
-	payload, warnings, err := convert.ConvertDocumentToDBLessYAML(doc, convert.Options{Strict: false})
+	payload, issues, err := RenderDBLessYAML(doc, convert.Options{})
 	require.NoError(t, err)
 	require.NotEmpty(t, payload)
-	require.NotEmpty(t, warnings)
+	require.NotEmpty(t, issues)
+	// The dropped target is reported with a warning issue first; the model left without a
+	// convertible target follows as an ERROR issue.
+	var modelErr *convert.ConversionIssue
+	for i, issue := range issues {
+		if issue.Severity == convert.Error {
+			modelErr = &issues[i]
+			break
+		}
+	}
+	require.NotNil(t, modelErr, "expected an ERROR issue for the unconvertible model, got %v", issues)
+	require.Equal(t, "model-a", modelErr.Source.Name)
 }
 
 // TestBuildDocument_NoModels covers the empty case: an OnPremAIGateway with no AIGatewayModels

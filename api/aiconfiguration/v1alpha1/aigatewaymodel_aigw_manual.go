@@ -96,8 +96,7 @@ func (obj *AIGatewayModel) ToAIGWModel(ctx context.Context, cl client.Client) (*
 	if err != nil {
 		return nil, fmt.Errorf("resolving AIGatewayModel %s/%s access.authStrategies: %w", obj.Namespace, obj.Name, err)
 	}
-	// aigw.ModelAccess.UnmarshalYAML already folded the deprecated identity_providers key into
-	// Access.AuthStrategies; current-key refs come first.
+	// Resolved current-key refs are re-attached first.
 	model.Access.AuthStrategies = append(authStrategies, model.Access.AuthStrategies...)
 
 	if access.Acls != nil {
