@@ -34,9 +34,8 @@ spec:
       use:
         template: ../../common/_step_templates/apply-assert-onpremAIGateway.yaml
     - name: Create-provider-and-model
-      try:
-        - apply:
-            file: 02-provider-and-model.yaml
+      use:
+        template: ../../common/_step_templates/apply-assert-onpremProviderAndModel.yaml
     - name: Create-aigateway-dataplane
       use:
         template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
@@ -47,7 +46,15 @@ spec:
     - name: Assert-model-pushed-to-dataplane
       try:
         - assert:
-            file: 02-provider-and-model-assert.yaml
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayModel
+              metadata:
+                name: ($model_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
     - name: Drive-chat-completion-traffic
       try:
         - script:
