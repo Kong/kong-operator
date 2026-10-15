@@ -13,6 +13,7 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	"github.com/kong/kong-operator/v2/internal/utils/konnectendpoint"
 )
 
 // ListenValue renders a Kong listen value for the given port, bound to the
@@ -111,10 +112,10 @@ func KongDefaults(family ipfamily.IPFamily) (map[string]string, error) {
 var kongInKonnectClusterTypeControlPlane = map[string]string{
 	"KONG_ROLE":                          "data_plane",
 	"KONG_CLUSTER_MTLS":                  "pki",
-	"KONG_CLUSTER_CONTROL_PLANE":         "<CONTROL-PLANE-ENDPOINT>:443",
-	"KONG_CLUSTER_SERVER_NAME":           "<CONTROL-PLANE-ENDPOINT>",
-	"KONG_CLUSTER_TELEMETRY_ENDPOINT":    "<TELEMETRY-ENDPOINT>:443",
-	"KONG_CLUSTER_TELEMETRY_SERVER_NAME": "<TELEMETRY-ENDPOINT>",
+	"KONG_CLUSTER_CONTROL_PLANE":         "<CONTROL-PLANE-ADDRESS>",
+	"KONG_CLUSTER_SERVER_NAME":           "<CONTROL-PLANE-SERVER-NAME>",
+	"KONG_CLUSTER_TELEMETRY_ENDPOINT":    "<TELEMETRY-ADDRESS>",
+	"KONG_CLUSTER_TELEMETRY_SERVER_NAME": "<TELEMETRY-SERVER-NAME>",
 	"KONG_CLUSTER_CERT":                  "/etc/secrets/kong-cluster-cert/tls.crt",
 	"KONG_CLUSTER_CERT_KEY":              "/etc/secrets/kong-cluster-cert/tls.key",
 	"KONG_INCREMENTAL_SYNC":              "on",
@@ -128,8 +129,8 @@ var kongInKonnectClusterTypeControlPlane = map[string]string{
 var kongInKonnectClusterTypeIngressController = map[string]string{
 	"KONG_ROLE":                          "traditional",
 	"KONG_CLUSTER_MTLS":                  "pki",
-	"KONG_CLUSTER_TELEMETRY_ENDPOINT":    "<TELEMETRY-ENDPOINT>:443",
-	"KONG_CLUSTER_TELEMETRY_SERVER_NAME": "<TELEMETRY-ENDPOINT>",
+	"KONG_CLUSTER_TELEMETRY_ENDPOINT":    "<TELEMETRY-ADDRESS>",
+	"KONG_CLUSTER_TELEMETRY_SERVER_NAME": "<TELEMETRY-SERVER-NAME>",
 	"KONG_CLUSTER_CERT":                  "/etc/secrets/kong-cluster-cert/tls.crt",
 	"KONG_CLUSTER_CERT_KEY":              "/etc/secrets/kong-cluster-cert/tls.key",
 	"KONG_LUA_SSL_TRUSTED_CERTIFICATE":   "system",
@@ -155,9 +156,19 @@ func KongInKonnectDefaults(
 		panic(fmt.Sprintf("unsupported Konnect cluster type: %s", konnectExtensionStatus.Konnect.ClusterType))
 	}
 
+	cpEndpoint := konnectendpoint.Parse(konnectExtensionStatus.Konnect.Endpoints.ControlPlaneEndpoint)
+	tpEndpoint := konnectendpoint.Parse(konnectExtensionStatus.Konnect.Endpoints.TelemetryEndpoint)
+	endpointValues := map[string]string{
+		"<CONTROL-PLANE-ADDRESS>":     cpEndpoint.ControlPlaneAddress(),
+		"<CONTROL-PLANE-SERVER-NAME>": cpEndpoint.ServerName(),
+		"<TELEMETRY-ADDRESS>":         tpEndpoint.TelemetryAddress(),
+		"<TELEMETRY-SERVER-NAME>":     tpEndpoint.ServerName(),
+	}
+
 	for k, v := range template {
-		v = strings.ReplaceAll(v, "<CONTROL-PLANE-ENDPOINT>", sanitizeEndpoint(konnectExtensionStatus.Konnect.Endpoints.ControlPlaneEndpoint))
-		v = strings.ReplaceAll(v, "<TELEMETRY-ENDPOINT>", sanitizeEndpoint(konnectExtensionStatus.Konnect.Endpoints.TelemetryEndpoint))
+		for placeholder, value := range endpointValues {
+			v = strings.ReplaceAll(v, placeholder, value)
+		}
 		newEnvSet[k] = v
 	}
 
@@ -166,10 +177,6 @@ func KongInKonnectDefaults(
 	}
 
 	return newEnvSet
-}
-
-func sanitizeEndpoint(endpoint string) string {
-	return strings.TrimPrefix(endpoint, "https://")
 }
 
 func clusterDataPlaneLabelStringFromLabels(labels map[string]konnectv1alpha2.DataPlaneLabelValue) string {

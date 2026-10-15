@@ -124,3 +124,124 @@ func TestKongDefaults(t *testing.T) {
 		}
 	})
 }
+
+func konnectStatusWithEndpoints(
+	clusterType konnectv1alpha2.KonnectExtensionClusterType,
+	controlPlaneEndpoint, telemetryEndpoint string,
+) konnectv1alpha2.KonnectExtensionStatus {
+	return konnectv1alpha2.KonnectExtensionStatus{
+		Konnect: &konnectv1alpha2.KonnectExtensionControlPlaneStatus{
+			ControlPlaneID: "konnect-id",
+			ClusterType:    clusterType,
+			Endpoints: konnectv1alpha2.KonnectEndpoints{
+				ControlPlaneEndpoint: controlPlaneEndpoint,
+				TelemetryEndpoint:    telemetryEndpoint,
+			},
+		},
+	}
+}
+
+func TestKongInKonnectDefaults(t *testing.T) {
+	const (
+		publicControlPlaneEndpoint  = "7078163243.us.cp.konghq.com"
+		publicTelemetryEndpoint     = "7078163243.us.tp.konghq.com"
+		privateControlPlaneEndpoint = "https://us.svc.konghq.com/cp/abc"
+		privateTelemetryEndpoint    = "https://us.svc.konghq.com/tp/abc"
+	)
+
+	// The whole map the ControlPlane template renders for a public endpoint,
+	// written out so any value that moves fails this test.
+	publicEnv := map[string]string{
+		"KONG_ROLE":                          "data_plane",
+		"KONG_CLUSTER_MTLS":                  "pki",
+		"KONG_CLUSTER_CONTROL_PLANE":         "7078163243.us.cp.konghq.com:443",
+		"KONG_CLUSTER_SERVER_NAME":           "7078163243.us.cp.konghq.com",
+		"KONG_CLUSTER_TELEMETRY_ENDPOINT":    "7078163243.us.tp.konghq.com:443",
+		"KONG_CLUSTER_TELEMETRY_SERVER_NAME": "7078163243.us.tp.konghq.com",
+		"KONG_CLUSTER_CERT":                  "/etc/secrets/kong-cluster-cert/tls.crt",
+		"KONG_CLUSTER_CERT_KEY":              "/etc/secrets/kong-cluster-cert/tls.key",
+		"KONG_INCREMENTAL_SYNC":              "on",
+		"KONG_LUA_SSL_TRUSTED_CERTIFICATE":   "system",
+		"KONG_KONNECT_MODE":                  "on",
+		"KONG_VITALS":                        "off",
+	}
+
+	testCases := []struct {
+		name                 string
+		clusterType          konnectv1alpha2.KonnectExtensionClusterType
+		controlPlaneEndpoint string
+		telemetryEndpoint    string
+		// wantEndpoints are the endpoint keys the returned map must carry.
+		wantEndpoints map[string]string
+		// wantAbsent are keys the returned map must not carry.
+		wantAbsent []string
+		// wantFull, when set, is the whole returned map.
+		wantFull map[string]string
+	}{
+		{
+			name:                 "public endpoint without a scheme",
+			clusterType:          konnectv1alpha2.ClusterTypeControlPlane,
+			controlPlaneEndpoint: publicControlPlaneEndpoint,
+			telemetryEndpoint:    publicTelemetryEndpoint,
+			wantEndpoints: map[string]string{
+				"KONG_CLUSTER_CONTROL_PLANE":         "7078163243.us.cp.konghq.com:443",
+				"KONG_CLUSTER_SERVER_NAME":           "7078163243.us.cp.konghq.com",
+				"KONG_CLUSTER_TELEMETRY_ENDPOINT":    "7078163243.us.tp.konghq.com:443",
+				"KONG_CLUSTER_TELEMETRY_SERVER_NAME": "7078163243.us.tp.konghq.com",
+			},
+			wantFull: publicEnv,
+		},
+		{
+			name:                 "public endpoint with a scheme",
+			clusterType:          konnectv1alpha2.ClusterTypeControlPlane,
+			controlPlaneEndpoint: "https://" + publicControlPlaneEndpoint,
+			telemetryEndpoint:    "https://" + publicTelemetryEndpoint,
+			wantEndpoints: map[string]string{
+				"KONG_CLUSTER_CONTROL_PLANE":         "7078163243.us.cp.konghq.com:443",
+				"KONG_CLUSTER_SERVER_NAME":           "7078163243.us.cp.konghq.com",
+				"KONG_CLUSTER_TELEMETRY_ENDPOINT":    "7078163243.us.tp.konghq.com:443",
+				"KONG_CLUSTER_TELEMETRY_SERVER_NAME": "7078163243.us.tp.konghq.com",
+			},
+			wantFull: publicEnv,
+		},
+		{
+			name:                 "private endpoints carrying a path",
+			clusterType:          konnectv1alpha2.ClusterTypeControlPlane,
+			controlPlaneEndpoint: privateControlPlaneEndpoint,
+			telemetryEndpoint:    privateTelemetryEndpoint,
+			wantEndpoints: map[string]string{
+				"KONG_CLUSTER_CONTROL_PLANE":         "us.svc.konghq.com/cp/abc",
+				"KONG_CLUSTER_SERVER_NAME":           "us.svc.konghq.com",
+				"KONG_CLUSTER_TELEMETRY_ENDPOINT":    "us.svc.konghq.com:443/tp/abc",
+				"KONG_CLUSTER_TELEMETRY_SERVER_NAME": "us.svc.konghq.com",
+			},
+		},
+		{
+			name:                 "private endpoints on a K8s Ingress Controller cluster",
+			clusterType:          konnectv1alpha2.ClusterTypeK8sIngressController,
+			controlPlaneEndpoint: privateControlPlaneEndpoint,
+			telemetryEndpoint:    privateTelemetryEndpoint,
+			wantEndpoints: map[string]string{
+				"KONG_CLUSTER_TELEMETRY_ENDPOINT":    "us.svc.konghq.com:443/tp/abc",
+				"KONG_CLUSTER_TELEMETRY_SERVER_NAME": "us.svc.konghq.com",
+			},
+			wantAbsent: []string{"KONG_CLUSTER_CONTROL_PLANE", "KONG_CLUSTER_SERVER_NAME"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := KongInKonnectDefaults(nil, konnectStatusWithEndpoints(tc.clusterType, tc.controlPlaneEndpoint, tc.telemetryEndpoint))
+
+			for key, want := range tc.wantEndpoints {
+				assert.Equal(t, want, got[key], "%s", key)
+			}
+			for _, key := range tc.wantAbsent {
+				assert.NotContains(t, got, key)
+			}
+			if tc.wantFull != nil {
+				assert.Equal(t, tc.wantFull, got)
+			}
+		})
+	}
+}
