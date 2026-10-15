@@ -22,6 +22,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/extensions"
 	extensionserrors "github.com/kong/kong-operator/v2/controller/pkg/extensions/errors"
 	extensionskonnect "github.com/kong/kong-operator/v2/controller/pkg/extensions/konnect"
+	"github.com/kong/kong-operator/v2/controller/pkg/hpa"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
@@ -236,7 +237,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, dataplane *operatorv1beta1.D
 		return ctrl.Result{}, nil
 	}
 
-	res, _, err = ensureHPAForDataPlane(ctx, r.Client, logger, dataplane, deployment.Name)
+	res, err = hpa.Ensure(ctx, r.Client, logger, dataplane, deployment.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

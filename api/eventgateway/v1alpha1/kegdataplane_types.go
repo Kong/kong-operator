@@ -604,3 +604,12 @@ func (e *KegDataPlane) GetConditions() []metav1.Condition {
 func (e *KegDataPlane) SetConditions(conditions []metav1.Condition) {
 	e.Status.Conditions = conditions
 }
+
+// GetHorizontalScaling returns the KegDataPlane horizontal scaling options, or nil
+// when horizontal scaling is not configured.
+func (e *KegDataPlane) GetHorizontalScaling() *commonv1alpha1.HorizontalScaling {
+	if e.Spec.Deployment == nil || e.Spec.Deployment.Scaling == nil {
+		return nil
+	}
+	return e.Spec.Deployment.Scaling.HorizontalScaling
+}
