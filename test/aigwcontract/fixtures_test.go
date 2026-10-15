@@ -9,6 +9,7 @@ import (
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	aigwcontainers "github.com/kong/kong-operator/v2/test/aigwcontract/containers"
 )
 
 // Entity names of the representative document. Every cross-reference below
@@ -37,22 +38,6 @@ const (
 	mcpServerUpstreamURL = "http://upstream:8080"
 	consumerAPIKey       = "s3cr3t"
 	providerAPIKey       = "test-ai-gateway-key"
-	// The schema must carry the `fields` table Kong's custom_plugins entity
-	// loader expects; a name-only schema makes the Admin API error out.
-	customPolicySchemaLua = `return {
-  name = "mock-custom-policy",
-  fields = {
-    { config = {
-        type = "record",
-        fields = {
-          { header_name = { type = "string", default = "X-Mock-Custom-Policy" } },
-        },
-      } },
-  },
-}`
-	customPolicyHandlerLua = `local P = { PRIORITY = 1000, VERSION = "1.0.0" }
-function P:header_filter(conf) kong.response.set_header("X-Mock-Custom-Policy", "applied") end
-return P`
 )
 
 // Fixed test certificates, following the same convention as the ingress
@@ -256,11 +241,11 @@ func representativeObjects(t *testing.T) []any {
 						DisplayName: "Mock custom policy",
 						Schema: aiconfigurationv1alpha1.ConfigMapDataSource{
 							Type:  aiconfigurationv1alpha1.ConfigMapDataSourceTypeInline,
-							Value: new(customPolicySchemaLua),
+							Value: new(aigwcontainers.MockCustomPolicySchemaLua),
 						},
 						Handler: aiconfigurationv1alpha1.ConfigMapDataSource{
 							Type:  aiconfigurationv1alpha1.ConfigMapDataSourceTypeInline,
-							Value: new(customPolicyHandlerLua),
+							Value: new(aigwcontainers.MockCustomPolicyHandlerLua),
 						},
 					},
 				},

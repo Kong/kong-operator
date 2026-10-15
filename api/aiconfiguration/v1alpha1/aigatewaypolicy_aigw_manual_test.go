@@ -5,11 +5,13 @@ import (
 	"testing"
 
 	"github.com/Kong/ai-deck-converter/aigw"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	"github.com/stretchr/testify/require"
 	yaml "gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
@@ -203,4 +205,141 @@ func TestAIGatewayPolicy_ToAIGWPolicy_StrictRoundTrip(t *testing.T) {
 	require.NotNil(t, policy.Global)
 	require.False(t, *policy.Global)
 	require.Equal(t, map[string]any{"limit_by_header": "x-api-key"}, policy.Config)
+}
+
+// TestAIGatewayPolicy_ToAIGWPolicy_CustomPolicyRef covers the on-prem
+// customPolicyRef resolution: the referenced custom policy's Konnect name
+// becomes the policy's type, and the error branches (type + customPolicyRef
+// mutual exclusion, missing custom policy, cross-namespace ref, nameless
+// custom policy, custom policy bound to a different AI Gateway) fail with
+// actionable messages instead of rendering a nameless plugin.
+func TestAIGatewayPolicy_ToAIGWPolicy_CustomPolicyRef(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	// customPolicy returns a streaming AIGatewayCustomPolicy named name,
+	// bound to the on-prem gateway gwName, in the default namespace.
+	customPolicy := func(name, gwName string) *AIGatewayCustomPolicy {
+		return &AIGatewayCustomPolicy{
+			Namespace: "default", Name: name,
+			Spec: AIGatewayCustomPolicySpec{
+				AIGatewayRef: AIGatewayRef{
+					Group:         AIGatewayRefGroupOnPrem,
+					Kind:          AIGatewayRefKindOnPrem,
+					NamespacedRef: &commonv1alpha1.NamespacedRef{Name: gwName},
+				},
+				APISpec: AIGatewayCustomPolicyAPISpec{
+					AIGatewayCustomPolicyConfig: &AIGatewayCustomPolicyConfig{
+						Type: AIGatewayCustomPolicyConfigTypeStreaming,
+						Streaming: &CreateAIGatewayCustomPolicyStreamingRequest{
+							Name: AIGatewayEntityIdentifier(name),
+							Schema: ConfigMapDataSource{
+								Type:  ConfigMapDataSourceTypeInline,
+								Value: new(`return { name = "` + name + `" }`),
+							},
+							Handler: ConfigMapDataSource{
+								Type:  ConfigMapDataSourceTypeInline,
+								Value: new(`return {}`),
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	// policy returns an AIGatewayPolicy in the default namespace bound to gw,
+	// with Type and customPolicyRef set according to the arguments.
+	policy := func(typ string, ref *AIGatewayCustomPolicyRef) *AIGatewayPolicy {
+		return &AIGatewayPolicy{
+			Namespace: "default", Name: "sample-policy",
+			Spec: AIGatewayPolicySpec{
+				AIGatewayRef: AIGatewayRef{
+					Group:         AIGatewayRefGroupOnPrem,
+					Kind:          AIGatewayRefKindOnPrem,
+					NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gw"},
+				},
+				APISpec: AIGatewayPolicyAPISpec{
+					Name:            "sample-policy",
+					DisplayName:     "Sample policy",
+					Type:            typ,
+					CustomPolicyRef: *ref,
+				},
+			},
+		}
+	}
+	refTo := func(name, namespace string) *AIGatewayCustomPolicyRef {
+		return &AIGatewayCustomPolicyRef{Name: name, Namespace: namespace}
+	}
+	builderWith := func(objs ...client.Object) *fake.ClientBuilder {
+		builder := fake.NewClientBuilder().WithScheme(scheme)
+		for _, obj := range objs {
+			builder = builder.WithObjects(obj)
+		}
+		return builder
+	}
+
+	tests := []struct {
+		name    string
+		obj     *AIGatewayPolicy
+		objects []client.Object
+		wantTyp string
+		wantErr string
+	}{
+		{
+			name:    "customPolicyRef resolves to the custom policy's Konnect name",
+			obj:     policy("", refTo("cp", "")),
+			objects: []client.Object{customPolicy("cp", "gw")},
+			wantTyp: "cp",
+		},
+		{
+			name:    "type and customPolicyRef are mutually exclusive",
+			obj:     policy("rate-limiting", refTo("cp", "")),
+			objects: []client.Object{customPolicy("cp", "gw")},
+			wantErr: "type and customPolicyRef are mutually exclusive",
+		},
+		{
+			name:    "missing custom policy fails",
+			obj:     policy("", refTo("missing", "")),
+			wantErr: "resolving AIGatewayPolicy default/sample-policy customPolicyRef \"missing\"",
+		},
+		{
+			name:    "cross-namespace customPolicyRef fails",
+			obj:     policy("", refTo("cp", "other")),
+			objects: []client.Object{customPolicy("cp", "gw")},
+			wantErr: "cross-namespace customPolicyRef other/cp is not supported on-prem",
+		},
+		{
+			name: "custom policy without apiSpec fails",
+			obj:  policy("", refTo("nameless", "")),
+			objects: []client.Object{&AIGatewayCustomPolicy{
+				Namespace: "default", Name: "nameless",
+			}},
+			wantErr: "referenced custom policy \"nameless\" has no name set",
+		},
+		{
+			name:    "custom policy bound to a different AI Gateway fails",
+			obj:     policy("", refTo("cp", "")),
+			objects: []client.Object{customPolicy("cp", "other-gw")},
+			wantErr: "customPolicyRef \"cp\" belongs to a different AI Gateway",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := tc.obj.ToAIGWPolicy(t.Context(), builderWith(tc.objects...).Build())
+			if tc.wantErr != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tc.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tc.wantTyp, got.Type)
+		})
+	}
 }

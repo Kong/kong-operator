@@ -27,23 +27,21 @@ const (
 	aigwProxyPort = "8000"
 )
 
-// mockCustomPolicyName must match fixtures_test.go's customPolicyName: the
-// streaming custom policy the representative document carries. The plugin
-// instance referencing it is only accepted by the Admin API when the plugin
-// is enabled on the data plane (KONG_PLUGINS) and its code is on disk — the
-// same setup the operator's data plane deployments provision for installed
-// and streaming custom policies.
-const mockCustomPolicyName = "mock-custom-policy"
+// MockCustomPolicyName is the streaming custom policy the representative
+// document carries. The plugin instance referencing it is only accepted by
+// the Admin API when the plugin is enabled on the data plane (KONG_PLUGINS)
+// and its code is on disk — the same setup the operator's data plane
+// deployments provision for installed and streaming custom policies. The
+// contract test's fixtures reference these constants so the payload's
+// custom_plugins entry and the container's on-disk plugin cannot drift.
+const (
+	MockCustomPolicyName = "mock-custom-policy"
 
-// mockCustomPolicyHandlerLua must stay behaviorally equivalent to
-// fixtures_test.go's customPolicyHandlerLua; it is what the container loads.
-const mockCustomPolicyHandlerLua = `local P = { PRIORITY = 1000, VERSION = "1.0.0" }
+	MockCustomPolicyHandlerLua = `local P = { PRIORITY = 1000, VERSION = "1.0.0" }
 function P:header_filter(conf) kong.response.set_header("X-Mock-Custom-Policy", "applied") end
 return P`
 
-// mockCustomPolicySchemaLua must stay behaviorally equivalent to
-// fixtures_test.go's customPolicySchemaLua.
-const mockCustomPolicySchemaLua = `return {
+	MockCustomPolicySchemaLua = `return {
   name = "mock-custom-policy",
   fields = {
     { config = {
@@ -54,6 +52,7 @@ const mockCustomPolicySchemaLua = `return {
       } },
   },
 }`
+)
 
 // AIGateway represents a docker container running Kong AI Gateway.
 type AIGateway struct {
@@ -82,7 +81,7 @@ func NewAIGateway(ctx context.Context, t *testing.T) AIGateway {
 			// streaming custom policy; the Admin API only accepts it when the
 			// plugin is enabled and its code is loadable (mirroring what the
 			// operator provisions on data planes).
-			"KONG_PLUGINS": "bundled," + mockCustomPolicyName,
+			"KONG_PLUGINS": "bundled," + MockCustomPolicyName,
 		},
 		WaitingFor: wait.ForAll(
 			wait.ForListeningPort(aigwAdminPort),
@@ -112,10 +111,10 @@ func NewAIGateway(ctx context.Context, t *testing.T) AIGateway {
 			}
 			// The custom policy's plugin code must be on the container's Lua
 			// path before Kong boots, or KONG_PLUGINS fails at startup.
-			pluginDir := "/usr/local/share/lua/5.1/kong/plugins/" + mockCustomPolicyName
+			pluginDir := "/usr/local/share/lua/5.1/kong/plugins/" + MockCustomPolicyName
 			for name, content := range map[string]string{
-				"handler.lua": mockCustomPolicyHandlerLua,
-				"schema.lua":  mockCustomPolicySchemaLua,
+				"handler.lua": MockCustomPolicyHandlerLua,
+				"schema.lua":  MockCustomPolicySchemaLua,
 			} {
 				if err := c.CopyToContainer(ctx, []byte(content), pluginDir+"/"+name, 0o644); err != nil {
 					return nil, fmt.Errorf("copying %s into the container: %w", name, err)

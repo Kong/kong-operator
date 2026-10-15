@@ -46,12 +46,26 @@ func (obj *AIGatewayPolicy) ToAIGWPolicy(ctx context.Context, cl client.Client) 
 		if policy.Type != "" {
 			return nil, fmt.Errorf("AIGatewayPolicy %s/%s: type and customPolicyRef are mutually exclusive", obj.Namespace, obj.Name)
 		}
+		if ref.Namespace != "" && ref.Namespace != obj.Namespace {
+			return nil, fmt.Errorf("AIGatewayPolicy %s/%s: cross-namespace customPolicyRef %s/%s is not supported on-prem", obj.Namespace, obj.Name, ref.Namespace, ref.Name)
+		}
 		var customPolicy AIGatewayCustomPolicy
 		nn := types.NamespacedName{Namespace: obj.Namespace, Name: ref.Name}
 		if err := cl.Get(ctx, nn, &customPolicy); err != nil {
 			return nil, fmt.Errorf("resolving AIGatewayPolicy %s/%s customPolicyRef %q: %w", obj.Namespace, obj.Name, ref.Name, err)
 		}
-		policy.Type = customPolicy.GetKonnectName()
+		// A custom policy bound to a different AI Gateway is not part of this
+		// gateway's rendered document, so referencing it would push a plugin
+		// with no custom_plugins entry behind it.
+		name := customPolicy.GetKonnectName()
+		if name == "" {
+			return nil, fmt.Errorf("AIGatewayPolicy %s/%s: referenced custom policy %q has no name set", obj.Namespace, obj.Name, ref.Name)
+		}
+		if cpGW := customPolicy.Spec.AIGatewayRef; cpGW.NamespacedRef == nil || obj.Spec.AIGatewayRef.NamespacedRef == nil ||
+			cpGW.NamespacedRef.Name != obj.Spec.AIGatewayRef.NamespacedRef.Name {
+			return nil, fmt.Errorf("AIGatewayPolicy %s/%s: customPolicyRef %q belongs to a different AI Gateway", obj.Namespace, obj.Name, ref.Name)
+		}
+		policy.Type = name
 	}
 	return &policy, nil
 }
