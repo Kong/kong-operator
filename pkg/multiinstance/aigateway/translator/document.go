@@ -37,7 +37,7 @@ import (
 // rendered configurations when the caller does not specify one: the oldest release
 // that must run the pushed output. Pinned to the converter README's example value;
 // TODO: derive it from the actual data plane version tag set on AIGatewayDataPlane
-// (tracked as a sub-issue of Kong/kong-operator#5402).
+// TODO: https://github.com/Kong/kong-operator/issues/6120
 const defaultMinRuntimeVersion = "2.1"
 
 // EntityStatus is the per-entity outcome of the document translation: Err is
