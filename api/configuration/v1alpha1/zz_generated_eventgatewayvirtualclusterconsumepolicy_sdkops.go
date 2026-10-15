@@ -13,6 +13,7 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectoper "github.com/Kong/sdk-konnect-go/models/operations"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
 // EventGatewayVirtualClusterConsumePolicySDKOpsBoolField describes a boolean enum field that must be normalized for SDK payloads.
@@ -237,6 +238,9 @@ func (s *EventGatewayVirtualClusterConsumePolicyAPISpec) selectedSDKOpsPayload(p
 	}
 	selected = flattenSDKUnionsExceptUnder(selected, EventGatewayVirtualClusterConsumePolicySDKOpsFreeformKeyFields, variantJSON)
 	if selectedMap, ok := selected.(map[string]any); ok {
+		if value, ok := payload["parent_policy_id"]; ok {
+			selectedMap["parent_policy_id"] = value
+		}
 		if typeValue, ok := payload["type"]; ok {
 			if _, hasType := selectedMap["type"]; !hasType {
 				withType := make(map[string]any)
@@ -333,6 +337,87 @@ func (s *EventGatewayVirtualClusterConsumePolicyAPISpec) toUpdateEventGatewayVir
 	return &sdkkonnectoper.UpdateEventGatewayVirtualClusterConsumePolicyRequest{
 		EventGatewayConsumePolicyUpdate: &body,
 	}, nil
+}
+
+// RefsAtEventGatewayVirtualClusterConsumePolicyParentPolicyRef returns the reference at spec.apiSpec.parentPolicyRef,
+// or nil when it is unset.
+func RefsAtEventGatewayVirtualClusterConsumePolicyParentPolicyRef(obj *EventGatewayVirtualClusterConsumePolicy) []EventGatewayVirtualClusterConsumePolicyRef {
+	if obj.Spec.APISpec.ParentPolicyRef.Name == "" {
+		return nil
+	}
+	return []EventGatewayVirtualClusterConsumePolicyRef{obj.Spec.APISpec.ParentPolicyRef}
+}
+
+// resolveEventGatewayVirtualClusterConsumePolicyParentPolicyRef resolves the CR references in spec.apiSpec.parentPolicyRef
+// to Konnect IDs.
+func resolveEventGatewayVirtualClusterConsumePolicyParentPolicyRef(ctx context.Context, cl client.Client, obj *EventGatewayVirtualClusterConsumePolicy) ([]string, error) {
+	refs := RefsAtEventGatewayVirtualClusterConsumePolicyParentPolicyRef(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewayVirtualClusterConsumePolicy"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		if ns != obj.GetNamespace() {
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
+		}
+		var referenced EventGatewayVirtualClusterConsumePolicy
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "EventGatewayVirtualClusterConsumePolicy", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced EventGatewayVirtualClusterConsumePolicy %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		if ns == obj.GetNamespace() && ref.Name == obj.GetName() {
+			errs = append(errs, ReferenceSelfError{Kind: "EventGatewayVirtualClusterConsumePolicy", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if commonv1alpha1.ObjectRefsDiffer(obj.Spec.EventGatewayVirtualClusterRef, referenced.Spec.EventGatewayVirtualClusterRef, obj.GetNamespace(), ns) {
+			errs = append(errs, ReferenceDifferentParentError{Kind: "EventGatewayVirtualClusterConsumePolicy", Namespace: ns, Name: ref.Name, ParentKind: "EventGatewayVirtualCluster"})
+			continue
+		}
+		if id := obj.GetVirtualClusterID(); id != "" && referenced.GetVirtualClusterID() != "" && id != referenced.GetVirtualClusterID() {
+			errs = append(errs, ReferenceDifferentParentError{Kind: "EventGatewayVirtualClusterConsumePolicy", Namespace: ns, Name: ref.Name, ParentKind: "EventGatewayVirtualCluster"})
+			continue
+		}
+		if referenced.Spec.APISpec.EventGatewayVirtualClusterConsumePolicyConfig == nil || string(referenced.Spec.APISpec.Type) != "schemaValidation" {
+			errs = append(errs, fmt.Errorf("EventGatewayVirtualClusterConsumePolicy %s/%s must have apiSpec.type schemaValidation", ns, ref.Name))
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "EventGatewayVirtualClusterConsumePolicy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		// The resolved value replaces parentPolicyID: EventGatewayVirtualClusterConsumePolicy objects
+		// being deleted must not gain new users, which could keep their deletion
+		// blocked.
+		if !referenced.GetDeletionTimestamp().IsZero() && obj.GetKonnectID() == "" {
+			errs = append(errs, ReferenceBeingDeletedError{Kind: "EventGatewayVirtualClusterConsumePolicy", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		id := referenced.GetKonnectID()
+		if id == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "EventGatewayVirtualClusterConsumePolicy", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, id)
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
 }
 
 // RefsAtEventGatewayVirtualClusterConsumePolicySchemaValidationConfigJSONSchemaRegistry returns the references at spec.apiSpec.schemaValidation.config.json.schemaRegistry,
@@ -473,10 +558,30 @@ func resolveEventGatewayVirtualClusterConsumePolicySchemaValidationConfigConflue
 	return resolved, nil
 }
 
+// EventGatewayVirtualClusterConsumePolicyRefsToEventGatewayVirtualClusterConsumePolicy returns the keys of the EventGatewayVirtualClusterConsumePolicy
+// objects obj references through spec.apiSpec.parentPolicyRef, with the default namespace applied.
+func EventGatewayVirtualClusterConsumePolicyRefsToEventGatewayVirtualClusterConsumePolicy(obj *EventGatewayVirtualClusterConsumePolicy) []client.ObjectKey {
+	var keys []client.ObjectKey
+	for _, ref := range RefsAtEventGatewayVirtualClusterConsumePolicyParentPolicyRef(obj) {
+		if ref.Kind != "" && ref.Kind != "EventGatewayVirtualClusterConsumePolicy" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
+	}
+	return keys
+}
+
 // ResolveKonnectReferences resolves every CR reference declared on the spec and
 // returns the joined resolution errors, or nil when all references resolve.
 func (obj *EventGatewayVirtualClusterConsumePolicy) ResolveKonnectReferences(ctx context.Context, cl client.Client) error {
 	var errs []error
+	if _, err := resolveEventGatewayVirtualClusterConsumePolicyParentPolicyRef(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
 	if _, err := resolveEventGatewayVirtualClusterConsumePolicySchemaValidationConfigJSONSchemaRegistry(ctx, cl, obj); err != nil {
 		errs = append(errs, err)
 	}
@@ -502,6 +607,14 @@ func (obj *EventGatewayVirtualClusterConsumePolicy) ToCreateEventGatewayVirtualC
 	payload, err := spec.marshalSDKOpsPayload()
 	if err != nil {
 		return nil, err
+	}
+	resolvedParentPolicyRef, err := resolveEventGatewayVirtualClusterConsumePolicyParentPolicyRef(ctx, cl, obj)
+	if err != nil {
+		return nil, fmt.Errorf("resolving spec.apiSpec.parentPolicyRef references: %w", err)
+	}
+	delete(payload, "parent_policy_ref")
+	if len(resolvedParentPolicyRef) > 0 {
+		payload["parent_policy_id"] = resolvedParentPolicyRef[0]
 	}
 	// spec.apiSpec.schemaValidation.config.json.schemaRegistry carries a CR reference: overwrite it in the SDK payload with an
 	// object wrapping the resolved Konnect value under "name",
@@ -569,6 +682,14 @@ func (obj *EventGatewayVirtualClusterConsumePolicy) ToUpdateEventGatewayVirtualC
 	payload, err := spec.marshalSDKOpsPayload()
 	if err != nil {
 		return nil, err
+	}
+	resolvedParentPolicyRef, err := resolveEventGatewayVirtualClusterConsumePolicyParentPolicyRef(ctx, cl, obj)
+	if err != nil {
+		return nil, fmt.Errorf("resolving spec.apiSpec.parentPolicyRef references: %w", err)
+	}
+	delete(payload, "parent_policy_ref")
+	if len(resolvedParentPolicyRef) > 0 {
+		payload["parent_policy_id"] = resolvedParentPolicyRef[0]
 	}
 	// spec.apiSpec.schemaValidation.config.json.schemaRegistry carries a CR reference: overwrite it in the SDK payload with an
 	// object wrapping the resolved Konnect value under "name",

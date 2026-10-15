@@ -402,6 +402,10 @@ func Delete[
 		err = deleteEventGatewayTLSTrustBundleGuarded(
 			ctx, sdk.GetEventGatewayTLSTrustBundlesSDK(), sdk.GetEventGatewayListenersSDK(), sdk.GetEventGatewayListenerPoliciesSDK(), cl, e,
 		)
+	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy:
+		err = deleteEventGatewayVirtualClusterProducePolicyGuarded(ctx, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), cl, e)
+	case *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy:
+		err = deleteEventGatewayVirtualClusterConsumePolicyGuarded(ctx, sdk.GetEventGatewayVirtualClusterConsumePoliciesSDK(), cl, e)
 	case *configurationv1alpha1.KongService:
 		err = deleteService(ctx, sdk.GetServicesSDK(), e)
 	case *configurationv1alpha1.KongRoute:

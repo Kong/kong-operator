@@ -963,6 +963,19 @@ apiGroupVersions:
       - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/produce-policies
         name: EventGatewayVirtualClusterProducePolicy
         references:
+          # The shared variant schemas cannot carry a same-kind reference.
+          # Resolve this root-level reference into the selected SDK variant.
+          - path: spec.apiSpec.parentPolicyRef
+            kinds: [EventGatewayVirtualClusterProducePolicy]
+            resolvesTo: id
+            injectInto: parentPolicyID
+            requiredAPISpecType: schemaValidation
+            reverseWatch: true
+            description: |-
+              ParentPolicyRef references a schemaValidation produce policy in the same
+              namespace and virtual cluster. Required for encryptFields and optional
+              for modifyHeaders. It is immutable once this policy exists in Konnect.
+              Deleting a parent is blocked while child policy objects reference it.
           # Additive: Konnect static key IDs/names keep working; namespacedRef
           # references an EventGatewayStaticKey in the cluster instead,
           # resolved to its Konnect ID. Konnect refuses to delete a static key
@@ -984,6 +997,11 @@ apiGroupVersions:
             - parentPolicyID
           EventGatewayParsedRecordEncryptFieldsPolicyCreate:
             - parentPolicyID
+        cel:
+          _validations:
+            - '+kubebuilder:validation:XValidation:rule="!has(oldSelf.status) || !has(oldSelf.status.id) || (has(self.spec.apiSpec) && has(self.spec.apiSpec.parentPolicyRef) ? has(oldSelf.spec.apiSpec) && has(oldSelf.spec.apiSpec.parentPolicyRef) && self.spec.apiSpec.parentPolicyRef == oldSelf.spec.apiSpec.parentPolicyRef : !has(oldSelf.spec.apiSpec) || !has(oldSelf.spec.apiSpec.parentPolicyRef))",message="parentPolicyRef is immutable once the policy has been created in Konnect",fieldPath=".spec.apiSpec.parentPolicyRef"'
+            - '+kubebuilder:validation:XValidation:rule="!has(self.spec.apiSpec) || !has(self.spec.apiSpec.type) || self.spec.apiSpec.type != ''encryptFields'' || has(self.spec.apiSpec.parentPolicyRef) || (oldSelf.hasValue() && has(oldSelf.value().spec.apiSpec) && has(oldSelf.value().spec.apiSpec.type) && oldSelf.value().spec.apiSpec.type == ''encryptFields'' && !has(oldSelf.value().spec.apiSpec.parentPolicyRef))",message="parentPolicyRef is required for encryptFields",fieldPath=".spec.apiSpec.parentPolicyRef",optionalOldSelf=true'
+            - '+kubebuilder:validation:XValidation:rule="!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef) || (has(self.spec.apiSpec.type) && self.spec.apiSpec.type in [''encryptFields'', ''modifyHeaders''])",message="parentPolicyRef is only supported for encryptFields and modifyHeaders",fieldPath=".spec.apiSpec.parentPolicyRef"'
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterProducePoliciesSDK
@@ -1006,6 +1024,17 @@ apiGroupVersions:
       - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/consume-policies
         name: EventGatewayVirtualClusterConsumePolicy
         references:
+          - path: spec.apiSpec.parentPolicyRef
+            kinds: [EventGatewayVirtualClusterConsumePolicy]
+            resolvesTo: id
+            injectInto: parentPolicyID
+            requiredAPISpecType: schemaValidation
+            reverseWatch: true
+            description: |-
+              ParentPolicyRef references a schemaValidation consume policy in the same
+              namespace and virtual cluster. Required for decryptFields and optional
+              for modifyHeaders and skipRecord. It is immutable once this policy exists
+              in Konnect. Deleting a parent is blocked while child policy objects reference it.
           - path: spec.apiSpec.schemaValidation.config.json.schemaRegistry
             kinds: [EventGatewaySchemaRegistry]
             resolvesTo: name
@@ -1019,6 +1048,11 @@ apiGroupVersions:
             - parentPolicyID
           EventGatewaySkipRecordPolicyCreate:
             - parentPolicyID
+        cel:
+          _validations:
+            - '+kubebuilder:validation:XValidation:rule="!has(oldSelf.status) || !has(oldSelf.status.id) || (has(self.spec.apiSpec) && has(self.spec.apiSpec.parentPolicyRef) ? has(oldSelf.spec.apiSpec) && has(oldSelf.spec.apiSpec.parentPolicyRef) && self.spec.apiSpec.parentPolicyRef == oldSelf.spec.apiSpec.parentPolicyRef : !has(oldSelf.spec.apiSpec) || !has(oldSelf.spec.apiSpec.parentPolicyRef))",message="parentPolicyRef is immutable once the policy has been created in Konnect",fieldPath=".spec.apiSpec.parentPolicyRef"'
+            - '+kubebuilder:validation:XValidation:rule="!has(self.spec.apiSpec) || !has(self.spec.apiSpec.type) || self.spec.apiSpec.type != ''decryptFields'' || has(self.spec.apiSpec.parentPolicyRef) || (oldSelf.hasValue() && has(oldSelf.value().spec.apiSpec) && has(oldSelf.value().spec.apiSpec.type) && oldSelf.value().spec.apiSpec.type == ''decryptFields'' && !has(oldSelf.value().spec.apiSpec.parentPolicyRef))",message="parentPolicyRef is required for decryptFields",fieldPath=".spec.apiSpec.parentPolicyRef",optionalOldSelf=true'
+            - '+kubebuilder:validation:XValidation:rule="!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef) || (has(self.spec.apiSpec.type) && self.spec.apiSpec.type in [''decryptFields'', ''modifyHeaders'', ''skipRecord''])",message="parentPolicyRef is only supported for decryptFields, modifyHeaders and skipRecord",fieldPath=".spec.apiSpec.parentPolicyRef"'
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterConsumePoliciesSDK

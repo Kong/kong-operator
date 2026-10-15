@@ -22,6 +22,10 @@ import (
 // +apireference:kgo:include
 // +kong:channels=kong-operator
 // +kubebuilder:validation:XValidation:rule="!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef", message="spec.eventGatewayVirtualClusterRef is immutable when an entity is already Programmed"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.status) || !has(oldSelf.status.id) || (has(self.spec.apiSpec) && has(self.spec.apiSpec.parentPolicyRef) ? has(oldSelf.spec.apiSpec) && has(oldSelf.spec.apiSpec.parentPolicyRef) && self.spec.apiSpec.parentPolicyRef == oldSelf.spec.apiSpec.parentPolicyRef : !has(oldSelf.spec.apiSpec) || !has(oldSelf.spec.apiSpec.parentPolicyRef))",message="parentPolicyRef is immutable once the policy has been created in Konnect",fieldPath=".spec.apiSpec.parentPolicyRef"
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.apiSpec) || !has(self.spec.apiSpec.type) || self.spec.apiSpec.type != 'encryptFields' || has(self.spec.apiSpec.parentPolicyRef) || (oldSelf.hasValue() && has(oldSelf.value().spec.apiSpec) && has(oldSelf.value().spec.apiSpec.type) && oldSelf.value().spec.apiSpec.type == 'encryptFields' && !has(oldSelf.value().spec.apiSpec.parentPolicyRef))",message="parentPolicyRef is required for encryptFields",fieldPath=".spec.apiSpec.parentPolicyRef",optionalOldSelf=true
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef) || (has(self.spec.apiSpec.type) && self.spec.apiSpec.type in ['encryptFields', 'modifyHeaders'])",message="parentPolicyRef is only supported for encryptFields and modifyHeaders",fieldPath=".spec.apiSpec.parentPolicyRef"
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef) || self.spec.apiSpec.parentPolicyRef.name != self.metadata.name", message="parentPolicyRef must not reference the EventGatewayVirtualClusterProducePolicy itself"
 type EventGatewayVirtualClusterProducePolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitzero"`
@@ -61,6 +65,61 @@ type EventGatewayVirtualClusterProducePolicyAPISpec struct {
 	//
 	// +optional
 	*EventGatewayVirtualClusterProducePolicyConfig `json:",inline"`
+
+	// ParentPolicyRef references a schemaValidation produce policy in the same
+	// namespace and virtual cluster. Required for encryptFields and optional
+	// for modifyHeaders. It is immutable once this policy exists in Konnect.
+	// Deleting a parent is blocked while child policy objects reference it.
+	//
+	// +optional
+	ParentPolicyRef EventGatewayVirtualClusterProducePolicyRef `json:"parentPolicyRef,omitzero"`
+}
+
+// MarshalJSON preserves the root union and its sibling references.
+func (s EventGatewayVirtualClusterProducePolicyAPISpec) MarshalJSON() ([]byte, error) {
+	var payload map[string]json.RawMessage
+	if s.EventGatewayVirtualClusterProducePolicyConfig != nil {
+		data, err := json.Marshal(s.EventGatewayVirtualClusterProducePolicyConfig)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(data, &payload); err != nil {
+			return nil, err
+		}
+	} else {
+		payload = map[string]json.RawMessage{}
+	}
+	if s.ParentPolicyRef.Name != "" {
+		data, err := json.Marshal(s.ParentPolicyRef)
+		if err != nil {
+			return nil, err
+		}
+		payload["parentPolicyRef"] = data
+	}
+	return json.Marshal(payload)
+}
+
+// UnmarshalJSON decodes the root union and its sibling references.
+func (s *EventGatewayVirtualClusterProducePolicyAPISpec) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling EventGatewayVirtualClusterProducePolicyAPISpec: nil receiver")
+	}
+	var config EventGatewayVirtualClusterProducePolicyConfig
+	if err := json.Unmarshal(data, &config); err != nil {
+		return err
+	}
+	var refs struct {
+		ParentPolicyRef EventGatewayVirtualClusterProducePolicyRef `json:"parentPolicyRef"`
+	}
+	if err := json.Unmarshal(data, &refs); err != nil {
+		return err
+	}
+	s.EventGatewayVirtualClusterProducePolicyConfig = &config
+	if config.Type == "" {
+		s.EventGatewayVirtualClusterProducePolicyConfig = nil
+	}
+	s.ParentPolicyRef = refs.ParentPolicyRef
+	return nil
 }
 
 // EventGatewayVirtualClusterProducePolicyStatus defines the observed state of EventGatewayVirtualClusterProducePolicy.
@@ -238,38 +297,5 @@ func (u *EventGatewayVirtualClusterProducePolicyConfig) UnmarshalJSON(data []byt
 		}
 		u.ProduceSchemaValidationPolicy = &val
 	}
-	return nil
-}
-
-// MarshalJSON implements json.Marshaler.
-func (s *EventGatewayVirtualClusterProducePolicyAPISpec) MarshalJSON() ([]byte, error) {
-	if s == nil {
-		return []byte("null"), nil
-	}
-	if s.EventGatewayVirtualClusterProducePolicyConfig == nil {
-		return []byte("{}"), nil
-	}
-	data, err := json.Marshal(s.EventGatewayVirtualClusterProducePolicyConfig)
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayVirtualClusterProducePolicyAPISpec: %w", err)
-	}
-	return data, nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (s *EventGatewayVirtualClusterProducePolicyAPISpec) UnmarshalJSON(data []byte) error {
-	if s == nil {
-		return fmt.Errorf("unmarshaling EventGatewayVirtualClusterProducePolicyAPISpec: nil receiver")
-	}
-	type alias EventGatewayVirtualClusterProducePolicyAPISpec
-	aux := alias{}
-	aux.EventGatewayVirtualClusterProducePolicyConfig = &EventGatewayVirtualClusterProducePolicyConfig{}
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return fmt.Errorf("unmarshaling EventGatewayVirtualClusterProducePolicyAPISpec: %w", err)
-	}
-	if aux.EventGatewayVirtualClusterProducePolicyConfig != nil && aux.EventGatewayVirtualClusterProducePolicyConfig.Type == "" && aux.EventGatewayVirtualClusterProducePolicyConfig.EncryptPolicy == nil && aux.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordEncryptFieldsPolicyCreate == nil && aux.EventGatewayVirtualClusterProducePolicyConfig.ModifyHeadersPolicyCreate == nil && aux.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy == nil {
-		aux.EventGatewayVirtualClusterProducePolicyConfig = nil
-	}
-	*s = EventGatewayVirtualClusterProducePolicyAPISpec(aux)
 	return nil
 }

@@ -11,6 +11,8 @@ import (
 const (
 	// IndexFieldEventGatewayVirtualClusterProducePolicyOnEventGatewayVirtualClusterRef is the index field for EventGatewayVirtualClusterProducePolicy -> EventGatewayVirtualCluster.
 	IndexFieldEventGatewayVirtualClusterProducePolicyOnEventGatewayVirtualClusterRef = "eventGatewayVirtualClusterProducePolicyOnEventGatewayVirtualClusterRef"
+	// IndexFieldEventGatewayVirtualClusterProducePolicyOnEventGatewayVirtualClusterProducePolicyRef is the index field for EventGatewayVirtualClusterProducePolicy -> EventGatewayVirtualClusterProducePolicy.
+	IndexFieldEventGatewayVirtualClusterProducePolicyOnEventGatewayVirtualClusterProducePolicyRef = "eventGatewayVirtualClusterProducePolicyOnEventGatewayVirtualClusterProducePolicyRef"
 	// IndexFieldEventGatewayVirtualClusterProducePolicyOnEventGatewayStaticKeyRef is the index field for EventGatewayVirtualClusterProducePolicy -> EventGatewayStaticKey.
 	IndexFieldEventGatewayVirtualClusterProducePolicyOnEventGatewayStaticKeyRef = "eventGatewayVirtualClusterProducePolicyOnEventGatewayStaticKeyRef"
 )
@@ -22,6 +24,11 @@ func OptionsForEventGatewayVirtualClusterProducePolicy() []Option {
 			Object:         &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{},
 			Field:          IndexFieldEventGatewayVirtualClusterProducePolicyOnEventGatewayVirtualClusterRef,
 			ExtractValueFn: eventGatewayVirtualClusterProducePolicyOnEventGatewayVirtualClusterRef,
+		},
+		{
+			Object:         &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{},
+			Field:          IndexFieldEventGatewayVirtualClusterProducePolicyOnEventGatewayVirtualClusterProducePolicyRef,
+			ExtractValueFn: eventGatewayVirtualClusterProducePolicyOnEventGatewayVirtualClusterProducePolicyRef,
 		},
 		{
 			Object:         &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{},
@@ -46,6 +53,25 @@ func eventGatewayVirtualClusterProducePolicyOnEventGatewayVirtualClusterRef(obje
 	}
 
 	return []string{refNamespace + "/" + ent.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Name}
+}
+
+func eventGatewayVirtualClusterProducePolicyOnEventGatewayVirtualClusterProducePolicyRef(object client.Object) []string {
+	ent, ok := object.(*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy)
+	if !ok {
+		return nil
+	}
+	var out []string
+	for _, ref := range configurationv1alpha1.RefsAtEventGatewayVirtualClusterProducePolicyParentPolicyRef(ent) {
+		if ref.Kind != "" && ref.Kind != "EventGatewayVirtualClusterProducePolicy" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
 }
 
 func eventGatewayVirtualClusterProducePolicyOnEventGatewayStaticKeyRef(object client.Object) []string {
