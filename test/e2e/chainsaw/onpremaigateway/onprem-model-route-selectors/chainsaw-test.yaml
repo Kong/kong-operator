@@ -1,0 +1,240 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: onprem-model-route-selectors
+spec:
+  description: |
+    AIGatewayModel route selectors against an on-prem control plane and data
+    plane: one model per selector shape — headers (`headerParam`), body
+    (`bodyParam`), and no selector (the openai format's default: the request
+    body's "model" field with the AIGatewayModel resource's name as the
+    implicit selector value) — then per-shape traffic assertions: a matching
+    alias routes (200 + X-Kong-LLM-Model) and a non-matching alias never
+    resolves to the model.
+
+    Each traffic step isolates the selector under test by omitting the other
+    alias sources (INCLUDE_HEADER / INCLUDE_BODY_MODEL), so a passing step
+    cannot be masked by an unrelated selector accepting the request. The
+    `pathParam` selector shape is covered by its own test
+    (`onprem-model-route-selectors-pathparam`), since the traffic script
+    carries the alias via header or body only.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'onprem-cp']))
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+    - name: provider_name
+      value: (join('-', [($test_name), 'provider']))
+    - name: provider_credentials_name
+      value: (join('-', [($provider_name), 'credentials']))
+  steps:
+    - name: Create-onprem-aigateway
+      use:
+        template: ../../common/_step_templates/apply-assert-onpremAIGateway.yaml
+    - name: Create-provider-and-models
+      try:
+        - apply:
+            file: 02-provider-and-models.yaml
+    - name: Create-aigateway-dataplane
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+        with:
+          bindings:
+            - name: control_plane_ref
+              value: "({type: 'onpremNamespacedRef', onpremNamespacedRef: {name: ($aigw_cp_name)}})"
+    - name: Assert-models-pushed-to-dataplane
+      try:
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayModel
+              metadata:
+                name: model-headers-selector
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayModel
+              metadata:
+                name: model-body-selector
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayModel
+              metadata:
+                name: model-no-selector-cr
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+    - name: Verify-headers-selector-routes-matching-alias
+      description: |
+        A request carrying the configured header alias is routed to the model.
+        The body's `model` field is deliberately omitted (INCLUDE_BODY_MODEL:
+        'false') so this exercises `headerParam` alone rather than the
+        OpenAI-format body fallback every model with any `route.model`
+        selector also accepts.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: /model-route/headers/chat
+              - name: MODEL_ALIAS
+                value: qwen2.5:0.5b
+              # Pin the response header to the intended target: the value
+              # proves the matched model, not merely that some model served.
+              - name: EXPECT_HEADER_VALUE
+                value: openai/qwen2.5:0.5b
+              - name: INCLUDE_BODY_MODEL
+                value: 'false'
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+    - name: Verify-headers-selector-rejects-non-matching-alias
+      description: |
+        A request carrying an alias absent from the selector's `values` never
+        resolves to the model. Body `model` field omitted for the same reason
+        as the matching case.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: /model-route/headers/chat
+              - name: MODEL_ALIAS
+                value: headers-alias-wrong
+              - name: EXPECTED_SUCCESS
+                value: 'false'
+              - name: INCLUDE_BODY_MODEL
+                value: 'false'
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+    - name: Verify-body-selector-routes-matching-alias
+      description: |
+        A request carrying the configured body property alias is routed to
+        the model. The X-Kong-LLM-Model header is deliberately omitted
+        (INCLUDE_HEADER: 'false') so this exercises `bodyParam` alone.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: /model-route/body/chat
+              - name: MODEL_ALIAS
+                value: gemma3:270m
+              - name: EXPECT_HEADER_VALUE
+                value: openai/gemma3:270m
+              - name: INCLUDE_HEADER
+                value: 'false'
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+    - name: Verify-no-selector-model-routes-via-format-default
+      description: |
+        A model with no `route.model` selector configured falls back to the
+        format's default selector (the request body's "model" field for
+        `openai`), with the model entity's name (apiSpec.model.name) as the implicit
+        selector value. The X-Kong-LLM-Model header is deliberately omitted
+        (INCLUDE_HEADER: 'false') so this exercises the format-default
+        fallback alone.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: /model-route/no-selector/chat
+              # The implicit selector value is apiSpec.model.name — NOT the
+              # CR's metadata.name (model-no-selector-cr), which differs here
+              # precisely to prove which name the fallback uses.
+              - name: MODEL_ALIAS
+                value: model-no-selector
+              - name: EXPECT_HEADER_VALUE
+                value: openai/qwen2.5:0.5b
+              - name: INCLUDE_HEADER
+                value: 'false'
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+    - name: Verify-route-without-any-alias-does-not-route
+      description: |
+        Control for the path-vs-selector distinction: a request on the
+        headers route carrying NO alias in any source (neither the header
+        nor the body's model field) must not be routed. The path matches,
+        so this proves the 200s above come from the selector's alias match,
+        not from the route path alone.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: /model-route/headers/chat
+              - name: MODEL_ALIAS
+                value: qwen2.5:0.5b
+              # Both alias sources stripped: the request carries no model
+              # identifier at all.
+              - name: INCLUDE_HEADER
+                value: 'false'
+              - name: INCLUDE_BODY_MODEL
+                value: 'false'
+              - name: EXPECTED_SUCCESS
+                value: 'false'
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+    - name: Verify-body-selector-rejects-non-matching-alias
+      description: |
+        A request carrying a body property alias absent from the selector's
+        `values` never resolves to the model. Header omitted for the same
+        reason as the matching case.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: /model-route/body/chat
+              - name: MODEL_ALIAS
+                value: body-alias-wrong
+              - name: EXPECTED_SUCCESS
+                value: 'false'
+              - name: INCLUDE_HEADER
+                value: 'false'
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: onprem-model-route-selectors
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
