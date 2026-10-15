@@ -68,11 +68,11 @@ func TestConverterDBLessPayloadAcceptedByAIGatewayAdminAPI(t *testing.T) {
 	payload := representativeDBLessPayload(t)
 	assertGoldenPayload(t, payload)
 
-	// The payload is re-parsed and re-marshaled as JSON on every attempt,
-	// mirroring how the ingress controller's golden tests feed golden outputs
-	// to the Admin API: JSON is the transport format the Admin API handles
-	// most predictably, and re-parsing keeps the body independent of the
-	// golden bytes' YAML formatting.
+	// The payload is parsed and re-marshaled as JSON once, mirroring how the
+	// ingress controller's golden tests feed golden outputs to the Admin API:
+	// JSON is the transport format the Admin API handles most predictably,
+	// and the parse keeps the body independent of the golden bytes' YAML
+	// formatting.
 	cfg := map[string]any{}
 	require.NoError(t, yaml.Unmarshal(payload, &cfg))
 	cfgAsJSON, err := json.Marshal(cfg)

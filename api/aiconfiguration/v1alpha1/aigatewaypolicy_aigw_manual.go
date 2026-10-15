@@ -61,8 +61,9 @@ func (obj *AIGatewayPolicy) ToAIGWPolicy(ctx context.Context, cl client.Client) 
 		if name == "" {
 			return nil, fmt.Errorf("AIGatewayPolicy %s/%s: referenced custom policy %q has no name set", obj.Namespace, obj.Name, ref.Name)
 		}
-		if cpGW := customPolicy.Spec.AIGatewayRef; cpGW.NamespacedRef == nil || obj.Spec.AIGatewayRef.NamespacedRef == nil ||
-			cpGW.NamespacedRef.Name != obj.Spec.AIGatewayRef.NamespacedRef.Name {
+		objKey, objOK := onPremAIGatewayRefKey(obj.Namespace, obj.Spec.AIGatewayRef)
+		cpKey, cpOK := onPremAIGatewayRefKey(customPolicy.Namespace, customPolicy.Spec.AIGatewayRef)
+		if !objOK || !cpOK || cpKey != objKey {
 			return nil, fmt.Errorf("AIGatewayPolicy %s/%s: customPolicyRef %q belongs to a different AI Gateway", obj.Namespace, obj.Name, ref.Name)
 		}
 		policy.Type = name

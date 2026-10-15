@@ -68,28 +68,36 @@ type AIGateway struct {
 // under test is the payload the operator pushes, not the transport the
 // operator provisions (mTLS) for it.
 func NewAIGateway(ctx context.Context, t *testing.T) AIGateway {
-	req := testcontainers.ContainerRequest{
-		Image: aigwImageUnderTest(t),
-		Env: map[string]string{
-			"KONG_DATABASE":      "off",
-			"KONG_ADMIN_LISTEN":  fmt.Sprintf("0.0.0.0:%s", aigwAdminPort),
-			"KONG_PROXY_LISTEN":  fmt.Sprintf("0.0.0.0:%s", aigwProxyPort),
-			"KONG_STATUS_LISTEN": "0.0.0.0:8100",
-			"KONG_VITALS":        "off",
-			"KONG_LICENSE_DATA":  test.KongLicenseData(),
-			// The representative document carries a plugin instance of the
-			// streaming custom policy; the Admin API only accepts it when the
-			// plugin is enabled and its code is loadable (mirroring what the
-			// operator provisions on data planes).
-			"KONG_PLUGINS": "bundled," + MockCustomPolicyName,
-		},
-		WaitingFor: wait.ForAll(
-			wait.ForListeningPort(aigwAdminPort),
-			wait.ForHTTP("/").WithPort(aigwAdminPort),
-		),
+	// The request is built fresh on every retry attempt so BindLocalPort picks
+	// a new host port each time, mirroring NewKong: GetFreePort only proves a
+	// port was free at check time, and BindLocalPort appends to ExposedPorts
+	// and chains HostConfigModifier, so reuse would rebind the same doomed port
+	// and accumulate stale bindings.
+	newRequest := func() testcontainers.ContainerRequest {
+		req := testcontainers.ContainerRequest{
+			Image: aigwImageUnderTest(t),
+			Env: map[string]string{
+				"KONG_DATABASE":      "off",
+				"KONG_ADMIN_LISTEN":  fmt.Sprintf("0.0.0.0:%s", aigwAdminPort),
+				"KONG_PROXY_LISTEN":  fmt.Sprintf("0.0.0.0:%s", aigwProxyPort),
+				"KONG_STATUS_LISTEN": "0.0.0.0:8100",
+				"KONG_VITALS":        "off",
+				"KONG_LICENSE_DATA":  test.KongLicenseData(),
+				// The representative document carries a plugin instance of the
+				// streaming custom policy; the Admin API only accepts it when the
+				// plugin is enabled and its code is loadable (mirroring what the
+				// operator provisions on data planes).
+				"KONG_PLUGINS": "bundled," + MockCustomPolicyName,
+			},
+			WaitingFor: wait.ForAll(
+				wait.ForListeningPort(aigwAdminPort),
+				wait.ForHTTP("/").WithPort(aigwAdminPort),
+			),
+		}
+		kongcontainers.BindLocalPort(t, &req, aigwAdminPort)
+		kongcontainers.BindLocalPort(t, &req, aigwProxyPort)
+		return req
 	}
-	kongcontainers.BindLocalPort(t, &req, aigwAdminPort)
-	kongcontainers.BindLocalPort(t, &req, aigwProxyPort)
 
 	aigwC, err := retry.NewWithData[testcontainers.Container](
 		retry.Context(ctx),
@@ -103,7 +111,7 @@ func NewAIGateway(ctx context.Context, t *testing.T) AIGateway {
 	).Do(
 		func() (testcontainers.Container, error) {
 			c, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-				ContainerRequest: req,
+				ContainerRequest: newRequest(),
 				Started:          false,
 			})
 			if err != nil {
@@ -117,10 +125,14 @@ func NewAIGateway(ctx context.Context, t *testing.T) AIGateway {
 				"schema.lua":  MockCustomPolicySchemaLua,
 			} {
 				if err := c.CopyToContainer(ctx, []byte(content), pluginDir+"/"+name, 0o644); err != nil {
+					_ = c.Terminate(context.Background())
 					return nil, fmt.Errorf("copying %s into the container: %w", name, err)
 				}
 			}
 			if err := c.Start(ctx); err != nil {
+				// A container that never started is not registered with the
+				// test's cleanup; terminate it here or it leaks.
+				_ = c.Terminate(context.Background())
 				return nil, err
 			}
 			return c, nil
