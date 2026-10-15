@@ -96,7 +96,7 @@ type GWAdminService struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=15
+	// +kubebuilder:validation:MaxLength=63
 	// +kubebuilder:validation:XValidation:rule="self.matches('^[a-z0-9]([-a-z0-9]*[a-z0-9])?$') && self.matches('[a-z]') && !self.contains('--')",message="portName must be a valid port name: lowercase alphanumeric characters or '-', with at least one letter, no consecutive '-', starting and ending with an alphanumeric character"
 	PortName string `json:"portName,omitempty"`
 }
