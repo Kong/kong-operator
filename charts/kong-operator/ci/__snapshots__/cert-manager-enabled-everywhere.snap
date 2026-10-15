@@ -23866,6 +23866,22 @@ spec:
                     minimum: 0
                     type: integer
                 type: object
+              objectFilters:
+                properties:
+                  secrets:
+                    properties:
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        maxProperties: 8
+                        type: object
+                        x-kubernetes-validations:
+                        - message: Minimum length of key in matchLabels is 1
+                          rule: self.all(key,key.size() >= 1)
+                        - message: Maximum length of value in matchLabels is 63
+                          rule: self.all(key,self[key].size() <= 63)
+                    type: object
+                type: object
             type: object
           status:
             properties:

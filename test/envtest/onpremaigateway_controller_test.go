@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zapcore"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -487,4 +488,82 @@ func TestOnPremAIGatewayReconciler_PreservesInstanceOwnedCondition(t *testing.T)
 				"controller field manager must not own the %s condition", condType)
 		}
 	}, waitTime, tickTime)
+}
+
+// TestOnPremAIGatewayReconciler_ObjectFilters verifies that with
+// spec.objectFilters.secrets.matchLabels set:
+//   - the gateway still becomes ready and reports OptionsValid=True,
+//   - the operator-provisioned Admin API client certificate Secret is stamped
+//     with the user's matchLabels, so it stays visible in the instance's
+//     matchLabels-filtered Secret cache.
+func TestOnPremAIGatewayReconciler_ObjectFilters(t *testing.T) {
+	t.Parallel()
+
+	const waitTime = time.Minute
+
+	ctx := t.Context()
+	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+
+	clusterCA := createClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "onprem-aigw-cluster-ca")
+
+	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
+	require.NoError(t, err)
+
+	instancesMgr := multiinstanceai.NewManager(mgr.GetLogger())
+	require.NoError(t, mgr.Add(instancesMgr))
+
+	StartReconcilers(ctx, t, mgr, logs,
+		&aigwonprem.Reconciler{
+			Client:                   mgr.GetClient(),
+			TypeConverter:            ssaProvider,
+			InstancesManager:         instancesMgr,
+			RestConfig:               cfg,
+			Scheme:                   scheme.Get(),
+			CacheSyncTimeout:         waitTime,
+			ClusterCASecretName:      clusterCA.Name,
+			ClusterCASecretNamespace: clusterCA.Namespace,
+			CertTTL:                  consts.DefaultCertTTL,
+			SecretLabelSelector:      "app",
+		},
+		&crdschema.Reconciler{
+			Client:   mgr.GetClient(),
+			Provider: ssaProvider,
+		},
+	)
+
+	cl := mgr.GetClient()
+
+	onprem := &aigatewayv1alpha1.OnPremAIGateway{
+		Name:      "onprem-aigw-filters",
+		Namespace: ns.Name,
+		Spec: aigatewayv1alpha1.OnPremAIGatewaySpec{
+			ObjectFilters: &aigatewayv1alpha1.OnPremAIGatewayObjectFilters{
+				Secrets: &aigatewayv1alpha1.OnPremAIGatewayFilterForObjectType{
+					MatchLabels: map[string]string{"team": "foo"},
+				},
+			},
+		},
+	}
+	require.NoError(t, cl.Create(ctx, onprem))
+
+	t.Log("Expecting the OnPremAIGateway to become ready with OptionsValid=True")
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(onprem), onprem)) {
+			return
+		}
+		if !assert.True(ct, k8sutils.HasConditionTrue(aigatewayv1alpha1.ReadyType, onprem)) {
+			return
+		}
+		assert.True(ct, k8sutils.HasConditionTrue(aigatewayv1alpha1.OnPremAIGatewayOptionsValidType, onprem))
+	}, waitTime, tickTime)
+
+	t.Log("Expecting the Admin API client certificate Secret to carry the objectFilters matchLabels")
+	var secrets corev1.SecretList
+	require.NoError(t, cl.List(ctx, &secrets, client.InNamespace(ns.Name),
+		client.MatchingLabels{consts.SecretOnPremAIGatewayAdminClientCertificateLabel: "true"}))
+	require.Len(t, secrets.Items, 1)
+	certSecret := secrets.Items[0]
+	require.Equal(t, "true", certSecret.Labels["app"], "the operator's secret label selector must be stamped")
+	require.Equal(t, "foo", certSecret.Labels["team"], "the objectFilters matchLabels must be stamped")
 }

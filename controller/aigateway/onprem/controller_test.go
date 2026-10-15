@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 	multiinstanceai "github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
@@ -181,6 +182,26 @@ func TestConfigFromSpec(t *testing.T) {
 			},
 			want: multiinstanceai.Config{},
 		},
+		{
+			name: "nil objectFilters",
+			spec: aigatewayv1alpha1.OnPremAIGatewaySpec{
+				DataPlaneSync: &aigatewayv1alpha1.OnPremAIGatewayDataPlaneSync{},
+			},
+			want: multiinstanceai.Config{},
+		},
+		{
+			name: "objectFilters secrets matchLabels",
+			spec: aigatewayv1alpha1.OnPremAIGatewaySpec{
+				ObjectFilters: &aigatewayv1alpha1.OnPremAIGatewayObjectFilters{
+					Secrets: &aigatewayv1alpha1.OnPremAIGatewayFilterForObjectType{
+						MatchLabels: map[string]string{"team": "foo"},
+					},
+				},
+			},
+			want: multiinstanceai.Config{
+				SecretLabelFilters: map[string]string{"team": "foo"},
+			},
+		},
 	}
 
 	for _, tc := range tests {
@@ -188,6 +209,64 @@ func TestConfigFromSpec(t *testing.T) {
 			onprem := &aigatewayv1alpha1.OnPremAIGateway{Spec: tc.spec}
 			cfg := new(Reconciler).configFromSpec(onprem)
 			assert.Equal(t, tc.want, cfg)
+		})
+	}
+}
+
+func TestValidateOnPremAIGatewayOptions(t *testing.T) {
+	objectFilters := func(matchLabels map[string]string) *aigatewayv1alpha1.OnPremAIGatewayObjectFilters {
+		return &aigatewayv1alpha1.OnPremAIGatewayObjectFilters{
+			Secrets: &aigatewayv1alpha1.OnPremAIGatewayFilterForObjectType{MatchLabels: matchLabels},
+		}
+	}
+
+	tests := []struct {
+		name                string
+		secretLabelSelector string
+		objectFilters       *aigatewayv1alpha1.OnPremAIGatewayObjectFilters
+		wantValid           bool
+		wantMsgContains     string
+	}{
+		{
+			name:      "no objectFilters",
+			wantValid: true,
+		},
+		{
+			name:          "no secrets filter",
+			objectFilters: &aigatewayv1alpha1.OnPremAIGatewayObjectFilters{},
+			wantValid:     true,
+		},
+		{
+			name:          "unrelated matchLabels",
+			objectFilters: objectFilters(map[string]string{"team": "foo"}),
+			wantValid:     true,
+		},
+		{
+			name:                "matchLabels key conflicts with the operator's secret label selector",
+			secretLabelSelector: "app",
+			objectFilters:       objectFilters(map[string]string{"team": "foo", "app": "true"}),
+			wantValid:           false,
+			wantMsgContains:     "operator's secret label filter 'app'",
+		},
+		{
+			name:            "matchLabels key conflicts with the admin client certificate label",
+			objectFilters:   objectFilters(map[string]string{consts.SecretOnPremAIGatewayAdminClientCertificateLabel: "true"}),
+			wantValid:       false,
+			wantMsgContains: "operator-managed label",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &Reconciler{SecretLabelSelector: tc.secretLabelSelector}
+			onprem := &aigatewayv1alpha1.OnPremAIGateway{
+				Spec: aigatewayv1alpha1.OnPremAIGatewaySpec{ObjectFilters: tc.objectFilters},
+			}
+			msg, ok := r.validateOnPremAIGatewayOptions(onprem)
+			assert.Equal(t, tc.wantValid, ok)
+			if !tc.wantValid {
+				assert.Contains(t, msg, tc.wantMsgContains)
+			}
 		})
 	}
 }

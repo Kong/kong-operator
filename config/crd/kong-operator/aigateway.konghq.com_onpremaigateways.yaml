@@ -78,6 +78,29 @@ spec:
                     minimum: 0
                     type: integer
                 type: object
+              objectFilters:
+                description: ObjectFilters defines the filters to limit watched objects
+                  by the controllers.
+                properties:
+                  secrets:
+                    description: Secrets defines the filters for watched secrets.
+                    properties:
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          MatchLabels defines the labels that the object must match to get reconciled by the controller for the OnPremAIGateway.
+                          For example, if `secrets.matchLabels` is `{"label1":"val1","label2":"val2"}`,
+                          only secrets with labels `label1=val1` and `label2=val2` are reconciled.
+                        maxProperties: 8
+                        type: object
+                        x-kubernetes-validations:
+                        - message: Minimum length of key in matchLabels is 1
+                          rule: self.all(key,key.size() >= 1)
+                        - message: Maximum length of value in matchLabels is 63
+                          rule: self.all(key,self[key].size() <= 63)
+                    type: object
+                type: object
             type: object
           status:
             description: Status defines the observed state of OnPremAIGateway.
