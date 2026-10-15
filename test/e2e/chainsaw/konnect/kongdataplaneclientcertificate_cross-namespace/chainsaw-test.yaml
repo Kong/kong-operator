@@ -53,6 +53,12 @@ spec:
       value: (env('KONNECT_TOKEN'))
     - name: konnect_url
       value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    # Random per-run suffix appended to names of resources that map to org-unique
+    # Konnect entities (control planes). Without it, a stale entity left behind by
+    # an interrupted previous run makes the Konnect create fail with a permanent
+    # 409 (name already exists) and the test times out.
+    - name: run_id
+      value: (random('[a-z0-9]{6}'))
     # Namespace bindings (Scenario B and C).
     - name: cp_namespace
       value: (join('-', [$namespace, 'cp']))
@@ -60,21 +66,21 @@ spec:
       value: (join('-', [$namespace, 'auth']))
     # Scenario A resource names (same namespace as test).
     - name: cp0_name
-      value: (join('-', [$namespace, 'cp0']))
+      value: (join('-', [$namespace, 'cp0', $run_id]))
     - name: auth0_name
       value: (join('-', [$namespace, 'auth0-konnect-api-auth']))
     - name: dpcc0_name
       value: (join('-', [$namespace, 'dpcc0']))
     # Scenario B resource names (DataPlaneClientCertificate in test namespace, CP+AuthConfig in cp_namespace).
     - name: cp_name
-      value: (join('-', [$namespace, 'cp']))
+      value: (join('-', [$namespace, 'cp', $run_id]))
     - name: auth_name
       value: (join('-', [$namespace, 'konnect-api-auth']))
     - name: dpcc_name
       value: (join('-', [$namespace, 'dpcc']))
     # Scenario C resource names (CP in cp_namespace, AuthConfig in auth_namespace).
     - name: cp2_name
-      value: (join('-', [$namespace, 'cp2']))
+      value: (join('-', [$namespace, 'cp2', $run_id]))
     - name: auth2_name
       value: (join('-', [$namespace, 'auth2-konnect-api-auth']))
     - name: dpcc2_name
