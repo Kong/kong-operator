@@ -77,6 +77,10 @@ spec:
                 value: /chat
               - name: MODEL_ALIAS
                 value: ($model_name)
+              # Pin the response header to the intended target: the value
+              # proves the matched model, not merely that some model served.
+              - name: EXPECT_HEADER_VALUE
+                value: openai/qwen2.5:0.5b
               - name: INCLUDE_HEADER
                 value: "false"
             content: |
@@ -109,6 +113,10 @@ spec:
                 value: /chat-v2
               - name: MODEL_ALIAS
                 value: ($model_name)
+              # Pin the response header to the intended target: the value
+              # proves the matched model, not merely that some model served.
+              - name: EXPECT_HEADER_VALUE
+                value: openai/qwen2.5:0.5b
               - name: INCLUDE_HEADER
                 value: "false"
             content: |
@@ -125,6 +133,8 @@ spec:
                 value: /chat
               - name: MODEL_ALIAS
                 value: ($model_name)
+              # Pin the response header to the intended target: the value
+              # proves the matched model, not merely that some model served.
               - name: INCLUDE_HEADER
                 value: "false"
               # The updated configuration replaced the pushed payload
@@ -232,6 +242,10 @@ spec:
                 value: /chat
               - name: MODEL_ALIAS
                 value: ($model_name)
+              # Pin the response header to the intended target: the value
+              # proves the matched model, not merely that some model served.
+              - name: EXPECT_HEADER_VALUE
+                value: openai/qwen2.5:0.5b
               - name: INCLUDE_HEADER
                 value: "false"
             content: |
