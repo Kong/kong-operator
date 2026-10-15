@@ -41,6 +41,8 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/pkg/extensions"
+	extensionserrors "github.com/kong/kong-operator/v2/controller/pkg/extensions/errors"
+	extensionskonnect "github.com/kong/kong-operator/v2/controller/pkg/extensions/konnect"
 	"github.com/kong/kong-operator/v2/controller/pkg/finalizer"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
@@ -438,12 +440,25 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 	// condition to the Gateway status if the dataplane is ready. If not ready
 	// the status DataPlaneReady=False will be set instead.
 	dataplane, provisionErr := r.provisionDataPlane(ctx, logger, gateway, gatewayConfig, konnectExtension)
+	// Use the same admin API decision as the DataPlane controller.
+	var adminAPIDisabled bool
+	if provisionErr == nil && dataplane != nil {
+		var err error
+		adminAPIDisabled, err = r.dataPlaneAdminAPIDisabled(ctx, dataplane)
+		if err != nil {
+			if extensionserrors.IsKonnectExtensionError(err) {
+				log.Debug(logger, "KonnectExtension not ready, requeueing", "err", err)
+				return ctrl.Result{RequeueAfter: provisionDataPlaneFailRetryAfter}, nil
+			}
+			return ctrl.Result{}, err
+		}
+	}
 	if provisionErr == nil && k8sutils.RunningOnKubernetes() {
 		// DataPlane NetworkPolicies
 		// Only create network policies if KO is running inside k8s.
 		// If the code is run outside of k8s (like in envtest or integration test), do not create network policies.
 		log.Trace(logger, "ensuring DataPlane's NetworkPolicy exists")
-		createdOrUpdated, err := r.ensureDataPlaneHasNetworkPolicy(ctx, gateway, dataplane, !isHybridGateway)
+		createdOrUpdated, err := r.ensureDataPlaneHasNetworkPolicy(ctx, gateway, dataplane, !adminAPIDisabled)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -537,8 +552,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// Hybrid DataPlanes have no admin Service.
-	if !isHybridGateway {
+	// DataPlanes with the admin API disabled have no admin Service.
+	if !adminAPIDisabled {
 		// List admin Services
 		adminServices, err := k8sutils.ListServicesForOwner(
 			ctx,
@@ -1249,4 +1264,13 @@ func deploymentOptionsDeepEqual(o1, o2 *operatorv1beta1.DataPlaneDeploymentOptio
 		}),
 	}
 	return cmp.Equal(&o1.PodTemplateSpec, &o2.PodTemplateSpec, opts...)
+}
+
+// dataPlaneAdminAPIDisabled mirrors the DataPlane controller: extensions are
+// applied only when Konnect is enabled.
+func (r *Reconciler) dataPlaneAdminAPIDisabled(ctx context.Context, dp *operatorv1beta1.DataPlane) (bool, error) {
+	if !r.KonnectEnabled {
+		return false, nil
+	}
+	return extensionskonnect.DataPlaneAdminAPIDisabled(ctx, r.Client, dp)
 }
