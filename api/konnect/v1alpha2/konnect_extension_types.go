@@ -223,13 +223,15 @@ const (
 
 // KonnectEndpoints defines the Konnect endpoints for the control plane.
 type KonnectEndpoints struct {
-	// TelemetryEndpoint is the endpoint for telemetry.
+	// TelemetryEndpoint is the telemetry endpoint of the Konnect control plane,
+	// as returned by Konnect: it may carry a path, e.g. reached over PrivateLink.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	TelemetryEndpoint string `json:"telemetry"`
 
-	// ControlPlaneEndpoint is the endpoint for the control plane.
+	// ControlPlaneEndpoint is the control plane endpoint, as returned by
+	// Konnect: it may carry a path, e.g. reached over PrivateLink.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
