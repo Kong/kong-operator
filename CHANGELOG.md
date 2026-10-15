@@ -94,7 +94,7 @@
   `KonnectReferencesResolved` condition (reason `ReferenceInvalid`). It used to
   wait for the referenced entity to be programmed in Konnect, which never
   happens, with reason `ReferenceNotProgrammed`.
-  [#6116](https://github.com/Kong/kong-operator/issues/6116)
+  [#6119](https://github.com/Kong/kong-operator/pull/6119)
 - CRDs generated from the Konnect OpenAPI spec now enforce the `maxProperties`
   constraint of shared label map types (`labels` accept at most 50 entries,
   `managedBy` at most 5). The constraint was previously emitted on the fields
@@ -170,7 +170,7 @@
   has been created in Konnect (`status.id` set), not only while it is
   `Programmed`, so an entity that exists in Konnect can't be moved under
   another parent.
-  [#6116](https://github.com/Kong/kong-operator/issues/6116)
+  [#6119](https://github.com/Kong/kong-operator/pull/6119)
 - `--konnect-list-page-size` flag (default and maximum `100`): the page size
   the operator requests when listing Konnect entities to find the Konnect
   entity of an object, e.g. one whose Konnect ID was lost. It is a fallback in
