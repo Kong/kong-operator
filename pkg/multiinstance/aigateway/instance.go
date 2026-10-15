@@ -421,9 +421,13 @@ func failuresForAll(objs []client.Object, err error) []EntityFailure {
 // conversionIssueKindToCRTypeName maps a conversion issue's Source.Kind (the
 // converter's singular document keys, public API in ai-deck-converter) to the
 // aiconfiguration CR type name (GetTypeName) the entity is translated from.
-// Kinds with no entry degrade their ERROR issues to warnings: a model
-// provider's problems surface as issues on the model referencing it, and
-// certificates report no issues.
+// The list is exhaustive for the converter's public API (v0.22.0): every
+// issue-carrying entity kind is covered. The document's remaining translated
+// kinds have no entries because the converter reports no issues for them: model
+// providers are only indexed into the converter's reference registry (their
+// problems surface as issues on the model referencing them, kind "model"), and
+// the certificate and CA certificate conversions are infallible pass-throughs.
+// Kinds with no entry degrade their ERROR issues to warnings.
 var conversionIssueKindToCRTypeName = map[string]string{
 	"model":          "AIGatewayModel",
 	"mcp_server":     "AIGatewayMCPServer",

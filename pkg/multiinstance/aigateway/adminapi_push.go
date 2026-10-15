@@ -296,8 +296,9 @@ func (i *Instance) reportPushStatus(
 //
 // renderErr is the whole-document rendering failure (nil when the rendering
 // succeeded), entityFailures the per-entity translation failures, and warnings
-// the one-line texts of the conversion issues reported by the ai-deck-converter
-// (its WARNING-severity issues, plus any ERROR issue that matched no entity).
+// the one-line texts of the conversion issues reported by the ai-deck-converter:
+// every issue's text on a failed render; on a successful render, its
+// WARNING-severity issues plus any ERROR issue that matched no entity.
 // Warnings never fail
 // the condition: it stays True and the warnings are carried by Warning events
 // (see reportTranslationWarnings), with only their count noted in the condition
