@@ -19,8 +19,8 @@ import (
 
 // DataPlaneKonnectExtensionProcessor processes Konnect extensions for DataPlane resources.
 type DataPlaneKonnectExtensionProcessor struct {
-	// clusterType is the cluster type of the KonnectExtension resolved by the last successful Process.
-	clusterType konnectv1alpha2.KonnectExtensionClusterType
+	// adminAPIDisabled is whether the last successful Process determined the admin API to be disabled.
+	adminAPIDisabled bool
 }
 
 // Compile-time check to ensure DataPlaneKonnectExtensionProcessor implements the processor.Processor interface.
@@ -30,7 +30,7 @@ var _ processor.Processor = (*DataPlaneKonnectExtensionProcessor)(nil)
 // fetches the referenced extension and applies the necessary changes to the DataPlane spec.
 func (p *DataPlaneKonnectExtensionProcessor) Process(ctx context.Context, cl client.Client, object client.Object) (bool, error) {
 	var konnectExtension *konnectv1alpha2.KonnectExtension
-	p.clusterType = ""
+	p.adminAPIDisabled = false
 
 	// First thing we do is check if the object is a DataPlane.
 	dataPlane, ok := object.(*operatorv1beta1.DataPlane)
@@ -67,9 +67,10 @@ func (p *DataPlaneKonnectExtensionProcessor) Process(ctx context.Context, cl cli
 		})
 	}
 
-	clusterType := konnectExtension.Status.Konnect.ClusterType
-	// Hybrid DataPlanes run without the admin API, so the admin API cluster certificate isn't needed.
-	if !IsHybridClusterType(clusterType) {
+	// Evaluated before the pod template is mutated below.
+	adminAPIDisabled := AdminAPIDisabled(dataPlane, konnectExtension.Status.Konnect.ClusterType)
+	// Without the admin API, the admin API cluster certificate isn't needed.
+	if !adminAPIDisabled {
 		d.WithVolume(kongInKonnectClusterCertificateVolume())
 		d.WithVolumeMount(kongInKonnectClusterCertificateVolumeMount(), consts.DataPlaneProxyContainerName)
 	}
@@ -85,14 +86,15 @@ func (p *DataPlaneKonnectExtensionProcessor) Process(ctx context.Context, cl cli
 
 	config.FillContainerEnvs(nil, &d.Spec.Template, consts.DataPlaneProxyContainerName, config.EnvVarMapToSlice(envSet))
 	dataPlane.Spec.Deployment.PodTemplateSpec = &d.Spec.Template
-	p.clusterType = clusterType
+	p.adminAPIDisabled = adminAPIDisabled
 
 	return true, nil
 }
 
-// AdminAPIDisabled returns true when the DataPlane is attached to a Konnect hybrid control plane.
+// AdminAPIDisabled returns true when the DataPlane is attached to a Konnect hybrid control plane
+// and the user didn't opt out by setting KONG_ADMIN_LISTEN.
 func (p *DataPlaneKonnectExtensionProcessor) AdminAPIDisabled() bool {
-	return IsHybridClusterType(p.clusterType)
+	return p.adminAPIDisabled
 }
 
 func kongInKonnectClusterCertVolume(secretName string) corev1.Volume {

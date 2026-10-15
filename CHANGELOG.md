@@ -355,8 +355,9 @@
   cluster type `ControlPlane` or `ControlPlaneGroup`, including hybrid
   `Gateway`s) no longer expose the Kong Admin API: the admin `Service` and
   admin certificate `Secret` are not created (existing ones are removed on
-  upgrade) and `KONG_ADMIN_LISTEN` defaults to `off`. It can be re-enabled by
-  setting `KONG_ADMIN_LISTEN` in the `DataPlane` pod template.
+  upgrade) and `KONG_ADMIN_LISTEN` defaults to `off`. Setting `KONG_ADMIN_LISTEN`
+  in the `DataPlane` pod template keeps the admin API, `Service` and
+  certificate as before.
   [#6082](https://github.com/Kong/kong-operator/pull/6082)
 
 ### Fixes

@@ -4,14 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	extensionserrors "github.com/kong/kong-operator/v2/controller/pkg/extensions/errors"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
@@ -51,4 +54,38 @@ func IsHybridClusterType(ct konnectv1alpha2.KonnectExtensionClusterType) bool {
 	default:
 		return false
 	}
+}
+
+// AdminAPIDisabled returns true when the Konnect cluster type is hybrid and the user
+// didn't set KONG_ADMIN_LISTEN in the DataPlane pod template.
+func AdminAPIDisabled(dp *operatorv1beta1.DataPlane, ct konnectv1alpha2.KonnectExtensionClusterType) bool {
+	return IsHybridClusterType(ct) && !adminListenSetByUser(dp)
+}
+
+// adminListenSetByUser returns true when the proxy container sets KONG_ADMIN_LISTEN to a literal value other than "off".
+func adminListenSetByUser(dp *operatorv1beta1.DataPlane) bool {
+	if dp == nil || dp.Spec.Deployment.PodTemplateSpec == nil {
+		return false
+	}
+	c := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+	if c == nil {
+		return false
+	}
+	v := strings.TrimSpace(k8sutils.EnvValueByName(c.Env, "KONG_ADMIN_LISTEN"))
+	return v != "" && v != "off"
+}
+
+// DataPlaneAdminAPIDisabled returns whether the admin API is disabled for the DataPlane
+// given the KonnectExtension it references (false when it references none).
+func DataPlaneAdminAPIDisabled(ctx context.Context, cl client.Client, dp *operatorv1beta1.DataPlane) (bool, error) {
+	for _, extensionRef := range dp.Spec.Extensions {
+		ext, err := getExtension(ctx, cl, dp.Namespace, extensionRef)
+		if err != nil {
+			return false, err
+		}
+		if ext != nil {
+			return AdminAPIDisabled(dp, ext.Status.Konnect.ClusterType), nil
+		}
+	}
+	return false, nil
 }

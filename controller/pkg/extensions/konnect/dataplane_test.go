@@ -149,6 +149,40 @@ func TestDataPlaneKonnectExtensionProcessor_Process(t *testing.T) {
 			wantAdminAPIDisabled: true,
 		},
 		{
+			name: "success - hybrid with user KONG_ADMIN_LISTEN keeps admin API",
+			object: func() *operatorv1beta1.DataPlane {
+				dp := createValidDataPlane()
+				c := &dp.Spec.Deployment.PodTemplateSpec.Spec.Containers[0]
+				c.Env = []corev1.EnvVar{{Name: "KONG_ADMIN_LISTEN", Value: "0.0.0.0:8444 ssl"}}
+				return dp
+			}(),
+			setupClient: func(t *testing.T) client.Client {
+				return clientWithObjects(s, createValidKonnectExtension())
+			},
+			wantProcessed:             true,
+			wantAdminAPIDisabled:      false,
+			wantClusterCertificateVol: true,
+			checkAssertions: func(t *testing.T, dp *operatorv1beta1.DataPlane) {
+				c := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+				require.NotNil(t, c)
+				assert.Equal(t, "0.0.0.0:8444 ssl", k8sutils.EnvValueByName(c.Env, "KONG_ADMIN_LISTEN"))
+			},
+		},
+		{
+			name: "success - hybrid with KONG_ADMIN_LISTEN=off stays disabled",
+			object: func() *operatorv1beta1.DataPlane {
+				dp := createValidDataPlane()
+				c := &dp.Spec.Deployment.PodTemplateSpec.Spec.Containers[0]
+				c.Env = []corev1.EnvVar{{Name: "KONG_ADMIN_LISTEN", Value: "off"}}
+				return dp
+			}(),
+			setupClient: func(t *testing.T) client.Client {
+				return clientWithObjects(s, createValidKonnectExtension())
+			},
+			wantProcessed:        true,
+			wantAdminAPIDisabled: true,
+		},
+		{
 			name:   "success - ClusterType K8sIngressController",
 			object: createValidDataPlane(),
 			setupClient: func(t *testing.T) client.Client {

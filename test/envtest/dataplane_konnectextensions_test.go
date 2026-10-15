@@ -684,6 +684,104 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 				}, waitTime, tickTime)
 			})
 
+			t.Run("hybrid with user KONG_ADMIN_LISTEN keeps admin API resources", func(t *testing.T) {
+				const (
+					konnectControlPlaneID = "aee0667a-90c6-45a6-a2d8-575e1e487b8a"
+					dpCertID              = "111111111111111111111111111111111-4"
+				)
+
+				sdk.EXPECT().CreateDataplaneCertificate(mock.Anything, konnectControlPlaneID, mock.Anything).
+					Return(&sdkkonnectops.CreateDataplaneCertificateResponse{
+						DataPlaneClientCertificateResponse: &sdkkonnectcomp.DataPlaneClientCertificateResponse{
+							Item: &sdkkonnectcomp.DataPlaneClientCertificate{
+								ID:   new(dpCertID),
+								Cert: new(deploy.TestValidCACertPEM),
+							},
+						},
+					}, nil)
+
+				const userAdminListen = "0.0.0.0:8444 ssl"
+
+				t.Logf("Creating KonnectAPIAuthConfiguration")
+				konnectAPIAuthConfiguration := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
+
+				t.Logf("Creating KonnectControlPlane with hybrid cluster type")
+				cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, cl, konnectAPIAuthConfiguration, deploy.WithKonnectID(konnectControlPlaneID))
+
+				t.Logf("Creating KonnectExtension")
+				konnectExtension := konnectv1alpha2.KonnectExtension{
+					GenerateName: "ke-",
+					Namespace:    ns.Name,
+					Spec: konnectv1alpha2.KonnectExtensionSpec{
+						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+									Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: cp.Name,
+									},
+								},
+							},
+						},
+					},
+				}
+				require.NoError(t, cl.Create(ctx, &konnectExtension))
+
+				t.Logf("Creating DataPlane with KonnectExtension reference")
+				dp := operatorv1beta1.DataPlane{
+					GenerateName: "dp-",
+					Namespace:    ns.Name,
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Extensions: []commonv1alpha1.ExtensionRef{
+								{
+									Group: konnectv1alpha1.GroupVersion.Group,
+									Kind:  "KonnectExtension",
+									Name:  konnectExtension.Name,
+								},
+							},
+							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+								DeploymentOptions: operatorv1beta1.DeploymentOptions{
+									PodTemplateSpec: &corev1.PodTemplateSpec{
+										Spec: corev1.PodSpec{
+											Containers: []corev1.Container{
+												{
+													Name:  consts.DataPlaneProxyContainerName,
+													Image: consts.DefaultDataPlaneImage,
+													Env: []corev1.EnvVar{
+														{Name: "KONG_ADMIN_LISTEN", Value: userAdminListen},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+				require.NoError(t, cl.Create(ctx, &dp))
+
+				t.Logf("Waiting for the hybrid KonnectExtension and admin API resources")
+				require.EventuallyWithT(t, func(t *assert.CollectT) {
+					require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(&konnectExtension), &konnectExtension))
+					require.NotNil(t, konnectExtension.Status.Konnect)
+					require.Equal(t, konnectv1alpha2.ClusterTypeControlPlane, konnectExtension.Status.Konnect.ClusterType)
+
+					adminSvcs, adminSecrets := listAdminAPIResources(t, ctx, cl, &dp)
+					require.Len(t, adminSvcs, 1)
+					require.NotEmpty(t, adminSecrets)
+
+					deployment := getDataPlaneDeployment(t, ctx, cl, &dp)
+					dpContainer := k8sutils.GetPodContainerByName(&deployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
+					require.NotNil(t, dpContainer)
+					require.Equal(t, userAdminListen, k8sutils.EnvValueByName(dpContainer.Env, "KONG_ADMIN_LISTEN"))
+					require.True(t, lo.ContainsBy(deployment.Spec.Template.Spec.Volumes, func(v corev1.Volume) bool {
+						return v.Name == consts.ClusterCertificateVolume
+					}))
+				}, waitTime, tickTime)
+			})
+
 			// Regression test for https://github.com/Kong/kong-operator/issues/3940.
 			// Two KonnectExtensions sharing a single client-certificate Secret must each
 			// produce their own KongDataPlaneClientCertificate CR (named after the
