@@ -1,0 +1,14 @@
+# Sample for the on-prem Event Gateway control plane CRD.
+#
+# OnPremEventGateway has no reconciler yet: applying this sample only exercises
+# CRD validation, it has no effect on the cluster.
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: OnPremEventGateway
+metadata:
+  name: event-gateway-onprem-1
+  namespace: default
+spec:
+  gwAdmin:
+    service:
+      name: gw-admin
+      portName: admin
