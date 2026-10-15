@@ -5,9 +5,9 @@
 #   - namespace: Namespace where the OnPremAIGateway will be created.
 #
 # The OnPremAIGateway spec is empty: the controller reports readiness of the
-# embedded control-plane instance. LicenseValid is informational and only set
-# when a KongLicense is present, so this template asserts Ready only; tests
-# that run with a license can assert LicenseValid themselves.
+# embedded control-plane instance. LicenseValid is informational and never
+# gates Ready: without a KongLicense it reports False (LicenseMissing), and
+# with one it reports True (LicenseProvided). This template asserts Ready only.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
 metadata:
