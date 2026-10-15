@@ -13,7 +13,7 @@ spec:
     X-Kong-LLM-Model header.
 
     The model's upstream points at the shared mock LLM stack (see
-    ../fixtures/aigateway), so the request is answered in-cluster.
+    ../../fixtures/aigateway), so the request is answered in-cluster.
   bindings:
     - name: test_name
       value: ($namespace)
