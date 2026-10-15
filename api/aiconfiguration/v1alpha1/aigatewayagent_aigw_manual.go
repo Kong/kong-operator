@@ -43,9 +43,10 @@ func (obj *AIGatewayAgent) ToAIGWAgent(ctx context.Context, cl client.Client) (*
 // resolveAIGWAccess resolves the agent's access.acls and access.authStrategies CR references
 // onto the translated aigw.Agent's access.
 //
-// marshalAIGWAgentPayload renames the payload's deprecated identity_providers key (plain
-// strings, no CR references) to auth_strategies (aigw rejects the old key); resolved
-// current-key refs are re-attached first, mirroring AIGatewayModel's ordering.
+// marshalAIGWAgentPayload leaves the payload's deprecated identity_providers key (plain
+// strings, no CR references) in place: it is not supported, aigw rejects the key, so a CR
+// carrying it fails translation. Resolved current-key refs are re-attached first, mirroring
+// AIGatewayModel's ordering.
 func (obj *AIGatewayAgent) resolveAIGWAccess(
 	ctx context.Context, cl client.Client, agent *aigw.Agent,
 ) error {
@@ -94,8 +95,8 @@ func (obj *AIGatewayAgent) resolveAIGWAccess(
 // drop (Konnect-only bookkeeping) and the stripping of the CR-reference keys
 // (policies, access.acls, access.auth_strategies: they carry {kind,name} references, aigw
 // wants plain resolved names, re-attached in ToAIGWAgent). The deprecated
-// access.identity_providers is renamed to access.auth_strategies: it carries plain strings
-// with no CR references, and aigw no longer folds the old key (it rejects it).
+// access.identity_providers is not supported: aigw rejects the key, so a CR carrying it
+// fails translation.
 func (spec *AIGatewayAgentAPISpec) marshalAIGWAgentPayload() ([]byte, error) {
 	data, err := spec.marshalSDKOpsPayload()
 	if err != nil {
@@ -113,13 +114,6 @@ func (spec *AIGatewayAgentAPISpec) marshalAIGWAgentPayload() ([]byte, error) {
 	if access, ok := cfg["access"].(map[string]any); ok {
 		delete(access, "acls")
 		delete(access, "auth_strategies")
-		// The deprecated identity_providers carries plain strings with no CR references;
-		// aigw no longer folds the key into AuthStrategies (it rejects it), so do the
-		// rename here: ToAIGWAgent re-attaches the resolved refs first, these last.
-		if idps, ok := access["identity_providers"]; ok {
-			delete(access, "identity_providers")
-			access["auth_strategies"] = idps
-		}
 	}
 	return json.Marshal(cfg)
 }

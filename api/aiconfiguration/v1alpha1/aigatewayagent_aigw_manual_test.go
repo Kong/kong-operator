@@ -31,8 +31,7 @@ func newAgentDenyACLsFixture() *AIGatewayAgentAccessAcls {
 // TestAIGatewayAgent_ToAIGWAgent covers the policies, ACL consumer group and auth strategy
 // reference resolution — deliberately without any SetKonnectID on the referenced entities,
 // pinning that the on-prem translation uses the name-only resolver, unlike the generated
-// Konnect resolver — plus the deprecated identity_providers renaming
-// to auth_strategies and the Enabled/Disabled boolean normalization. (The managed_by drop
+// Konnect resolver — plus the Enabled/Disabled boolean normalization. (The managed_by drop
 // is pinned by the strict round-trip test below, the only decode that can see the key.)
 //
 // aigw/doc.go doesn't alias AgentAccessConfig, AccessConfig or AgentConfig, so the want
@@ -91,7 +90,7 @@ func TestAIGatewayAgent_ToAIGWAgent(t *testing.T) {
 		wantErr string
 	}{
 		{
-			name: "policies, ACLs and auth strategies resolved by name, labels kept, managed_by dropped, identity_providers renamed",
+			name: "policies, ACLs and auth strategies resolved by name, labels kept, managed_by dropped",
 			obj: &AIGatewayAgent{
 				Name: "sample-ai-gw-agent", Namespace: "default",
 				Spec: AIGatewayAgentSpec{
@@ -104,9 +103,8 @@ func TestAIGatewayAgent_ToAIGWAgent(t *testing.T) {
 						ManagedBy:   ManagedBy{"kong-operator": "true"},
 						Policies:    []AIGatewayPolicyRef{{Name: "ai-gw-policy"}},
 						Access: AIGatewayAgentAccess{
-							Acls:              newAgentACLsFixture(),
-							AuthStrategies:    []AIGatewayAuthStrategyRef{{Name: "ai-gw-auth-strategy"}},
-							IdentityProviders: []AIGatewayIdentityProviderReference{"legacy-idp"},
+							Acls:           newAgentACLsFixture(),
+							AuthStrategies: []AIGatewayAuthStrategyRef{{Name: "ai-gw-auth-strategy"}},
 						},
 						Config: AIGatewayAgentConfig{
 							URL:                "http://upstream:8080",
@@ -130,9 +128,7 @@ func TestAIGatewayAgent_ToAIGWAgent(t *testing.T) {
 					Policies:    []string{"aigw-policy"},
 				}
 				agent.Access.ACLs = aigw.ACLs{Allow: []string{"dev-users"}}
-				// current-key authStrategies resolved first, then the renamed deprecated
-				// identity_providers.
-				agent.Access.AuthStrategies = []string{"key-auth-1", "legacy-idp"}
+				agent.Access.AuthStrategies = []string{"key-auth-1"}
 				agent.Config.URL = "http://upstream:8080"
 				agent.Config.MaxRequestBodySize = new(1024)
 				agent.Config.Logging = &aigw.Logging{
@@ -308,9 +304,6 @@ func TestAIGatewayAgent_ToAIGWAgent_StrictRoundTrip(t *testing.T) {
 		Access: AIGatewayAgentAccess{
 			Acls:           newAgentACLsFixture(),
 			AuthStrategies: []AIGatewayAuthStrategyRef{{Name: "ai-gw-auth-strategy"}},
-			// identity_providers carries plain strings, so the payload builder renames it to
-			// auth_strategies (aigw rejects the old key).
-			IdentityProviders: []AIGatewayIdentityProviderReference{"legacy-idp"},
 		},
 		Config: AIGatewayAgentConfig{
 			URL:                "http://upstream:8080",
@@ -337,7 +330,7 @@ func TestAIGatewayAgent_ToAIGWAgent_StrictRoundTrip(t *testing.T) {
 	require.Equal(t, aigw.Labels{"app": "test1"}, agent.Labels)
 	require.Nil(t, agent.Policies)
 	require.Empty(t, agent.Access.ACLs)
-	require.Equal(t, []string{"legacy-idp"}, agent.Access.AuthStrategies)
+	require.Empty(t, agent.Access.AuthStrategies)
 	require.Equal(t, "http://upstream:8080", agent.Config.URL)
 	require.NotNil(t, agent.Config.Logging)
 	require.NotNil(t, agent.Config.Logging.Payloads)

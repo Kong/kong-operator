@@ -323,9 +323,6 @@ func TestAIGatewayModel_ToAIGWModel_StrictRoundTrip(t *testing.T) {
 				// not see them.
 				Access: AIGatewayModelAccess{
 					AuthStrategies: []AIGatewayAuthStrategyRef{{Name: "ai-gw-model-auth-strategy"}},
-					// identity_providers carries plain strings, so the payload builder renames it to
-					// auth_strategies (aigw rejects the old key).
-					IdentityProviders: []AIGatewayIdentityProviderReference{"legacy-idp"},
 				},
 				Config: AIGatewayModelAPIConfig{
 					Route: AIGatewayModelRouteConfig{
@@ -360,9 +357,6 @@ func TestAIGatewayModel_ToAIGWModel_StrictRoundTrip(t *testing.T) {
 
 	// Pin the fix itself, not just its absence of error.
 	require.Equal(t, []string{"gpt-4o-mini"}, model.Config.Route.Model.Values)
-	// The deprecated identity_providers key is renamed to auth_strategies by the
-	// payload builder.
-	require.Equal(t, []string{"legacy-idp"}, model.Access.AuthStrategies)
 	// The "~" prefix is Konnect-only; the aigw document carries the bare
 	// capture-group name.
 	require.Equal(t, "model", model.Config.Route.Model.Path.PathParam)

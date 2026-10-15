@@ -351,12 +351,9 @@ func (i *Instance) sendConfig(
 		i.reportTranslationStatus(ctx, *gw, err, failures, conversionIssueWarnings(issues))
 		return fmt.Errorf("rendering dbless configuration: %w", err)
 	}
-	// The converter's WARNING issues mean it worked around a problem, so they are
-	// only reported as events. Its ERROR issues mean it dropped the offending
-	// entity from the payload: those are attributed back to the entities' CRs, so
-	// that their Programmed condition reports the drop while the rest of the
-	// payload is still pushed.
-	included, failures, warnings := attributeConversionIssues(included, failures, issues)
+	// attributeConversionIssues turns WARNING issues into events and ERROR
+	// issues into per-entity failures; see its doc for the contract.
+	included, failures, warnings := i.attributeConversionIssues(included, failures, issues)
 	// The translation outcome is fully known here: report it before the push, so
 	// that push failures - which belong to the DataPlanesConfigured condition -
 	// do not alter it.
@@ -451,8 +448,8 @@ var conversionIssueKindToCRTypeName = map[string]string{
 // (the converter worked around the problem), plus - defensively, since today
 // every issue Source.Kind is a kind translated into the document and a dropped
 // entity is always included - any ERROR issue matching no included entity, which
-// would otherwise be silently lost.
-func attributeConversionIssues(
+// is then logged loudly as an error so the drop is not lost in silence.
+func (i *Instance) attributeConversionIssues(
 	included []client.Object,
 	failures []EntityFailure,
 	issues []convert.ConversionIssue,
@@ -488,6 +485,10 @@ func attributeConversionIssues(
 			matches = byKey[key{typeName, issue.Source.Name}]
 		}
 		if len(matches) == 0 {
+			// An unattributed ERROR issue means a dropped CR keeps Programmed
+			// True while the pushed payload lacks its entity. Log it loudly
+			// instead of degrading it to a warning in silence.
+			i.logger.Error(nil, "unattributed converter ERROR issue", "issue", issue.String())
 			warnings = append(warnings, issue.String())
 			continue
 		}

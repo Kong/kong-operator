@@ -98,6 +98,12 @@
   objects exceeding these limits were already rejected by the Konnect API and
   are now additionally rejected at Kubernetes admission time.
   [#5983](https://github.com/Kong/kong-operator/pull/5983)
+- On-prem AI Gateway: entities that the configuration converter drops from the
+  pushed configuration now report the drop in their `Programmed` condition
+  instead of reporting success while absent from the configuration. A drop that
+  cannot be attributed to an entity is logged and surfaced as a warning on the
+  gateway.
+  [#6115](https://github.com/Kong/kong-operator/pull/6115)
 
 ### Added
 
