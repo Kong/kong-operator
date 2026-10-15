@@ -71,6 +71,10 @@ spec:
                 value: ($model_name)
               - name: EXPECT_HEADER
                 value: X-Kong-LLM-Model
+              # Pin the response header to the intended target: the value
+              # proves the matched model, not merely that some model served.
+              - name: EXPECT_HEADER_VALUE
+                value: openai/qwen2.5:0.5b
               # The model route has no selector (the format's default one
               # applies: the body's "model" field), so isolating it means not
               # sending the alias via the request header.
