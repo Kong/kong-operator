@@ -1,0 +1,162 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ($provider_credentials_name)
+  namespace: ($namespace)
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+stringData:
+  apikey: test-ai-gateway-key
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModelProvider
+metadata:
+  name: ($provider_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: openai
+    openai:
+      name: ($provider_name)
+      displayName: OpenAI-compatible mock provider
+      config:
+        auth:
+          headers:
+            - name: apikey
+              value:
+                type: secretRef
+                secretRef:
+                  name: ($provider_credentials_name)
+                  key: apikey
+---
+# Headers selector: routes on the X-Kong-LLM-Model request header. With an
+# authored selector, the model's alias is the selector's value itself
+# (qwen2.5:0.5b), which is what matching requests must carry.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModel
+metadata:
+  name: model-headers-selector
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: model
+    model:
+      name: model-headers-selector
+      displayName: Model routed via headers selector
+      enabled: Enabled
+      formats:
+        - type: openai
+      capabilities:
+        - generate
+      config:
+        model:
+          nameHeader: Enabled
+        route:
+          model:
+            headerParam: X-Kong-LLM-Model
+            values:
+              - qwen2.5:0.5b
+          paths:
+            - /model-route/headers/chat
+      targets:
+        - name: qwen2.5:0.5b
+          provider:
+            name: ($provider_name)
+          config:
+            type: openai
+            openai:
+              upstreamURL: http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/provider-a
+---
+# Body selector: routes on the "model" property of the JSON request body.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModel
+metadata:
+  name: model-body-selector
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: model
+    model:
+      name: model-body-selector
+      displayName: Model routed via body selector
+      enabled: Enabled
+      formats:
+        - type: openai
+      capabilities:
+        - generate
+      config:
+        model:
+          nameHeader: Enabled
+        route:
+          model:
+            bodyParam: model
+            values:
+              - gemma3:270m
+          paths:
+            - /model-route/body/chat
+      targets:
+        - name: gemma3:270m
+          provider:
+            name: ($provider_name)
+          config:
+            type: openai
+            openai:
+              upstreamURL: http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/provider-a
+---
+# No selector: `config.route.model` is left unset entirely. Per the schema's
+# doc comment, this falls back to the format's default selector (for `openai`,
+# the request body's "model" field) with the model ENTITY's name
+# (apiSpec.model.name) as the implicit selector value. The metadata.name is
+# deliberately different from apiSpec.model.name here, so the traffic step
+# proves which name the fallback uses.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModel
+metadata:
+  name: model-no-selector-cr
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: model
+    model:
+      name: model-no-selector
+      displayName: Model routed via no selector (format default)
+      enabled: Enabled
+      formats:
+        - type: openai
+      capabilities:
+        - generate
+      config:
+        model:
+          nameHeader: Enabled
+        route:
+          paths:
+            - /model-route/no-selector/chat
+      targets:
+        - name: qwen2.5:0.5b
+          provider:
+            name: ($provider_name)
+          config:
+            type: openai
+            openai:
+              upstreamURL: http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/provider-a
