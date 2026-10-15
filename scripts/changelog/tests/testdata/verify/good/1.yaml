@@ -1,0 +1,3 @@
+message: A valid entry.
+type: bugfix
+scope: dataplane
