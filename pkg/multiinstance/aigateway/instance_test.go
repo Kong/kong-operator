@@ -305,11 +305,11 @@ func TestSendConfig(t *testing.T) {
 		require.Equal(t, status.ConfigurationStatusFailed, statusOf(instance, model))
 	})
 
-	t.Run("attributes converter ERROR issues to their entities and still pushes the rest", func(t *testing.T) {
+	t.Run("reports dangling provider references at translation and still pushes the rest", func(t *testing.T) {
 		// The provider CR exists (so the model's reference resolves) but fails its
-		// own translation, so it is excluded from the document. The converter then
-		// drops the model's target referencing it and reports an ERROR issue on the
-		// model, which sendConfig attributes back to the model CR.
+		// own translation, so it is excluded from the document. The model referencing
+		// it is now rejected at translation time (checkTranslatedRefs) instead of
+		// being silently dropped by the converter.
 		model := testAIGatewayModel("model-a")
 		model.Spec.APISpec.Model.Targets = []aiconfigurationv1alpha1.AIGatewayTarget{{
 			Name:     "t",
@@ -339,9 +339,9 @@ func TestSendConfig(t *testing.T) {
 
 		require.NoError(t, instance.sendConfig(ctx, &gwNN))
 
-		// The model's Programmed condition reports the drop.
+		// The model's Programmed condition reports the dangling reference.
 		require.Equal(t, status.ConfigurationStatusFailed, statusOf(instance, model))
-		require.Contains(t, messageOf(instance, model), "dropped the entity from the rendered configuration")
+		require.Contains(t, messageOf(instance, model), "referenced AIGatewayModelProvider")
 
 		// The provider's own translation failure is reported separately.
 		require.Equal(t, status.ConfigurationStatusFailed, statusOf(instance, brokenProvider))
