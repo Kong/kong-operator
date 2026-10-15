@@ -16,6 +16,7 @@ func TestEventGatewayEntitiesParentRef(t *testing.T) {
 	type entity interface {
 		GetParentRef() commonv1alpha1.ObjectRef
 		SetParentRef(commonv1alpha1.ObjectRef)
+		SkipKonnectReconciliation() bool
 		GetEventGatewayRef() commonv1alpha1.ObjectRef
 		GetGatewayRef() commonv1alpha1.ObjectRef
 		GetParentGVK() schema.GroupVersionKind
@@ -27,7 +28,9 @@ func TestEventGatewayEntitiesParentRef(t *testing.T) {
 			NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gw", Namespace: new("other")},
 		}
 		parentRef  = &commonv1alpha1.GatewayRef{Group: "konnect.konghq.com", Kind: "KonnectEventGateway", Name: "gw", Namespace: new("other")}
+		onPremRef  = &commonv1alpha1.GatewayRef{Group: "eventgateway.konghq.com", Kind: "OnPremEventGateway", Name: "gw", Namespace: new("other")}
 		konnectGVK = schema.GroupVersionKind{Group: "konnect.konghq.com", Version: "v1alpha1", Kind: "KonnectEventGateway"}
+		onPremGVK  = schema.GroupVersionKind{Group: "eventgateway.konghq.com", Version: "v1alpha1", Kind: "OnPremEventGateway"}
 	)
 
 	tests := []struct {
@@ -107,12 +110,44 @@ func TestEventGatewayEntitiesParentRef(t *testing.T) {
 				require.Equal(t, legacyRef, obj.GetGatewayRef())
 				require.Equal(t, konnectGVK, obj.GetParentGVK())
 			})
-			t.Run("SetParentRef sets the deprecated gatewayRef and clears parentRef", func(t *testing.T) {
-				obj, refs := tc.newEntity(parentRef, commonv1alpha1.ObjectRef{})
+			t.Run("a Konnect gateway is reconciled against Konnect", func(t *testing.T) {
+				obj, _ := tc.newEntity(nil, legacyRef)
+				require.False(t, obj.SkipKonnectReconciliation())
+				obj, _ = tc.newEntity(parentRef.DeepCopy(), commonv1alpha1.ObjectRef{})
+				require.False(t, obj.SkipKonnectReconciliation())
+			})
+			t.Run("an on-prem gateway is not reconciled against Konnect", func(t *testing.T) {
+				obj, _ := tc.newEntity(onPremRef.DeepCopy(), commonv1alpha1.ObjectRef{})
+				require.True(t, obj.SkipKonnectReconciliation())
+				require.Equal(t, onPremGVK, obj.GetParentGVK())
+				require.Equal(t, legacyRef, obj.GetParentRef())
+			})
+			t.Run("SetParentRef sets the deprecated gatewayRef when parentRef is unset", func(t *testing.T) {
+				obj, refs := tc.newEntity(nil, commonv1alpha1.ObjectRef{})
 				obj.SetParentRef(legacyRef)
 				gotParentRef, gotGatewayRef := refs()
 				require.Nil(t, gotParentRef)
 				require.Equal(t, legacyRef, gotGatewayRef)
+			})
+			t.Run("SetParentRef keeps parentRef and the kind of the gateway", func(t *testing.T) {
+				for _, ref := range []*commonv1alpha1.GatewayRef{parentRef, onPremRef} {
+					obj, refs := tc.newEntity(ref.DeepCopy(), commonv1alpha1.ObjectRef{})
+					obj.SetParentRef(commonv1alpha1.ObjectRef{
+						Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "renamed"},
+					})
+					gotParentRef, gotGatewayRef := refs()
+					require.Equal(t, &commonv1alpha1.GatewayRef{Group: ref.Group, Kind: ref.Kind, Name: "renamed"}, gotParentRef)
+					require.Zero(t, gotGatewayRef)
+				}
+			})
+			t.Run("SetParentRef with a Konnect ID sets the deprecated gatewayRef", func(t *testing.T) {
+				konnectIDRef := commonv1alpha1.ObjectRef{Type: commonv1alpha1.ObjectRefTypeKonnectID, KonnectID: new("id")}
+				obj, refs := tc.newEntity(parentRef.DeepCopy(), commonv1alpha1.ObjectRef{})
+				obj.SetParentRef(konnectIDRef)
+				gotParentRef, gotGatewayRef := refs()
+				require.Nil(t, gotParentRef)
+				require.Equal(t, konnectIDRef, gotGatewayRef)
 			})
 		})
 	}

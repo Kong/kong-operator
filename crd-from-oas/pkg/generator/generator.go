@@ -4983,6 +4983,12 @@ type TemplateReferenceConfig struct {
 	// rejects such references when they point at the referencing object
 	// itself, which can never resolve to a usable ID.
 	SameTypeRef bool
+	// SkipsKonnectReconciliation reports, for each referenced kind, whether
+	// objects of that kind can opt out of the Konnect reconciler (they get a
+	// SkipKonnectReconciliation method). Only references to such kinds get
+	// the check rejecting a referenced object the Konnect reconciler does not
+	// manage.
+	SkipsKonnectReconciliation map[string]bool
 	// SameParentRefField is the Go name of the spec field holding the
 	// entity's parent reference (e.g. "PortalRef"). It is set only for
 	// same-type ObjectRefField references (e.g. PortalPage's
@@ -5154,36 +5160,37 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 			}
 		}
 		result[i] = TemplateReferenceConfig{
-			ReferenceConfig:      ref,
-			GoFieldName:          goFieldNameStr,
-			JSONFieldName:        tail,
-			SDKJSONFieldName:     sdkJSONFieldName,
-			DefaultKind:          defaultKind,
-			GoResolverName:       goResolverName,
-			NestedRef:            nested,
-			RefsExpr:             refsExpr,
-			GoPathSegments:       goPathSegments,
-			MultiKind:            len(ref.Kinds) > 1,
-			ResolvesToName:       ref.ResolvesTo == "name",
-			NestedArrayScalar:    nestedArrayScalar,
-			NestedArrayList:      nestedArrayList,
-			ArrayGuardExprs:      arrayGuardExprs,
-			ArrayPath:            arrayPath,
-			ElementGuardExprs:    elementGuardExprs,
-			ArrayLeafPath:        arrayLeafPath,
-			ArrayLeafPointer:     arrayLeafPointer,
-			SingleValueObjectRef: singleValueObjectRef,
-			ObjectWrapKey:        objectWrapKey,
-			UnionMemberGoName:    unionMemberGoName,
-			ArmChecks:            armChecks,
-			ElementArmChecks:     elementArmChecks,
-			DirectScalarRef:      directScalarRef,
-			ObjectRefField:       objectRefField,
-			SameTypeRef:          sameTypeRef,
-			SameParentRefField:   sameParentRefField,
-			SameParentRefKind:    sameParentRefKind,
-			SameParentIDGetter:   sameParentIDGetter,
-			OptionalRef:          optionalRef,
+			ReferenceConfig:            ref,
+			GoFieldName:                goFieldNameStr,
+			JSONFieldName:              tail,
+			SDKJSONFieldName:           sdkJSONFieldName,
+			DefaultKind:                defaultKind,
+			GoResolverName:             goResolverName,
+			NestedRef:                  nested,
+			RefsExpr:                   refsExpr,
+			GoPathSegments:             goPathSegments,
+			MultiKind:                  len(ref.Kinds) > 1,
+			ResolvesToName:             ref.ResolvesTo == "name",
+			NestedArrayScalar:          nestedArrayScalar,
+			NestedArrayList:            nestedArrayList,
+			ArrayGuardExprs:            arrayGuardExprs,
+			ArrayPath:                  arrayPath,
+			ElementGuardExprs:          elementGuardExprs,
+			ArrayLeafPath:              arrayLeafPath,
+			ArrayLeafPointer:           arrayLeafPointer,
+			SingleValueObjectRef:       singleValueObjectRef,
+			ObjectWrapKey:              objectWrapKey,
+			UnionMemberGoName:          unionMemberGoName,
+			ArmChecks:                  armChecks,
+			ElementArmChecks:           elementArmChecks,
+			DirectScalarRef:            directScalarRef,
+			ObjectRefField:             objectRefField,
+			SameTypeRef:                sameTypeRef,
+			SkipsKonnectReconciliation: g.kindsSkippingKonnectReconciliation(ref.Kinds),
+			SameParentRefField:         sameParentRefField,
+			SameParentRefKind:          sameParentRefKind,
+			SameParentIDGetter:         sameParentIDGetter,
+			OptionalRef:                optionalRef,
 		}
 		if optionalRef {
 			result[i].InjectIntoSDKJSONFieldName = g.injectIntoTargetSDKKey(entityName, ref.InjectInto)
@@ -8779,4 +8786,20 @@ func propertyUsesJSON(g *Generator, prop *parser.Property, parsed *parser.Parsed
 		}
 	}
 	return false
+}
+
+// kindsSkippingKonnectReconciliation returns, for each of the given kinds,
+// whether its objects can opt out of the Konnect reconciler: entities with a
+// typed parent ref (e.g. AIGatewayRef, which can target an OnPremAIGateway)
+// and entities whose gatewayRef accepts additional, non-Konnect kinds. Both get
+// a generated SkipKonnectReconciliation method.
+func (g *Generator) kindsSkippingKonnectReconciliation(kinds []string) map[string]bool {
+	result := make(map[string]bool, len(kinds))
+	for _, kind := range kinds {
+		rc := g.config.ReconcilerConfig[kind]
+		result[kind] = rc != nil &&
+			((rc.ParentRef != nil && rc.ParentRef.TypeName != "") ||
+				(rc.GatewayRef != nil && len(rc.GatewayRef.AdditionalKinds) > 0))
+	}
+	return result
 }

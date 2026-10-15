@@ -1,0 +1,31 @@
+# Sample attaching an Event Gateway entity to an OnPremEventGateway.
+#
+# OnPremEventGateway has no reconciler yet: applying this sample only exercises
+# CRD validation. The Konnect controllers leave the listener alone.
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: OnPremEventGateway
+metadata:
+  name: event-gateway-onprem-1
+  namespace: default
+spec:
+  gwAdmin:
+    service:
+      name: gw-admin
+      portName: admin
+---
+kind: EventGatewayListener
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: event-gateway-onprem-1-listener-1
+  namespace: default
+spec:
+  apiSpec:
+    name: event-gateway-onprem-1-listener-1
+    addresses:
+      - "0.0.0.0"
+    ports:
+      - 9092
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: event-gateway-onprem-1

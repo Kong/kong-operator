@@ -10,7 +10,8 @@ spec:
 
     - each of these entities, referencing its KonnectEventGateway through
       spec.parentRef, is created in Konnect, like one using spec.gatewayRef;
-    - an OnPremEventGateway, which is not supported yet, is rejected;
+    - an entity attached to an OnPremEventGateway is left alone by the Konnect
+      controllers, and an entity can't move to an OnPremEventGateway;
     - entities below them (a virtual cluster, a virtual cluster policy, a
       listener policy) and policies referencing them (a static key, a TLS trust
       bundle) are created in Konnect too;
@@ -451,9 +452,9 @@ spec:
                 (conditions[?type == 'KonnectReferencesResolved']):
                   - status: 'True'
 
-    - name: Reject-OnPremEventGateway
+    - name: OnPremEventGateway-entity-is-left-alone
       try:
-        - description: OnPremEventGateway is not an accepted kind yet.
+        - description: An entity attached to an OnPremEventGateway is accepted.
           apply:
             resource:
               apiVersion: configuration.konghq.com/v1alpha1
@@ -465,17 +466,46 @@ spec:
                 parentRef:
                   group: eventgateway.konghq.com
                   kind: OnPremEventGateway
-                  name: ($keg_cp_name)
+                  name: onprem-gateway
                 apiSpec:
                   name: listener-onprem
                   addresses:
                     - 0.0.0.0
                   ports:
                     - '19095'
+        # Leave the Konnect controllers time to pick it up, if they were to.
+        - sleep:
+            duration: 10s
+        - description: The Konnect controllers set no status and no finalizer on it.
+          assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListener
+              metadata:
+                name: listener-onprem
+                namespace: ($namespace)
+                (finalizers == null): true
+              (status.conditions == null): true
+
+    - name: Reject-moving-an-entity-to-an-OnPremEventGateway
+      try:
+        - description: The kind of the referenced gateway can't be changed.
+          patch:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListener
+              metadata:
+                name: listener
+                namespace: ($namespace)
+              spec:
+                parentRef:
+                  group: eventgateway.konghq.com
+                  kind: OnPremEventGateway
+                  name: onprem-gateway
             expect:
               - check:
                   ($error != null): true
-                  (contains($error, 'parentRef must reference one of')): true
+                  (contains($error, 'the kind of the referenced gateway is immutable')): true
 
     - name: Migrate-listener-from-gatewayRef-to-parentRef
       bindings:

@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -281,6 +282,57 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		require.True(t, ok, "expected KonnectReferencesResolved condition to be set")
 		assert.Equal(t, metav1.ConditionFalse, cond.Status)
 		assert.Equal(t, configurationv1alpha1.KonnectReferencesResolvedReasonInvalid, cond.Reason)
+	})
+
+	t.Run("ref to an AIGatewayPolicy attached to an OnPremAIGateway sets condition False with Invalid", func(t *testing.T) {
+		policy := &aiconfigurationv1alpha1.AIGatewayPolicy{
+			Name: "onprem-policy", Namespace: "ns",
+			Spec: aiconfigurationv1alpha1.AIGatewayPolicySpec{
+				AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+					Group:         aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+					Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+					NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "onprem-gw"},
+				},
+			},
+		}
+		ent := agent.DeepCopy()
+		ent.Spec.APISpec.Policies = []aiconfigurationv1alpha1.AIGatewayPolicyRef{{Name: policy.Name}}
+		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(ent.DeepCopy(), policy).Build()
+
+		updated, isProblem, _, err := handleKonnectReferences(t.Context(), cl, ent, ent)
+		require.NoError(t, err)
+		require.True(t, isProblem)
+		require.True(t, updated)
+
+		cond, ok := getKonnectReferencesResolvedCondition(ent.Status.Conditions)
+		require.True(t, ok, "expected KonnectReferencesResolved condition to be set")
+		assert.Equal(t, metav1.ConditionFalse, cond.Status)
+		assert.Equal(t, configurationv1alpha1.KonnectReferencesResolvedReasonInvalid, cond.Reason)
+		assert.Contains(t, cond.Message, "AIGatewayPolicy ns/onprem-policy is not attached to a Konnect gateway")
+	})
+
+	t.Run("ref to a CR not managed by Konnect sets condition False with Invalid", func(t *testing.T) {
+		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
+		ent := agent.DeepCopy()
+		resolverErr := configurationv1alpha1.ReferenceNotKonnectManagedError{
+			Kind: "EventGatewayTLSTrustBundle", Namespace: "ns", Name: "onprem-trust-bundle",
+		}
+
+		updated, isProblem, _, err := handleKonnectReferences(
+			t.Context(),
+			cl,
+			ent,
+			failingKonnectReferenceResolver{err: resolverErr},
+		)
+		require.NoError(t, err)
+		require.True(t, isProblem)
+		require.True(t, updated)
+
+		cond, ok := getKonnectReferencesResolvedCondition(ent.Status.Conditions)
+		require.True(t, ok, "expected KonnectReferencesResolved condition to be set")
+		assert.Equal(t, metav1.ConditionFalse, cond.Status)
+		assert.Equal(t, configurationv1alpha1.KonnectReferencesResolvedReasonInvalid, cond.Reason)
+		assert.Contains(t, cond.Message, "EventGatewayTLSTrustBundle ns/onprem-trust-bundle is not attached to a Konnect gateway")
 	})
 
 	t.Run("joined same-category reference errors keep specific reason", func(t *testing.T) {

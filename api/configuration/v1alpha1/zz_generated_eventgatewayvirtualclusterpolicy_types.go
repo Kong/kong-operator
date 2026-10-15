@@ -22,6 +22,7 @@ import (
 // +apireference:kgo:include
 // +kong:channels=kong-operator
 // +kubebuilder:validation:XValidation:rule="!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef", message="spec.eventGatewayVirtualClusterRef is immutable when an entity is already Programmed"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayVirtualClusterRef == oldSelf.spec.eventGatewayVirtualClusterRef",message="spec.eventGatewayVirtualClusterRef is immutable once the entity has been created in Konnect",fieldPath=".spec.eventGatewayVirtualClusterRef"
 type EventGatewayVirtualClusterPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitzero"`

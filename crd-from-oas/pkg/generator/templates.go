@@ -566,11 +566,20 @@ func (obj *{{.EntityName}}) GetParentRef() {{.RootRefTypeName}} {
 
 // SetParentRef sets the reference to the parent entity.
 {{- with .GatewayRef}}
-// It sets the deprecated spec.{{.LegacyJSONFieldName}}, which is the one holding an
-// ObjectRef, and clears spec.{{.JSONFieldName}}.
+// When spec.{{.JSONFieldName}} is set and ref is a namespaced reference, only
+// its name and namespace are updated, so the kind of the referenced gateway is
+// kept. Otherwise it sets the deprecated spec.{{.LegacyJSONFieldName}} and clears
+// spec.{{.JSONFieldName}}.
+// A Konnect ID can only be held by spec.{{.LegacyJSONFieldName}}: on an object
+// already using spec.{{.JSONFieldName}}, the API server rejects that change.
 {{- end}}
 func (obj *{{.EntityName}}) SetParentRef(ref {{.RootRefTypeName}}) {
 {{- with .GatewayRef}}
+	if parentRef := obj.Spec.{{.GoFieldName}}; parentRef != nil && ref.NamespacedRef != nil {
+		parentRef.Name = ref.NamespacedRef.Name
+		parentRef.Namespace = ref.NamespacedRef.DeepCopy().Namespace
+		return
+	}
 	obj.Spec.{{.GoFieldName}} = nil
 {{- end}}
 	obj.Spec.{{.RootRefDependency.FieldName}} = ref
@@ -1319,6 +1328,12 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 			}
 			return nil, fmt.Errorf("failed to get referenced {{.DefaultKind}} %s/%s: %w", ns, name, err)
 		}
+{{- if index .SkipsKonnectReconciliation .DefaultKind}}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			return nil, ReferenceNotKonnectManagedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name}
+		}
+{{- end}}
 {{- if .SameParentRefField}}
 		// Same-type references embed the referenced object's Konnect ID in a
 		// request scoped to the referrer's parent, so both objects must belong
@@ -1501,6 +1516,13 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 				errs = append(errs, fmt.Errorf("failed to get referenced {{.}} %s/%s: %w", ns, ref.Name, err))
 				continue
 			}
+{{- if index $ref.SkipsKonnectReconciliation .}}
+			// An object the Konnect reconciler does not manage never gets a Konnect ID.
+			if referenced.SkipKonnectReconciliation() {
+				errs = append(errs, ReferenceNotKonnectManagedError{Kind: "{{.}}", Namespace: ns, Name: ref.Name})
+				continue
+			}
+{{- end}}
 			konnectID = referenced.GetKonnectID()
 			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 				errs = append(errs, ReferenceDifferentGatewayError{Kind: "{{.}}", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
@@ -1552,6 +1574,13 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 {{- if .RequiredAPISpecType}}
 		if referenced.Spec.APISpec.{{.DefaultKind}}Config == nil || string(referenced.Spec.APISpec.Type) != "{{.RequiredAPISpecType}}" {
 			errs = append(errs, fmt.Errorf("{{.DefaultKind}} %s/%s must have apiSpec.type {{.RequiredAPISpecType}}", ns, ref.Name))
+			continue
+		}
+{{- end}}
+{{- if index .SkipsKonnectReconciliation .DefaultKind}}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
 			continue
 		}
 {{- end}}
@@ -4463,6 +4492,11 @@ type ReferenceBeingDeletedError = commonv1alpha1.ReferenceBeingDeletedError
 // namespace. Cross-namespace references are rejected until explicit
 // cross-namespace support and authorization checks are implemented.
 type ReferenceCrossNamespaceError = commonv1alpha1.ReferenceCrossNamespaceError
+
+// ReferenceNotKonnectManagedError is returned when a reference points to a CR
+// the Konnect reconciler does not manage, e.g. one attached to an on-prem
+// gateway.
+type ReferenceNotKonnectManagedError = commonv1alpha1.ReferenceNotKonnectManagedError
 
 // ReferenceDifferentGatewayError is returned when a reference points to a CR
 // programmed under a different AIGatewayControlPlane. References must stay

@@ -1207,6 +1207,11 @@ func resolveAIGatewayMCPServerConversionListenerPolicies(ctx context.Context, cl
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayPolicy %s/%s: %w", ns, ref.Name, err))
 			continue
 		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name})
+			continue
+		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
@@ -1265,6 +1270,11 @@ func resolveAIGatewayMCPServerConversionOnlyPolicies(ctx context.Context, cl cli
 				continue
 			}
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayPolicy %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name})
 			continue
 		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
@@ -1327,6 +1337,11 @@ func resolveAIGatewayMCPServerListenerSources(ctx context.Context, cl client.Cli
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayMCPServer %s/%s: %w", ns, ref.Name, err))
 			continue
 		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayMCPServer", Namespace: ns, Name: ref.Name})
+			continue
+		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayMCPServer", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
@@ -1385,6 +1400,11 @@ func resolveAIGatewayMCPServerListenerPolicies(ctx context.Context, cl client.Cl
 				continue
 			}
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayPolicy %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name})
 			continue
 		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
@@ -1447,6 +1467,11 @@ func resolveAIGatewayMCPServerPassthroughListenerPolicies(ctx context.Context, c
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayPolicy %s/%s: %w", ns, ref.Name, err))
 			continue
 		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name})
+			continue
+		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
@@ -1505,6 +1530,11 @@ func resolveAIGatewayMCPServerUpstreamServerPolicies(ctx context.Context, cl cli
 				continue
 			}
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayPolicy %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name})
 			continue
 		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
@@ -1573,6 +1603,11 @@ func resolveAIGatewayMCPServerListenerAccessConsumerAuthStrategies(ctx context.C
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayAuthStrategy %s/%s: %w", ns, ref.Name, err))
 			continue
 		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayAuthStrategy", Namespace: ns, Name: ref.Name})
+			continue
+		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayAuthStrategy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
@@ -1637,6 +1672,11 @@ func resolveAIGatewayMCPServerListenerAccessOauthAccessTokenAuthStrategies(ctx c
 				continue
 			}
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayAuthStrategy %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayAuthStrategy", Namespace: ns, Name: ref.Name})
 			continue
 		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
@@ -1705,6 +1745,11 @@ func resolveAIGatewayMCPServerConversionListenerAccessConsumerAuthStrategies(ctx
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayAuthStrategy %s/%s: %w", ns, ref.Name, err))
 			continue
 		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayAuthStrategy", Namespace: ns, Name: ref.Name})
+			continue
+		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayAuthStrategy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
@@ -1769,6 +1814,11 @@ func resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenAuthStrate
 				continue
 			}
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayAuthStrategy %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayAuthStrategy", Namespace: ns, Name: ref.Name})
 			continue
 		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
@@ -1837,6 +1887,11 @@ func resolveAIGatewayMCPServerPassthroughListenerAccessConsumerAuthStrategies(ct
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayAuthStrategy %s/%s: %w", ns, ref.Name, err))
 			continue
 		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayAuthStrategy", Namespace: ns, Name: ref.Name})
+			continue
+		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayAuthStrategy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
@@ -1903,6 +1958,11 @@ func resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAuthStrat
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayAuthStrategy %s/%s: %w", ns, ref.Name, err))
 			continue
 		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayAuthStrategy", Namespace: ns, Name: ref.Name})
+			continue
+		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayAuthStrategy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
@@ -1963,6 +2023,11 @@ func resolveAIGatewayMCPServerListenerAccessConsumerAclsAllow(ctx context.Contex
 				continue
 			}
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
 			continue
 		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
@@ -2027,6 +2092,11 @@ func resolveAIGatewayMCPServerListenerAccessConsumerAclsDeny(ctx context.Context
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
 			continue
 		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
@@ -2087,6 +2157,11 @@ func resolveAIGatewayMCPServerListenerAccessConsumerDefaultToolAclsAllow(ctx con
 				continue
 			}
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
 			continue
 		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
@@ -2151,6 +2226,11 @@ func resolveAIGatewayMCPServerListenerAccessConsumerDefaultToolAclsDeny(ctx cont
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
 			continue
 		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
@@ -2211,6 +2291,11 @@ func resolveAIGatewayMCPServerListenerAccessOauthAccessTokenAclsAllow(ctx contex
 				continue
 			}
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
 			continue
 		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
@@ -2275,6 +2360,11 @@ func resolveAIGatewayMCPServerListenerAccessOauthAccessTokenAclsDeny(ctx context
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
 			continue
 		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
@@ -2335,6 +2425,11 @@ func resolveAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultToolAclsAllow
 				continue
 			}
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
 			continue
 		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
@@ -2399,6 +2494,11 @@ func resolveAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultToolAclsDeny(
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
 			continue
 		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
@@ -2459,6 +2559,11 @@ func resolveAIGatewayMCPServerConversionListenerAccessConsumerAclsAllow(ctx cont
 				continue
 			}
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
 			continue
 		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
@@ -2523,6 +2628,11 @@ func resolveAIGatewayMCPServerConversionListenerAccessConsumerAclsDeny(ctx conte
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
 			continue
 		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
@@ -2583,6 +2693,11 @@ func resolveAIGatewayMCPServerConversionListenerAccessConsumerDefaultToolAclsAll
 				continue
 			}
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
 			continue
 		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
@@ -2647,6 +2762,11 @@ func resolveAIGatewayMCPServerConversionListenerAccessConsumerDefaultToolAclsDen
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
 			continue
 		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
@@ -2707,6 +2827,11 @@ func resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenAclsAllow(
 				continue
 			}
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
 			continue
 		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
@@ -2771,6 +2896,11 @@ func resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenAclsDeny(c
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
 			continue
 		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
@@ -2831,6 +2961,11 @@ func resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultToo
 				continue
 			}
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
 			continue
 		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
@@ -2895,6 +3030,11 @@ func resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultToo
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
 			continue
 		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
@@ -2955,6 +3095,11 @@ func resolveAIGatewayMCPServerPassthroughListenerAccessConsumerAclsAllow(ctx con
 				continue
 			}
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
 			continue
 		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
@@ -3019,6 +3164,11 @@ func resolveAIGatewayMCPServerPassthroughListenerAccessConsumerAclsDeny(ctx cont
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
 			continue
 		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
@@ -3079,6 +3229,11 @@ func resolveAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultToolAclsAl
 				continue
 			}
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
 			continue
 		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
@@ -3143,6 +3298,11 @@ func resolveAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultToolAclsDe
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
 			continue
 		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
@@ -3203,6 +3363,11 @@ func resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAclsAllow
 				continue
 			}
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
 			continue
 		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
@@ -3267,6 +3432,11 @@ func resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAclsDeny(
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
 			continue
 		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
@@ -3329,6 +3499,11 @@ func resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultTo
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
 			continue
 		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
@@ -3389,6 +3564,11 @@ func resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultTo
 				continue
 			}
 			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
 			continue
 		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
@@ -3454,6 +3634,11 @@ func resolveAIGatewayMCPServerConversionListenerToolsAccessAclsAllow(ctx context
 					continue
 				}
 				errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+				continue
+			}
+			// An object the Konnect reconciler does not manage never gets a Konnect ID.
+			if referenced.SkipKonnectReconciliation() {
+				errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
 				continue
 			}
 			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
@@ -3523,6 +3708,11 @@ func resolveAIGatewayMCPServerConversionListenerToolsAccessAclsDeny(ctx context.
 				errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
 				continue
 			}
+			// An object the Konnect reconciler does not manage never gets a Konnect ID.
+			if referenced.SkipKonnectReconciliation() {
+				errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+				continue
+			}
 			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 				errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 				continue
@@ -3588,6 +3778,11 @@ func resolveAIGatewayMCPServerConversionOnlyToolsAccessAclsAllow(ctx context.Con
 					continue
 				}
 				errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+				continue
+			}
+			// An object the Konnect reconciler does not manage never gets a Konnect ID.
+			if referenced.SkipKonnectReconciliation() {
+				errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
 				continue
 			}
 			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
@@ -3657,6 +3852,11 @@ func resolveAIGatewayMCPServerConversionOnlyToolsAccessAclsDeny(ctx context.Cont
 				errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
 				continue
 			}
+			// An object the Konnect reconciler does not manage never gets a Konnect ID.
+			if referenced.SkipKonnectReconciliation() {
+				errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+				continue
+			}
 			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 				errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 				continue
@@ -3722,6 +3922,11 @@ func resolveAIGatewayMCPServerPassthroughListenerToolsAccessAclsAllow(ctx contex
 					continue
 				}
 				errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+				continue
+			}
+			// An object the Konnect reconciler does not manage never gets a Konnect ID.
+			if referenced.SkipKonnectReconciliation() {
+				errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
 				continue
 			}
 			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
@@ -3791,6 +3996,11 @@ func resolveAIGatewayMCPServerPassthroughListenerToolsAccessAclsDeny(ctx context
 				errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
 				continue
 			}
+			// An object the Konnect reconciler does not manage never gets a Konnect ID.
+			if referenced.SkipKonnectReconciliation() {
+				errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+				continue
+			}
 			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 				errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 				continue
@@ -3858,6 +4068,11 @@ func resolveAIGatewayMCPServerUpstreamServerToolsAccessAclsAllow(ctx context.Con
 				errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
 				continue
 			}
+			// An object the Konnect reconciler does not manage never gets a Konnect ID.
+			if referenced.SkipKonnectReconciliation() {
+				errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+				continue
+			}
 			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 				errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 				continue
@@ -3923,6 +4138,11 @@ func resolveAIGatewayMCPServerUpstreamServerToolsAccessAclsDeny(ctx context.Cont
 					continue
 				}
 				errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+				continue
+			}
+			// An object the Konnect reconciler does not manage never gets a Konnect ID.
+			if referenced.SkipKonnectReconciliation() {
+				errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
 				continue
 			}
 			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {

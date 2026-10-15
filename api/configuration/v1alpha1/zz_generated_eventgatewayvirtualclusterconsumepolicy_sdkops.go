@@ -473,6 +473,11 @@ func resolveEventGatewayVirtualClusterConsumePolicySchemaValidationConfigJSONSch
 			errs = append(errs, fmt.Errorf("failed to get referenced EventGatewaySchemaRegistry %s/%s: %w", ns, ref.Name, err))
 			continue
 		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name})
+			continue
+		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
@@ -540,6 +545,11 @@ func resolveEventGatewayVirtualClusterConsumePolicySchemaValidationConfigConflue
 				continue
 			}
 			errs = append(errs, fmt.Errorf("failed to get referenced EventGatewaySchemaRegistry %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "EventGatewaySchemaRegistry", Namespace: ns, Name: ref.Name})
 			continue
 		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {

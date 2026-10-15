@@ -14,53 +14,60 @@ import (
 // TestEventGatewayEntitiesKonnectEventGatewayIndex verifies that the entities
 // directly under an Event Gateway are indexed by their KonnectEventGateway
 // whether they reference it through spec.parentRef or the deprecated
-// spec.gatewayRef.
+// spec.gatewayRef, and by their OnPremEventGateway otherwise.
 func TestEventGatewayEntitiesKonnectEventGatewayIndex(t *testing.T) {
 	meta := metav1.ObjectMeta{Name: "obj", Namespace: "ns"}
 
 	entities := []struct {
-		name      string
-		extract   func(client.Object) []string
-		newEntity func(*commonv1alpha1.GatewayRef, commonv1alpha1.ObjectRef) client.Object
+		name          string
+		extract       func(client.Object) []string
+		extractOnPrem func(client.Object) []string
+		newEntity     func(*commonv1alpha1.GatewayRef, commonv1alpha1.ObjectRef) client.Object
 	}{
 		{
-			name:    "EventGatewayBackendCluster",
-			extract: eventGatewayBackendClusterOnKonnectEventGatewayRef,
+			name:          "EventGatewayBackendCluster",
+			extract:       eventGatewayBackendClusterOnKonnectEventGatewayRef,
+			extractOnPrem: eventGatewayBackendClusterOnOnPremEventGatewayRef,
 			newEntity: func(p *commonv1alpha1.GatewayRef, g commonv1alpha1.ObjectRef) client.Object {
 				return &configurationv1alpha1.EventGatewayBackendCluster{ObjectMeta: meta, Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{ParentRef: p, GatewayRef: g}}
 			},
 		},
 		{
-			name:    "EventGatewayDataPlaneCertificate",
-			extract: eventGatewayDataPlaneCertificateOnKonnectEventGatewayRef,
+			name:          "EventGatewayDataPlaneCertificate",
+			extract:       eventGatewayDataPlaneCertificateOnKonnectEventGatewayRef,
+			extractOnPrem: eventGatewayDataPlaneCertificateOnOnPremEventGatewayRef,
 			newEntity: func(p *commonv1alpha1.GatewayRef, g commonv1alpha1.ObjectRef) client.Object {
 				return &configurationv1alpha1.EventGatewayDataPlaneCertificate{ObjectMeta: meta, Spec: configurationv1alpha1.EventGatewayDataPlaneCertificateSpec{ParentRef: p, GatewayRef: g}}
 			},
 		},
 		{
-			name:    "EventGatewayListener",
-			extract: eventGatewayListenerOnKonnectEventGatewayRef,
+			name:          "EventGatewayListener",
+			extract:       eventGatewayListenerOnKonnectEventGatewayRef,
+			extractOnPrem: eventGatewayListenerOnOnPremEventGatewayRef,
 			newEntity: func(p *commonv1alpha1.GatewayRef, g commonv1alpha1.ObjectRef) client.Object {
 				return &configurationv1alpha1.EventGatewayListener{ObjectMeta: meta, Spec: configurationv1alpha1.EventGatewayListenerSpec{ParentRef: p, GatewayRef: g}}
 			},
 		},
 		{
-			name:    "EventGatewaySchemaRegistry",
-			extract: eventGatewaySchemaRegistryOnKonnectEventGatewayRef,
+			name:          "EventGatewaySchemaRegistry",
+			extract:       eventGatewaySchemaRegistryOnKonnectEventGatewayRef,
+			extractOnPrem: eventGatewaySchemaRegistryOnOnPremEventGatewayRef,
 			newEntity: func(p *commonv1alpha1.GatewayRef, g commonv1alpha1.ObjectRef) client.Object {
 				return &configurationv1alpha1.EventGatewaySchemaRegistry{ObjectMeta: meta, Spec: configurationv1alpha1.EventGatewaySchemaRegistrySpec{ParentRef: p, GatewayRef: g}}
 			},
 		},
 		{
-			name:    "EventGatewayStaticKey",
-			extract: eventGatewayStaticKeyOnKonnectEventGatewayRef,
+			name:          "EventGatewayStaticKey",
+			extract:       eventGatewayStaticKeyOnKonnectEventGatewayRef,
+			extractOnPrem: eventGatewayStaticKeyOnOnPremEventGatewayRef,
 			newEntity: func(p *commonv1alpha1.GatewayRef, g commonv1alpha1.ObjectRef) client.Object {
 				return &configurationv1alpha1.EventGatewayStaticKey{ObjectMeta: meta, Spec: configurationv1alpha1.EventGatewayStaticKeySpec{ParentRef: p, GatewayRef: g}}
 			},
 		},
 		{
-			name:    "EventGatewayTLSTrustBundle",
-			extract: eventGatewayTLSTrustBundleOnKonnectEventGatewayRef,
+			name:          "EventGatewayTLSTrustBundle",
+			extract:       eventGatewayTLSTrustBundleOnKonnectEventGatewayRef,
+			extractOnPrem: eventGatewayTLSTrustBundleOnOnPremEventGatewayRef,
 			newEntity: func(p *commonv1alpha1.GatewayRef, g commonv1alpha1.ObjectRef) client.Object {
 				return &configurationv1alpha1.EventGatewayTLSTrustBundle{ObjectMeta: meta, Spec: configurationv1alpha1.EventGatewayTLSTrustBundleSpec{ParentRef: p, GatewayRef: g}}
 			},
@@ -76,6 +83,7 @@ func TestEventGatewayEntitiesKonnectEventGatewayIndex(t *testing.T) {
 		parentRef  *commonv1alpha1.GatewayRef
 		gatewayRef commonv1alpha1.ObjectRef
 		want       []string
+		wantOnPrem []string
 	}{
 		{
 			name: "deprecated gatewayRef",
@@ -111,6 +119,21 @@ func TestEventGatewayEntitiesKonnectEventGatewayIndex(t *testing.T) {
 			want:      []string{"other/gw"},
 		},
 		{
+			name:       "on-prem parentRef is only in the on-prem index",
+			parentRef:  &commonv1alpha1.GatewayRef{Group: "eventgateway.konghq.com", Kind: "OnPremEventGateway", Name: "gw"},
+			wantOnPrem: []string{"ns/gw"},
+		},
+		{
+			name:       "on-prem parentRef in another namespace",
+			parentRef:  &commonv1alpha1.GatewayRef{Group: "eventgateway.konghq.com", Kind: "OnPremEventGateway", Name: "gw", Namespace: new("other")},
+			wantOnPrem: []string{"other/gw"},
+		},
+		{
+			name:       "on-prem parentRef with an empty namespace",
+			parentRef:  &commonv1alpha1.GatewayRef{Group: "eventgateway.konghq.com", Kind: "OnPremEventGateway", Name: "gw", Namespace: new("")},
+			wantOnPrem: []string{"ns/gw"},
+		},
+		{
 			name: "no reference is not indexed",
 		},
 	}
@@ -119,7 +142,9 @@ func TestEventGatewayEntitiesKonnectEventGatewayIndex(t *testing.T) {
 		t.Run(e.name, func(t *testing.T) {
 			for _, r := range refs {
 				t.Run(r.name, func(t *testing.T) {
-					assert.Equal(t, r.want, e.extract(e.newEntity(r.parentRef, r.gatewayRef)))
+					obj := e.newEntity(r.parentRef, r.gatewayRef)
+					assert.Equal(t, r.want, e.extract(obj), "KonnectEventGateway index")
+					assert.Equal(t, r.wantOnPrem, e.extractOnPrem(obj), "OnPremEventGateway index")
 				})
 			}
 		})

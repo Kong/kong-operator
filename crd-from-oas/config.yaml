@@ -736,6 +736,10 @@ apiGroupVersions:
           # name, next to the deprecated spec.gatewayRef.
           gatewayRef:
             fieldName: parentRef
+            additionalKinds:
+              - group: eventgateway.konghq.com
+                version: v1alpha1
+                kind: OnPremEventGateway
       - path: /v1/event-gateways/{gatewayId}/schema-registries
         name: EventGatewaySchemaRegistry
         dataSources:
@@ -758,6 +762,10 @@ apiGroupVersions:
           # name, next to the deprecated spec.gatewayRef.
           gatewayRef:
             fieldName: parentRef
+            additionalKinds:
+              - group: eventgateway.konghq.com
+                version: v1alpha1
+                kind: OnPremEventGateway
       - path: /v1/event-gateways/{gatewayId}/tls-trust-bundles
         name: EventGatewayTLSTrustBundle
         dataSources:
@@ -780,6 +788,10 @@ apiGroupVersions:
           # name, next to the deprecated spec.gatewayRef.
           gatewayRef:
             fieldName: parentRef
+            additionalKinds:
+              - group: eventgateway.konghq.com
+                version: v1alpha1
+                kind: OnPremEventGateway
       - path: /v1/event-gateways/{gatewayId}/static-keys
         name: EventGatewayStaticKey
         dataSources:
@@ -841,6 +853,10 @@ apiGroupVersions:
           # name, next to the deprecated spec.gatewayRef.
           gatewayRef:
             fieldName: parentRef
+            additionalKinds:
+              - group: eventgateway.konghq.com
+                version: v1alpha1
+                kind: OnPremEventGateway
       - path: /v1/event-gateways/{gatewayId}/listeners
         name: EventGatewayListener
         ops:
@@ -860,8 +876,20 @@ apiGroupVersions:
           # name, next to the deprecated spec.gatewayRef.
           gatewayRef:
             fieldName: parentRef
+            additionalKinds:
+              - group: eventgateway.konghq.com
+                version: v1alpha1
+                kind: OnPremEventGateway
       - path: /v1/event-gateways/{gatewayId}/listeners/{eventGatewayListenerId}/policies
         name: EventGatewayListenerPolicy
+        # The parent reference is immutable once the entity has been created in
+        # Konnect (status.id set), not only while it is Programmed: Konnect scopes
+        # the entity under its parent, so it can't move to another one, e.g. one
+        # attached to an OnPremEventGateway, which would orphan it in Konnect.
+        cel:
+          # Rules on the resource root, spanning spec and status.
+          _validations:
+            - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayListenerRef == oldSelf.spec.eventGatewayListenerRef\",message=\"spec.eventGatewayListenerRef is immutable once the entity has been created in Konnect\",fieldPath=\".spec.eventGatewayListenerRef\""
         references:
           # Additive: Konnect trust bundle IDs/names keep working; namespacedRef
           # references an EventGatewayTLSTrustBundle in the cluster instead. It
@@ -935,6 +963,10 @@ apiGroupVersions:
           # name, next to the deprecated spec.gatewayRef.
           gatewayRef:
             fieldName: parentRef
+            additionalKinds:
+              - group: eventgateway.konghq.com
+                version: v1alpha1
+                kind: OnPremEventGateway
         dataSources:
           - path: spec.apiSpec.tls.clientIdentity.certificate
             type: Secret
@@ -942,6 +974,14 @@ apiGroupVersions:
             type: Secret
       - path: /v1/event-gateways/{gatewayId}/virtual-clusters
         name: EventGatewayVirtualCluster
+        # The parent reference is immutable once the entity has been created in
+        # Konnect (status.id set), not only while it is Programmed: Konnect scopes
+        # the entity under its parent, so it can't move to another one, e.g. one
+        # attached to an OnPremEventGateway, which would orphan it in Konnect.
+        cel:
+          # Rules on the resource root, spanning spec and status.
+          _validations:
+            - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayBackendClusterRef == oldSelf.spec.eventGatewayBackendClusterRef\",message=\"spec.eventGatewayBackendClusterRef is immutable once the entity has been created in Konnect\",fieldPath=\".spec.eventGatewayBackendClusterRef\""
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClustersSDK
@@ -999,6 +1039,12 @@ apiGroupVersions:
             - parentPolicyID
         cel:
           _validations:
+            # The parent reference is immutable once the entity has been created
+            # in Konnect (status.id set), not only while it is Programmed: Konnect
+            # scopes the entity under its parent, so it can't move to another one,
+            # e.g. one attached to an OnPremEventGateway, which would orphan it in
+            # Konnect.
+            - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayVirtualClusterRef == oldSelf.spec.eventGatewayVirtualClusterRef\",message=\"spec.eventGatewayVirtualClusterRef is immutable once the entity has been created in Konnect\",fieldPath=\".spec.eventGatewayVirtualClusterRef\""
             - '+kubebuilder:validation:XValidation:rule="!has(oldSelf.status) || !has(oldSelf.status.id) || (has(self.spec.apiSpec) && has(self.spec.apiSpec.parentPolicyRef) ? has(oldSelf.spec.apiSpec) && has(oldSelf.spec.apiSpec.parentPolicyRef) && self.spec.apiSpec.parentPolicyRef == oldSelf.spec.apiSpec.parentPolicyRef : !has(oldSelf.spec.apiSpec) || !has(oldSelf.spec.apiSpec.parentPolicyRef))",message="parentPolicyRef is immutable once the policy has been created in Konnect",fieldPath=".spec.apiSpec.parentPolicyRef"'
             - '+kubebuilder:validation:XValidation:rule="!has(self.spec.apiSpec) || !has(self.spec.apiSpec.type) || self.spec.apiSpec.type != ''encryptFields'' || has(self.spec.apiSpec.parentPolicyRef) || (oldSelf.hasValue() && has(oldSelf.value().spec.apiSpec) && has(oldSelf.value().spec.apiSpec.type) && oldSelf.value().spec.apiSpec.type == ''encryptFields'' && !has(oldSelf.value().spec.apiSpec.parentPolicyRef))",message="parentPolicyRef is required for encryptFields",fieldPath=".spec.apiSpec.parentPolicyRef",optionalOldSelf=true'
             - '+kubebuilder:validation:XValidation:rule="!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef) || (has(self.spec.apiSpec.type) && self.spec.apiSpec.type in [''encryptFields'', ''modifyHeaders''])",message="parentPolicyRef is only supported for encryptFields and modifyHeaders",fieldPath=".spec.apiSpec.parentPolicyRef"'
@@ -1050,6 +1096,12 @@ apiGroupVersions:
             - parentPolicyID
         cel:
           _validations:
+            # The parent reference is immutable once the entity has been created
+            # in Konnect (status.id set), not only while it is Programmed: Konnect
+            # scopes the entity under its parent, so it can't move to another one,
+            # e.g. one attached to an OnPremEventGateway, which would orphan it in
+            # Konnect.
+            - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayVirtualClusterRef == oldSelf.spec.eventGatewayVirtualClusterRef\",message=\"spec.eventGatewayVirtualClusterRef is immutable once the entity has been created in Konnect\",fieldPath=\".spec.eventGatewayVirtualClusterRef\""
             - '+kubebuilder:validation:XValidation:rule="!has(oldSelf.status) || !has(oldSelf.status.id) || (has(self.spec.apiSpec) && has(self.spec.apiSpec.parentPolicyRef) ? has(oldSelf.spec.apiSpec) && has(oldSelf.spec.apiSpec.parentPolicyRef) && self.spec.apiSpec.parentPolicyRef == oldSelf.spec.apiSpec.parentPolicyRef : !has(oldSelf.spec.apiSpec) || !has(oldSelf.spec.apiSpec.parentPolicyRef))",message="parentPolicyRef is immutable once the policy has been created in Konnect",fieldPath=".spec.apiSpec.parentPolicyRef"'
             - '+kubebuilder:validation:XValidation:rule="!has(self.spec.apiSpec) || !has(self.spec.apiSpec.type) || self.spec.apiSpec.type != ''decryptFields'' || has(self.spec.apiSpec.parentPolicyRef) || (oldSelf.hasValue() && has(oldSelf.value().spec.apiSpec) && has(oldSelf.value().spec.apiSpec.type) && oldSelf.value().spec.apiSpec.type == ''decryptFields'' && !has(oldSelf.value().spec.apiSpec.parentPolicyRef))",message="parentPolicyRef is required for decryptFields",fieldPath=".spec.apiSpec.parentPolicyRef",optionalOldSelf=true'
             - '+kubebuilder:validation:XValidation:rule="!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef) || (has(self.spec.apiSpec.type) && self.spec.apiSpec.type in [''decryptFields'', ''modifyHeaders'', ''skipRecord''])",message="parentPolicyRef is only supported for decryptFields, modifyHeaders and skipRecord",fieldPath=".spec.apiSpec.parentPolicyRef"'
@@ -1074,6 +1126,14 @@ apiGroupVersions:
             fieldName: eventGatewayVirtualClusterRef
       - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/cluster-policies
         name: EventGatewayVirtualClusterPolicy
+        # The parent reference is immutable once the entity has been created in
+        # Konnect (status.id set), not only while it is Programmed: Konnect scopes
+        # the entity under its parent, so it can't move to another one, e.g. one
+        # attached to an OnPremEventGateway, which would orphan it in Konnect.
+        cel:
+          # Rules on the resource root, spanning spec and status.
+          _validations:
+            - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayVirtualClusterRef == oldSelf.spec.eventGatewayVirtualClusterRef\",message=\"spec.eventGatewayVirtualClusterRef is immutable once the entity has been created in Konnect\",fieldPath=\".spec.eventGatewayVirtualClusterRef\""
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterPoliciesSDK
