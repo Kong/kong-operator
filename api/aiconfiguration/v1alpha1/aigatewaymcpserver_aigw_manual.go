@@ -94,9 +94,10 @@ func (obj *AIGatewayMCPServer) ToAIGWMCPServer(ctx context.Context, cl client.Cl
 		mcp.Config.Sources = names
 	}
 
-	// The access union's reference surface. aigw.MCPAccess.UnmarshalYAML already folded the
-	// deprecated identity_providers key (plain strings, no CR references) into
-	// Access.AuthStrategies; current-key refs come first, mirroring AIGatewayModel.
+	// The access union's reference surface. marshalAIGWMCPServerPayload renames the
+	// deprecated identity_providers key (plain strings, no CR references) to
+	// auth_strategies (aigw rejects the old key); resolved current-key refs come
+	// first, mirroring AIGatewayModel.
 	if mcp.Access.ACLs.Allow, err = resolveEntityNames[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, mcpACLRefs(acls.Allow)); err != nil {
 		return nil, fmt.Errorf("resolving AIGatewayMCPServer %s/%s access.acls.allow: %w", obj.Namespace, obj.Name, err)
 	}

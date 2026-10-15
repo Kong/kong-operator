@@ -277,10 +277,7 @@ func BuildDocument(
 // back to the entities' CRs (see the aigateway package's attributeConversionIssues).
 func RenderDBLessYAML(doc *aigw.Document, opts convert.Options) ([]byte, []convert.ConversionIssue, error) {
 	if opts.MinRuntimeVersion == "" {
-		// The converter requires a minimum AI Gateway runtime version: the oldest
-		// release that must run the pushed output. It gates which features the
-		// converter emits. Pinned for now; follow-up issue tracks deriving it from
-		// the actual data plane version tag set on AIGatewayDataPlane.
+		// Pinned minimum; see defaultMinRuntimeVersion.
 		opts.MinRuntimeVersion = defaultMinRuntimeVersion
 	}
 	// The converter's public entry point (convert.Convert) only accepts YAML bytes,
@@ -293,6 +290,11 @@ func RenderDBLessYAML(doc *aigw.Document, opts convert.Options) ([]byte, []conve
 	}
 	result, err := convert.Convert(src, opts)
 	if err != nil {
+		// Pass any issues the converter reported before failing through to the
+		// caller, so they still reach the gateway status.
+		if result != nil {
+			return nil, result.Issues, err
+		}
 		return nil, nil, err
 	}
 	payload, err := result.Output.ToDBLess().ToYAML()
