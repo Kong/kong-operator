@@ -40,6 +40,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/crdschema"
 	"github.com/kong/kong-operator/v2/controller/dataplane"
 	egdataplane "github.com/kong/kong-operator/v2/controller/eventgateway/dataplane"
+	egonprem "github.com/kong/kong-operator/v2/controller/eventgateway/onprem"
 	"github.com/kong/kong-operator/v2/controller/gateway"
 	"github.com/kong/kong-operator/v2/controller/gatewayclass"
 	hybridgateway "github.com/kong/kong-operator/v2/controller/hybridgateway"
@@ -395,6 +396,19 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 					Resource: "konnecteventgateways",
 				},
 			},
+		},
+		{
+			// The OnPremEventGateway controller watches the gateways and every
+			// Event Gateway entity that can belong to one.
+			condition: c.OnPremEventGatewayControllerEnabled,
+			gvrs: slices.Concat(
+				[]schema.GroupVersionResource{{
+					Group:    eventgatewayv1alpha1.SchemeGroupVersion.Group,
+					Version:  eventgatewayv1alpha1.SchemeGroupVersion.Version,
+					Resource: "onpremeventgateways",
+				}},
+				egonprem.EntityGroupVersionResources(),
+			),
 		},
 		{
 			condition: c.AIGatewayDataPlaneControllerEnabled,
@@ -912,6 +926,14 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				SecretLabelSelector:      c.SecretLabelSelector,
 				CertTTL:                  c.CertTTL,
 				TypeConverter:            ssaProvider,
+			},
+		},
+		// On-prem EventGateway controller
+		{
+			Enabled: c.OnPremEventGatewayControllerEnabled,
+			Controller: &egonprem.Reconciler{
+				Client:      mgr.GetClient(),
+				LoggingMode: c.LoggingMode,
 			},
 		},
 		// AIGateway DataPlane controller

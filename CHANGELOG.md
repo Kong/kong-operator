@@ -171,6 +171,12 @@
   `Programmed`, so an entity that exists in Konnect can't be moved under
   another parent.
   [#6119](https://github.com/Kong/kong-operator/pull/6119)
+- `--enable-controller-onpremeventgateway` flag (default `false`): enables the
+  `OnPremEventGateway` controller. A change to a gateway, or to an Event
+  Gateway entity attached to it directly or through its parent entities,
+  reconciles that gateway. The controller doesn't push any configuration to
+  gw-admin yet: the gateway reports `Programmed` `False` with reason `Pending`.
+  [#6132](https://github.com/Kong/kong-operator/pull/6132)
 - `--konnect-list-page-size` flag (default and maximum `100`): the page size
   the operator requests when listing Konnect entities to find the Konnect
   entity of an object, e.g. one whose Konnect ID was lost. It is a fallback in

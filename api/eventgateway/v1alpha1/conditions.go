@@ -192,4 +192,11 @@ const (
 	// OnPremEventGatewayConfigurationPushedType indicates whether the current
 	// configuration reached every discovered gw-admin pod.
 	OnPremEventGatewayConfigurationPushedType consts.ConditionType = "ConfigurationPushed"
+
+	// OnPremEventGatewayPendingReason indicates the configuration of the
+	// OnPremEventGateway has not been pushed to gw-admin yet.
+	OnPremEventGatewayPendingReason consts.ConditionReason = "Pending"
+	// OnPremEventGatewayPendingMessage is the message of the Programmed
+	// condition while the configuration has not been pushed to gw-admin.
+	OnPremEventGatewayPendingMessage = "The configuration has not been pushed to gw-admin yet"
 )
