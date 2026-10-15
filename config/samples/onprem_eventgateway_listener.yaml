@@ -1,7 +1,8 @@
 # Sample attaching an Event Gateway entity to an OnPremEventGateway.
 #
-# OnPremEventGateway has no reconciler yet: applying this sample only exercises
-# CRD validation. The Konnect controllers leave the listener alone.
+# The Konnect controllers leave the listener alone. The OnPremEventGateway
+# reconciler (--enable-controller-onpremeventgateway) doesn't push any
+# configuration to gw-admin yet.
 apiVersion: eventgateway.konghq.com/v1alpha1
 kind: OnPremEventGateway
 metadata:

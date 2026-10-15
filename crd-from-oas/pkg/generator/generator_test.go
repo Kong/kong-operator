@@ -4226,6 +4226,87 @@ func TestGenerateKonnectIndexOptionsDispatcher(t *testing.T) {
 	assert.Equal(t, string(formatted), file.Content)
 }
 
+func TestGenerateOnPremEventGatewayEntitiesDispatcher(t *testing.T) {
+	const (
+		group = "configuration.konghq.com"
+		alias = "configurationv1alpha1"
+		path  = "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	)
+	onPrem := []config.EntityGVKConfig{{Group: "eventgateway.konghq.com", Version: "v1alpha1", Kind: "OnPremEventGateway"}}
+	entity := func(name, parentKind string, gatewayKinds []config.EntityGVKConfig) *WatchFileInfo {
+		info := &WatchFileInfo{
+			Entity:         name,
+			APIAlias:       alias,
+			APIPackagePath: path,
+			Group:          group,
+			GatewayKinds:   gatewayKinds,
+		}
+		if parentKind != "" {
+			info.ParentKind = parentKind
+			info.ParentGroup = group
+		}
+		return info
+	}
+
+	t.Run("roots accepting the gateway and their descendants", func(t *testing.T) {
+		infos := []*WatchFileInfo{
+			// Listed before its parent: the descendants are found whatever the order.
+			entity("EventGatewayVirtualClusterProducePolicy", "EventGatewayVirtualCluster", nil),
+			entity("EventGatewayVirtualCluster", "EventGatewayBackendCluster", nil),
+			entity("EventGatewayBackendCluster", "KonnectEventGateway", onPrem),
+			entity("EventGatewayListenerPolicy", "EventGatewayListener", nil),
+			entity("EventGatewayListener", "KonnectEventGateway", onPrem),
+			// A root that only accepts a KonnectEventGateway, and its child.
+			entity("KonnectOnlyRoot", "KonnectEventGateway", nil),
+			entity("KonnectOnlyChild", "KonnectOnlyRoot", nil),
+			// A root accepting another gateway kind.
+			entity("AIGatewayPolicy", "KonnectAIGateway", []config.EntityGVKConfig{
+				{Group: "aigateway.konghq.com", Version: "v1alpha1", Kind: "OnPremAIGateway"},
+			}),
+			// A child of a same-named kind in another group.
+			{
+				Entity: "OtherGroupChild", APIAlias: "otherv1alpha1", APIPackagePath: "example.com/other",
+				Group: "other.konghq.com", ParentKind: "EventGatewayListener", ParentGroup: "other.konghq.com",
+			},
+		}
+
+		file, err := GenerateOnPremEventGatewayEntitiesDispatcher(infos)
+		require.NoError(t, err)
+		require.NotNil(t, file)
+
+		assert.Equal(t, "zz_generated_entities.go", file.Name)
+		assert.Equal(t, "controller/eventgateway/onprem", file.RelativeDir)
+		assert.Contains(t, file.Content, "package onprem")
+		for _, kind := range []string{
+			"EventGatewayBackendCluster", "EventGatewayListener", "EventGatewayListenerPolicy",
+			"EventGatewayVirtualCluster", "EventGatewayVirtualClusterProducePolicy",
+		} {
+			assert.Contains(t, file.Content, "&configurationv1alpha1."+kind+"{},")
+			assert.Contains(t, file.Content, `{Group: "configuration.konghq.com", Kind: "`+kind+`"}:`)
+		}
+		for _, kind := range []string{"KonnectOnlyRoot", "KonnectOnlyChild", "AIGatewayPolicy", "OtherGroupChild"} {
+			assert.NotContains(t, file.Content, kind)
+		}
+		assert.NotContains(t, file.Content, "example.com/other")
+		assert.Contains(t, file.Content,
+			`// +kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaybackendclusters;eventgatewaylistenerpolicies;eventgatewaylisteners;eventgatewayvirtualclusterproducepolicies;eventgatewayvirtualclusters,verbs=get;list;watch`)
+		assert.Contains(t, file.Content, `configurationv1alpha1.GroupVersion.WithResource("eventgatewaylistenerpolicies"),`)
+		assert.Contains(t, file.Content, `configurationv1alpha1.GroupVersion.WithResource("eventgatewayvirtualclusterproducepolicies"),`)
+
+		formatted, err := format.Source([]byte(file.Content))
+		require.NoError(t, err)
+		assert.Equal(t, string(formatted), file.Content)
+	})
+
+	t.Run("no entity accepts the gateway", func(t *testing.T) {
+		file, err := GenerateOnPremEventGatewayEntitiesDispatcher([]*WatchFileInfo{
+			entity("KonnectOnlyRoot", "KonnectEventGateway", nil),
+		})
+		require.NoError(t, err)
+		assert.Nil(t, file)
+	})
+}
+
 func TestGenerateKonnectConstraintsDispatcher(t *testing.T) {
 	infos := []*WatchFileInfo{
 		{

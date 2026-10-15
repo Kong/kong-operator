@@ -1,7 +1,8 @@
 # Sample for the on-prem Event Gateway control plane CRD.
 #
-# OnPremEventGateway has no reconciler yet: applying this sample only exercises
-# CRD validation, it has no effect on the cluster.
+# The reconciler for OnPremEventGateway is opt in via
+# --enable-controller-onpremeventgateway. It doesn't push any configuration to
+# gw-admin yet: the gateway reports Programmed False with reason Pending.
 apiVersion: eventgateway.konghq.com/v1alpha1
 kind: OnPremEventGateway
 metadata:

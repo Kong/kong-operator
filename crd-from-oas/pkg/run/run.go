@@ -381,6 +381,19 @@ func (r *Runner) Run(
 		return err
 	}
 
+	// Emit the entities of the OnPremEventGateway controller.
+	if err := emitDispatcherFile(
+		r.projectRoot,
+		logger,
+		generator.OnPremEventGatewayEntitiesDir,
+		generator.OnPremEventGatewayEntitiesFile,
+		func() (*generator.GeneratedFile, error) {
+			return generator.GenerateOnPremEventGatewayEntitiesDispatcher(allWatchInfos)
+		},
+	); err != nil {
+		return err
+	}
+
 	// Emit manager index options dispatcher.
 	if err := emitDispatcherFile(
 		r.projectRoot,
