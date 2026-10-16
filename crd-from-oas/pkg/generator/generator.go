@@ -2896,8 +2896,10 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	}
 
 	var responseStatusFields []config.ResponseStatusFieldConfig
+	var trackCreateInputs bool
 	if oc := g.config.OpsConfig[entityName]; oc != nil {
 		responseStatusFields = oc.ResponseStatusFields
+		trackCreateInputs = oc.TrackCreateInputs
 	}
 
 	// The parent reference must not change once the entity has been programmed in
@@ -2989,6 +2991,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ParentStatusEntityName    string
 		EmitParentRefStatusField  bool
 		ResponseStatusFields      []config.ResponseStatusFieldConfig
+		TrackCreateInputs         bool
 		TypeXValidations          []string
 		// APISpecValidations are the markers configured directly on
 		// spec.apiSpec (cel.spec.apiSpec._validations), emitted on the APISpec
@@ -3019,6 +3022,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ParentStatusEntityName:    parentStatusEntityName,
 		EmitParentRefStatusField:  emitParentRefStatusField,
 		ResponseStatusFields:      responseStatusFields,
+		TrackCreateInputs:         trackCreateInputs,
 		TypeXValidations:          typeXValidations,
 		APISpecValidations:        apiSpecCursorValidations(apiSpecCursor),
 		SupportsMirror:            g.entitySupportsMirror(entityName),
@@ -7101,6 +7105,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		ConstFields              []sdkOpsConstField
 		FreeformKeyFields        []sdkOpsFreeformKeyField
 		Methods                  []sdkOpsMethod
+		TrackCreateInputs        bool
 		NeedsClient              bool
 		DataSources              []DataSourceForTemplate
 		HasSecretSourceRefs      bool
@@ -7122,6 +7127,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		ConstFields:              constFields,
 		FreeformKeyFields:        freeformKeyFields,
 		Methods:                  standardMethods,
+		TrackCreateInputs:        opsConfig.TrackCreateInputs,
 		NeedsClient:              opsConfig.RequireClient || g.entityHasReferences(entityName),
 		DataSources:              dataSources,
 		HasSecretSourceRefs:      templateReferencesHaveSource(dataSources, false),

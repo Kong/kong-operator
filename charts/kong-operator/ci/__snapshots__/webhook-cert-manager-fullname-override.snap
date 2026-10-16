@@ -2997,6 +2997,9 @@ spec:
                     maxLength: 256
                     type: string
                 type: object
+              createInputsHash:
+                pattern: ^sha256:[0-9a-f]{64}$
+                type: string
               gatewayID:
                 properties:
                   id:
@@ -4011,6 +4014,9 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              createInputsHash:
+                pattern: ^sha256:[0-9a-f]{64}$
+                type: string
               gatewayID:
                 properties:
                   id:
@@ -25720,6 +25726,9 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              createInputsHash:
+                pattern: ^sha256:[0-9a-f]{64}$
+                type: string
               gatewayID:
                 properties:
                   id:

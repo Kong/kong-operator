@@ -1,8 +1,10 @@
 package configuration_test
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -31,6 +33,33 @@ func TestEventGatewayStaticKey(t *testing.T) {
 	ctx := t.Context()
 	scheme := scheme.Get()
 	cfg, ns := envtest.Setup(t, ctx, scheme)
+
+	t.Run("status.createInputsHash validation", func(t *testing.T) {
+		const validHash = "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+		obj := validStaticKey(ns.Name)
+		obj.Status.CreateInputsHash = validHash
+		common.TestCasesGroup[*configurationv1alpha1.EventGatewayStaticKey]{
+			{
+				Name:       "valid fingerprint is persisted",
+				TestObject: obj,
+				Assert: func(t *testing.T, obj *configurationv1alpha1.EventGatewayStaticKey) {
+					assert.Equal(t, validHash, obj.Status.CreateInputsHash)
+				},
+			},
+			{
+				Name:       "legacy status without fingerprint is accepted",
+				TestObject: validStaticKey(ns.Name),
+			},
+			{
+				Name:       "invalid fingerprint is rejected",
+				TestObject: validStaticKey(ns.Name),
+				StatusUpdate: func(obj *configurationv1alpha1.EventGatewayStaticKey) {
+					obj.Status.CreateInputsHash = "sha256:" + strings.Repeat("a", 63)
+				},
+				ExpectedStatusUpdateErrorMessage: new("createInputsHash in body should match"),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
 
 	t.Run("value SensitiveDataSource validation", func(t *testing.T) {
 		common.TestCasesGroup[*configurationv1alpha1.EventGatewayStaticKey]{

@@ -11,6 +11,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	"github.com/kong/kong-operator/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -209,6 +210,11 @@ func handleSecretRef[T constraints.SupportedKonnectEntityType, TEnt constraints.
 		); errStatus != nil || !res.IsZero() {
 			return res, true, errStatus
 		}
+	} else if !deleting && secretsReadOnlyAtCreation(ent) {
+		// A switch from Secret to inline inputs must not retain a stale failure.
+		if res, err := patch.StatusWithoutCondition(ctx, cl, ent, konnectv1alpha1.SecretRefValidConditionType); err != nil || !res.IsZero() {
+			return res, true, err
+		}
 	}
 
 	return ctrl.Result{}, false, nil
@@ -220,7 +226,9 @@ func secretsReadOnlyAtCreation[T constraints.SupportedKonnectEntityType, TEnt co
 	e TEnt,
 ) bool {
 	switch any(e).(type) {
-	case *configurationv1alpha1.EventGatewayStaticKey:
+	case *configurationv1alpha1.EventGatewayStaticKey,
+		*aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate,
+		*aiconfigurationv1alpha1.AIGatewayConsumerCredential:
 		return true
 	default:
 		return false

@@ -12,9 +12,11 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -128,6 +130,38 @@ func TestEventGatewayStaticKey(t *testing.T) {
 			"EventGatewayStaticKey didn't get Programmed status condition, Konnect ID, or cleanup finalizer",
 		)
 		envtest.EventuallyAssertSDKExpectations(t, sdk.EventGatewayStaticKeysSDK, consts.WaitTime, consts.TickTime)
+
+		require.NoError(t, clientNamespaced.Get(ctx, client.ObjectKeyFromObject(staticKey), staticKey))
+		appliedHash := staticKey.Status.CreateInputsHash
+		require.Regexp(t, `^sha256:[0-9a-f]{64}$`, appliedHash)
+		for _, value := range []string{"cm90YXRlZC1zdGF0aWMta2V5LTMyaWJ5dGVzLW9rISE=", keyValue} {
+			require.NoError(t, clientNamespaced.Get(ctx, client.ObjectKeyFromObject(keySecret), keySecret))
+			keySecret.Data["key"] = []byte(value)
+			require.NoError(t, clientNamespaced.Update(ctx, keySecret))
+			require.EventuallyWithT(t, func(t *assert.CollectT) {
+				var current configurationv1alpha1.EventGatewayStaticKey
+				if !assert.NoError(t, clientNamespaced.Get(ctx, client.ObjectKeyFromObject(staticKey), &current)) {
+					return
+				}
+				condition := apimeta.FindStatusCondition(current.Status.Conditions, konnectv1alpha1.CreateInputsAppliedConditionType)
+				if !assert.NotNil(t, condition) {
+					return
+				}
+				expectedStatus := metav1.ConditionTrue
+				if value != keyValue {
+					expectedStatus = metav1.ConditionFalse
+					assert.Equal(t, konnectv1alpha1.CreateInputsReasonValueChanged, condition.Reason)
+					assert.Contains(t, condition.Message, "Create a new EventGatewayStaticKey")
+				}
+				assert.Equal(t, expectedStatus, condition.Status)
+				assert.Equal(t, appliedHash, current.Status.CreateInputsHash)
+				assert.Equal(t, staticKeyID, current.GetKonnectID())
+				programmed := apimeta.FindStatusCondition(current.Status.Conditions, konnectv1alpha1.KonnectEntityProgrammedConditionType)
+				if assert.NotNil(t, programmed) {
+					assert.Equal(t, metav1.ConditionTrue, programmed.Status)
+				}
+			}, consts.WaitTime, consts.TickTime)
+		}
 
 		t.Log("Setting up SDK expectations: Konnect refuses the deletion while the produce policy uses the static key")
 		// Whether the Konnect produce policy still uses the static key.

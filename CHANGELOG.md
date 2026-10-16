@@ -73,6 +73,13 @@
 
 ### Fixed
 
+- Create-only Konnect entities (`EventGatewayStaticKey`,
+  `AIGatewayDataPlaneCertificate`, and `AIGatewayConsumerCredential`) now report
+  changes to Secret values, inline values, and other create inputs through
+  `CreateInputsApplied`, without automatically replacing the entity or marking
+  an otherwise healthy entity as unprogrammed. Existing entities establish an
+  unverified baseline on upgrade.
+  See [input change reporting](docs/create-only-konnect-entities.md).
 - Konnect entities that resolve API authentication through a parent chain,
   including EventGateway policies and AI Gateway consumer credentials, no longer
   get stuck terminating when an ancestor has already been deleted. Their cleanup

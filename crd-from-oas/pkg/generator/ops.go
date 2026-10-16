@@ -99,6 +99,9 @@ func (g *Generator) generateEntityOpsFile(
 		needsJSONImport := createData != nil && createData.RespRootUnion != nil
 
 		extraImportSet := make(map[string]string)
+		if createData != nil && createData.TrackCreateInputs {
+			extraImportSet["github.com/kong/kong-operator/v2/internal/utils/createinputs"] = "createinputs"
+		}
 		if deleteData != nil && deleteData.DeleteAsUpdate && deleteData.DeletePutReqImportPath != "" &&
 			!strings.HasSuffix(deleteData.DeletePutReqImportPath, "/operations") {
 			extraImportSet[deleteData.DeletePutReqImportPath] = sdkImportAlias(deleteData.DeletePutReqImportPath)
