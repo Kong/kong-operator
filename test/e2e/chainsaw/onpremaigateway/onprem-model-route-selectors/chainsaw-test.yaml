@@ -14,9 +14,7 @@ spec:
 
     Each traffic step isolates the selector under test by omitting the other
     alias sources (INCLUDE_HEADER / INCLUDE_BODY_MODEL), so a passing step
-    cannot be masked by an unrelated selector accepting the request. The
-    `pathParam` selector shape has no on-prem test; only the Konnect-flavor
-    `aigateway-model-route-selectors-pathparam` covers it.
+    cannot be masked by an unrelated selector accepting the request.
   bindings:
     - name: test_name
       value: ($namespace)
