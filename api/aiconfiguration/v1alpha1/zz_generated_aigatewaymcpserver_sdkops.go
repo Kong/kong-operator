@@ -1166,14 +1166,6 @@ func (s *AIGatewayMCPServerAPISpec) toUpdateAIGatewayMCPServerRequestFromPayload
 		return nil, err
 	}
 
-	var selected map[string]any
-	if err := json.Unmarshal(data, &selected); err != nil {
-		return nil, fmt.Errorf("failed to decode selected AIGatewayMCPServer config: %w", err)
-	}
-	var target sdkkonnectcomp.UpdateAIGatewayMCPServerRequest
-	if err := json.Unmarshal(data, &target); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal into UpdateAIGatewayMCPServerRequest: %w", err)
-	}
 	switch variant {
 	case "ConversionOnly":
 		var member sdkkonnectcomp.AIGatewayMCPServerConversionOnly

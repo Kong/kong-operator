@@ -7434,6 +7434,13 @@ func (g *Generator) generateRootUnionSDKOps(
 		NeedsCrossNamespaceCheck bool
 		RefInjections            []TemplateRefInjection
 		ObjectRefTypePrefix      string
+		// UpdateUsesPayloadTarget is true when at least one variant rebuilds the
+		// update request from a nested payload field of the selected config
+		// rather than from the variant itself. Only those variants read the
+		// shared `selected` / `target` pair; when every variant is direct,
+		// emitting the pair adds two unmarshals of the same payload that no
+		// branch ever reads.
+		UpdateUsesPayloadTarget bool
 	}{
 		APIVersion:               g.config.APIVersion,
 		EntityName:               entityName,
@@ -7445,6 +7452,7 @@ func (g *Generator) generateRootUnionSDKOps(
 		FreeformKeyFields:        freeformKeyFields,
 		Methods:                  rootUnionMethods,
 		Variants:                 variants,
+		UpdateUsesPayloadTarget:  slices.ContainsFunc(variants, func(v sdkOpsRootUnionVariant) bool { return !v.UpdateDirectUnion }),
 		NeedsClient:              opsConfig.RequireClient || g.entityHasReferences(entityName),
 		DataSources:              dataSources,
 		HasSecretSourceRefs:      templateReferencesHaveSource(dataSources, false),

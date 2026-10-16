@@ -798,14 +798,6 @@ func (s *AIGatewayModelAPISpec) toUpdateAIGatewayModelRequestFromPayload(payload
 		return nil, err
 	}
 
-	var selected map[string]any
-	if err := json.Unmarshal(data, &selected); err != nil {
-		return nil, fmt.Errorf("failed to decode selected AIGatewayModel config: %w", err)
-	}
-	var target sdkkonnectcomp.UpdateAIGatewayModelRequest
-	if err := json.Unmarshal(data, &target); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal into UpdateAIGatewayModelRequest: %w", err)
-	}
 	switch variant {
 	case "API":
 		var member sdkkonnectcomp.AIGatewayModelAPI

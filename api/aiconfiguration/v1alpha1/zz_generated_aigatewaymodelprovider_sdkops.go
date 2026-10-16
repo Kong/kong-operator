@@ -834,14 +834,6 @@ func (s *AIGatewayModelProviderAPISpec) ToUpdateAIGatewayModelProviderRequest() 
 		return nil, err
 	}
 
-	var selected map[string]any
-	if err := json.Unmarshal(data, &selected); err != nil {
-		return nil, fmt.Errorf("failed to decode selected AIGatewayModelProvider config: %w", err)
-	}
-	var target sdkkonnectcomp.UpdateAIGatewayModelProviderRequest
-	if err := json.Unmarshal(data, &target); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal into UpdateAIGatewayModelProviderRequest: %w", err)
-	}
 	switch variant {
 	case "Anthropic":
 		var member sdkkonnectcomp.AIGatewayModelProviderAnthropic

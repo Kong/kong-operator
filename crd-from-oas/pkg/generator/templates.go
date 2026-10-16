@@ -2282,6 +2282,7 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 	}, nil
 {{- else}}
 	{{$importAlias := .ImportAlias}}
+	{{- if $.UpdateUsesPayloadTarget}}
 	var selected map[string]any
 	if err := json.Unmarshal(data, &selected); err != nil {
 		return nil, fmt.Errorf("failed to decode selected {{$.EntityName}} config: %w", err)
@@ -2290,6 +2291,7 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 	if err := json.Unmarshal(data, &target); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal into {{.TypeName}}: %w", err)
 	}
+	{{- end}}
 	switch variant {
 {{- range $.Variants}}
 	case "{{.FieldName}}":
