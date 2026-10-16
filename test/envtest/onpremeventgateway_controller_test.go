@@ -1,6 +1,7 @@
 package envtest
 
 import (
+	"context"
 	"fmt"
 	"maps"
 	"slices"
@@ -26,6 +27,7 @@ import (
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	egonprem "github.com/kong/kong-operator/v2/controller/eventgateway/onprem"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 )
 
 // objectFromYAML returns an object of type T, in the namespace, from its
@@ -163,7 +165,10 @@ spec:
 				assert.Greater(ct, after[gateway.Name], before[gateway.Name], "gateway %s must be reconciled", gateway.Name)
 			}
 		}, waitTime, tickTime)
-		require.Never(t, func() bool {
+		// asserts.Never, not testify's require.Never: the latter runs the
+		// condition in a goroutine that it can leave running after it returns,
+		// which races with the next subtest writing the gateways read here.
+		asserts.Never(t, func(context.Context) bool {
 			after := reconciles()
 			for _, gateway := range gateways {
 				if !slices.Contains(reconciled, gateway) && after[gateway.Name] != before[gateway.Name] {
@@ -172,7 +177,7 @@ spec:
 				}
 			}
 			return false
-		}, time.Second, tickTime)
+		}, time.Second, tickTime, "a gateway other than the expected ones must not be reconciled")
 	}
 	create := func(t *testing.T, obj client.Object) func() {
 		return func() { require.NoError(t, cl.Create(ctx, obj)) }
