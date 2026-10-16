@@ -92,7 +92,7 @@ func (c *udpRouteConverter) GetOutputStore(_ context.Context, logger logr.Logger
 // HandleOrphanedResource implements OrphanedResourceHandler.
 // It removes the UDPRoute reference from shared resources before orphan deletion.
 func (c *udpRouteConverter) HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (skipDelete bool, err error) {
-	return handleOrphanedResourceForRoute(ctx, logger, c.Client, c.route, udpRouteKind, resource)
+	return HandleOrphanedResourceForRoute(ctx, logger, c.Client, c.route, udpRouteKind, resource)
 }
 
 // Translate implements the APIConverter interface.

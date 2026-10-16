@@ -241,7 +241,7 @@ func convertOutputStoreToUnstructured(logger logr.Logger, scheme *runtime.Scheme
 	return objects, nil
 }
 
-// handleOrphanedResourceForRoute implements the OrphanedResourceHandler logic shared by every
+// HandleOrphanedResourceForRoute implements the OrphanedResourceHandler logic shared by every
 // route converter: it removes route from the shared hybrid-routes annotation on resource before
 // orphan deletion, atomically. Multiple Routes (or rules) can share the same Kong resource, so a
 // concurrent Route adding itself must not be lost and the resource must not be deleted while still
@@ -249,7 +249,7 @@ func convertOutputStoreToUnstructured(logger logr.Logger, scheme *runtime.Scheme
 // (when other Routes remain) or surface the validated resourceVersion so the caller can delete with
 // an optimistic-lock precondition. routeKind is the route's Kind (e.g. "TCPRoute"), used to check
 // whether any other routes of the same kind remain in the annotation.
-func handleOrphanedResourceForRoute(
+func HandleOrphanedResourceForRoute(
 	ctx context.Context, logger logr.Logger, cl client.Client, route client.Object, routeKind string,
 	resource *unstructured.Unstructured,
 ) (skipDelete bool, err error) {

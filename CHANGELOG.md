@@ -73,6 +73,13 @@
 
 ### Fixed
 
+- HybridGateway root-object controllers (e.g. HTTPRoute) no longer spend several
+  seconds per reconcile scanning every managed Kong resource during orphan
+  cleanup and status computation. Ownership of child resources is now resolved
+  through a cached field index over the hybrid-routes annotations instead of
+  broad managed-by label listing with per-item live API reads, so configuration
+  changes are reconciled promptly at large entity counts.
+  [#6141](https://github.com/Kong/kong-operator/pull/6141)
 - Konnect entities that resolve API authentication through a parent chain,
   including EventGateway policies and AI Gateway consumer credentials, no longer
   get stuck terminating when an ancestor has already been deleted. Their cleanup

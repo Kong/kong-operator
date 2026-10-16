@@ -22,6 +22,7 @@ import (
 	finalizerconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/finalizers"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/converter"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/events"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/watch"
 	"github.com/kong/kong-operator/v2/controller/pkg/finalizer"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
@@ -109,6 +110,15 @@ func NewHybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjec
 // It registers the reconciler to watch and manage resources of type 'u'.
 func (r *HybridGatewayReconciler[t, tPtr]) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	obj := any(new(t)).(tPtr)
+
+	// Register the hybrid-routes annotation field index for all child resource
+	// types, so orphan cleanup and status listing can query the cached client
+	// for the children of a single root object instead of listing every child
+	// carrying the broad managed-by label. Registration is idempotent, as this
+	// method runs once per root-object controller sharing the same manager.
+	if err := metadata.RegisterHybridRouteOwnerIndexes(ctx, mgr.GetFieldIndexer()); err != nil {
+		return err
+	}
 
 	builder := ctrl.NewControllerManagedBy(mgr).For(obj)
 
