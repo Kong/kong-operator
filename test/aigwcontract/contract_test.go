@@ -205,12 +205,22 @@ func representativeDBLessPayload(t *testing.T) []byte {
 	require.Len(t, doc.Agents, 1, "the document must carry the agent")
 	require.Len(t, doc.MCPServers, 1, "the document must carry the MCP server")
 
-	payload, warnings, err := convert.ConvertDocumentToDBLessYAML(doc, convert.Options{Strict: false})
+	payload, issues, err := translator.RenderDBLessYAML(doc, convert.Options{})
 	require.NoError(t, err)
-	for _, w := range warnings {
-		t.Logf("converter warning: %s", w)
+	for _, issue := range issues {
+		if issue.Severity == convert.Error {
+			t.Logf("converter error: %s", issue.Reason)
+		} else {
+			t.Logf("converter warning: %s", issue.Reason)
+		}
 	}
-	require.Empty(t, warnings, "the representative document must convert without warnings")
+	errs := make([]convert.ConversionIssue, 0, len(issues))
+	for _, issue := range issues {
+		if issue.Severity == convert.Error {
+			errs = append(errs, issue)
+		}
+	}
+	require.Empty(t, errs, "the representative document must convert without errors")
 	return payload
 }
 
