@@ -454,6 +454,12 @@ func (r *HybridGatewayReconciler[t, tPtr]) cleanupGeneratedResources(
 	// On the deletion path we create a fresh converter but do not run Translate(),
 	// so cleanOrphanedResources() sees no desired output objects. That makes all
 	// owned generated resources orphan candidates, and we wait for their deletion
-	// before releasing the root finalizer.
-	return cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv, orphanCleanupOptions{waitForDeletes: true})
+	// before releasing the root finalizer. Unlike steady-state cleanup, an empty
+	// listing here is confirmed with a live listing: releasing the finalizer
+	// removes the object, so a listing missed through a stale cache is never
+	// retried.
+	return cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv, orphanCleanupOptions{
+		waitForDeletes:       true,
+		confirmEmptyListLive: true,
+	})
 }

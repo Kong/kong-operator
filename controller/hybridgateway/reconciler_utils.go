@@ -512,6 +512,15 @@ type orphanCleanupOptions struct {
 	// before KongPluginBinding). When false, all GVKs are processed in a single
 	// pass and resources already being deleted are not waited on.
 	waitForDeletes bool
+
+	// confirmEmptyListLive, when true, re-lists a GVK with a live (uncached)
+	// listing when the cached listing comes back empty. Set on the root-deletion
+	// path only: there an empty listing releases the root finalizer and the root
+	// is gone afterwards, so a listing missed through a stale cache is never
+	// retried. In steady state the next reconcile re-lists anyway, and confirming
+	// on every empty GVK would restore the broad live listing that the cached
+	// annotation-index listing replaces.
+	confirmEmptyListLive bool
 }
 
 // cleanOrphanedResources deletes resources previously managed by the converter but no longer present in the desired output.
@@ -600,6 +609,15 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 		list, err := metadata.ListOwnedChildResources(ctx, cl, rootObjPtr, gvk)
 		if err != nil {
 			return false, fmt.Errorf("unable to list objects with gvk %s: %w", gvk.String(), err)
+		}
+
+		// On the deletion path an empty listing leads to releasing the finalizer,
+		// after which the root is gone: confirm it against the API server instead
+		// of trusting a cache that may not have observed a child write yet.
+		if opts.confirmEmptyListLive && len(list.Items) == 0 {
+			if list, err = metadata.ListOwnedChildResourcesLive(ctx, cl, rootObjPtr, gvk); err != nil {
+				return false, fmt.Errorf("unable to live-list objects with gvk %s: %w", gvk.String(), err)
+			}
 		}
 
 		log.Debug(logger, "Found existing resources for GVK", "gvk", gvk.String(), "resourceCount", len(list.Items))
