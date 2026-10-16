@@ -50,6 +50,8 @@ func reconciliationWatchOptionsForEntity[
 		return AIGatewayPolicyReconciliationWatchOptions(cl)
 	case *aiconfigurationv1alpha1.AIGatewaySNI:
 		return AIGatewaySNIReconciliationWatchOptions(cl)
+	case *aiconfigurationv1alpha1.AIGatewayVault:
+		return AIGatewayVaultReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.EventGatewayBackendCluster:
 		return EventGatewayBackendClusterReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.EventGatewayDataPlaneCertificate:

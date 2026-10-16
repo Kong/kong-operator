@@ -97,6 +97,19 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 		},
 	},
 	{
+		Label: "conversion-listener.config.server.session.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"conversion-listener",
+			"config",
+			"server",
+			"session",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
 		Label: "conversion-listener.config.server.session.redis.connection_is_proxied",
 		Path: []string{
 			"conversion-listener",
@@ -373,6 +386,19 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 		},
 	},
 	{
+		Label: "listener.config.server.session.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"listener",
+			"config",
+			"server",
+			"session",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
 		Label: "listener.config.server.session.redis.connection_is_proxied",
 		Path: []string{
 			"listener",
@@ -483,6 +509,19 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 			"server",
 			"session",
 			"managed",
+		},
+	},
+	{
+		Label: "passthrough-listener.config.server.session.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"passthrough-listener",
+			"config",
+			"server",
+			"session",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
 		},
 	},
 	{
@@ -605,6 +644,19 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 			"server",
 			"session",
 			"managed",
+		},
+	},
+	{
+		Label: "upstream-server.config.server.session.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"upstream-server",
+			"config",
+			"server",
+			"session",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
 		},
 	},
 	{
@@ -1114,14 +1166,6 @@ func (s *AIGatewayMCPServerAPISpec) toUpdateAIGatewayMCPServerRequestFromPayload
 		return nil, err
 	}
 
-	var selected map[string]any
-	if err := json.Unmarshal(data, &selected); err != nil {
-		return nil, fmt.Errorf("failed to decode selected AIGatewayMCPServer config: %w", err)
-	}
-	var target sdkkonnectcomp.UpdateAIGatewayMCPServerRequest
-	if err := json.Unmarshal(data, &target); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal into UpdateAIGatewayMCPServerRequest: %w", err)
-	}
 	switch variant {
 	case "ConversionOnly":
 		var member sdkkonnectcomp.AIGatewayMCPServerConversionOnly

@@ -88,6 +88,7 @@ rules:
       - aigatewaymodels
       - aigatewaypolicies
       - aigatewaysnis
+      - aigatewayvaults
     verbs:
       - get
       - list
@@ -112,6 +113,7 @@ rules:
       - aigatewaymodels/finalizers
       - aigatewaypolicies/finalizers
       - aigatewaysnis/finalizers
+      - aigatewayvaults/finalizers
     verbs:
       - patch
       - update
@@ -131,6 +133,7 @@ rules:
       - aigatewaymodels/status
       - aigatewaypolicies/status
       - aigatewaysnis/status
+      - aigatewayvaults/status
     verbs:
       - get
       - patch
