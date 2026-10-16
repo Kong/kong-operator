@@ -20,7 +20,7 @@ spec:
     enabled: "Enabled"
     global: "Disabled"
     name: ($aigw_policy_name)
-    condition: 'http.path.startsWith("/chat")'
+    condition: 'http.path.startsWith("/policy/chat")'
     config:
       type: inline
       value:

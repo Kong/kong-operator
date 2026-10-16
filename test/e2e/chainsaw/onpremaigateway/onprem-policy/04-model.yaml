@@ -26,8 +26,12 @@ spec:
         model:
           nameHeader: Enabled
         route:
+          # A regex path so two different request paths match the SAME route:
+          # the condition policy's positive and negative steps (see
+          # 07-policy-condition.yaml) both route through this model, and only
+          # the condition's startsWith decides whether the policy applies.
           paths:
-            - /chat
+            - ~/policy/.+
       policies:
         - name: ($aigw_policy_name)
       targets:
