@@ -979,11 +979,12 @@ func TestCleanOrphanedResourcesWaitBehavior(t *testing.T) {
 	})
 }
 
-// TestCleanOrphanedResourcesConfirmEmptyListLive verifies the deletion-path
-// safety net: when the cached annotation-indexed listing comes back empty, the
-// live managed-by listing is consulted before the cleanup concludes that the
-// root has no children left and its caller releases the finalizer.
-func TestCleanOrphanedResourcesConfirmEmptyListLive(t *testing.T) {
+// TestCleanOrphanedResourcesDeletionPathListsLive verifies the deletion-path
+// listing: its caller releases the root finalizer on the basis of what the listing
+// returns and the root is gone afterwards, so a child the cache does not know about
+// would leak forever. The cleanup therefore lists children live on that path
+// (opts.listLive) instead of trusting the annotation-indexed cached listing.
+func TestCleanOrphanedResourcesDeletionPathListsLive(t *testing.T) {
 	ctx := context.Background()
 	logger := logr.Discard()
 	gvks := []schema.GroupVersionKind{
@@ -995,22 +996,37 @@ func TestCleanOrphanedResourcesConfirmEmptyListLive(t *testing.T) {
 		Name:       "httproute-owner",
 		Namespace:  "ns",
 	}
+	ownerAnnotations := map[string]string{
+		consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns/httproute-owner",
+	}
 
-	// The child is owned by the route but the indexed listing does not see it:
-	// what a stale cache looks like on the deletion path. The typed indexed
-	// listing is served empty, the live listing still sees the child.
-	newClient := func() client.Client {
-		child := newUnstructured("ns", "stale-cache-child", gvks[0], metadata.BuildLabels(root, nil))
-		child.SetAnnotations(map[string]string{
-			consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns/httproute-owner",
-		})
+	// liveChild is a child of the route that exists in the API server.
+	liveChild := newUnstructured("ns", "live-child", gvks[0], metadata.BuildLabels(root, nil))
+	liveChild.SetAnnotations(ownerAnnotations)
+
+	// cachedChild is what a stale cache holds: a child the API server no longer
+	// has. It is served by the typed (cached) listing only and is never added to
+	// the client, so the fresh read the orphan handler performs finds nothing.
+	cachedChild := &configurationv1alpha1.KongRoute{
+		Namespace:   "ns",
+		Name:        "cached-child",
+		Labels:      metadata.BuildLabels(root, nil),
+		Annotations: ownerAnnotations,
+	}
+
+	// newClient returns a client whose cached indexed listing serves staleCached,
+	// while its live (unstructured) listing sees the client's real contents.
+	newClient := func(staleCached *configurationv1alpha1.KongRoute) client.Client {
 		return fake.NewClientBuilder().
 			WithScheme(scheme.Get()).
-			WithObjects(&child).
+			WithObjects(liveChild.DeepCopy()).
 			WithIndex(&configurationv1alpha1.KongRoute{}, metadata.HybridRouteOwnerIndexField, metadata.HybridRouteOwnerIndexFunc).
 			WithInterceptorFuncs(interceptor.Funcs{
 				List: func(ctx context.Context, c client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
-					if _, indexed := list.(*configurationv1alpha1.KongRouteList); indexed {
+					if indexed, ok := list.(*configurationv1alpha1.KongRouteList); ok {
+						if staleCached != nil {
+							indexed.Items = []configurationv1alpha1.KongRoute{*staleCached}
+						}
 						return nil
 					}
 					return c.List(ctx, list, opts...)
@@ -1018,7 +1034,13 @@ func TestCleanOrphanedResourcesConfirmEmptyListLive(t *testing.T) {
 			}).
 			Build()
 	}
-	conv := &fakeHTTPRouteConverter{gvks: gvks, root: *root}
+	newConverter := func(cl client.Client) *fakeHTTPRouteConverterWithOrphanHandler {
+		return &fakeHTTPRouteConverterWithOrphanHandler{
+			gvks: gvks,
+			root: *root,
+			cl:   cl,
+		}
+	}
 
 	// listNames returns the names of all objects in the cluster for a given GVK.
 	listNames := func(t *testing.T, cl client.Client, gvk schema.GroupVersionKind) []string {
@@ -1033,22 +1055,23 @@ func TestCleanOrphanedResourcesConfirmEmptyListLive(t *testing.T) {
 		return names
 	}
 
-	t.Run("live listing confirms an empty cached listing", func(t *testing.T) {
-		cl := newClient()
-		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, conv,
-			orphanCleanupOptions{waitForDeletes: true, confirmEmptyListLive: true})
+	t.Run("the live listing finds a child the cache misses", func(t *testing.T) {
+		cl := newClient(cachedChild)
+		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, newConverter(cl),
+			orphanCleanupOptions{waitForDeletes: true, listLive: true})
 		require.NoError(t, err)
 		require.True(t, requeue, "cleanup must requeue to wait for the deletion")
-		assert.Empty(t, listNames(t, cl, gvks[0]), "the orphan must be deleted")
+		assert.Empty(t, listNames(t, cl, gvks[0]), "the live child must be deleted")
 	})
 
 	t.Run("steady-state cleanup keeps trusting the cached listing", func(t *testing.T) {
-		cl := newClient()
-		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, conv,
+		cl := newClient(nil)
+		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, newConverter(cl),
 			orphanCleanupOptions{waitForDeletes: true})
 		require.NoError(t, err)
 		require.False(t, requeue)
-		assert.Equal(t, []string{"stale-cache-child"}, listNames(t, cl, gvks[0]))
+		assert.Equal(t, []string{"live-child"}, listNames(t, cl, gvks[0]),
+			"steady state retries on the next reconcile, so it trusts the cache")
 	})
 }
 
@@ -3281,12 +3304,13 @@ func TestRequeueOnConflict(t *testing.T) {
 }
 
 // TestCleanOrphanedResourcesDoesNotFetchForeignChildren verifies that orphan
-// cleanup resolves child ownership through the hybrid-routes annotation field
-// index instead of scanning (and live-GETting) every child of every root
-// object: children owned by other root objects are never fetched at all, and
-// only genuinely orphaned children incur a read. This is the regression guard
-// for the O(N²) listing/getting behavior that saturated the root-object
-// controllers at scale.
+// cleanup resolves child ownership through the hybrid-routes annotation instead
+// of scanning (and live-GETting) every child of every root object: children owned
+// by other root objects are never fetched at all, and only genuinely orphaned
+// children incur a read. This is the regression guard for the O(N²)
+// listing/getting behavior that saturated the root-object controllers at scale.
+// It covers both listing modes, the cached annotation-indexed one used in steady
+// state and the live one used on the root-deletion path.
 func TestCleanOrphanedResourcesDoesNotFetchForeignChildren(t *testing.T) {
 	ctx := t.Context()
 	logger := logr.Discard()
@@ -3306,77 +3330,90 @@ func TestCleanOrphanedResourcesDoesNotFetchForeignChildren(t *testing.T) {
 	}
 
 	const foreignChildren = 50
-	objs := make([]client.Object, 0, foreignChildren+2)
-	for i := range foreignChildren {
-		// A child owned by a different HTTPRoute of the same kind: it carries
-		// the same managed-by label, so the legacy broad listing would scan it
-		// (and live-GET it) on every reconcile.
-		u := newUnstructured("ns", fmt.Sprintf("foreign-route-%d", i), gvks[0], metadata.BuildLabels(root, nil))
-		u.SetAnnotations(ownerAnnotation(fmt.Sprintf("ns/other-route-%d", i)))
-		objs = append(objs, &u)
+
+	listingModes := []struct {
+		name string
+		opts orphanCleanupOptions
+	}{
+		{name: "steady-state cached listing", opts: orphanCleanupOptions{waitForDeletes: false}},
+		{name: "deletion-path live listing", opts: orphanCleanupOptions{waitForDeletes: false, listLive: true}},
 	}
 
-	// The reconciling route's still-desired child...
-	own := newUnstructured("ns", "own-route", gvks[0], metadata.BuildLabels(root, nil))
-	own.SetAnnotations(ownerAnnotation("ns/httproute-owner"))
-	objs = append(objs, &own)
-	// ...and one of its children that is no longer desired (a real orphan).
-	orphan := newUnstructured("ns", "orphaned-route", gvks[0], metadata.BuildLabels(root, nil))
-	orphan.SetAnnotations(ownerAnnotation("ns/httproute-owner"))
-	objs = append(objs, &orphan)
+	for _, mode := range listingModes {
+		t.Run(mode.name, func(t *testing.T) {
+			objs := make([]client.Object, 0, foreignChildren+2)
+			for i := range foreignChildren {
+				// A child owned by a different HTTPRoute of the same kind: it
+				// carries the same managed-by label, so a broad listing would
+				// scan it (and live-GET it) on every reconcile.
+				u := newUnstructured("ns", fmt.Sprintf("foreign-route-%d", i), gvks[0], metadata.BuildLabels(root, nil))
+				u.SetAnnotations(ownerAnnotation(fmt.Sprintf("ns/other-route-%d", i)))
+				objs = append(objs, &u)
+			}
 
-	var (
-		getCalls  int
-		listCalls int
-	)
-	cl := fake.NewClientBuilder().
-		WithScheme(scheme.Get()).
-		WithObjects(objs...).
-		WithIndex(&configurationv1alpha1.KongRoute{}, metadata.HybridRouteOwnerIndexField, metadata.HybridRouteOwnerIndexFunc).
-		WithIndex(&configurationv1alpha1.KongService{}, metadata.HybridRouteOwnerIndexField, metadata.HybridRouteOwnerIndexFunc).
-		WithInterceptorFuncs(interceptor.Funcs{
-			Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-				getCalls++
-				return c.Get(ctx, key, obj, opts...)
-			},
-			List: func(ctx context.Context, c client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
-				listCalls++
-				return c.List(ctx, list, opts...)
-			},
-		}).
-		Build()
+			// The reconciling route's still-desired child...
+			own := newUnstructured("ns", "own-route", gvks[0], metadata.BuildLabels(root, nil))
+			own.SetAnnotations(ownerAnnotation("ns/httproute-owner"))
+			objs = append(objs, &own)
+			// ...and one of its children that is no longer desired (a real orphan).
+			orphan := newUnstructured("ns", "orphaned-route", gvks[0], metadata.BuildLabels(root, nil))
+			orphan.SetAnnotations(ownerAnnotation("ns/httproute-owner"))
+			objs = append(objs, &orphan)
 
-	// Route converters implement OrphanedResourceHandler by delegating to
-	// HandleOrphanedResourceForRoute, which live-GETs the resource it is given;
-	// mirror that so the test observes the real call pattern.
-	fakeConv := &fakeHTTPRouteConverterWithOrphanHandler{
-		gvks:    gvks,
-		root:    *root,
-		desired: []unstructured.Unstructured{own},
-		cl:      cl,
+			var (
+				getCalls  int
+				listCalls int
+			)
+			cl := fake.NewClientBuilder().
+				WithScheme(scheme.Get()).
+				WithObjects(objs...).
+				WithIndex(&configurationv1alpha1.KongRoute{}, metadata.HybridRouteOwnerIndexField, metadata.HybridRouteOwnerIndexFunc).
+				WithIndex(&configurationv1alpha1.KongService{}, metadata.HybridRouteOwnerIndexField, metadata.HybridRouteOwnerIndexFunc).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+						getCalls++
+						return c.Get(ctx, key, obj, opts...)
+					},
+					List: func(ctx context.Context, c client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+						listCalls++
+						return c.List(ctx, list, opts...)
+					},
+				}).
+				Build()
+
+			// Route converters implement OrphanedResourceHandler by delegating to
+			// HandleOrphanedResourceForRoute, which live-GETs the resource it is
+			// given; mirror that so the test observes the real call pattern.
+			fakeConv := &fakeHTTPRouteConverterWithOrphanHandler{
+				gvks:    gvks,
+				root:    *root,
+				desired: []unstructured.Unstructured{own},
+				cl:      cl,
+			}
+
+			requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](
+				ctx, cl, logger, fakeConv, mode.opts,
+			)
+			require.NoError(t, err)
+			require.False(t, requeue)
+
+			// One list per expected GVK, no more.
+			assert.Equal(t, len(gvks), listCalls, "expected exactly one list per expected GVK")
+			// Foreign children are never fetched; only the real orphan is.
+			assert.Equal(t, 1, getCalls, "only the genuinely orphaned child should be fetched")
+
+			// The real orphan is deleted; foreign and desired children are untouched.
+			routeList := &unstructured.UnstructuredList{}
+			routeList.SetGroupVersionKind(gvks[0])
+			require.NoError(t, cl.List(ctx, routeList))
+			names := make([]string, 0, len(routeList.Items))
+			for i := range routeList.Items {
+				names = append(names, routeList.Items[i].GetName())
+			}
+			assert.Contains(t, names, "own-route")
+			assert.Len(t, routeList.Items, foreignChildren+1, "only the orphan should have been deleted")
+		})
 	}
-
-	requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](
-		ctx, cl, logger, fakeConv, orphanCleanupOptions{waitForDeletes: false},
-	)
-	require.NoError(t, err)
-	require.False(t, requeue)
-
-	// One cached indexed list per expected GVK, no more.
-	assert.Equal(t, len(gvks), listCalls, "expected exactly one list per expected GVK")
-	// Foreign children are never fetched; only the real orphan is.
-	assert.Equal(t, 1, getCalls, "only the genuinely orphaned child should be fetched")
-
-	// The real orphan is deleted; foreign and desired children are untouched.
-	routeList := &unstructured.UnstructuredList{}
-	routeList.SetGroupVersionKind(gvks[0])
-	require.NoError(t, cl.List(ctx, routeList))
-	names := make([]string, 0, len(routeList.Items))
-	for i := range routeList.Items {
-		names = append(names, routeList.Items[i].GetName())
-	}
-	assert.Contains(t, names, "own-route")
-	assert.Len(t, routeList.Items, foreignChildren+1, "only the orphan should have been deleted")
 }
 
 // fakeHTTPRouteConverterWithOrphanHandler mirrors the route converters, whose
