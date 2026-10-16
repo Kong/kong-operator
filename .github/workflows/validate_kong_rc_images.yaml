@@ -26,14 +26,16 @@ env:
   KONG_RC_TAG_REGEX: '^3\.[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$'
   # Time of day (UTC) at which the daily poll window starts and ends. Must match the cron schedule.
   POLL_ANCHOR_TIME: "06:00"
-  # Interval between triggering subsequent validation workflows.
+  # Interval between triggering subsequent validation workflows. Each matrix leg of
+  # trigger-validation sleeps this long after its dispatch, except the last one.
   DISPATCH_INTERVAL_SECONDS: 600
 
 jobs:
-  trigger-validation:
-    # Allow enough time to space out multiple dispatches by DISPATCH_INTERVAL_SECONDS.
-    timeout-minutes: 360
+  find-images:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
+    outputs:
+      tags: ${{ steps.find.outputs.tags }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
@@ -59,18 +61,37 @@ jobs:
           # Docker Hub only supports substring filtering on tag names, so narrow the results
           # down with "-rc." and let the script apply the exact pattern.
           tags=$(./scripts/list-docker-hub-tags.sh --repository "${KONG_IMAGE_REPO}" \
-            --regex "${KONG_RC_TAG_REGEX}" --name-filter "-rc." "${window[@]}" \
-            | tr '\n' ' ' | sed 's/ *$//')
+            --regex "${KONG_RC_TAG_REGEX}" --name-filter "-rc." "${window[@]}")
           if [[ -z "${tags}" ]]; then
             echo "No new RC images found." | tee -a "${GITHUB_STEP_SUMMARY}"
           else
-            echo "New RC images found: ${tags}" | tee -a "${GITHUB_STEP_SUMMARY}"
+            echo "New RC images found: ${tags//$'\n'/ }" | tee -a "${GITHUB_STEP_SUMMARY}"
           fi
-          echo "tags=${tags}" >> "${GITHUB_OUTPUT}"
+          echo "tags=$(jq -Rnc '[inputs | select(length > 0)]' <<< "${tags}")" >> "${GITHUB_OUTPUT}"
+
+  # One matrix leg per tag, so each dispatch mints its own App token: installation
+  # tokens expire after 1 hour, which a single token would outlive with enough tags.
+  trigger-validation:
+    needs: find-images
+    if: ${{ needs.find-images.outputs.tags != '[]' }}
+    # One dispatch plus at most one DISPATCH_INTERVAL_SECONDS sleep.
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    strategy:
+      # Dispatch one tag at a time, spaced out by the sleep below.
+      max-parallel: 1
+      # A failed dispatch must not skip the remaining tags.
+      fail-fast: false
+      matrix:
+        tag: ${{ fromJSON(needs.find-images.outputs.tags) }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
 
       # Short-lived App token, minted in the job that uses it.
       - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        if: ${{ steps.find.outputs.tags != '' }}
         id: app-token
         with:
           client-id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
@@ -78,27 +99,27 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: |
             kong-operator
+          permission-actions: write
 
-      - name: Trigger validation workflows
-        if: ${{ steps.find.outputs.tags != '' }}
+      - name: Trigger validation workflow
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          TAGS: ${{ steps.find.outputs.tags }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ matrix.tag }}
           REF: ${{ github.ref_name }}
+          JOB_INDEX: ${{ strategy.job-index }}
+          JOB_TOTAL: ${{ strategy.job-total }}
         run: |
           set -euo pipefail
-          first=true
-          for tag in ${TAGS}; do
-            if [[ "${first}" != "true" ]]; then
-              echo "Waiting ${DISPATCH_INTERVAL_SECONDS}s before triggering the next validation..."
-              sleep "${DISPATCH_INTERVAL_SECONDS}"
-            fi
-            first=false
-            # The effective version is the first 3 parts of the tag, e.g. 3.16.0.1-rc.3 -> 3.16.0.
-            effective_version=$(echo "${tag}" | cut -d. -f1-3)
-            echo "Triggering validation for ${KONG_IMAGE_REPO}:${tag} (effective version ${effective_version})"
-            gh workflow run validate_kong_image.yaml --ref "${REF}" \
-              -f kong-image-repo="${KONG_IMAGE_REPO}" \
-              -f kong-image-tag="${tag}" \
-              -f kong-effective-version="${effective_version}"
-          done
+          # The effective version is the first 3 parts of the tag, e.g. 3.16.0.1-rc.3 -> 3.16.0.
+          effective_version=$(echo "${TAG}" | cut -d. -f1-3)
+          echo "Triggering validation for ${KONG_IMAGE_REPO}:${TAG} (effective version ${effective_version})"
+          gh workflow run validate_kong_image.yaml --ref "${REF}" \
+            -f kong-image-repo="${KONG_IMAGE_REPO}" \
+            -f kong-image-tag="${TAG}" \
+            -f kong-effective-version="${effective_version}"
+
+          if (( JOB_INDEX + 1 < JOB_TOTAL )); then
+            echo "Waiting ${DISPATCH_INTERVAL_SECONDS}s before triggering the next validation..."
+            sleep "${DISPATCH_INTERVAL_SECONDS}"
+          fi
