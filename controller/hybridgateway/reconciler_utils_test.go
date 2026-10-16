@@ -979,6 +979,79 @@ func TestCleanOrphanedResourcesWaitBehavior(t *testing.T) {
 	})
 }
 
+// TestCleanOrphanedResourcesConfirmEmptyListLive verifies the deletion-path
+// safety net: when the cached annotation-indexed listing comes back empty, the
+// live managed-by listing is consulted before the cleanup concludes that the
+// root has no children left and its caller releases the finalizer.
+func TestCleanOrphanedResourcesConfirmEmptyListLive(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+	gvks := []schema.GroupVersionKind{
+		{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongRoute"},
+	}
+	root := &gwtypes.HTTPRoute{
+		APIVersion: gatewayv1.GroupVersion.String(),
+		Kind:       "HTTPRoute",
+		Name:       "httproute-owner",
+		Namespace:  "ns",
+	}
+
+	// The child is owned by the route but the indexed listing does not see it:
+	// what a stale cache looks like on the deletion path. The typed indexed
+	// listing is served empty, the live listing still sees the child.
+	newClient := func() client.Client {
+		child := newUnstructured("ns", "stale-cache-child", gvks[0], metadata.BuildLabels(root, nil))
+		child.SetAnnotations(map[string]string{
+			consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns/httproute-owner",
+		})
+		return fake.NewClientBuilder().
+			WithScheme(scheme.Get()).
+			WithObjects(&child).
+			WithIndex(&configurationv1alpha1.KongRoute{}, metadata.HybridRouteOwnerIndexField, metadata.HybridRouteOwnerIndexFunc).
+			WithInterceptorFuncs(interceptor.Funcs{
+				List: func(ctx context.Context, c client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+					if _, indexed := list.(*configurationv1alpha1.KongRouteList); indexed {
+						return nil
+					}
+					return c.List(ctx, list, opts...)
+				},
+			}).
+			Build()
+	}
+	conv := &fakeHTTPRouteConverter{gvks: gvks, root: *root}
+
+	// listNames returns the names of all objects in the cluster for a given GVK.
+	listNames := func(t *testing.T, cl client.Client, gvk schema.GroupVersionKind) []string {
+		t.Helper()
+		list := &unstructured.UnstructuredList{}
+		list.SetGroupVersionKind(gvk)
+		require.NoError(t, cl.List(ctx, list))
+		names := make([]string, len(list.Items))
+		for i, item := range list.Items {
+			names[i] = item.GetName()
+		}
+		return names
+	}
+
+	t.Run("live listing confirms an empty cached listing", func(t *testing.T) {
+		cl := newClient()
+		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, conv,
+			orphanCleanupOptions{waitForDeletes: true, confirmEmptyListLive: true})
+		require.NoError(t, err)
+		require.True(t, requeue, "cleanup must requeue to wait for the deletion")
+		assert.Empty(t, listNames(t, cl, gvks[0]), "the orphan must be deleted")
+	})
+
+	t.Run("steady-state cleanup keeps trusting the cached listing", func(t *testing.T) {
+		cl := newClient()
+		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, conv,
+			orphanCleanupOptions{waitForDeletes: true})
+		require.NoError(t, err)
+		require.False(t, requeue)
+		assert.Equal(t, []string{"stale-cache-child"}, listNames(t, cl, gvks[0]))
+	})
+}
+
 // Minimal fake converter for HTTPRoute
 
 type fakeHTTPRouteConverter struct {

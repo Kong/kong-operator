@@ -30,6 +30,11 @@ func TestHybridRouteOwnerIndexCachedListing(t *testing.T) {
 
 	mgr, _ := NewManager(t, ctx, envcfg, s)
 	require.NoError(t, metadata.RegisterHybridRouteOwnerIndexes(ctx, mgr.GetFieldIndexer()))
+	// Registering twice mirrors the root-object controllers sharing one manager.
+	// This pins the wording of the conflict error the real manager field indexer
+	// returns, so a change in it fails here instead of every controller setup
+	// failing at manager startup.
+	require.NoError(t, metadata.RegisterHybridRouteOwnerIndexes(ctx, mgr.GetFieldIndexer()))
 	mgrCtx, cancel := context.WithCancel(ctx)
 	t.Cleanup(cancel)
 	go func() { _ = mgr.Start(mgrCtx) }()

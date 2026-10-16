@@ -43,6 +43,18 @@ var hybridRouteAnnotationKeys = []struct {
 	{consts.GatewayOperatorHybridRoutesUDPRouteAnnotation, kindUDPRoute},
 }
 
+// isRouteOwnerKind reports whether kind is a root object kind whose children are
+// owned through the hybrid-routes annotations, i.e. whether HybridRouteOwnerIndexField
+// can scope a child listing to an object of that kind.
+func isRouteOwnerKind(kind string) bool {
+	for _, ka := range hybridRouteAnnotationKeys {
+		if ka.kind == kind {
+			return true
+		}
+	}
+	return false
+}
+
 // HybridRouteOwnerIndexFunc is the field-index function for hybridgateway child
 // resources. It emits one index value per route reference found in any of the
 // hybrid-routes annotations, in "<RouteKind>/<namespace>/<name>" format, so a
@@ -154,38 +166,66 @@ func RegisterHybridRouteOwnerIndexes(ctx context.Context, indexer client.FieldIn
 }
 
 // isIndexAlreadyRegisteredError reports whether err indicates that the field
-// index has already been registered for the type.
+// index has already been registered for the type. The informer cache answers
+// "indexer conflict: <name>" (client-go); the double registration in
+// TestHybridRouteOwnerIndexCachedListing pins that wording against the real
+// manager field indexer, so a wording change fails a test instead of every
+// controller setup failing at manager startup.
 func isIndexAlreadyRegisteredError(err error) bool {
 	if err == nil {
 		return false
 	}
+	return strings.Contains(err.Error(), "indexer conflict")
+}
+
+// isIndexUnavailableError reports whether err means the client cannot serve the
+// hybrid-routes index at all: the informer cache answers "Index with name
+// <field> does not exist" (client-go), the fake client "no index with name
+// <field> has been registered" (controller-runtime), and a client whose scheme
+// does not know the typed list answers with a not-registered error. All three
+// are fixed properties of the client, not transient failures, and the first two
+// wordings are pinned by TestIsIndexUnavailableError so a wording change fails a
+// test instead of silently degrading every reconcile to the broad live listing.
+func isIndexUnavailableError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if runtime.IsNotRegisteredError(err) {
+		return true
+	}
 	msg := err.Error()
-	// client-go informer cache: "indexer conflict: <name>";
-	// fake client: "...index with name <name> has already been registered...".
-	return strings.Contains(msg, "indexer conflict") || strings.Contains(msg, "already registered")
+	return strings.Contains(msg, "Index with name "+HybridRouteOwnerIndexField+" does not exist") ||
+		strings.Contains(msg, "no index with name "+HybridRouteOwnerIndexField+" has been registered")
 }
 
 // ListOwnedChildResources lists the child resources of the given root object
-// for the expected GVK. When a typed list and a registered field index are
-// available for the GVK, the list is served from the cache and scoped to the
-// root object via the hybrid-routes annotation index; otherwise it falls back
-// to a broad live unstructured list filtered by the managed-by label (legacy
-// behavior). The result is always returned as unstructured items so callers
-// can treat all child GVKs uniformly.
+// for the expected GVK. When the root object kind owns its children through the
+// hybrid-routes annotations and a typed list is available for the GVK, the list
+// is served from the cache and scoped to the root object via the annotation
+// index; otherwise it falls back to the broad live unstructured list filtered by
+// the managed-by label (legacy behavior). The result is always returned as
+// unstructured items so callers can treat all child GVKs uniformly.
 func ListOwnedChildResources(
 	ctx context.Context,
 	cl client.Client,
 	rootObj client.Object,
 	gvk schema.GroupVersionKind,
 ) (*unstructured.UnstructuredList, error) {
-	if childType, ok := hybridRouteOwnerChildTypes[gvk.Kind]; ok {
+	// The index carries route ownership only. A Gateway root owns its children
+	// through owner references and the gateway annotation, which the index does
+	// not carry, so its key would match nothing and the List would return an
+	// empty success, silently skipping the whole cleanup. Keep the legacy label
+	// listing for such roots.
+	if childType, ok := hybridRouteOwnerChildTypes[gvk.Kind]; ok && isRouteOwnerKind(rootObj.GetObjectKind().GroupVersionKind().Kind) {
 		listObj := childType.newList()
 		labelsListOpt := client.MatchingFields{
 			HybridRouteOwnerIndexField: HybridRouteOwnerIndexKey(rootObj),
 		}
-		if err := cl.List(ctx, listObj, labelsListOpt); err == nil {
+		err := cl.List(ctx, listObj, labelsListOpt)
+		switch {
+		case err == nil:
 			return toUnstructuredList(listObj, gvk)
-		} else {
+		case isIndexUnavailableError(err):
 			// The indexed cached path is unavailable in this client (field
 			// index not registered for it, e.g. plain fake clients in unit
 			// tests, or the list type missing from the client's scheme); fall
@@ -194,9 +234,28 @@ func ListOwnedChildResources(
 			// path is used there.
 			ctrllog.FromContext(ctx).V(1).Info("hybrid-route owner index unavailable, falling back to managed-by label listing",
 				"gvk", gvk.String(), "error", err.Error())
+		default:
+			// Any other failure (cancelled context, cache error) must not
+			// degrade silently to the broad live listing this optimization
+			// removes.
+			return nil, fmt.Errorf("unable to list %s via the %s index: %w", gvk.String(), HybridRouteOwnerIndexField, err)
 		}
 	}
 
+	return ListOwnedChildResourcesLive(ctx, cl, rootObj, gvk)
+}
+
+// ListOwnedChildResourcesLive lists the child resources of the given root object
+// for the expected GVK with a live (uncached) unstructured listing scoped by the
+// managed-by label only. It is the legacy listing, the fallback of
+// ListOwnedChildResources, and the confirmation used on the root-deletion path
+// when an empty cached listing would otherwise release the root finalizer.
+func ListOwnedChildResourcesLive(
+	ctx context.Context,
+	cl client.Client,
+	rootObj client.Object,
+	gvk schema.GroupVersionKind,
+) (*unstructured.UnstructuredList, error) {
 	list := &unstructured.UnstructuredList{}
 	list.SetGroupVersionKind(gvk)
 	if err := cl.List(ctx, list, LabelSelectorForOwnedResources(rootObj, nil)); err != nil {
