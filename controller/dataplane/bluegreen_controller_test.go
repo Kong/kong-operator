@@ -262,3 +262,65 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 		})
 	}
 }
+
+func TestClearDataPlaneAdminAPIInRolloutStatus(t *testing.T) {
+	testCases := []struct {
+		name            string
+		rolloutStatus   *operatorv1beta1.DataPlaneRolloutStatus
+		expectedUpdated bool
+	}{
+		{
+			name:            "no rollout status",
+			rolloutStatus:   nil,
+			expectedUpdated: false,
+		},
+		{
+			name: "no Admin API in rollout status",
+			rolloutStatus: &operatorv1beta1.DataPlaneRolloutStatus{
+				Services: &operatorv1beta1.DataPlaneRolloutStatusServices{},
+			},
+			expectedUpdated: false,
+		},
+		{
+			name: "Admin API in rollout status gets cleared",
+			rolloutStatus: &operatorv1beta1.DataPlaneRolloutStatus{
+				Services: &operatorv1beta1.DataPlaneRolloutStatusServices{
+					AdminAPI: &operatorv1beta1.RolloutStatusService{Name: "admin-preview"},
+					Ingress:  &operatorv1beta1.RolloutStatusService{Name: "ingress-preview"},
+				},
+			},
+			expectedUpdated: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dataplane := &operatorv1beta1.DataPlane{
+				Name:      "dp",
+				Namespace: "default",
+				Status: operatorv1beta1.DataPlaneStatus{
+					RolloutStatus: tc.rolloutStatus,
+				},
+			}
+			fakeClient := fakectrlruntimeclient.
+				NewClientBuilder().
+				WithScheme(scheme.Scheme).
+				WithObjects(dataplane).
+				WithStatusSubresource(dataplane).
+				Build()
+			r := BlueGreenReconciler{Client: fakeClient}
+
+			updated, err := r.clearDataPlaneAdminAPIInRolloutStatus(t.Context(), logr.Discard(), dataplane)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expectedUpdated, updated)
+
+			var got operatorv1beta1.DataPlane
+			require.NoError(t, fakeClient.Get(t.Context(), client.ObjectKeyFromObject(dataplane), &got))
+			assert.Nil(t, extractRolloutStatusServiceAdmin(&got))
+			if tc.expectedUpdated {
+				require.NotNil(t, got.Status.RolloutStatus.Services.Ingress)
+				assert.Equal(t, "ingress-preview", got.Status.RolloutStatus.Services.Ingress.Name)
+			}
+		})
+	}
+}

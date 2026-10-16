@@ -6,8 +6,11 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -571,6 +574,237 @@ func TestComparePorts(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			actual := comparePorts(tc.a, tc.b, tc.dataPlane)
 			require.Equal(t, tc.expected, actual)
+		})
+	}
+}
+
+func TestDeleteAdminServicesForDataPlane(t *testing.T) {
+	dp := &operatorv1beta1.DataPlane{
+		Namespace: "default", Name: "dp-1", UID: "dp-uid",
+	}
+	ownerRef := func(uid string) []metav1.OwnerReference {
+		return []metav1.OwnerReference{{
+			APIVersion: operatorv1beta1.SchemeGroupVersion.String(),
+			Kind:       "DataPlane",
+			Name:       "owner",
+			UID:        k8stypes.UID(uid),
+		}}
+	}
+	svc := func(name, ownerUID, svcType, state string) *corev1.Service {
+		return &corev1.Service{
+			Namespace: "default",
+			Name:      name,
+			Labels: map[string]string{
+				consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+				consts.DataPlaneServiceTypeLabel:     svcType,
+				consts.DataPlaneServiceStateLabel:    state,
+			},
+			OwnerReferences: ownerRef(ownerUID),
+			Finalizers:      []string{consts.DataPlaneOwnedWaitForOwnerFinalizer},
+		}
+	}
+	admin := string(consts.DataPlaneAdminServiceLabelValue)
+	ingress := string(consts.DataPlaneIngressServiceLabelValue)
+	live := consts.DataPlaneStateLabelValueLive
+	preview := consts.DataPlaneStateLabelValuePreview
+
+	testCases := []struct {
+		name             string
+		objects          []client.Object
+		additionalLabels client.MatchingLabels
+		expectedDeleted  bool
+		expectedGone     []string
+		expectedKept     []string
+	}{
+		{
+			name: "owned admin service is deleted, others untouched",
+			objects: []client.Object{
+				svc("admin", "dp-uid", admin, live),
+				svc("ingress", "dp-uid", ingress, live),
+				svc("other-admin", "other-uid", admin, live),
+			},
+			additionalLabels: client.MatchingLabels{consts.DataPlaneServiceStateLabel: live},
+			expectedDeleted:  true,
+			expectedGone:     []string{"admin"},
+			expectedKept:     []string{"ingress", "other-admin"},
+		},
+		{
+			name: "live label filter leaves preview admin service",
+			objects: []client.Object{
+				svc("admin-live", "dp-uid", admin, live),
+				svc("admin-preview", "dp-uid", admin, preview),
+			},
+			additionalLabels: client.MatchingLabels{consts.DataPlaneServiceStateLabel: live},
+			expectedDeleted:  true,
+			expectedGone:     []string{"admin-live"},
+			expectedKept:     []string{"admin-preview"},
+		},
+		{
+			name: "preview label filter leaves live admin service",
+			objects: []client.Object{
+				svc("admin-live", "dp-uid", admin, live),
+				svc("admin-preview", "dp-uid", admin, preview),
+			},
+			additionalLabels: client.MatchingLabels{consts.DataPlaneServiceStateLabel: preview},
+			expectedDeleted:  true,
+			expectedGone:     []string{"admin-preview"},
+			expectedKept:     []string{"admin-live"},
+		},
+		{
+			name: "nothing to delete",
+			objects: []client.Object{
+				svc("ingress", "dp-uid", ingress, live),
+			},
+			additionalLabels: client.MatchingLabels{consts.DataPlaneServiceStateLabel: live},
+			expectedDeleted:  false,
+			expectedKept:     []string{"ingress"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := t.Context()
+			cl := fakectrlruntimeclient.NewClientBuilder().
+				WithScheme(scheme.Scheme).
+				WithObjects(tc.objects...).
+				Build()
+
+			deleted, err := deleteAdminServicesForDataPlane(ctx, cl, dp, tc.additionalLabels)
+			require.NoError(t, err)
+			require.Equal(t, tc.expectedDeleted, deleted)
+
+			for _, name := range tc.expectedGone {
+				err := cl.Get(ctx, client.ObjectKey{Namespace: "default", Name: name}, &corev1.Service{})
+				require.True(t, apierrors.IsNotFound(err), "expected Service %s to be deleted", name)
+			}
+			for _, name := range tc.expectedKept {
+				require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: "default", Name: name}, &corev1.Service{}))
+			}
+		})
+	}
+}
+
+func TestDeleteUnreferencedAdminCertSecrets(t *testing.T) {
+	dp := &operatorv1beta1.DataPlane{
+		Namespace: "default", Name: "dp-1", UID: "dp-uid",
+	}
+	ownerRefs := []metav1.OwnerReference{{
+		APIVersion: operatorv1beta1.SchemeGroupVersion.String(),
+		Kind:       "DataPlane",
+		Name:       dp.Name,
+		UID:        dp.UID,
+	}}
+	secret := func(name string, labels map[string]string) *corev1.Secret {
+		return &corev1.Secret{
+			Namespace:       "default",
+			Name:            name,
+			Labels:          labels,
+			OwnerReferences: ownerRefs,
+			Finalizers:      []string{consts.DataPlaneOwnedWaitForOwnerFinalizer},
+		}
+	}
+	adminCertLabels := map[string]string{consts.ServiceSecretLabel: "admin-svc"}
+	deployment := func(name string, volumes ...corev1.Volume) *appsv1.Deployment {
+		return &appsv1.Deployment{
+			Namespace:       "default",
+			Name:            name,
+			OwnerReferences: ownerRefs,
+			Spec: appsv1.DeploymentSpec{
+				Template: corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{Volumes: volumes},
+				},
+			},
+			Status: appsv1.DeploymentStatus{Replicas: 1, UpdatedReplicas: 1},
+		}
+	}
+	rollingOut := func(d *appsv1.Deployment) *appsv1.Deployment {
+		d.Status.Replicas = 2
+		return d
+	}
+	secretVolume := func(secretName string) corev1.Volume {
+		return corev1.Volume{
+			Name:   secretName,
+			Secret: &corev1.SecretVolumeSource{SecretName: secretName},
+		}
+	}
+	projectedVolume := func(secretName string) corev1.Volume {
+		return corev1.Volume{
+			Name: secretName,
+			Projected: &corev1.ProjectedVolumeSource{
+				Sources: []corev1.VolumeProjection{{
+					Secret: &corev1.SecretProjection{
+						Name: secretName,
+					},
+				}},
+			},
+		}
+	}
+
+	testCases := []struct {
+		name         string
+		objects      []client.Object
+		expectedGone []string
+		expectedKept []string
+	}{
+		{
+			name: "referenced kept, unreferenced deleted, unlabeled untouched",
+			objects: []client.Object{
+				secret("referenced", adminCertLabels),
+				secret("unreferenced", adminCertLabels),
+				secret("no-label", nil),
+				deployment("dp-live", secretVolume("referenced"), secretVolume("no-label")),
+			},
+			expectedGone: []string{"unreferenced"},
+			expectedKept: []string{"referenced", "no-label"},
+		},
+		{
+			name: "secrets referenced by preview deployment or projected volume are kept",
+			objects: []client.Object{
+				secret("live-cert", adminCertLabels),
+				secret("preview-cert", adminCertLabels),
+				deployment("dp-live", projectedVolume("live-cert")),
+				deployment("dp-preview", secretVolume("preview-cert")),
+			},
+			expectedKept: []string{"live-cert", "preview-cert"},
+		},
+		{
+			name: "all labeled secrets deleted when no deployment references them",
+			objects: []client.Object{
+				secret("cert-1", adminCertLabels),
+				secret("cert-2", adminCertLabels),
+				secret("no-label", nil),
+				deployment("dp-live"),
+			},
+			expectedGone: []string{"cert-1", "cert-2"},
+			expectedKept: []string{"no-label"},
+		},
+		{
+			name: "unreferenced secrets kept while a deployment is rolling out",
+			objects: []client.Object{
+				secret("cert-1", adminCertLabels),
+				rollingOut(deployment("dp-live")),
+			},
+			expectedKept: []string{"cert-1"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := t.Context()
+			cl := fakectrlruntimeclient.NewClientBuilder().
+				WithScheme(scheme.Scheme).
+				WithObjects(tc.objects...).
+				Build()
+
+			require.NoError(t, deleteUnreferencedAdminCertSecrets(ctx, cl, dp))
+
+			for _, name := range tc.expectedGone {
+				err := cl.Get(ctx, client.ObjectKey{Namespace: "default", Name: name}, &corev1.Secret{})
+				require.True(t, apierrors.IsNotFound(err), "expected Secret %s to be deleted", name)
+			}
+			for _, name := range tc.expectedKept {
+				require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: "default", Name: name}, &corev1.Secret{}))
+			}
 		})
 	}
 }

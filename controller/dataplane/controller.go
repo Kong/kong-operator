@@ -8,6 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/events"
@@ -98,7 +99,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, dataplane *operatorv1beta1.D
 	}
 
 	log.Trace(logger, "applying extensions")
-	stop, result, err := extensions.ApplyExtensions(ctx, r.Client, dataplane, r.KonnectEnabled, &extensionskonnect.DataPlaneKonnectExtensionProcessor{})
+	konnectProcessor := &extensionskonnect.DataPlaneKonnectExtensionProcessor{}
+	stop, result, err := extensions.ApplyExtensions(ctx, r.Client, dataplane, r.KonnectEnabled, konnectProcessor)
 	if err != nil {
 		if extensionserrors.IsKonnectExtensionError(err) {
 			log.Debug(logger, "failed to apply extensions", "err", err)
@@ -109,26 +111,47 @@ func (r *Reconciler) Reconcile(ctx context.Context, dataplane *operatorv1beta1.D
 	if stop || !result.IsZero() {
 		return result, nil
 	}
+	// Konnect hybrid DataPlanes don't expose the Admin API.
+	adminAPIDisabled := konnectProcessor.AdminAPIDisabled()
 
-	log.Trace(logger, "exposing DataPlane deployment admin API via headless service")
-	res, dataplaneAdminService, err := ensureAdminServiceForDataPlane(ctx, r.Client, dataplane,
-		client.MatchingLabels{
-			consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValueLive,
-		},
-		k8sresources.LabelSelectorFromDataPlaneStatusSelectorServiceOpt(dataplane),
-	)
-	if err != nil {
-		if apierrors.IsConflict(err) {
-			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+	var dataplaneAdminService *corev1.Service
+	if adminAPIDisabled {
+		log.Trace(logger, "Admin API disabled, deleting DataPlane admin service")
+		deleted, err := deleteAdminServicesForDataPlane(ctx, r.Client, dataplane,
+			client.MatchingLabels{
+				consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValueLive,
+			},
+		)
+		if err != nil {
+			return ctrl.Result{}, err
 		}
-		return ctrl.Result{}, err
-	}
-	switch res {
-	case op.Created, op.Updated:
-		log.Debug(logger, "DataPlane admin service modified", "service", dataplaneAdminService.Name, "reason", res)
-		return ctrl.Result{}, nil // dataplane admin service creation/update will trigger reconciliation
-	case op.Noop:
-	case op.Deleted: // This should not happen.
+		if deleted {
+			log.Debug(logger, "DataPlane admin service deleted")
+			return ctrl.Result{}, nil // dataplane admin service deletion will trigger reconciliation
+		}
+	} else {
+		log.Trace(logger, "exposing DataPlane deployment admin API via headless service")
+		var res op.Result
+		var err error
+		res, dataplaneAdminService, err = ensureAdminServiceForDataPlane(ctx, r.Client, dataplane,
+			client.MatchingLabels{
+				consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValueLive,
+			},
+			k8sresources.LabelSelectorFromDataPlaneStatusSelectorServiceOpt(dataplane),
+		)
+		if err != nil {
+			if apierrors.IsConflict(err) {
+				return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+			}
+			return ctrl.Result{}, err
+		}
+		switch res {
+		case op.Created, op.Updated:
+			log.Debug(logger, "DataPlane admin service modified", "service", dataplaneAdminService.Name, "reason", res)
+			return ctrl.Result{}, nil // dataplane admin service creation/update will trigger reconciliation
+		case op.Noop:
+		case op.Deleted: // This should not happen.
+		}
 	}
 
 	log.Trace(logger, "exposing DataPlane deployment via service")
@@ -162,28 +185,32 @@ func (r *Reconciler) Reconcile(ctx context.Context, dataplane *operatorv1beta1.D
 		return ctrl.Result{}, nil // dataplane status update will trigger reconciliation
 	}
 
-	log.Trace(logger, "ensuring mTLS certificate")
-	res, certSecret, err := ensureDataPlaneCertificate(
-		ctx,
-		r.Client,
-		dataplane,
-		types.NamespacedName{
-			Namespace: r.ClusterCASecretNamespace,
-			Name:      r.ClusterCASecretName,
-		},
-		types.NamespacedName{
-			Namespace: dataplaneAdminService.Namespace,
-			Name:      dataplaneAdminService.Name,
-		},
-		r.SecretLabelSelector,
-		r.CertTTL,
-	)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if res != op.Noop {
-		log.Debug(logger, "mTLS certificate created/updated")
-		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
+	var certSecretName string
+	if !adminAPIDisabled {
+		log.Trace(logger, "ensuring mTLS certificate")
+		res, certSecret, err := ensureDataPlaneCertificate(
+			ctx,
+			r.Client,
+			dataplane,
+			types.NamespacedName{
+				Namespace: r.ClusterCASecretNamespace,
+				Name:      r.ClusterCASecretName,
+			},
+			types.NamespacedName{
+				Namespace: dataplaneAdminService.Namespace,
+				Name:      dataplaneAdminService.Name,
+			},
+			r.SecretLabelSelector,
+			r.CertTTL,
+		)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if res != op.Noop {
+			log.Debug(logger, "mTLS certificate created/updated")
+			return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
+		}
+		certSecretName = certSecret.Name
 	}
 
 	log.Trace(logger, "checking readiness of DataPlane service", "service", dataplaneIngressService.Name)
@@ -222,7 +249,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, dataplane *operatorv1beta1.D
 	deploymentOpts = append(deploymentOpts, withCustomPlugins(kpisForDeployment...))
 
 	deploymentBuilder := NewDeploymentBuilder(logger.WithName("deployment_builder"), r.Client).
-		WithClusterCertificate(certSecret.Name).
+		WithClusterCertificate(certSecretName).
+		WithAdminAPIDisabled(adminAPIDisabled).
 		WithOpts(deploymentOpts...).
 		WithDefaultImage(r.DefaultImage).
 		WithAdditionalLabels(deploymentLabels).
@@ -235,6 +263,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, dataplane *operatorv1beta1.D
 	}
 	if res != op.Noop {
 		return ctrl.Result{}, nil
+	}
+
+	if adminAPIDisabled {
+		// Runs every reconcile so leftovers converge once no Deployment mounts them.
+		if err := deleteUnreferencedAdminCertSecrets(ctx, r.Client, dataplane); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	res, err = hpa.Ensure(ctx, r.Client, logger, dataplane, deployment.Name)
