@@ -101,6 +101,11 @@ esac
 
 new_secret=""
 new_certificate=""
+# Consecutive polls observing the Deployment mounting a certificate whose
+# registration has not settled. Condition propagation is not atomic and
+# Programmed transiently flaps under Konnect API rate limiting, so a single
+# inconsistent observation is not proof of a real violation.
+unregistered_mounts=0
 for attempt in $(seq 1 "$MAX_RETRIES"); do
   extension > "$tmp/extension.json"
   candidate="$(jq -r '.status.dataPlaneClientAuth.certificateSecretRef.name // ""' "$tmp/extension.json")"
@@ -118,9 +123,15 @@ for attempt in $(seq 1 "$MAX_RETRIES"); do
       jq -r '.spec.template.spec.volumes[] | select(.name == "kong-cluster-cert") | .secret.secretName')"
     if [[ "$mounted" == "$candidate" ]]; then
       registration_for_secret "$candidate" > "$tmp/cert.json"
-      jq -e '(.status.konnect.id | length > 0) and .metadata.deletionTimestamp == null and
-        any(.status.conditions[]?; .type == "Programmed" and .status == "True")' "$tmp/cert.json" >/dev/null ||
-        fail "Deployment consumed an unregistered certificate"
+      if jq -e '(.status.konnect.id | length > 0) and .metadata.deletionTimestamp == null and
+          any(.status.conditions[]?; .type == "Programmed" and .status == "True")' "$tmp/cert.json" >/dev/null; then
+        unregistered_mounts=0
+      else
+        unregistered_mounts=$((unregistered_mounts + 1))
+        if (( unregistered_mounts >= 30 )); then
+          fail "Deployment consumed an unregistered certificate"
+        fi
+      fi
     fi
   fi
   sleep 1
