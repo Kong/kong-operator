@@ -532,6 +532,7 @@ type KongV1KongPluginReconciler struct {
 	DataplaneClient   controllers.DataPlane
 	CacheSyncTimeout  time.Duration
 	ReferenceIndexers ctrlref.CacheIndexers
+	StatusQueue       *status.Queue
 }
 
 var _ controllers.Reconciler = &KongV1KongPluginReconciler{}
@@ -547,6 +548,19 @@ func (r *KongV1KongPluginReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			},
 			CacheSyncTimeout: r.CacheSyncTimeout,
 		})
+	// if configured, start the status updater controller
+	if r.StatusQueue != nil {
+		blder.WatchesRawSource(
+			source.Channel(
+				r.StatusQueue.Subscribe(schema.GroupVersionKind{
+					Group:   "configuration.konghq.com",
+					Version: "v1",
+					Kind:    "KongPlugin",
+				}),
+				&handler.EnqueueRequestForObject{},
+			),
+		)
+	}
 	return blder.For(&kongv1.KongPlugin{}).
 		Complete(r)
 }
@@ -608,6 +622,21 @@ func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
 	}
+	// if status updates are enabled report the status for the object
+	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
+		log.V(logging.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name, "configuration_status", configurationStatus)
+		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(
+			configurationStatus,
+			obj.Generation,
+			obj.Status.Conditions,
+		)
+		obj.Status.Conditions = conditions
+		if updateNeeded {
+			return ctrl.Result{}, r.Status().Update(ctx, obj)
+		}
+		log.V(logging.DebugLevel).Info("Status update not needed", "namespace", req.Namespace, "name", req.Name)
+	}
 	// update reference relationship from the KongPlugin to other objects.
 	if err := updateReferredObjects(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -634,6 +663,7 @@ type KongV1KongClusterPluginReconciler struct {
 	Scheme           *runtime.Scheme
 	DataplaneClient  controllers.DataPlane
 	CacheSyncTimeout time.Duration
+	StatusQueue      *status.Queue
 
 	IngressClassName           string
 	DisableIngressClassLookups bool
@@ -653,6 +683,19 @@ func (r *KongV1KongClusterPluginReconciler) SetupWithManager(mgr ctrl.Manager) e
 			},
 			CacheSyncTimeout: r.CacheSyncTimeout,
 		})
+	// if configured, start the status updater controller
+	if r.StatusQueue != nil {
+		blder.WatchesRawSource(
+			source.Channel(
+				r.StatusQueue.Subscribe(schema.GroupVersionKind{
+					Group:   "configuration.konghq.com",
+					Version: "v1",
+					Kind:    "KongClusterPlugin",
+				}),
+				&handler.EnqueueRequestForObject{},
+			),
+		)
+	}
 	if !r.DisableIngressClassLookups {
 		blder.Watches(&netv1.IngressClass{},
 			handler.EnqueueRequestsFromMapFunc(r.listClassless),
@@ -768,6 +811,21 @@ func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req c
 	// update the kong Admin API with the changes
 	if err := r.DataplaneClient.UpdateObject(obj); err != nil {
 		return ctrl.Result{}, err
+	}
+	// if status updates are enabled report the status for the object
+	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
+		log.V(logging.DebugLevel).Info("Updating programmed condition status", "namespace", req.Namespace, "name", req.Name, "configuration_status", configurationStatus)
+		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(
+			configurationStatus,
+			obj.Generation,
+			obj.Status.Conditions,
+		)
+		obj.Status.Conditions = conditions
+		if updateNeeded {
+			return ctrl.Result{}, r.Status().Update(ctx, obj)
+		}
+		log.V(logging.DebugLevel).Info("Status update not needed", "namespace", req.Namespace, "name", req.Name)
 	}
 	// update reference relationship from the KongClusterPlugin to other objects.
 	if err := updateReferredObjects(ctx, r.Client, r.ReferenceIndexers, r.DataplaneClient, obj); err != nil {
