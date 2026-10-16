@@ -259,6 +259,17 @@ func ensureIngressServiceForDataPlane(
 	addLabelsForDataPlaneIngressService(generatedService, *dataPlane)
 	k8sutils.SetOwnerForObject(generatedService, dataPlane)
 
+	// spec.clusterIP is immutable, so switching the Service between headless
+	// and non-headless requires recreating it. The Service is deleted here and
+	// created on a subsequent reconcile, once the deletion has gone through
+	// (e.g. after the cloud provider has cleaned up a LoadBalancer).
+	if count == 1 && isHeadlessService(&services[0]) != isHeadlessService(generatedService) {
+		if err := removeObjectSliceWithDataPlaneOwnedFinalizer(ctx, cl, services); err != nil {
+			return op.Noop, nil, fmt.Errorf("failed deleting DataPlane ingress Service %s to change its clusterIP: %w", services[0].Name, err)
+		}
+		return op.Noop, nil, errors.New("DataPlane ingress service deleted to change its clusterIP, it will be recreated")
+	}
+
 	if count == 1 {
 		var updated bool
 		existingService := &services[0]
@@ -375,6 +386,11 @@ func ensureIngressServiceForDataPlane(
 	}
 
 	return op.Created, generatedService, cl.Create(ctx, generatedService)
+}
+
+// isHeadlessService returns true if the Service is (or is requested to be) headless.
+func isHeadlessService(svc *corev1.Service) bool {
+	return svc.Spec.ClusterIP == corev1.ClusterIPNone
 }
 
 // comparePorts compares the ports of two services.

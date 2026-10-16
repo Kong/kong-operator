@@ -240,6 +240,7 @@ type LabelValue string
 // ServiceOptions is used to includes options to customize the ingress service,
 // such as the annotations.
 // +kubebuilder:validation:XValidation:message="Cannot set ExternalTrafficPolicy for ClusterIP service.", rule="has(self.type) && self.type == 'ClusterIP' ? !has(self.externalTrafficPolicy) : true"
+// +kubebuilder:validation:XValidation:message="ClusterIP can only be set to None when type is ClusterIP.", rule="has(self.clusterIP) ? has(self.type) && self.type == 'ClusterIP' : true"
 type ServiceOptions struct {
 	// Type determines how the Service is exposed.
 	// Defaults to `LoadBalancer`.
@@ -369,4 +370,24 @@ type ServiceOptions struct {
 	// +optional
 	// +kubebuilder:validation:Enum=SingleStack;PreferDualStack;RequireDualStack
 	IPFamilyPolicy *corev1.IPFamilyPolicy `json:"ipFamilyPolicy,omitempty"`
+
+	// ClusterIP allows creating a headless Service by setting it to "None".
+	// A headless Service is not allocated a virtual IP: DNS lookups of its name
+	// return the IPs of the ready DataPlane Pods directly, which lets clients
+	// (e.g. gRPC clients or proxies in front of the DataPlane) balance requests
+	// across the Pods themselves.
+	//
+	// Only "None" is supported and it can only be set when type is ClusterIP.
+	// When unset, the Service is allocated a cluster IP as usual.
+	//
+	// Kubernetes does not allow changing the clusterIP of an existing Service,
+	// so setting or unsetting this field causes the operator to delete and
+	// recreate the ingress Service. Clients addressing the Service are briefly
+	// disrupted while that happens.
+	//
+	// More info: https://kubernetes.io/docs/concepts/services-networking/service/#headless-services
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=None
+	ClusterIP *string `json:"clusterIP,omitempty"`
 }
