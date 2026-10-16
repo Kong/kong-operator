@@ -1,0 +1,103 @@
+# Template for creating the AIGatewayModelProvider + AIGatewayModel pair
+# attached to an OnPremAIGateway, shared by the onpremaigateway chainsaw tests.
+#
+# The provider authenticates to its upstream with an apikey resolved from a
+# dedicated Secret (created here); the model exposes /chat with the openai
+# format's default selector (the request body's "model" field) and a single
+# target backed by the shared mock LLM upstream.
+#
+# Required bindings (no defaults; every caller defines them at test level):
+#   - aigw_cp_name: Name of the OnPremAIGateway the entities attach to.
+#   - namespace: Namespace where the entities will be created.
+#   - provider_name: Name of the AIGatewayModelProvider (also its apiSpec name).
+#   - provider_credentials_name: Name of the provider credentials Secret.
+#   - model_name: Name of the AIGatewayModel (also its apiSpec name).
+#
+# Asserting the entities' Programmed condition belongs to the callers: it is
+# only satisfiable after the data plane exists and the configuration has been
+# pushed to it.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-onprem-provider-and-model
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: ($provider_credentials_name)
+            namespace: ($namespace)
+            labels:
+              konghq.com/secret: "true"
+          type: Opaque
+          stringData:
+            apikey: test-ai-gateway-key
+    - apply:
+        resource:
+          apiVersion: aiconfiguration.konghq.com/v1alpha1
+          kind: AIGatewayModelProvider
+          metadata:
+            name: ($provider_name)
+            namespace: ($namespace)
+          spec:
+            aiGatewayRef:
+              group: aigateway.konghq.com
+              kind: OnPremAIGateway
+              namespacedRef:
+                name: ($aigw_cp_name)
+            apiSpec:
+              type: openai
+              openai:
+                name: ($provider_name)
+                displayName: OpenAI-compatible mock provider
+                config:
+                  auth:
+                    headers:
+                      - name: apikey
+                        value:
+                          type: secretRef
+                          secretRef:
+                            name: ($provider_credentials_name)
+                            key: apikey
+    - apply:
+        resource:
+          apiVersion: aiconfiguration.konghq.com/v1alpha1
+          kind: AIGatewayModel
+          metadata:
+            name: ($model_name)
+            namespace: ($namespace)
+          spec:
+            aiGatewayRef:
+              group: aigateway.konghq.com
+              kind: OnPremAIGateway
+              namespacedRef:
+                name: ($aigw_cp_name)
+            apiSpec:
+              type: model
+              model:
+                name: ($model_name)
+                displayName: On-prem smoke-test model
+                enabled: Enabled
+                # capabilities must be non-empty: without any capability
+                # ai-deck-converter renders the model as a bare ai_models
+                # identity row and silently emits no service/route/plugin.
+                capabilities:
+                  - generate
+                formats:
+                  - type: openai
+                config:
+                  model:
+                    nameHeader: Enabled
+                  route:
+                    paths:
+                      - /chat
+                targets:
+                  - name: qwen2.5:0.5b
+                    provider:
+                      name: ($provider_name)
+                    config:
+                      type: openai
+                      openai:
+                        upstreamURL: http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/provider-a
