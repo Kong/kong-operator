@@ -1,0 +1,127 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: onprem-model-route-selectors-pathparam
+spec:
+  description: |
+    AIGatewayModel path (`pathParam`) route selector against an on-prem
+    control plane and data plane. One AIGatewayModel whose
+    `config.route.model` selector reads the model alias from a named capture
+    group in the route's path regex (`~/model-route/path/(?<model_name>[^/]+)/chat`),
+    then real chat-completions traffic verifying that a matching path segment
+    routes to the model and a non-matching one is consistently rejected.
+
+    Both the X-Kong-LLM-Model header and the body `model` field are
+    deliberately omitted in the traffic steps (INCLUDE_HEADER,
+    INCLUDE_BODY_MODEL: 'false') so they exercise `pathParam` alone — AI
+    Gateway resolves the model alias from whichever of header, body, or path
+    carries it, so leaving either of the other two enabled would let the
+    matching step pass even if the path-based capture were broken.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'onprem-cp']))
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+    - name: provider_name
+      value: (join('-', [($test_name), 'provider']))
+    - name: provider_credentials_name
+      value: (join('-', [($provider_name), 'credentials']))
+  steps:
+    - name: Create-onprem-aigateway
+      use:
+        template: ../../common/_step_templates/apply-assert-onpremAIGateway.yaml
+    - name: Create-provider-and-model
+      try:
+        - apply:
+            file: 02-provider-and-model.yaml
+    - name: Create-aigateway-dataplane
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+        with:
+          bindings:
+            - name: control_plane_ref
+              value: "({type: 'onpremNamespacedRef', onpremNamespacedRef: {name: ($aigw_cp_name)}})"
+            # Debug level so the failure snapshot's DP logs show the
+            # ai-model-selector's per-source errors ("source 'path' did not
+            # yield a model: ..."); the warn-level final message alone cannot
+            # tell a misrendered source from a missing one.
+            - name: aigw_dp_env
+              value: >-
+                ([{name: 'KONG_LOG_LEVEL', value: 'debug'}])
+    - name: Assert-model-pushed-to-dataplane
+      try:
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayModel
+              metadata:
+                name: model-path-selector
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+    - name: Verify-path-selector-routes-matching-alias
+      description: |
+        A request whose path segment matches the selector's `values` is
+        routed to the model. Both alias sources other than the path are
+        omitted, so this exercises `pathParam` alone; the pinned response
+        header proves the intended target model answered.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: /model-route/path/qwen2.5:0.5b/chat
+              - name: MODEL_ALIAS
+                value: qwen2.5:0.5b
+              - name: EXPECT_HEADER_VALUE
+                value: openai/qwen2.5:0.5b
+              - name: INCLUDE_HEADER
+                value: 'false'
+              - name: INCLUDE_BODY_MODEL
+                value: 'false'
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+    - name: Verify-path-selector-rejects-non-matching-alias
+      description: |
+        A request whose path segment is absent from the selector's `values`
+        never resolves to the model. Header and body `model` field omitted
+        for the same reason as the matching step.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: /model-route/path/path-alias-wrong/chat
+              - name: MODEL_ALIAS
+                value: path-alias-wrong
+              - name: EXPECTED_SUCCESS
+                value: 'false'
+              - name: INCLUDE_HEADER
+                value: 'false'
+              - name: INCLUDE_BODY_MODEL
+                value: 'false'
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: onprem-model-route-selectors-pathparam
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
