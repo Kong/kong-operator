@@ -1,0 +1,29 @@
+# An AIGatewayPolicy with a `condition` gating plugin execution on the
+# request path, adding a custom header only when the condition matches.
+# Requires AI Gateway runtime >= 2.1 (the translator's default
+# min_runtime_version). `condition` compiles as kcel (a CEL dialect) — use
+# CEL syntax/methods (e.g. startsWith), not ATC-router operators like '^='.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayPolicy
+metadata:
+  name: ($aigw_policy_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: response-transformer
+    displayName: "AIGateway Policy Condition"
+    enabled: "Enabled"
+    global: "Disabled"
+    name: ($aigw_policy_name)
+    condition: 'http.path.startsWith("/chat")'
+    config:
+      type: inline
+      value:
+        add:
+          headers:
+            - "Modified-By-Policy-Condition:Kong-Operator-Chainsaw-Test"
