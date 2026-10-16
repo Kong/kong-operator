@@ -164,6 +164,17 @@ func TestGatewayAddressesFromService(t *testing.T) {
 			wantErr:   true,
 		},
 		{
+			name: "headless ClusterIP Service",
+			svc: corev1.Service{
+				Spec: corev1.ServiceSpec{
+					Type:      "ClusterIP",
+					ClusterIP: corev1.ClusterIPNone,
+				},
+			},
+			addresses: []gwtypes.GatewayStatusAddress{},
+			wantErr:   false,
+		},
+		{
 			name: "LoadBalancer with IP addresses",
 			svc: corev1.Service{
 				Spec: corev1.ServiceSpec{

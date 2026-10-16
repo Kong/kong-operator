@@ -69,6 +69,10 @@ func AddressesFromService(service *corev1.Service) ([]operatorv1beta1.Address, e
 	}
 
 	for _, address := range service.Spec.ClusterIPs {
+		// Headless Services have no cluster IP: their clusterIPs contain only "None".
+		if address == corev1.ClusterIPNone {
+			continue
+		}
 		addresses = append(addresses,
 			operatorv1beta1.Address{
 				Type:       new(operatorv1beta1.IPAddressType),

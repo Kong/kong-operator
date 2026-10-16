@@ -505,6 +505,97 @@ func TestEnsureIngressServiceForDataPlaneIPFamily(t *testing.T) {
 	}
 }
 
+func TestEnsureIngressServiceForDataPlaneClusterIP(t *testing.T) {
+	testCases := []struct {
+		name string
+		// clusterIP of the existing Service, as allocated by the API server.
+		existingClusterIP string
+		// clusterIP set in the DataPlane spec (nil = not set).
+		dataplaneClusterIP *string
+		// expectRecreate is true when the existing Service is expected to be
+		// deleted (and created on the next reconcile) because spec.clusterIP
+		// is immutable.
+		expectRecreate    bool
+		expectedClusterIP string
+	}{
+		{
+			name:              "should not recreate a Service with an allocated cluster IP when clusterIP is unset",
+			existingClusterIP: "10.96.0.10",
+			expectedClusterIP: "10.96.0.10",
+		},
+		{
+			name:               "should not recreate a headless Service when clusterIP is None",
+			existingClusterIP:  corev1.ClusterIPNone,
+			dataplaneClusterIP: new(corev1.ClusterIPNone),
+			expectedClusterIP:  corev1.ClusterIPNone,
+		},
+		{
+			name:               "should recreate the Service as headless when clusterIP is set to None",
+			existingClusterIP:  "10.96.0.10",
+			dataplaneClusterIP: new(corev1.ClusterIPNone),
+			expectRecreate:     true,
+			expectedClusterIP:  corev1.ClusterIPNone,
+		},
+		{
+			name:              "should recreate the Service as non-headless when clusterIP is unset",
+			existingClusterIP: corev1.ClusterIPNone,
+			expectRecreate:    true,
+			expectedClusterIP: "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dataplane := builder.
+				NewDataPlaneBuilder().
+				WithObjectMeta(metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "dp-1",
+				}).
+				Build()
+			dataplane.Spec.Network = operatorv1beta1.DataPlaneNetworkOptions{
+				Services: &operatorv1beta1.DataPlaneServices{
+					Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+						Type:      corev1.ServiceTypeClusterIP,
+						ClusterIP: tc.dataplaneClusterIP,
+					},
+				},
+			}
+
+			fakeClient := fakectrlruntimeclient.
+				NewClientBuilder().
+				WithScheme(scheme.Scheme).
+				Build()
+
+			ctx := t.Context()
+			existingSvc, err := k8sresources.GenerateNewIngressServiceForDataPlane(dataplane)
+			require.NoError(t, err)
+			existingSvc.Spec.ClusterIP = tc.existingClusterIP
+			k8sutils.SetOwnerForObject(existingSvc, dataplane)
+			require.NoError(t, fakeClient.Create(ctx, existingSvc))
+			require.NoError(t, fakeClient.Create(ctx, dataplane), "should create dataplane successfully")
+
+			res, svc, err := ensureIngressServiceForDataPlane(ctx, logr.Discard(), fakeClient, dataplane, nil)
+			if !tc.expectRecreate {
+				require.NoError(t, err)
+				require.Equal(t, op.Noop, res)
+				require.Equal(t, tc.expectedClusterIP, svc.Spec.ClusterIP)
+				return
+			}
+
+			require.Error(t, err)
+			require.Equal(t, op.Noop, res)
+			err = fakeClient.Get(ctx, client.ObjectKeyFromObject(existingSvc), &corev1.Service{})
+			require.True(t, apierrors.IsNotFound(err), "existing Service should be deleted, got: %v", err)
+
+			res, svc, err = ensureIngressServiceForDataPlane(ctx, logr.Discard(), fakeClient, dataplane, nil)
+			require.NoError(t, err)
+			require.Equal(t, op.Created, res)
+			require.Equal(t, tc.expectedClusterIP, svc.Spec.ClusterIP)
+		})
+	}
+}
+
 func TestComparePorts(t *testing.T) {
 	testCases := []struct {
 		name      string

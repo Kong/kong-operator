@@ -155,6 +155,7 @@ func gatewayConfigDataPlaneOptionsV2ToV1(o *operatorv2beta1.GatewayConfigDataPla
 				ExternalTrafficPolicy: o.Network.Services.Ingress.ExternalTrafficPolicy,
 				IPFamilies:            o.Network.Services.Ingress.IPFamilies,
 				IPFamilyPolicy:        o.Network.Services.Ingress.IPFamilyPolicy,
+				ClusterIP:             o.Network.Services.Ingress.ClusterIP,
 			},
 		}
 	}
@@ -250,6 +251,7 @@ func gatewayConfigDataPlaneOptionsV1ToV2(o *GatewayConfigDataPlaneOptions) *oper
 				ExternalTrafficPolicy: o.Network.Services.Ingress.ExternalTrafficPolicy,
 				IPFamilies:            o.Network.Services.Ingress.IPFamilies,
 				IPFamilyPolicy:        o.Network.Services.Ingress.IPFamilyPolicy,
+				ClusterIP:             o.Network.Services.Ingress.ClusterIP,
 			},
 		}
 	}

@@ -43743,6 +43743,10 @@ spec:
                             additionalProperties:
                               type: string
                             type: object
+                          clusterIP:
+                            enum:
+                            - None
+                            type: string
                           externalTrafficPolicy:
                             enum:
                             - Cluster
@@ -43823,6 +43827,8 @@ spec:
                           rule: '!has(self.ports) || !(self.ports.exists(p, has(p.nodePort))) ? true : has(self.type) && [''LoadBalancer'', ''NodePort''].exists(t, t == self.type)'
                         - message: Cannot set ExternalTrafficPolicy for ClusterIP service.
                           rule: 'has(self.type) && self.type == ''ClusterIP'' ? !has(self.externalTrafficPolicy) : true'
+                        - message: ClusterIP can only be set to None when type is ClusterIP.
+                          rule: 'has(self.clusterIP) ? has(self.type) && self.type == ''ClusterIP'' : true'
                     type: object
                 type: object
               pluginsToInstall:
@@ -61703,6 +61709,10 @@ spec:
                                 additionalProperties:
                                   type: string
                                 type: object
+                              clusterIP:
+                                enum:
+                                - None
+                                type: string
                               externalTrafficPolicy:
                                 enum:
                                 - Cluster
@@ -61754,6 +61764,8 @@ spec:
                             x-kubernetes-validations:
                             - message: Cannot set ExternalTrafficPolicy for ClusterIP service.
                               rule: 'has(self.type) && self.type == ''ClusterIP'' ? !has(self.externalTrafficPolicy) : true'
+                            - message: ClusterIP can only be set to None when type is ClusterIP.
+                              rule: 'has(self.clusterIP) ? has(self.type) && self.type == ''ClusterIP'' : true'
                         type: object
                     type: object
                   pluginsToInstall:
@@ -66498,6 +66510,10 @@ spec:
                                 additionalProperties:
                                   type: string
                                 type: object
+                              clusterIP:
+                                enum:
+                                - None
+                                type: string
                               externalTrafficPolicy:
                                 enum:
                                 - Cluster
@@ -66550,6 +66566,8 @@ spec:
                             x-kubernetes-validations:
                             - message: Cannot set ExternalTrafficPolicy for ClusterIP service.
                               rule: 'has(self.type) && self.type == ''ClusterIP'' ? !has(self.externalTrafficPolicy) : true'
+                            - message: ClusterIP can only be set to None when type is ClusterIP.
+                              rule: 'has(self.clusterIP) ? has(self.type) && self.type == ''ClusterIP'' : true'
                         type: object
                     type: object
                   pluginsToInstall:
