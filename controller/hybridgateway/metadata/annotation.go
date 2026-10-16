@@ -603,21 +603,10 @@ func (am *AnnotationManager) SetRoutesWithKind(obj metav1.Object, routeKind stri
 
 // RouteAnnotationKeyForKind returns the annotation key for the route kind to
 // mark the namespace and name of the route with given kind that owns the object.
+// It reads the same kind-to-annotation table as the hybrid-route owner index, so
+// a route kind added there is picked up here as well.
 func (am *AnnotationManager) RouteAnnotationKeyForKind(routeKind string) string {
-	switch routeKind {
-	case kindHTTPRoute:
-		return consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation
-	case kindGRPCRoute:
-		return consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation
-	case kindTLSRoute:
-		return consts.GatewayOperatorHybridRoutesTLSRouteAnnotation
-	case kindTCPRoute:
-		return consts.GatewayOperatorHybridRoutesTCPRouteAnnotation
-	case kindUDPRoute:
-		return consts.GatewayOperatorHybridRoutesUDPRouteAnnotation
-	}
-	// Not supported route kind. Should be unreachable.
-	return ""
+	return hybridRouteAnnotationKeyForKind(routeKind)
 }
 
 // RouteAnnotationMatch returns true if the hybrid route annotation matches the given route by its namespace and name.

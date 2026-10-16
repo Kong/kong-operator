@@ -512,6 +512,16 @@ type orphanCleanupOptions struct {
 	// before KongPluginBinding). When false, all GVKs are processed in a single
 	// pass and resources already being deleted are not waited on.
 	waitForDeletes bool
+
+	// listLive, when true, lists every GVK with a live (uncached) listing instead
+	// of the cached annotation-index one. Set on the root-deletion path only: the
+	// caller releases the root finalizer once this cleanup finds nothing left, and
+	// the root is gone afterwards, so a child missed through a stale cache is never
+	// retried. A cached listing lags in both directions (it can hold a child the API
+	// server already deleted while still missing a live one), so confirming the
+	// empty case alone is not enough. In steady state the next reconcile re-lists
+	// anyway.
+	listLive bool
 }
 
 // cleanOrphanedResources deletes resources previously managed by the converter but no longer present in the desired output.
@@ -543,8 +553,9 @@ type orphanCleanupOptions struct {
 //   - bool: true if a requeue is needed to continue/complete the cleanup
 //   - error: Any error that occurred during the cleanup process
 //
-// The function uses ownership labels to identify resources managed by the root object
-// and only deletes resources that are no longer present in the converter's desired output.
+// The function resolves child ownership through the hybrid-routes annotation field index (on the
+// root-deletion path through a live managed-by label listing, see opts.listLive) and only deletes
+// resources that are no longer present in the converter's desired output.
 func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr[t]](
 	ctx context.Context,
 	cl client.Client,
@@ -593,11 +604,19 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 	for _, gvk := range expectedGVKs {
 		log.Debug(logger, "Processing GVK for orphan cleanup", "gvk", gvk.String())
 
-		list := &unstructured.UnstructuredList{}
-		list.SetGroupVersionKind(gvk)
-		selector := metadata.LabelSelectorForOwnedResources(rootObjPtr, nil)
-
-		if err := cl.List(ctx, list, selector); err != nil {
+		// List via the hybrid-routes annotation field index when available: the
+		// managed-by label selector is too broad (it matches the children of
+		// every root object of the same kind), turning orphan cleanup into an
+		// O(N²) scan of uncached unstructured resources. On the root-deletion
+		// path the listing is served live instead: the finalizer is released on
+		// the basis of this listing and is never retried afterwards.
+		var list *unstructured.UnstructuredList
+		if opts.listLive {
+			list, err = metadata.ListOwnedChildResourcesLive(ctx, cl, rootObjPtr, gvk)
+		} else {
+			list, err = metadata.ListOwnedChildResources(ctx, cl, rootObjPtr, gvk)
+		}
+		if err != nil {
 			return false, fmt.Errorf("unable to list objects with gvk %s: %w", gvk.String(), err)
 		}
 
