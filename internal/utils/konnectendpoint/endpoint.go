@@ -51,9 +51,8 @@ func (e Endpoint) ServerName() string {
 	return e.Host
 }
 
-// ControlPlaneAddress renders the value of KONG_CLUSTER_CONTROL_PLANE. Unlike
-// the telemetry address, a path is preceded by a port only when the value
-// carried one.
+// ControlPlaneAddress renders the value of KONG_CLUSTER_CONTROL_PLANE: Kong
+// accepts it with or without a port, so a path keeps the port it carried.
 func (e Endpoint) ControlPlaneAddress() string {
 	if e.Path == "" {
 		return e.Host + ":" + e.portOr443()
@@ -62,7 +61,7 @@ func (e Endpoint) ControlPlaneAddress() string {
 }
 
 // TelemetryAddress renders the value of KONG_CLUSTER_TELEMETRY_ENDPOINT, where
-// the port always precedes the path, even when it has to be defaulted.
+// the port precedes the path: Kong refuses this address without a port.
 func (e Endpoint) TelemetryAddress() string {
 	return e.Host + ":" + e.portOr443() + e.Path
 }
