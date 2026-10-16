@@ -148,6 +148,21 @@ const (
 )
 
 const (
+	// CreateInputsAppliedConditionType reports whether current create-only inputs match the recorded fingerprint.
+	CreateInputsAppliedConditionType = "CreateInputsApplied"
+	// CreateInputsReasonApplied indicates the inputs match a successful create request.
+	CreateInputsReasonApplied = "Applied"
+	// CreateInputsReasonUnchanged indicates current inputs match the recorded fingerprint.
+	CreateInputsReasonUnchanged = "Unchanged"
+	// CreateInputsReasonValueChanged indicates changed inputs cannot be applied.
+	CreateInputsReasonValueChanged = "ValueChanged"
+	// CreateInputsReasonBaselineEstablished indicates inputs match an unverified legacy baseline.
+	CreateInputsReasonBaselineEstablished = "BaselineEstablished"
+	// CreateInputsReasonUnavailable indicates inputs cannot currently be resolved.
+	CreateInputsReasonUnavailable = "InputsUnavailable"
+)
+
+const (
 	// SecretRefValidConditionType is the type of the condition that indicates
 	// whether the Secret reference is valid and points to an existing Secret.
 	SecretRefValidConditionType = "SecretRefValid"

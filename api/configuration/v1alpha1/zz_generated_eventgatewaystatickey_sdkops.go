@@ -11,7 +11,28 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+
+	"github.com/kong/kong-operator/v2/internal/utils/createinputs"
 )
+
+// GetCreateInputsHash returns the fingerprint recorded at creation or baselining.
+func (obj *EventGatewayStaticKey) GetCreateInputsHash() string {
+	return obj.Status.CreateInputsHash
+}
+
+// SetCreateInputsHash records a fingerprint without storing sensitive values.
+func (obj *EventGatewayStaticKey) SetCreateInputsHash(hash string) {
+	obj.Status.CreateInputsHash = hash
+}
+
+// CalculateCreateInputsHash resolves and fingerprints the current create inputs.
+func (obj *EventGatewayStaticKey) CalculateCreateInputsHash(ctx context.Context, cl client.Client) (string, error) {
+	req, err := obj.ToEventGatewayStaticKeyCreate(ctx, cl)
+	if err != nil {
+		return "", err
+	}
+	return createinputs.Hash(req)
+}
 
 // EventGatewayStaticKeySDKOpsFreeformKeyFields lists free-form / map data-keyed
 // subtrees whose keys are user data (e.g. an HTTP header name) and must be

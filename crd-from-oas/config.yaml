@@ -18,6 +18,7 @@ apiGroupVersions:
           - path: spec.apiSpec.cert
             type: Secret
         ops:
+          trackCreateInputs: true
           sdk:
           # AIGatewayDataPlaneClientCertificate is named struct in SDK
             interface: github.com/Kong/sdk-konnect-go.AIGatewayDataPlaneCertificatesSDK
@@ -500,6 +501,7 @@ apiGroupVersions:
           - path: spec.apiSpec.apiKey
             type: Secret
         ops:
+          trackCreateInputs: true
           sdk:
           # AIGatewayConsumerCredential shares the AIGatewayConsumersSDK interface
           # with AIGatewayConsumer; the SDK exposes credential ops on it directly.
@@ -839,6 +841,7 @@ apiGroupVersions:
                   text in the EventGatewayStaticKey and readable by anyone allowed to
                   read it.
         ops:
+          trackCreateInputs: true
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayStaticKeysSDK
             fieldName: EventGatewayStaticKeys

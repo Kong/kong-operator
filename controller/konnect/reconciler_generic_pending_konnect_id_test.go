@@ -54,7 +54,7 @@ func TestReconcilePendingKonnectID(t *testing.T) {
 
 		ent := newKongServiceForPendingTest("")
 		key := client.ObjectKeyFromObject(ent)
-		r.pendingKonnectIDs.Store(key, konnectID)
+		r.pendingKonnectIDs.Store(key, pendingKonnectEntityStatus{ID: konnectID})
 
 		res, stop, err := r.reconcilePendingKonnectID(t.Context(), ent)
 		require.NoError(t, err)
@@ -98,7 +98,7 @@ func TestReconcilePendingKonnectID(t *testing.T) {
 		r := newReconcilerForPendingTest(newKongServiceForPendingTest(konnectID))
 		ent := newKongServiceForPendingTest(konnectID)
 		key := client.ObjectKeyFromObject(ent)
-		r.pendingKonnectIDs.Store(key, konnectID)
+		r.pendingKonnectIDs.Store(key, pendingKonnectEntityStatus{ID: konnectID})
 
 		_, stop, err := r.reconcilePendingKonnectID(t.Context(), ent)
 		require.NoError(t, err)
@@ -116,7 +116,7 @@ func TestRestorePendingKonnectIDForDeletion(t *testing.T) {
 		r := newReconcilerForPendingTest()
 		ent := newKongServiceForPendingTest("")
 		key := client.ObjectKeyFromObject(ent)
-		r.pendingKonnectIDs.Store(key, konnectID)
+		r.pendingKonnectIDs.Store(key, pendingKonnectEntityStatus{ID: konnectID})
 
 		r.restorePendingKonnectIDForDeletion(ent)
 		assert.Equal(t, konnectID, ent.GetKonnectStatus().GetKonnectID())
@@ -126,7 +126,7 @@ func TestRestorePendingKonnectIDForDeletion(t *testing.T) {
 		r := newReconcilerForPendingTest()
 		ent := newKongServiceForPendingTest(konnectID)
 		key := client.ObjectKeyFromObject(ent)
-		r.pendingKonnectIDs.Store(key, "a-different-id")
+		r.pendingKonnectIDs.Store(key, pendingKonnectEntityStatus{ID: "a-different-id"})
 
 		r.restorePendingKonnectIDForDeletion(ent)
 		assert.Equal(t, konnectID, ent.GetKonnectStatus().GetKonnectID(), "the persisted status ID must win")

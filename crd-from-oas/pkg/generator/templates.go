@@ -306,6 +306,17 @@ type {{.EntityName}}Status struct {
 	{{.StatusField}} *{{$.EntityName}}{{.StatusField}} ` + "`" + `json:"{{.StatusJSON}},omitempty"` + "`" + `
 {{- end}}
 {{- end}}
+{{- if .TrackCreateInputs}}
+
+	// CreateInputsHash fingerprints the resolved user-supplied request body last
+	// successfully created in Konnect, before operator metadata is added.
+	// For entities predating this field, it is initialized from current inputs
+	// as a baseline, which cannot verify the values already stored in Konnect.
+	//
+	// +optional
+	// +kubebuilder:validation:Pattern=` + "`" + `^sha256:[0-9a-f]{64}$` + "`" + `
+	CreateInputsHash string ` + "`" + `json:"createInputsHash,omitempty"` + "`" + `
+{{- end}}
 	// ObservedGeneration is the most recent generation observed
 	//
 	// +optional
@@ -731,7 +742,36 @@ import (
 {{- end}}
 
 {{range .Imports}}	{{.Alias}} "{{.Path}}"
-{{end}})
+{{end}}
+{{- if .TrackCreateInputs}}
+	"github.com/kong/kong-operator/v2/internal/utils/createinputs"
+{{- end}}
+)
+{{- if .TrackCreateInputs}}
+
+// GetCreateInputsHash returns the fingerprint recorded at creation or baselining.
+func (obj *{{.EntityName}}) GetCreateInputsHash() string {
+	return obj.Status.CreateInputsHash
+}
+
+// SetCreateInputsHash records a fingerprint without storing sensitive values.
+func (obj *{{.EntityName}}) SetCreateInputsHash(hash string) {
+	obj.Status.CreateInputsHash = hash
+}
+
+{{- range .Methods}}
+{{- if eq .OpName "create"}}
+// CalculateCreateInputsHash resolves and fingerprints the current create inputs.
+func (obj *{{$.EntityName}}) CalculateCreateInputsHash(ctx context.Context, cl client.Client) (string, error) {
+	req, err := obj.{{.MethodName}}(ctx, cl)
+	if err != nil {
+		return "", err
+	}
+	return createinputs.Hash(req{{if .IsOperationsWrapped}}.{{.BodyFieldName}}{{end}})
+}
+{{- end}}
+{{- end}}
+{{- end}}
 {{- if .BoolFields}}
 
 // {{$.EntityName}}SDKOpsBoolField describes a boolean enum field that must be normalized for SDK payloads.
@@ -2508,6 +2548,10 @@ func TestCreate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 {{- end}}
 	require.NoError(t, err)
 {{- $reqBody := "expectedRequest"}}{{if and .Create.CreateFullyWrapped .Create.CreateBodyField}}{{$reqBody = printf "expectedRequest.%s" .Create.CreateBodyField}}{{end}}
+{{- if .Create.TrackCreateInputs}}
+	expectedCreateInputsHash, err := obj.CalculateCreateInputsHash(ctx, cl)
+	require.NoError(t, err)
+{{- end}}
 {{- if .AssertsInjectInto}}
 	{
 		// Additive references are resolved to the referenced object's Konnect
@@ -2591,6 +2635,9 @@ func TestCreate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 {{- if not .Create.SingletonNoID}}
 	require.Equal(t, expectedID, obj.GetKonnectID())
 {{- end}}
+{{- if .Create.TrackCreateInputs}}
+	require.Equal(t, expectedCreateInputsHash, obj.GetCreateInputsHash())
+{{- end}}
 }
 
 func TestCreate{{.Entity}}_PropagatesSDKError(t *testing.T) {
@@ -2660,6 +2707,9 @@ func TestCreate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 
 	err = create{{.Entity}}(ctx, {{if .Create.NeedsClient}}cl, {{end}}sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
+{{- if .Create.TrackCreateInputs}}
+	require.Empty(t, obj.GetCreateInputsHash())
+{{- end}}
 }
 {{- if $.SupportsMirror}}
 
@@ -3272,6 +3322,13 @@ func create{{.Entity}}(
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
 {{- $reqBody := "req"}}{{if and .CreateFullyWrapped .CreateBodyField}}{{$reqBody = printf "req.%s" .CreateBodyField}}{{end}}
+{{- if .TrackCreateInputs}}
+	// Fingerprint this request, not a second Secret read after creation.
+	createInputsHash, err := createinputs.Hash({{$reqBody}})
+	if err != nil {
+		return err
+	}
+{{- end}}
 {{- if .LabelsUnionTargets}}
 {{- template "labelsUnionInject" (labelsUnionInject "req" .LabelsUnionTargets $.HasTags $.LabelsPointer)}}
 {{- else}}
@@ -3355,6 +3412,10 @@ func create{{.Entity}}(
 	}
 
 	obj.SetKonnectID(resp.{{.RespField}}.ID)
+{{- end}}
+{{- if .TrackCreateInputs}}
+	obj.SetCreateInputsHash(createInputsHash)
+	SetKonnectEntityCreateInputsAppliedConditionTrue(obj)
 {{- end}}
 {{- if .HasNestedResponseStatusFields}}
 	const (

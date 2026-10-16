@@ -133,6 +133,14 @@ type EventGatewayStaticKeyStatus struct {
 	// +optional
 	GatewayID *KonnectEntityRef `json:"gatewayID,omitempty"`
 
+	// CreateInputsHash fingerprints the resolved user-supplied request body last
+	// successfully created in Konnect, before operator metadata is added.
+	// For entities predating this field, it is initialized from current inputs
+	// as a baseline, which cannot verify the values already stored in Konnect.
+	//
+	// +optional
+	// +kubebuilder:validation:Pattern=`^sha256:[0-9a-f]{64}$`
+	CreateInputsHash string `json:"createInputsHash,omitempty"`
 	// ObservedGeneration is the most recent generation observed
 	//
 	// +optional
