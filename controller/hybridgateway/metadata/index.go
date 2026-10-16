@@ -43,16 +43,24 @@ var hybridRouteAnnotationKeys = []struct {
 	{consts.GatewayOperatorHybridRoutesUDPRouteAnnotation, kindUDPRoute},
 }
 
+// hybridRouteAnnotationKeyForKind returns the hybrid-routes annotation key that
+// children of a root object of the given kind carry, or "" for a kind that does
+// not own children through those annotations. It is the single reader of
+// hybridRouteAnnotationKeys, shared with AnnotationManager.RouteAnnotationKeyForKind.
+func hybridRouteAnnotationKeyForKind(kind string) string {
+	for _, ka := range hybridRouteAnnotationKeys {
+		if ka.kind == kind {
+			return ka.key
+		}
+	}
+	return ""
+}
+
 // isRouteOwnerKind reports whether kind is a root object kind whose children are
 // owned through the hybrid-routes annotations, i.e. whether HybridRouteOwnerIndexField
 // can scope a child listing to an object of that kind.
 func isRouteOwnerKind(kind string) bool {
-	for _, ka := range hybridRouteAnnotationKeys {
-		if ka.kind == kind {
-			return true
-		}
-	}
-	return false
+	return hybridRouteAnnotationKeyForKind(kind) != ""
 }
 
 // HybridRouteOwnerIndexFunc is the field-index function for hybridgateway child
