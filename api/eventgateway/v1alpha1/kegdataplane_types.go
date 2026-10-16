@@ -605,6 +605,15 @@ func (e *KegDataPlane) SetConditions(conditions []metav1.Condition) {
 	e.Status.Conditions = conditions
 }
 
+// GetReplicas returns the KegDataPlane static replica count, or nil when it is
+// not set.
+func (e *KegDataPlane) GetReplicas() *int32 {
+	if e.Spec.Deployment == nil {
+		return nil
+	}
+	return e.Spec.Deployment.Replicas
+}
+
 // GetHorizontalScaling returns the KegDataPlane horizontal scaling options, or nil
 // when horizontal scaling is not configured.
 func (e *KegDataPlane) GetHorizontalScaling() *commonv1alpha1.HorizontalScaling {
