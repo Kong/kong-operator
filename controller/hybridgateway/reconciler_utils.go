@@ -593,11 +593,12 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 	for _, gvk := range expectedGVKs {
 		log.Debug(logger, "Processing GVK for orphan cleanup", "gvk", gvk.String())
 
-		list := &unstructured.UnstructuredList{}
-		list.SetGroupVersionKind(gvk)
-		selector := metadata.LabelSelectorForOwnedResources(rootObjPtr, nil)
-
-		if err := cl.List(ctx, list, selector); err != nil {
+		// List via the hybrid-routes annotation field index when available: the
+		// managed-by label selector is too broad (it matches the children of
+		// every root object of the same kind), turning orphan cleanup into an
+		// O(N²) scan of uncached unstructured resources.
+		list, err := metadata.ListOwnedChildResources(ctx, cl, rootObjPtr, gvk)
+		if err != nil {
 			return false, fmt.Errorf("unable to list objects with gvk %s: %w", gvk.String(), err)
 		}
 

@@ -605,12 +605,11 @@ func BuildProgrammedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRo
 
 	// For each expected GVK, list resources owned by the route and gateway.
 	for _, gvk := range expectedGVKs {
-		list := &unstructured.UnstructuredList{}
-		list.SetGroupVersionKind(gvk)
-		selector := metadata.LabelSelectorForOwnedResources(route, &pRef)
-
-		// List all resources of this GVK owned by the route object in the same namespace.
-		if err := cl.List(ctx, list, selector); err != nil {
+		// List via the hybrid-routes annotation field index when available;
+		// the managed-by label selector alone matches the children of every
+		// root object of the same kind, which is far broader than needed.
+		list, err := metadata.ListOwnedChildResources(ctx, cl, route, gvk)
+		if err != nil {
 			return nil, fmt.Errorf("unable to list objects with gvk %s: %w", gvk.String(), err)
 		}
 
