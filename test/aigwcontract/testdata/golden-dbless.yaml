@@ -1,0 +1,242 @@
+_format_version: "3.0"
+_transform: false
+services:
+  - id: 947a4e23-b483-5a65-8165-da9aed24565b
+    name: ai-gateway
+    url: http://ai-gateway.upstream.local
+    host: ai-gateway.upstream.local
+    port: 80
+    protocol: http
+  - id: 3d482369-c24e-5a35-846b-50e80ba33f15
+    name: mock-mcp-server
+    url: http://upstream:8080
+    host: upstream
+    port: 8080
+    protocol: http
+  - id: 99930f7a-c0e0-5ddc-b3f0-1562ceded006
+    name: mock-agent
+    url: http://upstream:8080
+    host: upstream
+    port: 8080
+    protocol: http
+routes:
+  - id: 8ae36805-da7a-55b9-b056-72bde6bb937d
+    name: openai-chat
+    service:
+      id: 947a4e23-b483-5a65-8165-da9aed24565b
+    paths:
+      - /chat/chat/completions
+    methods:
+      - POST
+      - OPTIONS
+    protocols:
+      - http
+      - https
+    strip_path: false
+  - id: 77e290f3-691b-5947-9fde-2c43467d8624
+    name: mock-mcp-server-route
+    service:
+      id: 3d482369-c24e-5a35-846b-50e80ba33f15
+    paths:
+      - /mcp/mock-mcp-server
+    protocols:
+      - http
+      - https
+  - id: b0c773b3-3c36-5795-b1d5-0e133270c2e2
+    name: mock-agent-route
+    service:
+      id: 99930f7a-c0e0-5ddc-b3f0-1562ceded006
+    paths:
+      - /agent/mock-agent
+    protocols:
+      - http
+      - https
+consumers:
+  - id: 07c62375-5510-5bb4-b8ed-3e7b12accbb7
+    username: mock-consumer
+  - id: 1e8d7140-b92a-52b9-9aa1-07931156b4bc
+    username: anonymous
+    custom_id: anonymous
+consumer_groups:
+  - id: dea7ba36-078a-5b88-acaa-66fac5eedd63
+    name: mock-group
+consumer_group_consumers:
+  - consumer: 07c62375-5510-5bb4-b8ed-3e7b12accbb7
+    consumer_group: dea7ba36-078a-5b88-acaa-66fac5eedd63
+plugins:
+  - id: 0cd0450c-f28a-52eb-a09d-36e72e2e5dd1
+    name: ai-mcp-proxy
+    config:
+      include_consumer_groups: true
+      logging:
+        log_audits: false
+        log_payloads: false
+        log_statistics: true
+      mode: passthrough-listener
+      tools: []
+    route:
+      id: 77e290f3-691b-5947-9fde-2c43467d8624
+  - id: 429da937-2514-5d86-a637-f71818b93ff6
+    name: rate-limiting
+    config:
+      minute: 5
+    route:
+      id: 77e290f3-691b-5947-9fde-2c43467d8624
+  - id: 89b70a0e-8a00-5df3-8813-6e927107401c
+    name: rate-limiting
+    config:
+      minute: 5
+    route:
+      id: b0c773b3-3c36-5795-b1d5-0e133270c2e2
+  - id: 444f266a-5c4c-5380-8f0e-96d10954c3a4
+    name: acl
+    config:
+      allow:
+        - mock-group
+      include_consumer_groups: true
+    route:
+      id: b0c773b3-3c36-5795-b1d5-0e133270c2e2
+  - id: df907c9b-25b7-505c-80db-cc780165afad
+    name: key-auth
+    config:
+      anonymous: anonymous
+    route:
+      id: b0c773b3-3c36-5795-b1d5-0e133270c2e2
+  - id: d39c1a27-9765-525d-a8f2-96c4a2435124
+    name: request-termination
+    enabled: true
+    config:
+      message: Unauthorized
+      status_code: 401
+    consumer:
+      id: 1e8d7140-b92a-52b9-9aa1-07931156b4bc
+  - id: 17fa8192-4b9f-5b5a-8379-20ad8bc836a7
+    name: ai-model-selector
+    config:
+      max_request_body_size: 8388608
+      sources:
+        - body_path: model
+          source: body
+    route:
+      id: 8ae36805-da7a-55b9-b056-72bde6bb937d
+  - id: f3adc007-171c-5519-8763-3a0eef79bde3
+    name: ai-proxy-advanced
+    config:
+      balancer:
+        algorithm: round-robin
+      genai_category: text/generation
+      llm_format: openai
+      targets:
+        - auth:
+            header_name: apikey
+            header_value: test-ai-gateway-key
+          description: qwen2.5:0.5b
+          logging:
+            log_payloads: false
+            log_statistics: true
+          model:
+            model_alias: mock-model
+            name: qwen2.5:0.5b
+            options:
+              upstream_url: http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/provider-a
+            provider: openai
+          route_type: llm/v1/chat
+    route:
+      id: 8ae36805-da7a-55b9-b056-72bde6bb937d
+    model:
+      id: 8cbafe44-dc26-57b9-9eb0-37630f9efe9d
+  - id: 9138d02e-1882-5112-9a78-5bf6fb81a761
+    name: rate-limiting
+    config:
+      minute: 5
+    route:
+      id: 8ae36805-da7a-55b9-b056-72bde6bb937d
+    model:
+      id: 8cbafe44-dc26-57b9-9eb0-37630f9efe9d
+  - id: f2f251ef-e7b5-558f-8ef6-c380179a1b8f
+    name: mock-custom-policy
+    route:
+      id: 8ae36805-da7a-55b9-b056-72bde6bb937d
+    model:
+      id: 8cbafe44-dc26-57b9-9eb0-37630f9efe9d
+  - id: 2501ef6b-218c-5327-ad93-4df6a2133531
+    name: acl
+    config:
+      allow:
+        - mock-group
+      include_consumer_groups: true
+    route:
+      id: 8ae36805-da7a-55b9-b056-72bde6bb937d
+    model:
+      id: 8cbafe44-dc26-57b9-9eb0-37630f9efe9d
+  - id: e3755ad8-2dec-569d-9f27-e233721c6b8e
+    name: key-auth
+    config:
+      anonymous: anonymous
+    route:
+      id: 8ae36805-da7a-55b9-b056-72bde6bb937d
+custom_plugins:
+  - id: e70214f8-4e9a-55e4-b2b3-319cee69d7cd
+    name: mock-custom-policy
+    schema: |-
+      return {
+        name = "mock-custom-policy",
+        fields = {
+          { config = {
+              type = "record",
+              fields = {
+                { header_name = { type = "string", default = "X-Mock-Custom-Policy" } },
+              },
+            } },
+        },
+      }
+    handler: |-
+      local P = { PRIORITY = 1000, VERSION = "1.0.0" }
+      function P:header_filter(conf) kong.response.set_header("X-Mock-Custom-Policy", "applied") end
+      return P
+certificates:
+  - id: de16e9ec-471b-586a-9849-fa4746ab7cf8
+    cert: |-
+      -----BEGIN CERTIFICATE-----
+      MIIBdDCCARqgAwIBAgIBAjAKBggqhkjOPQQDAjAgMR4wHAYDVQQDExVhaWd3LWNv
+      bnRyYWN0LXRlc3QtY2EwIBcNMjYwMTAxMDAwMDAwWhgPMjA2NjAxMDEwMDAwMDBa
+      MB8xHTAbBgNVBAMTFG1vY2stc25pLmV4YW1wbGUuY29tMFkwEwYHKoZIzj0CAQYI
+      KoZIzj0DAQcDQgAE/GlNTDWwdGlWcNAEbwhJLZI/HUOCKW6tMvXbmGlhzBQnGMOH
+      LgX/8V1pCkEWhNRz5gUrTm4gCEeu625JCIk3iqNEMEIwHwYDVR0jBBgwFoAUFObg
+      sPPbdKAG0INbmIKUw8V8cUAwHwYDVR0RBBgwFoIUbW9jay1zbmkuZXhhbXBsZS5j
+      b20wCgYIKoZIzj0EAwIDSAAwRQIgMNaboK65HcuVi724cgO/LbFlfPIel+QnU/L4
+      X5Sn7VoCIQCtVqBFiYZv9GO+thKto5F9qkZ75H27t556D3x/F+N/rQ==
+      -----END CERTIFICATE-----
+    key: |-
+      -----BEGIN PRIVATE KEY-----
+      MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgLSTI08SAMQVRLbR4
+      j7LzLUpjusUqXpRayO2+J4OL+QWhRANCAAT8aU1MNbB0aVZw0ARvCEktkj8dQ4Ip
+      bq0y9duYaWHMFCcYw4cuBf/xXWkKQRaE1HPmBStObiAIR67rbkkIiTeK
+      -----END PRIVATE KEY-----
+snis:
+  - id: a65cc2f3-45b5-504b-8b53-10a31375f57d
+    name: mock-sni.example.com
+    certificate:
+      id: de16e9ec-471b-586a-9849-fa4746ab7cf8
+ai_models:
+  - id: 8cbafe44-dc26-57b9-9eb0-37630f9efe9d
+    name: mock-model
+keyauth_credentials:
+  - id: cc565257-cd08-50a5-8ccd-0701249cc2de
+    key: s3cr3t
+    consumer: 07c62375-5510-5bb4-b8ed-3e7b12accbb7
+ca_certificates:
+  - id: 3f28e05e-60c5-5422-b4da-684b4b2b8343
+    cert: |-
+      -----BEGIN CERTIFICATE-----
+      MIIBYzCCAQmgAwIBAgIBATAKBggqhkjOPQQDAjAgMR4wHAYDVQQDExVhaWd3LWNv
+      bnRyYWN0LXRlc3QtY2EwIBcNMjYwMTAxMDAwMDAwWhgPMjA2NjAxMDEwMDAwMDBa
+      MCAxHjAcBgNVBAMTFWFpZ3ctY29udHJhY3QtdGVzdC1jYTBZMBMGByqGSM49AgEG
+      CCqGSM49AwEHA0IABEUdpuDM2CZU1OGK++ppjs2EIBa84BJXFdkcKVK6gnDG/0lz
+      W79u/gCexOtT/ataB91GDVSV36eha4hgn58AjvajMjAwMA8GA1UdEwEB/wQFMAMB
+      Af8wHQYDVR0OBBYEFBTm4LDz23SgBtCDW5iClMPFfHFAMAoGCCqGSM49BAMCA0gA
+      MEUCIQDy5Z6iS+0f9YWs7pKSUJW3VTw3jaDzxgWxTcj856RN0QIgG5yE0gpr83DF
+      pVIbbkWl2asbk8j1OEmMPwgZeP1oDsA=
+      -----END CERTIFICATE-----
+    tags:
+      - ai-gateway-name:mock-ca-cert
