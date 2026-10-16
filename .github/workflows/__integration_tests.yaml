@@ -45,6 +45,10 @@ jobs:
             kong-variant: enterprise
           - suite: kic
             kong-variant: oss
+          - suite: kic-isolated
+            kong-variant: enterprise
+          - suite: kic-isolated
+            kong-variant: oss
           - suite: bluegreen
           - suite: bluegreen
             ip_family: ipv6
@@ -75,13 +79,13 @@ jobs:
         op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
     - name: set kong oss version
-      if: ${{ matrix.suite == 'kic' && matrix.kong-variant == 'oss' && inputs.kong-image-repo == '' }}
+      if: ${{ startsWith(matrix.suite, 'kic') && matrix.kong-variant == 'oss' && inputs.kong-image-repo == '' }}
       run: |
         echo "TEST_KONG_IMAGE=kong" >> $GITHUB_ENV
         echo "TEST_KONG_TAG=$(yq -ojson -r '.integration.kong-oss' < test/test_dependencies.yaml )" >> $GITHUB_ENV
 
     - name: set kong ee version
-      if: ${{ matrix.suite == 'kic' && matrix.kong-variant == 'enterprise' && inputs.kong-image-repo == '' }}
+      if: ${{ startsWith(matrix.suite, 'kic') && matrix.kong-variant == 'enterprise' && inputs.kong-image-repo == '' }}
       run: |
         echo "TEST_KONG_IMAGE=kong/kong-gateway" >> $GITHUB_ENV
         echo "TEST_KONG_TAG=$(yq -ojson -r '.integration.kong-ee' < test/test_dependencies.yaml )" >> $GITHUB_ENV
@@ -115,7 +119,7 @@ jobs:
         RUNNER_OS: ${{ runner.os }}
         RUNNER_ARCH: ${{ runner.arch }}
         GO_MOD_HASH: ${{ hashFiles('**/go.mod') }}
-        CACHE_SUFFIX: ${{ matrix.suite == 'kic' && 'kic' || 'ko' }}
+        CACHE_SUFFIX: ${{ startsWith(matrix.suite, 'kic') && 'kic' || 'ko' }}
       run: |
         {
           echo "GO_CACHE_KEY=go-integrationtests-$CACHE_SUFFIX-$RUNNER_OS-$RUNNER_ARCH-go-$GO_MOD_HASH"
