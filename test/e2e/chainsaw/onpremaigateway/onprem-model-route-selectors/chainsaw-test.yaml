@@ -7,17 +7,16 @@ spec:
     AIGatewayModel route selectors against an on-prem control plane and data
     plane: one model per selector shape — headers (`headerParam`), body
     (`bodyParam`), and no selector (the openai format's default: the request
-    body's "model" field with the AIGatewayModel resource's name as the
-    implicit selector value) — then per-shape traffic assertions: a matching
-    alias routes (200 + X-Kong-LLM-Model) and a non-matching alias never
-    resolves to the model.
+    body's "model" field with the model entity's name, apiSpec.model.name, as
+    the implicit selector value) — then per-shape traffic assertions: a
+    matching alias routes (200 + X-Kong-LLM-Model) and a non-matching alias
+    never resolves to the model.
 
     Each traffic step isolates the selector under test by omitting the other
     alias sources (INCLUDE_HEADER / INCLUDE_BODY_MODEL), so a passing step
     cannot be masked by an unrelated selector accepting the request. The
-    `pathParam` selector shape is covered by its own test
-    (`onprem-model-route-selectors-pathparam`), since the traffic script
-    carries the alias via header or body only.
+    `pathParam` selector shape has no on-prem test; only the Konnect-flavor
+    `aigateway-model-route-selectors-pathparam` covers it.
   bindings:
     - name: test_name
       value: ($namespace)
