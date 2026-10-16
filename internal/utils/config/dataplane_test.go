@@ -245,3 +245,58 @@ func TestKongInKonnectDefaults(t *testing.T) {
 		})
 	}
 }
+
+func TestDisableAdminAPI(t *testing.T) {
+	testCases := []struct {
+		name     string
+		env      map[string]string
+		expected map[string]string
+	}{
+		{
+			name:     "nil map is a no-op",
+			env:      nil,
+			expected: nil,
+		},
+		{
+			name: "turns off admin listen and drops admin TLS settings",
+			env: map[string]string{
+				"KONG_ADMIN_LISTEN":                       "0.0.0.0:8444 ssl",
+				"KONG_ADMIN_SSL_CERT":                     "/var/cluster-certificate/tls.crt",
+				"KONG_ADMIN_SSL_CERT_KEY":                 "/var/cluster-certificate/tls.key",
+				"KONG_NGINX_ADMIN_SSL_CLIENT_CERTIFICATE": "/var/cluster-certificate/ca.crt",
+				"KONG_NGINX_ADMIN_SSL_VERIFY_CLIENT":      "on",
+				"KONG_NGINX_ADMIN_SSL_VERIFY_DEPTH":       "3",
+				"KONG_ADMIN_ACCESS_LOG":                   "/dev/stdout",
+				"KONG_DATABASE":                           "off",
+			},
+			expected: map[string]string{
+				"KONG_ADMIN_LISTEN":     "off",
+				"KONG_ADMIN_ACCESS_LOG": "/dev/stdout",
+				"KONG_DATABASE":         "off",
+			},
+		},
+		{
+			name:     "sets admin listen off when not present",
+			env:      map[string]string{},
+			expected: map[string]string{"KONG_ADMIN_LISTEN": "off"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			DisableAdminAPI(tc.env)
+			assert.Equal(t, tc.expected, tc.env)
+		})
+	}
+
+	t.Run("does not affect subsequent KongDefaults calls", func(t *testing.T) {
+		defaults, err := KongDefaults(ipfamily.IPv4)
+		require.NoError(t, err)
+		DisableAdminAPI(defaults)
+
+		fresh, err := KongDefaults(ipfamily.IPv4)
+		require.NoError(t, err)
+		assert.NotEqual(t, "off", fresh["KONG_ADMIN_LISTEN"])
+		assert.Contains(t, fresh, "KONG_ADMIN_SSL_CERT")
+	})
+}

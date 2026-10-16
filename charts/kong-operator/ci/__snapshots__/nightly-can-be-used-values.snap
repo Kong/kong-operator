@@ -68209,9 +68209,18 @@ rules:
   - eventgateway.konghq.com
   resources:
   - kegdataplanes/status
+  - onpremeventgateways/status
   verbs:
   - patch
   - update
+- apiGroups:
+  - eventgateway.konghq.com
+  resources:
+  - onpremeventgateways
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - gateway-operator.konghq.com
   resources:

@@ -107,6 +107,25 @@ func KongDefaults(family ipfamily.IPFamily) (map[string]string, error) {
 	return defaults, nil
 }
 
+// DisableAdminAPI turns off the Kong Admin API listener and drops the related
+// admin TLS/mTLS settings from the given env map. It mutates env in place, so
+// callers must not pass a shared map.
+func DisableAdminAPI(env map[string]string) {
+	if env == nil {
+		return
+	}
+	env["KONG_ADMIN_LISTEN"] = "off"
+	for _, k := range []string{
+		"KONG_ADMIN_SSL_CERT",
+		"KONG_ADMIN_SSL_CERT_KEY",
+		"KONG_NGINX_ADMIN_SSL_CLIENT_CERTIFICATE",
+		"KONG_NGINX_ADMIN_SSL_VERIFY_CLIENT",
+		"KONG_NGINX_ADMIN_SSL_VERIFY_DEPTH",
+	} {
+		delete(env, k)
+	}
+}
+
 // kongInKonnectClusterTypeControlPlane are the baseline Kong proxy configuration options needed for
 // the proxy to function when configured in Konnect Hybrid ControlPlanes.
 var kongInKonnectClusterTypeControlPlane = map[string]string{

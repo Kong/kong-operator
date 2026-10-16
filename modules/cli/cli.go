@@ -87,6 +87,7 @@ func New(m metadata.Info) *CLI {
 
 	// controllers for Event Gateway APIs
 	flagSet.BoolVar(&cfg.KEGDataPlaneControllerEnabled, "enable-controller-kegdataplane", false, "Enable the KEG (Kong Event Gateway) DataPlane controller.")
+	flagSet.BoolVar(&cfg.OnPremEventGatewayControllerEnabled, "enable-controller-onpremeventgateway", false, "Enable the on-prem Event Gateway controller (alpha, no configuration is pushed to gw-admin yet).")
 
 	// controllers for AI Gateway APIs
 	flagSet.BoolVar(&cfg.AIGatewayDataPlaneControllerEnabled, "enable-controller-aigatewaydataplane", false, "Enable the AI Gateway DataPlane controller.")

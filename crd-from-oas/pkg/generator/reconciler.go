@@ -998,12 +998,24 @@ func (g *Generator) generateReconcilerFiles(entityNames []string, entitySchemas 
 			Content:     watchContent,
 			RelativeDir: "controller/konnect",
 		})
-		g.watchInfos = append(g.watchInfos, &WatchFileInfo{
+		info := &WatchFileInfo{
 			Entity:         entityName,
 			APIAlias:       g.config.APIGroupPackageAlias,
 			APIPackagePath: g.config.APIGroupPackagePath,
 			IsRoot:         rc.GetIsRoot(),
-		})
+			Group:          g.config.APIGroup,
+		}
+		if dep := rootRefDependency(schema); dep != nil {
+			info.ParentKind = rc.ParentEntityKind()
+			if info.ParentKind == "" {
+				info.ParentKind = refConditionEntityName(dep)
+			}
+			info.ParentGroup = rc.ParentEntityGroup(g.config.APIGroup)
+		}
+		if rc.GatewayRef != nil {
+			info.GatewayKinds = rc.GatewayRef.AdditionalKinds
+		}
+		g.watchInfos = append(g.watchInfos, info)
 
 		// Index file → internal/utils/index/
 		indexContent, err := g.generateIndex(metadata, rc)

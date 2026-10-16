@@ -178,6 +178,12 @@
   `Programmed`, so an entity that exists in Konnect can't be moved under
   another parent.
   [#6119](https://github.com/Kong/kong-operator/pull/6119)
+- `--enable-controller-onpremeventgateway` flag (default `false`): enables the
+  `OnPremEventGateway` controller. A change to a gateway, or to an Event
+  Gateway entity attached to it directly or through its parent entities,
+  reconciles that gateway. The controller doesn't push any configuration to
+  gw-admin yet: the gateway reports `Programmed` `False` with reason `Pending`.
+  [#6132](https://github.com/Kong/kong-operator/pull/6132)
 - `--konnect-list-page-size` flag (default and maximum `100`): the page size
   the operator requests when listing Konnect entities to find the Konnect
   entity of an object, e.g. one whose Konnect ID was lost. It is a fallback in
@@ -384,6 +390,14 @@
   images. Kong Gateway versions older than 3.6 (previously 3.4.1) are no longer
   supported by the operator and has to be upgraded.
   [#5925](https://github.com/Kong/kong-operator/pull/5925)
+- `DataPlane`s connected to a Konnect hybrid control plane (`KonnectExtension`
+  cluster type `ControlPlane` or `ControlPlaneGroup`, including hybrid
+  `Gateway`s) no longer expose the Kong Admin API: the admin `Service` and
+  admin certificate `Secret` are not created (existing ones are removed on
+  upgrade) and `KONG_ADMIN_LISTEN` defaults to `off`. Setting `KONG_ADMIN_LISTEN`
+  in the `DataPlane` pod template keeps the admin API, `Service` and
+  certificate as before.
+  [#6082](https://github.com/Kong/kong-operator/pull/6082)
 
 ### Fixes
 

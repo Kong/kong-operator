@@ -1222,3 +1222,66 @@ func TestProvisionKonnectExtension_ControlPlaneRefNotValid(t *testing.T) {
 		})
 	}
 }
+
+func TestReconciler_dataPlaneAdminAPIDisabled(t *testing.T) {
+	const ns = "test-namespace"
+
+	ext := func(ct konnectv1alpha2.KonnectExtensionClusterType) *konnectv1alpha2.KonnectExtension {
+		return &konnectv1alpha2.KonnectExtension{
+			Name: "ext", Namespace: ns,
+			Status: konnectv1alpha2.KonnectExtensionStatus{
+				Konnect: &konnectv1alpha2.KonnectExtensionControlPlaneStatus{ClusterType: ct},
+				Conditions: []metav1.Condition{
+					{Type: konnectv1alpha2.KonnectExtensionReadyConditionType, Status: metav1.ConditionTrue},
+				},
+			},
+		}
+	}
+	dataPlane := func(withExt bool, env ...corev1.EnvVar) *operatorv1beta1.DataPlane {
+		dp := &operatorv1beta1.DataPlane{Name: "dp", Namespace: ns}
+		dp.Spec.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{
+			Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: consts.DataPlaneProxyContainerName, Env: env}}},
+		}
+		if withExt {
+			dp.Spec.Extensions = []commonv1alpha1.ExtensionRef{{
+				Group: konnectv1alpha1.SchemeGroupVersion.Group,
+				Kind:  konnectv1alpha2.KonnectExtensionKind,
+				Name:  "ext",
+			}}
+		}
+		return dp
+	}
+
+	tests := []struct {
+		name           string
+		konnectEnabled bool
+		dp             *operatorv1beta1.DataPlane
+		ext            *konnectv1alpha2.KonnectExtension
+		want           bool
+	}{
+		{name: "no extension", konnectEnabled: true, dp: dataPlane(false), want: false},
+		{name: "hybrid ControlPlane extension", konnectEnabled: true, dp: dataPlane(true), ext: ext(konnectv1alpha2.ClusterTypeControlPlane), want: true},
+		{name: "K8sIngressController extension", konnectEnabled: true, dp: dataPlane(true), ext: ext(konnectv1alpha2.ClusterTypeK8sIngressController), want: false},
+		{
+			name:           "hybrid with user KONG_ADMIN_LISTEN",
+			konnectEnabled: true,
+			dp:             dataPlane(true, corev1.EnvVar{Name: "KONG_ADMIN_LISTEN", Value: "0.0.0.0:8444 ssl"}),
+			ext:            ext(konnectv1alpha2.ClusterTypeControlPlane),
+			want:           false,
+		},
+		{name: "Konnect disabled", konnectEnabled: false, dp: dataPlane(true), ext: ext(konnectv1alpha2.ClusterTypeControlPlane), want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get())
+			if tt.ext != nil {
+				b = b.WithObjects(tt.ext)
+			}
+			r := &Reconciler{Client: b.Build(), KonnectEnabled: tt.konnectEnabled}
+			got, err := r.dataPlaneAdminAPIDisabled(t.Context(), tt.dp)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

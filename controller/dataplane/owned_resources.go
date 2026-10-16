@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
+	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -415,4 +416,92 @@ func comparePorts(
 
 	}
 	return true
+}
+
+// deleteAdminServicesForDataPlane deletes the Admin API Services owned by the
+// DataPlane and matching the additional labels.
+func deleteAdminServicesForDataPlane(
+	ctx context.Context,
+	cl client.Client,
+	dataplane *operatorv1beta1.DataPlane,
+	additionalLabels client.MatchingLabels,
+) (deleted bool, err error) {
+	matchingLabels := k8sresources.GetManagedLabelForOwner(dataplane)
+	matchingLabels[consts.DataPlaneServiceTypeLabel] = string(consts.DataPlaneAdminServiceLabelValue)
+	maps.Copy(matchingLabels, additionalLabels)
+
+	services, err := k8sutils.ListServicesForOwner(ctx, cl, dataplane.Namespace, dataplane.UID, matchingLabels)
+	if err != nil {
+		return false, fmt.Errorf("failed listing Admin API Services for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+	}
+	if len(services) == 0 {
+		return false, nil
+	}
+	if err := removeObjectSliceWithDataPlaneOwnedFinalizer(ctx, cl, services); err != nil {
+		return false, fmt.Errorf("failed deleting Admin API Services for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+	}
+	return true, nil
+}
+
+// deleteUnreferencedAdminCertSecrets deletes the Admin API certificate Secrets
+// owned by the DataPlane which are not mounted by any of its Deployments.
+func deleteUnreferencedAdminCertSecrets(
+	ctx context.Context,
+	cl client.Client,
+	dataplane *operatorv1beta1.DataPlane,
+) error {
+	secretList, err := k8sutils.ListSecretsForOwner(ctx, cl, dataplane.UID,
+		client.InNamespace(dataplane.Namespace),
+		client.HasLabels{consts.ServiceSecretLabel},
+	)
+	if err != nil {
+		return fmt.Errorf("failed listing Admin API certificate Secrets for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+	}
+	if len(secretList) == 0 {
+		return nil
+	}
+
+	deployments, err := k8sutils.ListDeploymentsForOwner(ctx, cl, dataplane.Namespace, dataplane.UID)
+	if err != nil {
+		return fmt.Errorf("failed listing Deployments for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+	}
+	referenced := make(map[string]struct{})
+	for _, d := range deployments {
+		// Old ReplicaSet pods may still mount the Secret until the rollout completes.
+		if !deploymentRolledOut(&d) {
+			return nil
+		}
+		for _, v := range d.Spec.Template.Spec.Volumes {
+			if v.Secret != nil {
+				referenced[v.Secret.SecretName] = struct{}{}
+			}
+			if v.Projected != nil {
+				for _, s := range v.Projected.Sources {
+					if s.Secret != nil {
+						referenced[s.Secret.Name] = struct{}{}
+					}
+				}
+			}
+		}
+	}
+
+	toDelete := lo.Reject(secretList, func(s corev1.Secret, _ int) bool {
+		_, ok := referenced[s.Name]
+		return ok
+	})
+	if err := removeObjectSliceWithDataPlaneOwnedFinalizer(ctx, cl, toDelete); err != nil {
+		return fmt.Errorf("failed deleting Admin API certificate Secrets for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
+	}
+	return nil
+}
+
+// deploymentRolledOut reports whether all replicas of the Deployment run its current pod template.
+func deploymentRolledOut(d *appsv1.Deployment) bool {
+	replicas := int32(1)
+	if d.Spec.Replicas != nil {
+		replicas = *d.Spec.Replicas
+	}
+	return d.Status.ObservedGeneration >= d.Generation &&
+		d.Status.UpdatedReplicas == replicas &&
+		d.Status.Replicas == replicas
 }

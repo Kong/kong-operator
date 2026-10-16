@@ -1,0 +1,96 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: onprem-config-push-models-routable
+spec:
+  description: |
+    End-to-end on-prem AI Gateway flow: an OnPremAIGateway control plane, an
+    AIGatewayModelProvider + AIGatewayModel attached to it, and an
+    AIGatewayDataPlane attached via controlPlaneRef.onpremNamespacedRef.
+    Asserts the model is Programmed (its rendered configuration was pushed to
+    the data plane pods), then drives a real chat-completions request through
+    the data plane's ingress Service and asserts a 200 response carrying the
+    X-Kong-LLM-Model header.
+
+    The model's upstream points at the shared mock LLM stack (see
+    ../../fixtures/aigateway), so the request is answered in-cluster.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'onprem-cp']))
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+    - name: model_name
+      value: (join('-', [($test_name), 'model']))
+    - name: provider_name
+      value: (join('-', [($test_name), 'provider']))
+    - name: provider_credentials_name
+      value: (join('-', [($provider_name), 'credentials']))
+  steps:
+    - name: Create-onprem-aigateway
+      use:
+        template: ../../common/_step_templates/apply-assert-onpremAIGateway.yaml
+    - name: Create-provider-and-model
+      use:
+        template: ../../common/_step_templates/apply-assert-onpremProviderAndModel.yaml
+    - name: Create-aigateway-dataplane
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+        with:
+          bindings:
+            - name: control_plane_ref
+              value: "({type: 'onpremNamespacedRef', onpremNamespacedRef: {name: ($aigw_cp_name)}})"
+    - name: Assert-model-pushed-to-dataplane
+      try:
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayModel
+              metadata:
+                name: ($model_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+    - name: Drive-chat-completion-traffic
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: /chat
+              # No authored selector: the model's alias is its own name, so
+              # the client selects it by model name (not the target name).
+              - name: MODEL_ALIAS
+                value: ($model_name)
+              - name: EXPECT_HEADER
+                value: X-Kong-LLM-Model
+              # Pin the response header to the intended target: the value
+              # proves the matched model, not merely that some model served.
+              - name: EXPECT_HEADER_VALUE
+                value: openai/qwen2.5:0.5b
+              # The model route has no selector (the format's default one
+              # applies: the body's "model" field), so isolating it means not
+              # sending the alias via the request header.
+              - name: INCLUDE_HEADER
+                value: "false"
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: onprem-config-push-models-routable
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

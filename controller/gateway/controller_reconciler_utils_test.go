@@ -4901,6 +4901,7 @@ func TestGenerateDataPlaneNetworkPolicy(t *testing.T) {
 	testCases := []struct {
 		name                  string
 		proxyContainerOptions func(c *corev1.Container)
+		adminAPIDisabled      bool
 		expectedIngressRules  []networkingv1.NetworkPolicyIngressRule
 	}{
 		{
@@ -4987,6 +4988,41 @@ func TestGenerateDataPlaneNetworkPolicy(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:             "admin API disabled (Konnect hybrid)",
+			adminAPIDisabled: true,
+			expectedIngressRules: []networkingv1.NetworkPolicyIngressRule{
+				defaultIngressRuleProxy,
+				defaultIngressRuleMetrics,
+			},
+		},
+		{
+			name: "KONG_ADMIN_LISTEN=off",
+			proxyContainerOptions: func(c *corev1.Container) {
+				c.Env = append(c.Env, corev1.EnvVar{
+					Name:  "KONG_ADMIN_LISTEN",
+					Value: " off ",
+				})
+			},
+			expectedIngressRules: []networkingv1.NetworkPolicyIngressRule{
+				defaultIngressRuleProxy,
+				defaultIngressRuleMetrics,
+			},
+		},
+		{
+			// No SSL admin endpoints must not produce an allow-all-ports rule.
+			name: "KONG_ADMIN_LISTEN without ssl endpoints",
+			proxyContainerOptions: func(c *corev1.Container) {
+				c.Env = append(c.Env, corev1.EnvVar{
+					Name:  "KONG_ADMIN_LISTEN",
+					Value: "0.0.0.0:8001",
+				})
+			},
+			expectedIngressRules: []networkingv1.NetworkPolicyIngressRule{
+				defaultIngressRuleProxy,
+				defaultIngressRuleMetrics,
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -4997,7 +5033,7 @@ func TestGenerateDataPlaneNetworkPolicy(t *testing.T) {
 				tc.proxyContainerOptions(container)
 			}
 
-			policy, err := generateDataPlaneNetworkPolicy(testNamespace, dp, podLabels)
+			policy, err := generateDataPlaneNetworkPolicy(testNamespace, dp, podLabels, !tc.adminAPIDisabled)
 			require.NoError(t, err)
 			// compare expected NetworkPolicy and the generated one.
 			require.Equal(t, testNamespace, policy.Namespace)
