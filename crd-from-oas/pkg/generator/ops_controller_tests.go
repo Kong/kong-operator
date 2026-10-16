@@ -428,6 +428,23 @@ func buildOpsControllerRootUnionFixture(entityName string, schema *parser.Schema
 				apiAlias,
 			),
 		}
+	case "AIGatewayVault":
+		// The fallback fixture (first variant, empty) cannot be used here: the
+		// konnect variant's SDK type requires name and config, so unmarshalling
+		// the empty payload into the request union fails. Conjur is populated
+		// instead, and its account/login/endpoint_url are required by the SDK
+		// too; its api key also exercises a SensitiveDataSource nested inside
+		// the variant.
+		return &opsControllerRootUnionFixture{
+			UnionTypeName:   "AIGatewayVaultConfig",
+			TypeConstName:   "AIGatewayVaultConfigTypeConjur",
+			VariantField:    "Conjur",
+			VariantTypeName: "ConjurVault",
+			VariantValue: fmt.Sprintf(
+				`&%[1]s.ConjurVault{Name: "test-vault", Config: %[1]s.ConjurVaultConfig{Account: "test-account", Login: "test-login", EndpointURL: "https://conjur.example.com", APIKey: %[1]s.SensitiveDataSource{Type: %[1]s.SensitiveDataSourceTypeInline, Value: new("test-api-key")}}}`,
+				apiAlias,
+			),
+		}
 	}
 
 	rootUnionTypeName := goFieldName(entityName + "Config")

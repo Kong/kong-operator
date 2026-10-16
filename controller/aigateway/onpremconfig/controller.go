@@ -106,6 +106,7 @@ func (cs *Controllers) SetupWithManager(_ context.Context, mgr ctrl.Manager) err
 		&AIGatewayModelProviderReconciler{},
 		&AIGatewayPolicyReconciler{},
 		&AIGatewaySNIReconciler{},
+		&AIGatewayVaultReconciler{},
 	} {
 		r.SetCommonFields(cs.Client, cs.Scheme, cs.Log, cs.CacheSyncTimeout, cs.ChangeNotifier, cs.StatusClient, cs.StatusQueue)
 		if err := r.SetupWithManager(mgr); err != nil {

@@ -279,6 +279,18 @@
   Revoking the grant stops the operator from syncing the static key (and from
   recreating it in Konnect); the key itself keeps working in Konnect.
   [#6007](https://github.com/Kong/kong-operator/pull/6007)
+- Added `AIGatewayVault` CRD, the AI Gateway counterpart of `KongVault`: a
+  vault the configuration entities can reference to keep secrets out of their
+  own configuration, backed by `konnect`, `env`, `aws`, `gcp`, `azure`,
+  `conjur` or `hcv`. `spec.apiSpec.type` selects the backend and the field
+  named after it holds that backend's configuration. The credentials a
+  backend needs — the CyberArk Secrets Manager API key, and the HashiCorp
+  token, certificate, OAuth client secret, AppRole secret ID, GCP service
+  account and static AWS keys — can be given inline or read from a Kubernetes
+  Secret. The entity is reconciled for a `KonnectAIGateway`; translation into
+  the on-prem configuration document is not implemented yet, so an
+  `OnPremAIGateway` vault is not pushed to its data planes.
+  [#6148](https://github.com/Kong/kong-operator/pull/6148)
 
 ### Changed
 

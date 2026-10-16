@@ -26,6 +26,7 @@ func generatedControllersForKonnectEntities(
 		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayModelProvider](controllerFactory),
 		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayPolicy](controllerFactory),
 		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewaySNI](controllerFactory),
+		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayVault](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.EventGatewayBackendCluster](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.EventGatewayDataPlaneCertificate](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.EventGatewayListener](controllerFactory),

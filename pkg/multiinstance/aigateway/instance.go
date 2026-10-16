@@ -631,6 +631,7 @@ func (i *Instance) Run(ctx context.Context) error {
 		index.OptionsForAIGatewayModelProvider(),
 		index.OptionsForAIGatewayPolicy(),
 		index.OptionsForAIGatewaySNI(),
+		index.OptionsForAIGatewayVault(),
 	} {
 		for _, opt := range opts {
 			if err := mgr.GetFieldIndexer().IndexField(ctx, opt.Object, opt.Field, opt.ExtractValueFn); err != nil {

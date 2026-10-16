@@ -695,6 +695,54 @@ apiGroupVersions:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
 
+      # The backends whose credentials the OAS carries inline are sourced from
+      # Kubernetes Secrets, like AIGatewayCertificate's cert/key and
+      # AIGatewayAuthStrategy's clientSecret. The other backends carry no
+      # inline secret: aws authenticates through an IAM role, gcp through
+      # project_id, azure through client_id/tenant_id and env through prefix.
+      # Path segments address the type union by its discriminator mapping keys
+      # (conjur, hcv) and the nested HashiCorpVaultConfig auth_method union by
+      # its own (token, cert, jwt, approle, gcp_iam, aws_iam) — a nested union's
+      # variant segment is matched against the mapping key verbatim, unlike the
+      # root union's, which also accepts the camelCase form.
+      - path: /v1/ai-gateways/{gatewayId}/vaults
+        name: AIGatewayVault
+        dataSources:
+          - path: spec.apiSpec.conjur.config.apiKey
+            type: Secret
+          - path: spec.apiSpec.hcv.config.token.token
+            type: Secret
+          - path: spec.apiSpec.hcv.config.cert.cert
+            type: Secret
+          - path: spec.apiSpec.hcv.config.cert.key
+            type: Secret
+          - path: spec.apiSpec.hcv.config.jwt.clientSecret
+            type: Secret
+          - path: spec.apiSpec.hcv.config.approle.secretID
+            type: Secret
+          - path: spec.apiSpec.hcv.config.gcp_iam.serviceAccount
+            type: Secret
+          - path: spec.apiSpec.hcv.config.aws_iam.accessKeyID
+            type: Secret
+          - path: spec.apiSpec.hcv.config.aws_iam.secretAccessKey
+            type: Secret
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayVaultsSDK
+            fieldName: AIGatewayVaults
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayVaultRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayVaultRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectAIGateway
+            group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayRef
+            typeName: AIGatewayRef
+
   configuration.konghq.com/v1alpha1:
     categories:
       - kong
