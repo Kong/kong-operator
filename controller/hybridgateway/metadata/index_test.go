@@ -177,7 +177,7 @@ func TestListOwnedChildResources(t *testing.T) {
 		assert.ElementsMatch(t, []string{"gw-a-cert", "gw-b-cert"}, itemNames(list))
 	})
 
-	t.Run("fallback to broad managed-by label listing without the index", func(t *testing.T) {
+	t.Run("fallback to the live listing without the index still scopes to the root object", func(t *testing.T) {
 		cl := fake.NewClientBuilder().
 			WithScheme(s).
 			WithObjects(ownedByA, ownedByB, shared, unannotated).
@@ -185,7 +185,61 @@ func TestListOwnedChildResources(t *testing.T) {
 
 		list, err := ListOwnedChildResources(ctx, cl, rA, gvk)
 		require.NoError(t, err)
-		assert.ElementsMatch(t, []string{"owned-by-a", "owned-by-b", "shared", "unannotated"}, itemNames(list))
+		assert.ElementsMatch(t, []string{"owned-by-a", "shared"}, itemNames(list))
+	})
+}
+
+// TestListOwnedChildResourcesLive verifies that the live (uncached) listing is
+// narrowed to the root object's own children for roots that own their children
+// through the hybrid-routes annotations, and stays unscoped for roots that do not
+// (a Gateway owns its children through owner references and the gateway
+// annotation, so filtering them by a route annotation would drop every child).
+func TestListOwnedChildResourcesLive(t *testing.T) {
+	var (
+		ctx = context.Background()
+		s   = objScheme.Get()
+		gvk = configurationv1alpha1.SchemeGroupVersion.WithKind("KongRoute")
+		rA  = &types.HTTPRoute{Namespace: "ns", Name: "route-a"}
+	)
+	rA.SetGroupVersionKind(httpRouteGVK)
+
+	ownedByA := kongRouteWithAnnotations("owned-by-a", map[string]string{
+		consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns/route-a",
+	})
+	ownedByB := kongRouteWithAnnotations("owned-by-b", map[string]string{
+		consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns/route-b",
+	})
+	unannotated := kongRouteWithAnnotations("unannotated", nil)
+
+	cl := fake.NewClientBuilder().
+		WithScheme(s).
+		WithObjects(ownedByA, ownedByB, unannotated).
+		Build()
+
+	t.Run("route root", func(t *testing.T) {
+		list, err := ListOwnedChildResourcesLive(ctx, cl, rA, gvk)
+		require.NoError(t, err)
+		assert.ElementsMatch(t, []string{"owned-by-a"}, itemNames(list))
+	})
+
+	t.Run("gateway root", func(t *testing.T) {
+		gw := &types.Gateway{Namespace: "ns", Name: "gw-a"}
+		gw.SetGroupVersionKind(schema.GroupVersionKind{
+			Group: "gateway.networking.k8s.io", Version: "v1", Kind: "Gateway",
+		})
+
+		certGVK := configurationv1alpha1.SchemeGroupVersion.WithKind("KongCertificate")
+		gwCert := &configurationv1alpha1.KongCertificate{
+			Namespace: "ns",
+			Name:      "gw-a-cert",
+			Labels:    map[string]string{consts.GatewayOperatorManagedByLabel: "Gateway"},
+		}
+		require.NoError(t, cl.Create(ctx, gwCert))
+
+		list, err := ListOwnedChildResourcesLive(ctx, cl, gw, certGVK)
+		require.NoError(t, err)
+		assert.ElementsMatch(t, []string{"gw-a-cert"}, itemNames(list),
+			"children without a hybrid-routes annotation must not be filtered out for a gateway root")
 	})
 }
 

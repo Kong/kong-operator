@@ -202,9 +202,9 @@ func isIndexUnavailableError(err error) bool {
 // for the expected GVK. When the root object kind owns its children through the
 // hybrid-routes annotations and a typed list is available for the GVK, the list
 // is served from the cache and scoped to the root object via the annotation
-// index; otherwise it falls back to the broad live unstructured list filtered by
-// the managed-by label (legacy behavior). The result is always returned as
-// unstructured items so callers can treat all child GVKs uniformly.
+// index; otherwise it falls back to the live unstructured listing filtered by the
+// managed-by label (and, for route-owned roots, by the annotation). The result is
+// always returned as unstructured items so callers can treat all child GVKs uniformly.
 func ListOwnedChildResources(
 	ctx context.Context,
 	cl client.Client,
@@ -247,9 +247,15 @@ func ListOwnedChildResources(
 
 // ListOwnedChildResourcesLive lists the child resources of the given root object
 // for the expected GVK with a live (uncached) unstructured listing scoped by the
-// managed-by label only. It is the legacy listing, the fallback of
-// ListOwnedChildResources, and the confirmation used on the root-deletion path
-// when an empty cached listing would otherwise release the root finalizer.
+// managed-by label. It is the listing used on the root-deletion path, where the
+// cleanup concludes that the root has no children left on the basis of what it
+// returns, and the fallback of ListOwnedChildResources.
+//
+// The managed-by label is broader than the root object (it matches the children of
+// every root of the same kind), so for root kinds that own their children through
+// the hybrid-routes annotations the listing is narrowed to the root's own children
+// before it is returned. This is the same ownership test the orphan handler applies
+// after its own fresh read, so it removes work without changing any delete decision.
 func ListOwnedChildResourcesLive(
 	ctx context.Context,
 	cl client.Client,
@@ -260,6 +266,13 @@ func ListOwnedChildResourcesLive(
 	list.SetGroupVersionKind(gvk)
 	if err := cl.List(ctx, list, LabelSelectorForOwnedResources(rootObj, nil)); err != nil {
 		return nil, fmt.Errorf("unable to list objects with gvk %s: %w", gvk.String(), err)
+	}
+
+	if isRouteOwnerKind(rootObj.GetObjectKind().GroupVersionKind().Kind) {
+		am := NewAnnotationManager(ctrllog.FromContext(ctx))
+		list.Items = slices.DeleteFunc(list.Items, func(item unstructured.Unstructured) bool {
+			return !am.ContainsRoute(&item, rootObj)
+		})
 	}
 	return list, nil
 }
