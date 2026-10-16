@@ -296,6 +296,8 @@ type TypeConfig struct {
 	// OpsResponseStatusFields configures fields to copy from the SDK create
 	// response into the CRD status struct.
 	OpsResponseStatusFields []ResponseStatusFieldConfig `yaml:"-"`
+	// OpsTrackCreateInputs records a fingerprint of create-only entity inputs.
+	OpsTrackCreateInputs bool `yaml:"-"`
 	// DataSources lists field paths whose values can be provided either inline
 	// or sourced from a Kubernetes Secret or ConfigMap. Each entry causes the
 	// OAS-derived field at Path to become a union struct supporting inline and
@@ -652,6 +654,8 @@ type ResponseStatusSubField struct {
 }
 
 type typeOpsYAML struct {
+	// TrackCreateInputs generates status and helpers for detecting create-input drift.
+	TrackCreateInputs bool `yaml:"trackCreateInputs,omitempty"`
 	// RequireClient indicates that generated ops for this entity need a
 	// controller-runtime client to fetch cluster data such as Secrets.
 	RequireClient bool `yaml:"requireClient,omitempty"`
@@ -729,6 +733,7 @@ func (tc *TypeConfig) UnmarshalYAML(value *yaml.Node) error {
 		tc.OpsGetForUID = raw.Ops.GetForUID
 		tc.OpsSDK = raw.Ops.SDK
 		tc.OpsResponseStatusFields = raw.Ops.ResponseStatusFields
+		tc.OpsTrackCreateInputs = raw.Ops.TrackCreateInputs
 	}
 
 	return nil
@@ -736,6 +741,8 @@ func (tc *TypeConfig) UnmarshalYAML(value *yaml.Node) error {
 
 // EntityOpsConfig holds the operations configuration for a single entity type.
 type EntityOpsConfig struct {
+	// TrackCreateInputs enables fingerprints for create-only entities.
+	TrackCreateInputs bool
 	// Ops maps operation names (e.g. "create", "update") to their SDK type configs.
 	Ops map[string]*OpConfig
 	// RequireClient indicates that generated ops need a controller-runtime client
@@ -891,6 +898,7 @@ func (c *APIGroupVersionConfig) OpsConfig(pathToEntityName map[string]string) ma
 			GetForUID:                   tc.OpsGetForUID,
 			SDK:                         tc.OpsSDK,
 			ResponseStatusFields:        tc.OpsResponseStatusFields,
+			TrackCreateInputs:           tc.OpsTrackCreateInputs,
 		}
 	}
 	return result
@@ -1219,6 +1227,14 @@ func (tc *TypeConfig) validate() error {
 			if err := validateGetForUIDMatchFields("ops.getForUID.matchFields", tc.OpsGetForUID.MatchFields); err != nil {
 				return err
 			}
+		}
+	}
+	if tc.OpsTrackCreateInputs {
+		if tc.Ops["create"] == nil || tc.Ops["update"] != nil {
+			return fmt.Errorf("ops.trackCreateInputs requires create without update")
+		}
+		if len(tc.DataSources) == 0 {
+			return fmt.Errorf("ops.trackCreateInputs requires dataSources")
 		}
 	}
 	for i, f := range tc.OpsResponseStatusFields {

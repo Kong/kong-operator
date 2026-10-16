@@ -18,10 +18,10 @@ func TestPendingKonnectIDStore(t *testing.T) {
 	})
 
 	t.Run("Store then Get returns the stored ID", func(t *testing.T) {
-		s.Store(key, "konnect-id")
+		s.Store(key, pendingKonnectEntityStatus{ID: "konnect-id", CreateInputsHash: "sha256:hash"})
 		got, ok := s.Get(key)
 		assert.True(t, ok)
-		assert.Equal(t, "konnect-id", got)
+		assert.Equal(t, pendingKonnectEntityStatus{ID: "konnect-id", CreateInputsHash: "sha256:hash"}, got)
 	})
 
 	t.Run("Delete removes the entry", func(t *testing.T) {
@@ -33,15 +33,15 @@ func TestPendingKonnectIDStore(t *testing.T) {
 	t.Run("entries are isolated per key", func(t *testing.T) {
 		k1 := client.ObjectKey{Namespace: "ns", Name: "a"}
 		k2 := client.ObjectKey{Namespace: "ns", Name: "b"}
-		s.Store(k1, "id-a")
-		s.Store(k2, "id-b")
+		s.Store(k1, pendingKonnectEntityStatus{ID: "id-a"})
+		s.Store(k2, pendingKonnectEntityStatus{ID: "id-b"})
 
 		got1, ok1 := s.Get(k1)
 		got2, ok2 := s.Get(k2)
 		assert.True(t, ok1)
 		assert.True(t, ok2)
-		assert.Equal(t, "id-a", got1)
-		assert.Equal(t, "id-b", got2)
+		assert.Equal(t, "id-a", got1.ID)
+		assert.Equal(t, "id-b", got2.ID)
 
 		s.Delete(k1)
 		_, ok1 = s.Get(k1)

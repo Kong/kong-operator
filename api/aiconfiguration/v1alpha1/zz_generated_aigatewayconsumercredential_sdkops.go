@@ -12,7 +12,28 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectoper "github.com/Kong/sdk-konnect-go/models/operations"
+
+	"github.com/kong/kong-operator/v2/internal/utils/createinputs"
 )
+
+// GetCreateInputsHash returns the fingerprint recorded at creation or baselining.
+func (obj *AIGatewayConsumerCredential) GetCreateInputsHash() string {
+	return obj.Status.CreateInputsHash
+}
+
+// SetCreateInputsHash records a fingerprint without storing sensitive values.
+func (obj *AIGatewayConsumerCredential) SetCreateInputsHash(hash string) {
+	obj.Status.CreateInputsHash = hash
+}
+
+// CalculateCreateInputsHash resolves and fingerprints the current create inputs.
+func (obj *AIGatewayConsumerCredential) CalculateCreateInputsHash(ctx context.Context, cl client.Client) (string, error) {
+	req, err := obj.ToCreateAiGatewayConsumerCredentialRequest(ctx, cl)
+	if err != nil {
+		return "", err
+	}
+	return createinputs.Hash(req.CreateAIGatewayConsumerCredentialRequest)
+}
 
 // AIGatewayConsumerCredentialSDKOpsFreeformKeyFields lists free-form / map data-keyed
 // subtrees whose keys are user data (e.g. an HTTP header name) and must be

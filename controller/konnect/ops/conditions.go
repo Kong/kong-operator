@@ -16,6 +16,17 @@ type entityType interface {
 	GetGeneration() int64
 }
 
+// SetKonnectEntityCreateInputsAppliedConditionTrue records a successful create.
+func SetKonnectEntityCreateInputsAppliedConditionTrue(obj entityType) {
+	_setKonnectEntityConditon(
+		obj,
+		konnectv1alpha1.CreateInputsAppliedConditionType,
+		metav1.ConditionTrue,
+		konnectv1alpha1.CreateInputsReasonApplied,
+		"Current inputs were applied when the entity was created in Konnect",
+	)
+}
+
 // SetKonnectEntityProgrammedConditionTrue sets the KonnectEntityProgrammed condition to true
 // on the provided object.
 // Unlike the failure counterpart, the condition is upserted even when its content is

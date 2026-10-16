@@ -9,6 +9,7 @@ import (
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	createinputs "github.com/kong/kong-operator/v2/internal/utils/createinputs"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 )
@@ -27,6 +28,11 @@ func createAIGatewayDataPlaneCertificate(
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
+	// Fingerprint this request, not a second Secret read after creation.
+	createInputsHash, err := createinputs.Hash(req)
+	if err != nil {
+		return err
+	}
 	req.Labels = WithKubernetesMetadataLabels(obj, req.Labels)
 
 	resp, err := sdk.CreateAiGatewayDataPlaneCertificate(ctx, parentID, req)
@@ -38,6 +44,8 @@ func createAIGatewayDataPlaneCertificate(
 	}
 
 	obj.SetKonnectID(resp.AIGatewayDataPlaneClientCertificate.ID)
+	obj.SetCreateInputsHash(createInputsHash)
+	SetKonnectEntityCreateInputsAppliedConditionTrue(obj)
 	return nil
 }
 

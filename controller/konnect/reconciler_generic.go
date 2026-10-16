@@ -495,6 +495,10 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	}
 
+	if res, err := handleCreateInputs(ctx, r.Client, ent); err != nil || !res.IsZero() {
+		return res, err
+	}
+
 	// If a type has ConfigMap data sources, handle them.
 	res, stop, err = handleConfigMapRef(ctx, r.Client, ent)
 	if err != nil || !res.IsZero() {
@@ -765,10 +769,14 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 		//     if the status update below fails (preventing orphaned entities);
 		//   - de-duplication: a subsequent reconcile reading a stale, ID-less cached
 		//     status will restore the ID from here instead of creating a duplicate.
-		// Only the entity's own ID can be lost here; parent references are persisted
-		// by their reference handlers in earlier reconcile passes.
+		// The entity's ID and create-input fingerprint can be lost here; parent
+		// references are persisted by their handlers in earlier reconcile passes.
 		if id := ent.GetKonnectStatus().GetKonnectID(); id != "" {
-			r.pendingKonnectIDs.Store(client.ObjectKeyFromObject(ent), id)
+			pending := pendingKonnectEntityStatus{ID: id}
+			if inputs, ok := any(ent).(createInputsAware); ok {
+				pending.CreateInputsHash = inputs.GetCreateInputsHash()
+			}
+			r.pendingKonnectIDs.Store(client.ObjectKeyFromObject(ent), pending)
 		}
 
 		// Regardless of the error, patch the status as it can contain the Konnect ID,
@@ -821,7 +829,18 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 		return ctrl.Result{}, nil
 	}
 
+	previousID := ent.GetKonnectStatus().GetKonnectID()
+	previousHash := ""
+	if inputs, ok := any(ent).(createInputsAware); ok {
+		previousHash = inputs.GetCreateInputsHash()
+	}
 	res, err = ops.Update(ctx, sdk, r.SyncPeriod, r.Client, r.MetricRecorder, ent)
+	if inputs, ok := any(ent).(createInputsAware); ok &&
+		(previousID != ent.GetKonnectStatus().GetKonnectID() || previousHash != inputs.GetCreateInputsHash()) {
+		r.pendingKonnectIDs.Store(client.ObjectKeyFromObject(ent), pendingKonnectEntityStatus{
+			ID: ent.GetKonnectStatus().GetKonnectID(), CreateInputsHash: inputs.GetCreateInputsHash(),
+		})
+	}
 
 	// Set the server URL and org ID regardless of the error.
 	setStatusServerURLAndOrgID(ent, server, apiAuth.Status.OrganizationID)
@@ -938,36 +957,42 @@ func (r *KonnectEntityReconciler[T, TEnt]) reconcilePendingKonnectID(
 	ent TEnt,
 ) (ctrl.Result, bool, error) {
 	pendingKey := client.ObjectKeyFromObject(ent)
-	if ent.GetKonnectStatus().GetKonnectID() == "" {
-		if id, ok := r.pendingKonnectIDs.Get(pendingKey); ok {
-			old := ent.DeepCopyObject().(client.Object)
-			ent.SetKonnectID(id)
-			if _, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, ctrllog.FromContext(ctx), any(ent).(client.Object), old); err != nil {
-				if apierrors.IsConflict(err) {
-					return ctrl.Result{Requeue: true}, true, nil
-				}
-				return ctrl.Result{}, true, fmt.Errorf("failed to persist recovered Konnect ID for %s: %w", pendingKey, err)
-			}
-			return ctrl.Result{}, true, nil
-		}
-	} else {
-		r.pendingKonnectIDs.Delete(pendingKey)
+	pending, ok := r.pendingKonnectIDs.Get(pendingKey)
+	if !ok {
+		return ctrl.Result{}, false, nil
 	}
-	return ctrl.Result{}, false, nil
+	inputs, tracksInputs := any(ent).(createInputsAware)
+	if ent.GetKonnectStatus().GetKonnectID() == pending.ID &&
+		(!tracksInputs || pending.CreateInputsHash == "" || inputs.GetCreateInputsHash() == pending.CreateInputsHash) {
+		r.pendingKonnectIDs.Delete(pendingKey)
+		return ctrl.Result{}, false, nil
+	}
+	old := ent.DeepCopyObject().(client.Object)
+	ent.SetKonnectID(pending.ID)
+	if tracksInputs && pending.CreateInputsHash != "" {
+		inputs.SetCreateInputsHash(pending.CreateInputsHash)
+		ops.SetKonnectEntityCreateInputsAppliedConditionTrue(ent)
+	}
+	if _, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, ctrllog.FromContext(ctx), any(ent).(client.Object), old); err != nil {
+		if apierrors.IsConflict(err) {
+			return ctrl.Result{Requeue: true}, true, nil
+		}
+		return ctrl.Result{}, true, fmt.Errorf("failed to persist recovered Konnect status for %s: %w", pendingKey, err)
+	}
+	return ctrl.Result{}, true, nil
 }
 
 // restorePendingKonnectIDForDeletion restores the Konnect ID from the in-memory
-// store onto the object when its status does not carry one, so the deletion logic
-// can clean up the corresponding Konnect entity. If the ID is not in memory either
+// store onto the object when its status lacks an ID or still carries the ID from
+// before a tracked recreation, so deletion cleans up the latest Konnect entity.
+// If the ID is not in memory either
 // (e.g. after an operator restart), ops.Delete falls back to probing Konnect by
 // Kubernetes UID. Parent references needed for deletion are already on the object,
 // persisted by their reference handlers in earlier reconcile passes.
 func (r *KonnectEntityReconciler[T, TEnt]) restorePendingKonnectIDForDeletion(ent TEnt) {
-	if ent.GetKonnectStatus().GetKonnectID() != "" {
-		return
-	}
-	if id, ok := r.pendingKonnectIDs.Get(client.ObjectKeyFromObject(ent)); ok {
-		ent.SetKonnectID(id)
+	if pending, ok := r.pendingKonnectIDs.Get(client.ObjectKeyFromObject(ent)); ok &&
+		(ent.GetKonnectStatus().GetKonnectID() == "" || pending.CreateInputsHash != "") {
+		ent.SetKonnectID(pending.ID)
 	}
 }
 
@@ -1082,7 +1107,7 @@ func patchWithProgrammedStatusConditionBasedOnOtherConditions[
 	cl client.Client,
 	ent T,
 ) (ctrl.Result, error) {
-	if k8sutils.AreAllConditionsHaveTrueStatus(ent) {
+	if k8sutils.AreAllConditionsHaveTrueStatus(ent, konnectv1alpha1.CreateInputsAppliedConditionType) {
 		return ctrl.Result{}, nil
 	}
 

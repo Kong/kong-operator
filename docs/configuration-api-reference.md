@@ -3279,6 +3279,7 @@ EventGatewayStaticKeyStatus defines the observed state of EventGatewayStaticKey.
 | --- | --- |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
 | `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `createInputsHash` _string_ | CreateInputsHash fingerprints the resolved user-supplied request body last successfully created in Konnect, before operator metadata is added. For entities predating this field, it is initialized from current inputs as a baseline, which cannot verify the values already stored in Konnect. |
 | `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
 
 _Appears in:_
