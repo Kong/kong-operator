@@ -22,6 +22,7 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	pkgmetadata "github.com/kong/kong-operator/v2/pkg/metadata"
+	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
 var (
@@ -176,7 +177,7 @@ func TestPluginForFilter(t *testing.T) {
 			},
 		},
 		{
-			name: "route tags are not merged into the tags annotation",
+			name: "route tags are not merged into the tags annotation of a generated plugin",
 			filter: gwtypes.HTTPRouteFilter{
 				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
 				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
@@ -437,6 +438,95 @@ func TestPluginsForRule_ExtensionRef_TagsAnnotation(t *testing.T) {
 	require.Len(t, plugins, 1)
 
 	assert.Equal(t, "plugin-tag,route-tag", plugins[0].Annotations[pkgmetadata.AnnotationKeyTags])
+}
+
+// TestPluginsForRule_InheritedTagsAnnotation pins that a generated KongPlugin and a mirrored
+// ExtensionRef KongPlugin both inherit the parent Gateway's and GatewayClass's tags through the
+// konghq.com/tags annotation, which is where the Konnect ops layer reads a plugin's tags from.
+func TestPluginsForRule_InheritedTagsAnnotation(t *testing.T) {
+	logger := logr.Discard()
+	ctx := context.Background()
+
+	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
+		Annotations: map[string]string{
+			pkgmetadata.AnnotationKeyTags: "route-tag",
+		},
+		Spec: gwtypes.HTTPRouteSpec{
+			CommonRouteSpec: gwtypes.CommonRouteSpec{
+				ParentRefs: []gwtypes.ParentReference{{Name: "test-gateway"}},
+			},
+		},
+	}
+	// Translation only ever runs on a route whose status is already settled (Reconcile
+	// updates it first and requeues), so the fixture carries the accepted-parent entry
+	// that marks the parentRef as one this controller reconciles.
+	httpRoute.Status.Parents = []gwtypes.RouteParentStatus{{
+		ParentRef:      gwtypes.ParentReference{Name: "test-gateway"},
+		ControllerName: gwtypes.GatewayController(vars.ControllerName()),
+	}}
+	parentRef := &gwtypes.ParentReference{Name: "test-gateway"}
+	gateway := &gwtypes.Gateway{
+		Name:        "test-gateway",
+		Namespace:   "test-namespace",
+		Annotations: map[string]string{pkgmetadata.AnnotationKeyTags: "gw-tag"},
+		Spec:        gwtypes.GatewaySpec{GatewayClassName: "test-class"},
+	}
+	gatewayClass := &gwtypes.GatewayClass{
+		Name:        "test-class",
+		Annotations: map[string]string{pkgmetadata.AnnotationKeyTags: "class-tag"},
+	}
+
+	t.Run("generated plugin", func(t *testing.T) {
+		rule := gwtypes.HTTPRouteRule{
+			Filters: []gwtypes.HTTPRouteFilter{{
+				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
+				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+					Set: []gatewayv1.HTTPHeader{{Name: "X-Custom-Header", Value: "custom-value"}},
+				},
+			}},
+		}
+		fakeClient := fakectrlruntimeclient.NewClientBuilder().
+			WithScheme(scheme.Get()).WithObjects(gateway, gatewayClass).Build()
+
+		plugins, err := PluginsForRule(ctx, logger, fakeClient, httpRoute, rule, parentRef)
+		require.NoError(t, err)
+		require.Len(t, plugins, 1)
+		// The route's own tags are deliberately left out of a shared generated plugin; only the
+		// inherited ones are added.
+		assert.Equal(t, "gw-tag,class-tag", plugins[0].Annotations[pkgmetadata.AnnotationKeyTags])
+	})
+
+	t.Run("mirrored ExtensionRef plugin keeps its own tags first", func(t *testing.T) {
+		referencedPlugin := &configurationv1.KongPlugin{
+			Name:      "referenced-plugin",
+			Namespace: "test-namespace",
+			Annotations: map[string]string{
+				pkgmetadata.AnnotationKeyTags: "plugin-tag",
+			},
+			PluginName: "rate-limiting",
+		}
+		rule := gwtypes.HTTPRouteRule{
+			Filters: []gwtypes.HTTPRouteFilter{{
+				Type: gatewayv1.HTTPRouteFilterExtensionRef,
+				ExtensionRef: &gatewayv1.LocalObjectReference{
+					Group: gatewayv1.Group(configurationv1.GroupVersion.Group),
+					Kind:  "KongPlugin",
+					Name:  "referenced-plugin",
+				},
+			}},
+		}
+		fakeClient := fakectrlruntimeclient.NewClientBuilder().
+			WithScheme(scheme.Get()).WithObjects(referencedPlugin, gateway, gatewayClass).Build()
+
+		plugins, err := PluginsForRule(ctx, logger, fakeClient, httpRoute, rule, parentRef)
+		require.NoError(t, err)
+		require.Len(t, plugins, 1)
+		assert.Equal(t, "plugin-tag,gw-tag,class-tag", plugins[0].Annotations[pkgmetadata.AnnotationKeyTags])
+	})
 }
 
 func TestPluginsForRule_ExtensionRef_Tags(t *testing.T) {
