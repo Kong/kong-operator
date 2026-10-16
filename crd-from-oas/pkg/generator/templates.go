@@ -2424,7 +2424,7 @@ const opsControllerTestTemplate = sharedGeneratedFilePreamble + `
 package ops
 
 import (
-{{- if .AssertsInjectInto}}
+{{- if .NeedsJSON}}
 	"encoding/json"
 {{- end}}
 	"errors"
@@ -2507,6 +2507,9 @@ func TestCreate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 	expectedRequest, err := obj.Spec.APISpec.{{.Create.CreateReqMethod}}()
 {{- end}}
 	require.NoError(t, err)
+{{- if and .RootUnion .RootUnion.ExpectedPayloadCheck}}
+{{.RootUnion.ExpectedPayloadCheck}}
+{{- end}}
 {{- $reqBody := "expectedRequest"}}{{if and .Create.CreateFullyWrapped .Create.CreateBodyField}}{{$reqBody = printf "expectedRequest.%s" .Create.CreateBodyField}}{{end}}
 {{- if .AssertsInjectInto}}
 	{

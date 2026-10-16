@@ -13,6 +13,116 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 )
 
+// AIGatewayModelProviderSDKOpsBoolField describes a boolean enum field that must be normalized for SDK payloads.
+type AIGatewayModelProviderSDKOpsBoolField struct {
+	Label string
+	Path  []string
+}
+
+// AIGatewayModelProviderSDKOpsBoolFields lists all boolean enum fields that must be normalized for SDK payloads.
+var AIGatewayModelProviderSDKOpsBoolFields = []AIGatewayModelProviderSDKOpsBoolField{
+	{
+		Label: "azure.config.auth.azure.use_managed_identity",
+		Path: []string{
+			"azure",
+			"config",
+			"auth",
+			"azure",
+			"use_managed_identity",
+		},
+	},
+	{
+		Label: "gemini.config.auth.gcp.use_gcp_service_account",
+		Path: []string{
+			"gemini",
+			"config",
+			"auth",
+			"gcp",
+			"use_gcp_service_account",
+		},
+	},
+}
+
+func normalizeAIGatewayModelProviderSDKOpsBoolFields(payload map[string]any) error {
+	for _, field := range AIGatewayModelProviderSDKOpsBoolFields {
+		if _, err := normalizeAIGatewayModelProviderSDKOpsBoolField(payload, field.Path); err != nil {
+			return fmt.Errorf("%s: %w", field.Label, err)
+		}
+	}
+	return nil
+}
+
+func normalizeAIGatewayModelProviderSDKOpsBoolField(value any, path []string) (any, error) {
+	if len(path) == 0 {
+		switch typed := value.(type) {
+		case nil:
+			return nil, nil
+		case bool:
+			return typed, nil
+		case string:
+			switch typed {
+			case "Enabled":
+				return true, nil
+			case "Disabled":
+				return false, nil
+			default:
+				return nil, fmt.Errorf("unexpected boolean enum %q", typed)
+			}
+		default:
+			return nil, fmt.Errorf("expected string boolean enum, got %T", value)
+		}
+	}
+
+	if value == nil {
+		return nil, nil
+	}
+
+	segment := path[0]
+	switch segment {
+	case "[]":
+		items, ok := value.([]any)
+		if !ok {
+			return nil, fmt.Errorf("expected array, got %T", value)
+		}
+		for i, item := range items {
+			normalized, err := normalizeAIGatewayModelProviderSDKOpsBoolField(item, path[1:])
+			if err != nil {
+				return nil, err
+			}
+			items[i] = normalized
+		}
+		return items, nil
+	case "{}":
+		object, ok := value.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("expected object, got %T", value)
+		}
+		for key, item := range object {
+			normalized, err := normalizeAIGatewayModelProviderSDKOpsBoolField(item, path[1:])
+			if err != nil {
+				return nil, err
+			}
+			object[key] = normalized
+		}
+		return object, nil
+	default:
+		object, ok := value.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("expected object, got %T", value)
+		}
+		child, ok := object[segment]
+		if !ok {
+			return value, nil
+		}
+		normalized, err := normalizeAIGatewayModelProviderSDKOpsBoolField(child, path[1:])
+		if err != nil {
+			return nil, err
+		}
+		object[segment] = normalized
+		return object, nil
+	}
+}
+
 // AIGatewayModelProviderSDKOpsConstFields lists const discriminators that were stripped
 // from the CRD structs but are required by the Konnect SDK request types.
 var AIGatewayModelProviderSDKOpsConstFields = []sdkOpsConstField{
@@ -425,6 +535,9 @@ func (s *AIGatewayModelProviderAPISpec) marshalSDKOpsPayload() (map[string]any, 
 	payload, ok := renamed.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("failed to convert AIGatewayModelProviderAPISpec SDK payload to map")
+	}
+	if err := normalizeAIGatewayModelProviderSDKOpsBoolFields(payload); err != nil {
+		return nil, fmt.Errorf("failed to normalize AIGatewayModelProviderAPISpec SDK payload: %w", err)
 	}
 	injectSDKOpsConstFields(payload, AIGatewayModelProviderSDKOpsConstFields)
 	return payload, nil

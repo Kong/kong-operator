@@ -4846,6 +4846,8 @@ _Appears in:_
 
 - [AIGatewayModelBalancerSemanticConfigEmbeddings](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddings)
 
+
+
 #### AIGatewayModelProviderSagemaker
 
 

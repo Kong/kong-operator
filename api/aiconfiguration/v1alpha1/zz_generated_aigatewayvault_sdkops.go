@@ -61,6 +61,195 @@ var AIGatewayVaultSDKOpsBoolFields = []AIGatewayVaultSDKOpsBoolField{
 			"base64_decode",
 		},
 	},
+	{
+		Label: "hcv.config.approle.base64_decode",
+		Path: []string{
+			"hcv",
+			"config",
+			"approle",
+			"base64_decode",
+		},
+	},
+	{
+		Label: "hcv.config.approle.response_wrapping",
+		Path: []string{
+			"hcv",
+			"config",
+			"approle",
+			"response_wrapping",
+		},
+	},
+	{
+		Label: "hcv.config.approle.ssl_verify",
+		Path: []string{
+			"hcv",
+			"config",
+			"approle",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "hcv.config.aws_ec2.base64_decode",
+		Path: []string{
+			"hcv",
+			"config",
+			"aws_ec2",
+			"base64_decode",
+		},
+	},
+	{
+		Label: "hcv.config.aws_ec2.ssl_verify",
+		Path: []string{
+			"hcv",
+			"config",
+			"aws_ec2",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "hcv.config.aws_iam.base64_decode",
+		Path: []string{
+			"hcv",
+			"config",
+			"aws_iam",
+			"base64_decode",
+		},
+	},
+	{
+		Label: "hcv.config.aws_iam.ssl_verify",
+		Path: []string{
+			"hcv",
+			"config",
+			"aws_iam",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "hcv.config.azure.base64_decode",
+		Path: []string{
+			"hcv",
+			"config",
+			"azure",
+			"base64_decode",
+		},
+	},
+	{
+		Label: "hcv.config.azure.ssl_verify",
+		Path: []string{
+			"hcv",
+			"config",
+			"azure",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "hcv.config.cert.base64_decode",
+		Path: []string{
+			"hcv",
+			"config",
+			"cert",
+			"base64_decode",
+		},
+	},
+	{
+		Label: "hcv.config.cert.ssl_verify",
+		Path: []string{
+			"hcv",
+			"config",
+			"cert",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "hcv.config.gcp_gce.base64_decode",
+		Path: []string{
+			"hcv",
+			"config",
+			"gcp_gce",
+			"base64_decode",
+		},
+	},
+	{
+		Label: "hcv.config.gcp_gce.ssl_verify",
+		Path: []string{
+			"hcv",
+			"config",
+			"gcp_gce",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "hcv.config.gcp_iam.base64_decode",
+		Path: []string{
+			"hcv",
+			"config",
+			"gcp_iam",
+			"base64_decode",
+		},
+	},
+	{
+		Label: "hcv.config.gcp_iam.ssl_verify",
+		Path: []string{
+			"hcv",
+			"config",
+			"gcp_iam",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "hcv.config.jwt.base64_decode",
+		Path: []string{
+			"hcv",
+			"config",
+			"jwt",
+			"base64_decode",
+		},
+	},
+	{
+		Label: "hcv.config.jwt.ssl_verify",
+		Path: []string{
+			"hcv",
+			"config",
+			"jwt",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "hcv.config.kubernetes.base64_decode",
+		Path: []string{
+			"hcv",
+			"config",
+			"kubernetes",
+			"base64_decode",
+		},
+	},
+	{
+		Label: "hcv.config.kubernetes.ssl_verify",
+		Path: []string{
+			"hcv",
+			"config",
+			"kubernetes",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "hcv.config.token.base64_decode",
+		Path: []string{
+			"hcv",
+			"config",
+			"token",
+			"base64_decode",
+		},
+	},
+	{
+		Label: "hcv.config.token.ssl_verify",
+		Path: []string{
+			"hcv",
+			"config",
+			"token",
+			"ssl_verify",
+		},
+	},
 }
 
 func normalizeAIGatewayVaultSDKOpsBoolFields(payload map[string]any) error {

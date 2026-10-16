@@ -111,6 +111,15 @@
   cannot be attributed to an entity is logged and surfaced as a warning on the
   gateway.
   [#6115](https://github.com/Kong/kong-operator/pull/6115)
+- Konnect payloads for entities whose configuration nests a discriminated union
+  now normalize the boolean enum fields (`Enabled`/`Disabled`) inside that union
+  to the booleans the Konnect API expects, and rename the nested union's
+  discriminator value to snake_case so its variant is selected. Setting such a
+  field used to send the enum string and made the create or update fail, e.g.
+  `validateKey` on Event Gateway schema-validation consume and produce policies,
+  and `base64Decode`, `sslVerify`, `useCache` or `international` on AI Gateway
+  models, model providers and MCP servers.
+  [#6148](https://github.com/Kong/kong-operator/pull/6148)
 
 ### Added
 

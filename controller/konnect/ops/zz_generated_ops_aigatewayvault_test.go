@@ -3,6 +3,7 @@
 package ops
 
 import (
+	"encoding/json"
 	"errors"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -31,8 +32,8 @@ func testGeneratedAIGatewayVaultForSDKOps() *aiconfigurationv1alpha1.AIGatewayVa
 		Spec: aiconfigurationv1alpha1.AIGatewayVaultSpec{
 			APISpec: aiconfigurationv1alpha1.AIGatewayVaultAPISpec{
 				AIGatewayVaultConfig: &aiconfigurationv1alpha1.AIGatewayVaultConfig{
-					Type:   aiconfigurationv1alpha1.AIGatewayVaultConfigTypeConjur,
-					Conjur: &aiconfigurationv1alpha1.ConjurVault{Name: "test-vault", Config: aiconfigurationv1alpha1.ConjurVaultConfig{Account: "test-account", Login: "test-login", EndpointURL: "https://conjur.example.com", APIKey: aiconfigurationv1alpha1.SensitiveDataSource{Type: aiconfigurationv1alpha1.SensitiveDataSourceTypeInline, Value: new("test-api-key")}}},
+					Type:      aiconfigurationv1alpha1.AIGatewayVaultConfigTypeHashiCorp,
+					HashiCorp: &aiconfigurationv1alpha1.HashiCorpVault{Name: "test-vault", Config: &aiconfigurationv1alpha1.HashiCorpVaultConfig{AuthMethod: aiconfigurationv1alpha1.HashiCorpVaultConfigTypeAwsIAM, AwsIAM: &aiconfigurationv1alpha1.HashiCorpVaultAwsIAMConfig{Host: "vault.example.com", Port: 8200, Role: "test-role", Region: "us-east-1", Base64Decode: "Enabled", SSLVerify: "Disabled", AccessKeyID: aiconfigurationv1alpha1.SensitiveDataSource{Type: aiconfigurationv1alpha1.SensitiveDataSourceTypeInline, Value: new("test-access-key")}}}},
 				},
 			},
 		},
@@ -50,6 +51,29 @@ func TestCreateAIGatewayVault_UsesSDKOpsConversion(t *testing.T) {
 	obj.SetGatewayID(parentID)
 	expectedRequest, err := obj.ToCreateAIGatewayVaultRequest(ctx, cl)
 	require.NoError(t, err)
+
+	{
+		// Check the conversion against a hand-written Konnect payload: the mock
+		// expectation below is built by calling the same conversion function, so
+		// it cannot catch a wrong payload by itself.
+		data, err := json.Marshal(expectedRequest)
+		require.NoError(t, err)
+		var body map[string]any
+		require.NoError(t, json.Unmarshal(data, &body))
+		require.Subset(t, body, map[string]any{
+			"name": "test-vault",
+			"type": "hcv",
+		})
+		config, ok := body["config"].(map[string]any)
+		require.True(t, ok)
+		require.Subset(t, config, map[string]any{
+			"auth_method":   "aws_iam",
+			"base64_decode": true,
+			"ssl_verify":    false,
+			"access_key_id": "test-access-key",
+			"host":          "vault.example.com",
+		})
+	}
 	if expectedRequest.KonnectConfigStoreVault != nil {
 		expectedRequest.KonnectConfigStoreVault.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.KonnectConfigStoreVault.Labels)
 	}
