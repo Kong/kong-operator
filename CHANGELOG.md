@@ -120,7 +120,7 @@
   can resolve and balance across the individual DataPlane Pods. Setting or
   unsetting the field recreates the ingress Service, as `clusterIP` is
   immutable.
-  [#TBD](https://github.com/Kong/kong-operator/pull/TBD)
+  [#6144](https://github.com/Kong/kong-operator/pull/6144)
 - OnPremAIGateway spec: added a `dataplaneSync` field with optional
   `intervalSeconds` and `timeoutSeconds` (non-negative integers, in seconds) to
   tune the cadence of and the timeout for pushing configuration to the data
