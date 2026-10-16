@@ -1,0 +1,25 @@
+# An AIGatewayPolicy with inline config that adds a custom header to the
+# model's responses. The on-prem aiGatewayRef targets the OnPremAIGateway.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayPolicy
+metadata:
+  name: ($aigw_policy_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: response-transformer
+    displayName: "AIGateway Policy Response Transformer"
+    enabled: "Enabled"
+    global: "Disabled"
+    name: ($aigw_policy_name)
+    config:
+      type: inline
+      value:
+        add:
+          headers:
+            - "Modified-By-Policy-Inline:Kong-Operator-Chainsaw-Test"
