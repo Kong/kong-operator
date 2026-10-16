@@ -78,8 +78,6 @@ to generate a `status.createInputsHash` fingerprint and helpers for detecting
 input changes. This requires a `create` operation without an `update` operation.
 Successful creates record the resolved request body before operator metadata is
 added; the reconciler reports subsequent drift using `CreateInputsApplied`.
-See [create-only entity input changes](../docs/create-only-konnect-entities.md)
-for user-facing behavior and upgrade limitations.
 
 For reconciler-enabled child entities, `crd-from-oas` also generates shared
 `<ParentAccessor>Ref*` condition constants in the target API package. The
