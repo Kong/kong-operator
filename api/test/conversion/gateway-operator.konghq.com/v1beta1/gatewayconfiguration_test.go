@@ -68,6 +68,31 @@ func TestGatewayConfiguration_ConvertTo(t *testing.T) {
 			},
 		},
 		{
+			name: "DataPlane Options with headless ingress service",
+			spec: operatorv1beta1.GatewayConfigurationSpec{
+				DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
+					Network: operatorv1beta1.GatewayConfigDataPlaneNetworkOptions{
+						Services: &operatorv1beta1.GatewayConfigDataPlaneServices{
+							Ingress: &operatorv1beta1.GatewayConfigServiceOptions{
+								Type:      corev1.ServiceTypeClusterIP,
+								ClusterIP: new(corev1.ClusterIPNone),
+							},
+						},
+					},
+				},
+			},
+			expectedDataPlane: &operatorv2beta1.GatewayConfigDataPlaneOptions{
+				Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
+					Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
+						Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
+							Type:      corev1.ServiceTypeClusterIP,
+							ClusterIP: new(corev1.ClusterIPNone),
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "DataPlane Options with ingress service IP families",
 			spec: operatorv1beta1.GatewayConfigurationSpec{
 				DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
@@ -441,6 +466,32 @@ func TestGatewayConfiguration_ConvertFrom(t *testing.T) {
 					NodePort: int32(3000),
 				},
 			},
+		},
+		{
+			name: "DataPlane Options with headless ingress service",
+			spec: operatorv2beta1.GatewayConfigurationSpec{
+				DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
+					Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
+						Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
+							Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
+								Type:      corev1.ServiceTypeClusterIP,
+								ClusterIP: new(corev1.ClusterIPNone),
+							},
+						},
+					},
+				},
+			},
+			expectedDataPlane: &operatorv1beta1.GatewayConfigDataPlaneOptions{
+				Network: operatorv1beta1.GatewayConfigDataPlaneNetworkOptions{
+					Services: &operatorv1beta1.GatewayConfigDataPlaneServices{
+						Ingress: &operatorv1beta1.GatewayConfigServiceOptions{
+							Type:      corev1.ServiceTypeClusterIP,
+							ClusterIP: new(corev1.ClusterIPNone),
+						},
+					},
+				},
+			},
+			expectedExtensions: []commonv1alpha1.ExtensionRef{},
 		},
 		{
 			name: "DataPlane Options with ingress service IP families",

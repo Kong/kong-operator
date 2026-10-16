@@ -49,6 +49,7 @@ func GenerateNewIngressServiceForDataPlane(dataplane *operatorv1beta1.DataPlane,
 	setDataPlaneIngressServiceExternalTrafficPolicy(dataplane, svc)
 	setDataPlaneIngressServiceTrafficDistribution(dataplane, svc)
 	setDataPlaneIngressServiceInternalTrafficPolicy(dataplane, svc)
+	setDataPlaneIngressServiceClusterIP(dataplane, svc)
 	LabelObjectAsDataPlaneManaged(svc)
 
 	for _, opt := range opts {
@@ -138,6 +139,19 @@ func setDataPlaneIngressServiceInternalTrafficPolicy(
 		return
 	}
 	svc.Spec.InternalTrafficPolicy = dataplane.Spec.Network.Services.Ingress.InternalTrafficPolicy
+}
+
+func setDataPlaneIngressServiceClusterIP(
+	dataplane *operatorv1beta1.DataPlane,
+	svc *corev1.Service,
+) {
+	if dataplane == nil ||
+		dataplane.Spec.Network.Services == nil ||
+		dataplane.Spec.Network.Services.Ingress == nil ||
+		dataplane.Spec.Network.Services.Ingress.ClusterIP == nil {
+		return
+	}
+	svc.Spec.ClusterIP = *dataplane.Spec.Network.Services.Ingress.ClusterIP
 }
 
 func setDataPlaneIngressServiceIPFamilies(

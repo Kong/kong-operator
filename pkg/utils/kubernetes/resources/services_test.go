@@ -517,6 +517,52 @@ func TestGenerateNewIngressServiceForDataPlaneIPFamilies(t *testing.T) {
 	}
 }
 
+func TestGenerateNewIngressServiceForDataPlaneClusterIP(t *testing.T) {
+	testCases := []struct {
+		name     string
+		ingress  *operatorv1beta1.DataPlaneServiceOptions
+		expected string
+	}{
+		{
+			name:     "no ingress options leaves clusterIP unset",
+			expected: "",
+		},
+		{
+			name: "unset clusterIP leaves clusterIP unset",
+			ingress: &operatorv1beta1.DataPlaneServiceOptions{
+				Type: corev1.ServiceTypeClusterIP,
+			},
+			expected: "",
+		},
+		{
+			name: "clusterIP None creates a headless Service",
+			ingress: &operatorv1beta1.DataPlaneServiceOptions{
+				Type:      corev1.ServiceTypeClusterIP,
+				ClusterIP: new(corev1.ClusterIPNone),
+			},
+			expected: corev1.ClusterIPNone,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dp := &operatorv1beta1.DataPlane{
+				Name:      "dp-1",
+				Namespace: "default",
+				UID:       types.UID("1234"),
+			}
+			if tc.ingress != nil {
+				dp.Spec.Network.Services = &operatorv1beta1.DataPlaneServices{
+					Ingress: tc.ingress,
+				}
+			}
+			svc, err := GenerateNewIngressServiceForDataPlane(dp)
+			require.NoError(t, err)
+			require.Equal(t, tc.expected, svc.Spec.ClusterIP)
+		})
+	}
+}
+
 func TestServicePortsFromDataPlaneIngressOpt(t *testing.T) {
 	makeDP := func(ports []operatorv1beta1.DataPlaneServicePort) *operatorv1beta1.DataPlane {
 		return &operatorv1beta1.DataPlane{

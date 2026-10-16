@@ -594,6 +594,90 @@ func TestDataplane(t *testing.T) {
 			RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("service clusterIP", func(t *testing.T) {
+		common.TestCasesGroup[*operatorv1beta1.DataPlane]{
+			{
+				Name: "headless ClusterIP service",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										Type:      corev1.ServiceTypeClusterIP,
+										ClusterIP: new("None"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "clusterIP None with default LoadBalancer type",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										ClusterIP: new("None"),
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("ClusterIP can only be set to None when type is ClusterIP."),
+			},
+			{
+				Name: "clusterIP None with NodePort type",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										Type:      corev1.ServiceTypeNodePort,
+										ClusterIP: new("None"),
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("ClusterIP can only be set to None when type is ClusterIP."),
+			},
+			{
+				Name: "clusterIP set to an IP address",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										Type:      corev1.ServiceTypeClusterIP,
+										ClusterIP: new("10.96.0.10"),
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("Unsupported value: \"10.96.0.10\""),
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("service ip families", func(t *testing.T) {
 		ipFamilies := func(families ...corev1.IPFamily) []corev1.IPFamily {
 			return families
