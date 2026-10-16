@@ -103,7 +103,7 @@ spec:
               - name: ADDRESS
                 value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
               - name: ROUTE_PATH
-                value: /chat
+                value: /policy/chat
               - name: MODEL_ALIAS
                 value: ($model_name)
               - name: INCLUDE_HEADER
@@ -142,7 +142,7 @@ spec:
               - name: ADDRESS
                 value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
               - name: ROUTE_PATH
-                value: /chat
+                value: /policy/chat
               - name: MODEL_ALIAS
                 value: ($model_name)
               - name: INCLUDE_HEADER
@@ -172,7 +172,7 @@ spec:
               - name: ADDRESS
                 value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
               - name: ROUTE_PATH
-                value: /chat
+                value: /policy/chat
               - name: MODEL_ALIAS
                 value: ($model_name)
               - name: INCLUDE_HEADER
@@ -199,9 +199,10 @@ spec:
             file: 04-model.yaml
     - name: Verify-condition-policy-is-applied
       description: |
-        The policy's condition (`http.path.startsWith("/chat")`) matches the
-        request path, so the header must be present — the condition gated
-        plugin execution and the runtime accepted the 2.1 feature.
+        The policy's condition (`http.path.startsWith("/policy/chat")`)
+        matches the request path, so the header must be present — the
+        condition gated plugin execution and the runtime accepted the 2.1
+        feature.
       try:
         - script:
             env:
@@ -210,7 +211,7 @@ spec:
               - name: ADDRESS
                 value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
               - name: ROUTE_PATH
-                value: /chat
+                value: /policy/chat
               - name: MODEL_ALIAS
                 value: ($model_name)
               - name: INCLUDE_HEADER
@@ -219,6 +220,33 @@ spec:
                 value: "Modified-By-Policy-Condition"
               - name: EXPECT_HEADER_VALUE
                 value: "Kong-Operator-Chainsaw-Test"
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+    - name: Verify-condition-policy-does-not-apply-on-non-matching-path
+      description: |
+        Negative for the condition: a request routed through the same model
+        whose path does NOT match the condition's startsWith expression gets
+        a 200 from the model but WITHOUT the policy's header — proving the
+        condition gates the plugin rather than it being unconditionally
+        applied. Three consecutive header-less responses guard against a
+        propagation blip.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: /policy/other
+              - name: MODEL_ALIAS
+                value: ($model_name)
+              - name: INCLUDE_HEADER
+                value: "false"
+              - name: EXPECT_HEADER
+                value: "Modified-By-Policy-Condition"
+              - name: EXPECTED_SUCCESS
+                value: "false"
             content: |
               bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
   catch:
