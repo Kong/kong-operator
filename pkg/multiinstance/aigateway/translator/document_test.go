@@ -338,6 +338,31 @@ func aiGatewayMCPServerFixture(name string) *aiconfigurationv1alpha1.AIGatewayMC
 	}
 }
 
+// aiGatewayVaultFixture returns an env-backed vault. prefix is the vault prefix (the CR's
+// apiSpec.env.name and the Kong entity's `prefix`), so passing the same one twice produces a
+// duplicate-prefix document.
+func aiGatewayVaultFixture(name, prefix string) *aiconfigurationv1alpha1.AIGatewayVault {
+	return &aiconfigurationv1alpha1.AIGatewayVault{
+		Name: name, Namespace: "default",
+		Spec: aiconfigurationv1alpha1.AIGatewayVaultSpec{
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				Group:         aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+				Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gw"},
+			},
+			APISpec: aiconfigurationv1alpha1.AIGatewayVaultAPISpec{
+				AIGatewayVaultConfig: &aiconfigurationv1alpha1.AIGatewayVaultConfig{
+					Type: aiconfigurationv1alpha1.AIGatewayVaultConfigTypeEnvironmentVariable,
+					EnvironmentVariable: &aiconfigurationv1alpha1.EnvironmentVariableVault{
+						Name:   aiconfigurationv1alpha1.AIGatewayVaultName(prefix),
+						Config: aiconfigurationv1alpha1.EnvironmentVariableVaultConfig{Prefix: "MY_SECRET_"},
+					},
+				},
+			},
+		},
+	}
+}
+
 // TestBuildDocument covers listing, conversion and deterministic ordering: translateKind sorts
 // by k8s object name so the rendered payload (and its hash, which drives the drift loop in
 // controller.go) doesn't flap across List calls that return in a different order.
@@ -374,11 +399,14 @@ func TestBuildDocument(t *testing.T) {
 	agentA := aiGatewayAgentFixture("agent-a")
 	mcpServerB := aiGatewayMCPServerFixture("mcp-server-b")
 	mcpServerA := aiGatewayMCPServerFixture("mcp-server-a")
+	vaultB := aiGatewayVaultFixture("vault-b", "env-b")
+	vaultA := aiGatewayVaultFixture("vault-a", "env-a")
 
 	builder := fake.NewClientBuilder().WithScheme(scheme).
 		WithObjects(gw, modelB, modelA, providerB, providerA, policyB, policyA, groupB, groupA,
 			authStrategyB, authStrategyA, consumerB, consumerA, certB, certA, sniB, sniA,
-			customPolicyB, customPolicyA, caCertB, caCertA, agentB, agentA, mcpServerB, mcpServerA)
+			customPolicyB, customPolicyA, caCertB, caCertA, agentB, agentA, mcpServerB, mcpServerA,
+			vaultB, vaultA)
 	for _, opt := range index.OptionsForAIGatewayModel() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
@@ -416,6 +444,9 @@ func TestBuildDocument(t *testing.T) {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	for _, opt := range index.OptionsForAIGatewayMCPServer() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayVault() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	cl := builder.Build()
@@ -469,9 +500,15 @@ func TestBuildDocument(t *testing.T) {
 	// config.url lands on the top-level UpstreamURL.
 	require.Equal(t, []string{"policy-a"}, doc.MCPServers[0].Policies)
 	require.Equal(t, "http://upstream:8080", doc.MCPServers[0].UpstreamURL)
+	// The vault's apiSpec name is its Kong prefix; the vault type is the Kong backend.
+	require.Len(t, doc.Vaults, 2)
+	require.Equal(t, "env-a", doc.Vaults[0].Name)
+	require.Equal(t, "env", doc.Vaults[0].Type)
+	require.Equal(t, map[string]any{"prefix": "MY_SECRET_"}, doc.Vaults[0].Config)
+	require.Equal(t, "env-b", doc.Vaults[1].Name)
 
 	// Every entity translated successfully, so all statuses are reported as such.
-	require.Len(t, statuses, 24)
+	require.Len(t, statuses, 26)
 	for _, s := range statuses {
 		require.NoError(t, s.Err)
 	}
@@ -491,9 +528,23 @@ func TestBuildDocument(t *testing.T) {
 			ID   string   `yaml:"id"`
 			Tags []string `yaml:"tags"`
 		} `yaml:"ca_certificates"`
+		Vaults []struct {
+			ID     string         `yaml:"id"`
+			Prefix string         `yaml:"prefix"`
+			Name   string         `yaml:"name"`
+			Config map[string]any `yaml:"config"`
+		} `yaml:"vaults"`
 	}
 	require.NoError(t, yaml.Unmarshal(sniPayload, &dblessConfig))
 	require.Len(t, dblessConfig.CACertificates, 2)
+	// The vaults must reach the rendered payload with unique IDs: the converter derives each
+	// entity ID from the vault prefix.
+	require.Len(t, dblessConfig.Vaults, 2)
+	require.Equal(t, "env-a", dblessConfig.Vaults[0].Prefix)
+	require.Equal(t, "env", dblessConfig.Vaults[0].Name)
+	require.Equal(t, map[string]any{"prefix": "MY_SECRET_"}, dblessConfig.Vaults[0].Config)
+	require.NotEmpty(t, dblessConfig.Vaults[0].ID)
+	require.NotEqual(t, dblessConfig.Vaults[0].ID, dblessConfig.Vaults[1].ID)
 	tags := make([]string, 0, 2)
 	for i, caCert := range dblessConfig.CACertificates {
 		require.NotEmpty(t, caCert.ID, "ca_certificates[%d] has no ID", i)
@@ -579,6 +630,9 @@ func TestBuildDocument_NoModels(t *testing.T) {
 	for _, opt := range index.OptionsForAIGatewayMCPServer() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
+	for _, opt := range index.OptionsForAIGatewayVault() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
 	cl := builder.Build()
 
 	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
@@ -657,6 +711,9 @@ func TestBuildDocument_PerEntityFailure(t *testing.T) {
 	for _, opt := range index.OptionsForAIGatewayMCPServer() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
+	for _, opt := range index.OptionsForAIGatewayVault() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
 	cl := builder.Build()
 
 	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
@@ -714,6 +771,7 @@ func TestBuildDocument_CACertificateDuplicateContent(t *testing.T) {
 		index.OptionsForAIGatewayCustomPolicy(),
 		index.OptionsForAIGatewayAgent(),
 		index.OptionsForAIGatewayMCPServer(),
+		index.OptionsForAIGatewayVault(),
 	} {
 		for _, opt := range opts {
 			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
@@ -735,6 +793,64 @@ func TestBuildDocument_CACertificateDuplicateContent(t *testing.T) {
 			require.Equal(t, "ca-cert-b", s.Obj.GetName())
 			require.ErrorContains(t, s.Err, "duplicate CA certificate content")
 			require.ErrorContains(t, s.Err, "ca-cert-a")
+		}
+	}
+	require.Equal(t, 1, failed)
+}
+
+// TestBuildDocument_VaultDuplicatePrefix mirrors TestBuildDocument_CACertificateDuplicateContent:
+// the converter derives the rendered vault entity ID from the vault prefix, so two CRs sharing
+// one prefix would render two entries with the same ID and fail the whole push. The first CR
+// (namespace/name order) wins; the duplicate is reported per-entity and excluded.
+func TestBuildDocument_VaultDuplicatePrefix(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	vaultA := aiGatewayVaultFixture("vault-a", "env")
+	vaultB := aiGatewayVaultFixture("vault-b", "env")
+
+	builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gw, vaultA, vaultB)
+	// BuildDocument lists every configuration-entity kind, so every kind's index is needed.
+	for _, opts := range [][]index.Option{
+		index.OptionsForAIGatewayModel(),
+		index.OptionsForAIGatewayModelProvider(),
+		index.OptionsForAIGatewayPolicy(),
+		index.OptionsForAIGatewayConsumerGroup(),
+		index.OptionsForAIGatewayConsumer(),
+		index.OptionsForAIGatewayConsumerCredential(),
+		index.OptionsForAIGatewayAuthStrategy(),
+		index.OptionsForAIGatewayCACertificate(),
+		index.OptionsForAIGatewayCertificate(),
+		index.OptionsForAIGatewaySNI(),
+		index.OptionsForAIGatewayCustomPolicy(),
+		index.OptionsForAIGatewayAgent(),
+		index.OptionsForAIGatewayMCPServer(),
+		index.OptionsForAIGatewayVault(),
+	} {
+		for _, opt := range opts {
+			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+		}
+	}
+	cl := builder.Build()
+
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	require.NoError(t, err)
+
+	require.Len(t, doc.Vaults, 1)
+	require.Equal(t, "env", doc.Vaults[0].Name)
+
+	require.Len(t, statuses, 2)
+	failed := 0
+	for _, s := range statuses {
+		if s.Err != nil {
+			failed++
+			require.Equal(t, "vault-b", s.Obj.GetName())
+			require.ErrorContains(t, s.Err, `duplicate vault prefix "env"`)
+			require.ErrorContains(t, s.Err, "vault-a")
 		}
 	}
 	require.Equal(t, 1, failed)
@@ -803,6 +919,9 @@ func TestBuildDocument_SNIFailsWhenReferencedCertificateFails(t *testing.T) {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	for _, opt := range index.OptionsForAIGatewayMCPServer() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
+	for _, opt := range index.OptionsForAIGatewayVault() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	cl := builder.Build()
@@ -897,6 +1016,9 @@ func TestBuildDocument_CrossNamespaceEntityRejected(t *testing.T) {
 	for _, opt := range index.OptionsForAIGatewayMCPServer() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
+	for _, opt := range index.OptionsForAIGatewayVault() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
 	cl := builder.Build()
 
 	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
@@ -911,6 +1033,7 @@ func TestBuildDocument_CrossNamespaceEntityRejected(t *testing.T) {
 	require.Empty(t, doc.Certificates)
 	require.Empty(t, doc.SNIs)
 	require.Empty(t, doc.CustomPolicies)
+	require.Empty(t, doc.Vaults)
 	require.Len(t, doc.AuthStrategies, 1)
 	require.Equal(t, "same-ns", doc.AuthStrategies[0].Name)
 
@@ -983,6 +1106,7 @@ func TestBuildDocument_CredentialChangeRerender(t *testing.T) {
 		index.OptionsForAIGatewayCustomPolicy(),
 		index.OptionsForAIGatewayAgent(),
 		index.OptionsForAIGatewayMCPServer(),
+		index.OptionsForAIGatewayVault(),
 	} {
 		for _, opt := range opts {
 			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
@@ -1028,6 +1152,7 @@ func newTestBuilder(scheme *runtime.Scheme, objs ...client.Object) *fake.ClientB
 		index.OptionsForAIGatewayCustomPolicy(),
 		index.OptionsForAIGatewayAgent(),
 		index.OptionsForAIGatewayMCPServer(),
+		index.OptionsForAIGatewayVault(),
 	} {
 		for _, opt := range opts {
 			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)

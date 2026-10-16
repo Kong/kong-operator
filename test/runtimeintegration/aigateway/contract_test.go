@@ -180,6 +180,9 @@ func representativeDBLessPayload(t *testing.T) []byte {
 	for _, opt := range index.OptionsForAIGatewayMCPServer() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
+	for _, opt := range index.OptionsForAIGatewayVault() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
 	cl := builder.Build()
 
 	doc, statuses, err := translator.BuildDocument(context.Background(), cl, types.NamespacedName{Namespace: "default", Name: gwName})

@@ -296,9 +296,10 @@
   backend needs — the CyberArk Secrets Manager API key, and the HashiCorp
   token, certificate, OAuth client secret, AppRole secret ID, GCP service
   account and static AWS keys — can be given inline or read from a Kubernetes
-  Secret. The entity is reconciled for a `KonnectAIGateway`; translation into
-  the on-prem configuration document is not implemented yet, so an
-  `OnPremAIGateway` vault is not pushed to its data planes.
+  Secret. The entity is reconciled for a `KonnectAIGateway`; the vault is
+  translated for an `OnPremAIGateway` too, so an on-prem vault is pushed to its
+  data planes as a Kong vault entity. `spec.apiSpec.type: konnect` is rejected
+  on-prem: a Konnect Config Store has no self-managed gateway equivalent.
   [#6148](https://github.com/Kong/kong-operator/pull/6148)
 
 ### Changed

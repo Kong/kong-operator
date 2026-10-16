@@ -20,8 +20,8 @@ package v1alpha1
 //     {{- template "sdkOpsRefInjections" $}} define.
 //   - The method to generate is MarshalAIGatewayEntity(ctx, cl) ([]byte, error): bytes, not a
 //     typed *aigw.Model, so api/ stays free of the ai-deck-converter dependency and callers can
-//     stuff the ten entities' output into a map[string][]json.RawMessage envelope for
-//     aigw.Parse. Ten methods from one template edit.
+//     stuff the eleven entities' output into a map[string][]json.RawMessage envelope for
+//     aigw.Parse. Eleven methods from one template edit.
 //   - What survives hand-written even after that: the name-only resolver below (until the
 //     generator grows an on-prem resolve mode that skips the Konnect-ID gate described on
 //     resolveEntityName), the "managed_by" drop, and the model-selector re-nesting.
