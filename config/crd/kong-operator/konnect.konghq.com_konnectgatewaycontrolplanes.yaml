@@ -323,12 +323,15 @@ spec:
                   Konnect and connect to the control plane.
                 properties:
                   controlPlane:
-                    description: ControlPlaneEndpoint is the endpoint for the control
-                      plane.
+                    description: |-
+                      ControlPlaneEndpoint is the control plane endpoint, as returned by
+                      Konnect: it may carry a path, e.g. reached over PrivateLink.
                     minLength: 1
                     type: string
                   telemetry:
-                    description: TelemetryEndpoint is the endpoint for telemetry.
+                    description: |-
+                      TelemetryEndpoint is the telemetry endpoint of the Konnect control plane,
+                      as returned by Konnect: it may carry a path, e.g. reached over PrivateLink.
                     minLength: 1
                     type: string
                 required:
@@ -696,12 +699,15 @@ spec:
                   Konnect and connect to the control plane.
                 properties:
                   controlPlane:
-                    description: ControlPlaneEndpoint is the endpoint for the control
-                      plane.
+                    description: |-
+                      ControlPlaneEndpoint is the control plane endpoint, as returned by
+                      Konnect: it may carry a path, e.g. reached over PrivateLink.
                     minLength: 1
                     type: string
                   telemetry:
-                    description: TelemetryEndpoint is the endpoint for telemetry.
+                    description: |-
+                      TelemetryEndpoint is the telemetry endpoint of the Konnect control plane,
+                      as returned by Konnect: it may carry a path, e.g. reached over PrivateLink.
                     minLength: 1
                     type: string
                 required:
