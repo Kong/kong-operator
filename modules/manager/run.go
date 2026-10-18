@@ -320,6 +320,21 @@ func Run(
 		RenewDeadline:           &cfg.LeaderElectionRenewDeadline,
 		RetryPeriod:             &cfg.LeaderElectionRetryPeriod,
 		Cache:                   cacheOptions,
+		// Reads through mgr.GetClient() are served by the informer cache, so by default a
+		// read that follows one of our own writes can still observe the pre-write object.
+		// Read-your-own-writes consistency makes such a read wait until the cache has
+		// observed the write, which removes the "reconcile ran immediately after a status
+		// patch and still saw an empty Konnect ID" class of duplicate creates.
+		//
+		// This only holds while every object we write can actually be observed by the
+		// cache: Secret/ConfigMap writers have to stamp the --secret-label-selector /
+		// --config-map-label-selector label, and --watch-namespaces has to cover every
+		// namespace we write into. See docs/internal/read-your-own-writes-consistency.md.
+		Client: client.Options{
+			Cache: &client.CacheOptions{
+				EnableReadYourWritesConsistency: new(true),
+			},
+		},
 	}
 
 	mgr, err := ctrl.NewManager(restCfg, managerOpts)

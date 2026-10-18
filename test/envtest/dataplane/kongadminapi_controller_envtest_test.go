@@ -74,6 +74,7 @@ func startKongAdminAPIServiceReconciler(ctx context.Context, t *testing.T, clien
 		Cache: cache.Options{
 			SyncPeriod: new(2 * time.Second),
 		},
+		Client: envtest.ReadYourOwnWritesClientOptions(),
 	})
 	require.NoError(t, err)
 
