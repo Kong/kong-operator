@@ -46,6 +46,25 @@ const (
 	kindUDPRoute  = "UDPRoute"
 )
 
+// routeKindFromObject returns the route kind of obj. It resolves the kind from
+// the Go type, because TypeMeta is not guaranteed to be populated on cached
+// objects. It returns "" for an object that carries no route kind.
+func routeKindFromObject(obj client.Object) string {
+	switch obj.(type) {
+	case *gwtypes.HTTPRoute:
+		return kindHTTPRoute
+	case *gwtypes.GRPCRoute:
+		return kindGRPCRoute
+	case *gwtypes.TLSRoute:
+		return kindTLSRoute
+	case *gwtypes.TCPRoute:
+		return kindTCPRoute
+	case *gwtypes.UDPRoute:
+		return kindUDPRoute
+	}
+	return obj.GetObjectKind().GroupVersionKind().Kind
+}
+
 // Defaults for the annotations when not specified that match the behavior of on-prem.
 const (
 	// defaultStripPath is the default value for the strip-path annotation when not specified.
@@ -291,20 +310,7 @@ func BuildAnnotations(obj client.Object, parentRef *gwtypes.ParentReference) map
 	// Use a distinct annotation key per route kind so routes with the same
 	// namespace/name but different kinds do not collide. The keys come from the
 	// shared kind-to-annotation table.
-	var routeKind string
-	switch obj.(type) {
-	case *gwtypes.HTTPRoute:
-		routeKind = kindHTTPRoute
-	case *gwtypes.GRPCRoute:
-		routeKind = kindGRPCRoute
-	case *gwtypes.TLSRoute:
-		routeKind = kindTLSRoute
-	case *gwtypes.TCPRoute:
-		routeKind = kindTCPRoute
-	case *gwtypes.UDPRoute:
-		routeKind = kindUDPRoute
-	}
-	if key := hybridRouteAnnotationKeyForKind(routeKind); key != "" {
+	if key := hybridRouteAnnotationKeyForKind(routeKindFromObject(obj)); key != "" {
 		annotations[key] = client.ObjectKeyFromObject(obj).String()
 	}
 

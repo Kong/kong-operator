@@ -104,27 +104,10 @@ func HybridRouteOwnerIndexFunc(obj client.Object) []string {
 // resources of the given root route object are indexed. It mirrors the
 // "<RouteKind>/<namespace>/<name>" format produced by HybridRouteOwnerIndexFunc.
 func HybridRouteOwnerIndexKey(route client.Object) string {
-	// TypeMeta is not guaranteed to be populated on cached objects, so
-	// resolve the kind from the Go type.
-	var kind string
-	switch route.(type) {
-	case *gwtypes.HTTPRoute:
-		kind = kindHTTPRoute
-	case *gwtypes.GRPCRoute:
-		kind = kindGRPCRoute
-	case *gwtypes.TLSRoute:
-		kind = kindTLSRoute
-	case *gwtypes.TCPRoute:
-		kind = kindTCPRoute
-	case *gwtypes.UDPRoute:
-		kind = kindUDPRoute
-	default:
-		kind = route.GetObjectKind().GroupVersionKind().Kind
-	}
-	return kind + "/" + client.ObjectKeyFromObject(route).String()
+	return routeKindFromObject(route) + "/" + client.ObjectKeyFromObject(route).String()
 }
 
-// hybridRouteOwnerChildType holds, per child resource kind, a constructor for
+// hybridRouteOwnerChildType holds, per child resource GVK, a constructor for
 // the empty typed object used for index registration and one for the typed
 // list used for indexed cached lists. Typed objects/lists are required because
 // field selectors are only served by the cached client; unstructured lists
@@ -135,42 +118,44 @@ type hybridRouteOwnerChildType struct {
 	newList   func() client.ObjectList
 }
 
-// hybridRouteOwnerChildTypes maps the kinds of child resources managed by the
-// hybridgateway converters to their typed object and list constructors.
-var hybridRouteOwnerChildTypes = map[string]hybridRouteOwnerChildType{
-	"KongRoute": {
+// hybridRouteOwnerChildTypes maps the GVK of each child resource managed by the
+// hybridgateway converters to its typed object and list constructors. The key is
+// the full GVK, not the kind: a kind alone cannot select the typed list when two
+// API groups or versions define the same kind.
+var hybridRouteOwnerChildTypes = map[schema.GroupVersionKind]hybridRouteOwnerChildType{
+	configurationv1alpha1.SchemeGroupVersion.WithKind("KongRoute"): {
 		newObject: func() client.Object { return &configurationv1alpha1.KongRoute{} },
 		newList:   func() client.ObjectList { return &configurationv1alpha1.KongRouteList{} },
 	},
-	"KongService": {
+	configurationv1alpha1.SchemeGroupVersion.WithKind("KongService"): {
 		newObject: func() client.Object { return &configurationv1alpha1.KongService{} },
 		newList:   func() client.ObjectList { return &configurationv1alpha1.KongServiceList{} },
 	},
-	"KongUpstream": {
+	configurationv1alpha1.SchemeGroupVersion.WithKind("KongUpstream"): {
 		newObject: func() client.Object { return &configurationv1alpha1.KongUpstream{} },
 		newList:   func() client.ObjectList { return &configurationv1alpha1.KongUpstreamList{} },
 	},
-	"KongTarget": {
+	configurationv1alpha1.SchemeGroupVersion.WithKind("KongTarget"): {
 		newObject: func() client.Object { return &configurationv1alpha1.KongTarget{} },
 		newList:   func() client.ObjectList { return &configurationv1alpha1.KongTargetList{} },
 	},
-	"KongPluginBinding": {
+	configurationv1alpha1.SchemeGroupVersion.WithKind("KongPluginBinding"): {
 		newObject: func() client.Object { return &configurationv1alpha1.KongPluginBinding{} },
 		newList:   func() client.ObjectList { return &configurationv1alpha1.KongPluginBindingList{} },
 	},
-	"KongSNI": {
+	configurationv1alpha1.SchemeGroupVersion.WithKind("KongSNI"): {
 		newObject: func() client.Object { return &configurationv1alpha1.KongSNI{} },
 		newList:   func() client.ObjectList { return &configurationv1alpha1.KongSNIList{} },
 	},
-	"KongCertificate": {
+	configurationv1alpha1.SchemeGroupVersion.WithKind("KongCertificate"): {
 		newObject: func() client.Object { return &configurationv1alpha1.KongCertificate{} },
 		newList:   func() client.ObjectList { return &configurationv1alpha1.KongCertificateList{} },
 	},
-	"KongReferenceGrant": {
+	configurationv1alpha1.SchemeGroupVersion.WithKind("KongReferenceGrant"): {
 		newObject: func() client.Object { return &configurationv1alpha1.KongReferenceGrant{} },
 		newList:   func() client.ObjectList { return &configurationv1alpha1.KongReferenceGrantList{} },
 	},
-	"KongPlugin": {
+	configurationv1.SchemeGroupVersion.WithKind("KongPlugin"): {
 		newObject: func() client.Object { return &configurationv1.KongPlugin{} },
 		newList:   func() client.ObjectList { return &configurationv1.KongPluginList{} },
 	},
@@ -182,20 +167,20 @@ var hybridRouteOwnerChildTypes = map[string]hybridRouteOwnerChildType{
 // same index several times (e.g. once per root-object controller sharing one
 // manager) is not an error.
 func RegisterHybridRouteOwnerIndexes(ctx context.Context, indexer client.FieldIndexer) error {
-	kinds := make([]string, 0, len(hybridRouteOwnerChildTypes))
-	for kind := range hybridRouteOwnerChildTypes {
-		kinds = append(kinds, kind)
+	gvks := make([]schema.GroupVersionKind, 0, len(hybridRouteOwnerChildTypes))
+	for gvk := range hybridRouteOwnerChildTypes {
+		gvks = append(gvks, gvk)
 	}
-	slices.Sort(kinds)
-	for _, kind := range kinds {
-		if err := indexer.IndexField(ctx, hybridRouteOwnerChildTypes[kind].newObject(), HybridRouteOwnerIndexField, HybridRouteOwnerIndexFunc); err != nil {
+	slices.SortFunc(gvks, func(a, b schema.GroupVersionKind) int { return strings.Compare(a.String(), b.String()) })
+	for _, gvk := range gvks {
+		if err := indexer.IndexField(ctx, hybridRouteOwnerChildTypes[gvk].newObject(), HybridRouteOwnerIndexField, HybridRouteOwnerIndexFunc); err != nil {
 			// The same index is registered once per root-object controller on a
 			// shared manager; a conflict means it is already registered, which
 			// is fine (both the informer cache and the fake client report it).
 			if isIndexAlreadyRegisteredError(err) {
 				continue
 			}
-			return fmt.Errorf("failed to register %s index for %s: %w", HybridRouteOwnerIndexField, kind, err)
+			return fmt.Errorf("failed to register %s index for %s: %w", HybridRouteOwnerIndexField, gvk.String(), err)
 		}
 	}
 	return nil
@@ -243,6 +228,12 @@ func isIndexUnavailableError(err error) bool {
 // index; otherwise it falls back to the live unstructured listing filtered by the
 // managed-by label (and, for route-owned roots, by the annotation). The result is
 // always returned as unstructured items so callers can treat all child GVKs uniformly.
+//
+// The indexed path reads the informer cache, which lags the API server in both
+// directions. Callers that delete on the strength of the listing must use
+// ListOwnedChildResourcesLive instead, and callers that only report status are
+// safe here because the child watches re-enqueue the root object when the cache
+// catches up.
 func ListOwnedChildResources(
 	ctx context.Context,
 	cl client.Client,
@@ -254,7 +245,7 @@ func ListOwnedChildResources(
 	// not carry, so its key would match nothing and the List would return an
 	// empty success, silently skipping the whole cleanup. Keep the legacy label
 	// listing for such roots.
-	if childType, ok := hybridRouteOwnerChildTypes[gvk.Kind]; ok && isRouteOwnerKind(rootObj.GetObjectKind().GroupVersionKind().Kind) {
+	if childType, ok := hybridRouteOwnerChildTypes[gvk]; ok && isRouteOwnerKind(rootObj.GetObjectKind().GroupVersionKind().Kind) {
 		listObj := childType.newList()
 		labelsListOpt := client.MatchingFields{
 			HybridRouteOwnerIndexField: HybridRouteOwnerIndexKey(rootObj),
