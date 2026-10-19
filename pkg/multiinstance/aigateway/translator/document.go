@@ -215,6 +215,14 @@ func BuildDocument(
 	// from the document.
 	translatedCACertCRs := make(map[string]string)
 
+	// Vault prefixes already claimed by a translated AIGatewayVault, mapped to the claiming
+	// CR's name: ai-deck-converter derives the rendered entity ID from the vault prefix
+	// (internal/kong/to_dbless.go's stableUUID("vault:"+prefix)), so two CRs sharing a prefix
+	// would render two entries with the same ID and fail the whole push. The first CR in
+	// namespace/name order wins; the duplicate is reported per-entity and excluded from the
+	// document.
+	translatedVaultPrefixes := make(map[string]string)
+
 	// The list is ordered so every kind translates after all the kinds it references:
 	// checkTranslatedRefs inside the converting wrappers relies on the referenced kinds'
 	// translated-name sets being complete by then. The one same-kind dependency
@@ -367,6 +375,23 @@ func BuildDocument(
 				return mcpServer, nil
 			},
 			&doc.MCPServers),
+		translateKind[aiconfigurationv1alpha1.AIGatewayVaultList](
+			cl, gw, index.IndexFieldAIGatewayVaultOnOnPremAIGatewayRef,
+			func(v *aiconfigurationv1alpha1.AIGatewayVault, ctx context.Context, cl client.Client) (*aigw.Vault, error) {
+				vault, err := v.ToAIGWVault(ctx, cl)
+				if err != nil {
+					return nil, err
+				}
+				if first, ok := translatedVaultPrefixes[vault.Name]; ok {
+					return nil, fmt.Errorf(
+						"duplicate vault prefix %q: AIGatewayVault %q already uses it, and the rendered entity ID is derived from the vault prefix",
+						vault.Name, first,
+					)
+				}
+				translatedVaultPrefixes[vault.Name] = v.Name
+				return vault, nil
+			},
+			&doc.Vaults),
 		translateKind[aiconfigurationv1alpha1.AIGatewayCACertificateList](
 			cl, gw, index.IndexFieldAIGatewayCACertificateOnOnPremAIGatewayRef,
 			func(c *aiconfigurationv1alpha1.AIGatewayCACertificate, ctx context.Context, cl client.Client) (*aigw.CACertificate, error) {

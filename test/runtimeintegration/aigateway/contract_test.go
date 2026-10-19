@@ -180,6 +180,9 @@ func representativeDBLessPayload(t *testing.T) []byte {
 	for _, opt := range index.OptionsForAIGatewayMCPServer() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
+	for _, opt := range index.OptionsForAIGatewayVault() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
 	cl := builder.Build()
 
 	doc, statuses, err := translator.BuildDocument(context.Background(), cl, types.NamespacedName{Namespace: "default", Name: gwName})
@@ -204,6 +207,7 @@ func representativeDBLessPayload(t *testing.T) []byte {
 	require.Len(t, doc.SNIs, 1, "the document must carry the SNI")
 	require.Len(t, doc.Agents, 1, "the document must carry the agent")
 	require.Len(t, doc.MCPServers, 1, "the document must carry the MCP server")
+	require.Len(t, doc.Vaults, 1, "the document must carry the vault")
 
 	payload, issues, err := translator.RenderDBLessYAML(doc, convert.Options{})
 	require.NoError(t, err)
