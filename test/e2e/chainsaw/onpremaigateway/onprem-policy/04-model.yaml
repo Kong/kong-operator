@@ -1,0 +1,44 @@
+# The AIGatewayModel referencing whichever AIGatewayPolicy ($aigw_policy_name)
+# the current step is verifying; re-applied with different bindings as the
+# test moves from one policy to the next.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModel
+metadata:
+  name: ($model_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: model
+    model:
+      name: ($model_name)
+      displayName: On-prem policy-test model
+      enabled: Enabled
+      formats:
+        - type: openai
+      capabilities:
+        - generate
+      config:
+        model:
+          nameHeader: Enabled
+        route:
+          # A regex path so two different request paths match the SAME route:
+          # the condition policy's positive and negative steps (see
+          # 07-policy-condition.yaml) both route through this model, and only
+          # the condition's startsWith decides whether the policy applies.
+          paths:
+            - ~/policy/.+
+      policies:
+        - name: ($aigw_policy_name)
+      targets:
+        - name: qwen2.5:0.5b
+          provider:
+            name: ($provider_name)
+          config:
+            type: openai
+            openai:
+              upstreamURL: http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/provider-a
