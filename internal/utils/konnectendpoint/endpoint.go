@@ -25,8 +25,11 @@ type Endpoint struct {
 func Parse(raw string) Endpoint {
 	toParse := raw
 	if !strings.Contains(raw, "://") {
-		// Without a scheme, net/url reads "cp.endpoint:443" as the scheme
-		// "cp.endpoint" with no authority; "//" starts the authority part.
+		// A Konnect endpoint can arrive without a scheme. url.Parse then reads
+		// the text before the first colon as the scheme, so "cp.endpoint:443"
+		// becomes scheme "cp.endpoint" with no host, and "host/cp/x" is read as
+		// a path. "//" makes the text an authority (RFC 3986 §3.2), so host,
+		// port and path land where the renderers read them.
 		toParse = "//" + raw
 	}
 
