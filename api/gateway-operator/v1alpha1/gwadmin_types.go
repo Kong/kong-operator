@@ -30,8 +30,9 @@ const (
 )
 
 // GWAdmin is the Schema for the GWAdmin API. It deploys gw-admin, the
-// on-prem control plane of the data planes that do not use Konnect (e.g. the
-// Event Gateway). Kong Operator pushes the configuration to gw-admin on its
+// on-prem control plane of the next-generation Kong data planes, such as the
+// Kong Event Gateway, when they run without Konnect. Kong Gateway 3.x data
+// planes are not supported. Kong Operator pushes the configuration to gw-admin on its
 // API listener, and the data planes pull it from its control plane (cp)
 // listener. Both listeners use mutual TLS: Kong Operator provisions and
 // rotates every certificate they need, from three certificate authorities:

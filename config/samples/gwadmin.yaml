@@ -1,5 +1,6 @@
-# gw-admin is the on-prem control plane of the data planes that do not use
-# Konnect (e.g. the Event Gateway). With an empty spec Kong Operator deploys it
+# gw-admin is the on-prem control plane of the next-generation Kong data
+# planes, such as the Kong Event Gateway, when they run without Konnect. Kong
+# Gateway 3.x data planes are not supported. With an empty spec Kong Operator deploys it
 # and creates its certificate authorities, from which it issues and rotates
 # every certificate gw-admin and Kong Operator need. The empty spec is the
 # same as:

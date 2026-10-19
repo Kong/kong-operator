@@ -182,11 +182,12 @@
   [#6119](https://github.com/Kong/kong-operator/pull/6119)
 - Added the `GWAdmin` CRD (`gateway-operator.konghq.com/v1alpha1`). A
   `GWAdmin` stands for one gw-admin instance, the in-cluster control plane of
-  the data planes that run without Konnect: its spec configures the gw-admin
-  Deployment, the Service the data planes pull the configuration from, and
-  the certificates of its listeners (`spec.tls.clientCA` and `spec.tls.cp`,
-  created by Kong Operator or taken from user Secrets, e.g. from
-  cert-manager).
+  the next-generation Kong data planes, such as the Kong Event Gateway, when
+  they run without Konnect; Kong Gateway 3.x data planes are not supported.
+  Its spec configures the gw-admin Deployment, the Service the data planes
+  pull the configuration from, and the certificates of its listeners
+  (`spec.tls.clientCA` and `spec.tls.cp`, created by Kong Operator or taken
+  from user Secrets, e.g. from cert-manager).
   [#6168](https://github.com/Kong/kong-operator/pull/6168)
 - `--enable-controller-onpremeventgateway` flag (default `false`): enables the
   `OnPremEventGateway` controller. A change to a gateway, or to an Event
