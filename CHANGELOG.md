@@ -80,7 +80,11 @@
   path render exactly as before; a value that carried a port previously had a
   second port appended, which is fixed. An endpoint value that cannot be used
   now reports `KonnectExtensionApplied=False` with reason `InvalidEndpoint`
-  instead of receiving a rendered value.
+  instead of receiving a rendered value. The other Konnect extension failures
+  (`RefNotPermitted`, `InvalidExtension`, `InvalidSecret`,
+  `KonnectExtensionNotReady`) now also surface their
+  `KonnectExtensionApplied=False` condition on the resource, where the
+  condition was previously not written.
   [#6104](https://github.com/Kong/kong-operator/issues/6104)
 - Konnect entities that resolve API authentication through a parent chain,
   including EventGateway policies and AI Gateway consumer credentials, no longer
