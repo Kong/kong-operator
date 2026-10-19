@@ -74335,6 +74335,7 @@ rules:
   - aigateways/finalizers
   - controlplanes/finalizers
   - dataplanes/finalizers
+  - gwadmins/finalizers
   verbs:
   - update
 - apiGroups:
@@ -74343,6 +74344,7 @@ rules:
   - aigateways/status
   - controlplanes/status
   - dataplanes/status
+  - gwadmins/status
   - kongplugininstallations/status
   - konnectextensions/finalizers
   - konnectextensions/status
@@ -74362,6 +74364,7 @@ rules:
 - apiGroups:
   - gateway-operator.konghq.com
   resources:
+  - gwadmins
   - kongplugininstallations
   - konnectextensions
   verbs:

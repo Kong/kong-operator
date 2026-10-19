@@ -481,6 +481,15 @@ func (g *GWAdmin) SetConditions(conditions []metav1.Condition) {
 	g.Status.Conditions = conditions
 }
 
+// GetReplicas returns the GWAdmin static replica count, or nil when it is not
+// set.
+func (g *GWAdmin) GetReplicas() *int32 {
+	if g.Spec.Deployment == nil {
+		return nil
+	}
+	return g.Spec.Deployment.Replicas
+}
+
 // GetHorizontalScaling returns the GWAdmin horizontal scaling options, or nil
 // when horizontal scaling is not configured.
 func (g *GWAdmin) GetHorizontalScaling() *commonv1alpha1.HorizontalScaling {

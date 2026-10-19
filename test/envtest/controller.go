@@ -33,8 +33,24 @@ type IngressReconciler interface {
 	SetLogger(logr.Logger)
 }
 
-// ManagerOption is a function that can be used to configure the manager.
-type ManagerOption func(manager.Manager) error
+// ManagerOption configures the manager built by NewManager. Build one with
+// WithManagerOptions, to change the manager.Options before the manager is
+// built, or with WithManager, to act on the manager once built.
+type ManagerOption struct {
+	options func(*manager.Options)
+	manager func(manager.Manager) error
+}
+
+// WithManagerOptions returns a ManagerOption changing the manager.Options
+// before the manager is built, e.g. WithWatchNamespace.
+func WithManagerOptions(f func(*manager.Options)) ManagerOption {
+	return ManagerOption{options: f}
+}
+
+// WithManager returns a ManagerOption acting on the manager once built.
+func WithManager(f func(manager.Manager) error) ManagerOption {
+	return ManagerOption{manager: f}
+}
 
 // NewManager returns a manager and a logs observer.
 // The logs observer can be used to dump logs if the test fails.
@@ -65,11 +81,19 @@ func NewManager(t *testing.T, ctx context.Context, cfg *rest.Config, s *runtime.
 		},
 	}
 
+	for _, opt := range opts {
+		if opt.options != nil {
+			opt.options(&o)
+		}
+	}
+
 	mgr, err := ctrl.NewManager(cfg, o)
 	require.NoError(t, err)
 
 	for _, opt := range opts {
-		require.NoError(t, opt(mgr))
+		if opt.manager != nil {
+			require.NoError(t, opt.manager(mgr))
+		}
 	}
 
 	return mgr, logs

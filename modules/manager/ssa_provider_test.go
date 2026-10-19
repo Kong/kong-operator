@@ -58,6 +58,11 @@ func TestIsSSAProviderNeeded(t *testing.T) {
 			want: true,
 		},
 		{
+			name: "GWAdmin controller enabled",
+			cfg:  Config{GWAdminControllerEnabled: true},
+			want: true,
+		},
+		{
 			name: "OnPremAIGateway controller enabled",
 			cfg:  Config{OnPremAIGatewayControllerEnabled: true},
 			want: true,
