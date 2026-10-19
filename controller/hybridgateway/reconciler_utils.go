@@ -371,19 +371,20 @@ func upstreamTargetsProgrammed(ctx context.Context, cl client.Client, targets []
 // hybridRouteAnnotationInfo returns the annotation key and route reference string for the given
 // root object. Returns empty strings for Gateway objects, which do not use hybrid-routes annotations.
 func hybridRouteAnnotationInfo[t converter.RootObject](obj t) (annotationKey, routeRef string) {
+	var kind string
 	switch o := any(obj).(type) {
 	case gwtypes.HTTPRoute:
-		return consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation, o.Namespace + "/" + o.Name
+		kind, routeRef = "HTTPRoute", o.Namespace+"/"+o.Name
 	case gwtypes.GRPCRoute:
-		return consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation, o.Namespace + "/" + o.Name
+		kind, routeRef = "GRPCRoute", o.Namespace+"/"+o.Name
 	case gwtypes.TLSRoute:
-		return consts.GatewayOperatorHybridRoutesTLSRouteAnnotation, o.Namespace + "/" + o.Name
+		kind, routeRef = "TLSRoute", o.Namespace+"/"+o.Name
 	case gwtypes.TCPRoute:
-		return consts.GatewayOperatorHybridRoutesTCPRouteAnnotation, o.Namespace + "/" + o.Name
+		kind, routeRef = "TCPRoute", o.Namespace+"/"+o.Name
 	case gwtypes.UDPRoute:
-		return consts.GatewayOperatorHybridRoutesUDPRouteAnnotation, o.Namespace + "/" + o.Name
+		kind, routeRef = "UDPRoute", o.Namespace+"/"+o.Name
 	}
-	return "", ""
+	return metadata.HybridRouteAnnotationKeyForKind(kind), routeRef
 }
 
 // mergeHybridRouteAnnotation merges routeRef into the hybrid-routes annotation on desired,

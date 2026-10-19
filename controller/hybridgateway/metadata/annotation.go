@@ -288,19 +288,24 @@ func BuildAnnotations(obj client.Object, parentRef *gwtypes.ParentReference) map
 		consts.GatewayOperatorHybridGatewaysAnnotation: gwObjKey.String(),
 	}
 
-	// Add route annotation for TLSRoute and HTTPRoute objects.
-	// Use different annotation keys for each type to distinguish the routes with same namespace/name but different kinds.
+	// Use a distinct annotation key per route kind so routes with the same
+	// namespace/name but different kinds do not collide. The keys come from the
+	// shared kind-to-annotation table.
+	var routeKind string
 	switch obj.(type) {
 	case *gwtypes.HTTPRoute:
-		annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation] = client.ObjectKeyFromObject(obj).String()
+		routeKind = kindHTTPRoute
 	case *gwtypes.GRPCRoute:
-		annotations[consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation] = client.ObjectKeyFromObject(obj).String()
+		routeKind = kindGRPCRoute
 	case *gwtypes.TLSRoute:
-		annotations[consts.GatewayOperatorHybridRoutesTLSRouteAnnotation] = client.ObjectKeyFromObject(obj).String()
+		routeKind = kindTLSRoute
 	case *gwtypes.TCPRoute:
-		annotations[consts.GatewayOperatorHybridRoutesTCPRouteAnnotation] = client.ObjectKeyFromObject(obj).String()
+		routeKind = kindTCPRoute
 	case *gwtypes.UDPRoute:
-		annotations[consts.GatewayOperatorHybridRoutesUDPRouteAnnotation] = client.ObjectKeyFromObject(obj).String()
+		routeKind = kindUDPRoute
+	}
+	if key := hybridRouteAnnotationKeyForKind(routeKind); key != "" {
+		annotations[key] = client.ObjectKeyFromObject(obj).String()
 	}
 
 	return annotations

@@ -30,6 +30,10 @@ import (
 // the (much broader) managed-by label.
 const HybridRouteOwnerIndexField = "hybridRouteOwner"
 
+// cachedIndexFieldName is the name the informer cache stores the index under:
+// controller-runtime prefixes every field name with "field:".
+const cachedIndexFieldName = "field:" + HybridRouteOwnerIndexField
+
 // hybridRouteAnnotationKey associates each root-object kind with the
 // hybrid-routes annotation key its children carry.
 var hybridRouteAnnotationKeys = []struct {
@@ -45,8 +49,8 @@ var hybridRouteAnnotationKeys = []struct {
 
 // hybridRouteAnnotationKeyForKind returns the hybrid-routes annotation key that
 // children of a root object of the given kind carry, or "" for a kind that does
-// not own children through those annotations. It is the single reader of
-// hybridRouteAnnotationKeys, shared with AnnotationManager.RouteAnnotationKeyForKind.
+// not own children through those annotations. The table is shared with
+// AnnotationManager.RouteAnnotationKeyForKind and HybridRouteOwnerIndexFunc.
 func hybridRouteAnnotationKeyForKind(kind string) string {
 	for _, ka := range hybridRouteAnnotationKeys {
 		if ka.kind == kind {
@@ -54,6 +58,13 @@ func hybridRouteAnnotationKeyForKind(kind string) string {
 		}
 	}
 	return ""
+}
+
+// HybridRouteAnnotationKeyForKind returns the hybrid-routes annotation key that
+// children of a root object of the given kind carry, or "" for a kind that does
+// not own children through those annotations.
+func HybridRouteAnnotationKeyForKind(kind string) string {
+	return hybridRouteAnnotationKeyForKind(kind)
 }
 
 // isRouteOwnerKind reports whether kind is a root object kind whose children are
@@ -188,12 +199,14 @@ func isIndexAlreadyRegisteredError(err error) bool {
 
 // isIndexUnavailableError reports whether err means the client cannot serve the
 // hybrid-routes index at all: the informer cache answers "Index with name
-// <field> does not exist" (client-go), the fake client "no index with name
-// <field> has been registered" (controller-runtime), and a client whose scheme
-// does not know the typed list answers with a not-registered error. All three
-// are fixed properties of the client, not transient failures, and the first two
-// wordings are pinned by TestIsIndexUnavailableError so a wording change fails a
-// test instead of silently degrading every reconcile to the broad live listing.
+// field:hybridRouteOwner does not exist" (controller-runtime prefixes the field
+// name and client-go words the error), the fake client "no index with name
+// hybridRouteOwner has been registered" (controller-runtime), and a client whose
+// scheme does not know the typed list answers with a not-registered error. All
+// three are fixed properties of the client, not transient failures, and the first
+// two wordings are pinned by TestIsIndexUnavailableError so a wording change
+// fails a test instead of silently degrading every reconcile to the broad live
+// listing.
 func isIndexUnavailableError(err error) bool {
 	if err == nil {
 		return false
@@ -202,7 +215,7 @@ func isIndexUnavailableError(err error) bool {
 		return true
 	}
 	msg := err.Error()
-	return strings.Contains(msg, "Index with name "+HybridRouteOwnerIndexField+" does not exist") ||
+	return strings.Contains(msg, "Index with name "+cachedIndexFieldName+" does not exist") ||
 		strings.Contains(msg, "no index with name "+HybridRouteOwnerIndexField+" has been registered")
 }
 

@@ -255,10 +255,12 @@ func itemNames(list *unstructured.UnstructuredList) []string {
 // answer the indexed list in this repo, so a wording change fails here instead
 // of silently turning every reconcile into a broad live listing.
 func TestIsIndexUnavailableError(t *testing.T) {
-	// client-go informer cache: "Index with name <field> does not exist".
+	// client-go informer cache: "Index with name <field> does not exist", where
+	// controller-runtime registered the index under the "field:"-prefixed name.
 	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
-	_, err := indexer.ByIndex(HybridRouteOwnerIndexField, "HTTPRoute/ns/route-a")
+	_, err := indexer.ByIndex(cachedIndexFieldName, "HTTPRoute/ns/route-a")
 	require.Error(t, err)
+	assert.Contains(t, err.Error(), cachedIndexFieldName, "client-go no longer names the prefixed index")
 	assert.True(t, isIndexUnavailableError(err), "unrecognized client-go wording: %v", err)
 
 	// controller-runtime fake client: "no index with name <field> has been registered".

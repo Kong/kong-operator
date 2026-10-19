@@ -2,6 +2,7 @@ package envtest
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
@@ -80,16 +81,18 @@ func TestHybridRouteOwnerIndexCachedListing(t *testing.T) {
 			t.Logf("failed to list children of route-b: %v", err)
 			return false
 		}
-		return namesOf(listA) != nil && namesOf(listB) != nil &&
-			assert.ObjectsAreEqual([]string{"owned-by-a", "shared"}, namesOf(listA)) &&
+		return assert.ObjectsAreEqual([]string{"owned-by-a", "shared"}, namesOf(listA)) &&
 			assert.ObjectsAreEqual([]string{"owned-by-b", "shared"}, namesOf(listB))
 	}, 60*time.Second, 200*time.Millisecond)
 }
 
+// namesOf returns the sorted names of the list items. The informer returns
+// index matches in map order, so sorting makes the result comparable.
 func namesOf(list *unstructured.UnstructuredList) []string {
 	out := make([]string, 0, len(list.Items))
 	for i := range list.Items {
 		out = append(out, list.Items[i].GetName())
 	}
+	slices.Sort(out)
 	return out
 }

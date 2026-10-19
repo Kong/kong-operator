@@ -854,7 +854,6 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 
 func Test_BuildProgrammedCondition(t *testing.T) {
 	ctx := context.Background()
-	pRef := gwtypes.ParentReference{Name: "gw"}
 	route := &gwtypes.HTTPRoute{
 		Kind: "HTTPRoute", APIVersion: "gateway.networking.k8s.io/v1",
 		Namespace: "default", Name: "route",
@@ -939,7 +938,7 @@ func Test_BuildProgrammedCondition(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		conds, err := BuildProgrammedCondition(ctx, logr.Discard(), tt.client, route, pRef, tt.gvks)
+		conds, err := BuildProgrammedCondition(ctx, logr.Discard(), tt.client, route, tt.gvks)
 		if tt.wantErr {
 			require.Error(t, err, tt.name)
 			require.Nil(t, conds, tt.name)
