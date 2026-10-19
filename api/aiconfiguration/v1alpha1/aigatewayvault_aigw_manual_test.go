@@ -168,6 +168,64 @@ func TestAIGatewayVault_ToAIGWVault(t *testing.T) {
 			},
 		},
 		{
+			name: "gcp vault: projectID renamed to project_id",
+			obj: &AIGatewayVault{
+				Name: "sample-ai-gw-vault-gcp", Namespace: "default",
+				Spec: AIGatewayVaultSpec{
+					APISpec: AIGatewayVaultAPISpec{
+						AIGatewayVaultConfig: &AIGatewayVaultConfig{
+							Type: AIGatewayVaultConfigTypeGoogleSecretManager,
+							GoogleSecretManager: &GoogleSecretManagerVault{
+								Name:   "gcp",
+								Config: GoogleSecretManagerVaultConfig{ProjectID: "my-project"},
+							},
+						},
+					},
+				},
+			},
+			want: &aigw.Vault{
+				Type:   "gcp",
+				Name:   "gcp",
+				Config: map[string]any{"project_id": "my-project"},
+			},
+		},
+		{
+			name: "azure vault: camelCase config keys renamed, inner type kept",
+			obj: &AIGatewayVault{
+				Name: "sample-ai-gw-vault-azure", Namespace: "default",
+				Spec: AIGatewayVaultSpec{
+					APISpec: AIGatewayVaultAPISpec{
+						AIGatewayVaultConfig: &AIGatewayVaultConfig{
+							Type: AIGatewayVaultConfigTypeAzureKey,
+							AzureKey: &AzureKeyVault{
+								Name: "azure",
+								Config: AzureKeyVaultConfig{
+									Type:              "secrets",
+									Location:          "westeurope",
+									VaultURI:          "https://my.vault.azure.net/",
+									ClientID:          "client-id",
+									TenantID:          "tenant-id",
+									CredentialsPrefix: "AZURE_",
+								},
+							},
+						},
+					},
+				},
+			},
+			want: &aigw.Vault{
+				Type: "azure",
+				Name: "azure",
+				Config: map[string]any{
+					"type":               "secrets",
+					"location":           "westeurope",
+					"vault_uri":          "https://my.vault.azure.net/",
+					"client_id":          "client-id",
+					"tenant_id":          "tenant-id",
+					"credentials_prefix": "AZURE_",
+				},
+			},
+		},
+		{
 			name: "konnect config store vault rejected",
 			obj: &AIGatewayVault{
 				Name: "sample-ai-gw-vault-konnect", Namespace: "default",

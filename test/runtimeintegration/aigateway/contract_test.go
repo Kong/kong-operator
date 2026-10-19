@@ -207,6 +207,7 @@ func representativeDBLessPayload(t *testing.T) []byte {
 	require.Len(t, doc.SNIs, 1, "the document must carry the SNI")
 	require.Len(t, doc.Agents, 1, "the document must carry the agent")
 	require.Len(t, doc.MCPServers, 1, "the document must carry the MCP server")
+	require.Len(t, doc.Vaults, 1, "the document must carry the vault")
 
 	payload, issues, err := translator.RenderDBLessYAML(doc, convert.Options{})
 	require.NoError(t, err)
