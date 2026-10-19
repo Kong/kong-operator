@@ -100,6 +100,10 @@ func ApplyExtensions[t ExtendableT](ctx context.Context, cl client.Client, o t, 
 				konnectExtensionApplied.Status = metav1.ConditionFalse
 				konnectExtensionApplied.Reason = string(kcfgkonnect.KonnectExtensionNotReadyReason)
 				konnectExtensionApplied.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
+			case errors.Is(err, extensionserrors.ErrInvalidEndpoint):
+				konnectExtensionApplied.Status = metav1.ConditionFalse
+				konnectExtensionApplied.Reason = string(kcfgkonnect.InvalidEndpointReason)
+				konnectExtensionApplied.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
 			default:
 				return true, ctrl.Result{}, err
 			}

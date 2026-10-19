@@ -78,7 +78,9 @@
   over PrivateLink, in the form Kong Gateway accepts: the port no longer lands
   inside the path. Endpoints that name a DNS host without a port and without a
   path render exactly as before; a value that carried a port previously had a
-  second port appended, which is fixed.
+  second port appended, which is fixed. An endpoint value that cannot be used
+  now reports `KonnectExtensionApplied=False` with reason `InvalidEndpoint`
+  instead of receiving a rendered value.
   [#6104](https://github.com/Kong/kong-operator/issues/6104)
 - Konnect entities that resolve API authentication through a parent chain,
   including EventGateway policies and AI Gateway consumer credentials, no longer

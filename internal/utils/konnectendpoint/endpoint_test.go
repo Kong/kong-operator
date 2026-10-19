@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParse(t *testing.T) {
@@ -26,12 +27,13 @@ func TestParse(t *testing.T) {
 			want: Endpoint{Host: "us.api.konghq.com"}},
 		{name: "query and fragment are dropped", raw: "https://host/x?a=1#f",
 			want: Endpoint{Host: "host", Path: "/x"}},
-		{name: "empty value", raw: "", want: Endpoint{}},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, Parse(tc.raw))
+			got, err := Parse(tc.raw)
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, got)
 		})
 	}
 }
@@ -72,7 +74,8 @@ func TestEndpointRendering(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			e := Parse(tc.raw)
+			e, err := Parse(tc.raw)
+			require.NoError(t, err)
 			assert.Equal(t, tc.wantServer, e.ServerName())
 			assert.Equal(t, tc.wantControl, e.ControlPlaneAddress())
 			assert.Equal(t, tc.wantTelemetry, e.TelemetryAddress())
@@ -80,11 +83,22 @@ func TestEndpointRendering(t *testing.T) {
 	}
 }
 
-func TestParseUnparseableValueKeepsLegacyRendering(t *testing.T) {
-	// "host:bad" has no valid port: net/url rejects it. The rendering must stay
-	// byte-identical to the string concatenation used before this helper.
-	e := Parse("https://host:bad")
-	assert.Equal(t, "host:bad", e.ServerName())
-	assert.Equal(t, "host:bad:443", e.ControlPlaneAddress())
-	assert.Equal(t, "host:bad:443", e.TelemetryAddress())
+func TestParseUnusableValue(t *testing.T) {
+	testCases := []struct {
+		name string
+		raw  string
+	}{
+		{name: "empty value", raw: ""},
+		{name: "scheme without an authority", raw: "https://"},
+		{name: "invalid port", raw: "https://host:bad"},
+		{name: "invalid port with a path", raw: "https://host:bad/x"},
+		{name: "unterminated IPv6 host", raw: "http://[::1"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := Parse(tc.raw)
+			assert.Error(t, err)
+		})
+	}
 }

@@ -158,10 +158,11 @@ var kongInKonnectClusterTypeIngressController = map[string]string{
 }
 
 // KongInKonnectDefaults returns the map of Konnect-related env vars properly configured.
+// It returns an error when the control plane or telemetry endpoint value cannot be used.
 func KongInKonnectDefaults(
 	dpLabels map[string]konnectv1alpha2.DataPlaneLabelValue,
 	konnectExtensionStatus konnectv1alpha2.KonnectExtensionStatus,
-) map[string]string {
+) (map[string]string, error) {
 	newEnvSet := make(map[string]string, len(kongInKonnectClusterTypeControlPlane))
 	var template map[string]string
 
@@ -175,8 +176,14 @@ func KongInKonnectDefaults(
 		panic(fmt.Sprintf("unsupported Konnect cluster type: %s", konnectExtensionStatus.Konnect.ClusterType))
 	}
 
-	cpEndpoint := konnectendpoint.Parse(konnectExtensionStatus.Konnect.Endpoints.ControlPlaneEndpoint)
-	tpEndpoint := konnectendpoint.Parse(konnectExtensionStatus.Konnect.Endpoints.TelemetryEndpoint)
+	cpEndpoint, err := konnectendpoint.Parse(konnectExtensionStatus.Konnect.Endpoints.ControlPlaneEndpoint)
+	if err != nil {
+		return nil, fmt.Errorf("control plane endpoint %q: %w", konnectExtensionStatus.Konnect.Endpoints.ControlPlaneEndpoint, err)
+	}
+	tpEndpoint, err := konnectendpoint.Parse(konnectExtensionStatus.Konnect.Endpoints.TelemetryEndpoint)
+	if err != nil {
+		return nil, fmt.Errorf("telemetry endpoint %q: %w", konnectExtensionStatus.Konnect.Endpoints.TelemetryEndpoint, err)
+	}
 	endpointValues := map[string]string{
 		"<CONTROL-PLANE-ADDRESS>":     cpEndpoint.ControlPlaneAddress(),
 		"<CONTROL-PLANE-SERVER-NAME>": cpEndpoint.ServerName(),
@@ -195,7 +202,7 @@ func KongInKonnectDefaults(
 		newEnvSet["KONG_CLUSTER_DP_LABELS"] = clusterDataPlaneLabelStringFromLabels(dpLabels)
 	}
 
-	return newEnvSet
+	return newEnvSet, nil
 }
 
 func clusterDataPlaneLabelStringFromLabels(labels map[string]konnectv1alpha2.DataPlaneLabelValue) string {

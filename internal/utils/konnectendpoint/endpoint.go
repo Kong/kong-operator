@@ -3,6 +3,7 @@
 package konnectendpoint
 
 import (
+	"fmt"
 	"net/url"
 	"strings"
 )
@@ -19,10 +20,9 @@ type Endpoint struct {
 	Path string
 }
 
-// Parse splits a Konnect endpoint value into its parts. A value net/url cannot
-// parse keeps the host as the pre-helper rendering trimmed it, so it never
-// renders worse than the plain concatenation it replaces.
-func Parse(raw string) Endpoint {
+// Parse splits a Konnect endpoint value into its parts. A value that cannot be
+// used returns an error so the caller can refuse it rather than render it.
+func Parse(raw string) (Endpoint, error) {
 	toParse := raw
 	if !strings.Contains(raw, "://") {
 		// A Konnect endpoint can arrive without a scheme. url.Parse then reads
@@ -35,7 +35,10 @@ func Parse(raw string) Endpoint {
 
 	u, err := url.Parse(toParse)
 	if err != nil {
-		return Endpoint{Host: strings.TrimPrefix(raw, "https://")}
+		return Endpoint{}, err
+	}
+	if u.Hostname() == "" {
+		return Endpoint{}, fmt.Errorf("no host in %q", raw)
 	}
 
 	e := Endpoint{
@@ -46,7 +49,7 @@ func Parse(raw string) Endpoint {
 	if e.Path == "/" {
 		e.Path = ""
 	}
-	return e
+	return e, nil
 }
 
 // ServerName is the TLS server name to use for the endpoint.

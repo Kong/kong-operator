@@ -177,6 +177,8 @@ func TestKongInKonnectDefaults(t *testing.T) {
 		wantAbsent []string
 		// wantFull, when set, is the whole returned map.
 		wantFull map[string]string
+		// wantErr is set when the endpoints cannot be used.
+		wantErr bool
 	}{
 		{
 			name:                 "public endpoint without a scheme",
@@ -227,11 +229,24 @@ func TestKongInKonnectDefaults(t *testing.T) {
 			},
 			wantAbsent: []string{"KONG_CLUSTER_CONTROL_PLANE", "KONG_CLUSTER_SERVER_NAME"},
 		},
+		{
+			name:                 "control plane endpoint that cannot be used",
+			clusterType:          konnectv1alpha2.ClusterTypeControlPlane,
+			controlPlaneEndpoint: "https://host:bad",
+			telemetryEndpoint:    publicTelemetryEndpoint,
+			wantErr:              true,
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := KongInKonnectDefaults(nil, konnectStatusWithEndpoints(tc.clusterType, tc.controlPlaneEndpoint, tc.telemetryEndpoint))
+			got, err := KongInKonnectDefaults(nil, konnectStatusWithEndpoints(tc.clusterType, tc.controlPlaneEndpoint, tc.telemetryEndpoint))
+			if tc.wantErr {
+				require.Error(t, err)
+				assert.Nil(t, got)
+				return
+			}
+			require.NoError(t, err)
 
 			for key, want := range tc.wantEndpoints {
 				assert.Equal(t, want, got[key], "%s", key)

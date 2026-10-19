@@ -58,6 +58,12 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 		TelemetryEndpoint:    "https://us.svc.konghq.com/tp/abc",
 	}
 
+	unusableEndpointExtensionStatus := *konnectExtensionStatus.DeepCopy()
+	unusableEndpointExtensionStatus.Konnect.Endpoints = konnectv1alpha2.KonnectEndpoints{
+		ControlPlaneEndpoint: "https://host:bad",
+		TelemetryEndpoint:    "7078163243.us.tp.konghq.com",
+	}
+
 	tests := []struct {
 		name          string
 		dataPlane     *operatorv1beta1.DataPlane
@@ -418,6 +424,35 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Extension whose endpoint value cannot be used",
+			dataPlane: &operatorv1beta1.DataPlane{
+				Namespace: "default",
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Extensions: []commonv1alpha1.ExtensionRef{
+							{
+								Group: konnectv1alpha1.SchemeGroupVersion.Group,
+								Kind:  konnectv1alpha2.KonnectExtensionKind,
+								Name:  "konnect-ext",
+							},
+						},
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+								PodTemplateSpec: &corev1.PodTemplateSpec{},
+							},
+						},
+					},
+				},
+			},
+			konnectExt: &konnectv1alpha2.KonnectExtension{
+				Name:      "konnect-ext",
+				Namespace: "default",
+				Status:    unusableEndpointExtensionStatus,
+			},
+			expectedError: extensionserrors.ErrInvalidEndpoint,
+			applied:       false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -449,7 +484,9 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 			}
 
 			if tt.konnectExt != nil {
-				requiredEnv = append(requiredEnv, getKongInKonnectEnvVars(*tt.konnectExt)...)
+				envVars, err := getKongInKonnectEnvVars(*tt.konnectExt)
+				require.NoError(t, err)
+				requiredEnv = append(requiredEnv, envVars...)
 				sort.Sort(k8sutils.SortableEnvVars(requiredEnv))
 				require.NotNil(t, dataplane.Spec.Deployment.PodTemplateSpec)
 				assert.Equal(t, requiredEnv, dataplane.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].Env)
@@ -464,18 +501,22 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 
 func getKongInKonnectEnvVars(
 	konnectExt konnectv1alpha2.KonnectExtension,
-) []corev1.EnvVar {
+) ([]corev1.EnvVar, error) {
 	envSet := []corev1.EnvVar{}
 	var dataplaneLabels map[string]konnectv1alpha2.DataPlaneLabelValue
 	if konnectExt.Spec.Konnect.DataPlane != nil {
 		dataplaneLabels = konnectExt.Spec.Konnect.DataPlane.Labels
 	}
-	for k, v := range config.KongInKonnectDefaults(dataplaneLabels, konnectExt.Status) {
+	envMap, err := config.KongInKonnectDefaults(dataplaneLabels, konnectExt.Status)
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range envMap {
 		envSet = append(envSet, corev1.EnvVar{
 			Name:  k,
 			Value: v,
 		})
 	}
 
-	return envSet
+	return envSet, nil
 }
