@@ -1,4 +1,4 @@
-package envtest
+package aigateway
 
 import (
 	"context"
@@ -29,6 +29,9 @@ import (
 	kiccontrollers "github.com/kong/kong-operator/v2/ingress-controller/pkg/controllers"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/create"
+	"github.com/kong/kong-operator/v2/test/envtest/update"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
@@ -60,15 +63,15 @@ func TestAIGatewayDataPlaneReconciler_SelectorStability(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := createClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "aigw-cluster-ca")
+	clusterCA := create.ClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "aigw-cluster-ca")
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
 	require.NoError(t, err)
 
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		&aigwdataplane.Reconciler{
 			Client:                   mgr.GetClient(),
 			ClusterCASecretName:      clusterCA.Name,
@@ -148,15 +151,15 @@ func TestAIGatewayDataPlaneReconciler_NoControlPlaneRef(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := createClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "aigw-cluster-ca-no-cp")
+	clusterCA := create.ClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "aigw-cluster-ca-no-cp")
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
 	require.NoError(t, err)
 
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		&aigwdataplane.Reconciler{
 			Client:                   mgr.GetClient(),
 			ClusterCASecretName:      clusterCA.Name,
@@ -200,13 +203,13 @@ func TestAIGatewayDataPlaneReconciler_ManualCertificateSecret(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
 	require.NoError(t, err)
 
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		&aigwdataplane.Reconciler{
 			Client:        mgr.GetClient(),
 			CertTTL:       consts.DefaultCertTTL,
@@ -273,13 +276,13 @@ func TestAIGatewayDataPlaneReconciler_KonnectCertificateBlueGreenRotation(t *tes
 	t.Parallel()
 
 	ctx := t.Context()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
 	require.NoError(t, err)
 
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		&aigwdataplane.Reconciler{
 			Client:        mgr.GetClient(),
 			CertTTL:       consts.DefaultCertTTL,
@@ -317,7 +320,7 @@ func TestAIGatewayDataPlaneReconciler_KonnectCertificateBlueGreenRotation(t *tes
 	deploy := waitForAIGWDeployment(t, ctx, cl, ns.Name, aigwdp.Name)
 	checksumV1 := deploy.Spec.Template.Annotations[consts.AIGatewayDataPlaneCertificateChecksumAnnotation]
 	require.NotEmpty(t, checksumV1)
-	setDeploymentRolloutStatus(t, ctx, cl, ns.Name, deploy.Name)
+	update.DeploymentRolloutStatus(t, ctx, cl, ns.Name, deploy.Name)
 
 	// Rotate the Secret's content in place -- the cert-manager-renewal scenario.
 	certV2, keyV2 := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("rotation cert v2"))
@@ -369,39 +372,13 @@ func TestAIGatewayDataPlaneReconciler_KonnectCertificateBlueGreenRotation(t *tes
 	}, waitTime, tickTime, "old certificate must not be removed before the rollout to the new one is confirmed complete")
 
 	// Confirm the rollout to the new generation.
-	setDeploymentRolloutStatus(t, ctx, cl, ns.Name, deploy.Name)
+	update.DeploymentRolloutStatus(t, ctx, cl, ns.Name, deploy.Name)
 
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
 		assert.True(ct, apierrors.IsNotFound(
 			cl.Get(ctx, client.ObjectKeyFromObject(certA), &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{})))
 	}, waitTime, tickTime)
 	assert.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(certB), &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}))
-}
-
-// setDeploymentRolloutStatus sets deployment status fields to report a
-// fully-complete rollout (matching k8sutils.DeploymentRolloutComplete).
-// Envtest doesn't run the real Deployment controller, so nothing populates
-// these fields on its own.
-func setDeploymentRolloutStatus(t *testing.T, ctx context.Context, cl client.Client, ns, name string) {
-	t.Helper()
-	require.EventuallyWithT(t, func(ct *assert.CollectT) {
-		deploy := &appsv1.Deployment{}
-		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: name}, deploy)) {
-			return
-		}
-		replicas := int32(1)
-		if deploy.Spec.Replicas != nil {
-			replicas = *deploy.Spec.Replicas
-		}
-		deploy.Status = appsv1.DeploymentStatus{
-			ObservedGeneration: deploy.Generation,
-			Replicas:           replicas,
-			UpdatedReplicas:    replicas,
-			ReadyReplicas:      replicas,
-			AvailableReplicas:  replicas,
-		}
-		assert.NoError(ct, cl.Status().Update(ctx, deploy))
-	}, waitTime, tickTime)
 }
 
 // setupProgrammedAIGWDP creates a KonnectAIGateway and an AIGatewayDataPlane,
@@ -503,7 +480,7 @@ func updateKonnectAIGatewayStatusWithProgrammed(
 			Telemetry:     "tp." + id + ".example.com",
 		}
 		aigwcp.Status.Conditions = []metav1.Condition{
-			ProgrammedCondition(aigwcp.GetGeneration()),
+			envtest.ProgrammedCondition(aigwcp.GetGeneration()),
 		}
 		assert.NoError(ct, cl.Status().Update(ctx, aigwcp))
 	}, waitTime, tickTime)
@@ -537,15 +514,15 @@ func TestAIGatewayDataPlaneReconciler_HPA(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := createClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "aigw-cluster-ca-hpa")
+	clusterCA := create.ClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "aigw-cluster-ca-hpa")
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
 	require.NoError(t, err)
 
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		&aigwdataplane.Reconciler{
 			Client:                   mgr.GetClient(),
 			ClusterCASecretName:      clusterCA.Name,
@@ -666,15 +643,15 @@ func TestAIGatewayDataPlaneReconciler_OnPremAIGatewayAdminAPI(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := createClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "aigw-cluster-ca-onprem")
+	clusterCA := create.ClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "aigw-cluster-ca-onprem")
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
 	require.NoError(t, err)
 
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		&aigwdataplane.Reconciler{
 			Client:                   mgr.GetClient(),
 			ClusterCASecretName:      clusterCA.Name,
@@ -915,7 +892,7 @@ func updateAIGatewayDataPlaneCertificateStatusWithProgrammed(
 			return
 		}
 		obj.Status.Conditions = []metav1.Condition{
-			ProgrammedCondition(obj.GetGeneration()),
+			envtest.ProgrammedCondition(obj.GetGeneration()),
 		}
 		assert.NoError(ct, cl.Status().Update(ctx, obj))
 	}, waitTime, tickTime)
@@ -931,8 +908,8 @@ func TestAIGatewayDataPlaneReconciler_KongLicense(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
 	require.NoError(t, err)
@@ -942,7 +919,7 @@ func TestAIGatewayDataPlaneReconciler_KongLicense(t *testing.T) {
 	// the manager's informer cache, not from the KongLicense reconciler's own cache.
 	licenseGetter := shareddataplane.NewKongLicenseCacheGetter(mgr.GetClient())
 
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		&aigwdataplane.Reconciler{
 			Client:        mgr.GetClient(),
 			CertTTL:       consts.DefaultCertTTL,

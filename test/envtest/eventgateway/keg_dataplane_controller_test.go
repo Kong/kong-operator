@@ -1,4 +1,4 @@
-package envtest
+package eventgateway
 
 import (
 	"context"
@@ -27,6 +27,8 @@ import (
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/update"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
@@ -43,8 +45,8 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
 	clusterCA := createKEGClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "keg-cluster-ca")
 
@@ -53,7 +55,7 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, kegCRDGroups)
 	require.NoError(t, err)
 
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		&egdataplane.Reconciler{
 			Client:                   mgr.GetClient(),
 			ClusterCASecretName:      clusterCA.Name,
@@ -158,7 +160,7 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 			Namespace: ns.Name,
 		}
 		require.NoError(t, cl.Create(ctx, kep))
-		UpdateKonnectEventGatewayStatusWithProgrammed(t, ctx, cl, kep, "konnect-id-no-cert")
+		envtest.UpdateKonnectEventGatewayStatusWithProgrammed(t, ctx, cl, kep, "konnect-id-no-cert")
 
 		egdp := &eventgatewayv1alpha1.KegDataPlane{
 			Name:      "egdp-no-cert-programmed",
@@ -230,7 +232,7 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 			Namespace: ns.Name,
 		}
 		require.NoError(t, cl.Create(ctx, kep))
-		UpdateKonnectEventGatewayStatusWithProgrammed(t, ctx, cl, kep, "konnect-id-happy")
+		envtest.UpdateKonnectEventGatewayStatusWithProgrammed(t, ctx, cl, kep, "konnect-id-happy")
 
 		egdp := &eventgatewayv1alpha1.KegDataPlane{
 			Name:      "egdp-happy-path",
@@ -249,7 +251,7 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 		// Wait for EventGatewayDataPlaneCertificate to be created, then simulate Konnect programming it.
 		konnectCert := waitForKEGCertificate(t, ctx, cl, egdp)
 
-		updateEventGatewayDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, konnectCert)
+		envtest.UpdateEventGatewayDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, konnectCert)
 
 		// Deployment should appear.
 		var deployList appsv1.DeploymentList
@@ -308,7 +310,7 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 			Namespace: ns.Name,
 		}
 		require.NoError(t, cl.Create(ctx, kep))
-		UpdateKonnectEventGatewayStatusWithProgrammed(t, ctx, cl, kep, "konnect-id-idempotent")
+		envtest.UpdateKonnectEventGatewayStatusWithProgrammed(t, ctx, cl, kep, "konnect-id-idempotent")
 
 		egdp := &eventgatewayv1alpha1.KegDataPlane{
 			Name:      "egdp-idempotent",
@@ -325,7 +327,7 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 		require.NoError(t, cl.Create(ctx, egdp))
 
 		konnectCert := waitForKEGCertificate(t, ctx, cl, egdp)
-		updateEventGatewayDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, konnectCert)
+		envtest.UpdateEventGatewayDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, konnectCert)
 
 		// Wait for the happy state.
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
@@ -367,7 +369,7 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 			Namespace: ns.Name,
 		}
 		require.NoError(t, cl.Create(ctx, kep))
-		UpdateKonnectEventGatewayStatusWithProgrammed(t, ctx, cl, kep, "konnect-id-cert-ref-field")
+		envtest.UpdateKonnectEventGatewayStatusWithProgrammed(t, ctx, cl, kep, "konnect-id-cert-ref-field")
 
 		egdp := &eventgatewayv1alpha1.KegDataPlane{
 			Name:      "egdp-cert-ref-field",
@@ -388,7 +390,7 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 		require.NotNil(t, konnectCert.Spec.GatewayRef.NamespacedRef)
 		assert.Equal(t, kep.Name, konnectCert.Spec.GatewayRef.NamespacedRef.Name)
 		assert.Nil(t, konnectCert.Spec.ParentRef)
-		updateEventGatewayDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, konnectCert)
+		envtest.UpdateEventGatewayDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, konnectCert)
 
 		t.Log("moving the Programmed certificate to spec.parentRef, as a newer operator version or a user would")
 		const managedByLabel = consts.GatewayOperatorManagedByNameLabel
@@ -441,7 +443,7 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 			Namespace: ns.Name,
 		}
 		require.NoError(t, cl.Create(ctx, kep))
-		UpdateKonnectEventGatewayStatusWithProgrammed(t, ctx, cl, kep, "konnect-id-deletion")
+		envtest.UpdateKonnectEventGatewayStatusWithProgrammed(t, ctx, cl, kep, "konnect-id-deletion")
 
 		egdp := &eventgatewayv1alpha1.KegDataPlane{
 			Name:      "egdp-deletion",
@@ -458,7 +460,7 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 		require.NoError(t, cl.Create(ctx, egdp))
 
 		konnectCert := waitForKEGCertificate(t, ctx, cl, egdp)
-		updateEventGatewayDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, konnectCert)
+		envtest.UpdateEventGatewayDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, konnectCert)
 
 		// Wait for Deployment to exist.
 		var deployList appsv1.DeploymentList
@@ -1005,7 +1007,7 @@ func setupProgrammedKEGDP(
 		Name: kepName, Namespace: ns,
 	}
 	require.NoError(t, cl.Create(ctx, kep))
-	UpdateKonnectEventGatewayStatusWithProgrammed(t, ctx, cl, kep, konnectID)
+	envtest.UpdateKonnectEventGatewayStatusWithProgrammed(t, ctx, cl, kep, konnectID)
 
 	spec.ControlPlaneRef = eventgatewayv1alpha1.ControlPlaneRef{
 		Type:                 eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
@@ -1018,7 +1020,7 @@ func setupProgrammedKEGDP(
 	require.NoError(t, cl.Create(ctx, egdp))
 
 	konnectCert := waitForKEGCertificate(t, ctx, cl, egdp)
-	updateEventGatewayDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, konnectCert)
+	envtest.UpdateEventGatewayDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, konnectCert)
 
 	return egdp
 }
@@ -1159,15 +1161,15 @@ func TestKEGDataPlaneReconciler_HPA(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
 	clusterCA := createKEGClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "keg-cluster-ca-hpa")
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, kegCRDGroups)
 	require.NoError(t, err)
 
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		&egdataplane.Reconciler{
 			Client:                   mgr.GetClient(),
 			ClusterCASecretName:      clusterCA.Name,
@@ -1285,15 +1287,15 @@ func TestKEGDataPlaneReconciler_ManualCertificateSecret(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
 	clusterCA := createKEGClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "keg-cluster-ca")
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, kegCRDGroups)
 	require.NoError(t, err)
 
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		&egdataplane.Reconciler{
 			Client:                   mgr.GetClient(),
 			ClusterCASecretName:      clusterCA.Name,
@@ -1379,7 +1381,7 @@ func TestKEGDataPlaneReconciler_ManualCertificateSecret(t *testing.T) {
 
 		kep := &konnectv1alpha1.KonnectEventGateway{Name: "kep-manual-missing", Namespace: ns.Name}
 		require.NoError(t, cl.Create(ctx, kep))
-		UpdateKonnectEventGatewayStatusWithProgrammed(t, ctx, cl, kep, "konnect-id-manual-missing")
+		envtest.UpdateKonnectEventGatewayStatusWithProgrammed(t, ctx, cl, kep, "konnect-id-manual-missing")
 
 		spec := manualSpec("user-cert-missing")
 		spec.ControlPlaneRef = eventgatewayv1alpha1.ControlPlaneRef{
@@ -1422,7 +1424,7 @@ func TestKEGDataPlaneReconciler_ManualCertificateSecret(t *testing.T) {
 		deploy := waitForKEGDeployment(t, ctx, cl, ns.Name, egdp.Name)
 		checksumV1 := deploy.Spec.Template.Annotations[consts.KEGDataPlaneCertificateChecksumAnnotation]
 		require.NotEmpty(t, checksumV1)
-		setDeploymentRolloutStatus(t, ctx, cl, ns.Name, deploy.Name)
+		update.DeploymentRolloutStatus(t, ctx, cl, ns.Name, deploy.Name)
 
 		certV2, keyV2 := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("user-cert-rotating-v2"))
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
@@ -1447,7 +1449,7 @@ func TestKEGDataPlaneReconciler_ManualCertificateSecret(t *testing.T) {
 		assert.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(certA), &configurationv1alpha1.EventGatewayDataPlaneCertificate{}),
 			"old certificate must still exist once the new one is merely registered")
 
-		updateEventGatewayDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, certB)
+		envtest.UpdateEventGatewayDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, certB)
 
 		// The Deployment rolls onto the new certificate.
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
@@ -1465,7 +1467,7 @@ func TestKEGDataPlaneReconciler_ManualCertificateSecret(t *testing.T) {
 			return apierrors.IsNotFound(cl.Get(ctx, client.ObjectKeyFromObject(certA), &configurationv1alpha1.EventGatewayDataPlaneCertificate{}))
 		}, waitTime, tickTime, "old certificate must not be removed before the rollout to the new one is confirmed complete")
 
-		setDeploymentRolloutStatus(t, ctx, cl, ns.Name, deploy.Name)
+		update.DeploymentRolloutStatus(t, ctx, cl, ns.Name, deploy.Name)
 
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
 			assert.True(ct, apierrors.IsNotFound(
@@ -1482,7 +1484,7 @@ func TestKEGDataPlaneReconciler_ManualCertificateSecret(t *testing.T) {
 			eventgatewayv1alpha1.KegDataPlaneSpec{},
 		)
 		deploy := waitForKEGDeployment(t, ctx, cl, ns.Name, egdp.Name)
-		setDeploymentRolloutStatus(t, ctx, cl, ns.Name, deploy.Name)
+		update.DeploymentRolloutStatus(t, ctx, cl, ns.Name, deploy.Name)
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
 			assert.Len(ct, listAutomaticSecrets(ct, egdp), 1)
 		}, waitTime, tickTime)
@@ -1507,7 +1509,7 @@ func TestKEGDataPlaneReconciler_ManualCertificateSecret(t *testing.T) {
 			assert.NotNil(ct, manualCert)
 		}, waitTime, tickTime)
 		require.NotNil(t, manualCert)
-		updateEventGatewayDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, manualCert)
+		envtest.UpdateEventGatewayDataPlaneCertificateStatusWithProgrammed(t, ctx, cl, manualCert)
 
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
 			var d appsv1.Deployment
@@ -1516,7 +1518,7 @@ func TestKEGDataPlaneReconciler_ManualCertificateSecret(t *testing.T) {
 			}
 			assert.Equal(ct, userSecret.Name, certVolumeSecretName(d))
 		}, waitTime, tickTime)
-		setDeploymentRolloutStatus(t, ctx, cl, ns.Name, deploy.Name)
+		update.DeploymentRolloutStatus(t, ctx, cl, ns.Name, deploy.Name)
 
 		// The operator-provisioned Secret and the old certificate are removed;
 		// the user-owned Secret is untouched.

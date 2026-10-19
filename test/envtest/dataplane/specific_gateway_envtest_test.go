@@ -1,4 +1,4 @@
-package envtest
+package dataplane
 
 import (
 	"context"
@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
+	"github.com/kong/kong-operator/v2/test/envtest"
 	"github.com/kong/kong-operator/v2/test/envtest/create"
 	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 )
@@ -26,9 +27,9 @@ func TestSpecificGatewayNN(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	scheme := Scheme(t, WithGatewayAPI, WithKong)
-	envcfg, _ := Setup(t, ctx, scheme, WithInstallGatewayCRDs(true))
-	ctrlClient := NewControllerClient(t, scheme, envcfg)
+	scheme := envtest.Scheme(t, envtest.WithGatewayAPI, envtest.WithKong)
+	envcfg, _ := envtest.Setup(t, ctx, scheme, envtest.WithInstallGatewayCRDs(true))
+	ctrlClient := envtest.NewControllerClient(t, scheme, envcfg)
 
 	var (
 		gw, gwc = create.Gateway(ctx, t, ctrlClient)
@@ -38,12 +39,12 @@ func TestSpecificGatewayNN(t *testing.T) {
 		nnIgnored = client.ObjectKeyFromObject(&gwIgnored)
 	)
 
-	RunManager(ctx, t, envcfg,
-		AdminAPIOptFns(),
-		WithPublishService(gw.Namespace),
-		WithGatewayAPIControllers(),
-		WithGatewayToReconcile(nn.String()),
-		WithProxySyncInterval(250*time.Millisecond),
+	envtest.RunManager(ctx, t, envcfg,
+		envtest.AdminAPIOptFns(),
+		envtest.WithPublishService(gw.Namespace),
+		envtest.WithGatewayAPIControllers(),
+		envtest.WithGatewayToReconcile(nn.String()),
+		envtest.WithProxySyncInterval(250*time.Millisecond),
 	)
 
 	const routeCount = 10

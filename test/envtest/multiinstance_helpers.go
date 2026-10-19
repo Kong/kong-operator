@@ -10,7 +10,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstance"
 )
 
-func setupMultiInstanceDiagnosticsManager(
+func SetupMultiInstanceDiagnosticsManager(
 	ctx context.Context,
 	t *testing.T,
 	diagPort int,

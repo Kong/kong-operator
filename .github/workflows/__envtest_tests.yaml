@@ -27,6 +27,9 @@ jobs:
           - testcase: konnect-other
           - testcase: konnect-api-gw
           - testcase: gateway-api
+          - testcase: aigateway
+          - testcase: eventgateway
+          - testcase: dataplane
           - testcase: .
     steps:
     - name: Harden Runner

@@ -1,8 +1,7 @@
-package envtest
+package dataplane
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -23,7 +22,8 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
-	"github.com/kong/kong-operator/v2/test/helpers/certificate"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/create"
 )
 
 func TestDataPlane(t *testing.T) {
@@ -341,10 +341,10 @@ func TestDataPlane(t *testing.T) {
 func setupDataPlaneTest(t *testing.T, ctx context.Context, caSecretName string) (client.Client, *corev1.Namespace) {
 	t.Helper()
 
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := createClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, caSecretName)
+	clusterCA := create.ClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, caSecretName)
 	dpReconciler := &dataplane.Reconciler{
 		DataPlaneIPFamily:        ipfamily.IPv4,
 		Client:                   mgr.GetClient(),
@@ -358,35 +358,10 @@ func setupDataPlaneTest(t *testing.T, ctx context.Context, caSecretName string) 
 		Client:               mgr.GetClient(),
 		CertExpirationMargin: consts.DefaultCertExpirationMargin,
 	}
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		dpReconciler,
 		secretCertReconciler,
 	)
 
 	return mgr.GetClient(), ns
-}
-
-func createClusterCASecret(t *testing.T, ctx context.Context, cl client.Client, namespace, name string) *corev1.Secret {
-	t.Helper()
-
-	cert, key := certificate.MustGenerateCertPEMFormat(
-		certificate.WithCommonName(fmt.Sprintf("%s-ca", name)),
-		certificate.WithCATrue(),
-	)
-
-	secret := &corev1.Secret{
-		Namespace: namespace,
-		Name:      name,
-		Labels: map[string]string{
-			"konghq.com/secret": "internal",
-		},
-		Type: corev1.SecretTypeTLS,
-		Data: map[string][]byte{
-			"tls.crt": cert,
-			"tls.key": key,
-		},
-	}
-	require.NoError(t, cl.Create(ctx, secret))
-
-	return secret
 }

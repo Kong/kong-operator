@@ -1,4 +1,4 @@
-package envtest
+package eventgateway
 
 import (
 	"context"
@@ -27,6 +27,7 @@ import (
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	egonprem "github.com/kong/kong-operator/v2/controller/eventgateway/onprem"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/test/envtest"
 	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 )
 
@@ -64,11 +65,11 @@ func TestOnPremEventGatewayReconciler(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 
-	// Like NewManager, without its short resync period: a resync reconciles
+	// Like envtest.NewManager, without its short resync period: a resync reconciles
 	// every gateway, which would hide which gateways a change reconciled.
-	_, logger, logs := CreateTestLogger(ctx)
+	_, logger, logs := envtest.CreateTestLogger(ctx)
 	mgr, err := ctrl.NewManager(cfg, manager.Options{
 		Logger:     logger,
 		Scheme:     scheme.Get(),
@@ -77,7 +78,7 @@ func TestOnPremEventGatewayReconciler(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		&egonprem.Reconciler{
 			Client: mgr.GetClient(),
 		},

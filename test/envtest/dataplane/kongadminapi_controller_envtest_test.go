@@ -1,4 +1,4 @@
-package envtest
+package dataplane
 
 import (
 	"context"
@@ -27,6 +27,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test/adminapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/controllers/configuration"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/util/builder"
+	"github.com/kong/kong-operator/v2/test/envtest"
 )
 
 type notifier struct {
@@ -54,8 +55,8 @@ func startKongAdminAPIServiceReconciler(ctx context.Context, t *testing.T, clien
 	adminPod corev1.Pod,
 	n *notifier,
 ) {
-	ns := CreateNamespace(ctx, t, client)
-	adminPod = CreatePod(ctx, t, client, ns.Name)
+	ns := envtest.CreateNamespace(ctx, t, client)
+	adminPod = envtest.CreatePod(ctx, t, client, ns.Name)
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Controller: config.Controller{
@@ -117,7 +118,7 @@ func TestKongAdminAPIController(t *testing.T) {
 	// for its timeout.
 
 	ctx := t.Context()
-	cfg, _ := Setup(t, ctx, Scheme(t))
+	cfg, _ := envtest.Setup(t, ctx, envtest.Scheme(t))
 	client, err := ctrlclient.New(cfg, ctrlclient.Options{})
 	require.NoError(t, err)
 	getTLSServerName := func(adminSvc corev1.Service) string {

@@ -1,4 +1,4 @@
-package envtest
+package dataplane
 
 import (
 	"context"
@@ -37,6 +37,8 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/update"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
@@ -45,7 +47,7 @@ import (
 
 func TestKonnectExtensionManualSnapshotDeletion(t *testing.T) {
 	t.Parallel()
-	cfg, ns := Setup(t, t.Context(), scheme.Get())
+	cfg, ns := envtest.Setup(t, t.Context(), scheme.Get())
 	apiClient, err := client.New(cfg, client.Options{Scheme: scheme.Get()})
 	require.NoError(t, err)
 	cl := client.NewNamespacedClient(apiClient, ns.Name)
@@ -161,10 +163,10 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 
 	for _, keyType := range []certificate.KeyType{certificate.RSA, certificate.ECDSA} {
 		t.Run("for CA with key type "+string(keyType), func(t *testing.T) {
-			cfg, ns := Setup(t, t.Context(), scheme.Get(), WithInstallGatewayCRDs(true))
+			cfg, ns := envtest.Setup(t, t.Context(), scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 			ctx := t.Context()
 
-			mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+			mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
 			cl := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 			factory := sdkmocks.NewMockSDKFactory(t)
@@ -219,7 +221,7 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 				CertExpirationMargin: consts.DefaultCertExpirationMargin,
 			}
 
-			StartReconcilers(ctx, t, mgr, logs,
+			envtest.StartReconcilers(ctx, t, mgr, logs,
 				dpReconciler,
 				secretCertReconciler,
 				konnectExtensionReconciler,
@@ -676,7 +678,7 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 
 				// No Deployment controller in envtest: mark the rollout as complete
 				// so the leftover admin certificate can be removed.
-				setDeploymentRolloutStatus(t, ctx, cl, dp.Namespace, deploymentName)
+				update.DeploymentRolloutStatus(t, ctx, cl, dp.Namespace, deploymentName)
 
 				t.Logf("Waiting for admin API resources to be removed")
 				require.EventuallyWithT(t, func(t *assert.CollectT) {

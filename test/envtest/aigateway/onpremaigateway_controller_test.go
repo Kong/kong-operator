@@ -1,4 +1,4 @@
-package envtest
+package aigateway
 
 import (
 	"slices"
@@ -27,6 +27,8 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	multiinstanceai "github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/create"
 )
 
 // TestOnPremAIGatewayReconciler_BecomesReady verifies that the reconciler
@@ -45,10 +47,10 @@ func TestOnPremAIGatewayReconciler_BecomesReady(t *testing.T) {
 	const waitTime = time.Minute
 
 	ctx := t.Context()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := createClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "onprem-aigw-cluster-ca")
+	clusterCA := create.ClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "onprem-aigw-cluster-ca")
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
 	require.NoError(t, err)
@@ -56,7 +58,7 @@ func TestOnPremAIGatewayReconciler_BecomesReady(t *testing.T) {
 	instancesMgr := multiinstanceai.NewManager(mgr.GetLogger())
 	require.NoError(t, mgr.Add(instancesMgr))
 
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		&aigwonprem.Reconciler{
 			Client:           mgr.GetClient(),
 			TypeConverter:    ssaProvider,
@@ -133,10 +135,10 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 	const waitTime = time.Minute
 
 	ctx := t.Context()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := createClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "onprem-aigw-models-cluster-ca")
+	clusterCA := create.ClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "onprem-aigw-models-cluster-ca")
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
 	require.NoError(t, err)
@@ -144,7 +146,7 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 	instancesMgr := multiinstanceai.NewManager(mgr.GetLogger())
 	require.NoError(t, mgr.Add(instancesMgr))
 
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		&aigwonprem.Reconciler{
 			Client:           mgr.GetClient(),
 			TypeConverter:    ssaProvider,
@@ -322,10 +324,10 @@ func TestOnPremAIGatewayReconciler_PreservesInstanceOwnedCondition(t *testing.T)
 	}
 
 	ctx := t.Context()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := createClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "onprem-aigw-instance-cond-cluster-ca")
+	clusterCA := create.ClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "onprem-aigw-instance-cond-cluster-ca")
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
 	require.NoError(t, err)
@@ -333,7 +335,7 @@ func TestOnPremAIGatewayReconciler_PreservesInstanceOwnedCondition(t *testing.T)
 	instancesMgr := multiinstanceai.NewManager(mgr.GetLogger())
 	require.NoError(t, mgr.Add(instancesMgr))
 
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		&aigwonprem.Reconciler{
 			Client:           mgr.GetClient(),
 			TypeConverter:    ssaProvider,
@@ -502,10 +504,10 @@ func TestOnPremAIGatewayReconciler_ObjectFilters(t *testing.T) {
 	const waitTime = time.Minute
 
 	ctx := t.Context()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := createClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "onprem-aigw-cluster-ca")
+	clusterCA := create.ClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "onprem-aigw-cluster-ca")
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
 	require.NoError(t, err)
@@ -513,7 +515,7 @@ func TestOnPremAIGatewayReconciler_ObjectFilters(t *testing.T) {
 	instancesMgr := multiinstanceai.NewManager(mgr.GetLogger())
 	require.NoError(t, mgr.Add(instancesMgr))
 
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		&aigwonprem.Reconciler{
 			Client:                   mgr.GetClient(),
 			TypeConverter:            ssaProvider,

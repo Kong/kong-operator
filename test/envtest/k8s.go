@@ -25,6 +25,15 @@ func CreateNamespace(ctx context.Context, t *testing.T, client ctrlclient.Client
 	return ns
 }
 
+// PodReference returns an ObjectReference to a Pod with the given name and namespace.
+func PodReference(name, ns string) *corev1.ObjectReference {
+	return &corev1.ObjectReference{
+		Kind:      "Pod",
+		Namespace: ns,
+		Name:      name,
+	}
+}
+
 // CreatePod creates pod using the provided client and returns it.
 func CreatePod(ctx context.Context, t *testing.T, client ctrlclient.Client, ns string) corev1.Pod {
 	t.Helper()
