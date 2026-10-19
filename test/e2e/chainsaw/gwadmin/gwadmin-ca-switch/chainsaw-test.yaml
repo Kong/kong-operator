@@ -1,0 +1,297 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: gwadmin-ca-switch
+spec:
+  description: |
+    Switching the source of the cp client CA rotates in phases, without a TLS
+    failure:
+    1. A GWAdmin accepts the data plane certificates issued from the Manual
+       CA in Secret ca-one.
+    2. spec.tls.clientCA.secretRef is switched to another Secret, ca-two.
+    3. spec.tls.clientCA is switched back to Automatic: Kong Operator creates
+       its own CA and rotates to it.
+       In steps 2 and 3, the data plane is paused until the new CA is
+       published, so that the phase trusting both CAs can't be skipped.
+    4. ca-one is renewed with a new CA (ca-one-renewed, a name no earlier
+       event mentions), and spec.tls.clientCA is switched to it while the
+       peers are stopped, so that the rollout stalls: until the pods trust
+       it, the cp client CA Kong Operator publishes in its own namespace
+       stays the Automatic one.
+    5. Once the peers are back, the pods roll out trusting ca-one-renewed:
+       it is published (with a CAPublished event naming it), and the
+       rotation completes once the data plane rolled out with a certificate
+       from it.
+    The published cp client CA, gwadmin-<uid>-cp-client-ca in the operator
+    namespace, only ever holds a CA the pods trust, and the status never
+    names it. The cp server certificate,
+    issued from a CA of its own, never moves. Peers provision the pods and
+    check both listeners throughout, and the data plane gwadmin-dp, rolled
+    with a certificate issued again from every CA published, checks the cp
+    listener: each previous CA is only dropped once it rolled out.
+  bindings:
+    - name: gwadmin_name
+      value: gw-switch
+    - name: work_dir
+      value: (join('', ['/tmp/gwadmin-e2e-', ($namespace)]))
+  steps:
+    - name: 1-Create-gwadmin-on-ca-one
+      try:
+        - script:
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+              - name: WORK_DIR
+                value: ($work_dir)
+            content: ../gwadmin-shared/gwadmin.sh gen-ca ca-one "$WORK_DIR/one"
+        - script:
+            env: *env
+            content: ../gwadmin-shared/gwadmin.sh put-tls-secret ca-one "$WORK_DIR/one"
+        - script:
+            env: *env
+            content: ../gwadmin-shared/gwadmin.sh gen-ca ca-two "$WORK_DIR/two"
+        - script:
+            env: *env
+            content: ../gwadmin-shared/gwadmin.sh put-tls-secret ca-two "$WORK_DIR/two"
+        - apply:
+            file: 01-gwadmin.yaml
+            bindings:
+              - name: ca_secret
+                value: ca-one
+        # The scripts the peers and gwadmin-dp run, from gwadmin-shared.
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+            content: ../gwadmin-shared/gwadmin.sh peers-scripts
+        - apply:
+            file: ../gwadmin-shared/peers.yaml
+        - assert:
+            timeout: 4m
+            file: ../gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 1}
+        - script:
+            env: *env
+            timeout: 1m
+            content: ../gwadmin-shared/gwadmin.sh save-private-ca "$GWADMIN" cp-server-ca "$WORK_DIR/cp-server-ca"
+        - script:
+            env: *env
+            timeout: 1m
+            content: ../gwadmin-shared/gwadmin.sh wait-leaves-on "$GWADMIN" "$WORK_DIR/cp-server-ca/tls.crt" 30 cp
+        - assert:
+            timeout: 30s
+            file: ../gwadmin-shared/assert-tls-status.yaml
+        - script:
+            env: *env
+            timeout: 1m
+            content: ../gwadmin-shared/gwadmin.sh wait-published "$GWADMIN" "$WORK_DIR/one/tls.crt" 30
+      cleanup:
+        # Holds CA keys: removed whatever the outcome of the test.
+        - script:
+            env: *env
+            content: ../gwadmin-shared/gwadmin.sh clean-work-dir
+    - name: 2-Switch-to-another-secret
+      try:
+        - script:
+            env: *env
+            timeout: 2m
+            content: ../gwadmin-shared/gwadmin.sh dp-pause
+        - apply:
+            file: 01-gwadmin.yaml
+            bindings:
+              - name: ca_secret
+                value: ca-two
+        - assert:
+            timeout: 1m
+            file: ../gwadmin-shared/assert-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 2}
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../gwadmin-shared/gwadmin.sh wait-published "$GWADMIN" "$WORK_DIR/two/tls.crt" 300
+        # ca-one stays trusted until the data plane rolled out with a
+        # certificate from ca-two.
+        - assert:
+            timeout: 5s
+            file: ../gwadmin-shared/assert-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 2}
+        - script:
+            env: *env
+            content: ../gwadmin-shared/gwadmin.sh dp-resume
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../gwadmin-shared/gwadmin.sh wait-dp-current "$GWADMIN" 180
+        - assert:
+            timeout: 2m
+            file: ../gwadmin-shared/assert-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 1}
+        - assert:
+            timeout: 3m
+            file: ../gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 1}
+    - name: 3-Switch-back-to-automatic
+      try:
+        - script:
+            env: *env
+            timeout: 2m
+            content: ../gwadmin-shared/gwadmin.sh dp-pause
+        # secretRef is set to null, so that the merge patch removes it.
+        - patch:
+            resource:
+              apiVersion: gateway-operator.konghq.com/v1alpha1
+              kind: GWAdmin
+              metadata:
+                name: ($gwadmin_name)
+              spec:
+                tls:
+                  clientCA:
+                    provisioning: Automatic
+                    secretRef: null
+        - assert:
+            timeout: 1m
+            file: ../gwadmin-shared/assert-condition.yaml
+            bindings:
+              - {name: condition_type, value: CertificateProvisioned}
+              - {name: condition_status, value: "True"}
+              - {name: condition_reason, value: CARotationInProgress}
+        # The new Automatic CA is published once the pods trust it.
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../gwadmin-shared/gwadmin.sh wait-new-private-ca "$GWADMIN" cp-client-ca "$WORK_DIR/two/tls.crt" "$WORK_DIR/auto" 300
+        # ca-two stays trusted until the data plane rolled out with a
+        # certificate from the Automatic CA.
+        - assert:
+            timeout: 5s
+            file: ../gwadmin-shared/assert-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 2}
+        - script:
+            env: *env
+            content: ../gwadmin-shared/gwadmin.sh dp-resume
+        - assert:
+            timeout: 2m
+            file: ../gwadmin-shared/assert-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 1}
+        - assert:
+            timeout: 1m
+            file: ../gwadmin-shared/assert-gwadmin-ready.yaml
+        - assert:
+            timeout: 3m
+            file: ../gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 1}
+    - name: 4-Switch-to-manual-with-rollout-stalled
+      try:
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../gwadmin-shared/gwadmin.sh peers-stop 90
+        # A CA no earlier CAPublished event names.
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../gwadmin-shared/gwadmin.sh gen-ca ca-one-renewed "$WORK_DIR/one-renewed"
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../gwadmin-shared/gwadmin.sh put-tls-secret ca-one "$WORK_DIR/one-renewed"
+        - apply:
+            file: 01-gwadmin.yaml
+            bindings:
+              - name: ca_secret
+                value: ca-one
+        # Phase 1: ca-one is trusted, but the new gw-admin pods can't turn
+        # Ready without the peers: the pods don't trust it yet.
+        - assert:
+            timeout: 1m
+            file: ../gwadmin-shared/assert-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 2}
+        - assert:
+            timeout: 30s
+            file: ../gwadmin-shared/assert-condition.yaml
+            bindings:
+              - {name: condition_type, value: CertificateProvisioned}
+              - {name: condition_status, value: "True"}
+              - {name: condition_reason, value: CARotationInProgress}
+        # The condition above carries the current generation: the status
+        # was written for the Manual CA, and the Automatic one stays
+        # published.
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../gwadmin-shared/gwadmin.sh assert-published "$GWADMIN" "$WORK_DIR/auto/tls.crt"
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../gwadmin-shared/gwadmin.sh peers-start 120
+    - name: 5-Rotation-to-manual-completes
+      try:
+        # The first rollout trusting ca-one-renewed completes: it is
+        # published.
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../gwadmin-shared/gwadmin.sh wait-published "$GWADMIN" "$WORK_DIR/one-renewed/tls.crt" 240
+        # Earlier publications recorded CAPublished events too: only the
+        # note tells this one apart.
+        - assert:
+            timeout: 30s
+            resource:
+              apiVersion: events.k8s.io/v1
+              kind: Event
+              regarding:
+                kind: GWAdmin
+                name: ($gwadmin_name)
+              type: Normal
+              reason: CAPublished
+              (contains(note, 'authority ca-one-renewed ')): true
+        - script:
+            env: *env
+            timeout: 6m
+            # The cp server certificate never moved through all the switches.
+            content: ../gwadmin-shared/gwadmin.sh assert-leaves-on "$GWADMIN" "$WORK_DIR/cp-server-ca/tls.crt" cp
+        - assert:
+            timeout: 2m
+            file: ../gwadmin-shared/assert-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 1}
+        - assert:
+            timeout: 1m
+            file: ../gwadmin-shared/assert-gwadmin-ready.yaml
+        - assert:
+            timeout: 3m
+            file: ../gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 1}
+        # A few more rounds of handshakes against the final state.
+        - script:
+            env: *env
+            timeout: 2m
+            content: ../gwadmin-shared/gwadmin.sh wait-rounds 3 60
+        - script:
+            env: *env
+            timeout: 2m
+            content: ../gwadmin-shared/gwadmin.sh assert-no-failures
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

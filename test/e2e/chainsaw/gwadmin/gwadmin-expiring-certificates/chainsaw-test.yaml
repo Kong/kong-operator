@@ -1,0 +1,228 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: gwadmin-expiring-certificates
+spec:
+  description: |
+    Certificates the user provides that are about to expire are reported, and
+    an overdue rotation the data planes hold back is reported as blocked.
+    Each certificate is issued 5h10m ago and expires in 50m: less than a
+    sixth of its validity is left (the warning time), and more than two
+    thirds of it elapsed (the renewal time).
+    1. A GWAdmin uses such a Manual cp client CA: CertificateProvisioned
+       warns that it expires, with a CertificateExpiringSoon Warning event.
+    2. The CA Secret is renewed with a fresh CA: the GWAdmin rotates to it,
+       and the warning is gone.
+    3. spec.tls.cp switches to such a Manual cp certificate, from issuer A:
+       once the data plane gwadmin-dp runs a bundle trusting A, the cp
+       listener serves it, and CertificateProvisioned warns that it expires,
+       with a CertificateExpiringSoon Warning event.
+    4. With gwadmin-dp paused, the cp certificate is renewed from issuer B:
+       the served certificate is past its renewal time but can't move to B
+       until gwadmin-dp runs a bundle trusting B, so CertificateProvisioned
+       turns False/CARotationBlocked, naming gwadmin-dp. Once resumed, the
+       cp listener serves the certificate from B, and the GWAdmin is
+       provisioned without warning.
+    The peers and gwadmin-dp see no TLS failure.
+  bindings:
+    - name: gwadmin_name
+      value: gw-expiring
+    - name: work_dir
+      value: (join('', ['/tmp/gwadmin-e2e-', ($namespace)]))
+    - name: cp_host
+      value: (join('', [($gwadmin_name), '-cp.', ($namespace), '.svc']))
+  steps:
+    - name: 1-Manual-ca-about-to-expire
+      try:
+        - script:
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+              - name: WORK_DIR
+                value: ($work_dir)
+              - name: CP_HOST
+                value: ($cp_host)
+            content: ../gwadmin-shared/gwadmin.sh gen-ca expiring-ca "$WORK_DIR/expiring" 18600 3000
+        - script:
+            env: *env
+            content: ../gwadmin-shared/gwadmin.sh put-tls-secret user-ca "$WORK_DIR/expiring"
+        - apply:
+            file: 01-gwadmin.yaml
+        # The scripts the peers and gwadmin-dp run, from gwadmin-shared.
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+            content: ../gwadmin-shared/gwadmin.sh peers-scripts
+        - apply:
+            file: ../gwadmin-shared/peers.yaml
+        - assert:
+            timeout: 4m
+            file: ../gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 1}
+        - assert:
+            timeout: 1m
+            file: assert-message.yaml
+            bindings:
+              - {name: condition_status, value: "True"}
+              - {name: condition_reason, value: CertificateProvisioned}
+              - {name: text, value: 'CA Secret "user-ca" expires at'}
+              - {name: contained, value: true}
+        - assert:
+            timeout: 30s
+            file: assert-expiring-event.yaml
+            bindings:
+              - {name: text, value: 'CA Secret "user-ca" expires at'}
+      cleanup:
+        # Holds CA keys: removed whatever the outcome of the test.
+        - script:
+            env: *env
+            content: ../gwadmin-shared/gwadmin.sh clean-work-dir
+    - name: 2-Fresh-ca-clears-the-warning
+      try:
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../gwadmin-shared/gwadmin.sh gen-ca fresh-ca "$WORK_DIR/fresh"
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../gwadmin-shared/gwadmin.sh put-tls-secret user-ca "$WORK_DIR/fresh"
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../gwadmin-shared/gwadmin.sh wait-published "$GWADMIN" "$WORK_DIR/fresh/tls.crt" 300
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../gwadmin-shared/gwadmin.sh wait-dp-current "$GWADMIN" 180
+        - assert:
+            timeout: 2m
+            file: assert-message.yaml
+            bindings:
+              - {name: condition_status, value: "True"}
+              - {name: condition_reason, value: CertificateProvisioned}
+              - {name: text, value: 'expires at'}
+              - {name: contained, value: false}
+    - name: 3-Manual-cp-certificate-about-to-expire
+      try:
+        - script:
+            env: *env
+            timeout: 1m
+            content: ../gwadmin-shared/gwadmin.sh gen-ca issuer-a "$WORK_DIR/issuer-a"
+        - script:
+            env: *env
+            timeout: 1m
+            content: ../gwadmin-shared/gwadmin.sh gen-ca issuer-b "$WORK_DIR/issuer-b"
+        - script:
+            env: *env
+            timeout: 1m
+            content: ../gwadmin-shared/gwadmin.sh put-server-cert cp-cert "$WORK_DIR/issuer-a" "$CP_HOST" "$WORK_DIR/cp-a" 18600 3000
+        - patch:
+            resource:
+              apiVersion: gateway-operator.konghq.com/v1alpha1
+              kind: GWAdmin
+              metadata:
+                name: ($gwadmin_name)
+              spec:
+                tls:
+                  cp:
+                    provisioning: Manual
+                    secretRef:
+                      name: cp-cert
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../gwadmin-shared/gwadmin.sh wait-dp-current "$GWADMIN" 180
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../gwadmin-shared/gwadmin.sh wait-leaves-on "$GWADMIN" "$WORK_DIR/issuer-a/tls.crt" 60 cp
+        - assert:
+            timeout: 1m
+            file: assert-message.yaml
+            bindings:
+              - {name: condition_status, value: "True"}
+              - {name: condition_reason, value: CertificateProvisioned}
+              - {name: text, value: 'cp certificate Secret "cp-cert" expires at'}
+              - {name: contained, value: true}
+        - assert:
+            timeout: 30s
+            file: assert-expiring-event.yaml
+            bindings:
+              - {name: text, value: 'cp certificate Secret "cp-cert" expires at'}
+    - name: 4-Overdue-rotation-held-back-by-the-data-plane-is-blocked
+      try:
+        - script:
+            env: *env
+            timeout: 2m
+            content: ../gwadmin-shared/gwadmin.sh dp-pause
+        - script:
+            env: *env
+            timeout: 2m
+            content: ../gwadmin-shared/gwadmin.sh put-server-cert cp-cert "$WORK_DIR/issuer-b" "$CP_HOST" "$WORK_DIR/cp-b"
+        - assert:
+            timeout: 1m
+            file: assert-message.yaml
+            bindings:
+              - {name: condition_status, value: "False"}
+              - {name: condition_reason, value: CARotationBlocked}
+              - {name: text, value: 'gwadmin-dp'}
+              - {name: contained, value: true}
+        - script:
+            env: *env
+            timeout: 1m
+            # Still on A: the data plane doesn't trust B yet.
+            content: ../gwadmin-shared/gwadmin.sh assert-leaves-on "$GWADMIN" "$WORK_DIR/issuer-a/tls.crt" cp
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../gwadmin-shared/gwadmin.sh dp-resume
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../gwadmin-shared/gwadmin.sh wait-dp-current "$GWADMIN" 180
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../gwadmin-shared/gwadmin.sh wait-leaves-on "$GWADMIN" "$WORK_DIR/issuer-b/tls.crt" 60 cp
+        - assert:
+            timeout: 2m
+            file: assert-message.yaml
+            bindings:
+              - {name: condition_status, value: "True"}
+              - {name: condition_reason, value: CertificateProvisioned}
+              - {name: text, value: 'expires at'}
+              - {name: contained, value: false}
+        - assert:
+            timeout: 3m
+            file: ../gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 1}
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../gwadmin-shared/gwadmin.sh wait-dp-current "$GWADMIN" 180
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../gwadmin-shared/gwadmin.sh wait-rounds 3 60
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../gwadmin-shared/gwadmin.sh assert-no-failures
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

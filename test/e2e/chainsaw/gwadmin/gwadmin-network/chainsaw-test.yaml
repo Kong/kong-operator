@@ -1,0 +1,87 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: gwadmin-network
+spec:
+  description: |
+    The cp Service of a GWAdmin follows spec.network.cp, and still routes the
+    data planes to the cp listener:
+    1. A GWAdmin moves the cp port to 443, adds a port 9443 targeting the cp
+       listener explicitly, and sets annotations, labels, a traffic
+       distribution and an internal traffic policy. The Service carries them
+       all, and status.cp.serverURL names port 443.
+    2. Through the Service, at status.cp.serverURL and at port 9443, the cp
+       listener serves the data plane certificate, verified with the cp
+       server bundle. The peers and the data plane gwadmin-dp, which connect
+       to the pods directly, see no TLS failure.
+  bindings:
+    - name: gwadmin_name
+      value: gw-net
+  steps:
+    - name: 1-Create-gwadmin-with-cp-service-options
+      try:
+        - apply:
+            file: 01-gwadmin.yaml
+        # The scripts the peers and gwadmin-dp run, from gwadmin-shared.
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+            content: ../gwadmin-shared/gwadmin.sh peers-scripts
+        - apply:
+            file: ../gwadmin-shared/peers.yaml
+        - assert:
+            timeout: 4m
+            file: ../gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 1}
+        - assert:
+            timeout: 1m
+            file: 01-assert-cp-service.yaml
+    - name: 2-Data-planes-reach-the-cp-listener-through-the-service
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+            timeout: 5m
+            content: ../gwadmin-shared/gwadmin.sh wait-dp-current "$GWADMIN" 180
+        # status.cp.serverURL, and the other port.
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+            timeout: 5m
+            content: ../gwadmin-shared/gwadmin.sh cp-serves "$GWADMIN" "https://$GWADMIN-cp.$NAMESPACE.svc:9443"
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+            timeout: 5m
+            content: ../gwadmin-shared/gwadmin.sh wait-rounds 3 60
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+            timeout: 5m
+            content: ../gwadmin-shared/gwadmin.sh assert-no-failures
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

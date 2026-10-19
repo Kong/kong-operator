@@ -1,0 +1,23 @@
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: GWAdmin
+metadata:
+  name: ($gwadmin_name)
+spec:
+  network:
+    cp:
+      annotations:
+        e2e.konghq.com/annotation: kept
+      labels:
+        e2e.konghq.com/label: kept
+      trafficDistribution: PreferSameZone
+      # The e2e clusters have a single node: Local still reaches every pod.
+      internalTrafficPolicy: Local
+      ports:
+        # The port the data planes are told about (status.cp.serverURL),
+        # moved, and targeting the cp listener by default.
+        - name: cp
+          port: 443
+        # Another port, targeting the cp listener explicitly.
+        - name: extra
+          port: 9443
+          targetPort: cp

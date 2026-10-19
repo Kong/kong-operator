@@ -1,0 +1,99 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: gwadmin-pod-template
+spec:
+  description: |
+    A podTemplateSpec overlay is merged into the gw-admin pods without
+    disturbing the TLS material Kong Operator mounts:
+    1. A GWAdmin adds a label, an annotation, an environment variable and an
+       emptyDir volume to its pods. The running pods carry them next to the
+       TLS volumes, mounts and environment, and turn Ready: the peers
+       provision them over mTLS.
+    2. The overlay changes: the pods roll out with it, and the peers and the
+       data plane gwadmin-dp see no TLS failure.
+  bindings:
+    - name: gwadmin_name
+      value: gw-podtpl
+  steps:
+    - name: 1-Create-gwadmin-with-overlay
+      try:
+        - apply:
+            file: 01-gwadmin.yaml
+            bindings:
+              - {name: revision, value: "1"}
+        # The scripts the peers and gwadmin-dp run, from gwadmin-shared.
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+            content: ../gwadmin-shared/gwadmin.sh peers-scripts
+        - apply:
+            file: ../gwadmin-shared/peers.yaml
+        - assert:
+            timeout: 4m
+            file: ../gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 1}
+        - assert:
+            timeout: 1m
+            file: assert-pods.yaml
+            bindings:
+              - {name: revision, value: "1"}
+    - name: 2-Overlay-change-rolls-the-pods
+      try:
+        - apply:
+            file: 01-gwadmin.yaml
+            bindings:
+              - {name: revision, value: "2"}
+        - assert:
+            timeout: 3m
+            file: ../gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 1}
+        - assert:
+            timeout: 1m
+            file: assert-pods.yaml
+            bindings:
+              - {name: revision, value: "2"}
+        # Only the new revision runs.
+        - error:
+            file: assert-pods.yaml
+            bindings:
+              - {name: revision, value: "1"}
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+            timeout: 5m
+            content: ../gwadmin-shared/gwadmin.sh wait-dp-current "$GWADMIN" 180
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+            timeout: 5m
+            content: ../gwadmin-shared/gwadmin.sh wait-rounds 3 60
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+            timeout: 5m
+            content: ../gwadmin-shared/gwadmin.sh assert-no-failures
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

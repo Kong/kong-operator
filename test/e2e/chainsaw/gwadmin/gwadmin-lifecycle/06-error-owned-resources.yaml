@@ -1,0 +1,40 @@
+# Everything the GWAdmin owns is garbage collected along with it.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ($gwadmin_name)
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: (join('-', [($gwadmin_name), 'cp-client-ca-bundle']))
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: (join('-', [($gwadmin_name), 'cp-server-ca-bundle']))
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: (join('-', [($gwadmin_name), 'api-ca-bundle']))
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: (join('-', [($gwadmin_name), 'api-tls']))
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: (join('-', [($gwadmin_name), 'cp-tls']))
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: (join('-', [($gwadmin_name), 'api']))
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: (join('-', [($gwadmin_name), 'cp']))
