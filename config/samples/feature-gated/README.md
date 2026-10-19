@@ -1,8 +1,9 @@
 # Feature-gated samples
 
 Samples in this directory need setup beyond what a stock Kong Operator install
-gives you — an extra CRD channel, a feature gate that is off by default, or
-both. They are kept in a subdirectory on purpose: `make test.samples` iterates
+gives you — an extra CRD channel, a feature gate that is off by default, a
+third-party controller such as cert-manager, or a combination. They are kept
+in a subdirectory on purpose: `make test.samples` iterates
 `config/samples/*.yaml` and does not recurse, so these are not applied and
 deleted in CI. Treat them as reference material you apply by hand after doing
 the setup each one describes.
@@ -15,6 +16,9 @@ summary.
 | [`kong-service-facade.yaml`](kong-service-facade.yaml) | The `ingress-controller-incubator` CRD channel, plus the `KongServiceFacade` feature gate |
 | [`ingress-broken-plugin-fallback.yaml`](ingress-broken-plugin-fallback.yaml) | The `FallbackConfiguration` feature gate |
 | [`gateway-httproute-broken-plugin-fallback.yaml`](gateway-httproute-broken-plugin-fallback.yaml) | The `FallbackConfiguration` feature gate |
+| [`gwadmin-cert-manager-client-ca.yaml`](gwadmin-cert-manager-client-ca.yaml) | cert-manager installed in the cluster |
+| [`gwadmin-cert-manager-cp.yaml`](gwadmin-cert-manager-cp.yaml) | cert-manager installed in the cluster, and the `default` namespace (or the dnsNames edited) |
+| [`gwadmin-cert-manager.yaml`](gwadmin-cert-manager.yaml) | cert-manager installed in the cluster, and the `default` namespace (or the dnsNames edited) |
 
 ## Feature gates
 

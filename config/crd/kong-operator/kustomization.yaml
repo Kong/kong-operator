@@ -64,6 +64,7 @@ resources:
   - gateway-operator.konghq.com_dataplanes.yaml
   - gateway-operator.konghq.com_dbbackedhybridcontrolplanes.yaml
   - gateway-operator.konghq.com_gatewayconfigurations.yaml
+  - gateway-operator.konghq.com_gwadmins.yaml
   - gateway-operator.konghq.com_kongplugininstallations.yaml
   - gateway-operator.konghq.com_watchnamespacegrants.yaml
   - konnect.konghq.com_konnectaigateways.yaml

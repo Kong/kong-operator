@@ -58,6 +58,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&WatchNamespaceGrantList{},
 		&DBBackedHybridControlPlane{},
 		&DBBackedHybridControlPlaneList{},
+		&GWAdmin{},
+		&GWAdminList{},
 	)
 
 	metav1.AddToGroupVersion(scheme, GroupVersion)

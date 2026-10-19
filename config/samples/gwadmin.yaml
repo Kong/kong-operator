@@ -1,0 +1,26 @@
+# gw-admin is the on-prem control plane of the data planes that do not use
+# Konnect (e.g. the Event Gateway). With an empty spec Kong Operator deploys it
+# and creates its certificate authorities, from which it issues and rotates
+# every certificate gw-admin and Kong Operator need. The empty spec is the
+# same as:
+#
+#   spec:
+#     tls:
+#       clientCA:
+#         provisioning: Automatic
+#       cp:
+#         provisioning: Automatic
+#
+# The data planes pull the configuration from status.cp.serverURL, verify it
+# with the certificate authorities in the ca.crt of the Secret named by
+# status.tls.cpServerCABundleSecretName, and authenticate with a client
+# certificate issued from the cp client CA Kong Operator keeps in its own
+# namespace.
+#
+# To bring your own certificates instead, see the gwadmin-cert-manager*.yaml
+# samples in feature-gated/.
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: GWAdmin
+metadata:
+  name: gw-admin
+spec: {}
