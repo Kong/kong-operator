@@ -46,6 +46,60 @@ var EventGatewayVirtualClusterProducePolicySDKOpsBoolFields = []EventGatewayVirt
 		},
 	},
 	{
+		Label: "schema_validation.config.confluent_schema_registry.validate_key",
+		Path: []string{
+			"schema_validation",
+			"config",
+			"confluent_schema_registry",
+			"validate_key",
+		},
+	},
+	{
+		Label: "schema_validation.config.confluent_schema_registry.validate_value",
+		Path: []string{
+			"schema_validation",
+			"config",
+			"confluent_schema_registry",
+			"validate_value",
+		},
+	},
+	{
+		Label: "schema_validation.config.inline_schema.validate_key",
+		Path: []string{
+			"schema_validation",
+			"config",
+			"inline_schema",
+			"validate_key",
+		},
+	},
+	{
+		Label: "schema_validation.config.inline_schema.validate_value",
+		Path: []string{
+			"schema_validation",
+			"config",
+			"inline_schema",
+			"validate_value",
+		},
+	},
+	{
+		Label: "schema_validation.config.json.validate_key",
+		Path: []string{
+			"schema_validation",
+			"config",
+			"json",
+			"validate_key",
+		},
+	},
+	{
+		Label: "schema_validation.config.json.validate_value",
+		Path: []string{
+			"schema_validation",
+			"config",
+			"json",
+			"validate_value",
+		},
+	},
+	{
 		Label: "schema_validation.enabled",
 		Path: []string{
 			"schema_validation",

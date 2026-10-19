@@ -71,3 +71,8 @@ func (*AIGatewayPolicy) PersistsKonnectID() bool {
 func (*AIGatewaySNI) PersistsKonnectID() bool {
 	return true
 }
+
+// PersistsKonnectID reports whether AIGatewayVault persists a Konnect ID in status.
+func (*AIGatewayVault) PersistsKonnectID() bool {
+	return true
+}
