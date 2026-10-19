@@ -44,21 +44,21 @@ spec:
     - name: Create-provider
       try:
         - apply:
-            file: 02-provider.yaml
+            file: 01-provider.yaml
     - name: Create-policy-with-inline-config
       bindings:
         - name: aigw_policy_name
           value: (join('-', [($test_name), 'policy-inline']))
       try:
         - apply:
-            file: 03-policy-inline.yaml
+            file: 02-policy-inline.yaml
     - name: Create-model-referencing-the-policy
       bindings:
         - name: aigw_policy_name
           value: (join('-', [($test_name), 'policy-inline']))
       try:
         - apply:
-            file: 04-model.yaml
+            file: 03-model.yaml
     - name: Create-aigateway-dataplane
       use:
         template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
@@ -122,14 +122,14 @@ spec:
           value: (join('-', [($test_name), 'policy-secretref-secret']))
       try:
         - apply:
-            file: 05-policy-secretref.yaml
+            file: 04-policy-secretref.yaml
     - name: Update-model-to-reference-the-secretref-policy
       bindings:
         - name: aigw_policy_name
           value: (join('-', [($test_name), 'policy-secretref']))
       try:
         - apply:
-            file: 04-model.yaml
+            file: 03-model.yaml
     - name: Verify-secretref-policy-is-applied
       description: |
         The model was re-pointed to the secretRef policy; the new header
@@ -162,7 +162,7 @@ spec:
           value: (join('-', [($test_name), 'policy-secretref-secret']))
       try:
         - apply:
-            file: 06-policy-secret-updated.yaml
+            file: 05-policy-secret-updated.yaml
     - name: Verify-secretref-policy-after-secret-update
       try:
         - script:
@@ -189,14 +189,14 @@ spec:
           value: (join('-', [($test_name), 'policy-condition']))
       try:
         - apply:
-            file: 07-policy-condition.yaml
+            file: 06-policy-condition.yaml
     - name: Update-model-to-reference-the-condition-policy
       bindings:
         - name: aigw_policy_name
           value: (join('-', [($test_name), 'policy-condition']))
       try:
         - apply:
-            file: 04-model.yaml
+            file: 03-model.yaml
     - name: Verify-condition-policy-is-applied
       description: |
         The policy's condition (`http.path.startsWith("/policy/chat")`)
