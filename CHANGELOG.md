@@ -301,6 +301,7 @@
   data planes as a Kong vault entity. `spec.apiSpec.type: konnect` is rejected
   on-prem: a Konnect Config Store has no self-managed gateway equivalent.
   [#6148](https://github.com/Kong/kong-operator/pull/6148)
+  [#6159](https://github.com/Kong/kong-operator/pull/6159)
 
 ### Changed
 
