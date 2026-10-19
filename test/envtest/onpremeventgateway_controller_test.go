@@ -138,13 +138,16 @@ spec:
 	}
 	// waitForNoReconcile waits until no gateway has been reconciled for a
 	// second, e.g. after the reconcile triggered by a gateway's own status
-	// write.
+	// write. testify checks the condition once before the first tick, so the
+	// samples must be a second apart: taken back to back they are always equal
+	// and the wait would return at once. It assumes one step of the
+	// status-write chain takes well under a second.
 	waitForNoReconcile := func(t *testing.T) {
 		t.Helper()
-		last := reconciles()
+		var last map[string]int
 		require.Eventually(t, func() bool {
 			counts := reconciles()
-			quiet := maps.Equal(counts, last)
+			quiet := last != nil && maps.Equal(counts, last)
 			last = counts
 			return quiet
 		}, waitTime, time.Second)
