@@ -238,8 +238,8 @@ type GWAdminServiceOptions struct {
 // GWAdminServicePort contains information on a Service port.
 type GWAdminServicePort struct {
 	// The name of this port within the Service. It must be a DNS-1123 label.
-	// The port named "cp" replaces the default cp port. Required: the
-	// Service has more than one port unless it replaces the default one.
+	// The port named "cp" replaces the default cp port. Required: every port
+	// must be named.
 	//
 	// +optional
 	// +kubebuilder:validation:MinLength=1

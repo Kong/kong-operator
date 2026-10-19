@@ -16753,7 +16753,7 @@ GWAdminServicePort contains information on a Service port.
 
 | Field | Description |
 | --- | --- |
-| `name` _*string_ | The name of this port within the Service. It must be a DNS-1123 label. The port named "cp" replaces the default cp port. Required: the Service has more than one port unless it replaces the default one. |
+| `name` _*string_ | The name of this port within the Service. It must be a DNS-1123 label. The port named "cp" replaces the default cp port. Required: every port must be named. |
 | `port` _int32_ | The port that will be exposed by this Service. |
 | `targetPort` _*k8s.io/apimachinery/pkg/util/intstr.IntOrString_ | Number or name of the port to access on the pods targeted by the Service. Defaults to the cp listener of gw-admin. |
 
