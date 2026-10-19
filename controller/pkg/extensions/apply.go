@@ -77,6 +77,9 @@ func ApplyExtensions[t ExtendableT](ctx context.Context, cl client.Client, o t, 
 
 	// in case the extensionsCondition is true, let's apply the extensions.
 	konnectExtensionApplied := k8sutils.NewConditionWithGeneration(kcfgkonnect.KonnectExtensionAppliedType, metav1.ConditionTrue, kcfgkonnect.KonnectExtensionAppliedReason, "The Konnect extension has been successfully applied", o.GetGeneration())
+	// extensionError stops the caller once the classified error below is patched
+	// into the condition, instead of requeueing.
+	var extensionError bool
 	if extensionsCondition.Status == metav1.ConditionTrue {
 		var err error
 
@@ -107,8 +110,7 @@ func ApplyExtensions[t ExtendableT](ctx context.Context, cl client.Client, o t, 
 			default:
 				return true, ctrl.Result{}, err
 			}
-			// Don't spam with errors, so return stop and nil error
-			return true, ctrl.Result{}, nil
+			extensionError = true
 		}
 	}
 
@@ -122,6 +124,11 @@ func ApplyExtensions[t ExtendableT](ctx context.Context, cl client.Client, o t, 
 		konnectExtensionApplied.Message,
 	); err != nil || !res.IsZero() {
 		return true, res, err
+	}
+
+	// Don't spam with errors, so return stop and nil error
+	if extensionError {
+		return true, ctrl.Result{}, nil
 	}
 
 	return false, ctrl.Result{}, err
