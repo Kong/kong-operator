@@ -35,11 +35,9 @@ func TestApplyExtensionsClassifiesInvalidEndpoint(t *testing.T) {
 	require.NoError(t, operatorv1beta1.AddToScheme(s))
 
 	dataPlane := &operatorv1beta1.DataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "dataplane",
-			Namespace:  "default",
-			Generation: 1,
-		},
+		Name:       "dataplane",
+		Namespace:  "default",
+		Generation: 1,
 		Spec: operatorv1beta1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 				Extensions: []commonv1alpha1.ExtensionRef{

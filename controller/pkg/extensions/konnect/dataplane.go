@@ -85,7 +85,7 @@ func (p *DataPlaneKonnectExtensionProcessor) Process(ctx context.Context, cl cli
 	}
 	envSet, err := config.KongInKonnectDefaults(dataplaneLabels, konnectExtension.Status)
 	if err != nil {
-		return false, fmt.Errorf("%w: %v", extensionserrors.ErrInvalidEndpoint, err)
+		return false, fmt.Errorf("%w: %w", extensionserrors.ErrInvalidEndpoint, err)
 	}
 
 	config.FillContainerEnvs(nil, &d.Spec.Template, consts.DataPlaneProxyContainerName, config.EnvVarMapToSlice(envSet))
