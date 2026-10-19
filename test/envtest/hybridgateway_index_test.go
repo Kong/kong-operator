@@ -22,8 +22,9 @@ import (
 // TestHybridRouteOwnerIndexCachedListing verifies, against a real (informer-based)
 // cached client, that the hybrid-route owner field index scopes child listings to
 // a single root object: children annotated for other routes are not returned.
-// The fake client used in unit tests does not replicate the informer cache's
-// namespaced index-key handling, so this envtest closes that gap.
+// All children here share the roots' namespace; the informer cache's handling of
+// a child in a different namespace (e.g. KongReferenceGrant, created in the
+// Secret's namespace) is not covered.
 func TestHybridRouteOwnerIndexCachedListing(t *testing.T) {
 	ctx := t.Context()
 	s := scheme.Get()
