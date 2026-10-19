@@ -24,7 +24,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
 	sdkwrappermocks "github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
 )
@@ -633,6 +635,8 @@ func TestUpdateEventGatewayStaticKey(t *testing.T) {
 
 		obj := newStaticKey()
 		obj.SetUID("static-key-uid")
+		obj.SetCreateInputsHash("sha256:previous-request")
+		SetKonnectEntityCreateInputsAppliedConditionTrue(obj)
 		sdk := sdkmocks.NewMockEventGatewayStaticKeysSDK(t)
 		expectRecreateNameTaken(t, sdk,
 			sdkkonnectcomp.EventGatewayStaticKey{ID: "other-id", Labels: map[string]string{KubernetesUIDLabelKey: "other-uid"}},
@@ -641,6 +645,28 @@ func TestUpdateEventGatewayStaticKey(t *testing.T) {
 
 		require.NoError(t, updateEventGatewayStaticKey(t.Context(), newClient(t, secret.DeepCopy()), sdk, obj))
 		assert.Equal(t, "recreated-id", obj.GetKonnectID())
+		assert.Empty(t, obj.GetCreateInputsHash(), "the old entity's fingerprint cannot describe the recovered entity")
+		_, ok := k8sutils.GetCondition(konnectv1alpha1.CreateInputsAppliedConditionType, obj)
+		assert.False(t, ok, "UID recovery must not claim that the current inputs were applied")
+	})
+
+	t.Run("preserves the fingerprint when UID recovery finds the same entity", func(t *testing.T) {
+		t.Parallel()
+
+		obj := newStaticKey()
+		obj.SetUID("static-key-uid")
+		obj.SetCreateInputsHash("sha256:previous-request")
+		SetKonnectEntityCreateInputsAppliedConditionTrue(obj)
+		sdk := sdkmocks.NewMockEventGatewayStaticKeysSDK(t)
+		expectRecreateNameTaken(t, sdk,
+			sdkkonnectcomp.EventGatewayStaticKey{ID: staticKeyID, Labels: map[string]string{KubernetesUIDLabelKey: "static-key-uid"}},
+		)
+
+		require.NoError(t, updateEventGatewayStaticKey(t.Context(), newClient(t, secret.DeepCopy()), sdk, obj))
+		assert.Equal(t, staticKeyID, obj.GetKonnectID())
+		assert.Equal(t, "sha256:previous-request", obj.GetCreateInputsHash())
+		_, ok := k8sutils.GetCondition(konnectv1alpha1.CreateInputsAppliedConditionType, obj)
+		assert.True(t, ok)
 	})
 
 	t.Run("fails when the name is taken by another static key", func(t *testing.T) {

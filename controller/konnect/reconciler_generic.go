@@ -495,6 +495,12 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	}
 
+	// Restore tracked status before comparing inputs or establishing a baseline.
+	if _, tracksInputs := any(ent).(createInputsAware); tracksInputs && ent.GetDeletionTimestamp().IsZero() {
+		if res, stop, err := r.reconcilePendingKonnectID(ctx, ent); stop {
+			return res, err
+		}
+	}
 	if res, err := handleCreateInputs(ctx, r.Client, ent); err != nil || !res.IsZero() {
 		return res, err
 	}
@@ -963,15 +969,19 @@ func (r *KonnectEntityReconciler[T, TEnt]) reconcilePendingKonnectID(
 	}
 	inputs, tracksInputs := any(ent).(createInputsAware)
 	if ent.GetKonnectStatus().GetKonnectID() == pending.ID &&
-		(!tracksInputs || pending.CreateInputsHash == "" || inputs.GetCreateInputsHash() == pending.CreateInputsHash) {
+		(!tracksInputs || inputs.GetCreateInputsHash() == pending.CreateInputsHash) {
 		r.pendingKonnectIDs.Delete(pendingKey)
 		return ctrl.Result{}, false, nil
 	}
 	old := ent.DeepCopyObject().(client.Object)
 	ent.SetKonnectID(pending.ID)
-	if tracksInputs && pending.CreateInputsHash != "" {
+	if tracksInputs {
 		inputs.SetCreateInputsHash(pending.CreateInputsHash)
-		ops.SetKonnectEntityCreateInputsAppliedConditionTrue(ent)
+		if pending.CreateInputsHash != "" {
+			ops.SetKonnectEntityCreateInputsAppliedConditionTrue(ent)
+		} else {
+			k8sutils.RemoveCondition(konnectv1alpha1.CreateInputsAppliedConditionType, ent)
+		}
 	}
 	if _, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, ctrllog.FromContext(ctx), any(ent).(client.Object), old); err != nil {
 		if apierrors.IsConflict(err) {
@@ -990,8 +1000,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) reconcilePendingKonnectID(
 // Kubernetes UID. Parent references needed for deletion are already on the object,
 // persisted by their reference handlers in earlier reconcile passes.
 func (r *KonnectEntityReconciler[T, TEnt]) restorePendingKonnectIDForDeletion(ent TEnt) {
+	_, tracksInputs := any(ent).(createInputsAware)
 	if pending, ok := r.pendingKonnectIDs.Get(client.ObjectKeyFromObject(ent)); ok &&
-		(ent.GetKonnectStatus().GetKonnectID() == "" || pending.CreateInputsHash != "") {
+		(ent.GetKonnectStatus().GetKonnectID() == "" || tracksInputs) {
 		ent.SetKonnectID(pending.ID)
 	}
 }

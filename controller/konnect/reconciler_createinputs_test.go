@@ -1,6 +1,8 @@
 package konnect
 
 import (
+	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -197,23 +200,76 @@ func TestCreateInputsConditionDoesNotBlockProgrammed(t *testing.T) {
 }
 
 func TestRecoverPendingCreateInputsHash(t *testing.T) {
-	for _, id := range []string{"", "old-id"} {
-		t.Run("previous ID "+id, func(t *testing.T) {
-			ent := &configurationv1alpha1.EventGatewayStaticKey{Name: "key", Namespace: "default"}
-			ent.SetKonnectID(id)
-			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(ent).WithStatusSubresource(ent).Build()
-			r := NewKonnectEntityReconciler[configurationv1alpha1.EventGatewayStaticKey](nil, logging.DevelopmentMode, cl)
-			r.pendingKonnectIDs.Store(client.ObjectKeyFromObject(ent), pendingKonnectEntityStatus{ID: "new-id", CreateInputsHash: "sha256:actual-request"})
-			_, stop, err := r.reconcilePendingKonnectID(t.Context(), ent)
-			require.NoError(t, err)
-			require.True(t, stop)
-			require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(ent), ent))
-			assert.Equal(t, "new-id", ent.GetKonnectID())
-			assert.Equal(t, "sha256:actual-request", ent.GetCreateInputsHash())
+	for _, hash := range []string{"sha256:actual-request", ""} {
+		for _, id := range []string{"", "old-id", "new-id"} {
+			t.Run("hash "+hash+"/previous ID "+id, func(t *testing.T) {
+				ctx := t.Context()
+				ent := &configurationv1alpha1.EventGatewayStaticKey{Name: "key", Namespace: "default"}
+				ent.Spec.APISpec.Name = "key"
+				ent.Spec.APISpec.Value = configurationv1alpha1.SensitiveDataSource{
+					Type: configurationv1alpha1.SensitiveDataSourceTypeInline, Value: new("current-value"),
+				}
+				ent.SetKonnectID(id)
+				ent.SetCreateInputsHash("sha256:previous-request")
+				ops.SetKonnectEntityCreateInputsAppliedConditionTrue(ent)
+				failedWrites := 2
+				cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(ent).WithStatusSubresource(ent).
+					WithInterceptorFuncs(interceptor.Funcs{
+						SubResourcePatch: func(ctx context.Context, cl client.Client, subResource string, obj client.Object, p client.Patch, opts ...client.SubResourcePatchOption) error {
+							if failedWrites > 0 {
+								failedWrites--
+								return errors.New("status write failed")
+							}
+							return cl.SubResource(subResource).Patch(ctx, obj, p, opts...)
+						},
+					}).Build()
+				r := NewKonnectEntityReconciler[configurationv1alpha1.EventGatewayStaticKey](nil, logging.DevelopmentMode, cl)
+				key := client.ObjectKeyFromObject(ent)
+				r.pendingKonnectIDs.Store(key, pendingKonnectEntityStatus{ID: "new-id", CreateInputsHash: hash})
+				for attempt := range 3 {
+					require.NoError(t, cl.Get(ctx, key, ent))
+					_, stop, err := r.reconcilePendingKonnectID(ctx, ent)
+					require.True(t, stop)
+					if attempt < 2 {
+						require.ErrorContains(t, err, "status write failed")
+					} else {
+						require.NoError(t, err)
+					}
+					_, pending := r.pendingKonnectIDs.Get(key)
+					assert.True(t, pending, "recovery must survive repeated status write failures")
+				}
+				require.NoError(t, cl.Get(ctx, key, ent))
+				assert.Equal(t, "new-id", ent.GetKonnectID())
+				assert.Equal(t, hash, ent.GetCreateInputsHash())
+				_, hasCondition := k8sutils.GetCondition(konnectv1alpha1.CreateInputsAppliedConditionType, ent)
+				assert.Equal(t, hash != "", hasCondition)
 
-			ent.SetKonnectID(id)
-			r.restorePendingKonnectIDForDeletion(ent)
-			assert.Equal(t, "new-id", ent.GetKonnectID(), "deletion must target the recreated entity even before its status is persisted")
-		})
+				for _, staleID := range []string{id, "old-id"} {
+					stale := ent.DeepCopy()
+					stale.SetKonnectID(staleID)
+					r.restorePendingKonnectIDForDeletion(stale)
+					assert.Equal(t, "new-id", stale.GetKonnectID(), "deletion must target the recreated entity before its status is persisted")
+				}
+
+				_, stop, err := r.reconcilePendingKonnectID(ctx, ent)
+				require.NoError(t, err)
+				require.False(t, stop)
+				_, pending := r.pendingKonnectIDs.Get(key)
+				assert.False(t, pending, "recovery must finish before establishing a baseline")
+				if hash == "" {
+					_, err := handleCreateInputs(ctx, cl, ent)
+					require.NoError(t, err)
+					assert.NotEmpty(t, ent.GetCreateInputsHash())
+					condition, ok := k8sutils.GetCondition(konnectv1alpha1.CreateInputsAppliedConditionType, ent)
+					require.True(t, ok)
+					assert.Equal(t, konnectv1alpha1.CreateInputsReasonBaselineEstablished, condition.Reason)
+					baseline := ent.GetCreateInputsHash()
+					_, stop, err := r.reconcilePendingKonnectID(ctx, ent)
+					require.NoError(t, err)
+					assert.False(t, stop)
+					assert.Equal(t, baseline, ent.GetCreateInputsHash(), "pending recovery must not reset the new baseline")
+				}
+			})
+		}
 	}
 }

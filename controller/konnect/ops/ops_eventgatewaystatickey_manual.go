@@ -10,6 +10,8 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // eventGatewayVirtualClustersProbePageSize is the page size used to list the
@@ -104,6 +106,11 @@ func recreateEventGatewayStaticKey(
 	id, errGet := getEventGatewayStaticKeyForUID(ctx, sdk, obj)
 	if errGet != nil {
 		return fmt.Errorf("%w; looking up the static key by UID: %w", err, errGet)
+	}
+	if id != obj.GetKonnectID() {
+		// UID recovery cannot verify the replacement entity's creation inputs.
+		obj.SetCreateInputsHash("")
+		k8sutils.RemoveCondition(konnectv1alpha1.CreateInputsAppliedConditionType, obj)
 	}
 	obj.SetKonnectID(id)
 	return nil
