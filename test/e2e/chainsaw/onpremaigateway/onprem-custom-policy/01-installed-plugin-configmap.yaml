@@ -5,8 +5,9 @@
 # it via KONG_PLUGINS (see the DP creation step).
 # Required bindings:
 #   - namespace: Namespace of the ConfigMap.
-#   - installed_plugin_name: Plugin name; also the installed custom policy's
-#     name (apiSpec.installed.name).
+#   - installed_plugin_name: The custom policy's plugin name
+#     (apiSpec.installed.name). Distinct from the CR's metadata.name — the
+#     literal `type` must reference THIS name, not the CR name.
 #   - plugin_schema_prefix / plugin_schema_suffix: The plugin schema around
 #     its name, shared with the installed custom policy so the two always
 #     match.

@@ -17,11 +17,12 @@ spec:
       KONG_PLUGINS.
 
     The streaming policy names its custom policy via `customPolicyRef`; the
-    installed one via the literal `type` (the custom policy's name) — both
-    resolution paths in one test. Unlike Konnect, on-prem accepts custom
-    policy types on models, so both policies attach to the model directly and
-    each sets a distinct response header, asserted by name and value on real
-    chat-completions requests.
+    installed one via the literal `type` (the custom policy's plugin name) —
+    both resolution paths in one test. The policies are global: on-prem
+    accepts a model-scoped custom policy at push time, but the runtime never
+    executes it, so a custom policy must be global to take effect. Each
+    policy sets a distinct response header, asserted by name and value on
+    real chat-completions requests.
 
   bindings:
     - name: test_name
@@ -46,8 +47,10 @@ spec:
       value: (join('-', [($test_name), 'streaming']))
     - name: streaming_policy_name
       value: (join('-', [($test_name), 'streaming-policy']))
-    # Installed custom policy (CR name = plugin name), its ConfigMap, and the
-    # policy referencing it via literal type.
+    # Installed custom policy (CR name and its plugin name — the plugin name
+    # is what the literal type must reference, NOT the CR name), its
+    # ConfigMap, and the policy referencing the plugin name via the literal
+    # type.
     - name: installed_custom_policy_name
       value: custom-policy-installed
     - name: installed_plugin_name
@@ -57,7 +60,7 @@ spec:
     - name: installed_policy_name
       value: (join('-', [($test_name), 'installed-policy']))
     # The plugin Lua schema, split around the plugin name (which must equal
-    # the custom policy's name), and header names/values per policy.
+    # the custom policy's plugin name), and header names/values per policy.
     - name: plugin_schema_prefix
       value: 'local typedefs = require "kong.db.schema.typedefs" return { name = "'
     - name: plugin_schema_suffix
@@ -88,7 +91,7 @@ spec:
       try:
         - apply:
             file: 04-policies.yaml
-    - name: Create-model-referencing-both-policies
+    - name: Create-model
       try:
         - apply:
             file: 05-model.yaml

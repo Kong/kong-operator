@@ -1,7 +1,7 @@
 # Two AIGatewayPolicies over the custom policies, exercising both ways a
 # policy can name a custom policy:
 #   - streaming policy -> customPolicyRef
-#   - installed policy -> literal type (the custom policy's name)
+#   - installed policy -> literal type (the custom policy's plugin name)
 # Each config sets a distinct response header, asserted on real traffic.
 #
 # Both are GLOBAL: the runtime does not execute model-scoped instances of
