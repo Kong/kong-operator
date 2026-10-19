@@ -26,7 +26,7 @@ func Parse(raw string) Endpoint {
 	toParse := raw
 	if !strings.Contains(raw, "://") {
 		// Without a scheme, net/url reads "cp.endpoint:443" as the scheme
-		// "cp.endpoint" and the opaque part "443".
+		// "cp.endpoint" with no authority; "//" starts the authority part.
 		toParse = "//" + raw
 	}
 
