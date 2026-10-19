@@ -27,11 +27,29 @@ func (obj *EventGatewayStaticKey) SetCreateInputsHash(hash string) {
 
 // CalculateCreateInputsHash resolves and fingerprints the current create inputs.
 func (obj *EventGatewayStaticKey) CalculateCreateInputsHash(ctx context.Context, cl client.Client) (string, error) {
-	req, err := obj.ToEventGatewayStaticKeyCreate(ctx, cl)
+	_, hash, err := obj.ToCreateRequestWithInputsHash(ctx, cl)
+	return hash, err
+}
+
+// ToCreateRequestWithInputsHash resolves the inputs once for both the SDK request and its fingerprint.
+func (obj *EventGatewayStaticKey) ToCreateRequestWithInputsHash(ctx context.Context, cl client.Client) (*sdkkonnectcomp.EventGatewayStaticKeyCreate, string, error) {
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
-	return createinputs.Hash(req)
+	data, err := spec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, "", err
+	}
+	req, err := spec.ToEventGatewayStaticKeyCreate()
+	if err != nil {
+		return nil, "", err
+	}
+	hash, err := createinputs.Hash(json.RawMessage(data))
+	if err != nil {
+		return nil, "", err
+	}
+	return req, hash, nil
 }
 
 // EventGatewayStaticKeySDKOpsFreeformKeyFields lists free-form / map data-keyed

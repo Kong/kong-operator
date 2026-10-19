@@ -9,7 +9,6 @@ import (
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
-	createinputs "github.com/kong/kong-operator/v2/internal/utils/createinputs"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 )
@@ -28,14 +27,9 @@ func createAIGatewayConsumerCredential(
 	if consumerID == "" {
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "AIGatewayConsumer", Op: CreateOp}
 	}
-	req, err := obj.ToCreateAiGatewayConsumerCredentialRequest(ctx, cl)
+	req, createInputsHash, err := obj.ToCreateRequestWithInputsHash(ctx, cl)
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
-	}
-	// Fingerprint this request, not a second Secret read after creation.
-	createInputsHash, err := createinputs.Hash(req.CreateAIGatewayConsumerCredentialRequest)
-	if err != nil {
-		return err
 	}
 	req.CreateAIGatewayConsumerCredentialRequest.Labels = WithKubernetesMetadataLabels(obj, req.CreateAIGatewayConsumerCredentialRequest.Labels)
 	req.GatewayID = gatewayID

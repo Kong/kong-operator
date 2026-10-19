@@ -27,11 +27,29 @@ func (obj *AIGatewayDataPlaneCertificate) SetCreateInputsHash(hash string) {
 
 // CalculateCreateInputsHash resolves and fingerprints the current create inputs.
 func (obj *AIGatewayDataPlaneCertificate) CalculateCreateInputsHash(ctx context.Context, cl client.Client) (string, error) {
-	req, err := obj.ToCreateAIGatewayDataPlaneCertificateRequest(ctx, cl)
+	_, hash, err := obj.ToCreateRequestWithInputsHash(ctx, cl)
+	return hash, err
+}
+
+// ToCreateRequestWithInputsHash resolves the inputs once for both the SDK request and its fingerprint.
+func (obj *AIGatewayDataPlaneCertificate) ToCreateRequestWithInputsHash(ctx context.Context, cl client.Client) (*sdkkonnectcomp.CreateAIGatewayDataPlaneCertificateRequest, string, error) {
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
-	return createinputs.Hash(req)
+	data, err := spec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, "", err
+	}
+	req, err := spec.ToCreateAIGatewayDataPlaneCertificateRequest()
+	if err != nil {
+		return nil, "", err
+	}
+	hash, err := createinputs.Hash(json.RawMessage(data))
+	if err != nil {
+		return nil, "", err
+	}
+	return req, hash, nil
 }
 
 // AIGatewayDataPlaneCertificateSDKOpsFreeformKeyFields lists free-form / map data-keyed

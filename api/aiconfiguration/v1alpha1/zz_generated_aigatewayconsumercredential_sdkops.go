@@ -28,11 +28,29 @@ func (obj *AIGatewayConsumerCredential) SetCreateInputsHash(hash string) {
 
 // CalculateCreateInputsHash resolves and fingerprints the current create inputs.
 func (obj *AIGatewayConsumerCredential) CalculateCreateInputsHash(ctx context.Context, cl client.Client) (string, error) {
-	req, err := obj.ToCreateAiGatewayConsumerCredentialRequest(ctx, cl)
+	_, hash, err := obj.ToCreateRequestWithInputsHash(ctx, cl)
+	return hash, err
+}
+
+// ToCreateRequestWithInputsHash resolves the inputs once for both the SDK request and its fingerprint.
+func (obj *AIGatewayConsumerCredential) ToCreateRequestWithInputsHash(ctx context.Context, cl client.Client) (*sdkkonnectoper.CreateAiGatewayConsumerCredentialRequest, string, error) {
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
-	return createinputs.Hash(req.CreateAIGatewayConsumerCredentialRequest)
+	data, err := spec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, "", err
+	}
+	req, err := spec.ToCreateAiGatewayConsumerCredentialRequest()
+	if err != nil {
+		return nil, "", err
+	}
+	hash, err := createinputs.Hash(json.RawMessage(data))
+	if err != nil {
+		return nil, "", err
+	}
+	return req, hash, nil
 }
 
 // AIGatewayConsumerCredentialSDKOpsFreeformKeyFields lists free-form / map data-keyed

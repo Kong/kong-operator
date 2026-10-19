@@ -765,11 +765,29 @@ func (obj *{{.EntityName}}) SetCreateInputsHash(hash string) {
 {{- if eq .OpName "create"}}
 // CalculateCreateInputsHash resolves and fingerprints the current create inputs.
 func (obj *{{$.EntityName}}) CalculateCreateInputsHash(ctx context.Context, cl client.Client) (string, error) {
-	req, err := obj.{{.MethodName}}(ctx, cl)
+	_, hash, err := obj.ToCreateRequestWithInputsHash(ctx, cl)
+	return hash, err
+}
+
+// ToCreateRequestWithInputsHash resolves the inputs once for both the SDK request and its fingerprint.
+func (obj *{{$.EntityName}}) ToCreateRequestWithInputsHash(ctx context.Context, cl client.Client) (*{{.ImportAlias}}.{{.TypeName}}, string, error) {
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {
-		return "", err
+		return nil, "", err
 	}
-	return createinputs.Hash(req{{if .IsOperationsWrapped}}.{{.BodyFieldName}}{{end}})
+	data, err := spec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, "", err
+	}
+	req, err := spec.{{.MethodName}}()
+	if err != nil {
+		return nil, "", err
+	}
+	hash, err := createinputs.Hash(json.RawMessage(data))
+	if err != nil {
+		return nil, "", err
+	}
+	return req, hash, nil
 }
 {{- end}}
 {{- end}}
@@ -3318,7 +3336,9 @@ func create{{.Entity}}(
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.EntityName}}", Op: CreateOp}
 	}
 {{- end}}
-	{{- if .NeedsClient}}
+	{{- if .TrackCreateInputs}}
+	req, createInputsHash, err := obj.ToCreateRequestWithInputsHash(ctx, cl)
+	{{- else if .NeedsClient}}
 	req, err := obj.{{.CreateReqMethod}}(ctx, cl)
 	{{- else if .HasReferences}}
 	req, err := obj.{{.CreateReqMethod}}()
@@ -3329,13 +3349,6 @@ func create{{.Entity}}(
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
 {{- $reqBody := "req"}}{{if and .CreateFullyWrapped .CreateBodyField}}{{$reqBody = printf "req.%s" .CreateBodyField}}{{end}}
-{{- if .TrackCreateInputs}}
-	// Fingerprint this request, not a second Secret read after creation.
-	createInputsHash, err := createinputs.Hash({{$reqBody}})
-	if err != nil {
-		return err
-	}
-{{- end}}
 {{- if .LabelsUnionTargets}}
 {{- template "labelsUnionInject" (labelsUnionInject "req" .LabelsUnionTargets $.HasTags $.LabelsPointer)}}
 {{- else}}
