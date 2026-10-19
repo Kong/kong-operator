@@ -23,6 +23,15 @@ type opsControllerRootUnionFixture struct {
 	// objects the fixture's fake client must have pre-seeded — e.g. a
 	// "programmed" CR that VariantValue holds a resolvable reference to.
 	ExtraSeedObjects []string
+	// ExpectedPayloadCheck, when set, is a Go block emitted into the generated
+	// create test that asserts the converted request against a hand-written
+	// Konnect payload. The mock expectation the test otherwise uses is built by
+	// calling the very conversion function under test, so on its own it cannot
+	// catch a payload defect — only a conversion error. Set this for variants
+	// whose payload shape is easy to get wrong (nested discriminated unions,
+	// bool enums, snake_cased member keys) and would otherwise pass unchecked.
+	// The block may use the local `expectedRequest` and must import encoding/json.
+	ExpectedPayloadCheck string
 }
 
 // opsControllerInjectIntoCheck describes an additive (InjectInto) reference
@@ -87,6 +96,9 @@ type opsControllerTestFileData struct {
 	// AssertsInjectInto is true when the create test asserts InjectIntoChecks:
 	// there is a create op resolving references through the client.
 	AssertsInjectInto bool
+	// NeedsJSON is true when the generated file needs encoding/json, either for
+	// the InjectInto assertions or for the root union's ExpectedPayloadCheck.
+	NeedsJSON bool
 }
 
 func (g *Generator) generateEntityOpsTestFile(
@@ -139,6 +151,7 @@ func (g *Generator) generateEntityOpsTestFile(
 		data.NeedsFakeClient = data.NeedsFakeClient || createData.NeedsClient
 		data.NeedsComponentsImport = true
 		data.AssertsInjectInto = createData.NeedsClient && len(injectIntoChecks) > 0
+		data.NeedsJSON = data.AssertsInjectInto || (rootUnion != nil && rootUnion.ExpectedPayloadCheck != "")
 	}
 	if updateData != nil {
 		data.Update = &opsControllerUpdateTestData{
@@ -427,6 +440,49 @@ func buildOpsControllerRootUnionFixture(entityName string, schema *parser.Schema
 				`&%[1]s.AIGatewayMCPServerConversionOnly{DisplayName: "test-display-name", Name: "test-mcp-server", Config: %[1]s.AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig{URL: "https://example.com/mcp"}, Tools: []%[1]s.AIGatewayMCPConversionTool{{Name: "test-tool", Description: "test-tool-description", Method: "GET"}}}`,
 				apiAlias,
 			),
+		}
+	case "AIGatewayVault":
+		// The fallback fixture (first variant, empty) cannot be used here: the
+		// konnect variant's SDK type requires name and config, so unmarshalling
+		// the empty payload into the request union fails. The hcv variant is
+		// populated instead, because it is the only vault that nests a second
+		// discriminated union (config.authMethod) inside its own payload: the
+		// nested union's discriminator value and member key have to be
+		// snake_cased to match each other (awsIam/aws_iam), and its
+		// Enabled/Disabled fields have to be sent as bools. Its access key also
+		// exercises a SensitiveDataSource nested inside the variant.
+		return &opsControllerRootUnionFixture{
+			UnionTypeName:   "AIGatewayVaultConfig",
+			TypeConstName:   "AIGatewayVaultConfigTypeHashiCorp",
+			VariantField:    "HashiCorp",
+			VariantTypeName: "HashiCorpVault",
+			VariantValue: fmt.Sprintf(
+				`&%[1]s.HashiCorpVault{Name: "test-vault", Config: &%[1]s.HashiCorpVaultConfig{AuthMethod: %[1]s.HashiCorpVaultConfigTypeAwsIAM, AwsIAM: &%[1]s.HashiCorpVaultAwsIAMConfig{Host: "vault.example.com", Port: 8200, Role: "test-role", Region: "us-east-1", Base64Decode: "Enabled", SSLVerify: "Disabled", AccessKeyID: %[1]s.SensitiveDataSource{Type: %[1]s.SensitiveDataSourceTypeInline, Value: new("test-access-key")}}}}`,
+				apiAlias,
+			),
+			ExpectedPayloadCheck: `
+	{
+		// Check the conversion against a hand-written Konnect payload: the mock
+		// expectation below is built by calling the same conversion function, so
+		// it cannot catch a wrong payload by itself.
+		data, err := json.Marshal(expectedRequest)
+		require.NoError(t, err)
+		var body map[string]any
+		require.NoError(t, json.Unmarshal(data, &body))
+		require.Subset(t, body, map[string]any{
+			"name": "test-vault",
+			"type": "hcv",
+		})
+		config, ok := body["config"].(map[string]any)
+		require.True(t, ok)
+		require.Subset(t, config, map[string]any{
+			"auth_method":   "aws_iam",
+			"base64_decode": true,
+			"ssl_verify":    false,
+			"access_key_id": "test-access-key",
+			"host":          "vault.example.com",
+		})
+	}`,
 		}
 	}
 

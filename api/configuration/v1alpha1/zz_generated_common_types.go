@@ -374,9 +374,11 @@ func camelToSnakeCase(s string) string {
 
 // renameKeysToSDK converts all map keys and common discriminator values from
 // camelCase (CRD K8s wire format) to snake_case (Konnect SDK wire format).
+// The discriminator's value must be renamed alongside its key, because
+// flattenSDKUnions matches it against the snake_case sibling member key.
 func isSDKDiscriminatorKey(key string) bool {
 	switch key {
-	case "type", "op", "kind", "mode", "aclAttributeType":
+	case "type", "op", "kind", "mode", "aclAttributeType", "authMethod":
 		return true
 	default:
 		return false

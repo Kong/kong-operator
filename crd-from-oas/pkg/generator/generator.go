@@ -7434,6 +7434,13 @@ func (g *Generator) generateRootUnionSDKOps(
 		NeedsCrossNamespaceCheck bool
 		RefInjections            []TemplateRefInjection
 		ObjectRefTypePrefix      string
+		// UpdateUsesPayloadTarget is true when at least one variant rebuilds the
+		// update request from a nested payload field of the selected config
+		// rather than from the variant itself. Only those variants read the
+		// shared `selected` / `target` pair; when every variant is direct,
+		// emitting the pair adds two unmarshals of the same payload that no
+		// branch ever reads.
+		UpdateUsesPayloadTarget bool
 	}{
 		APIVersion:               g.config.APIVersion,
 		EntityName:               entityName,
@@ -7445,6 +7452,7 @@ func (g *Generator) generateRootUnionSDKOps(
 		FreeformKeyFields:        freeformKeyFields,
 		Methods:                  rootUnionMethods,
 		Variants:                 variants,
+		UpdateUsesPayloadTarget:  slices.ContainsFunc(variants, func(v sdkOpsRootUnionVariant) bool { return !v.UpdateDirectUnion }),
 		NeedsClient:              opsConfig.RequireClient || g.entityHasReferences(entityName),
 		DataSources:              dataSources,
 		HasSecretSourceRefs:      templateReferencesHaveSource(dataSources, false),
@@ -7780,6 +7788,27 @@ func (g *Generator) collectSDKOpsBoolFieldsFromProperty(prop *parser.Property, p
 	}
 	if prop.AdditionalProperties != nil {
 		g.collectSDKOpsBoolFieldsFromProperty(prop.AdditionalProperties, append(path, "{}"), fields)
+	}
+	// A discriminated union nested inside an object (e.g. HashiCorpVault's
+	// config.auth_method union) keeps the CRD's {"<disc>": "X", "X": {...}}
+	// shape on the wire at the point where bool normalization runs. Each
+	// variant's own fields are addressed under its discriminator mapping key,
+	// verbatim and snake_case, mirroring how a dataSource path selects a
+	// nested union variant (see walkSensitiveLeafPath).
+	if len(prop.OneOf) > 0 && len(prop.DiscriminatorMapping) > 0 {
+		discValueForRef := make(map[string]string, len(prop.DiscriminatorMapping))
+		for discValue, refName := range prop.DiscriminatorMapping {
+			discValueForRef[refName] = discValue
+		}
+		for _, variant := range prop.OneOf {
+			memberKey := discValueForRef[variant.RefName]
+			if memberKey == "" {
+				continue
+			}
+			for _, nestedProp := range variant.Properties {
+				g.collectSDKOpsBoolFieldsFromProperty(nestedProp, append(path, memberKey, nestedProp.Name), fields)
+			}
+		}
 	}
 }
 
