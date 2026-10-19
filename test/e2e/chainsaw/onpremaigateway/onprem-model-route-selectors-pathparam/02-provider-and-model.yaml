@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ($provider_credentials_name)
+  namespace: ($namespace)
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+stringData:
+  apikey: test-ai-gateway-key
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModelProvider
+metadata:
+  name: ($provider_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: openai
+    openai:
+      name: ($provider_name)
+      displayName: OpenAI-compatible mock provider
+      config:
+        auth:
+          headers:
+            - name: apikey
+              value:
+                type: secretRef
+                secretRef:
+                  name: ($provider_credentials_name)
+                  key: apikey
+---
+# Path selector: routes on a named capture group in the route's path regex
+# (`model_name`); the captured segment is the alias the selector matches
+# against its `values`.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModel
+metadata:
+  name: model-path-selector
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: model
+    model:
+      name: model-path-selector
+      displayName: Model routed via path selector
+      enabled: Enabled
+      formats:
+        - type: openai
+      capabilities:
+        - generate
+      config:
+        model:
+          nameHeader: Enabled
+        route:
+          model:
+            # pathParam is the name of the regex capture group defined in the
+            # route path below ("model_name").
+            pathParam: model_name
+            values:
+              - qwen2.5:0.5b
+          paths:
+            - ~/model-route/path/(?<model_name>[^/]+)/chat
+      targets:
+        - name: qwen2.5:0.5b
+          provider:
+            name: ($provider_name)
+          config:
+            type: openai
+            openai:
+              upstreamURL: http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/provider-a
