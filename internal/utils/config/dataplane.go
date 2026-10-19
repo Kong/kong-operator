@@ -158,7 +158,7 @@ var kongInKonnectClusterTypeIngressController = map[string]string{
 }
 
 // KongInKonnectDefaults returns the map of Konnect-related env vars properly configured.
-// It returns an error when the control plane or telemetry endpoint value cannot be used.
+// It returns an error when a value the selected template renders cannot be used.
 func KongInKonnectDefaults(
 	dpLabels map[string]konnectv1alpha2.DataPlaneLabelValue,
 	konnectExtensionStatus konnectv1alpha2.KonnectExtensionStatus,
@@ -176,19 +176,24 @@ func KongInKonnectDefaults(
 		panic(fmt.Sprintf("unsupported Konnect cluster type: %s", konnectExtensionStatus.Konnect.ClusterType))
 	}
 
-	cpEndpoint, err := konnectendpoint.Parse(konnectExtensionStatus.Konnect.Endpoints.ControlPlaneEndpoint)
-	if err != nil {
-		return nil, fmt.Errorf("control plane endpoint %q: %w", konnectExtensionStatus.Konnect.Endpoints.ControlPlaneEndpoint, err)
+	// Only the endpoints the selected template renders are parsed: a value the
+	// cluster type never uses must not fail the DataPlane.
+	endpointValues := map[string]string{}
+	if _, ok := template["KONG_CLUSTER_CONTROL_PLANE"]; ok {
+		cpEndpoint, err := konnectendpoint.Parse(konnectExtensionStatus.Konnect.Endpoints.ControlPlaneEndpoint)
+		if err != nil {
+			return nil, fmt.Errorf("control plane endpoint %q: %w", konnectExtensionStatus.Konnect.Endpoints.ControlPlaneEndpoint, err)
+		}
+		endpointValues["<CONTROL-PLANE-ADDRESS>"] = cpEndpoint.ControlPlaneAddress()
+		endpointValues["<CONTROL-PLANE-SERVER-NAME>"] = cpEndpoint.ServerName()
 	}
-	tpEndpoint, err := konnectendpoint.Parse(konnectExtensionStatus.Konnect.Endpoints.TelemetryEndpoint)
-	if err != nil {
-		return nil, fmt.Errorf("telemetry endpoint %q: %w", konnectExtensionStatus.Konnect.Endpoints.TelemetryEndpoint, err)
-	}
-	endpointValues := map[string]string{
-		"<CONTROL-PLANE-ADDRESS>":     cpEndpoint.ControlPlaneAddress(),
-		"<CONTROL-PLANE-SERVER-NAME>": cpEndpoint.ServerName(),
-		"<TELEMETRY-ADDRESS>":         tpEndpoint.TelemetryAddress(),
-		"<TELEMETRY-SERVER-NAME>":     tpEndpoint.ServerName(),
+	if _, ok := template["KONG_CLUSTER_TELEMETRY_ENDPOINT"]; ok {
+		tpEndpoint, err := konnectendpoint.Parse(konnectExtensionStatus.Konnect.Endpoints.TelemetryEndpoint)
+		if err != nil {
+			return nil, fmt.Errorf("telemetry endpoint %q: %w", konnectExtensionStatus.Konnect.Endpoints.TelemetryEndpoint, err)
+		}
+		endpointValues["<TELEMETRY-ADDRESS>"] = tpEndpoint.TelemetryAddress()
+		endpointValues["<TELEMETRY-SERVER-NAME>"] = tpEndpoint.ServerName()
 	}
 
 	for k, v := range template {

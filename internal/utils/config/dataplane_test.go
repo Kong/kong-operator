@@ -236,6 +236,24 @@ func TestKongInKonnectDefaults(t *testing.T) {
 			telemetryEndpoint:    publicTelemetryEndpoint,
 			wantErr:              true,
 		},
+		{
+			name:                 "unusable control plane endpoint on a K8s Ingress Controller cluster",
+			clusterType:          konnectv1alpha2.ClusterTypeK8sIngressController,
+			controlPlaneEndpoint: "https://host:bad",
+			telemetryEndpoint:    privateTelemetryEndpoint,
+			wantEndpoints: map[string]string{
+				"KONG_CLUSTER_TELEMETRY_ENDPOINT":    "us.svc.konghq.com:443/tp/abc",
+				"KONG_CLUSTER_TELEMETRY_SERVER_NAME": "us.svc.konghq.com",
+			},
+			wantAbsent: []string{"KONG_CLUSTER_CONTROL_PLANE", "KONG_CLUSTER_SERVER_NAME"},
+		},
+		{
+			name:                 "unusable telemetry endpoint on a K8s Ingress Controller cluster",
+			clusterType:          konnectv1alpha2.ClusterTypeK8sIngressController,
+			controlPlaneEndpoint: privateControlPlaneEndpoint,
+			telemetryEndpoint:    "https://host:bad",
+			wantErr:              true,
+		},
 	}
 
 	for _, tc := range testCases {
