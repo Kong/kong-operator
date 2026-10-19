@@ -104,7 +104,24 @@ func HybridRouteOwnerIndexFunc(obj client.Object) []string {
 // resources of the given root route object are indexed. It mirrors the
 // "<RouteKind>/<namespace>/<name>" format produced by HybridRouteOwnerIndexFunc.
 func HybridRouteOwnerIndexKey(route client.Object) string {
-	return route.GetObjectKind().GroupVersionKind().Kind + "/" + client.ObjectKeyFromObject(route).String()
+	// TypeMeta is not guaranteed to be populated on cached objects, so
+	// resolve the kind from the Go type.
+	var kind string
+	switch route.(type) {
+	case *gwtypes.HTTPRoute:
+		kind = kindHTTPRoute
+	case *gwtypes.GRPCRoute:
+		kind = kindGRPCRoute
+	case *gwtypes.TLSRoute:
+		kind = kindTLSRoute
+	case *gwtypes.TCPRoute:
+		kind = kindTCPRoute
+	case *gwtypes.UDPRoute:
+		kind = kindUDPRoute
+	default:
+		kind = route.GetObjectKind().GroupVersionKind().Kind
+	}
+	return kind + "/" + client.ObjectKeyFromObject(route).String()
 }
 
 // hybridRouteOwnerChildType holds, per child resource kind, a constructor for
