@@ -1,4 +1,4 @@
-package envtest
+package dataplane
 
 import (
 	"context"
@@ -28,6 +28,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/util/builder"
+	"github.com/kong/kong-operator/v2/test/envtest"
 )
 
 func TestKongUpstreamPolicyWithoutGatewayAPICRDs(t *testing.T) {
@@ -35,26 +36,26 @@ func TestKongUpstreamPolicyWithoutGatewayAPICRDs(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	scheme := Scheme(t, WithKong)
-	envcfg, _ := Setup(t, ctx, scheme, WithInstallGatewayCRDs(false))
+	scheme := envtest.Scheme(t, envtest.WithKong)
+	envcfg, _ := envtest.Setup(t, ctx, scheme, envtest.WithInstallGatewayCRDs(false))
 
-	ctrlClient := NewControllerClient(t, scheme, envcfg)
+	ctrlClient := envtest.NewControllerClient(t, scheme, envcfg)
 	ingressClassName := "kongenvtest"
-	deployIngressClass(ctx, t, ingressClassName, ctrlClient)
+	envtest.DeployIngressClass(ctx, t, ingressClassName, ctrlClient)
 
 	diagPort := helpers.GetFreePort(t)
-	ns := CreateNamespace(ctx, t, ctrlClient)
+	ns := envtest.CreateNamespace(ctx, t, ctrlClient)
 
-	multimgr := setupMultiInstanceDiagnosticsManager(ctx, t, diagPort)
+	multimgr := envtest.SetupMultiInstanceDiagnosticsManager(ctx, t, diagPort)
 
-	mgr := SetupManager(ctx, t, manager.NewRandomID(), envcfg,
-		AdminAPIOptFns(),
-		WithPublishService(ns.Name),
-		WithIngressClass(ingressClassName),
-		WithKongServiceFacadeFeatureEnabled(),
-		WithGatewayAPIControllers(),
-		WithProxySyncInterval(100*time.Millisecond),
-		WithDiagnosticsWithoutServer(),
+	mgr := envtest.SetupManager(ctx, t, manager.NewRandomID(), envcfg,
+		envtest.AdminAPIOptFns(),
+		envtest.WithPublishService(ns.Name),
+		envtest.WithIngressClass(ingressClassName),
+		envtest.WithKongServiceFacadeFeatureEnabled(),
+		envtest.WithGatewayAPIControllers(),
+		envtest.WithProxySyncInterval(100*time.Millisecond),
+		envtest.WithDiagnosticsWithoutServer(),
 	)
 	require.NoError(t, multimgr.ScheduleInstance(mgr))
 
@@ -156,22 +157,22 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	scheme := Scheme(t, WithKong, WithGatewayAPI)
-	envcfg, _ := Setup(t, ctx, scheme, WithInstallGatewayCRDs(true))
+	scheme := envtest.Scheme(t, envtest.WithKong, envtest.WithGatewayAPI)
+	envcfg, _ := envtest.Setup(t, ctx, scheme, envtest.WithInstallGatewayCRDs(true))
 
-	ctrlClient := NewControllerClient(t, scheme, envcfg)
+	ctrlClient := envtest.NewControllerClient(t, scheme, envcfg)
 	ingressClassName := "kongenvtest"
-	deployIngressClass(ctx, t, ingressClassName, ctrlClient)
+	envtest.DeployIngressClass(ctx, t, ingressClassName, ctrlClient)
 
 	diagPort := helpers.GetFreePort(t)
-	ns := CreateNamespace(ctx, t, ctrlClient)
-	RunManager(ctx, t, envcfg,
-		AdminAPIOptFns(),
-		WithPublishService(ns.Name),
-		WithIngressClass(ingressClassName),
-		WithGatewayAPIControllers(),
-		WithProxySyncInterval(100*time.Millisecond),
-		WithDiagnosticsServer(diagPort),
+	ns := envtest.CreateNamespace(ctx, t, ctrlClient)
+	envtest.RunManager(ctx, t, envcfg,
+		envtest.AdminAPIOptFns(),
+		envtest.WithPublishService(ns.Name),
+		envtest.WithIngressClass(ingressClassName),
+		envtest.WithGatewayAPIControllers(),
+		envtest.WithProxySyncInterval(100*time.Millisecond),
+		envtest.WithDiagnosticsServer(diagPort),
 	)
 
 	t.Log("verfying that KongUpstreamPolicy works without gateway APIs")
@@ -330,21 +331,21 @@ func TestKongUpstreamPolicyNotReferencedInReconciledIngress(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
-	scheme := Scheme(t, WithKong)
-	envcfg, _ := Setup(t, ctx, scheme, WithInstallGatewayCRDs(false))
+	scheme := envtest.Scheme(t, envtest.WithKong)
+	envcfg, _ := envtest.Setup(t, ctx, scheme, envtest.WithInstallGatewayCRDs(false))
 
-	ctrlClient := NewControllerClient(t, scheme, envcfg)
+	ctrlClient := envtest.NewControllerClient(t, scheme, envcfg)
 	ingressClassName := "kongenvtest"
-	deployIngressClass(ctx, t, ingressClassName, ctrlClient)
+	envtest.DeployIngressClass(ctx, t, ingressClassName, ctrlClient)
 	alterIngressClassName := "kongenvtest-alter"
-	deployIngressClass(ctx, t, alterIngressClassName, ctrlClient)
+	envtest.DeployIngressClass(ctx, t, alterIngressClassName, ctrlClient)
 
-	ns := CreateNamespace(ctx, t, ctrlClient)
-	RunManager(ctx, t, envcfg,
-		AdminAPIOptFns(),
-		WithPublishService(ns.Name),
-		WithIngressClass(ingressClassName),
-		WithProxySyncInterval(100*time.Millisecond),
+	ns := envtest.CreateNamespace(ctx, t, ctrlClient)
+	envtest.RunManager(ctx, t, envcfg,
+		envtest.AdminAPIOptFns(),
+		envtest.WithPublishService(ns.Name),
+		envtest.WithIngressClass(ingressClassName),
+		envtest.WithProxySyncInterval(100*time.Millisecond),
 	)
 
 	t.Log("creating a KongUpstreamPolicy")

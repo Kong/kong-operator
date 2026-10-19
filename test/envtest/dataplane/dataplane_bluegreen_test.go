@@ -1,4 +1,4 @@
-package envtest
+package dataplane
 
 import (
 	"testing"
@@ -30,6 +30,8 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
+	"github.com/kong/kong-operator/v2/test/envtest"
+	"github.com/kong/kong-operator/v2/test/envtest/create"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
@@ -37,10 +39,10 @@ import (
 
 func TestDataPlaneBlueGreen(t *testing.T) {
 	ctx := t.Context()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := createClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "cluster-ca-bluegreen-reconcile")
+	clusterCA := create.ClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "cluster-ca-bluegreen-reconcile")
 	bgReconciler := &dataplane.BlueGreenReconciler{
 		DataPlaneIPFamily:        ipfamily.IPv4,
 		Client:                   mgr.GetClient(),
@@ -63,7 +65,7 @@ func TestDataPlaneBlueGreen(t *testing.T) {
 		Client:               mgr.GetClient(),
 		CertExpirationMargin: consts.DefaultCertExpirationMargin,
 	}
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		bgReconciler,
 		secretCertReconciler,
 	)
@@ -235,8 +237,8 @@ func TestDataPlaneBlueGreen(t *testing.T) {
 
 func TestDataPlaneBlueGreenKonnectHybrid(t *testing.T) {
 	ctx := t.Context()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 	cl := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 
 	factory := sdkmocks.NewMockSDKFactory(t)
@@ -250,7 +252,7 @@ func TestDataPlaneBlueGreenKonnectHybrid(t *testing.T) {
 			},
 		}, nil)
 
-	clusterCA := createClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "cluster-ca-bluegreen-hybrid")
+	clusterCA := create.ClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "cluster-ca-bluegreen-hybrid")
 	bgReconciler := &dataplane.BlueGreenReconciler{
 		DataPlaneIPFamily:        ipfamily.IPv4,
 		Client:                   cl,
@@ -271,7 +273,7 @@ func TestDataPlaneBlueGreenKonnectHybrid(t *testing.T) {
 			KonnectEnabled:           true,
 		},
 	}
-	StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilers(ctx, t, mgr, logs,
 		bgReconciler,
 		&secretcert.Reconciler{
 			Client:               mgr.GetClient(),

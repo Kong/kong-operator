@@ -150,7 +150,7 @@ func UpdateKonnectEventGatewayStatusWithProgrammed(
 	}, waitTime, tickTime)
 }
 
-func updateEventGatewayDataPlaneCertificateStatusWithProgrammed(
+func UpdateEventGatewayDataPlaneCertificateStatusWithProgrammed(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,

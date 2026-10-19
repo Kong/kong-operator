@@ -1,4 +1,4 @@
-package envtest
+package dataplane
 
 import (
 	"testing"
@@ -16,6 +16,7 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/test/envtest"
 )
 
 func baseTLSSecret(namespace string) *corev1.Secret {
@@ -106,14 +107,14 @@ func TestSecretCertReconciler(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
 	reconciler := &secretcert.Reconciler{
 		Client:      mgr.GetClient(),
 		LoggingMode: logging.DevelopmentMode,
 	}
-	StartReconcilers(ctx, t, mgr, logs, reconciler)
+	envtest.StartReconcilers(ctx, t, mgr, logs, reconciler)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -126,15 +127,15 @@ func TestSecretCertReconcilerCustomMargin(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
-	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
 	reconciler := &secretcert.Reconciler{
 		Client:               mgr.GetClient(),
 		LoggingMode:          logging.DevelopmentMode,
 		CertExpirationMargin: 2 * time.Second,
 	}
-	StartReconcilers(ctx, t, mgr, logs, reconciler)
+	envtest.StartReconcilers(ctx, t, mgr, logs, reconciler)
 
 	tc := secretCertReconcilerTestCase{
 		name: "actual requeue for short term valid DataPlane managed cert and delete it",

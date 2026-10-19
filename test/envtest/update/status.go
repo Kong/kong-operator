@@ -6,45 +6,34 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
-	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/test/envtest/consts"
-	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
 )
 
-func UpdateKonnectEventGatewayStatusWithProgrammed(
-	t *testing.T,
-	ctx context.Context,
-	cl client.Client,
-	obj *konnectv1alpha1.KonnectEventGateway,
-	id string,
-) {
+// DeploymentRolloutStatus sets Deployment status fields to report a
+// fully-complete rollout (matching k8sutils.DeploymentRolloutComplete).
+// Envtest doesn't run the real Deployment controller, so nothing populates
+// these fields on its own.
+func DeploymentRolloutStatus(t *testing.T, ctx context.Context, cl client.Client, ns, name string) {
+	t.Helper()
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
-		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)) {
+		deploy := &appsv1.Deployment{}
+		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: name}, deploy)) {
 			return
 		}
-		obj.Status.KonnectEntityStatus = konnectv1alpha2.KonnectEntityStatus{
-			ID:        id,
-			ServerURL: sdkmocks.SDKServerURL,
-			OrgID:     "org-id",
+		replicas := int32(1)
+		if deploy.Spec.Replicas != nil {
+			replicas = *deploy.Spec.Replicas
 		}
-		obj.Status.Conditions = []metav1.Condition{
-			programmedCondition(obj.GetGeneration()),
+		deploy.Status = appsv1.DeploymentStatus{
+			ObservedGeneration: deploy.Generation,
+			Replicas:           replicas,
+			UpdatedReplicas:    replicas,
+			ReadyReplicas:      replicas,
+			AvailableReplicas:  replicas,
 		}
-		assert.NoError(ct, cl.Status().Update(ctx, obj))
+		assert.NoError(ct, cl.Status().Update(ctx, deploy))
 	}, consts.WaitTime, consts.TickTime)
-}
-
-func programmedCondition(generation int64) metav1.Condition {
-	return k8sutils.NewConditionWithGeneration(
-		konnectv1alpha1.KonnectEntityProgrammedConditionType,
-		metav1.ConditionTrue,
-		konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed,
-		"",
-		generation,
-	)
 }

@@ -1,4 +1,4 @@
-package envtest
+package dataplane
 
 import (
 	"context"
@@ -15,15 +15,16 @@ import (
 
 	"github.com/kong/kong-operator/v2/ingress-controller/test/adminapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/util/builder"
+	"github.com/kong/kong-operator/v2/test/envtest"
 )
 
 func TestDiscoverer_GetAdminAPIsForServiceReturnsAllAddresses(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
-	scheme := Scheme(t)
-	cfg, _ := Setup(t, ctx, scheme)
-	client := NewControllerClient(t, scheme, cfg)
+	scheme := envtest.Scheme(t)
+	cfg, _ := envtest.Setup(t, ctx, scheme)
+	client := envtest.NewControllerClient(t, scheme, cfg)
 
 	// In tests below we use a deferred cancel to stop the manager and not wait
 	// for its timeout.
@@ -52,7 +53,7 @@ func TestDiscoverer_GetAdminAPIsForServiceReturnsAllAddresses(t *testing.T) {
 				portNumber  = 8444
 			)
 			var (
-				ns         = CreateNamespace(ctx, t, client)
+				ns         = envtest.CreateNamespace(ctx, t, client)
 				serviceObj = corev1.Service{
 					Namespace: ns.Name,
 					Name:      serviceName,
@@ -101,7 +102,7 @@ func TestDiscoverer_GetAdminAPIsForServiceReturnsAllAddresses(t *testing.T) {
 									Ready:       new(true),
 									Terminating: new(false),
 								},
-								TargetRef: testPodReference("pod-1", ns.Name),
+								TargetRef: envtest.PodReference("pod-1", ns.Name),
 							},
 						},
 						Ports: builder.NewEndpointPort(portNumber).WithName(portName).IntoSlice(),
@@ -117,14 +118,6 @@ func TestDiscoverer_GetAdminAPIsForServiceReturnsAllAddresses(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, got, tc.subnetD*tc.subnetC, "GetAdminAPIsForService should return all valid addresses")
 		})
-	}
-}
-
-func testPodReference(name, ns string) *corev1.ObjectReference {
-	return &corev1.ObjectReference{
-		Kind:      "Pod",
-		Namespace: ns,
-		Name:      name,
 	}
 }
 
@@ -144,13 +137,13 @@ func TestDiscoverer_GetAdminAPIsForServiceWithCacheClient(t *testing.T) {
 		portName    = "admin"
 		portNumber  = 8444
 	)
-	scheme := Scheme(t)
-	cfg, _ := Setup(t, ctx, scheme)
-	directClient := NewControllerClient(t, scheme, cfg)
-	mgr, _ := NewManager(t, ctx, cfg, scheme)
+	scheme := envtest.Scheme(t)
+	cfg, _ := envtest.Setup(t, ctx, scheme)
+	directClient := envtest.NewControllerClient(t, scheme, cfg)
+	mgr, _ := envtest.NewManager(t, ctx, cfg, scheme)
 	cacheClient := mgr.GetClient()
 
-	ns := CreateNamespace(ctx, t, directClient)
+	ns := envtest.CreateNamespace(ctx, t, directClient)
 	serviceObj := corev1.Service{
 		Namespace: ns.Name,
 		Name:      serviceName,
@@ -196,7 +189,7 @@ func TestDiscoverer_GetAdminAPIsForServiceWithCacheClient(t *testing.T) {
 					Ready:       new(true),
 					Terminating: new(false),
 				},
-				TargetRef: testPodReference("pod-1", ns.Name),
+				TargetRef: envtest.PodReference("pod-1", ns.Name),
 			},
 		},
 		Ports: builder.NewEndpointPort(portNumber).WithName(portName).IntoSlice(),
