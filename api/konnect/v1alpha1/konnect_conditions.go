@@ -158,8 +158,8 @@ const (
 	CreateInputsReasonValueChanged = "ValueChanged"
 	// CreateInputsReasonBaselineEstablished indicates inputs match an unverified legacy baseline.
 	CreateInputsReasonBaselineEstablished = "BaselineEstablished"
-	// CreateInputsReasonUnavailable indicates inputs cannot currently be resolved.
-	CreateInputsReasonUnavailable = "InputsUnavailable"
+	// CreateInputsReasonInputsUnavailable indicates inputs cannot currently be resolved.
+	CreateInputsReasonInputsUnavailable = "InputsUnavailable"
 )
 
 const (

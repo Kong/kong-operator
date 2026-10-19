@@ -39,17 +39,21 @@ func handleCreateInputs[T constraints.SupportedKonnectEntityType, TEnt constrain
 	}
 	if len(getSecretRefs(ent)) > 0 {
 		if c, ok := k8sutils.GetCondition(konnectv1alpha1.SecretRefValidConditionType, ent); ok && c.Status != metav1.ConditionTrue {
-			return setCondition(metav1.ConditionUnknown, konnectv1alpha1.CreateInputsReasonUnavailable,
+			return setCondition(metav1.ConditionUnknown, konnectv1alpha1.CreateInputsReasonInputsUnavailable,
 				"Cannot compare create inputs while referenced Secrets are unavailable; the recorded fingerprint is unchanged")
 		}
 	}
 	hash, err := inputs.CalculateCreateInputsHash(ctx, cl)
 	if err != nil {
-		if res, statusErr := setCondition(metav1.ConditionUnknown, konnectv1alpha1.CreateInputsReasonUnavailable,
-			"Cannot resolve current create inputs; the recorded fingerprint is unchanged"); statusErr != nil || !res.IsZero() {
-			return res, statusErr
+		fingerprintErr := fmt.Errorf("failed to fingerprint %s create inputs: %w", ent.GetTypeName(), err)
+		if res, statusErr := setCondition(metav1.ConditionUnknown, konnectv1alpha1.CreateInputsReasonInputsUnavailable,
+			"Cannot resolve current create inputs; the recorded fingerprint is unchanged"); statusErr != nil {
+			return res, fmt.Errorf("%w; failed to record condition: %w", fingerprintErr, statusErr)
+		} else if !res.IsZero() {
+			ctrllog.FromContext(ctx).Error(fingerprintErr, "failed to compare create inputs while requeuing condition update")
+			return res, nil
 		}
-		return ctrl.Result{}, fmt.Errorf("failed to fingerprint %s create inputs: %w", ent.GetTypeName(), err)
+		return ctrl.Result{}, fingerprintErr
 	}
 	if inputs.GetCreateInputsHash() == "" {
 		old := ent.DeepCopyObject().(TEnt)

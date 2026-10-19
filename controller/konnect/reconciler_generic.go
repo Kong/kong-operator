@@ -952,8 +952,10 @@ func removeCleanupFinalizerIfAncestorIsGone[
 //     logic with the recovered ID, causing nondeterministic Konnect updates before
 //     the cache has observed the status write. Re-persisting is idempotent and
 //     also heals the case where the post-create status write failed.
-//   - once the cached status carries the ID, the bridge entry has served its
-//     purpose and is dropped.
+//   - once the cached status carries the ID and fingerprint, the bridge entry
+//     has served its purpose and is dropped.
+//
+// For entities without tracked inputs, any persisted ID supersedes the bridge.
 //
 // It returns stop=true when the caller should return the provided result/error (a
 // conflict requeue, a persist error, or a successful pending-ID recovery);
@@ -968,8 +970,8 @@ func (r *KonnectEntityReconciler[T, TEnt]) reconcilePendingKonnectID(
 		return ctrl.Result{}, false, nil
 	}
 	inputs, tracksInputs := any(ent).(createInputsAware)
-	if ent.GetKonnectStatus().GetKonnectID() == pending.ID &&
-		(!tracksInputs || inputs.GetCreateInputsHash() == pending.CreateInputsHash) {
+	if id := ent.GetKonnectStatus().GetKonnectID(); id != "" &&
+		(!tracksInputs || (id == pending.ID && inputs.GetCreateInputsHash() == pending.CreateInputsHash)) {
 		r.pendingKonnectIDs.Delete(pendingKey)
 		return ctrl.Result{}, false, nil
 	}

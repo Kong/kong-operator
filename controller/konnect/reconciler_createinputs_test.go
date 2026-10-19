@@ -1,17 +1,21 @@
 package konnect
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"testing"
 
+	"github.com/go-logr/logr/funcr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -113,14 +117,14 @@ func testCreateInputs[T constraints.SupportedKonnectEntityType, TEnt constraints
 			wantStatus: metav1.ConditionTrue, wantReason: konnectv1alpha1.CreateInputsReasonUnchanged},
 		{name: "missing Secret", secret: true, change: func(t *testing.T, _ TEnt, cl client.Client, s *corev1.Secret) {
 			require.NoError(t, cl.Delete(t.Context(), s))
-		}, wantStatus: metav1.ConditionUnknown, wantReason: konnectv1alpha1.CreateInputsReasonUnavailable},
+		}, wantStatus: metav1.ConditionUnknown, wantReason: konnectv1alpha1.CreateInputsReasonInputsUnavailable},
 		{name: "missing key", secret: true, change: func(t *testing.T, _ TEnt, cl client.Client, s *corev1.Secret) {
 			delete(s.Data, "value")
 			require.NoError(t, cl.Update(t.Context(), s))
-		}, wantStatus: metav1.ConditionUnknown, wantReason: konnectv1alpha1.CreateInputsReasonUnavailable},
+		}, wantStatus: metav1.ConditionUnknown, wantReason: konnectv1alpha1.CreateInputsReasonInputsUnavailable},
 		{name: "legacy missing Secret", secret: true, baseline: true, change: func(t *testing.T, _ TEnt, cl client.Client, s *corev1.Secret) {
 			require.NoError(t, cl.Delete(t.Context(), s))
-		}, wantStatus: metav1.ConditionUnknown, wantReason: konnectv1alpha1.CreateInputsReasonUnavailable},
+		}, wantStatus: metav1.ConditionUnknown, wantReason: konnectv1alpha1.CreateInputsReasonInputsUnavailable},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := t.Context()
@@ -197,6 +201,70 @@ func TestCreateInputsConditionDoesNotBlockProgrammed(t *testing.T) {
 	require.NoError(t, err)
 	programmed, _ := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ent)
 	assert.Equal(t, metav1.ConditionTrue, programmed.Status)
+}
+
+func TestCreateInputsResolutionError(t *testing.T) {
+	inputErr := errors.New("secret read failed")
+	patchErr := errors.New("status write failed")
+	for _, tc := range []struct {
+		name     string
+		patchErr error
+	}{
+		{name: "condition recorded"},
+		{name: "condition write failed", patchErr: patchErr},
+		{name: "condition write conflicted", patchErr: &apierrors.StatusError{
+			ErrStatus: metav1.Status{Status: metav1.StatusFailure, Reason: metav1.StatusReasonConflict},
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var logs bytes.Buffer
+			ctx := ctrllog.IntoContext(t.Context(), funcr.New(func(_, message string) {
+				logs.WriteString(message)
+			}, funcr.Options{}))
+			ent := &configurationv1alpha1.EventGatewayStaticKey{Name: "key", Namespace: "default"}
+			ent.Spec.APISpec.Value = configurationv1alpha1.SensitiveDataSource{
+				Type:      configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+				SecretRef: &configurationv1alpha1.SensitiveDataSecretRef{Name: "inputs", Key: "value"},
+			}
+			ent.SetKonnectID("konnect-id")
+			ent.SetCreateInputsHash("sha256:original-request")
+			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(ent).WithStatusSubresource(ent).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+						if _, secret := obj.(*corev1.Secret); secret {
+							return inputErr
+						}
+						return cl.Get(ctx, key, obj, opts...)
+					},
+					SubResourcePatch: func(ctx context.Context, cl client.Client, subResource string, obj client.Object, p client.Patch, opts ...client.SubResourcePatchOption) error {
+						if tc.patchErr != nil {
+							return tc.patchErr
+						}
+						return cl.SubResource(subResource).Patch(ctx, obj, p, opts...)
+					},
+				}).Build()
+			require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(ent), ent))
+			res, err := handleCreateInputs(ctx, cl, ent)
+			if apierrors.IsConflict(tc.patchErr) {
+				require.NoError(t, err)
+				assert.True(t, res.Requeue)
+				assert.Contains(t, logs.String(), inputErr.Error(), "conflict retries must still report the resolution failure")
+			} else {
+				require.ErrorIs(t, err, inputErr)
+				assert.True(t, res.IsZero())
+				if tc.patchErr != nil {
+					assert.ErrorIs(t, err, tc.patchErr)
+				} else {
+					require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(ent), ent))
+					condition, ok := k8sutils.GetCondition(konnectv1alpha1.CreateInputsAppliedConditionType, ent)
+					require.True(t, ok)
+					assert.Equal(t, metav1.ConditionUnknown, condition.Status)
+					assert.Equal(t, "InputsUnavailable", condition.Reason)
+				}
+			}
+			assert.Equal(t, "sha256:original-request", ent.GetCreateInputsHash())
+		})
+	}
 }
 
 func TestRecoverPendingCreateInputsHash(t *testing.T) {
