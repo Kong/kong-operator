@@ -939,7 +939,8 @@ _test.kongintegration: gotestsum
 		-parallel $(NCPU) \
 		-coverpkg=$(PKG_LIST) \
 		-coverprofile=coverage.kongintegration.out \
-		./ingress-controller/test/kongintegration
+		./ingress-controller/test/kongintegration \
+		./test/runtimeintegration/aigateway
 
 .PHONY: test.samples
 test.samples: kustomize

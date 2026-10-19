@@ -1502,6 +1502,45 @@ func TestAuthGCPWorkloadIdentityFederationAwsIam_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestAwsSecretsManagerVault_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AwsSecretsManagerVault
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAzureKeyVault_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AzureKeyVault
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestConjurVault_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec ConjurVault
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestCreateAIGatewayCustomPolicyInstalledRequest_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -1528,10 +1567,192 @@ func TestCreateAIGatewayCustomPolicyStreamingRequest_MarshalEmpty(t *testing.T) 
 	}
 }
 
+func TestEnvironmentVariableVault_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EnvironmentVariableVault
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestGCPModelConfig_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
 	var spec GCPModelConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestGoogleSecretManagerVault_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec GoogleSecretManagerVault
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestHashiCorpVault_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec HashiCorpVault
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestHashiCorpVaultAppRoleConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec HashiCorpVaultAppRoleConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestHashiCorpVaultAwsEC2Config_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec HashiCorpVaultAwsEC2Config
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestHashiCorpVaultAwsIAMConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec HashiCorpVaultAwsIAMConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestHashiCorpVaultAzureConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec HashiCorpVaultAzureConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestHashiCorpVaultCertConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec HashiCorpVaultCertConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestHashiCorpVaultGcpGCEConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec HashiCorpVaultGcpGCEConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestHashiCorpVaultGcpIAMConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec HashiCorpVaultGcpIAMConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestHashiCorpVaultKubernetesConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec HashiCorpVaultKubernetesConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestHashiCorpVaultOauth2Config_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec HashiCorpVaultOauth2Config
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestHashiCorpVaultTokenConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec HashiCorpVaultTokenConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestKonnectConfigStoreVault_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec KonnectConfigStoreVault
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -2160,6 +2381,42 @@ func TestAuthGCPWorkloadIdentityFederationUnmarshalJSON_NilReceiver(t *testing.T
 				t.Fatal("expected error for nil receiver")
 			}
 			if got, want := err.Error(), "unmarshaling AuthGCPWorkloadIdentityFederation: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestHashiCorpVaultConfigUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "approle", payload: []byte("{\"authMethod\":\"approle\",\"approle\":{}}")},
+		{name: "aws_ec2", payload: []byte("{\"authMethod\":\"awsEc2\",\"awsEc2\":{}}")},
+		{name: "aws_iam", payload: []byte("{\"authMethod\":\"awsIam\",\"awsIam\":{}}")},
+		{name: "azure", payload: []byte("{\"authMethod\":\"azure\",\"azure\":{}}")},
+		{name: "cert", payload: []byte("{\"authMethod\":\"cert\",\"cert\":{}}")},
+		{name: "gcp_gce", payload: []byte("{\"authMethod\":\"gcpGce\",\"gcpGce\":{}}")},
+		{name: "gcp_iam", payload: []byte("{\"authMethod\":\"gcpIam\",\"gcpIam\":{}}")},
+		{name: "jwt", payload: []byte("{\"authMethod\":\"jwt\",\"jwt\":{}}")},
+		{name: "kubernetes", payload: []byte("{\"authMethod\":\"kubernetes\",\"kubernetes\":{}}")},
+		{name: "token", payload: []byte("{\"authMethod\":\"token\",\"token\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *HashiCorpVaultConfig
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling HashiCorpVaultConfig: nil receiver"; got != want {
 				t.Fatalf("unexpected error: got %q want %q", got, want)
 			}
 		})
@@ -3454,6 +3711,190 @@ func TestAIGatewayUpstreamConfigUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			t.Parallel()
 
 			var target AIGatewayUpstreamConfig
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
+func TestHashiCorpVaultUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+		assert  func(*testing.T, HashiCorpVault)
+	}{
+		{
+			name:    "Config/approle",
+			payload: []byte("{\"config\":{\"authMethod\":\"approle\",\"approle\":{}}}"),
+			assert: func(t *testing.T, target HashiCorpVault) {
+				t.Helper()
+				if target.Config == nil {
+					t.Fatalf("Config should be allocated")
+				}
+				if got, want := target.Config.AuthMethod, HashiCorpVaultConfigTypeAppRole; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Config.AppRole == nil {
+					t.Fatalf("Config.AppRole should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Config/aws_ec2",
+			payload: []byte("{\"config\":{\"authMethod\":\"awsEc2\",\"awsEc2\":{}}}"),
+			assert: func(t *testing.T, target HashiCorpVault) {
+				t.Helper()
+				if target.Config == nil {
+					t.Fatalf("Config should be allocated")
+				}
+				if got, want := target.Config.AuthMethod, HashiCorpVaultConfigTypeAwsEC2; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Config.AwsEC2 == nil {
+					t.Fatalf("Config.AwsEC2 should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Config/aws_iam",
+			payload: []byte("{\"config\":{\"authMethod\":\"awsIam\",\"awsIam\":{}}}"),
+			assert: func(t *testing.T, target HashiCorpVault) {
+				t.Helper()
+				if target.Config == nil {
+					t.Fatalf("Config should be allocated")
+				}
+				if got, want := target.Config.AuthMethod, HashiCorpVaultConfigTypeAwsIAM; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Config.AwsIAM == nil {
+					t.Fatalf("Config.AwsIAM should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Config/azure",
+			payload: []byte("{\"config\":{\"authMethod\":\"azure\",\"azure\":{}}}"),
+			assert: func(t *testing.T, target HashiCorpVault) {
+				t.Helper()
+				if target.Config == nil {
+					t.Fatalf("Config should be allocated")
+				}
+				if got, want := target.Config.AuthMethod, HashiCorpVaultConfigTypeAzure; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Config.Azure == nil {
+					t.Fatalf("Config.Azure should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Config/cert",
+			payload: []byte("{\"config\":{\"authMethod\":\"cert\",\"cert\":{}}}"),
+			assert: func(t *testing.T, target HashiCorpVault) {
+				t.Helper()
+				if target.Config == nil {
+					t.Fatalf("Config should be allocated")
+				}
+				if got, want := target.Config.AuthMethod, HashiCorpVaultConfigTypeCert; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Config.Cert == nil {
+					t.Fatalf("Config.Cert should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Config/gcp_gce",
+			payload: []byte("{\"config\":{\"authMethod\":\"gcpGce\",\"gcpGce\":{}}}"),
+			assert: func(t *testing.T, target HashiCorpVault) {
+				t.Helper()
+				if target.Config == nil {
+					t.Fatalf("Config should be allocated")
+				}
+				if got, want := target.Config.AuthMethod, HashiCorpVaultConfigTypeGcpGCE; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Config.GcpGCE == nil {
+					t.Fatalf("Config.GcpGCE should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Config/gcp_iam",
+			payload: []byte("{\"config\":{\"authMethod\":\"gcpIam\",\"gcpIam\":{}}}"),
+			assert: func(t *testing.T, target HashiCorpVault) {
+				t.Helper()
+				if target.Config == nil {
+					t.Fatalf("Config should be allocated")
+				}
+				if got, want := target.Config.AuthMethod, HashiCorpVaultConfigTypeGcpIAM; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Config.GcpIAM == nil {
+					t.Fatalf("Config.GcpIAM should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Config/jwt",
+			payload: []byte("{\"config\":{\"authMethod\":\"jwt\",\"jwt\":{}}}"),
+			assert: func(t *testing.T, target HashiCorpVault) {
+				t.Helper()
+				if target.Config == nil {
+					t.Fatalf("Config should be allocated")
+				}
+				if got, want := target.Config.AuthMethod, HashiCorpVaultConfigTypeOauth2; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Config.Oauth2 == nil {
+					t.Fatalf("Config.Oauth2 should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Config/kubernetes",
+			payload: []byte("{\"config\":{\"authMethod\":\"kubernetes\",\"kubernetes\":{}}}"),
+			assert: func(t *testing.T, target HashiCorpVault) {
+				t.Helper()
+				if target.Config == nil {
+					t.Fatalf("Config should be allocated")
+				}
+				if got, want := target.Config.AuthMethod, HashiCorpVaultConfigTypeKubernetes; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Config.Kubernetes == nil {
+					t.Fatalf("Config.Kubernetes should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Config/token",
+			payload: []byte("{\"config\":{\"authMethod\":\"token\",\"token\":{}}}"),
+			assert: func(t *testing.T, target HashiCorpVault) {
+				t.Helper()
+				if target.Config == nil {
+					t.Fatalf("Config should be allocated")
+				}
+				if got, want := target.Config.AuthMethod, HashiCorpVaultConfigTypeToken; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Config.Token == nil {
+					t.Fatalf("Config.Token should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target HashiCorpVault
 			if err := json.Unmarshal(tt.payload, &target); err != nil {
 				t.Fatalf("json.Unmarshal() error = %v", err)
 			}

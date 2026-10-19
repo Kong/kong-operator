@@ -56,6 +56,8 @@ func UpdateGeneratedOps[
 		return updateAIGatewayPolicy(ctx, cl, sdk.GetAIGatewayPoliciesSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewaySNI:
 		return updateAIGatewaySNI(ctx, cl, sdk.GetAIGatewaySNIsSDK(), ent)
+	case *aiconfigurationv1alpha1.AIGatewayVault:
+		return updateAIGatewayVault(ctx, cl, sdk.GetAIGatewayVaultsSDK(), ent)
 	case *configurationv1alpha1.EventGatewayBackendCluster:
 		return updateEventGatewayBackendCluster(ctx, cl, sdk.GetEventGatewayBackendClustersSDK(), ent)
 	case *configurationv1alpha1.EventGatewayDataPlaneCertificate:

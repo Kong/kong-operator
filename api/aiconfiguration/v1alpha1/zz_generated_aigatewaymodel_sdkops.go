@@ -24,6 +24,145 @@ type AIGatewayModelSDKOpsBoolField struct {
 // AIGatewayModelSDKOpsBoolFields lists all boolean enum fields that must be normalized for SDK payloads.
 var AIGatewayModelSDKOpsBoolFields = []AIGatewayModelSDKOpsBoolField{
 	{
+		Label: "api.config.balancer.semantic.embeddings.allow_auth_override",
+		Path: []string{
+			"api",
+			"config",
+			"balancer",
+			"semantic",
+			"embeddings",
+			"allow_auth_override",
+		},
+	},
+	{
+		Label: "api.config.balancer.semantic.embeddings.config.bedrock.embeddings_normalize",
+		Path: []string{
+			"api",
+			"config",
+			"balancer",
+			"semantic",
+			"embeddings",
+			"config",
+			"bedrock",
+			"embeddings_normalize",
+		},
+	},
+	{
+		Label: "api.config.balancer.semantic.embeddings.config.huggingface.use_cache",
+		Path: []string{
+			"api",
+			"config",
+			"balancer",
+			"semantic",
+			"embeddings",
+			"config",
+			"huggingface",
+			"use_cache",
+		},
+	},
+	{
+		Label: "api.config.balancer.semantic.embeddings.config.huggingface.wait_for_model",
+		Path: []string{
+			"api",
+			"config",
+			"balancer",
+			"semantic",
+			"embeddings",
+			"config",
+			"huggingface",
+			"wait_for_model",
+		},
+	},
+	{
+		Label: "api.config.balancer.semantic.vectordb.pgvector.ssl.enabled",
+		Path: []string{
+			"api",
+			"config",
+			"balancer",
+			"semantic",
+			"vectordb",
+			"pgvector",
+			"ssl",
+			"enabled",
+		},
+	},
+	{
+		Label: "api.config.balancer.semantic.vectordb.pgvector.ssl.required",
+		Path: []string{
+			"api",
+			"config",
+			"balancer",
+			"semantic",
+			"vectordb",
+			"pgvector",
+			"ssl",
+			"required",
+		},
+	},
+	{
+		Label: "api.config.balancer.semantic.vectordb.pgvector.ssl.verify",
+		Path: []string{
+			"api",
+			"config",
+			"balancer",
+			"semantic",
+			"vectordb",
+			"pgvector",
+			"ssl",
+			"verify",
+		},
+	},
+	{
+		Label: "api.config.balancer.semantic.vectordb.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"api",
+			"config",
+			"balancer",
+			"semantic",
+			"vectordb",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "api.config.balancer.semantic.vectordb.redis.connection_is_proxied",
+		Path: []string{
+			"api",
+			"config",
+			"balancer",
+			"semantic",
+			"vectordb",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "api.config.balancer.semantic.vectordb.redis.ssl",
+		Path: []string{
+			"api",
+			"config",
+			"balancer",
+			"semantic",
+			"vectordb",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "api.config.balancer.semantic.vectordb.redis.ssl_verify",
+		Path: []string{
+			"api",
+			"config",
+			"balancer",
+			"semantic",
+			"vectordb",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
 		Label: "api.config.logging.payloads",
 		Path: []string{
 			"api",
@@ -82,6 +221,211 @@ var AIGatewayModelSDKOpsBoolFields = []AIGatewayModelSDKOpsBoolField{
 			"targets",
 			"[]",
 			"allow_auth_override",
+		},
+	},
+	{
+		Label: "api.targets.[].config.bedrock.embeddings_normalize",
+		Path: []string{
+			"api",
+			"targets",
+			"[]",
+			"config",
+			"bedrock",
+			"embeddings_normalize",
+		},
+	},
+	{
+		Label: "api.targets.[].config.cohere.wait_for_model",
+		Path: []string{
+			"api",
+			"targets",
+			"[]",
+			"config",
+			"cohere",
+			"wait_for_model",
+		},
+	},
+	{
+		Label: "api.targets.[].config.dashscope.international",
+		Path: []string{
+			"api",
+			"targets",
+			"[]",
+			"config",
+			"dashscope",
+			"international",
+		},
+	},
+	{
+		Label: "api.targets.[].config.huggingface.use_cache",
+		Path: []string{
+			"api",
+			"targets",
+			"[]",
+			"config",
+			"huggingface",
+			"use_cache",
+		},
+	},
+	{
+		Label: "api.targets.[].config.huggingface.wait_for_model",
+		Path: []string{
+			"api",
+			"targets",
+			"[]",
+			"config",
+			"huggingface",
+			"wait_for_model",
+		},
+	},
+	{
+		Label: "api.targets.[].config.kimi.international",
+		Path: []string{
+			"api",
+			"targets",
+			"[]",
+			"config",
+			"kimi",
+			"international",
+		},
+	},
+	{
+		Label: "model.config.balancer.semantic.embeddings.allow_auth_override",
+		Path: []string{
+			"model",
+			"config",
+			"balancer",
+			"semantic",
+			"embeddings",
+			"allow_auth_override",
+		},
+	},
+	{
+		Label: "model.config.balancer.semantic.embeddings.config.bedrock.embeddings_normalize",
+		Path: []string{
+			"model",
+			"config",
+			"balancer",
+			"semantic",
+			"embeddings",
+			"config",
+			"bedrock",
+			"embeddings_normalize",
+		},
+	},
+	{
+		Label: "model.config.balancer.semantic.embeddings.config.huggingface.use_cache",
+		Path: []string{
+			"model",
+			"config",
+			"balancer",
+			"semantic",
+			"embeddings",
+			"config",
+			"huggingface",
+			"use_cache",
+		},
+	},
+	{
+		Label: "model.config.balancer.semantic.embeddings.config.huggingface.wait_for_model",
+		Path: []string{
+			"model",
+			"config",
+			"balancer",
+			"semantic",
+			"embeddings",
+			"config",
+			"huggingface",
+			"wait_for_model",
+		},
+	},
+	{
+		Label: "model.config.balancer.semantic.vectordb.pgvector.ssl.enabled",
+		Path: []string{
+			"model",
+			"config",
+			"balancer",
+			"semantic",
+			"vectordb",
+			"pgvector",
+			"ssl",
+			"enabled",
+		},
+	},
+	{
+		Label: "model.config.balancer.semantic.vectordb.pgvector.ssl.required",
+		Path: []string{
+			"model",
+			"config",
+			"balancer",
+			"semantic",
+			"vectordb",
+			"pgvector",
+			"ssl",
+			"required",
+		},
+	},
+	{
+		Label: "model.config.balancer.semantic.vectordb.pgvector.ssl.verify",
+		Path: []string{
+			"model",
+			"config",
+			"balancer",
+			"semantic",
+			"vectordb",
+			"pgvector",
+			"ssl",
+			"verify",
+		},
+	},
+	{
+		Label: "model.config.balancer.semantic.vectordb.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"model",
+			"config",
+			"balancer",
+			"semantic",
+			"vectordb",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "model.config.balancer.semantic.vectordb.redis.connection_is_proxied",
+		Path: []string{
+			"model",
+			"config",
+			"balancer",
+			"semantic",
+			"vectordb",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "model.config.balancer.semantic.vectordb.redis.ssl",
+		Path: []string{
+			"model",
+			"config",
+			"balancer",
+			"semantic",
+			"vectordb",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "model.config.balancer.semantic.vectordb.redis.ssl_verify",
+		Path: []string{
+			"model",
+			"config",
+			"balancer",
+			"semantic",
+			"vectordb",
+			"redis",
+			"ssl_verify",
 		},
 	},
 	{
@@ -152,6 +496,72 @@ var AIGatewayModelSDKOpsBoolFields = []AIGatewayModelSDKOpsBoolField{
 			"targets",
 			"[]",
 			"allow_auth_override",
+		},
+	},
+	{
+		Label: "model.targets.[].config.bedrock.embeddings_normalize",
+		Path: []string{
+			"model",
+			"targets",
+			"[]",
+			"config",
+			"bedrock",
+			"embeddings_normalize",
+		},
+	},
+	{
+		Label: "model.targets.[].config.cohere.wait_for_model",
+		Path: []string{
+			"model",
+			"targets",
+			"[]",
+			"config",
+			"cohere",
+			"wait_for_model",
+		},
+	},
+	{
+		Label: "model.targets.[].config.dashscope.international",
+		Path: []string{
+			"model",
+			"targets",
+			"[]",
+			"config",
+			"dashscope",
+			"international",
+		},
+	},
+	{
+		Label: "model.targets.[].config.huggingface.use_cache",
+		Path: []string{
+			"model",
+			"targets",
+			"[]",
+			"config",
+			"huggingface",
+			"use_cache",
+		},
+	},
+	{
+		Label: "model.targets.[].config.huggingface.wait_for_model",
+		Path: []string{
+			"model",
+			"targets",
+			"[]",
+			"config",
+			"huggingface",
+			"wait_for_model",
+		},
+	},
+	{
+		Label: "model.targets.[].config.kimi.international",
+		Path: []string{
+			"model",
+			"targets",
+			"[]",
+			"config",
+			"kimi",
+			"international",
 		},
 	},
 }
@@ -388,14 +798,6 @@ func (s *AIGatewayModelAPISpec) toUpdateAIGatewayModelRequestFromPayload(payload
 		return nil, err
 	}
 
-	var selected map[string]any
-	if err := json.Unmarshal(data, &selected); err != nil {
-		return nil, fmt.Errorf("failed to decode selected AIGatewayModel config: %w", err)
-	}
-	var target sdkkonnectcomp.UpdateAIGatewayModelRequest
-	if err := json.Unmarshal(data, &target); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal into UpdateAIGatewayModelRequest: %w", err)
-	}
 	switch variant {
 	case "API":
 		var member sdkkonnectcomp.AIGatewayModelAPI
