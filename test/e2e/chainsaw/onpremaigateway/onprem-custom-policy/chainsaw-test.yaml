@@ -1,0 +1,229 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: onprem-custom-policy
+spec:
+  description: |
+    Custom policies on the on-prem AI Gateway data plane, mirroring the
+    Konnect suite's `custom-policy-dataplane` test (its core: both custom
+    policy kinds, each exercised through one of the two ways an
+    AIGatewayPolicy can name a custom policy, verified on real traffic):
+
+    - streaming: schema and Lua handler travel in the pushed payload
+      (custom_plugins). The data plane needs
+      KONG_CUSTOM_PLUGIN_STREAMING_ENABLED=on and a runtime >= 2.2.
+    - installed: only the schema travels; the data plane loads the plugin
+      itself from a ConfigMap mounted on its Lua package path, enabled via
+      KONG_PLUGINS.
+
+    The streaming policy names its custom policy via `customPolicyRef`; the
+    installed one via the literal `type` (the custom policy's name) — both
+    resolution paths in one test. Unlike Konnect, on-prem accepts custom
+    policy types on models, so both policies attach to the model directly and
+    each sets a distinct response header, asserted by name and value on real
+    chat-completions requests.
+
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'onprem-cp']))
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+    - name: model_name
+      value: (join('-', [($test_name), 'model']))
+    - name: provider_name
+      value: (join('-', [($test_name), 'provider']))
+    - name: provider_credentials_name
+      value: (join('-', [($provider_name), 'credentials']))
+    # Streaming custom policy (CR name and its plugin name) and the policy
+    # referencing it via customPolicyRef.
+    - name: streaming_custom_policy_name
+      value: custom-policy-streaming
+    - name: streaming_plugin_name
+      value: (join('-', [($test_name), 'streaming']))
+    - name: streaming_policy_name
+      value: (join('-', [($test_name), 'streaming-policy']))
+    # Installed custom policy (CR name = plugin name), its ConfigMap, and the
+    # policy referencing it via literal type.
+    - name: installed_custom_policy_name
+      value: custom-policy-installed
+    - name: installed_plugin_name
+      value: (join('-', [($test_name), 'installed']))
+    - name: installed_plugin_configmap
+      value: installed-custom-plugin
+    - name: installed_policy_name
+      value: (join('-', [($test_name), 'installed-policy']))
+    # The plugin Lua schema, split around the plugin name (which must equal
+    # the custom policy's name), and header names/values per policy.
+    - name: plugin_schema_prefix
+      value: 'local typedefs = require "kong.db.schema.typedefs" return { name = "'
+    - name: plugin_schema_suffix
+      value: '", fields = { { protocols = typedefs.protocols_http }, { config = { type = "record", fields = { { header_name = { type = "string", default = "X-Custom-Policy" } }, { header_value = { type = "string", default = "applied" } } } } } } }'
+    - name: streaming_plugin_handler
+      value: 'local P = { PRIORITY = 1000, VERSION = "1.0.0" } function P:header_filter(conf) kong.response.set_header(conf.header_name, conf.header_value) end return P'
+    - name: streaming_header_value
+      value: chainsaw-streaming-via-ref
+    - name: installed_header_value
+      value: chainsaw-installed-via-type
+  steps:
+    - name: Create-onprem-aigateway
+      use:
+        template: ../../common/_step_templates/apply-assert-onpremAIGateway.yaml
+    - name: Create-installed-plugin-configmap
+      try:
+        - apply:
+            file: 01-installed-plugin-configmap.yaml
+    - name: Create-provider
+      try:
+        - apply:
+            file: 02-provider.yaml
+    - name: Create-custom-policies
+      try:
+        - apply:
+            file: 03-custom-policies.yaml
+    - name: Create-policies-referencing-the-custom-policies
+      try:
+        - apply:
+            file: 04-policies.yaml
+    - name: Create-model-referencing-both-policies
+      try:
+        - apply:
+            file: 05-model.yaml
+    - name: Create-aigateway-dataplane
+      description: |
+        KONG_CUSTOM_PLUGIN_STREAMING_ENABLED lets the data plane accept the
+        streaming custom policy's handler carried in the pushed payload. The
+        installed custom policy's plugin is mounted from the ConfigMap on the
+        Lua package path (the trailing ";;" keeps Kong's default one) and
+        enabled via KONG_PLUGINS.
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+        with:
+          bindings:
+            - name: control_plane_ref
+              value: "({type: 'onpremNamespacedRef', onpremNamespacedRef: {name: ($aigw_cp_name)}})"
+            - name: aigw_dp_env
+              value: >-
+                ([{name: 'KONG_CUSTOM_PLUGIN_STREAMING_ENABLED', value: 'on'},
+                {name: 'KONG_PLUGINS', value: join(',', ['bundled', $installed_plugin_name])},
+                {name: 'KONG_LUA_PACKAGE_PATH', value: '/opt/kong-plugins/?.lua;/opt/kong-plugins/?/init.lua;;'}])
+            - name: aigw_dp_volume_mounts
+              value: >-
+                ([{name: 'installed-custom-plugin', readOnly: `true`,
+                mountPath: join('', ['/opt/kong-plugins/kong/plugins/', $installed_plugin_name])}])
+            - name: aigw_dp_volumes
+              value: >-
+                ([{name: 'installed-custom-plugin', configMap: {name: $installed_plugin_configmap}}])
+    - name: Assert-all-entities-pushed
+      try:
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayCustomPolicy
+              metadata:
+                name: ($streaming_custom_policy_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayCustomPolicy
+              metadata:
+                name: ($installed_custom_policy_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                name: ($streaming_policy_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                name: ($installed_policy_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayModel
+              metadata:
+                name: ($model_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+    - name: Verify-streaming-custom-policy-header
+      description: |
+        The streaming custom policy's handler set the header with the value
+        from the policy that referenced it via customPolicyRef.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: /chat
+              - name: MODEL_ALIAS
+                value: ($model_name)
+              - name: INCLUDE_HEADER
+                value: "false"
+              - name: EXPECT_HEADER
+                value: X-Streaming-Custom-Policy
+              - name: EXPECT_HEADER_VALUE
+                value: ($streaming_header_value)
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+    - name: Verify-installed-custom-policy-header
+      description: |
+        The installed custom policy's on-disk handler set the header with the
+        value from the policy that named it via the literal type.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: /chat
+              - name: MODEL_ALIAS
+                value: ($model_name)
+              - name: INCLUDE_HEADER
+                value: "false"
+              - name: EXPECT_HEADER
+                value: X-Installed-Custom-Policy
+              - name: EXPECT_HEADER_VALUE
+                value: ($installed_header_value)
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: onprem-custom-policy
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
