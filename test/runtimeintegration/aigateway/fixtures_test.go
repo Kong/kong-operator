@@ -1,4 +1,4 @@
-package aigwcontract_test
+package aigateway_test
 
 import (
 	"testing"
@@ -9,7 +9,7 @@ import (
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
-	aigwcontainers "github.com/kong/kong-operator/v2/test/aigwcontract/containers"
+	rtcontainers "github.com/kong/kong-operator/v2/test/runtimeintegration/aigateway/containers"
 )
 
 // Entity names of the representative document. Every cross-reference below
@@ -241,11 +241,11 @@ func representativeObjects(t *testing.T) []any {
 						DisplayName: "Mock custom policy",
 						Schema: aiconfigurationv1alpha1.ConfigMapDataSource{
 							Type:  aiconfigurationv1alpha1.ConfigMapDataSourceTypeInline,
-							Value: new(aigwcontainers.MockCustomPolicySchemaLua),
+							Value: new(rtcontainers.MockCustomPolicySchemaLua),
 						},
 						Handler: aiconfigurationv1alpha1.ConfigMapDataSource{
 							Type:  aiconfigurationv1alpha1.ConfigMapDataSourceTypeInline,
-							Value: new(aigwcontainers.MockCustomPolicyHandlerLua),
+							Value: new(rtcontainers.MockCustomPolicyHandlerLua),
 						},
 					},
 				},

@@ -1,4 +1,4 @@
-package aigwcontract_test
+package aigateway_test
 
 import (
 	"bytes"
@@ -28,7 +28,7 @@ import (
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/translator"
 	"github.com/kong/kong-operator/v2/test"
-	aigwcontainers "github.com/kong/kong-operator/v2/test/aigwcontract/containers"
+	rtcontainers "github.com/kong/kong-operator/v2/test/runtimeintegration/aigateway/containers"
 )
 
 // goldenPayloadPath holds the golden dbless payload rendered by
@@ -60,7 +60,7 @@ func TestConverterDBLessPayloadAcceptedByAIGatewayAdminAPI(t *testing.T) {
 	t.Parallel()
 	ctx := t.Context()
 
-	aigwC := aigwcontainers.NewAIGateway(ctx, t)
+	aigwC := rtcontainers.NewAIGateway(ctx, t)
 	adminURL := aigwC.AdminURL(ctx, t)
 	aigwClient, err := kong.NewClient(&adminURL, http.DefaultClient)
 	require.NoError(t, err)
@@ -225,11 +225,11 @@ func representativeDBLessPayload(t *testing.T) []byte {
 }
 
 // assertGoldenPayload compares the rendered payload against the golden file,
-// updating it in place when AIGWCONTRACT_UPDATE_GOLDEN is set.
+// updating it in place when RUNTIMEINTEGRATION_UPDATE_GOLDEN is set.
 func assertGoldenPayload(t *testing.T, payload []byte) {
 	t.Helper()
 
-	if os.Getenv("AIGWCONTRACT_UPDATE_GOLDEN") == "true" {
+	if os.Getenv("RUNTIMEINTEGRATION_UPDATE_GOLDEN") == "true" {
 		require.NoError(t, os.MkdirAll(filepath.Dir(goldenPayloadPath), 0o755))
 		require.NoError(t, os.WriteFile(goldenPayloadPath, payload, 0o600))
 		t.Logf("golden payload updated: %s", goldenPayloadPath)
@@ -237,9 +237,9 @@ func assertGoldenPayload(t *testing.T, payload []byte) {
 	}
 
 	golden, err := os.ReadFile(goldenPayloadPath)
-	require.NoError(t, err, "the golden payload must exist; run with AIGWCONTRACT_UPDATE_GOLDEN=true to generate it")
+	require.NoError(t, err, "the golden payload must exist; run with RUNTIMEINTEGRATION_UPDATE_GOLDEN=true to generate it")
 	assert.Contains(t, string(golden), "ai_models:",
 		"the golden payload must carry the ai_models collection")
 	assert.Equal(t, string(golden), string(payload),
-		"the converter's dbless payload changed: either update the golden (AIGWCONTRACT_UPDATE_GOLDEN=true) or treat this as a regression against the AI Gateway Admin API contract")
+		"the converter's dbless payload changed: either update the golden (RUNTIMEINTEGRATION_UPDATE_GOLDEN=true) or treat this as a regression against the AI Gateway Admin API contract")
 }
