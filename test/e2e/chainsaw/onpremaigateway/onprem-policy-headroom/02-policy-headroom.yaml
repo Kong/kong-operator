@@ -1,0 +1,27 @@
+# An ai-prompt-compressor AIGatewayPolicy whose config, read from the Secret,
+# holds `provider: headroom` next to a nested `headroom` block: the shape the
+# SDK union flattening used to rewrite (hoisting the nested block into config)
+# before the runtime rejected it with "unknown field" errors. The config must
+# reach the data plane verbatim.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayPolicy
+metadata:
+  name: ($aigw_policy_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: ai-prompt-compressor
+    displayName: "AIGateway Policy Headroom Compressor"
+    enabled: "Enabled"
+    global: "Disabled"
+    name: ($aigw_policy_name)
+    config:
+      type: secretRef
+      secretRef:
+        name: ($aigw_policy_secretref_name)
+        key: config

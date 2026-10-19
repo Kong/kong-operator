@@ -1,0 +1,203 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: onprem-policy-headroom
+spec:
+  description: |
+    On-prem AI Gateway - ai-prompt-compressor policy with the headroom
+    provider, mirroring the Konnect suite's `aigateway-policy-headroom` test.
+
+    The policy config, read from a Secret, holds `provider: headroom` next to
+    a nested `headroom` block: free-form config that looks like a
+    discriminated union, which the SDK union flattening used to rewrite
+    (hoisting the nested block into config) before the runtime rejected it
+    with "unknown field" errors. The config must reach the data plane
+    verbatim.
+
+    The policy is then exercised on the data plane against the mock Headroom
+    on the shared kong-mock, which only accepts the proxy_token
+    test-headroom-token: requests succeed with the right token, fail once the
+    Secret carries a wrong one (stop_on_error), and recover when it is
+    restored.
+
+    The headroom provider requires a 2.2 runtime: run with a data-plane image
+    >= 2.2 (e.g. the aigw-dp image pinned in test/test_dependencies.yaml).
+
+    Unlike the Konnect original, there is no control-plane introspection
+    step: on-prem the equivalent verbatim-config guarantee is pinned by the
+    converter contract test's golden payload machinery.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'onprem-cp']))
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+    - name: model_name
+      value: (join('-', [($test_name), 'model']))
+    - name: provider_name
+      value: (join('-', [($test_name), 'provider']))
+    - name: provider_credentials_name
+      value: (join('-', [($provider_name), 'credentials']))
+  steps:
+    - name: Create-onprem-aigateway
+      use:
+        template: ../../common/_step_templates/apply-assert-onpremAIGateway.yaml
+    - name: Create-headroom-policy-secret
+      description: |
+        Create the Secret holding the headroom ai-prompt-compressor policy
+        config, with the proxy_token the mock Headroom accepts.
+      bindings:
+        - name: aigw_policy_secretref_name
+          value: (join('-', [($test_name), 'policy-headroom-secret']))
+        - name: headroom_proxy_token
+          value: test-headroom-token
+      try:
+        - apply:
+            file: 01-secret-for-headroom-policy.yaml
+    - name: Create-headroom-policy
+      bindings:
+        - name: aigw_policy_name
+          value: (join('-', [($test_name), 'policy-headroom']))
+        - name: aigw_policy_secretref_name
+          value: (join('-', [($test_name), 'policy-headroom-secret']))
+      try:
+        - apply:
+            file: 02-policy-headroom.yaml
+    - name: Create-provider-and-model-referencing-the-policy
+      bindings:
+        - name: aigw_policy_name
+          value: (join('-', [($test_name), 'policy-headroom']))
+      try:
+        - apply:
+            file: 03-provider-and-model.yaml
+    - name: Create-aigateway-dataplane
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+        with:
+          bindings:
+            - name: control_plane_ref
+              value: "({type: 'onpremNamespacedRef', onpremNamespacedRef: {name: ($aigw_cp_name)}})"
+    - name: Assert-model-and-policy-pushed
+      bindings:
+        - name: aigw_policy_name
+          value: (join('-', [($test_name), 'policy-headroom']))
+      try:
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayModel
+              metadata:
+                name: ($model_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                name: ($aigw_policy_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+    - name: Verify-headroom-compressor-is-applied
+      description: |
+        Chat completions succeed through the model with the headroom policy
+        attached. On its own this does not prove the policy runs (the data
+        plane may not have picked it up yet); the wrong-token steps below do.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: /chat
+              - name: MODEL_ALIAS
+                value: ($model_name)
+              - name: INCLUDE_HEADER
+                value: "false"
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+    - name: Update-headroom-secret-with-a-wrong-proxy-token
+      description: |
+        Put a proxy_token the mock Headroom rejects into the Secret. The
+        operator has to re-render the policy config and push it to the data
+        plane.
+      bindings:
+        - name: aigw_policy_secretref_name
+          value: (join('-', [($test_name), 'policy-headroom-secret']))
+        - name: headroom_proxy_token
+          value: wrong-headroom-token
+      try:
+        - apply:
+            file: 01-secret-for-headroom-policy.yaml
+    - name: Verify-headroom-compressor-rejects-the-wrong-proxy-token
+      description: |
+        With the wrong token the mock Headroom answers 401, and stop_on_error
+        makes the data plane fail the chat request. This proves the data plane
+        actually calls Headroom with the token read from the Secret, rather
+        than skipping the policy.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: /chat
+              - name: MODEL_ALIAS
+                value: ($model_name)
+              - name: INCLUDE_HEADER
+                value: "false"
+              - name: EXPECTED_SUCCESS
+                value: "false"
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+    - name: Restore-headroom-secret-with-the-right-proxy-token
+      bindings:
+        - name: aigw_policy_secretref_name
+          value: (join('-', [($test_name), 'policy-headroom-secret']))
+        - name: headroom_proxy_token
+          value: test-headroom-token
+      try:
+        - apply:
+            file: 01-secret-for-headroom-policy.yaml
+    - name: Verify-headroom-compressor-recovers-with-the-right-proxy-token
+      description: |
+        Chat completions succeed again once the right token is back, ruling
+        out that the previous failure came from anything but the token.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: /chat
+              - name: MODEL_ALIAS
+                value: ($model_name)
+              - name: INCLUDE_HEADER
+                value: "false"
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: onprem-policy-headroom
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
