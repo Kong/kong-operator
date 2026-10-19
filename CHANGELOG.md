@@ -76,9 +76,9 @@
 - Konnect: a DataPlane attached to a `KonnectExtension` now renders control
   plane and telemetry endpoints that carry a path, as Konnect returns them
   over PrivateLink, in the form Kong Gateway accepts: the port no longer lands
-  inside the path. Endpoints that carry no port and no path render exactly as
-  before; a value that carried a port previously had a second port appended,
-  which is fixed.
+  inside the path. Endpoints that name a DNS host without a port and without a
+  path render exactly as before; a value that carried a port previously had a
+  second port appended, which is fixed.
   [#6104](https://github.com/Kong/kong-operator/issues/6104)
 - Konnect entities that resolve API authentication through a parent chain,
   including EventGateway policies and AI Gateway consumer credentials, no longer
