@@ -97,6 +97,10 @@ func TestEventGatewayStaticKey(t *testing.T) {
 			Return(&sdkkonnectops.CreateEventGatewayStaticKeyResponse{
 				EventGatewayStaticKey: &sdkkonnectcomp.EventGatewayStaticKey{ID: staticKeyID},
 			}, nil)
+		sdk.EventGatewayStaticKeysSDK.EXPECT().
+			GetEventGatewayStaticKey(mock.Anything, eventGatewayID, staticKeyID).
+			Return(&sdkkonnectops.GetEventGatewayStaticKeyResponse{}, nil).
+			Maybe()
 
 		t.Log("Creating EventGatewayStaticKey")
 		staticKey := &configurationv1alpha1.EventGatewayStaticKey{
