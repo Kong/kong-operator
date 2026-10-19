@@ -940,7 +940,7 @@ _test.kongintegration: gotestsum
 		-coverpkg=$(PKG_LIST) \
 		-coverprofile=coverage.kongintegration.out \
 		./ingress-controller/test/kongintegration \
-		./test/aigwcontract
+		./test/runtimeintegration/aigateway
 
 .PHONY: test.samples
 test.samples: kustomize
