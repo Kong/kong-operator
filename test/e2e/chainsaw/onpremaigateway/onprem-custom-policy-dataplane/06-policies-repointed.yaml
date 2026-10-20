@@ -1,0 +1,53 @@
+# Phase B (re-point): both policies switched to the OTHER naming method, with
+# new header values — the streaming policy via literal type, the installed one
+# via customPolicyRef. The removed field is explicitly nulled: the patch
+# operation treats omitted fields as "unchanged", so the CEL rule ("exactly
+# one of type and customPolicyRef") would reject the update otherwise.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayPolicy
+metadata:
+  name: ($streaming_policy_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: ($streaming_plugin_name)
+    customPolicyRef: null
+    displayName: Uses the streaming custom policy via literal type
+    enabled: "Enabled"
+    global: "Enabled"
+    name: ($streaming_policy_name)
+    config:
+      type: inline
+      value:
+        header_name: X-Streaming-Custom-Policy
+        header_value: ($streaming_header_value_via_type)
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayPolicy
+metadata:
+  name: ($installed_policy_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: null
+    displayName: Uses the installed custom policy via customPolicyRef
+    enabled: "Enabled"
+    global: "Enabled"
+    name: ($installed_policy_name)
+    customPolicyRef:
+      name: ($installed_custom_policy_name)
+    config:
+      type: inline
+      value:
+        header_name: X-Installed-Custom-Policy
+        header_value: ($installed_header_value_via_ref)
