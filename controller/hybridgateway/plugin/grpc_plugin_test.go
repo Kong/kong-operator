@@ -73,11 +73,14 @@ func TestGRPCPluginsForRule(t *testing.T) {
 	assert.Empty(t, plugin.Annotations[pkgmetadata.AnnotationKeyTags])
 }
 
-// TestGRPCPluginsForRule_IdenticalFiltersDifferentRules is a regression test for the
-// shared-plugin naming collision: two rules with identical GRPCRoute filters must produce
-// distinct KongPlugins, mirroring the HTTPRoute fix. GRPC filter configs depend only on the
-// filter contents today, but a shared name keyed on the filters alone would let any future
-// filter type whose config depends on the rule reintroduce the config flip across reconciles.
+// TestGRPCPluginsForRule_IdenticalFiltersDifferentRules asserts the GRPCRoute sharing invariant:
+// GRPC filter translations depend only on the filter contents (translateGRPCFromFilter handles
+// header modifiers only), so two rules with identical filters produce identical configs and
+// safely share one KongPlugin whose name is derived from the filters alone. If a future GRPC
+// filter translation starts depending on the rule's matches, its plugin naming must hash the
+// matches in (mirroring plugin.filterDependsOnRuleMatches / namegen.NewKongPluginNameForFiltersAndMatches
+// on the HTTPRoute side), or two rules would collide on one shared KongPlugin whose config flips
+// between the two translations.
 func TestGRPCPluginsForRule_IdenticalFiltersDifferentRules(t *testing.T) {
 	ctx := context.Background()
 	logger := logr.Discard()
@@ -119,7 +122,8 @@ func TestGRPCPluginsForRule_IdenticalFiltersDifferentRules(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, pluginsB, 1)
 
-	assert.NotEqual(t, pluginsA[0].Name, pluginsB[0].Name, "identical filters under different rules must not share one KongPlugin")
+	assert.Equal(t, pluginsA[0].Name, pluginsB[0].Name, "identical filters under different rules must share one KongPlugin")
+	assert.Equal(t, pluginsA[0].Config.Raw, pluginsB[0].Config.Raw, "identical filters must produce identical configs")
 }
 
 func TestGRPCPluginsForRule_UnsupportedFilterErrors(t *testing.T) {

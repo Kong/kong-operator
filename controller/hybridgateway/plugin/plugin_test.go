@@ -311,6 +311,54 @@ func TestPluginsForRule_IdenticalFiltersDifferentMatches(t *testing.T) {
 	assert.Equal(t, `$(uri_captures[1] == nil and "/" or uri_captures[1])`, extractReplaceURI(t, apiPlugins[0]))
 }
 
+// TestPluginsForRule_NonDependentFiltersSharePluginAcrossRules asserts that rules whose filters
+// do not depend on the rule's matches (e.g. RequestHeaderModifier, whose config is fully
+// determined by the filter contents) keep sharing one KongPlugin across rules with identical
+// filters: the name stays derived from the filters alone, preserving the pre-existing
+// cross-rule/cross-route plugin sharing and avoiding plugin renames on upgrade.
+func TestPluginsForRule_NonDependentFiltersSharePluginAcrossRules(t *testing.T) {
+	logger := logr.Discard()
+	ctx := context.Background()
+
+	headerModifier := gwtypes.HTTPRouteFilter{
+		Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
+		RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+			Set: []gatewayv1.HTTPHeader{{Name: "X-Shared", Value: "foo"}},
+		},
+	}
+	ruleWithMatch := func(path string) gwtypes.HTTPRouteRule {
+		return gwtypes.HTTPRouteRule{
+			Matches: []gatewayv1.HTTPRouteMatch{
+				{Path: &gatewayv1.HTTPPathMatch{Type: new(gatewayv1.PathMatchPathPrefix), Value: new(path)}},
+			},
+			Filters: []gwtypes.HTTPRouteFilter{headerModifier},
+		}
+	}
+
+	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
+	}
+	parentRef := &gwtypes.ParentReference{Name: "test-gateway"}
+
+	fakeClient := fakectrlruntimeclient.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		Build()
+
+	rootPlugins, err := PluginsForRule(ctx, logger, fakeClient, httpRoute, ruleWithMatch("/"), parentRef)
+	require.NoError(t, err)
+	require.Len(t, rootPlugins, 1)
+
+	apiPlugins, err := PluginsForRule(ctx, logger, fakeClient, httpRoute, ruleWithMatch("/api"), parentRef)
+	require.NoError(t, err)
+	require.Len(t, apiPlugins, 1)
+
+	assert.Equal(t, rootPlugins[0].Name, apiPlugins[0].Name, "non-match-dependent filters must keep sharing one KongPlugin across rules")
+	assert.Equal(t, rootPlugins[0].Config.Raw, apiPlugins[0].Config.Raw)
+}
+
 func TestGetReferencedKongPlugin(t *testing.T) {
 	tests := []struct {
 		name           string
