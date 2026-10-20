@@ -34,23 +34,14 @@ jobs:
         exclude:
          - router-flavor: expressions
            gateway-type: hybrid
-        include:
-          - router-flavor: traditional_compatible
-            gateway-type: standard
-            ip_family: ipv6
-          - router-flavor: expressions
-            gateway-type: standard
-            ip_family: ipv6
-          # Hybrid makes real Konnect API calls, which on an ipv6-only
-          # cluster needs NAT64/DNS64 (see e2e chainsaw's hybridgateway
-          # ipv6 leg). That needs the cluster to exist before the Go test
-          # binary starts (to patch CoreDNS), so this leg pre-creates its
-          # own cluster via the ktf CLI and hands it to `make
-          # test.conformance` as an existing cluster (KONG_TEST_CLUSTER)
-          # instead of letting the test binary create+own it.
-          - router-flavor: traditional_compatible
-            gateway-type: hybrid
-            ip_family: ipv6
+        # TEMPORARILY SKIPPED: the ipv6 legs (an `include:` list with the three
+        # entries standard/traditional+ipv6, standard/expressions+ipv6 and
+        # hybrid/traditional+ipv6) need the setup-nat64-dns64 step, which is
+        # being reworked from jool-dkms to tayga (jool's kernel module stopped
+        # building on the 7.0.0-azure runner image). Restore the include list
+        # (keep the explanatory comment about the hybrid leg pre-creating its
+        # own cluster via ktf for KONG_TEST_CLUSTER) once the reworked action
+        # is validated.
 
     steps:
     - name: Harden Runner

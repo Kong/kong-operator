@@ -17,12 +17,16 @@ on:
         description: "JSON array of matrix entries ({suite, ip_family}) to run."
         type: string
         required: false
+        # TEMPORARILY SKIPPED: the ipv6 legs ({"suite": "gateway", "ip_family": "ipv6"}
+        # and {"suite": "hybridgateway", "ip_family": "ipv6"}) need the
+        # setup-nat64-dns64 step, which is being reworked from jool-dkms to tayga
+        # (jool's kernel module stopped building on the 7.0.0-azure runner image).
+        # Restore the two entries in the default below once the reworked
+        # action is validated.
         default: >-
           [
             {"suite": "gateway"},
-            {"suite": "gateway", "ip_family": "ipv6"},
             {"suite": "hybridgateway"},
-            {"suite": "hybridgateway", "ip_family": "ipv6"},
             {"suite": "konnect"},
             {"suite": "aigateway"},
             {"suite": "onpremaigateway"},
