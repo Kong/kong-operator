@@ -15,20 +15,52 @@ permissions:
   contents: read
 
 jobs:
-  analyze:
-    # The upload stays in this file rather than in a reusable workflow: the SARIF-upload step and
+  branches:
+    # Single source of truth for the scanned branches: a matrix can only read the needs, github,
+    # vars and inputs contexts, so the list is published here for the scan and upload jobs.
+    runs-on: ubuntu-latest
+    outputs:
+      scans: ${{ steps.set.outputs.scans }}
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        fetch-depth: 1
+    - id: set
+      run: |
+        {
+          echo 'scans<<EOF'
+          yq eval -o=json '.' .github/govulncheck_branches.yaml
+          echo 'EOF'
+        } >> "${GITHUB_OUTPUT}"
+
+  scan:
+    needs: branches
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.branches.outputs.scans) }}
+    uses: ./.github/workflows/__govulncheck.yaml
+    with:
+      ref: ${{ matrix.branch }}
+      artifact-name: ${{ matrix.artifact }}
+      output-format: sarif
+      output-file: results.sarif
+    permissions:
+      contents: read
+
+  upload:
+    # The upload stays in this file rather than in the reusable workflow: the SARIF-upload step and
     # the security-events: write it needs have to sit together for the permission to be exempt.
+    #
+    # Run even when one branch's scan failed: the branches are scanned and uploaded independently.
+    if: ${{ !cancelled() }}
+    needs:
+    - branches
+    - scan
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
-      matrix:
-        branch:
-        - main
-        - release/2.1.x
-        - release/2.2.x
-        - release/2.3.x
-        - release/2.4.0-rapid.1.x
-        - release/2.4.0-rapid.2.x
+      matrix: ${{ fromJSON(needs.branches.outputs.scans) }}
     permissions:
       security-events: write
       contents: read
@@ -43,21 +75,20 @@ jobs:
       with:
         ref: ${{ matrix.branch }}
 
-    - uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f # v1.1.0
+    - name: Download scan results
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       with:
-        repo-checkout: false
-        output-format: sarif
-        output-file: results_${{ steps.checkout.outputs.commit }}.sarif
+        name: ${{ matrix.artifact }}
 
     - name: Drop excluded advisories
       env:
-        SARIF_IN: results_${{ steps.checkout.outputs.commit }}.sarif
-        SARIF_OUT: results-filtered_${{ steps.checkout.outputs.commit }}.sarif
+        SARIF_IN: results.sarif
+        SARIF_OUT: results-filtered.sarif
         FILTER: ./hack/govulncheck-sarif-with-excludes.sh
       run: |
         set -euo pipefail
-        # The schedule takes this file from the default branch while the matrix checks out a release
-        # branch, where hack/ carries no filter yet: fall back to the unfiltered SARIF.
+        # The workflow runs from the default branch while the matrix scans a release branch, where
+        # hack/ may carry no filter yet: fall back to the unfiltered SARIF.
         if [[ -x "${FILTER}" ]]; then
           "${FILTER}" "${SARIF_IN}" "${SARIF_OUT}"
         else
@@ -67,7 +98,7 @@ jobs:
     - name: Upload SARIF file
       uses: github/codeql-action/upload-sarif@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
       with:
-        sarif_file: results-filtered_${{ steps.checkout.outputs.commit }}.sarif
+        sarif_file: results-filtered.sarif
         ref: refs/heads/${{ matrix.branch }}
         sha: ${{ steps.checkout.outputs.commit }}
         category: govulncheck
