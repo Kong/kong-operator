@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -49,10 +50,12 @@ func TestHybridRouteOwnerIndexCachedListing(t *testing.T) {
 	kongRouteGVK := configurationv1alpha1.SchemeGroupVersion.WithKind("KongRoute")
 	child := func(name, owners string) *configurationv1alpha1.KongRoute {
 		return &configurationv1alpha1.KongRoute{
-			Namespace: ns.Name,
-			Name:      name,
-			Annotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: owners,
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: ns.Name,
+				Name:      name,
+				Annotations: map[string]string{
+					consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: owners,
+				},
 			},
 		}
 	}
@@ -62,7 +65,7 @@ func TestHybridRouteOwnerIndexCachedListing(t *testing.T) {
 	require.NoError(t, direct.Create(ctx, child("unannotated", "")))
 
 	root := func(name string) *gwtypes.HTTPRoute {
-		r := &gwtypes.HTTPRoute{Namespace: ns.Name, Name: name}
+		r := &gwtypes.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: ns.Name, Name: name}}
 		r.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"})
 		return r
 	}

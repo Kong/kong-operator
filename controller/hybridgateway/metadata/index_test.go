@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
@@ -25,10 +26,12 @@ var httpRouteGVK = schema.GroupVersionKind{Group: "gateway.networking.k8s.io", V
 
 func kongRouteWithAnnotations(name string, annotations map[string]string) *configurationv1alpha1.KongRoute {
 	r := &configurationv1alpha1.KongRoute{
-		Namespace:   "ns",
-		Name:        name,
-		Annotations: annotations,
-		Labels:      map[string]string{consts.GatewayOperatorManagedByLabel: "HTTPRoute"},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:   "ns",
+			Name:        name,
+			Annotations: annotations,
+			Labels:      map[string]string{consts.GatewayOperatorManagedByLabel: "HTTPRoute"},
+		},
 	}
 	r.SetGroupVersionKind(configurationv1alpha1.SchemeGroupVersion.WithKind("KongRoute"))
 	return r
@@ -95,7 +98,7 @@ func TestHybridRouteOwnerIndexFunc(t *testing.T) {
 
 func TestHybridRouteOwnerIndexKey(t *testing.T) {
 	route := &types.HTTPRoute{
-		Namespace: "ns", Name: "route-a",
+		ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "route-a"},
 	}
 	route.SetGroupVersionKind(httpRouteGVK)
 	assert.Equal(t, "HTTPRoute/ns/route-a", HybridRouteOwnerIndexKey(route))
@@ -110,8 +113,8 @@ func TestListOwnedChildResources(t *testing.T) {
 		ctx = context.Background()
 		s   = objScheme.Get()
 		gvk = configurationv1alpha1.SchemeGroupVersion.WithKind("KongRoute")
-		rA  = &types.HTTPRoute{Namespace: "ns", Name: "route-a"}
-		rB  = &types.HTTPRoute{Namespace: "ns", Name: "route-b"}
+		rA  = &types.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "route-a"}}
+		rB  = &types.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "route-b"}}
 	)
 	rA.SetGroupVersionKind(httpRouteGVK)
 	rB.SetGroupVersionKind(httpRouteGVK)
@@ -145,7 +148,7 @@ func TestListOwnedChildResources(t *testing.T) {
 	})
 
 	t.Run("gateway root keeps the broad managed-by listing", func(t *testing.T) {
-		gw := &types.Gateway{Namespace: "ns", Name: "gw-a"}
+		gw := &types.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "gw-a"}}
 		gw.SetGroupVersionKind(schema.GroupVersionKind{
 			Group: "gateway.networking.k8s.io", Version: "v1", Kind: "Gateway",
 		})
@@ -155,9 +158,11 @@ func TestListOwnedChildResources(t *testing.T) {
 		// must not swallow the cleanup listing.
 		cert := func(name, gatewayAnnotation string) *configurationv1alpha1.KongCertificate {
 			c := &configurationv1alpha1.KongCertificate{
-				Namespace: "ns",
-				Name:      name,
-				Labels:    map[string]string{consts.GatewayOperatorManagedByLabel: "Gateway"},
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "ns",
+					Name:      name,
+					Labels:    map[string]string{consts.GatewayOperatorManagedByLabel: "Gateway"},
+				},
 			}
 			if gatewayAnnotation != "" {
 				c.Annotations = map[string]string{consts.GatewayOperatorHybridGatewaysAnnotation: gatewayAnnotation}
@@ -199,7 +204,7 @@ func TestListOwnedChildResourcesLive(t *testing.T) {
 		ctx = context.Background()
 		s   = objScheme.Get()
 		gvk = configurationv1alpha1.SchemeGroupVersion.WithKind("KongRoute")
-		rA  = &types.HTTPRoute{Namespace: "ns", Name: "route-a"}
+		rA  = &types.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "route-a"}}
 	)
 	rA.SetGroupVersionKind(httpRouteGVK)
 
@@ -223,16 +228,18 @@ func TestListOwnedChildResourcesLive(t *testing.T) {
 	})
 
 	t.Run("gateway root", func(t *testing.T) {
-		gw := &types.Gateway{Namespace: "ns", Name: "gw-a"}
+		gw := &types.Gateway{ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "gw-a"}}
 		gw.SetGroupVersionKind(schema.GroupVersionKind{
 			Group: "gateway.networking.k8s.io", Version: "v1", Kind: "Gateway",
 		})
 
 		certGVK := configurationv1alpha1.SchemeGroupVersion.WithKind("KongCertificate")
 		gwCert := &configurationv1alpha1.KongCertificate{
-			Namespace: "ns",
-			Name:      "gw-a-cert",
-			Labels:    map[string]string{consts.GatewayOperatorManagedByLabel: "Gateway"},
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "ns",
+				Name:      "gw-a-cert",
+				Labels:    map[string]string{consts.GatewayOperatorManagedByLabel: "Gateway"},
+			},
 		}
 		require.NoError(t, cl.Create(ctx, gwCert))
 
@@ -283,7 +290,7 @@ func TestListOwnedChildResourcesReturnsNonIndexErrors(t *testing.T) {
 	var (
 		ctx      = context.Background()
 		gvk      = configurationv1alpha1.SchemeGroupVersion.WithKind("KongRoute")
-		rA       = &types.HTTPRoute{Namespace: "ns", Name: "route-a"}
+		rA       = &types.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "route-a"}}
 		cacheErr = errors.New("cache failure")
 	)
 	rA.SetGroupVersionKind(httpRouteGVK)

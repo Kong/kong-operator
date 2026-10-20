@@ -997,10 +997,14 @@ func TestCleanOrphanedResourcesDeletionPathListsLive(t *testing.T) {
 		{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongRoute"},
 	}
 	root := &gwtypes.HTTPRoute{
-		APIVersion: gatewayv1.GroupVersion.String(),
-		Kind:       "HTTPRoute",
-		Name:       "httproute-owner",
-		Namespace:  "ns",
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: gatewayv1.GroupVersion.String(),
+			Kind:       "HTTPRoute",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "httproute-owner",
+			Namespace: "ns",
+		},
 	}
 	ownerAnnotations := map[string]string{
 		consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns/httproute-owner",
@@ -1014,10 +1018,12 @@ func TestCleanOrphanedResourcesDeletionPathListsLive(t *testing.T) {
 	// has. It is served by the typed (cached) listing only and is never added to
 	// the client, so the fresh read the orphan handler performs finds nothing.
 	cachedChild := &configurationv1alpha1.KongRoute{
-		Namespace:   "ns",
-		Name:        "cached-child",
-		Labels:      metadata.BuildLabels(root, nil),
-		Annotations: ownerAnnotations,
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:   "ns",
+			Name:        "cached-child",
+			Labels:      metadata.BuildLabels(root, nil),
+			Annotations: ownerAnnotations,
+		},
 	}
 
 	// newClient returns a client whose cached indexed listing serves staleCached,
@@ -1042,9 +1048,11 @@ func TestCleanOrphanedResourcesDeletionPathListsLive(t *testing.T) {
 	}
 	newConverter := func(cl client.Client) *fakeHTTPRouteConverterWithOrphanHandler {
 		return &fakeHTTPRouteConverterWithOrphanHandler{
-			gvks: gvks,
-			root: *root,
-			cl:   cl,
+			fakeHTTPRouteConverter: fakeHTTPRouteConverter{
+				gvks: gvks,
+				root: *root,
+			},
+			cl: cl,
 		}
 	}
 
@@ -3448,10 +3456,14 @@ func TestCleanOrphanedResourcesDoesNotFetchForeignChildren(t *testing.T) {
 		{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"},
 	}
 	root := &gwtypes.HTTPRoute{
-		APIVersion: gatewayv1.GroupVersion.String(),
-		Kind:       "HTTPRoute",
-		Name:       "httproute-owner",
-		Namespace:  "ns",
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: gatewayv1.GroupVersion.String(),
+			Kind:       "HTTPRoute",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "httproute-owner",
+			Namespace: "ns",
+		},
 	}
 	ownerAnnotation := func(owner string) map[string]string {
 		return map[string]string{consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: owner}
@@ -3513,10 +3525,12 @@ func TestCleanOrphanedResourcesDoesNotFetchForeignChildren(t *testing.T) {
 			// HandleOrphanedResourceForRoute, which live-GETs the resource it is
 			// given; mirror that so the test observes the real call pattern.
 			fakeConv := &fakeHTTPRouteConverterWithOrphanHandler{
-				gvks:    gvks,
-				root:    *root,
-				desired: []unstructured.Unstructured{own},
-				cl:      cl,
+				fakeHTTPRouteConverter: fakeHTTPRouteConverter{
+					gvks:    gvks,
+					root:    *root,
+					desired: []unstructured.Unstructured{own},
+				},
+				cl: cl,
 			}
 
 			requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](
