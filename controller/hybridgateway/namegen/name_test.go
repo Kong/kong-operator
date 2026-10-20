@@ -916,7 +916,7 @@ func TestNewKongPluginNameForFilters(t *testing.T) {
 			filters:   []gatewayv1.HTTPRouteFilter{urlRewrite},
 			routeName: "route-a",
 			rule:      rootMatchRule,
-			want:      NewKongPluginNameForFilters([]gatewayv1.HTTPRouteFilter{urlRewrite}, ns, pluginName, "route-a", rootMatchRule),
+			want:      newName(ns, pluginName, "route-a", utils.Hash32([]gatewayv1.HTTPRouteFilter{urlRewrite}), utils.Hash32(rootMatchRule)),
 			wantEqual: true,
 		},
 		{
@@ -1011,7 +1011,7 @@ func TestNewKongPluginNameForGRPCRouteFilter(t *testing.T) {
 			filter:    requestHeaderModifier,
 			routeName: "route-a",
 			rule:      ruleWithServiceA,
-			want:      NewKongPluginNameForGRPCRouteFilter(requestHeaderModifier, ns, pluginName, "route-a", ruleWithServiceA),
+			want:      newName(ns, pluginName, "route-a", utils.Hash32(requestHeaderModifier), utils.Hash32(ruleWithServiceA)),
 			wantEqual: true,
 		},
 		{
