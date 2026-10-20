@@ -45,6 +45,13 @@ func TestWithTransientConnectionRetries(t *testing.T) {
 			wantCalls: 3,
 		},
 		{
+			name:      "HEAD is retried when the connection breaks",
+			request:   func(t *testing.T) *http.Request { return newRequest(t, http.MethodHead, "") },
+			failures:  2,
+			failure:   protocolErr,
+			wantCalls: 3,
+		},
+		{
 			name:     "GET is retried when the error is wrapped by url.Error",
 			request:  func(t *testing.T) *http.Request { return newRequest(t, http.MethodGet, "") },
 			failures: 1,
