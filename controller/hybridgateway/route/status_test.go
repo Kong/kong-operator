@@ -49,13 +49,25 @@ func (f *fakeListClient) List(ctx context.Context, list client.ObjectList, opts 
 	if f.fail {
 		return fmt.Errorf("list error")
 	}
-	ulist, ok := list.(*unstructured.UnstructuredList)
+	if ulist, ok := list.(*unstructured.UnstructuredList); ok {
+		ulist.Items = make([]unstructured.Unstructured, len(f.items))
+		for i, item := range f.items {
+			ulist.Items[i] = *item
+		}
+		return nil
+	}
+	// Children listed through the hybrid-routes field index come back as a
+	// typed list; serve the same items there.
+	kongServices, ok := list.(*configurationv1alpha1.KongServiceList)
 	if !ok {
 		return fmt.Errorf("not unstructured list")
 	}
-	ulist.Items = make([]unstructured.Unstructured, len(f.items))
-	for i, item := range f.items {
-		ulist.Items[i] = *item
+	for _, item := range f.items {
+		var svc configurationv1alpha1.KongService
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(item.Object, &svc); err != nil {
+			return err
+		}
+		kongServices.Items = append(kongServices.Items, svc)
 	}
 	return nil
 }
@@ -844,7 +856,6 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 
 func Test_BuildProgrammedCondition(t *testing.T) {
 	ctx := context.Background()
-	pRef := gwtypes.ParentReference{Name: "gw"}
 	route := &gwtypes.HTTPRoute{
 		TypeMeta:   metav1.TypeMeta{Kind: "HTTPRoute", APIVersion: "gateway.networking.k8s.io/v1"},
 		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
@@ -929,7 +940,7 @@ func Test_BuildProgrammedCondition(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		conds, err := BuildProgrammedCondition(ctx, logr.Discard(), tt.client, route, pRef, tt.gvks)
+		conds, err := BuildProgrammedCondition(ctx, logr.Discard(), tt.client, route, tt.gvks)
 		if tt.wantErr {
 			require.Error(t, err, tt.name)
 			require.Nil(t, conds, tt.name)

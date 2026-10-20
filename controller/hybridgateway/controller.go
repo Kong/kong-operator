@@ -22,6 +22,7 @@ import (
 	finalizerconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/finalizers"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/converter"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/events"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/watch"
 	"github.com/kong/kong-operator/v2/controller/pkg/finalizer"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
@@ -109,6 +110,15 @@ func NewHybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjec
 // It registers the reconciler to watch and manage resources of type 'u'.
 func (r *HybridGatewayReconciler[t, tPtr]) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	obj := any(new(t)).(tPtr)
+
+	// Register the hybrid-routes annotation field index for all child resource
+	// types, so orphan cleanup and status listing can query the cached client
+	// for the children of a single root object instead of listing every child
+	// carrying the broad managed-by label. Registration is idempotent, as this
+	// method runs once per root-object controller sharing the same manager.
+	if err := metadata.RegisterHybridRouteOwnerIndexes(ctx, mgr.GetFieldIndexer()); err != nil {
+		return err
+	}
 
 	builder := ctrl.NewControllerManagedBy(mgr).For(obj)
 
@@ -434,6 +444,11 @@ func (r *HybridGatewayReconciler[t, tPtr]) cleanupGeneratedResources(
 	// On the deletion path we create a fresh converter but do not run Translate(),
 	// so cleanOrphanedResources() sees no desired output objects. That makes all
 	// owned generated resources orphan candidates, and we wait for their deletion
-	// before releasing the root finalizer.
-	return cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv, orphanCleanupOptions{waitForDeletes: true})
+	// before releasing the root finalizer. Unlike steady-state cleanup, child
+	// listings here are served live: releasing the finalizer removes the object,
+	// so a child missed through a stale cache is never retried.
+	return cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv, orphanCleanupOptions{
+		waitForDeletes: true,
+		listLive:       true,
+	})
 }

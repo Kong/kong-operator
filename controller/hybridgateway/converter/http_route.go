@@ -250,7 +250,7 @@ func (c *httpRouteConverter) DesiredResourcesReady(ctx context.Context, logger l
 // HandleOrphanedResource implements OrphanedResourceHandler.
 // It removes the HTTPRoute reference from shared resources before orphan deletion.
 func (c *httpRouteConverter) HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (skipDelete bool, err error) {
-	return handleOrphanedResourceForRoute(ctx, logger, c.Client, c.route, "HTTPRoute", resource)
+	return HandleOrphanedResourceForRoute(ctx, logger, c.Client, c.route, "HTTPRoute", resource)
 }
 
 // translate converts the HTTPRoute to Kong resources and stores them in outputStore.
