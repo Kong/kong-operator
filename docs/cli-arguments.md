@@ -109,6 +109,10 @@ rows:
     type: '`bool`'
     description: "Enable the Gateway controller."
     default: '`true`'
+  - flag: '`--enable-controller-gwadmin`'
+    type: '`bool`'
+    description: "Enable the GWAdmin controller, deploying gw-admin and managing its certificates."
+    default: '`false`'
   - flag: '`--enable-controller-kegdataplane`'
     type: '`bool`'
     description: "Enable the KEG (Kong Event Gateway) DataPlane controller."
@@ -157,6 +161,14 @@ rows:
     type: '`string`'
     description: "Comma-separated list of feature gates to enable. Valid values: mcp-server."
     default: '`""`'
+  - flag: '`--gwadmin-ca-ttl`'
+    type: '`duration`'
+    description: "Validity of the certificate authorities created for a GWAdmin, renewed once two thirds of it have elapsed (e.g. '8760h'). At least 10m."
+    default: '`8760h (1 years)`'
+  - flag: '`--gwadmin-cert-ttl`'
+    type: '`duration`'
+    description: "Validity of the certificates issued for a GWAdmin, renewed once two thirds of it have elapsed, and capped at the expiry of their certificate authority (e.g. '2160h'). At least 10m, and at most gwadmin-ca-ttl."
+    default: '`2160h (90 days)`'
   - flag: '`--health-probe-bind-address`'
     type: '`string`'
     description: "The address the probe endpoint binds to."

@@ -205,7 +205,6 @@ var testConfig = Config[
 			}
 			return aigwdp.Spec.Deployment.Annotations
 		},
-		Replicas:       testReplicas,
 		BuildContainer: buildTestContainer,
 		LabelManaged:   k8sresources.LabelObjectAsAIGatewayDataPlaneManaged,
 	},
@@ -222,13 +221,6 @@ var testConfig = Config[
 	},
 
 	SetStatusReplicas: testSetStatusReplicas,
-}
-
-func testReplicas(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *int32 {
-	if aigwdp.Spec.Deployment == nil {
-		return nil
-	}
-	return aigwdp.Spec.Deployment.Replicas
 }
 
 func testSetStatusReplicas(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane, replicas, readyReplicas int32) {

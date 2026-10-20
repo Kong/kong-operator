@@ -268,9 +268,11 @@ build: generate
 	$(MAKE) build.operator
 
 .PHONY: _govulncheck
-_govulncheck:
+_govulncheck: download.govulncheck
 	GOVULNCHECK=$(GOVULNCHECK) SCAN=$(SCAN) ./hack/govulncheck-with-excludes.sh ./...
 
+# NOTE: SCAN=symbol runs out of memory on GitHub runners, so CI runs the package scan only:
+# `make _govulncheck SCAN=package`. Both scans are run here, for local use.
 .PHONY: govulncheck
 govulncheck: download.govulncheck
 	$(MAKE) _govulncheck SCAN=symbol

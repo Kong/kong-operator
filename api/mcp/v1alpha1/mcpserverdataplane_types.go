@@ -244,6 +244,15 @@ func (e *MCPServerDataPlane) SetConditions(conditions []metav1.Condition) {
 	e.Status.Conditions = conditions
 }
 
+// GetReplicas returns the MCPServerDataPlane static replica count, or nil when it is
+// not set.
+func (e *MCPServerDataPlane) GetReplicas() *int32 {
+	if e.Spec.Deployment == nil {
+		return nil
+	}
+	return e.Spec.Deployment.Replicas
+}
+
 // GetHorizontalScaling returns the MCPServerDataPlane horizontal scaling options, or nil
 // when horizontal scaling is not configured.
 func (e *MCPServerDataPlane) GetHorizontalScaling() *commonv1alpha1.HorizontalScaling {

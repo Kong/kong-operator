@@ -119,7 +119,7 @@ func UpdateRouteStatus[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[
 		}
 
 		log.Debug(logger, "Building Programmed conditions", "parentRef", pRef, "gateway", gateway.Name)
-		programmedConditions, err := BuildProgrammedCondition(ctx, logger, cl, routeObject, pRef, expectedGVKs)
+		programmedConditions, err := BuildProgrammedCondition(ctx, logger, cl, routeObject, expectedGVKs)
 		if err != nil {
 			return false, stop, fmt.Errorf("failed to build programmed condition for parentRef %s: %w", pRef.Name, err)
 		}
@@ -571,8 +571,8 @@ func BuildAcceptedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRout
 	return SetConditionMeta(*cond, route), nil
 }
 
-// BuildProgrammedCondition evaluates the programmed status of all resources associated with a route and gateway.
-// For each expected GroupVersionKind (GVK), it lists resources owned by the route and gateway, checks if each is programmed,
+// BuildProgrammedCondition evaluates the programmed status of all resources associated with a route.
+// For each expected GroupVersionKind (GVK), it lists the resources owned by the route, checks if each is programmed,
 // and generates a corresponding condition (True if programmed, False otherwise).
 //
 // The function deduplicates conditions by type, keeping the most severe status for each resource type.
@@ -582,7 +582,6 @@ func BuildAcceptedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRout
 //   - logger: Logger for debugging information.
 //   - cl: Kubernetes client for resource operations.
 //   - route: The route whose resources are being checked.
-//   - pRef: The ParentReference (gateway) associated with the route.
 //   - expectedGVKs: Slice of GVKs representing the resource types to check.
 //
 // Returns:
@@ -593,7 +592,7 @@ func BuildAcceptedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRout
 // resources are not programmed and why, improving troubleshooting and status visibility.
 func BuildProgrammedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](
 	ctx context.Context, logger logr.Logger, cl client.Client, route TPtr,
-	pRef gwtypes.ParentReference, expectedGVKs []schema.GroupVersionKind) ([]metav1.Condition, error) {
+	expectedGVKs []schema.GroupVersionKind) ([]metav1.Condition, error) {
 	var conditions []metav1.Condition
 	am := metadata.NewAnnotationManager(logger)
 
@@ -605,12 +604,11 @@ func BuildProgrammedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRo
 
 	// For each expected GVK, list resources owned by the route and gateway.
 	for _, gvk := range expectedGVKs {
-		list := &unstructured.UnstructuredList{}
-		list.SetGroupVersionKind(gvk)
-		selector := metadata.LabelSelectorForOwnedResources(route, &pRef)
-
-		// List all resources of this GVK owned by the route object in the same namespace.
-		if err := cl.List(ctx, list, selector); err != nil {
+		// List via the hybrid-routes annotation field index when available;
+		// the managed-by label selector alone matches the children of every
+		// root object of the same kind, which is far broader than needed.
+		list, err := metadata.ListOwnedChildResources(ctx, cl, route, gvk)
+		if err != nil {
 			return nil, fmt.Errorf("unable to list objects with gvk %s: %w", gvk.String(), err)
 		}
 

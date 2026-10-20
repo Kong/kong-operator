@@ -35,12 +35,12 @@ func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
 	envcfg, _ := Setup(t, ctx, scheme)
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
 	ingressClassName := "kongenvtest"
-	deployIngressClass(ctx, t, ingressClassName, ctrlClient)
+	DeployIngressClass(ctx, t, ingressClassName, ctrlClient)
 
 	diagPort := helpers.GetFreePort(t)
 	ns := CreateNamespace(ctx, t, ctrlClient)
 
-	multimgr := setupMultiInstanceDiagnosticsManager(ctx, t, diagPort)
+	multimgr := SetupMultiInstanceDiagnosticsManager(ctx, t, diagPort)
 
 	mgr := SetupManager(ctx, t, manager.NewRandomID(), envcfg,
 		AdminAPIOptFns(),
@@ -94,7 +94,7 @@ func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
 					Ready:       new(true),
 					Terminating: new(false),
 				},
-				TargetRef: testPodReference("pod-1", ns.Name),
+				TargetRef: PodReference("pod-1", ns.Name),
 			},
 		},
 		Ports: builder.NewEndpointPort(80).WithName("http").IntoSlice(),

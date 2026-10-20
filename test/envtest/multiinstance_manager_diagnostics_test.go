@@ -34,7 +34,7 @@ func TestMultiInstanceManagerDiagnostics(t *testing.T) {
 	healthPort1 := helpers.GetFreePort(t)
 	healthPort2 := helpers.GetFreePort(t)
 
-	multimgr := setupMultiInstanceDiagnosticsManager(ctx, t, diagPort, multiinstance.WithPprofHandler())
+	multimgr := SetupMultiInstanceDiagnosticsManager(ctx, t, diagPort, multiinstance.WithPprofHandler())
 
 	t.Log("Setting up two instances of the manager and scheduling them in the multi-instance manager")
 	mgrInstance1 := SetupManager(ctx, t, manager.NewRandomID(), envcfg, AdminAPIOptFns(), WithDiagnosticsWithoutServer(), WithHealthProbePort(healthPort1))
@@ -118,7 +118,7 @@ func TestMultiInstanceManager_Profiling(t *testing.T) {
 	diagPort := helpers.GetFreePort(t)
 	t.Logf("Diagnostics port: %d", diagPort)
 
-	multimgr := setupMultiInstanceDiagnosticsManager(ctx, t, diagPort, multiinstance.WithPprofHandler())
+	multimgr := SetupMultiInstanceDiagnosticsManager(ctx, t, diagPort, multiinstance.WithPprofHandler())
 
 	m1 := SetupManager(ctx, t, lo.Must(manager.NewID("cp-1")), envcfg, AdminAPIOptFns(), WithDiagnosticsWithoutServer())
 	m2 := SetupManager(ctx, t, lo.Must(manager.NewID("cp-2")), envcfg, AdminAPIOptFns(), WithDiagnosticsWithoutServer())

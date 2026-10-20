@@ -319,6 +319,16 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              createInputsHash:
+                description: |-
+                  CreateInputsHash fingerprints the resolved user-supplied request body last
+                  successfully created in Konnect, before operator metadata is added.
+                  For entities predating this field, it is initialized from current inputs
+                  as a baseline, which cannot verify the values already stored in Konnect.
+                  Readers of this resource can use the fingerprint to verify guesses of
+                  low-entropy Secret values offline. Use high-entropy secret material.
+                pattern: ^sha256:[0-9a-f]{64}$
+                type: string
               gatewayID:
                 description: GatewayID is the Konnect ID of the parent Gateway.
                 properties:

@@ -35,7 +35,7 @@ spec:
     - name: Create-provider-and-models
       try:
         - apply:
-            file: 02-provider-and-models.yaml
+            file: 01-provider-and-models.yaml
     - name: Create-aigateway-dataplane
       use:
         template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml

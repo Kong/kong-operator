@@ -86,6 +86,20 @@
   `KonnectExtensionApplied=False` condition on the resource, where the
   condition was previously not written.
   [#6104](https://github.com/Kong/kong-operator/issues/6104)
+- HybridGateway root-object controllers (e.g. HTTPRoute) no longer spend several
+  seconds per reconcile scanning every managed Kong resource during orphan
+  cleanup and status computation. Ownership of child resources is now resolved
+  through a cached field index over the hybrid-routes annotations instead of
+  broad managed-by label listing with per-item live API reads, so configuration
+  changes are reconciled promptly at large entity counts.
+  [#6141](https://github.com/Kong/kong-operator/pull/6141)
+- Create-only Konnect entities (`EventGatewayStaticKey`,
+  `AIGatewayDataPlaneCertificate`, and `AIGatewayConsumerCredential`) now report
+  changes to Secret values, inline values, and other create inputs through
+  `CreateInputsApplied`, without automatically replacing the entity or marking
+  an otherwise healthy entity as unprogrammed. Existing entities establish an
+  unverified baseline on upgrade.
+  [#6142](https://github.com/Kong/kong-operator/pull/6142)
 - Konnect entities that resolve API authentication through a parent chain,
   including EventGateway policies and AI Gateway consumer credentials, no longer
   get stuck terminating when an ancestor has already been deleted. Their cleanup
@@ -133,6 +147,25 @@
   and `base64Decode`, `sslVerify`, `useCache` or `international` on AI Gateway
   models, model providers and MCP servers.
   [#6148](https://github.com/Kong/kong-operator/pull/6148)
+- `AIGatewayDataPlane`, `KegDataPlane` and `MCPServerDataPlane`: with
+  horizontal scaling configured (`spec.deployment.scaling.horizontal`), the
+  operator no longer resets the Deployment's replica count to `minReplicas` on
+  every reconcile, which reverted each scale-up done by the
+  `HorizontalPodAutoscaler`. The current replica count is now kept, and only
+  raised to `minReplicas` when it is below it (including for `DataPlane`).
+  Furthermore for autoscaling metrics maximum limit is set to 32 for all
+  aforementioned CRs.
+  [#6083](https://github.com/Kong/kong-operator/pull/6083)
+  [#6084](https://github.com/Kong/kong-operator/pull/6084)
+  [#6102](https://github.com/Kong/kong-operator/pull/6102)
+- On-prem AI Gateway: adding, changing or deleting an
+  `AIGatewayConsumerCredential` now re-renders the configuration of the gateway
+  its parent `AIGatewayConsumer` targets. A credential has no `aiGatewayRef` and
+  no reconciler of its own - its rendered form is embedded in the parent
+  consumer's document - so those changes used to be picked up only when some
+  unrelated event happened to re-render the same gateway, leaving the data plane
+  with stale credentials.
+  [#6185](https://github.com/Kong/kong-operator/pull/6185)
 
 ### Added
 
@@ -193,6 +226,37 @@
   `Programmed`, so an entity that exists in Konnect can't be moved under
   another parent.
   [#6119](https://github.com/Kong/kong-operator/pull/6119)
+- Added the `GWAdmin` CRD (`gateway-operator.konghq.com/v1alpha1`). A
+  `GWAdmin` stands for one gw-admin instance, the in-cluster control plane of
+  the next-generation Kong data planes, such as the Kong Event Gateway, when
+  they run without Konnect; Kong Gateway 3.x data planes are not supported.
+  Its spec configures the gw-admin Deployment, the Service the data planes
+  pull the configuration from, and the certificates of its listeners
+  (`spec.tls.clientCA` and `spec.tls.cp`, created by Kong Operator or taken
+  from user Secrets, e.g. from cert-manager).
+  [#6168](https://github.com/Kong/kong-operator/pull/6168)
+- `--enable-controller-gwadmin` flag (default `false`, Helm:
+  `env.enable_controller_gwadmin`): enables the `GWAdmin` controller. It
+  deploys gw-admin (Deployment, optional HorizontalPodAutoscaler, a Service
+  per listener) and provisions its mutual TLS from three certificate
+  authorities, whose keys stay in the operator namespace. It renews the
+  certificates before they expire, and changes a certificate authority only
+  once the gw-admin pods and the data planes rolled out with what the change
+  depends on. Data planes are the Deployments labelled
+  `gateway-operator.konghq.com/gwadmin-namespace` and
+  `gateway-operator.konghq.com/gwadmin-name`, in the namespace of the
+  `GWAdmin` or in one a `KongReferenceGrant` grants. The
+  `gateway-operator.konghq.com/rotate-certificate-authorities` annotation
+  rotates the certificate authorities Kong Operator created, and
+  `gateway-operator.konghq.com/rotation-skip-data-planes` stops the rotations
+  from waiting for the data planes.
+  [#6170](https://github.com/Kong/kong-operator/pull/6170)
+- `--gwadmin-ca-ttl` (default `8760h`) and `--gwadmin-cert-ttl` (default
+  `2160h`) flags: the validity of the certificate authorities and of the
+  certificates Kong Operator creates for a `GWAdmin`, each renewed once two
+  thirds of it elapsed. Both are at least `10m`, and `--gwadmin-cert-ttl` is
+  at most `--gwadmin-ca-ttl`.
+  [#6170](https://github.com/Kong/kong-operator/pull/6170)
 - `--enable-controller-onpremeventgateway` flag (default `false`): enables the
   `OnPremEventGateway` controller. A change to a gateway, or to an Event
   Gateway entity attached to it directly or through its parent entities,
@@ -309,10 +373,12 @@
   backend needs — the CyberArk Secrets Manager API key, and the HashiCorp
   token, certificate, OAuth client secret, AppRole secret ID, GCP service
   account and static AWS keys — can be given inline or read from a Kubernetes
-  Secret. The entity is reconciled for a `KonnectAIGateway`; translation into
-  the on-prem configuration document is not implemented yet, so an
-  `OnPremAIGateway` vault is not pushed to its data planes.
+  Secret. The entity is reconciled for a `KonnectAIGateway`; the vault is
+  translated for an `OnPremAIGateway` too, so an on-prem vault is pushed to its
+  data planes as a Kong vault entity. `spec.apiSpec.type: konnect` is rejected
+  on-prem: a Konnect Config Store has no self-managed gateway equivalent.
   [#6148](https://github.com/Kong/kong-operator/pull/6148)
+  [#6159](https://github.com/Kong/kong-operator/pull/6159)
 
 ### Changed
 

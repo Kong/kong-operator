@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"slices"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -257,9 +258,12 @@ func SetAcceptedConditionOnGateway(resource ConditionsAndListenerConditionsAndGe
 
 // AreAllConditionsHaveTrueStatus checks if all the conditions on the resource are in the True state.
 // It skips the Programmed condition as that particular condition will be set based on
-// the return value of this function.
-func AreAllConditionsHaveTrueStatus(resource ConditionsAware) bool {
+// the return value of this function, and any additional informational conditions.
+func AreAllConditionsHaveTrueStatus(resource ConditionsAware, ignoredTypes ...string) bool {
 	for _, condition := range resource.GetConditions() {
+		if slices.Contains(ignoredTypes, condition.Type) {
+			continue
+		}
 		switch condition.Type {
 		case string(kcfgdataplane.ReadyType), string(gatewayv1.GatewayConditionProgrammed):
 			continue

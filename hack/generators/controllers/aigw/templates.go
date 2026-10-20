@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-{{- if .ConfigStatusNotificationsEnabled }}
+{{- if or .ConfigStatusNotificationsEnabled .WatchedResources }}
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 {{- end}}
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -89,6 +89,13 @@ func (r *{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 			),
 		)
 	}
+{{- end}}
+{{- range .WatchedResources }}
+	// Watch {{ .Kind }} and map each of its events back to the entities that render it.
+	blder.Watches(
+		&{{ .PackageImportAlias }}.{{ .Kind }}{},
+		handler.EnqueueRequestsFromMapFunc({{ .MapFunc }}),
+	)
 {{- end}}
 	return blder.
 		For(

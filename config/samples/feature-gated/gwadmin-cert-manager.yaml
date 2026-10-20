@@ -1,0 +1,108 @@
+# GWAdmin whose cp client CA and cp server certificate both come from
+# cert-manager (Manual). Kong Operator still creates the certificate
+# authority of the API listener it pushes the configuration through.
+# Prerequisites:
+# - cert-manager installed in the cluster (https://cert-manager.io/docs/installation/)
+# - the GWAdmin in the "default" namespace: elsewhere, replace "default" in
+#   the dnsNames below with its namespace.
+#
+# Use two certificate authorities: one the data plane client certificates are
+# issued from, and one the cp server certificate is issued from. Whoever can
+# issue data plane certificates then can't impersonate gw-admin.
+#
+# See gwadmin-cert-manager-client-ca.yaml and gwadmin-cert-manager-cp.yaml for
+# what Kong Operator expects from each of them and how it handles renewals.
+#
+# The Secrets cert-manager writes and Kong Operator reads must carry the
+# operator's secret label (default konghq.com/secret: "true") for Kong
+# Operator to see them, and must not be named <GWAdmin name>-api-tls,
+# -api-ca-bundle, -cp-tls, -cp-server-ca-bundle or -cp-client-ca-bundle: Kong
+# Operator keeps its own Secrets under those names.
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: gwadmin-cert-manager-selfsigned
+spec:
+  selfSigned: {}
+---
+# The CA the cp listener verifies the data plane client certificates with.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: gwadmin-cert-manager-dataplane-ca
+spec:
+  isCA: true
+  commonName: gwadmin-cert-manager-dataplane-ca
+  secretName: gwadmin-cert-manager-dataplane-ca
+  secretTemplate:
+    labels:
+      konghq.com/secret: "true"
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    kind: Issuer
+    name: gwadmin-cert-manager-selfsigned
+---
+# The CA the cp server certificate is issued from.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: gwadmin-cert-manager-server-ca
+spec:
+  isCA: true
+  commonName: gwadmin-cert-manager-server-ca
+  secretName: gwadmin-cert-manager-server-ca
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    kind: Issuer
+    name: gwadmin-cert-manager-selfsigned
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: gwadmin-cert-manager-server
+spec:
+  ca:
+    secretName: gwadmin-cert-manager-server-ca
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: gwadmin-cert-manager-server-cert
+spec:
+  commonName: gwadmin-cert-manager-cp
+  dnsNames:
+    - gwadmin-cert-manager-cp
+    - gwadmin-cert-manager-cp.default
+    - gwadmin-cert-manager-cp.default.svc
+    - gwadmin-cert-manager-cp.default.svc.cluster.local
+  usages:
+    - server auth
+  secretName: gwadmin-cert-manager-server-cert
+  secretTemplate:
+    labels:
+      konghq.com/secret: "true"
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    kind: Issuer
+    name: gwadmin-cert-manager-server
+---
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: GWAdmin
+metadata:
+  name: gwadmin-cert-manager
+spec:
+  tls:
+    clientCA:
+      provisioning: Manual
+      secretRef:
+        name: gwadmin-cert-manager-dataplane-ca
+    cp:
+      provisioning: Manual
+      secretRef:
+        name: gwadmin-cert-manager-server-cert

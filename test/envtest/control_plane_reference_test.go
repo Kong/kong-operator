@@ -33,7 +33,7 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 	scheme := Scheme(t, WithKong)
 	envcfg, _ := Setup(t, ctx, scheme)
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
-	deployIngressClass(ctx, t, ingressClassName, ctrlClient)
+	DeployIngressClass(ctx, t, ingressClassName, ctrlClient)
 	ns := CreateNamespace(ctx, t, ctrlClient)
 
 	var (

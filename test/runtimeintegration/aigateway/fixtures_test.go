@@ -33,6 +33,7 @@ const (
 	sniName              = "mock-sni"
 	agentName            = "mock-agent"
 	mcpServerName        = "mock-mcp-server"
+	vaultName            = "mock-vault"
 	upstreamURL          = "http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/provider-a"
 	agentUpstreamURL     = "http://upstream:8080"
 	mcpServerUpstreamURL = "http://upstream:8080"
@@ -99,6 +100,7 @@ func namespacedName(name string) metav1.ObjectMeta {
 //   - consumer -> credential (api-key), enrolled in the consumer group
 //   - SNI -> certificate; the certificate is signed by the CA certificate
 //   - agent and MCP server -> policy, auth strategy and consumer group
+//   - vault: env backend, no references
 func representativeObjects(t *testing.T) []any {
 	t.Helper()
 
@@ -414,6 +416,22 @@ func representativeObjects(t *testing.T) []any {
 		},
 	}
 
+	vault := &aiconfigurationv1alpha1.AIGatewayVault{
+		ObjectMeta: namespacedName(vaultName),
+		Spec: aiconfigurationv1alpha1.AIGatewayVaultSpec{
+			AIGatewayRef: onPremRef(),
+			APISpec: aiconfigurationv1alpha1.AIGatewayVaultAPISpec{
+				AIGatewayVaultConfig: &aiconfigurationv1alpha1.AIGatewayVaultConfig{
+					Type: aiconfigurationv1alpha1.AIGatewayVaultConfigTypeEnvironmentVariable,
+					EnvironmentVariable: &aiconfigurationv1alpha1.EnvironmentVariableVault{
+						Name:   vaultName,
+						Config: aiconfigurationv1alpha1.EnvironmentVariableVaultConfig{Prefix: "MOCK_SECRET_"},
+					},
+				},
+			},
+		},
+	}
+
 	secrets := []*corev1.Secret{
 		{
 			Namespace: "default",
@@ -434,7 +452,7 @@ func representativeObjects(t *testing.T) []any {
 		rateLimitPolicy, customPolicyPolicyObj, customPolicy,
 		consumerGroup, consumer, credential, authStrategy,
 		caCertificate, certificate, sni,
-		agent, mcpServer,
+		agent, mcpServer, vault,
 		secrets[0], secrets[1],
 	}
 }

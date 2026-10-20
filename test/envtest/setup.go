@@ -354,7 +354,7 @@ func installGatewayCRDs(t *testing.T, scheme *runtime.Scheme, cfg *rest.Config) 
 	require.NoError(t, err, "failed installing Gateway API CRDs")
 }
 
-func deployIngressClass(ctx context.Context, t *testing.T, name string, client client.Client) {
+func DeployIngressClass(ctx context.Context, t *testing.T, name string, client client.Client) {
 	t.Helper()
 
 	ingress := &netv1.IngressClass{

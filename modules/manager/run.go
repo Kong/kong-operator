@@ -144,6 +144,16 @@ type Config struct {
 	KEGDataPlaneControllerEnabled       bool
 	OnPremEventGatewayControllerEnabled bool
 
+	// Controller for gw-admin, the on-prem control plane of the data planes
+	// that do not use Konnect.
+	GWAdminControllerEnabled bool
+	// GWAdminCATTL is the validity of the certificate authorities created
+	// for a GWAdmin.
+	GWAdminCATTL time.Duration
+	// GWAdminCertTTL is the validity of the certificates issued for a
+	// GWAdmin.
+	GWAdminCertTTL time.Duration
+
 	// Controllers for AI Gateway APIs.
 	AIGatewayDataPlaneControllerEnabled bool
 	OnPremAIGatewayControllerEnabled    bool
@@ -204,6 +214,8 @@ func DefaultConfig() Config {
 		KonnectListPageSize:           consts.DefaultKonnectListPageSize,
 		CertTTL:                       consts.DefaultCertTTL,
 		CertExpirationMargin:          consts.DefaultCertExpirationMargin,
+		GWAdminCATTL:                  consts.GWAdminCATTL,
+		GWAdminCertTTL:                consts.GWAdminLeafTTL,
 	}
 }
 
@@ -529,6 +541,17 @@ func setupAnonymousReports(
 	}
 
 	return tMgr.Stop, nil
+}
+
+// SecretCacheByObject returns the cache options the manager uses to only cache
+// the Secrets whose selector label is set to "true" or "internal". It lets
+// tests run a manager whose Secret cache is filtered as in production.
+func SecretCacheByObject(selector string) (map[client.Object]cache.ByObject, error) {
+	byObject := map[client.Object]cache.ByObject{}
+	if err := setByObjectFor[corev1.Secret](selector, byObject); err != nil {
+		return nil, err
+	}
+	return byObject, nil
 }
 
 func setByObjectFor[
