@@ -166,6 +166,51 @@ func Test_ensureDeployment(t *testing.T) {
 	}
 }
 
+func Test_ensureDeployment_PreservesHPAReplicas(t *testing.T) {
+	const (
+		minReplicas    = int32(2)
+		scaledReplicas = int32(4)
+	)
+
+	mcpDataPlane := minimalMCPServerDataPlane()
+	mcpDataPlane.Spec.Deployment = &mcpv1alpha1.DeploymentOptions{
+		Scaling: &mcpv1alpha1.Scaling{
+			HorizontalScaling: &mcpv1alpha1.HorizontalScaling{
+				MinReplicas: new(minReplicas),
+				MaxReplicas: 5,
+			},
+		},
+	}
+	apiAuth := minimalAPIAuth()
+	ts := tokenSecret(mcpDataPlane)
+
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
+	r := &MCPServerDataPlaneReconciler{
+		Client:        cl,
+		TypeConverter: managedfields.NewDeducedTypeConverter(),
+		eventRecorder: events.NewFakeRecorder(10),
+	}
+
+	deploy, err := r.ensureDeployment(t.Context(), logr.Discard(), mcpDataPlane, mcpServerMetadataWithContainers(), apiAuth.Spec.ServerURL, ts)
+	require.NoError(t, err)
+	require.NotNil(t, deploy)
+
+	// Act as the HPA controller: scale the Deployment above minReplicas
+	// under the HPA's field manager.
+	var current appsv1.Deployment
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(deploy), &current))
+	current.Spec.Replicas = new(scaledReplicas)
+	require.NoError(t, cl.Update(t.Context(), &current, client.FieldOwner("horizontal-pod-autoscaler")))
+
+	// The next reconcile must leave the HPA-managed replica count alone.
+	_, err = r.ensureDeployment(t.Context(), logr.Discard(), mcpDataPlane, mcpServerMetadataWithContainers(), apiAuth.Spec.ServerURL, ts)
+	require.NoError(t, err)
+
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(deploy), &current))
+	require.NotNil(t, current.Spec.Replicas)
+	assert.Equal(t, scaledReplicas, *current.Spec.Replicas, "operator reverted the Deployment replicas set by the HPA")
+}
+
 func Test_ensureTokenSecret(t *testing.T) {
 	scheme := managerscheme.Get()
 	// A real, built-in-type TypeConverter (not managedfields.NewDeducedTypeConverter,
@@ -879,33 +924,34 @@ func Test_generateDeployment_Replicas(t *testing.T) {
 	tests := []struct {
 		name       string
 		deployment *mcpv1alpha1.DeploymentOptions
-		want       *int32
+		want       int32
 	}{
 		{
 			name:       "no deployment options defaults to 1 replica",
 			deployment: nil,
-			want:       new(int32(1)),
+			want:       1,
 		},
 		{
 			name: "explicit replicas",
 			deployment: &mcpv1alpha1.DeploymentOptions{
 				Replicas: new(int32(3)),
 			},
-			want: new(int32(3)),
+			want: 3,
 		},
 		{
 			name:       "nil replicas defaults to 1",
 			deployment: &mcpv1alpha1.DeploymentOptions{},
-			want:       new(int32(1)),
+			want:       1,
 		},
 		{
-			name: "HPA active without minReplicas leaves replicas nil so the HPA owns it",
+			name: "HPA active without minReplicas seeds HPA default of 1",
 			deployment: &mcpv1alpha1.DeploymentOptions{
+				Replicas: new(int32(3)),
 				Scaling: &mcpv1alpha1.Scaling{
 					HorizontalScaling: &mcpv1alpha1.HorizontalScaling{MaxReplicas: 5},
 				},
 			},
-			want: nil,
+			want: 1,
 		},
 		{
 			name: "HPA active with minReplicas seeds replicas from it",
@@ -914,7 +960,7 @@ func Test_generateDeployment_Replicas(t *testing.T) {
 					HorizontalScaling: &mcpv1alpha1.HorizontalScaling{MaxReplicas: 5, MinReplicas: new(int32(2))},
 				},
 			},
-			want: new(int32(2)),
+			want: 2,
 		},
 	}
 
@@ -926,12 +972,8 @@ func Test_generateDeployment_Replicas(t *testing.T) {
 			tokenSecret := tokenSecret(mcpDataPlane)
 			deploy := generateDeployment(logr.Discard(), mcpDataPlane, metadata, tokenSecret, apiAuth.Spec.ServerURL)
 
-			if tc.want == nil {
-				assert.Nil(t, deploy.Spec.Replicas)
-				return
-			}
 			require.NotNil(t, deploy.Spec.Replicas)
-			assert.Equal(t, *tc.want, *deploy.Spec.Replicas)
+			assert.Equal(t, tc.want, *deploy.Spec.Replicas)
 		})
 	}
 }

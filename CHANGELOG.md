@@ -127,6 +127,17 @@
   and `base64Decode`, `sslVerify`, `useCache` or `international` on AI Gateway
   models, model providers and MCP servers.
   [#6148](https://github.com/Kong/kong-operator/pull/6148)
+- `AIGatewayDataPlane`, `KegDataPlane` and `MCPServerDataPlane`: with
+  horizontal scaling configured (`spec.deployment.scaling.horizontal`), the
+  operator no longer resets the Deployment's replica count to `minReplicas` on
+  every reconcile, which reverted each scale-up done by the
+  `HorizontalPodAutoscaler`. The current replica count is now kept, and only
+  raised to `minReplicas` when it is below it (including for `DataPlane`).
+  Furthermore for autoscaling metrics maximum limit is set to 32 for all
+  aforementioned CRs.
+  [#6083](https://github.com/Kong/kong-operator/pull/6083)
+  [#6084](https://github.com/Kong/kong-operator/pull/6084)
+  [#6102](https://github.com/Kong/kong-operator/pull/6102)
 
 ### Added
 

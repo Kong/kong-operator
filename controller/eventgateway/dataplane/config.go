@@ -142,7 +142,6 @@ var config = shareddataplane.Config[
 		PodTemplateSpec:       podTemplateSpec,
 		DeploymentLabels:      deploymentLabels,
 		DeploymentAnnotations: deploymentAnnotations,
-		Replicas:              replicas,
 		BuildContainer:        buildContainer,
 	},
 
@@ -179,13 +178,6 @@ func deploymentAnnotations(egdp *eventgatewayv1alpha1.KegDataPlane) map[string]s
 		return nil
 	}
 	return egdp.Spec.Deployment.Annotations
-}
-
-func replicas(egdp *eventgatewayv1alpha1.KegDataPlane) *int32 {
-	if egdp.Spec.Deployment == nil {
-		return nil
-	}
-	return egdp.Spec.Deployment.Replicas
 }
 
 func setStatusReplicas(egdp *eventgatewayv1alpha1.KegDataPlane, replicas, readyReplicas int32) {

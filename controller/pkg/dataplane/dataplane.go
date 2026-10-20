@@ -178,9 +178,6 @@ type DeploymentConfig[T Object] struct {
 	DeploymentLabels func(T) map[string]string
 	// DeploymentAnnotations returns the user-provided Deployment annotations, or nil.
 	DeploymentAnnotations func(T) map[string]string
-	// Replicas returns the user-provided static replica count, or nil. It is
-	// ignored when horizontal scaling is configured.
-	Replicas func(T) *int32
 
 	// BuildContainer builds the DataPlane container and the additional volumes
 	// it requires. The Konnect certificate volume itself is managed by the
