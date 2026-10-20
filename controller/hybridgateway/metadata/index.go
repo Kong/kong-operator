@@ -34,17 +34,14 @@ const HybridRouteOwnerIndexField = "hybridRouteOwner"
 // controller-runtime prefixes every field name with "field:".
 const cachedIndexFieldName = "field:" + HybridRouteOwnerIndexField
 
-// hybridRouteAnnotationKey associates each root-object kind with the
+// hybridRouteAnnotationKeys associates each root-object kind with the
 // hybrid-routes annotation key its children carry.
-var hybridRouteAnnotationKeys = []struct {
-	key  string
-	kind string
-}{
-	{consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation, kindHTTPRoute},
-	{consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation, kindGRPCRoute},
-	{consts.GatewayOperatorHybridRoutesTLSRouteAnnotation, kindTLSRoute},
-	{consts.GatewayOperatorHybridRoutesTCPRouteAnnotation, kindTCPRoute},
-	{consts.GatewayOperatorHybridRoutesUDPRouteAnnotation, kindUDPRoute},
+var hybridRouteAnnotationKeys = map[string]string{
+	KindHTTPRoute: consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation,
+	KindGRPCRoute: consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation,
+	KindTLSRoute:  consts.GatewayOperatorHybridRoutesTLSRouteAnnotation,
+	KindTCPRoute:  consts.GatewayOperatorHybridRoutesTCPRouteAnnotation,
+	KindUDPRoute:  consts.GatewayOperatorHybridRoutesUDPRouteAnnotation,
 }
 
 // hybridRouteAnnotationKeyForKind returns the hybrid-routes annotation key that
@@ -52,12 +49,7 @@ var hybridRouteAnnotationKeys = []struct {
 // not own children through those annotations. The table is shared with
 // AnnotationManager.RouteAnnotationKeyForKind and HybridRouteOwnerIndexFunc.
 func hybridRouteAnnotationKeyForKind(kind string) string {
-	for _, ka := range hybridRouteAnnotationKeys {
-		if ka.kind == kind {
-			return ka.key
-		}
-	}
-	return ""
+	return hybridRouteAnnotationKeys[kind]
 }
 
 // HybridRouteAnnotationKeyForKind returns the hybrid-routes annotation key that
@@ -84,8 +76,10 @@ func HybridRouteOwnerIndexFunc(obj client.Object) []string {
 		return nil
 	}
 	var out []string
-	for _, ka := range hybridRouteAnnotationKeys {
-		value, ok := annotations[ka.key]
+	// Map iteration order is random; the index stores these values as a set, so
+	// their order carries no meaning.
+	for kind, key := range hybridRouteAnnotationKeys {
+		value, ok := annotations[key]
 		if !ok || value == "" {
 			continue
 		}
@@ -94,7 +88,7 @@ func HybridRouteOwnerIndexFunc(obj client.Object) []string {
 			if entry == "" {
 				continue
 			}
-			out = append(out, ka.kind+"/"+entry)
+			out = append(out, kind+"/"+entry)
 		}
 	}
 	return out

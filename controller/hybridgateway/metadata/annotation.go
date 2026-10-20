@@ -38,12 +38,24 @@ const (
 	serviceUpstreamAnnotation  = "ingress.kubernetes.io/service-upstream"
 )
 
+// The Gateway API kinds of the root objects that own their children through the
+// hybrid-routes annotations. Exported so the reconcilers that build those
+// annotations carry the same kind strings this package keys on.
 const (
-	kindHTTPRoute = "HTTPRoute"
-	kindGRPCRoute = "GRPCRoute"
-	kindTLSRoute  = "TLSRoute"
-	kindTCPRoute  = "TCPRoute"
-	kindUDPRoute  = "UDPRoute"
+	// KindHTTPRoute is the Gateway API kind of an HTTPRoute.
+	KindHTTPRoute = "HTTPRoute"
+
+	// KindGRPCRoute is the Gateway API kind of a GRPCRoute.
+	KindGRPCRoute = "GRPCRoute"
+
+	// KindTLSRoute is the Gateway API kind of a TLSRoute.
+	KindTLSRoute = "TLSRoute"
+
+	// KindTCPRoute is the Gateway API kind of a TCPRoute.
+	KindTCPRoute = "TCPRoute"
+
+	// KindUDPRoute is the Gateway API kind of a UDPRoute.
+	KindUDPRoute = "UDPRoute"
 )
 
 // routeKindFromObject returns the route kind of obj. It resolves the kind from
@@ -52,15 +64,15 @@ const (
 func routeKindFromObject(obj client.Object) string {
 	switch obj.(type) {
 	case *gwtypes.HTTPRoute:
-		return kindHTTPRoute
+		return KindHTTPRoute
 	case *gwtypes.GRPCRoute:
-		return kindGRPCRoute
+		return KindGRPCRoute
 	case *gwtypes.TLSRoute:
-		return kindTLSRoute
+		return KindTLSRoute
 	case *gwtypes.TCPRoute:
-		return kindTCPRoute
+		return KindTCPRoute
 	case *gwtypes.UDPRoute:
-		return kindUDPRoute
+		return KindUDPRoute
 	}
 	return obj.GetObjectKind().GroupVersionKind().Kind
 }

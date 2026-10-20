@@ -374,15 +374,15 @@ func hybridRouteAnnotationInfo[t converter.RootObject](obj t) (annotationKey, ro
 	var kind string
 	switch o := any(obj).(type) {
 	case gwtypes.HTTPRoute:
-		kind, routeRef = "HTTPRoute", o.Namespace+"/"+o.Name
+		kind, routeRef = metadata.KindHTTPRoute, o.Namespace+"/"+o.Name
 	case gwtypes.GRPCRoute:
-		kind, routeRef = "GRPCRoute", o.Namespace+"/"+o.Name
+		kind, routeRef = metadata.KindGRPCRoute, o.Namespace+"/"+o.Name
 	case gwtypes.TLSRoute:
-		kind, routeRef = "TLSRoute", o.Namespace+"/"+o.Name
+		kind, routeRef = metadata.KindTLSRoute, o.Namespace+"/"+o.Name
 	case gwtypes.TCPRoute:
-		kind, routeRef = "TCPRoute", o.Namespace+"/"+o.Name
+		kind, routeRef = metadata.KindTCPRoute, o.Namespace+"/"+o.Name
 	case gwtypes.UDPRoute:
-		kind, routeRef = "UDPRoute", o.Namespace+"/"+o.Name
+		kind, routeRef = metadata.KindUDPRoute, o.Namespace+"/"+o.Name
 	}
 	return metadata.HybridRouteAnnotationKeyForKind(kind), routeRef
 }
