@@ -6,9 +6,10 @@ spec:
   description: |
     EventGatewayStaticKey lifecycle once created, against the real Konnect API:
 
-    - the key value is read from its Secret only when the key is created: a
-      missing Secret is reported (SecretRefValid False) but the key stays
-      Programmed;
+    - changing the key value in its Secret reports unapplied create inputs;
+      reverting it clears the warning without replacing the key;
+    - a missing Secret is reported (SecretRefValid False and create inputs
+      unavailable) but the key stays Programmed;
     - a key deleted from Konnect out of band is recreated, with a new Konnect
       ID, on the next periodic sync (the operator's Konnect sync period,
       one minute by default).
@@ -85,6 +86,9 @@ spec:
                 name: ($static_key_name)
                 namespace: ($namespace)
               status:
+                (createInputsHash != null): true
+                (conditions[?type == 'CreateInputsApplied']):
+                  - status: 'True'
                 (conditions[?type == 'Programmed']):
                   - status: 'True'
 
@@ -108,6 +112,9 @@ spec:
                 (conditions[?type == 'SecretRefValid']):
                   - status: 'False'
                     (contains(message, 'required to recreate it')): true
+                (conditions[?type == 'CreateInputsApplied']):
+                  - status: 'Unknown'
+                    reason: InputsUnavailable
                 (conditions[?type == 'Programmed']):
                   - status: 'True'
         - apply:
@@ -132,6 +139,74 @@ spec:
                 namespace: ($namespace)
               status:
                 (conditions[?type == 'SecretRefValid']):
+                  - status: 'True'
+                (conditions[?type == 'CreateInputsApplied']):
+                  - status: 'True'
+                    reason: Unchanged
+
+    - name: Rotated-secret-reports-unapplied-inputs-until-reverted
+      try:
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: eventgatewaystatickeys.configuration.konghq.com
+              - name: RESOURCE_NAME
+                value: ($static_key_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: COLLECTION_PATH_JQ
+                value: '"/v1/event-gateways/" + .status.gatewayID.id + "/static-keys"'
+            content: |
+              bash ../../common/scripts/konnect_entity_of_resource.sh
+            outputs:
+              - name: original_key
+                value: (json_parse($stdout))
+        - patch:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: encryption-key
+                namespace: ($namespace)
+              stringData:
+                key: Y2hhaW5zYXctc3RhdGljLWtleS0zMi1ieXRlcy1ubyE=
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayStaticKey
+              metadata:
+                name: ($static_key_name)
+                namespace: ($namespace)
+              status:
+                id: ($original_key.id)
+                (conditions[?type == 'CreateInputsApplied']):
+                  - status: 'False'
+                    reason: ValueChanged
+                    (contains(message, 'Create a new EventGatewayStaticKey')): true
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - patch:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: encryption-key
+                namespace: ($namespace)
+              stringData:
+                key: Y2hhaW5zYXctc3RhdGljLWtleS0zMi1ieXRlcy1vayE=
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayStaticKey
+              metadata:
+                name: ($static_key_name)
+                namespace: ($namespace)
+              status:
+                id: ($original_key.id)
+                (conditions[?type == 'CreateInputsApplied']):
+                  - status: 'True'
+                    reason: Unchanged
+                (conditions[?type == 'Programmed']):
                   - status: 'True'
 
     - name: Key-deleted-out-of-band-is-recreated

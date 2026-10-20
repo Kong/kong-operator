@@ -17,8 +17,9 @@ spec:
       second CR, is never taken over;
     - deleting a CR that lost its status.id leaves no orphan entity.
 
-    Credentials are immutable in Konnect (the operator does not update
-    them), so there is no update step.
+    Credentials cannot be updated in Konnect. Changing the referenced API key
+    or the display name reports unapplied inputs without replacing the entity;
+    reverting either change clears the warning.
 
     No data plane is needed.
   bindings:
@@ -175,6 +176,118 @@ spec:
           value: chainsaw
       use:
         template: ../../common/_step_templates/konnect-ownership-assert-labels.yaml
+    - name: Changed-API-key-and-display-name-report-unapplied-inputs
+      try:
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: ($cr_resource)
+              - name: RESOURCE_NAME
+                value: ($cr_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: COLLECTION_PATH_JQ
+                value: ($collection_path_jq)
+            content: |
+              bash ../../common/scripts/konnect_entity_of_resource.sh
+            outputs:
+              - name: original_credential
+                value: (json_parse($stdout))
+        - patch:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ownership-credential-key
+                namespace: ($namespace)
+              stringData:
+                api-key: ownership-api-key-rotated
+        - assert:
+            resource:
+              apiVersion: ($cr_api_version)
+              kind: ($cr_kind)
+              metadata:
+                name: ($cr_name)
+                namespace: ($namespace)
+              status:
+                id: ($original_credential.id)
+                (conditions[?type == 'CreateInputsApplied']):
+                  - status: 'False'
+                    reason: ValueChanged
+                    (contains(message, 'Recreate the Kubernetes object')): true
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - patch:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ownership-credential-key
+                namespace: ($namespace)
+              stringData:
+                api-key: ownership-api-key
+        - assert:
+            resource:
+              apiVersion: ($cr_api_version)
+              kind: ($cr_kind)
+              metadata:
+                name: ($cr_name)
+                namespace: ($namespace)
+              status:
+                id: ($original_credential.id)
+                (conditions[?type == 'CreateInputsApplied']):
+                  - status: 'True'
+                    reason: Unchanged
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - patch:
+            resource:
+              apiVersion: ($cr_api_version)
+              kind: ($cr_kind)
+              metadata:
+                name: ($cr_name)
+                namespace: ($namespace)
+              spec:
+                apiSpec:
+                  displayName: revised-display-name
+        - assert:
+            resource:
+              apiVersion: ($cr_api_version)
+              kind: ($cr_kind)
+              metadata:
+                name: ($cr_name)
+                namespace: ($namespace)
+              status:
+                id: ($original_credential.id)
+                (conditions[?type == 'CreateInputsApplied']):
+                  - status: 'False'
+                    reason: ValueChanged
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - patch:
+            resource:
+              apiVersion: ($cr_api_version)
+              kind: ($cr_kind)
+              metadata:
+                name: ($cr_name)
+                namespace: ($namespace)
+              spec:
+                apiSpec:
+                  displayName: ($entity_name)
+        - assert:
+            resource:
+              apiVersion: ($cr_api_version)
+              kind: ($cr_kind)
+              metadata:
+                name: ($cr_name)
+                namespace: ($namespace)
+              status:
+                id: ($original_credential.id)
+                (conditions[?type == 'CreateInputsApplied']):
+                  - status: 'True'
+                    reason: Unchanged
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
     - name: Recover-lost-Konnect-ID
       use:
         template: ../../common/_step_templates/konnect-ownership-recover-lost-id.yaml
