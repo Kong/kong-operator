@@ -1,0 +1,96 @@
+# GRPCRoute: gRPC routing over plaintext HTTP (h2c), both from the client to the
+# Gateway and from the Gateway to the backend, which is what
+# `konghq.com/protocol: grpc` on the Service selects.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grpcbin-via-http
+  labels:
+    app: grpcbin-via-http
+  annotations:
+    konghq.com/protocol: grpc
+spec:
+  ports:
+  - name: grpc
+    port: 80
+    targetPort: 9000
+  selector:
+    app: grpcbin-via-http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grpcbin-via-http
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grpcbin-via-http
+  template:
+    metadata:
+      labels:
+        app: grpcbin-via-http
+    spec:
+      containers:
+      - image: kong/grpcbin
+        name: grpcbin-via-http
+        ports:
+        - containerPort: 9000
+---
+apiVersion: gateway-operator.konghq.com/v2beta1
+kind: GatewayConfiguration
+metadata:
+  name: example-grpcroute-via-http
+spec:
+  dataPlaneOptions:
+    deployment:
+      podTemplateSpec:
+        spec:
+          containers:
+          - name: proxy
+            image: kong/kong-gateway:3.16
+            readinessProbe:
+              initialDelaySeconds: 1
+              periodSeconds: 1
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: example-grpcroute-via-http
+spec:
+  controllerName: konghq.com/gateway-operator
+  parametersRef:
+    group: gateway-operator.konghq.com
+    kind: GatewayConfiguration
+    name: example-grpcroute-via-http
+    namespace: default
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: example-grpcroute-via-http
+spec:
+  gatewayClassName: example-grpcroute-via-http
+  listeners:
+  - name: grpc
+    protocol: HTTP
+    port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GRPCRoute
+metadata:
+  name: grpcbin-via-http
+spec:
+  parentRefs:
+  - name: example-grpcroute-via-http
+  hostnames:
+  - example-grpc-via-http.com
+  rules:
+  - backendRefs:
+    - name: grpcbin-via-http
+      port: 80
+    matches:
+    - method:
+        service: "grpcbin.GRPCBin"
+        method: "DummyUnary"

@@ -16,7 +16,6 @@ apiVersion: gateway-operator.konghq.com/v1beta1
 kind: DataPlane
 metadata:
   name: dataplane-fallback
-  namespace: default
 spec:
   deployment:
     podTemplateSpec:
@@ -33,7 +32,6 @@ apiVersion: gateway-operator.konghq.com/v2beta1
 kind: ControlPlane
 metadata:
   name: controlplane-fallback
-  namespace: default
 spec:
   # Required when dataplane.type is ref, and only Ingress is supported in that mode.
   ingressClass: kong
