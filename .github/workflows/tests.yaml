@@ -161,7 +161,9 @@ jobs:
     - uses: ./.github/actions/setup-mise
       with:
         install: false
-    - run: make govulncheck
+    # Package scan only: the symbol scan exceeds the memory GitHub runners have (see the govulncheck
+    # target in the Makefile).
+    - run: make _govulncheck SCAN=package
 
   verify:
     needs: [check-docs-only]
