@@ -12,8 +12,28 @@ runs:
       run: |
         set -o pipefail
 
+        # Ubuntu's Jool 4.1.11 fails to build on runners with Linux 7.0.
+        JOOL_VERSION=4.1.15
+        JOOL_DIR=$(mktemp -d)
+        trap 'rm -f "$JOOL_DIR/jool-dkms.deb" "$JOOL_DIR/jool-tools.deb"; rmdir "$JOOL_DIR"' EXIT
+        chmod 755 "$JOOL_DIR"
+        curl --fail --silent --show-error --location --retry 3 \
+          "https://github.com/NICMx/Jool/releases/download/v${JOOL_VERSION}/jool-dkms_${JOOL_VERSION}-1_all.deb" \
+          --output "$JOOL_DIR/jool-dkms.deb"
+        curl --fail --silent --show-error --location --retry 3 \
+          "https://github.com/NICMx/Jool/releases/download/v${JOOL_VERSION}/jool-tools_${JOOL_VERSION}-1_amd64.deb" \
+          --output "$JOOL_DIR/jool-tools.deb"
+        printf '%s  %s\n' \
+          6a6f3bdc9c34c8b45f3404e5b926c1e2dfc2696afe3955aaed91c61c939d6294 "$JOOL_DIR/jool-dkms.deb" \
+          ad4707e00db184303693fb1ec8161137ba9c1d37b252a74fc805136a88750479 "$JOOL_DIR/jool-tools.deb" \
+          | sha256sum --check
+
         sudo apt-get update -qq
-        sudo apt-get install -y jool-dkms jool-tools unbound bind9-dnsutils
+        if ! sudo apt-get install -y "linux-headers-$(uname -r)" unbound bind9-dnsutils \
+          "$JOOL_DIR/jool-dkms.deb" "$JOOL_DIR/jool-tools.deb"; then
+          sudo find /var/lib/dkms/jool -name make.log -print -exec cat {} \;
+          exit 1
+        fi
         sudo modprobe jool
 
         sudo sysctl -w net.ipv4.ip_forward=1
