@@ -154,10 +154,17 @@ func statusReady(ctx context.Context, t *testing.T, statusURL string) bool {
 	reqCtx, cancel := context.WithTimeout(ctx, requestTimeout)
 	defer cancel()
 
+	// Return false rather than failing the test: a transient transport error must
+	// count as "not ready" for the pollers, and require's FailNow is invalid here
+	// because require.Eventually runs the condition in another goroutine.
 	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, statusURL+"/status/ready", nil)
-	require.NoError(t, err)
+	if err != nil {
+		return false
+	}
 	resp, err := http.DefaultClient.Do(req)
-	require.NoError(t, err)
+	if err != nil {
+		return false
+	}
 	defer resp.Body.Close()
 	_, _ = io.Copy(io.Discard, resp.Body)
 

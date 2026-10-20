@@ -611,10 +611,11 @@ func TestRenderDBLessYAML_EmptyConfigGetsStubUpstream(t *testing.T) {
 	require.Equal(t, withEntities, out)
 
 	// A payload that decodes to no mapping at all is stubbed too, rather than
-	// failing on a write to a nil map.
+	// failing on a write to a nil map. The format version is seeded, because
+	// Kong rejects a payload that carries none.
 	out, err = ensureNonEmptyConfig(nil)
 	require.NoError(t, err)
-	require.Equal(t, "upstreams:\n    - name: kong\n", string(out))
+	require.Equal(t, "_format_version: \"3.0\"\nupstreams:\n    - name: kong\n", string(out))
 }
 
 // TestBuildDocument_NoModels covers the empty case: an OnPremAIGateway with no AIGatewayModels

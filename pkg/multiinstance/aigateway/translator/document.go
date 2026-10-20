@@ -558,8 +558,9 @@ func ensureNonEmptyConfig(payload []byte) ([]byte, error) {
 		}
 	}
 	if content == nil {
-		// An empty or null payload decodes to a nil map, which cannot be written to.
-		content = map[string]any{}
+		// An empty or null payload decodes to a nil map, which cannot be written
+		// to. Seed the format version: Kong rejects a payload without one.
+		content = map[string]any{"_format_version": "3.0"}
 	}
 	content["upstreams"] = []any{map[string]any{"name": stubUpstreamName}}
 	out, err := yaml.Marshal(content)
