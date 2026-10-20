@@ -212,7 +212,9 @@ spec:
     - name: Repoint-policies-to-swapped-naming-methods
       description: |
         Re-point both policies to the other naming method with new header
-        values; SSA drops the previously-set field when absent.
+        values. An omitted field is not reliably pruned across apply steps,
+        so the removed field is explicitly nulled; the CEL rule requires
+        exactly one of type and customPolicyRef.
       try:
         - apply:
             file: 06-policies-repointed.yaml
