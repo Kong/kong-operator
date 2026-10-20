@@ -224,10 +224,13 @@ func isIndexUnavailableError(err error) bool {
 // always returned as unstructured items so callers can treat all child GVKs uniformly.
 //
 // The indexed path reads the informer cache, which lags the API server in both
-// directions. Callers that delete on the strength of the listing must use
-// ListOwnedChildResourcesLive instead, and callers that only report status are
-// safe here because the child watches re-enqueue the root object when the cache
-// catches up.
+// directions. An empty result carries no staleness signal: no root object has
+// children of every GVK, and reads after this client's own writes are covered by
+// read-your-own-writes consistency (PR #6152), which makes a cached List wait for
+// the cache to observe them. Callers that delete on the strength of the listing
+// must use ListOwnedChildResourcesLive instead, and callers that only report
+// status are safe here because the child watches re-enqueue the root object when
+// the cache catches up.
 func ListOwnedChildResources(
 	ctx context.Context,
 	cl client.Client,
