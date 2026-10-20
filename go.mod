@@ -358,3 +358,5 @@ replace (
 	k8s.io/sample-controller => k8s.io/sample-controller v0.37.1
 	k8s.io/streaming => k8s.io/streaming v0.37.1
 )
+
+replace github.com/Kong/sdk-konnect-go => github.com/Kong/sdk-konnect-go v0.74.1-0.20261020093127-44ecb3f538dc
