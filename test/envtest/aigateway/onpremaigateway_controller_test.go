@@ -1,6 +1,7 @@
 package aigateway
 
 import (
+	"context"
 	"slices"
 	"strings"
 	"testing"
@@ -29,6 +30,7 @@ import (
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/test/envtest"
 	"github.com/kong/kong-operator/v2/test/envtest/create"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 )
 
 // TestOnPremAIGatewayReconciler_BecomesReady verifies that the reconciler
@@ -119,13 +121,15 @@ func TestOnPremAIGatewayReconciler_BecomesReady(t *testing.T) {
 	}, waitTime, tickTime)
 }
 
-// TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels verifies the configuration-change
+// TestOnPremAIGatewayReconciler_ConfigTracksEntities verifies the configuration-change
 // pipeline end to end: an AIGatewayModel pointing at an OnPremAIGateway is reconciled by the
 // onpremconfig controller, which notifies the shared ChangeNotifier, which wakes the running
 // control plane instance so that it re-renders the gateway's configuration document. It also
 // verifies that deleting the model notifies the instance with the parent gateway reference
-// that the reconciler stored in its cache.
-func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
+// that the reconciler stored in its cache, and that a change to an AIGatewayConsumerCredential
+// - which has no controller of its own, its rendered form living in the parent consumer's
+// document - is mapped to its parent consumer and notifies the instance through it.
+func TestOnPremAIGatewayReconciler_ConfigTracksEntities(t *testing.T) {
 	t.Parallel()
 
 	// After the manager's cache sync (waited for below), readiness has been
@@ -197,6 +201,21 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 		}
 		return n
 	}
+
+	t.Log("Creating an AIGatewayConsumer for the credential checks below")
+	consumer := onPremConsumer("test-consumer", ns.Name, onprem.Name)
+	require.NoError(t, cl.Create(ctx, consumer))
+
+	countConsumerNotifications := func() int {
+		return countNotifications(consumer.Name, time.Time{})
+	}
+	// The consumer is created here, well before the credential checks, so that the burst of
+	// its own notifications - its reconcile notifies, and the instance's status report
+	// re-triggers it through the status queue - has died down by then.
+	t.Log("Expecting the instance to receive the consumer's change notification")
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		assert.Positive(ct, countConsumerNotifications())
+	}, waitTime, tickTime)
 
 	t.Log("Creating the AIGatewayModelProvider the model's target references")
 	provider := &aiconfigurationv1alpha1.AIGatewayModelProvider{
@@ -302,6 +321,84 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 		assert.Positive(ct, countNotifications(model.Name, deleteStart))
 		assert.Zero(ct, countSendFailures())
 	}, waitTime, tickTime)
+
+	// The credential has no controller of its own: its rendered form lives in the consumer's
+	// document, so the consumer is what the credential's watch must re-reconcile. The
+	// consumer's own notifications must have stopped by now, otherwise they cannot be told
+	// apart from the credential's.
+	settled := countConsumerNotifications()
+	asserts.Never(t, func(context.Context) bool {
+		return countConsumerNotifications() != settled
+	}, 3*time.Second, 100*time.Millisecond,
+		"the consumer's own notifications must go quiet before the credential is created")
+
+	t.Log("Creating an AIGatewayConsumerCredential for the consumer")
+	credential := &aiconfigurationv1alpha1.AIGatewayConsumerCredential{
+		Name:      "test-credential",
+		Namespace: ns.Name,
+		Spec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialSpec{
+			AIGatewayConsumerRef: commonv1alpha1.ObjectRef{
+				Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: consumer.Name},
+			},
+			APISpec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialAPISpec{
+				Name:        "test-credential",
+				DisplayName: "Test Credential",
+				Type:        "api-key",
+				APIKey: aiconfigurationv1alpha1.SensitiveDataSource{
+					Type:  aiconfigurationv1alpha1.SensitiveDataSourceTypeInline,
+					Value: new("test-api-key"),
+				},
+			},
+		},
+	}
+	require.NoError(t, cl.Create(ctx, credential))
+
+	t.Log("Expecting the credential's creation to notify the instance through its parent consumer")
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		assert.Greater(ct, countConsumerNotifications(), settled)
+		assert.Zero(ct, countSendFailures())
+	}, waitTime, tickTime)
+
+	settled = countConsumerNotifications()
+	asserts.Never(t, func(context.Context) bool {
+		return countConsumerNotifications() != settled
+	}, 3*time.Second, 100*time.Millisecond,
+		"the consumer's notifications must go quiet before the credential is updated")
+
+	t.Log("Updating the credential's display name")
+	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(credential), credential))
+	credential.Spec.APISpec.DisplayName = "Updated Credential"
+	require.NoError(t, cl.Update(ctx, credential))
+
+	// The update touches neither the consumer nor the credential's parent reference, so only
+	// the credential's own event can be what notifies the instance here.
+	t.Log("Expecting the credential's update to notify the instance through its parent consumer")
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		assert.Greater(ct, countConsumerNotifications(), settled)
+		assert.Zero(ct, countSendFailures())
+	}, waitTime, tickTime)
+}
+
+// onPremConsumer returns an AIGatewayConsumer in namespace ns targeting the OnPremAIGateway
+// gwName, with the APISpec fields the CRD requires.
+func onPremConsumer(name, ns, gwName string) *aiconfigurationv1alpha1.AIGatewayConsumer {
+	return &aiconfigurationv1alpha1.AIGatewayConsumer{
+		Name:      name,
+		Namespace: ns,
+		Spec: aiconfigurationv1alpha1.AIGatewayConsumerSpec{
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				Group:         aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+				Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: gwName},
+			},
+			APISpec: aiconfigurationv1alpha1.AIGatewayConsumerAPISpec{
+				Name:        aiconfigurationv1alpha1.AIGatewayEntityIdentifier(name),
+				DisplayName: name,
+				Type:        "api-key",
+			},
+		},
+	}
 }
 
 // TestOnPremAIGatewayReconciler_PreservesInstanceOwnedCondition verifies that the
