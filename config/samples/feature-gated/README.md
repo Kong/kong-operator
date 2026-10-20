@@ -16,6 +16,7 @@ summary.
 | [`kong-service-facade.yaml`](kong-service-facade.yaml) | The `ingress-controller-incubator` CRD channel, plus the `KongServiceFacade` feature gate |
 | [`ingress-broken-plugin-fallback.yaml`](ingress-broken-plugin-fallback.yaml) | The `FallbackConfiguration` feature gate |
 | [`gateway-httproute-broken-plugin-fallback.yaml`](gateway-httproute-broken-plugin-fallback.yaml) | The `FallbackConfiguration` feature gate |
+| [`gateway-httproute-use-last-valid-config.yaml`](gateway-httproute-use-last-valid-config.yaml) | The `FallbackConfiguration` feature gate |
 | [`gwadmin-cert-manager-client-ca.yaml`](gwadmin-cert-manager-client-ca.yaml) | cert-manager installed in the cluster |
 | [`gwadmin-cert-manager-cp.yaml`](gwadmin-cert-manager-cp.yaml) | cert-manager installed in the cluster, and the `default` namespace (or the dnsNames edited) |
 | [`gwadmin-cert-manager.yaml`](gwadmin-cert-manager.yaml) | cert-manager installed in the cluster, and the `default` namespace (or the dnsNames edited) |

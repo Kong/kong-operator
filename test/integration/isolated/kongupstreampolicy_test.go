@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/samber/lo"
@@ -25,16 +24,13 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/testlabels"
 	"github.com/kong/kong-operator/v2/pkg/clientset"
-	"github.com/kong/kong-operator/v2/test/helpers"
 )
 
 func TestKongUpstreamPolicyStatus(t *testing.T) {
 	f := features.
 		New("essentials").
 		WithLabel(testlabels.Kind, testlabels.KindKongUpstreamPolicy).
-		WithSetup("deploy kong addon into cluster", featureSetup(
-			withControllerManagerOpts(helpers.ControllerManagerOptAdditionalWatchNamespace("default")),
-		)).
+		WithSetup("deploy Gateway managed by Kong Operator", featureSetup()).
 		WithSetup("prepare clients", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			cluster := GetClusterFromCtx(ctx)
 
@@ -174,21 +170,16 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 			require.NoError(t, err)
 			cleaner.Add(ingress)
 
-			t.Log("creating IngressClass")
-			gatewayClassName := uuid.NewString()
-			gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
-			require.NoError(t, err)
-			cleaner.Add(gwc)
-
-			t.Log("creating Gateway")
-			gw, err := helpers.DeployGateway(ctx, gatewayClient, namespace, gatewayClassName)
-			require.NoError(t, err)
-			cleaner.Add(gw)
-
 			t.Log("creating HTTPRoute")
+			gateway := GetFromCtxForT[*gatewayapi.Gateway](ctx, t)
 			httpRoute := &gatewayapi.HTTPRoute{
 				Name: "http-route",
 				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{{
+							Name: gatewayapi.ObjectName(gateway.Name),
+						}},
+					},
 					Rules: []gatewayapi.HTTPRouteRule{
 						{
 							BackendRefs: []gatewayapi.HTTPBackendRef{
