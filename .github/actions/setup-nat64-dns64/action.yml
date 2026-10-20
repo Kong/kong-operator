@@ -1,9 +1,10 @@
 name: Set up NAT64 + DNS64
 description: >-
   Give an IPv6-only kind cluster on an IPv4-only GitHub runner external
-  reachability: NAT64 (Jool) translates pod egress onto the host's real IPv4
-  uplink, and DNS64 (unbound) synthesizes AAAA answers for hostnames that only
-  have an A record, so pods route through the NAT64 prefix automatically.
+  reachability: NAT64 (tayga, userspace) translates pod egress onto the host's
+  real IPv4 uplink, and DNS64 (unbound) synthesizes AAAA answers for hostnames
+  that only have an A record, so pods route through the NAT64 prefix
+  automatically.
 runs:
   using: composite
   steps:
@@ -12,61 +13,76 @@ runs:
       run: |
         set -o pipefail
 
-        # Ubuntu's Jool 4.1.11 fails to build on runners with Linux 7.0.
-        JOOL_VERSION=4.1.15
-        JOOL_DIR=$(mktemp -d)
-        trap 'rm -f "$JOOL_DIR/jool-dkms.deb" "$JOOL_DIR/jool-tools.deb"; rmdir "$JOOL_DIR"' EXIT
-        chmod 755 "$JOOL_DIR"
-        curl --fail --silent --show-error --location --retry 3 \
-          "https://github.com/NICMx/Jool/releases/download/v${JOOL_VERSION}/jool-dkms_${JOOL_VERSION}-1_all.deb" \
-          --output "$JOOL_DIR/jool-dkms.deb"
-        curl --fail --silent --show-error --location --retry 3 \
-          "https://github.com/NICMx/Jool/releases/download/v${JOOL_VERSION}/jool-tools_${JOOL_VERSION}-1_amd64.deb" \
-          --output "$JOOL_DIR/jool-tools.deb"
-        printf '%s  %s\n' \
-          6a6f3bdc9c34c8b45f3404e5b926c1e2dfc2696afe3955aaed91c61c939d6294 "$JOOL_DIR/jool-dkms.deb" \
-          ad4707e00db184303693fb1ec8161137ba9c1d37b252a74fc805136a88750479 "$JOOL_DIR/jool-tools.deb" \
-          | sha256sum --check
-
+        # tayga is a userspace NAT64 (TUN-based): unlike jool's kernel module
+        # it has no DKMS build, so it keeps working when GitHub rolls out new
+        # runner kernels.
         sudo apt-get update -qq
-        if ! sudo apt-get install -y "linux-headers-$(uname -r)" unbound bind9-dnsutils \
-          "$JOOL_DIR/jool-dkms.deb" "$JOOL_DIR/jool-tools.deb"; then
-          sudo find /var/lib/dkms/jool -name make.log -print -exec cat {} \;
-          exit 1
-        fi
-        sudo modprobe jool
+        sudo apt-get install -y tayga unbound bind9-dnsutils
 
         sudo sysctl -w net.ipv4.ip_forward=1
         sudo sysctl -w net.ipv6.conf.all.forwarding=1
         sudo sysctl -w net.ipv6.conf.default.forwarding=1
 
-        # Read the uplink address from the route table instead of listing
-        # global-scope addresses: by this point kind's own docker bridge
-        # also has one, and list order isn't guaranteed to put the real
-        # uplink first.
-        RUNNER_IP4=$(ip -4 route get 1.1.1.1 | awk '{for(i=1;i<NF;i++) if($i=="src") print $(i+1); exit}')
-        sudo jool instance add nat64 --netfilter --pool6 64:ff9b::/96
-        sudo jool -i nat64 pool4 add --tcp "${RUNNER_IP4}" 61001-65535
-        sudo jool -i nat64 pool4 add --udp "${RUNNER_IP4}" 61001-65535
-        sudo jool -i nat64 pool4 add --icmp "${RUNNER_IP4}" 61001-65535
+        # 100.64.0.0/24 (CGNAT space) can't collide with the runner LAN or
+        # docker's default address pools. tayga is 1:1, not NAPT: each IPv6
+        # source (kind node) gets one dynamic-pool address, and the MASQUERADE
+        # below then translates those onto the real uplink address.
+        sudo tee /etc/tayga.conf >/dev/null <<EOF
+        tun-device nat64
+        ipv4-addr 100.64.0.1
+        prefix 64:ff9b::/96
+        dynamic-pool 100.64.0.0/24
+        # Reserve the /24's broadcast address: tayga's allocator would
+        # otherwise hand it out to some sources (chosen by a hash of the
+        # source address), and flows via it never complete.
+        map 100.64.0.255 fd00:64ff:ffff:ffff::
+        EOF
 
-        # This host needs a route for the NAT64 prefix to accept forwarding
-        # it at all. It has no real IPv6 default route, so an on-link route
-        # (no gateway) makes the kernel try to NDP-resolve the fake NAT64
-        # destination itself, which just times out. A permanent, never-
-        # verified fake neighbor gives the kernel a resolved next hop
-        # without that - Jool intercepts and re-injects as IPv4 long before
-        # any real L2 delivery to that (nonexistent) neighbor is attempted.
-        PRIMARY_IF=$(ip -6 route show default | awk '{for(i=1;i<NF;i++) if($i=="dev") print $(i+1); exit}')
-        if [ -z "$PRIMARY_IF" ]; then
-          PRIMARY_IF=$(ip -4 route get 1.1.1.1 | awk '{for(i=1;i<NF;i++) if($i=="dev") print $(i+1); exit}')
+        # --mktun creates the persistent TUN without addresses; wire it up
+        # explicitly. The v4 /24 doubles as the return route for MASQUERADE'd
+        # reply traffic, and the v6 address is the one tayga derives for
+        # itself (prefix + ipv4-addr) - never source traffic from a different
+        # in-prefix address, those bypass the dynamic pool.
+        sudo tayga --mktun
+        sudo ip addr add 100.64.0.1/24 dev nat64
+        sudo ip addr add 64:ff9b::6440:1/128 dev nat64
+        sudo ip link set nat64 up
+        sudo ip route replace 100.64.0.0/24 dev nat64
+        sudo ip -6 route replace 64:ff9b::/96 dev nat64
+
+        sudo bash -c 'nohup tayga >/var/log/tayga.log 2>&1 &'
+        sleep 2
+        if ! pgrep -x tayga >/dev/null; then
+          echo "tayga failed to start:" >&2
+          cat /var/log/tayga.log >&2 || true
+          exit 1
         fi
-        sudo ip -6 neigh add fe80::64 lladdr 00:00:00:00:00:64 dev "${PRIMARY_IF}" nud permanent
-        sudo ip -6 route add 64:ff9b::/96 via fe80::64 dev "${PRIMARY_IF}"
 
-        # DNS64 has to run on this host, not as a cluster pod: it needs to
-        # be reachable via IPv6 from the pod network AND do real IPv4 DNS
-        # lookups itself, which an IPv6-only CoreDNS pod can't do.
+        # All four legs of a translation flow traverse netfilter's FORWARD
+        # chain (tayga injects translated packets back through the TUN), and
+        # docker sets the FORWARD policy to DROP with rules that only know
+        # about its own bridges - accept the translation subnets explicitly.
+        sudo iptables -I FORWARD 1 -s 100.64.0.0/24 -j ACCEPT
+        sudo iptables -I FORWARD 1 -d 100.64.0.0/24 -j ACCEPT
+        sudo ip6tables -I FORWARD 1 -s 64:ff9b::/96 -j ACCEPT
+        sudo ip6tables -I FORWARD 1 -d 64:ff9b::/96 -j ACCEPT
+
+        UPLINK_IF=$(ip -4 route get 1.1.1.1 | awk '{for(i=1;i<NF;i++) if($i=="dev") print $(i+1); exit}')
+        sudo iptables -t nat -I POSTROUTING 1 -s 100.64.0.0/24 -o "${UPLINK_IF}" -j MASQUERADE
+
+        # Docker also adds, per IPv6 network, an ip6 masquerade rule for the
+        # network's subnet and raw-prerouting isolation drops for each
+        # container address. Both would break this path: the node's
+        # NAT64-bound traffic gets its source rewritten to the tun's
+        # in-prefix address (which tayga rejects) and the replies, entering
+        # via the tun, get dropped. Accept the NAT64 prefix in both places,
+        # before docker's rules.
+        sudo ip6tables -t nat -I POSTROUTING 1 -d 64:ff9b::/96 -j ACCEPT
+        sudo ip6tables -t raw -I PREROUTING 1 -s 64:ff9b::/96 -j ACCEPT
+
+        # DNS64 has to run on this host, not as a cluster pod: it needs to be
+        # reachable via IPv6 from the pod network AND do real IPv4 DNS lookups
+        # itself, which an IPv6-only CoreDNS pod can't do.
         GW=$(docker network inspect kind | jq -r '.[0].IPAM.Config[] | select(.Subnet | contains(":")) | .Gateway')
         if [ -z "$GW" ] || [ "$GW" = "null" ]; then
           SUBNET=$(docker network inspect kind | jq -r '.[0].IPAM.Config[] | select(.Subnet | contains(":")) | .Subnet')
@@ -84,28 +100,16 @@ runs:
           do-ip6: yes
           module-config: "dns64 validator iterator"
           dns64-prefix: 64:ff9b::/96
-          # Force synthesis unconditionally, ignoring any real AAAA record.
-          # Without this, a hostname that later gains a genuine AAAA (e.g.
-          # if Konnect ever dual-stacks its cp/tp endpoints) would return
-          # that real address instead of the NAT64-prefixed one - and github
-          # runner has no real IPv6 route to send it over, so it would be
-          # just as unreachable as a bare IPv4 address, only via a
-          # different code path. Synthesizing unconditionally keeps every
-          # external destination routed through the one path that's
-          # actually proven to work here: NAT64 onto the real IPv4 uplink.
+          # Synthesize unconditionally, ignoring any real AAAA record: the
+          # runner has no real IPv6 route, so every external destination must
+          # go through the NAT64 path.
           dns64-synthall: yes
         EOF
-        # The resolvconf integration unit gets symlinked in by the package
-        # postinst but the resolvconf binary isn't installed on the runner,
-        # so the helper fails during unbound's start transaction and can
-        # fail the whole job. We manage resolv.conf ourselves here.
+        # The resolvconf integration unit fails on runners (no resolvconf
+        # binary); we manage resolv.conf ourselves here.
         sudo systemctl disable --now unbound-resolvconf.service 2>/dev/null || true
         sudo rm -f /etc/systemd/system/unbound.service.wants/unbound-resolvconf.service
 
-        # The package postinst sometimes fails to invoke systemd on hosted
-        # runners ("Could not execute systemctl"), leaving the unit in an
-        # unreliable state; a single restart issued right after races that
-        # start attempt and intermittently fails. Retry with diagnostics.
         sudo unbound-checkconf
         for i in 1 2 3 4 5; do
           if sudo systemctl restart unbound; then
@@ -119,9 +123,8 @@ runs:
           sleep 5
         done
 
-        # Prove DNS64 actually works before pointing CoreDNS at it, so a
-        # silently broken resolver fails here with a clear message instead
-        # of as confusing downstream test failures.
+        # Prove DNS64 works before pointing CoreDNS at it, and resolve the
+        # TCP probe target below.
         for i in $(seq 1 30); do
           if dig +time=2 +tries=1 @"${GW}" example.com AAAA +short | grep -q '^64:ff9b::'; then
             echo "DNS64 synthesis OK"
@@ -129,6 +132,31 @@ runs:
           fi
           if [ "$i" = 30 ]; then
             echo "DNS64 never synthesized an AAAA via unbound at ${GW}" >&2
+            exit 1
+          fi
+          sleep 2
+        done
+        TARGET_V6=$(dig +time=2 +tries=1 @"${GW}" example.com AAAA +short | head -1)
+
+        # Prove the NAT64 path end-to-end with a TCP connection to the
+        # DNS64-resolved target - the same path the tests use. Bind the probe
+        # source: without it, curl uses the route's default source (the tun's
+        # in-prefix address), which tayga rejects. (Do not probe 1.1.1.1:
+        # runners black-hole it, native IPv4 included.)
+        PROBE_ADDR=fd00:64ff::1
+        sudo ip addr add "${PROBE_ADDR}/128" dev lo || true
+        for i in $(seq 1 5); do
+          rc=0
+          curl --connect-timeout 8 --interface "${PROBE_ADDR}" -sS -o /dev/null "https://[${TARGET_V6:-64:ff9b::1.1.1.1}]/" 2>/dev/null || rc=$?
+          # Any exit other than connection-level failure (7 refused,
+          # 28 timeout) proves the flow traversed NAT64 in both directions;
+          # TLS/app-layer errors are still successful connections.
+          if [ "$rc" != 7 ] && [ "$rc" != 28 ]; then
+            echo "NAT64 path OK (tcp)"
+            break
+          fi
+          if [ "$i" = 5 ]; then
+            echo "NAT64 path never came up (tcp via ${PROBE_ADDR} to ${TARGET_V6:-64:ff9b::1.1.1.1})" >&2
             exit 1
           fi
           sleep 2
