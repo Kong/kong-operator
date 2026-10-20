@@ -5,18 +5,17 @@ metadata:
 spec:
   description: |
     Smoke test for the on-prem AI Gateway flow. Creates an OnPremAIGateway
-    control plane and waits for it to become Ready, creates one
-    AIGatewayModelProvider + AIGatewayModel attached to it, then creates an
-    AIGatewayDataPlane attached via controlPlaneRef.onpremNamespacedRef.
-    Asserts that the model is Programmed (its rendered configuration was
-    pushed to the data plane) and that the data plane becomes Ready with a
-    service address.
+    control plane and waits for it to become Ready, then creates an
+    AIGatewayDataPlane attached via controlPlaneRef.onpremNamespacedRef and
+    waits for it to become Ready with a service address, and finally creates
+    one AIGatewayModelProvider + AIGatewayModel and asserts the model is
+    Programmed (its rendered configuration was pushed to the data plane).
 
-    A configuration entity is required: a Kong DB-less data plane reports
-    not-ready while its applied configuration is empty, and the control plane
-    pushes an empty configuration when there are no entities. No traffic is
-    driven here — the routable end-to-end flow is covered by the
-    config-push test.
+    The data plane is created before any configuration entity on purpose: a
+    Kong DB-less data plane does not report ready while its applied
+    configuration is empty, so this step is what proves that an empty
+    configuration still leaves the data plane ready. No traffic is driven
+    here — the routable end-to-end flow is covered by the config-push test.
   bindings:
     - name: test_name
       value: ($namespace)
@@ -36,9 +35,6 @@ spec:
     - name: Create-onprem-aigateway
       use:
         template: ../../common/_step_templates/apply-assert-onpremAIGateway.yaml
-    - name: Create-provider-and-model
-      use:
-        template: ../../common/_step_templates/apply-assert-onpremProviderAndModel.yaml
     - name: Create-aigateway-dataplane
       use:
         template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
@@ -46,6 +42,9 @@ spec:
           bindings:
             - name: control_plane_ref
               value: "({type: 'onpremNamespacedRef', onpremNamespacedRef: {name: ($aigw_cp_name)}})"
+    - name: Create-provider-and-model
+      use:
+        template: ../../common/_step_templates/apply-assert-onpremProviderAndModel.yaml
     - name: Assert-model-pushed-to-dataplane
       try:
         - assert:

@@ -583,6 +583,40 @@ func TestBuildDocument(t *testing.T) {
 	require.Equal(t, "model-a", modelErr.Source.Name)
 }
 
+// TestRenderDBLessYAML_EmptyConfigGetsStubUpstream covers the stub entity: a Kong data
+// plane does not report ready while its applied configuration is empty, so a gateway
+// with no configuration entities gets an inert upstream instead of an empty payload.
+func TestRenderDBLessYAML_EmptyConfigGetsStubUpstream(t *testing.T) {
+	t.Parallel()
+
+	payload, issues, err := RenderDBLessYAML(&aigw.Document{}, convert.Options{})
+	require.NoError(t, err)
+	require.Empty(t, issues)
+
+	var content struct {
+		FormatVersion string `yaml:"_format_version"`
+		Upstreams     []struct {
+			Name string `yaml:"name"`
+		} `yaml:"upstreams"`
+	}
+	require.NoError(t, yaml.Unmarshal(payload, &content))
+	require.NotEmpty(t, content.FormatVersion, "the rendered format version must be kept")
+	require.Len(t, content.Upstreams, 1)
+	require.Equal(t, stubUpstreamName, content.Upstreams[0].Name)
+
+	// A payload that carries entities is not touched.
+	withEntities := []byte("_format_version: \"3.0\"\n_transform: false\nservices:\n- name: svc\n")
+	out, err := ensureNonEmptyConfig(withEntities)
+	require.NoError(t, err)
+	require.Equal(t, withEntities, out)
+
+	// A payload that decodes to no mapping at all is stubbed too, rather than
+	// failing on a write to a nil map.
+	out, err = ensureNonEmptyConfig(nil)
+	require.NoError(t, err)
+	require.Equal(t, "upstreams:\n    - name: kong\n", string(out))
+}
+
 // TestBuildDocument_NoModels covers the empty case: an OnPremAIGateway with no AIGatewayModels
 // yet must not error.
 func TestBuildDocument_NoModels(t *testing.T) {

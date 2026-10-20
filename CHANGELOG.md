@@ -95,6 +95,14 @@
   `DataPlane` and finally the `Gateway`), leaving them unprogrammed while the
   controller retried every 3 seconds and kept the organization rate limited.
   [#6217](https://github.com/Kong/kong-operator/issues/6217)
+- An `OnPremAIGateway` with no configuration entities (no `AIGatewayModel`,
+  `AIGatewayModelProvider`, `AIGatewayConsumer`, ...) no longer leaves its
+  `AIGatewayDataPlane` stuck in `Ready=False`: the control plane pushes a stub
+  upstream when the rendered configuration would otherwise be empty, because a
+  DB-less Kong Gateway does not report ready while its applied configuration is
+  empty. Deleting the last entity consequently no longer takes a ready data plane
+  out of service.
+  [#6187](https://github.com/Kong/kong-operator/pull/6187)
 - HybridGateway root-object controllers (e.g. HTTPRoute) no longer spend several
   seconds per reconcile scanning every managed Kong resource during orphan
   cleanup and status computation. Ownership of child resources is now resolved

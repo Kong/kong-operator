@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/Kong/ai-deck-converter/aigw"
 	"github.com/Kong/ai-deck-converter/convert"
@@ -489,6 +490,12 @@ func BuildDocument(
 	return doc, statuses, nil
 }
 
+// stubUpstreamName is the name of the inert upstream that is pushed as the only
+// entity when the configuration is otherwise empty. It mirrors the ingress
+// controller's deckgen.StubUpstreamName, declared again here because that one
+// lives under ingress-controller/internal and is not importable.
+const stubUpstreamName = "kong"
+
 // RenderDBLessYAML converts the translated AI Gateway document into the flattened
 // db-less YAML payload understood by Kong data planes. Alongside the payload it
 // returns the typed conversion issues reported by the converter: a Warning issue
@@ -496,6 +503,8 @@ func BuildDocument(
 // fully match the intent), while an Error issue means the offending entity was
 // left out of the output entirely - the caller is expected to attribute those
 // back to the entities' CRs (see the aigateway package's attributeConversionIssues).
+//
+// The payload is never empty: see ensureNonEmptyConfig.
 func RenderDBLessYAML(doc *aigw.Document, opts convert.Options) ([]byte, []convert.ConversionIssue, error) {
 	if opts.MinRuntimeVersion == "" {
 		// Pinned minimum; see defaultMinRuntimeVersion.
@@ -519,5 +528,43 @@ func RenderDBLessYAML(doc *aigw.Document, opts convert.Options) ([]byte, []conve
 		return nil, nil, err
 	}
 	payload, err := result.Output.ToDBLess().ToYAML()
+	if err != nil {
+		return nil, result.Issues, err
+	}
+	payload, err = ensureNonEmptyConfig(payload)
 	return payload, result.Issues, err
+}
+
+// ensureNonEmptyConfig appends the stub upstream when the rendered payload holds no
+// entities, and returns the payload unchanged otherwise.
+//
+// A Kong data plane does not report ready (GET /status/ready never returns 200) while
+// its applied configuration is empty, so a gateway with no configuration entities yet
+// would never become ready. This is the same workaround the ingress controller applies
+// in db-less mode.
+//
+// Emptiness is decided on the rendered payload rather than on the document, so a
+// document whose entities were all dropped by the converter is covered too. Only
+// metadata keys are prefixed with an underscore (_format_version, _transform), so any
+// other top-level key means the payload carries entities.
+func ensureNonEmptyConfig(payload []byte) ([]byte, error) {
+	var content map[string]any
+	if err := yaml.Unmarshal(payload, &content); err != nil {
+		return nil, fmt.Errorf("parsing rendered dbless configuration: %w", err)
+	}
+	for key := range content {
+		if !strings.HasPrefix(key, "_") {
+			return payload, nil
+		}
+	}
+	if content == nil {
+		// An empty or null payload decodes to a nil map, which cannot be written to.
+		content = map[string]any{}
+	}
+	content["upstreams"] = []any{map[string]any{"name": stubUpstreamName}}
+	out, err := yaml.Marshal(content)
+	if err != nil {
+		return nil, fmt.Errorf("marshaling dbless configuration with the stub upstream: %w", err)
+	}
+	return out, nil
 }
