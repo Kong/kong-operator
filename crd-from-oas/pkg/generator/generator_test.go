@@ -628,6 +628,47 @@ func TestGenerateCRDType_ReferenceFieldTypeSwap(t *testing.T) {
 	require.Contains(t, content, "+kubebuilder:validation:MaxItems=50")
 }
 
+func TestGenerateCRDType_RequiredOrderedReferenceArray(t *testing.T) {
+	t.Parallel()
+
+	schema := &parser.Schema{
+		Name: "CreateEventGatewayVirtualClusterPolicyChain",
+		Properties: []*parser.Property{{
+			Name:     "policies",
+			Type:     "array",
+			Required: true,
+			Items:    &parser.Property{Type: "string", Format: "uuid"},
+		}},
+	}
+	g := NewGenerator(Config{
+		APIGroup:   "configuration.konghq.com",
+		APIVersion: "v1alpha1",
+		References: map[string][]config.ReferenceConfig{
+			"EventGatewayVirtualClusterPolicyChain": {{
+				Path:       "spec.apiSpec.policies",
+				Kinds:      []string{"EventGatewayVirtualClusterPolicy"},
+				ResolvesTo: "id",
+			}},
+		},
+		FieldConfig: &config.Config{
+			Entities: map[string]*config.EntityConfig{
+				"EventGatewayVirtualClusterPolicyChain": {
+					Fields: map[string]*config.FieldConfig{
+						"spec": {Fields: map[string]*config.FieldConfig{
+							"apiSpec": {Fields: map[string]*config.FieldConfig{
+								"policies": {Validations: []string{"+listType=atomic"}},
+							}},
+						}},
+					},
+				},
+			},
+		},
+	})
+	content, err := g.generateCRDType(schema.Name, schema)
+	require.NoError(t, err)
+	require.Contains(t, content, "// +required\n\t// +listType=atomic\n\tPolicies []EventGatewayVirtualClusterPolicyRef `json:\"policies,omitzero\"`")
+}
+
 func TestGenerateCRDType_Association(t *testing.T) {
 	schema := &parser.Schema{
 		Name:       "CreateAIGatewayConsumer",

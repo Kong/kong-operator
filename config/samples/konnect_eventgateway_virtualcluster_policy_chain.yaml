@@ -1,0 +1,15 @@
+# Apply konnect_eventgateway_virtualcluster_policy.yaml for the referenced resources.
+# This CRD defines the API only; controller support is not implemented yet.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterPolicyChain
+metadata:
+  name: cp-event-1-virtual-cluster-1-policy-chain
+  namespace: default
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: cp-event-1-virtual-cluster-1
+  apiSpec:
+    policies:
+      - name: cp-event-1-virtual-cluster-1-policy-1

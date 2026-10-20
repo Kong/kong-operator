@@ -185,7 +185,7 @@ type {{.EntityName}}APISpec struct {
 {{- end}}
 {{- if isRefConfigField $prop}}
 {{- if eq $prop.Type "array"}}
-	{{goFieldName $prop.Name}} []{{refTypeNameForField $prop}} ` + "`" + `json:"{{jsonPropName $prop}},omitempty"` + "`" + `
+	{{goFieldName $prop.Name}} []{{refTypeNameForField $prop}} ` + "`" + `json:"{{jsonPropName $prop}},{{if $prop.Required}}omitzero{{else}}omitempty{{end}}"` + "`" + `
 {{- else}}
 	{{goFieldName $prop.Name}} {{refTypeNameForField $prop}} ` + "`" + `json:"{{jsonPropName $prop}},omitzero"` + "`" + `
 {{- end}}

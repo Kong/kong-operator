@@ -209,6 +209,8 @@
 
 ### Added
 
+- Added the `EventGatewayVirtualClusterPolicyChain` CRD to declare the execution
+  order of cluster-level policies within an Event Gateway virtual cluster.
 - OnPremAIGateway spec: added a `dataplaneSync` field with optional
   `intervalSeconds` and `timeoutSeconds` (non-negative integers, in seconds) to
   tune the cadence of and the timeout for pushing configuration to the data

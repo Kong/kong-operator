@@ -1205,6 +1205,23 @@ apiGroupVersions:
           parentRef:
             fieldName: eventGatewayVirtualClusterRef
 
+      - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/cluster-policy-chain
+        name: EventGatewayVirtualClusterPolicyChain
+        references:
+          - path: spec.apiSpec.policies
+            kinds: [EventGatewayVirtualClusterPolicy]
+            resolvesTo: id
+        cel:
+          spec:
+            apiSpec:
+              policies:
+                _description: >-
+                  Policies lists EventGatewayVirtualClusterPolicy references in execution order.
+                  Each policy must belong to the referenced EventGatewayVirtualCluster
+                  and be in the same namespace as this chain.
+                _validations:
+                  - "+listType=atomic"
+
   konnect.konghq.com/v1alpha1:
     categories:
       - konnect

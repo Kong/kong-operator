@@ -2723,7 +2723,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 			if prop.Type == "array" && prop.MaxItems != nil {
 				tags = append(tags, markerValidationMaxItems(int(*prop.MaxItems)))
 			}
-			return tags
+			return applyValidationOverrides(tags, apiSpecCursor.Sub(jsonName(prop.Name)))
 		}
 		if g.isEntityAPISpecFieldSensitiveLeaf(entityName, jsonName(prop.Name)) {
 			if prop.Required && !prop.Nullable {
