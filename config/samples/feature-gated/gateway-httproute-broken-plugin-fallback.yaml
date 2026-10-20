@@ -99,7 +99,6 @@ apiVersion: gateway-operator.konghq.com/v2beta1
 kind: GatewayConfiguration
 metadata:
   name: kong
-  namespace: default
 spec:
   controlPlaneOptions:
     featureGates:
@@ -194,7 +193,6 @@ apiVersion: configuration.konghq.com/v1
 kind: KongPlugin
 metadata:
   name: key-auth
-  namespace: default
 plugin: key-auth
 config:
   # Should be key_names, not keys.

@@ -1,18 +1,12 @@
-//go:build integration_tests
-
 package isolated
 
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"net/http"
-	"os"
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -37,47 +31,18 @@ func TestCustomEntityExample(t *testing.T) {
 		WithLabel(testlabels.Kind, testlabels.KindKongCustomEntity).
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyIngress).
 		WithSetup("skip if enterprise not enabled", SkipIfEnterpriseNotEnabled).
-		WithSetup("skip if DB-backed", SkipIfDBBacked).
-		WithSetup("deploy kong addon into cluster", featureSetup(
-			withControllerManagerOpts(helpers.ControllerManagerOptAdditionalWatchNamespace("default")),
-		)).
+		WithSetup("deploy Gateway managed by Kong Operator", featureSetup()).
 		WithSetup("deploy example manifest", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-			manifestPath := examplesManifestPath("kong-custom-entity.yaml")
-
-			b, err := os.ReadFile(manifestPath)
-			require.NoError(t, err)
-			manifest := string(b)
-
 			ingressClass := GetIngressClassFromCtx(ctx)
-
 			t.Logf("replacing kong ingress class in yaml manifest to %s", ingressClass)
-			manifest = strings.ReplaceAll(
-				manifest,
-				"kubernetes.io/ingress.class: kong",
-				fmt.Sprintf("kubernetes.io/ingress.class: %s", ingressClass),
+			applyManifest(ctx, t, samplesManifestPath("kongcustomentity.yaml"),
+				"kubernetes.io/ingress.class: kong", "kubernetes.io/ingress.class: "+ingressClass,
+				"ingressClassName: kong", "ingressClassName: "+ingressClass,
+				"controllerName: kong", "controllerName: "+ingressClass,
 			)
-			manifest = strings.ReplaceAll(
-				manifest,
-				"ingressClassName: kong",
-				fmt.Sprintf("ingressClassName: %s", ingressClass),
-			)
-			manifest = strings.ReplaceAll(
-				manifest,
-				"controllerName: kong",
-				fmt.Sprintf("controllerName: %s", ingressClass),
-			)
-
-			t.Logf("applying yaml manifest %s", manifestPath)
-			cluster := GetClusterFromCtx(ctx)
-			require.NoError(t, clusters.ApplyManifestByYAML(ctx, cluster, manifest))
-
-			t.Cleanup(func() {
-				t.Logf("deleting yaml manifest %s", manifestPath)
-				assert.NoError(t, clusters.DeleteManifestByYAML(ctx, cluster, manifest))
-			})
 
 			t.Log("waiting for hasura deployment to be ready")
-			helpers.WaitForDeploymentRollout(ctx, t, cluster, "default", "hasura")
+			helpers.WaitForDeploymentRollout(ctx, t, GetClusterFromCtx(ctx), GetNamespaceForT(ctx, t), "hasura")
 			return ctx
 		}).
 		Assess("degraphql plugin works as expected", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
@@ -143,8 +108,8 @@ func TestCustomEntityExample(t *testing.T) {
 			return ctx
 		}).
 		Assess("another ingress using the same degraphql plugin should also work", func(ctx context.Context, t *testing.T, conf *envconf.Config) context.Context {
+			ingressNamespace := GetNamespaceForT(ctx, t)
 			const (
-				ingressNamespace = "default"
 				serviceName      = "hasura"
 				ingressName      = "hasura-ingress-graphql"
 				alterServiceName = "hasura-alter"
@@ -156,12 +121,10 @@ func TestCustomEntityExample(t *testing.T) {
 			svc := corev1.Service{}
 			require.NoError(t, r.Get(ctx, serviceName, ingressNamespace, &svc))
 			alterService := &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        alterServiceName,
-					Namespace:   ingressNamespace,
-					Labels:      svc.Labels,
-					Annotations: svc.Annotations,
-				},
+				Name:        alterServiceName,
+				Namespace:   ingressNamespace,
+				Labels:      svc.Labels,
+				Annotations: svc.Annotations,
 			}
 			alterService.Spec = *svc.Spec.DeepCopy()
 			alterService.Spec.ClusterIP = ""
@@ -172,12 +135,10 @@ func TestCustomEntityExample(t *testing.T) {
 			ingress := netv1.Ingress{}
 			require.NoError(t, r.Get(ctx, ingressName, ingressNamespace, &ingress))
 			alterIngress := &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        alterIngressName,
-					Namespace:   ingressNamespace,
-					Labels:      ingress.Labels,
-					Annotations: ingress.Annotations,
-				},
+				Name:        alterIngressName,
+				Namespace:   ingressNamespace,
+				Labels:      ingress.Labels,
+				Annotations: ingress.Annotations,
 			}
 			alterIngress.Spec = *ingress.Spec.DeepCopy()
 			for i := range alterIngress.Spec.Rules {
@@ -202,9 +163,12 @@ func TestCustomEntityExample(t *testing.T) {
 			return ctx
 		}).
 		Assess("entities not passing schema validation are excluded from config and produce KongConfigurationTranslationFailed events", func(ctx context.Context, t *testing.T, conf *envconf.Config) context.Context {
+			t.Skip("skipping, the operator's validating webhook rejects KongCustomEntities not passing schema validation")
+
+			namespace := GetNamespaceForT(ctx, t)
 			c, err := clientset.NewForConfig(conf.Client().RESTConfig())
 			require.NoError(t, err)
-			kceClient := c.ConfigurationV1alpha1().KongCustomEntities("default")
+			kceClient := c.ConfigurationV1alpha1().KongCustomEntities(namespace)
 			customEntity, err := kceClient.Get(ctx, "degraphql-route-example", metav1.GetOptions{})
 			require.NoError(t, err)
 			t.Logf("update the custom entity with invalid field, failing validation and thus being excluded from config")
@@ -221,11 +185,11 @@ func TestCustomEntityExample(t *testing.T) {
 			fs := fields.SelectorFromSet(fields.Set{
 				"involvedObject.kind":      "KongCustomEntity",
 				"involvedObject.name":      "degraphql-route-example",
-				"involvedObject.namespace": "default",
+				"involvedObject.namespace": namespace,
 				"reason":                   "KongConfigurationTranslationFailed",
 			})
 			w, err := cl.Watch(ctx, &events, &client.ListOptions{
-				Namespace:     "default",
+				Namespace:     namespace,
 				FieldSelector: fs,
 			})
 			require.NoError(t, err)
@@ -239,7 +203,7 @@ func TestCustomEntityExample(t *testing.T) {
 				case e := <-w.ResultChan():
 					event := e.Object.(*corev1.Event)
 					// Just perform the assertions and break out of the loop. There shouldn't be more than one event at this point.
-					assert.Contains(t, event.Message, "entity default/degraphql-route-example failed validation:")
+					assert.Contains(t, event.Message, "entity "+namespace+"/degraphql-route-example failed validation:")
 					assert.Contains(t, event.Message, "schema violation")
 					assert.Equal(t, "KongConfigurationTranslationFailed", event.Reason)
 					break forLoop

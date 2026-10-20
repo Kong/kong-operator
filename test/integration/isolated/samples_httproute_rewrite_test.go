@@ -3,11 +3,9 @@ package isolated
 import (
 	"context"
 	"net/http"
-	"os"
 	"testing"
 
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
-	"github.com/stretchr/testify/assert"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
@@ -17,27 +15,19 @@ import (
 )
 
 func TestHTTPRouteRewriteExample(t *testing.T) {
-	httprouteURLRewriteExampleManifests := examplesManifestPath("gateway-httproute-rewrite-path.yaml")
+	httprouteURLRewriteExampleManifests := samplesManifestPath("gateway-httproute-rewrite-path.yaml")
 
 	f := features.
 		New("example").
 		WithLabel(testlabels.Example, testlabels.ExampleTrue).
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyGatewayAPI).
 		WithLabel(testlabels.Kind, testlabels.KindHTTPRoute).
-		WithSetup("deploy kong addon into cluster", featureSetup(
-			withControllerManagerOpts(helpers.ControllerManagerOptAdditionalWatchNamespace("default")),
-		)).
+		WithSetup("create test namespace", featureSetup(withoutGateway())).
 		Assess("deploying to cluster works and HTTP requests get properly rewritten URI",
 			func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-				cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
-				cluster := GetClusterFromCtx(ctx)
-				proxyURL := GetHTTPSURLFromCtx(ctx)
-
-				t.Logf("applying yaml manifest %s", httprouteURLRewriteExampleManifests)
-				manifest, err := os.ReadFile(httprouteURLRewriteExampleManifests)
-				assert.NoError(t, err)
-				assert.NoError(t, clusters.ApplyManifestByYAML(ctx, cluster, string(manifest)))
-				cleaner.AddManifest(string(manifest))
+				applyManifest(ctx, t, httprouteURLRewriteExampleManifests)
+				ctx = waitForGateway(ctx, t, k8stypes.NamespacedName{Namespace: GetNamespaceForT(ctx, t), Name: "kong"})
+				proxyURL := GetHTTPURLFromCtx(ctx)
 
 				t.Logf("verifying that the HTTPRoute routes traffic properly")
 
@@ -47,7 +37,7 @@ func TestHTTPRouteRewriteExample(t *testing.T) {
 					proxyURL,
 					proxyURL.String(),
 					"/full-path-prefix",
-					&helpers.HTTPSOptions{InsecureSkipVerify: true},
+					nil,
 					http.StatusOK,
 					"hello",
 					nil,
@@ -61,7 +51,7 @@ func TestHTTPRouteRewriteExample(t *testing.T) {
 					proxyURL,
 					proxyURL.String(),
 					"/old-prefix?msg=hello",
-					&helpers.HTTPSOptions{InsecureSkipVerify: true},
+					nil,
 					http.StatusOK,
 					"hello",
 					nil,

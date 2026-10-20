@@ -6,16 +6,15 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"testing"
 
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	eventsv1 "k8s.io/api/events/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
@@ -33,18 +32,14 @@ import (
 )
 
 func TestHTTPRouteExample(t *testing.T) {
-	httprouteExampleManifest := examplesManifestPath("gateway-httproute.yaml")
-
 	f := features.
 		New("example").
 		WithLabel(testlabels.Example, testlabels.ExampleTrue).
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyGatewayAPI).
 		WithLabel(testlabels.Kind, testlabels.KindHTTPRoute).
-		WithSetup("deploy kong addon into cluster", featureSetup(
-			withControllerManagerOpts(helpers.ControllerManagerOptAdditionalWatchNamespace("default")),
-		)).
+		WithSetup("deploy Gateway managed by Kong Operator", featureSetup()).
 		Assess("deploying to cluster works and HTTP requests are routed properly",
-			runHTTPRouteExampleTestScenario(httprouteExampleManifest),
+			runHTTPRouteExampleTestScenario,
 		).
 		Teardown(featureTeardown())
 
@@ -52,22 +47,41 @@ func TestHTTPRouteExample(t *testing.T) {
 }
 
 func TestHTTPRouteWithBrokenPluginFallback(t *testing.T) {
-	httprouteWithBrokenPluginFallback := examplesManifestPath("gateway-httproute-broken-plugin-fallback.yaml")
+	httprouteWithBrokenPluginFallback := samplesManifestPath("feature-gated/gateway-httproute-broken-plugin-fallback.yaml")
 
 	f := features.
 		New("example").
 		WithLabel(testlabels.Example, testlabels.ExampleTrue).
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyGatewayAPI).
 		WithLabel(testlabels.Kind, testlabels.KindHTTPRoute).
-		WithSetup("deploy kong addon into cluster", featureSetup(
-			withControllerManagerOpts(
-				helpers.ControllerManagerOptAdditionalWatchNamespace("default"),
-			),
-			withControllerManagerFeatureGates(map[string]string{managercfg.FallbackConfigurationFeature: "true"}),
-		)).
-		Assess("deploying to cluster works and HTTP requests are routed properly",
-			runHTTPRouteExampleTestScenario(httprouteWithBrokenPluginFallback),
-		).
+		WithSetup("skip as the broken KongPlugin is rejected by the webhook", SkipBrokenKongPluginsRejectedByWebhook).
+		WithSetup("create test namespace", featureSetup(withoutGateway())).
+		Assess("deploying to cluster works and HTTP requests are routed properly", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+			// The sample's GatewayConfiguration enables the FallbackConfiguration feature gate,
+			// enable config dumps on top of that to verify the fallback via the diagnostics server.
+			applyManifest(ctx, t, httprouteWithBrokenPluginFallback,
+				"  controlPlaneOptions:\n", "  controlPlaneOptions:\n    configDump:\n      state: enabled\n",
+			)
+			ctx = waitForGateway(ctx, t, k8stypes.NamespacedName{Namespace: GetNamespaceForT(ctx, t), Name: "kong"})
+			proxyURL := GetHTTPURLFromCtx(ctx)
+
+			t.Logf("verifying that the HTTPRoute becomes routable and the backendRefs are being loadbalanced")
+			for _, backend := range []string{"echo-1", "echo-2"} {
+				helpers.EventuallyGETPath(
+					t,
+					proxyURL,
+					proxyURL.String(),
+					"/httproute-testing",
+					nil,
+					http.StatusOK,
+					backend,
+					nil,
+					consts.IngressWait,
+					consts.WaitTick,
+				)
+			}
+			return ctx
+		}).
 		Assess("verify that route with misconfigured plugin is not operational", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			proxyURL := GetHTTPURLFromCtx(ctx)
 			t.Logf("verifying that Kong gateway response in returned instead of desired site")
@@ -88,10 +102,11 @@ func TestHTTPRouteWithBrokenPluginFallback(t *testing.T) {
 		}).
 		Assess("verify diagnostic server fallback info indicates ", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			diagURL := GetDiagURLFromCtx(ctx)
+			fallbackPath := controlPlaneDiagnosticsPath(ctx, t, "/fallback")
 			t.Logf("verifying diag available")
 			require.EventuallyWithT(t, func(c *assert.CollectT) {
 				cl := helpers.DefaultHTTPClient()
-				resp, err := cl.Do(helpers.MustHTTPRequest(t, http.MethodGet, diagURL.Host, "/debug/config/fallback", nil))
+				resp, err := cl.Do(helpers.MustHTTPRequest(t, http.MethodGet, diagURL.Host, fallbackPath, nil))
 				if !assert.NoError(c, err) {
 					return
 				}
@@ -106,12 +121,12 @@ func TestHTTPRouteWithBrokenPluginFallback(t *testing.T) {
 				if !assert.NoError(c, err) {
 					return
 				}
-				assert.Equal(t, diagnostics.FallbackStatusTriggered, response.Status)
-				assert.NotEmpty(t, response.ExcludedObjects)
+				assert.Equal(c, diagnostics.FallbackStatusTriggered, response.Status)
+				assert.NotEmpty(c, response.ExcludedObjects)
 				contains := lo.ContainsBy(response.ExcludedObjects, func(obj diagnostics.FallbackAffectedObjectMeta) bool {
 					return obj.Group == "configuration.konghq.com" && obj.Kind == "KongPlugin" && obj.Name == "key-auth"
 				})
-				assert.Truef(t, contains, "expected to find KongPlugin key-auth in excluded objects, got: %v", response.ExcludedObjects)
+				assert.Truef(c, contains, "expected to find KongPlugin key-auth in excluded objects, got: %v", response.ExcludedObjects)
 			}, consts.IngressWait, consts.WaitTick)
 			return ctx
 		}).
@@ -121,9 +136,7 @@ func TestHTTPRouteWithBrokenPluginFallback(t *testing.T) {
 }
 
 func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
-	httprouteExampleManifest := examplesManifestPath("gateway-httproute.yaml")
 	const (
-		namespace                    = "default"
 		additionalRouteName          = "httproute-testing-additional"
 		additionalRoutePath          = "/additional-route"
 		additionalRouteServiceTarget = "echo-1"
@@ -161,16 +174,16 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 		WithLabel(testlabels.Example, testlabels.ExampleTrue).
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyGatewayAPI).
 		WithLabel(testlabels.Kind, testlabels.KindHTTPRoute).
-		WithSetup("deploy kong addon into cluster", featureSetup(
-			withControllerManagerOpts(
-				helpers.ControllerManagerOptAdditionalWatchNamespace(namespace),
-				helpers.ControllerManagerOptFlagUseLastValidConfigForFallback(),
-			),
-			withControllerManagerFeatureGates(map[string]string{managercfg.FallbackConfigurationFeature: "true"}),
+		WithSetup("skip as the broken KongPlugin is rejected by the webhook", SkipBrokenKongPluginsRejectedByWebhook).
+		WithSetup("deploy Gateway managed by Kong Operator", featureSetup(
+			withControlPlaneFeatureGates(map[string]string{managercfg.FallbackConfigurationFeature: "true"}),
+			withUseLastValidConfigForFallback(),
 		)).
 		Assess("deploying to cluster works and HTTP requests are routed properly", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
-			runHTTPRouteExampleTestScenario(httprouteExampleManifest)(ctx, t, c)
+			runHTTPRouteExampleTestScenario(ctx, t, c)
 
+			namespace := GetNamespaceForT(ctx, t)
+			gateway := GetFromCtxForT[*gatewayapi.Gateway](ctx, t)
 			clusterCfg := GetClusterFromCtx(ctx).Config()
 			t.Log("getting a gateway client")
 			gatewayClient, err := gatewayclient.NewForConfig(clusterCfg)
@@ -189,7 +202,7 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{
 							{
-								Name: "kong",
+								Name: gatewayapi.ObjectName(gateway.Name),
 							},
 						},
 					},
@@ -239,6 +252,7 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 			return ctx
 		}).
 		Assess("break plugin's configuration and wait for event indicating that", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+			namespace := GetNamespaceForT(ctx, t)
 			client := GetFromCtxForT[*clientset.Clientset](ctx, t)
 
 			plugin, err := client.ConfigurationV1().KongPlugins(namespace).Get(ctx, "response-transformer", metav1.GetOptions{})
@@ -270,6 +284,7 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 			return ctx
 		}).
 		Assess("modify working route /httproute-testing to /new-route", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+			namespace := GetNamespaceForT(ctx, t)
 			gatewayclient := GetFromCtxForT[*gatewayclient.Clientset](ctx, t)
 			route, err := gatewayclient.GatewayV1().HTTPRoutes(namespace).Get(ctx, "httproute-testing", metav1.GetOptions{})
 			require.NoError(t, err)
@@ -336,70 +351,65 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 	tenv.Test(t, f.Feature())
 }
 
-func runHTTPRouteExampleTestScenario(manifestToUse string) func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-	return func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-		cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
-		cluster := GetClusterFromCtx(ctx)
-		var (
-			proxyURLHTTP  = GetHTTPURLFromCtx(ctx)
-			proxyURLHTTPS = GetHTTPSURLFromCtx(ctx)
-		)
+// runHTTPRouteExampleTestScenario deploys two echo backends and an HTTPRoute load balancing between them,
+// attached to the HTTPS listener of the test's Gateway, and verifies the traffic is routed properly.
+func runHTTPRouteExampleTestScenario(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+	gateway := GetFromCtxForT[*gatewayapi.Gateway](ctx, t)
+	var (
+		proxyURLHTTP  = GetHTTPURLFromCtx(ctx)
+		proxyURLHTTPS = GetHTTPSURLFromCtx(ctx)
+	)
 
-		t.Logf("applying yaml manifest %s", manifestToUse)
-		manifest, err := os.ReadFile(manifestToUse)
-		assert.NoError(t, err)
-		assert.NoError(t, clusters.ApplyManifestByYAML(ctx, cluster, string(manifest)))
-		cleaner.AddManifest(string(manifest))
+	applyManifest(ctx, t, samplesManifestPath("gateway-httproute.yaml"), "GATEWAY_NAME", gateway.Name)
 
-		t.Logf("verifying that traffic is routed properly")
+	t.Logf("verifying that traffic is routed properly")
 
-		t.Logf("verifying that the HTTPRoute becomes routable")
-		helpers.EventuallyGETPath(
-			t,
-			proxyURLHTTPS,
-			proxyURLHTTPS.String(),
-			"/httproute-testing",
-			&helpers.HTTPSOptions{
-				InsecureSkipVerify: true,
-			},
-			http.StatusOK,
-			"echo-1",
-			nil,
-			consts.IngressWait,
-			consts.WaitTick,
-		)
+	t.Logf("verifying that the HTTPRoute becomes routable")
+	helpers.EventuallyGETPath(
+		t,
+		proxyURLHTTPS,
+		proxyURLHTTPS.String(),
+		"/httproute-testing",
+		&helpers.HTTPSOptions{
+			InsecureSkipVerify: true,
+		},
+		http.StatusOK,
+		"echo-1",
+		nil,
+		consts.IngressWait,
+		consts.WaitTick,
+	)
 
-		t.Logf("verifying that the backendRefs are being loadbalanced")
-		helpers.EventuallyGETPath(
-			t,
-			proxyURLHTTPS,
-			proxyURLHTTPS.String(),
-			"/httproute-testing",
-			&helpers.HTTPSOptions{
-				InsecureSkipVerify: true,
-			},
-			http.StatusOK,
-			"echo-2",
-			nil,
-			consts.IngressWait,
-			consts.WaitTick,
-		)
+	t.Logf("verifying that the backendRefs are being loadbalanced")
+	helpers.EventuallyGETPath(
+		t,
+		proxyURLHTTPS,
+		proxyURLHTTPS.String(),
+		"/httproute-testing",
+		&helpers.HTTPSOptions{
+			InsecureSkipVerify: true,
+		},
+		http.StatusOK,
+		"echo-2",
+		nil,
+		consts.IngressWait,
+		consts.WaitTick,
+	)
 
-		t.Logf("verifying that the backendRefs are not reached through HTTP listener")
-		helpers.EventuallyGETPath(
-			t,
-			proxyURLHTTP,
-			proxyURLHTTP.String(),
-			"/httproute-testing",
-			nil,
-			// Status code returned by Kong when HTTPS is required but request is made over HTTP.
-			http.StatusUpgradeRequired,
-			"",
-			nil,
-			consts.IngressWait,
-			consts.WaitTick,
-		)
+	t.Logf("verifying that the backendRefs are not reached through HTTP listener")
+	helpers.EventuallyGETPath(
+		t,
+		proxyURLHTTP,
+		proxyURLHTTP.String(),
+		"/httproute-testing",
+		nil,
+		// Status code returned by Kong when HTTPS is required but request is made over HTTP.
+		http.StatusUpgradeRequired,
+		"",
+		nil,
+		consts.IngressWait,
+		consts.WaitTick,
+	)
 
-		return ctx
-	}
+	return ctx
 }
