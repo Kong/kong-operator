@@ -237,7 +237,7 @@ func Test_GenerateBaseDeployment_hardening(t *testing.T) {
 	}
 	aigwcp := testKonnectAIGateway()
 
-	d, err := GenerateBaseDeployment(logr.Discard(), aigwdp, resolvedTestCP(aigwcp), "kong/aigw:test", "cert-secret", "", "", testConfig)
+	d, err := GenerateBaseDeployment(logr.Discard(), aigwdp, resolvedTestCP(aigwcp), "kong/aigw:test", "cert-secret", "", "", testConfig.Deployment, testConfig.Certificate.ChecksumAnnotation)
 	require.NoError(t, err)
 	require.Len(t, d.Spec.Template.Spec.Containers, 1)
 	container := d.Spec.Template.Spec.Containers[0]
@@ -291,7 +291,7 @@ func Test_GenerateBaseDeployment_LabelsAndAnnotations(t *testing.T) {
 	}
 	aigwcp := testKonnectAIGateway()
 
-	d, err := GenerateBaseDeployment(logr.Discard(), aigwdp, resolvedTestCP(aigwcp), "kong/aigw:test", "cert-secret", "", "", testConfig)
+	d, err := GenerateBaseDeployment(logr.Discard(), aigwdp, resolvedTestCP(aigwcp), "kong/aigw:test", "cert-secret", "", "", testConfig.Deployment, testConfig.Certificate.ChecksumAnnotation)
 	require.NoError(t, err)
 
 	assert.Equal(t, "value", d.Labels["deployment-label"])
@@ -411,7 +411,7 @@ func Test_BuildDeployment(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			u, err := BuildDeployment(logr.Discard(), tc, tt.aigwdp, resolvedTestCP(tt.aigwcp), tt.image, tt.certSecretName, "", "", testConfig)
+			u, err := BuildDeployment(logr.Discard(), tc, tt.aigwdp, resolvedTestCP(tt.aigwcp), tt.image, tt.certSecretName, "", "", testConfig.Deployment, testConfig.Certificate.ChecksumAnnotation)
 			if tt.wantErr {
 				require.Error(t, err)
 				return
@@ -464,7 +464,7 @@ func Test_BuildDeployment_ReassertEnvVars(t *testing.T) {
 	// container env as a name->value map.
 	buildAndExtractEnv := func(t *testing.T, cfg Config[*aigatewayv1alpha1.AIGatewayDataPlane, *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate]) map[string]string {
 		t.Helper()
-		u, err := BuildDeployment(logr.Discard(), tc, overlayAIGwdp(), resolvedTestCP(testKonnectAIGateway()), "kong/aigw:test", "cert-secret", "", "", cfg)
+		u, err := BuildDeployment(logr.Discard(), tc, overlayAIGwdp(), resolvedTestCP(testKonnectAIGateway()), "kong/aigw:test", "cert-secret", "", "", cfg.Deployment, cfg.Certificate.ChecksumAnnotation)
 		require.NoError(t, err)
 		require.NotNil(t, u)
 

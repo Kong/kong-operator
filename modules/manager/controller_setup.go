@@ -43,6 +43,7 @@ import (
 	egonprem "github.com/kong/kong-operator/v2/controller/eventgateway/onprem"
 	"github.com/kong/kong-operator/v2/controller/gateway"
 	"github.com/kong/kong-operator/v2/controller/gatewayclass"
+	"github.com/kong/kong-operator/v2/controller/gwadmin"
 	hybridgateway "github.com/kong/kong-operator/v2/controller/hybridgateway"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/converter"
 	"github.com/kong/kong-operator/v2/controller/kongplugininstallation"
@@ -218,6 +219,12 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 	if cfg.AIGatewayDataPlaneControllerEnabled {
 		indexOptions = slices.Concat(indexOptions,
 			index.OptionsForAIGatewayDataPlane(),
+		)
+	}
+
+	if cfg.GWAdminControllerEnabled {
+		indexOptions = slices.Concat(indexOptions,
+			gwadmin.IndexOptions(),
 		)
 	}
 
@@ -409,6 +416,18 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 				}},
 				egonprem.EntityGroupVersionResources(),
 			),
+		},
+		{
+			condition: c.GWAdminControllerEnabled,
+			gvrs: []schema.GroupVersionResource{
+				operatorv1alpha1.GWAdminGVR(),
+				// The grants allowing data planes in other namespaces.
+				{
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "kongreferencegrants",
+				},
+			},
 		},
 		{
 			condition: c.AIGatewayDataPlaneControllerEnabled,
@@ -934,6 +953,20 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			Controller: &egonprem.Reconciler{
 				Client:      mgr.GetClient(),
 				LoggingMode: c.LoggingMode,
+			},
+		},
+		// GWAdmin controller
+		{
+			Enabled: c.GWAdminControllerEnabled,
+			Controller: &gwadmin.Reconciler{
+				Client:              mgr.GetClient(),
+				LoggingMode:         c.LoggingMode,
+				ClusterDomain:       c.ClusterDomain,
+				SecretLabelSelector: c.SecretLabelSelector,
+				OperatorNamespace:   c.ControllerNamespace,
+				CATTL:               c.GWAdminCATTL,
+				CertTTL:             c.GWAdminCertTTL,
+				TypeConverter:       ssaProvider,
 			},
 		},
 		// AIGateway DataPlane controller
