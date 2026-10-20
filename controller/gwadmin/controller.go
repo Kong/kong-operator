@@ -74,9 +74,9 @@ type Reconciler struct {
 	// on; the Secrets of the GWAdmin carry it so the operator sees them.
 	SecretLabelSelector string
 
-	// OperatorNamespace is the namespace holding the Secrets of the GWAdmins
-	// only Kong Operator uses: the keys of their certificate authorities and
-	// the operator client certificate.
+	// OperatorNamespace is the namespace Kong Operator runs in. It holds the
+	// Secrets of the GWAdmins only Kong Operator uses: the keys of their
+	// certificate authorities and the operator client certificate.
 	OperatorNamespace string
 
 	// CATTL is the validity of the certificate authorities Kong Operator

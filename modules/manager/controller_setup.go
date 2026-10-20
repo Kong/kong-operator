@@ -963,7 +963,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				LoggingMode:         c.LoggingMode,
 				ClusterDomain:       c.ClusterDomain,
 				SecretLabelSelector: c.SecretLabelSelector,
-				OperatorNamespace:   c.ClusterCASecretNamespace,
+				OperatorNamespace:   c.ControllerNamespace,
 				CATTL:               c.GWAdminCATTL,
 				CertTTL:             c.GWAdminCertTTL,
 				TypeConverter:       ssaProvider,
