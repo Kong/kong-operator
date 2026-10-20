@@ -30,11 +30,10 @@ func (p errorProcessor) Process(context.Context, client.Client, client.Object) (
 	return false, p.err
 }
 
-func TestApplyExtensionsClassifiesInvalidEndpoint(t *testing.T) {
-	s := scheme.Scheme
-	require.NoError(t, operatorv1beta1.AddToScheme(s))
-
-	dataPlane := &operatorv1beta1.DataPlane{
+// dataPlaneWithExtension is a DataPlane whose extension reference validates, so
+// ApplyExtensions reaches the processor.
+func dataPlaneWithExtension() *operatorv1beta1.DataPlane {
+	return &operatorv1beta1.DataPlane{
 		Name:       "dataplane",
 		Namespace:  "default",
 		Generation: 1,
@@ -50,23 +49,68 @@ func TestApplyExtensionsClassifiesInvalidEndpoint(t *testing.T) {
 			},
 		},
 	}
-	cl := fake.NewClientBuilder().
-		WithScheme(s).
-		WithRuntimeObjects(dataPlane).
-		WithStatusSubresource(dataPlane).
-		Build()
+}
 
-	stop, res, err := ApplyExtensions(t.Context(), cl, dataPlane.DeepCopy(), true,
-		errorProcessor{err: fmt.Errorf("%w: control plane endpoint", extensionserrors.ErrInvalidEndpoint)})
-	require.NoError(t, err)
-	assert.True(t, stop, "the caller must stop: the condition carries the feedback")
-	assert.True(t, res.IsZero(), "a misconfiguration must not requeue")
+// TestApplyExtensionsClassifies pins, for every classified extension failure,
+// the condition the caller relies on: status, reason, message, and the stop
+// semantics that keep the reconciler from requeueing.
+func TestApplyExtensionsClassifies(t *testing.T) {
+	testCases := []struct {
+		name       string
+		err        error
+		wantReason string
+	}{
+		{
+			name:       "cross-namespace reference",
+			err:        extensionserrors.ErrCrossNamespaceReference,
+			wantReason: string(kcfgkonnect.RefNotPermittedReason),
+		},
+		{
+			name:       "extension not found",
+			err:        extensionserrors.ErrKonnectExtensionNotFound,
+			wantReason: string(kcfgkonnect.InvalidExtensionRefReason),
+		},
+		{
+			name:       "cluster certificate not found",
+			err:        extensionserrors.ErrClusterCertificateNotFound,
+			wantReason: string(kcfgkonnect.InvalidSecretRefReason),
+		},
+		{
+			name:       "extension not ready",
+			err:        extensionserrors.ErrKonnectExtensionNotReady,
+			wantReason: string(kcfgkonnect.KonnectExtensionNotReadyReason),
+		},
+		{
+			name:       "endpoint value that cannot be used",
+			err:        fmt.Errorf("%w: control plane endpoint", extensionserrors.ErrInvalidEndpoint),
+			wantReason: string(kcfgkonnect.InvalidEndpointReason),
+		},
+	}
 
-	var got operatorv1beta1.DataPlane
-	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(dataPlane), &got))
-	condition, ok := k8sutils.GetCondition(kcfgkonnect.KonnectExtensionAppliedType, &got)
-	require.True(t, ok, "expected the KonnectExtensionApplied condition to be patched, got: %+v", got.Status.Conditions)
-	assert.Equal(t, metav1.ConditionFalse, condition.Status)
-	assert.Equal(t, string(kcfgkonnect.InvalidEndpointReason), condition.Reason)
-	assert.Contains(t, condition.Message, "control plane endpoint")
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			s := scheme.Scheme
+			require.NoError(t, operatorv1beta1.AddToScheme(s))
+
+			dataPlane := dataPlaneWithExtension()
+			cl := fake.NewClientBuilder().
+				WithScheme(s).
+				WithRuntimeObjects(dataPlane).
+				WithStatusSubresource(dataPlane).
+				Build()
+
+			stop, res, err := ApplyExtensions(t.Context(), cl, dataPlane.DeepCopy(), true, errorProcessor{err: tc.err})
+			require.NoError(t, err)
+			assert.True(t, stop, "the caller must stop: the condition carries the feedback")
+			assert.True(t, res.IsZero(), "a misconfiguration must not requeue")
+
+			var got operatorv1beta1.DataPlane
+			require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(dataPlane), &got))
+			condition, ok := k8sutils.GetCondition(kcfgkonnect.KonnectExtensionAppliedType, &got)
+			require.True(t, ok, "expected the KonnectExtensionApplied condition to be patched, got: %+v", got.Status.Conditions)
+			assert.Equal(t, metav1.ConditionFalse, condition.Status)
+			assert.Equal(t, tc.wantReason, condition.Reason)
+			assert.Equal(t, tc.err.Error(), condition.Message)
+		})
+	}
 }
