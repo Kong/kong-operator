@@ -143,6 +143,16 @@ type AIGatewayConsumerCredentialStatus struct {
 	// +optional
 	ConsumerID *KonnectEntityRef `json:"consumerID,omitempty"`
 
+	// CreateInputsHash fingerprints the resolved user-supplied request body last
+	// successfully created in Konnect, before operator metadata is added.
+	// For entities predating this field, it is initialized from current inputs
+	// as a baseline, which cannot verify the values already stored in Konnect.
+	// Readers of this resource can use the fingerprint to verify guesses of
+	// low-entropy Secret values offline. Use high-entropy secret material.
+	//
+	// +optional
+	// +kubebuilder:validation:Pattern=`^sha256:[0-9a-f]{64}$`
+	CreateInputsHash string `json:"createInputsHash,omitempty"`
 	// ObservedGeneration is the most recent generation observed
 	//
 	// +optional

@@ -20,6 +20,7 @@ type OpsCreateFileInfo struct {
 
 // opsCreateFuncData holds template data for a single create<Entity> function.
 type opsCreateFuncData struct {
+	TrackCreateInputs    bool
 	Entity               string
 	APIAlias             string
 	SDKInterface         string
@@ -227,6 +228,7 @@ func (g *Generator) generateOpsCreateFuncBody(
 	}
 
 	return &opsCreateFuncData{
+		TrackCreateInputs:             opsConfig.TrackCreateInputs,
 		APIAlias:                      g.config.APIGroupPackageAlias,
 		Associations:                  associations,
 		CreateBodyField:               createBodyField,

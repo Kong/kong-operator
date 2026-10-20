@@ -27,6 +27,18 @@ func (r *TestResource) GetGeneration() int64 {
 	return r.Generation
 }
 
+func TestAreAllConditionsHaveTrueStatusWithIgnoredConditions(t *testing.T) {
+	resource := &TestResource{Conditions: []metav1.Condition{
+		{Type: "Programmed", Status: metav1.ConditionFalse},
+		{Type: "Informational", Status: metav1.ConditionFalse},
+		{Type: "ReferencesValid", Status: metav1.ConditionTrue},
+	}}
+	assert.False(t, AreAllConditionsHaveTrueStatus(resource))
+	assert.True(t, AreAllConditionsHaveTrueStatus(resource, "Informational"))
+	resource.Conditions[2].Status = metav1.ConditionFalse
+	assert.False(t, AreAllConditionsHaveTrueStatus(resource, "Informational"))
+}
+
 func TestGetCondition(t *testing.T) {
 	expected := metav1.Condition{
 		Type:               "example",

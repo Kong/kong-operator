@@ -50,6 +50,8 @@ func TestCreateEventGatewayStaticKey_UsesSDKOpsConversion(t *testing.T) {
 	obj.SetGatewayID(parentID)
 	expectedRequest, err := obj.ToEventGatewayStaticKeyCreate(ctx, cl)
 	require.NoError(t, err)
+	expectedCreateInputsHash, err := obj.CalculateCreateInputsHash(ctx, cl)
+	require.NoError(t, err)
 	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
 	expectedID := "eventgatewaystatickey-id"
 
@@ -68,6 +70,7 @@ func TestCreateEventGatewayStaticKey_UsesSDKOpsConversion(t *testing.T) {
 
 	require.NoError(t, createEventGatewayStaticKey(ctx, cl, sdk, obj))
 	require.Equal(t, expectedID, obj.GetKonnectID())
+	require.Equal(t, expectedCreateInputsHash, obj.GetCreateInputsHash())
 }
 
 func TestCreateEventGatewayStaticKey_PropagatesSDKError(t *testing.T) {
@@ -95,6 +98,7 @@ func TestCreateEventGatewayStaticKey_PropagatesSDKError(t *testing.T) {
 
 	err = createEventGatewayStaticKey(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
+	require.Empty(t, obj.GetCreateInputsHash())
 }
 
 func TestDeleteEventGatewayStaticKey_UsesGeneratedSDKOps(t *testing.T) {

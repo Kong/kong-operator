@@ -80,6 +80,13 @@
   broad managed-by label listing with per-item live API reads, so configuration
   changes are reconciled promptly at large entity counts.
   [#6141](https://github.com/Kong/kong-operator/pull/6141)
+- Create-only Konnect entities (`EventGatewayStaticKey`,
+  `AIGatewayDataPlaneCertificate`, and `AIGatewayConsumerCredential`) now report
+  changes to Secret values, inline values, and other create inputs through
+  `CreateInputsApplied`, without automatically replacing the entity or marking
+  an otherwise healthy entity as unprogrammed. Existing entities establish an
+  unverified baseline on upgrade.
+  [#6142](https://github.com/Kong/kong-operator/pull/6142)
 - Konnect entities that resolve API authentication through a parent chain,
   including EventGateway policies and AI Gateway consumer credentials, no longer
   get stuck terminating when an ancestor has already been deleted. Their cleanup
