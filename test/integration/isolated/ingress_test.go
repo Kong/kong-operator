@@ -9,7 +9,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
-	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,6 +23,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test/annotations"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/testlabels"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/util/builder"
+	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
 	"github.com/kong/kong-operator/v2/pkg/clientset"
 	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
@@ -43,7 +43,7 @@ func TestIngressGRPC(t *testing.T) {
 		New("essentials").
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyIngress).
 		WithLabel(testlabels.Kind, testlabels.KindIngress).
-		WithSetup("deploy kong addon into cluster", featureSetup()).
+		WithSetup("deploy Gateway managed by Kong Operator", featureSetup()).
 		WithSetup("deploying gRPC service exposed via Ingress", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
 			cluster := GetClusterFromCtx(ctx)
@@ -52,6 +52,9 @@ func TestIngressGRPC(t *testing.T) {
 			t.Log("configuring certificate secret")
 			secret := &corev1.Secret{
 				Name: "secret-test",
+				Labels: map[string]string{
+					mgrconfig.DefaultSecretLabelSelector: mgrconfig.LabelValueForSelectorTrue,
+				},
 				Data: map[string][]byte{
 					"tls.crt": tlsRouteExampleTLSCert,
 					"tls.key": tlsRouteExampleTLSKey,
@@ -170,16 +173,16 @@ func TestIngressGRPC(t *testing.T) {
 			verifyEchoResponds := func(hostname string) {
 				t.Helper()
 				// Kong Gateway uses different ports for HTTP and HTTPS traffic,
-				// but in typical setup both ports are exposed on the same IP address.
-				proxyPort := ktfkong.DefaultProxyTLSServicePort
+				// both exposed by the Gateway's listeners on the same IP address.
+				proxyAddr := GetHTTPSURLFromCtx(ctx).Host
 				certPoolToUse := certPool
 				if hostname == "" {
-					proxyPort = ktfkong.DefaultProxyHTTPPort
+					proxyAddr = GetHTTPURLFromCtx(ctx).Host
 					certPoolToUse = nil
 				}
 				assert.EventuallyWithT(t, func(c *assert.CollectT) {
 					err := grpcEchoResponds(
-						ctx, fmt.Sprintf("%s:%d", GetHTTPURLFromCtx(ctx).Hostname(), proxyPort), hostname, "echo Kong", certPoolToUse,
+						ctx, proxyAddr, hostname, "echo Kong", certPoolToUse,
 					)
 					assert.NoError(c, err)
 				}, consts.IngressWait, consts.WaitTick)
@@ -206,7 +209,7 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 		New("essentials").
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyIngress).
 		WithLabel(testlabels.Kind, testlabels.KindIngress).
-		WithSetup("deploy kong addon into cluster", featureSetup()).
+		WithSetup("deploy Gateway managed by Kong Operator", featureSetup()).
 		WithSetup("prepare Kong clients", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			cluster := GetClusterFromCtx(ctx)
 			kongClients, err := clientset.NewForConfig(cluster.Config())

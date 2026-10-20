@@ -2,14 +2,9 @@ package isolated
 
 import (
 	"context"
-	"fmt"
 	"net/http"
-	"os"
-	"strings"
 	"testing"
 
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
-	"github.com/stretchr/testify/assert"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
@@ -19,35 +14,22 @@ import (
 )
 
 func TestIngressHTTPSExample(t *testing.T) {
-	ingressExampleManifests := examplesManifestPath("ingress-https.yaml")
-
-	replaceIngressClassAnnotationInManifests := func(manifests string, ingressClass string) string {
-		return strings.ReplaceAll(manifests, "ingressClassName: kong", fmt.Sprintf("ingressClassName: %s", ingressClass))
-	}
+	ingressExampleManifests := samplesManifestPath("ingress-https.yaml")
 
 	f := features.
 		New("example").
 		WithLabel(testlabels.Example, testlabels.ExampleTrue).
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyIngress).
 		WithLabel(testlabels.Kind, testlabels.KindIngress).
-		WithSetup("deploy kong addon into cluster", featureSetup(
-			withControllerManagerOpts(helpers.ControllerManagerOptAdditionalWatchNamespace("default")),
-		)).
+		WithSetup("deploy Gateway managed by Kong Operator", featureSetup()).
 		Assess("deploying to cluster works and HTTPS traffic is routed to the service",
 			func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-				cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
-				cluster := GetClusterFromCtx(ctx)
 				var (
 					proxyURLHTTP  = GetHTTPURLFromCtx(ctx)
 					proxyURLHTTPS = GetHTTPSURLFromCtx(ctx)
 				)
 
-				t.Logf("applying yaml manifest %s", ingressExampleManifests)
-				b, err := os.ReadFile(ingressExampleManifests)
-				assert.NoError(t, err)
-				manifest := replaceIngressClassAnnotationInManifests(string(b), GetIngressClassFromCtx(ctx))
-				assert.NoError(t, clusters.ApplyManifestByYAML(ctx, cluster, manifest))
-				cleaner.AddManifest(manifest)
+				applyManifest(ctx, t, ingressExampleManifests, "ingressClassName: kong", "ingressClassName: "+GetIngressClassFromCtx(ctx))
 
 				t.Logf("verifying that the Ingress routes traffic properly")
 				helpers.EventuallyGETPath(
@@ -88,32 +70,19 @@ func TestIngressHTTPSExample(t *testing.T) {
 }
 
 func TestIngressHTTPExample(t *testing.T) {
-	ingressExampleManifests := examplesManifestPath("ingress-http.yaml")
-
-	replaceIngressClassAnnotationInManifests := func(manifests string, ingressClass string) string {
-		return strings.ReplaceAll(manifests, "ingressClassName: kong", fmt.Sprintf("ingressClassName: %s", ingressClass))
-	}
+	ingressExampleManifests := samplesManifestPath("ingress-http.yaml")
 
 	f := features.
 		New("example").
 		WithLabel(testlabels.Example, testlabels.ExampleTrue).
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyIngress).
 		WithLabel(testlabels.Kind, testlabels.KindIngress).
-		WithSetup("deploy kong addon into cluster", featureSetup(
-			withControllerManagerOpts(helpers.ControllerManagerOptAdditionalWatchNamespace("default")),
-		)).
+		WithSetup("deploy Gateway managed by Kong Operator", featureSetup()).
 		Assess("deploying to cluster works and HTTP traffic is routed to the service",
 			func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-				cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
-				cluster := GetClusterFromCtx(ctx)
 				proxyURLHTTP := GetHTTPURLFromCtx(ctx)
 
-				t.Logf("applying yaml manifest %s", ingressExampleManifests)
-				b, err := os.ReadFile(ingressExampleManifests)
-				assert.NoError(t, err)
-				manifest := replaceIngressClassAnnotationInManifests(string(b), GetIngressClassFromCtx(ctx))
-				assert.NoError(t, clusters.ApplyManifestByYAML(ctx, cluster, manifest))
-				cleaner.AddManifest(manifest)
+				applyManifest(ctx, t, ingressExampleManifests, "ingressClassName: kong", "ingressClassName: "+GetIngressClassFromCtx(ctx))
 
 				t.Logf("verifying that the Ingress routes traffic properly")
 				helpers.EventuallyGETPath(
