@@ -21,7 +21,7 @@ type TCPProxy struct {
 	// shouldHandleNewConnections is a flag that indicates whether new connections should be accepted.
 	shouldHandleNewConnections bool
 
-	mu sync.RWMutex
+	mu sync.Mutex
 }
 
 func NewTCPProxy(destination string) (*TCPProxy, error) {
@@ -53,12 +53,13 @@ func (p *TCPProxy) Run(ctx context.Context) error {
 			return fmt.Errorf("failed to accept connection: %w", err)
 		}
 
-		if !p.shouldHandleConnections() {
+		interruptSignalCh, ok := p.registerConnection()
+		if !ok {
 			_ = c.Close()
 			continue
 		}
 
-		go p.handleConnection(c, p.newInterruptSignalCh())
+		go p.handleConnection(c, interruptSignalCh)
 	}
 }
 
@@ -118,14 +119,13 @@ func (p *TCPProxy) copy(dst, src net.Conn, doneCh chan struct{}) {
 	doneCh <- struct{}{}
 }
 
-func (p *TCPProxy) shouldHandleConnections() bool {
-	p.mu.RLock()
-	defer p.mu.RUnlock()
-	return p.shouldHandleNewConnections
-}
-
-func (p *TCPProxy) newInterruptSignalCh() chan struct{} {
+func (p *TCPProxy) registerConnection() (chan struct{}, bool) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if !p.shouldHandleNewConnections {
+		return nil, false
+	}
 	ch := make(chan struct{})
 	p.interruptSignalChs = append(p.interruptSignalChs, ch)
-	return ch
+	return ch, true
 }

@@ -290,7 +290,6 @@ func TestGetBackendTLSPolicyAncestors(t *testing.T) {
 
 	scheme := runtime.NewScheme()
 	require.NoError(t, gatewayapi.InstallV1(scheme))
-	require.NoError(t, gatewayapi.InstallV1alpha3(scheme))
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -803,7 +802,6 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, clientgoscheme.AddToScheme(scheme))
 	require.NoError(t, gatewayapi.InstallV1(scheme))
-	require.NoError(t, gatewayapi.InstallV1alpha3(scheme))
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -1,0 +1,57 @@
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongLicense
+metadata:
+  name: kong-license
+enabled: true
+rawLicenseString: |
+  <paste your Kong license payload here>
+---
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: OnPremAIGateway
+metadata:
+  name: ai-gw-cp-onprem-1
+  namespace: default
+spec: {}
+---
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: AIGatewayDataPlane
+metadata:
+  name: ai-gw-dp-onprem-1
+  namespace: default
+spec:
+  controlPlaneRef:
+    type: onpremNamespacedRef
+    onpremNamespacedRef:
+      name: ai-gw-cp-onprem-1
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayPolicy
+metadata:
+  name: aigw-policy-prompt-decorator
+  namespace: default
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ai-gw-cp-onprem-1
+  apiSpec:
+    displayName: "AIGateway Policy Prompt Decorator"
+    # Name of the policy. The name must be unique within the AI Gateway.
+    name: "aigw-policy-prompt-decorator"
+    # Type of the policy.
+    type: "ai-prompt-decorator"
+    enabled: "Enabled"
+    # Set to "Enabled" to enable the policy globally.
+    global: "Disabled"
+    # Configuration for the policy. The configuration is specific to the policy type.
+    config:
+      type: "inline"
+      value:
+        llm_format: openai
+        max_request_body_size: 8388608
+        prompts:
+          append: null
+          prepend:
+          - content: "In short words"
+            role: user

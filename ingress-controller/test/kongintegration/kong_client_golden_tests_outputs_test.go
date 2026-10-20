@@ -128,7 +128,6 @@ func TestKongClientGoldenTestsOutputs_Konnect(t *testing.T) {
 	updateStrategy := sendconfig.NewUpdateStrategyDBModeKonnect(
 		adminAPIClient.AdminAPIClient(),
 		dump.Config{
-			SkipCACerts:         true,
 			KonnectControlPlane: cpID,
 		},
 		semver.MustParse(gatewayTag),

@@ -2,6 +2,7 @@ package konnect
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,6 +11,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"github.com/kong/kong-operator/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -589,4 +591,121 @@ func findCondition(cert *configurationv1alpha1.KongCertificate, condType string)
 		}
 	}
 	return metav1.Condition{}, false
+}
+
+// TestHandleSecretRef_StaticKeyReadOnlyAtCreation ensures an
+// EventGatewayStaticKey needs its Secret to be created in Konnect, but not
+// afterwards: static keys can't be updated, so a missing Secret only matters
+// to recreate the key. Access to a cross-namespace Secret is always checked.
+func TestHandleSecretRef_StaticKeyReadOnlyAtCreation(t *testing.T) {
+	ctx := context.Background()
+
+	newStaticKey := func(secretNamespace *string) *configurationv1alpha1.EventGatewayStaticKey {
+		return &configurationv1alpha1.EventGatewayStaticKey{
+			Name:       "static-key",
+			Namespace:  "default",
+			APIVersion: configurationv1alpha1.GroupVersion.String(),
+			Kind:       "EventGatewayStaticKey",
+			Spec: configurationv1alpha1.EventGatewayStaticKeySpec{
+				APISpec: configurationv1alpha1.EventGatewayStaticKeyAPISpec{
+					Name: "static-key",
+					Value: configurationv1alpha1.SensitiveDataSource{
+						Type:      configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+						SecretRef: &configurationv1alpha1.SensitiveDataSecretRef{Name: "key", Key: "key", Namespace: secretNamespace},
+					},
+				},
+			},
+		}
+	}
+	newClient := func(obj client.Object, objs ...client.Object) client.Client {
+		return fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(append(objs, obj)...).WithStatusSubresource(obj).Build()
+	}
+	secretRefValid := func(t *testing.T, cl client.Client, key *configurationv1alpha1.EventGatewayStaticKey) metav1.Condition {
+		t.Helper()
+		updated := &configurationv1alpha1.EventGatewayStaticKey{}
+		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(key), updated))
+		cond, found := findConditionGeneric(updated.Status.Conditions, string(konnectv1alpha1.SecretRefValidConditionType))
+		require.True(t, found)
+		return cond
+	}
+
+	t.Run("requires the Secret before creation", func(t *testing.T) {
+		key := newStaticKey(nil)
+		_, stop, err := handleSecretRef(ctx, newClient(key), key)
+		require.Error(t, err)
+		assert.True(t, stop)
+	})
+
+	t.Run("reports but doesn't require a missing Secret once created", func(t *testing.T) {
+		key := newStaticKey(nil)
+		key.SetKonnectID("static-key-id")
+		cl := newClient(key)
+		res, stop, err := handleSecretRef(ctx, cl, key)
+		require.NoError(t, err)
+		assert.False(t, stop)
+		assert.True(t, res.IsZero())
+		cond := secretRefValid(t, cl, key)
+		assert.Equal(t, metav1.ConditionFalse, cond.Status)
+		assert.Contains(t, cond.Message, "Secret default/key not found")
+		assert.Contains(t, cond.Message, "required to recreate it")
+	})
+
+	t.Run("stops once created on errors other than a missing Secret", func(t *testing.T) {
+		key := newStaticKey(nil)
+		key.SetKonnectID("static-key-id")
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme.Get()).
+			WithObjects(key).
+			WithStatusSubresource(key).
+			WithInterceptorFuncs(interceptor.Funcs{
+				Get: func(ctx context.Context, c client.WithWatch, k client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					if _, ok := obj.(*corev1.Secret); ok {
+						return errors.New("cache not synced")
+					}
+					return c.Get(ctx, k, obj, opts...)
+				},
+			}).
+			Build()
+		_, stop, err := handleSecretRef(ctx, cl, key)
+		require.ErrorContains(t, err, "cache not synced")
+		assert.True(t, stop)
+		assert.NotContains(t, secretRefValid(t, cl, key).Message, "required to recreate it")
+	})
+
+	t.Run("reports but doesn't require a missing key once created", func(t *testing.T) {
+		key := newStaticKey(nil)
+		key.SetKonnectID("static-key-id")
+		cl := newClient(key, &corev1.Secret{Name: "key", Namespace: "default"})
+		_, stop, err := handleSecretRef(ctx, cl, key)
+		require.NoError(t, err)
+		assert.False(t, stop)
+		cond := secretRefValid(t, cl, key)
+		assert.Equal(t, metav1.ConditionFalse, cond.Status)
+		assert.Contains(t, cond.Message, `missing key "key"`)
+	})
+
+	t.Run("reports a present Secret as valid once created", func(t *testing.T) {
+		key := newStaticKey(nil)
+		key.SetKonnectID("static-key-id")
+		cl := newClient(key, &corev1.Secret{Name: "key", Namespace: "default", Data: map[string][]byte{"key": []byte("v")}})
+		_, stop, err := handleSecretRef(ctx, cl, key)
+		require.NoError(t, err)
+		assert.False(t, stop)
+		assert.Equal(t, metav1.ConditionTrue, secretRefValid(t, cl, key).Status)
+	})
+
+	t.Run("stops once created when no KongReferenceGrant allows the cross-namespace Secret", func(t *testing.T) {
+		key := newStaticKey(new("other"))
+		key.SetKonnectID("static-key-id")
+		cl := newClient(key, &corev1.Secret{Name: "key", Namespace: "other", Data: map[string][]byte{"key": []byte("v")}})
+		_, stop, err := handleSecretRef(ctx, cl, key)
+		require.NoError(t, err)
+		assert.True(t, stop)
+
+		updated := &configurationv1alpha1.EventGatewayStaticKey{}
+		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(key), updated))
+		cond, found := findConditionGeneric(updated.Status.Conditions, string(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs))
+		require.True(t, found)
+		assert.Equal(t, metav1.ConditionFalse, cond.Status)
+	})
 }

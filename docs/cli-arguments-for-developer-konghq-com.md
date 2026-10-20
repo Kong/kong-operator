@@ -164,6 +164,10 @@ rows:
     type: '`bool`'
     description: "Enable the on-prem AI Gateway (control plane) controller."
     default: '`false`'
+  - flag: '`--enable-controller-onpremeventgateway`'
+    type: '`bool`'
+    description: "Enable the on-prem Event Gateway controller (alpha, no configuration is pushed to gw-admin yet)."
+    default: '`false`'
   - flag: '`--enable-controlplane-config-dump`'
     type: '`bool`'
     description: "Enable the server to dump generated Kong configuration from ControlPlanes. Only effective when ControlPlane controller is enabled."

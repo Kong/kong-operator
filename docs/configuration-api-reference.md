@@ -277,6 +277,7 @@ Package v1alpha1 contains API Schema definitions for the configuration.konghq.co
 - [EventGatewayListener](#configuration-konghq-com-v1alpha1-eventgatewaylistener)
 - [EventGatewayListenerPolicy](#configuration-konghq-com-v1alpha1-eventgatewaylistenerpolicy)
 - [EventGatewaySchemaRegistry](#configuration-konghq-com-v1alpha1-eventgatewayschemaregistry)
+- [EventGatewayStaticKey](#configuration-konghq-com-v1alpha1-eventgatewaystatickey)
 - [EventGatewayTLSTrustBundle](#configuration-konghq-com-v1alpha1-eventgatewaytlstrustbundle)
 - [EventGatewayVirtualCluster](#configuration-konghq-com-v1alpha1-eventgatewayvirtualcluster)
 - [EventGatewayVirtualClusterConsumePolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterconsumepolicy)
@@ -378,6 +379,21 @@ EventGatewaySchemaRegistry is the Schema for the eventgatewayschemaregistrys API
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[EventGatewaySchemaRegistrySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryspec)_ |  |
 | `status` _[EventGatewaySchemaRegistryStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistrystatus)_ |  |
+
+### EventGatewayStaticKey
+
+
+EventGatewayStaticKey is the Schema for the eventgatewaystatickeys API.
+
+<!-- event_gateway_static_key description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `EventGatewayStaticKey`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EventGatewayStaticKeySpec](#configuration-konghq-com-v1alpha1-types-eventgatewaystatickeyspec)_ |  |
+| `status` _[EventGatewayStaticKeyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaystatickeystatus)_ |  |
 
 ### EventGatewayTLSTrustBundle
 
@@ -1089,6 +1105,7 @@ EncryptionKeyStaticReference is a type alias.
 | --- | --- |
 | `id` _*string_ |  |
 | `name` _*string_ |  |
+| `namespacedRef` _[EventGatewayStaticKeyRef](#configuration-konghq-com-v1alpha1-types-eventgatewaystatickeyref)_ | NamespacedRef references an in-cluster EventGatewayStaticKey object, resolved to its Konnect id. It is mutually exclusive with the other fields. |
 
 _Appears in:_
 
@@ -1476,7 +1493,8 @@ EventGatewayBackendClusterSpec defines the desired state of EventGatewayBackendC
 
 | Field | Description |
 | --- | --- |
-| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. This field is deprecated, use parentRef instead. Exactly one of gatewayRef and parentRef must be set. |
+| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway, OnPremEventGateway. Exactly one of gatewayRef and parentRef must be set. |
 | `apiSpec` _[EventGatewayBackendClusterAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -1791,7 +1809,8 @@ EventGatewayDataPlaneCertificateSpec defines the desired state of EventGatewayDa
 
 | Field | Description |
 | --- | --- |
-| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. This field is deprecated, use parentRef instead. Exactly one of gatewayRef and parentRef must be set. |
+| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway, OnPremEventGateway. Exactly one of gatewayRef and parentRef must be set. |
 | `apiSpec` _[EventGatewayDataPlaneCertificateAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificateapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -2186,7 +2205,8 @@ EventGatewayListenerSpec defines the desired state of EventGatewayListener.
 
 | Field | Description |
 | --- | --- |
-| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. This field is deprecated, use parentRef instead. Exactly one of gatewayRef and parentRef must be set. |
+| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway, OnPremEventGateway. Exactly one of gatewayRef and parentRef must be set. |
 | `apiSpec` _[EventGatewayListenerAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -3138,7 +3158,8 @@ EventGatewaySchemaRegistrySpec defines the desired state of EventGatewaySchemaRe
 
 | Field | Description |
 | --- | --- |
-| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. This field is deprecated, use parentRef instead. Exactly one of gatewayRef and parentRef must be set. |
+| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway, OnPremEventGateway. Exactly one of gatewayRef and parentRef must be set. |
 | `apiSpec` _[EventGatewaySchemaRegistryAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -3182,6 +3203,42 @@ _Appears in:_
 
 - [EventGatewayVirtualClusterConsumePolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyconfig)
 
+#### EventGatewayStaticKeyAPISpec
+
+
+EventGatewayStaticKeyAPISpec defines the API spec fields for EventGatewayStaticKey.
+
+
+
+| Field | Description |
+| --- | --- |
+| `description` _string_ | A human-readable description of the static key. |
+| `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | The unique name of the static key. |
+| `value` _[SensitiveDataSource](#configuration-konghq-com-v1alpha1-types-sensitivedatasource)_ | Value is the static key's secret value: a base64-encoded 256-bit key. It is read only when the static key is created in Konnect: changing it afterwards (or the Secret it comes from) doesn't update the key, as Konnect static keys can't be updated. To rotate a key, create a new EventGatewayStaticKey and point the policies at it. Prefer sourcing it from a Secret: an inline value is stored in plain text in the EventGatewayStaticKey and readable by anyone allowed to read it. |
+
+_Appears in:_
+
+- [EventGatewayStaticKeySpec](#configuration-konghq-com-v1alpha1-types-eventgatewaystatickeyspec)
+
+#### EventGatewayStaticKeyRef
+
+
+EventGatewayStaticKeyRef references an EventGatewayStaticKey in the cluster. The referenced
+object's Konnect id is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+
+_Appears in:_
+
+- [EncryptionKeyStaticReference](#configuration-konghq-com-v1alpha1-types-encryptionkeystaticreference)
+
 #### EventGatewayStaticKeySource
 
 
@@ -3193,6 +3250,40 @@ EventGatewayStaticKeySource A key source that uses static symmetric keys.
 _Appears in:_
 
 - [EventGatewayKeySource](#configuration-konghq-com-v1alpha1-types-eventgatewaykeysource)
+
+#### EventGatewayStaticKeySpec
+
+
+EventGatewayStaticKeySpec defines the desired state of EventGatewayStaticKey.
+
+
+
+| Field | Description |
+| --- | --- |
+| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. This field is deprecated, use parentRef instead. Exactly one of gatewayRef and parentRef must be set. |
+| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway, OnPremEventGateway. Exactly one of gatewayRef and parentRef must be set. |
+| `apiSpec` _[EventGatewayStaticKeyAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaystatickeyapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [EventGatewayStaticKey](#configuration-konghq-com-v1alpha1-eventgatewaystatickey)
+
+#### EventGatewayStaticKeyStatus
+
+
+EventGatewayStaticKeyStatus defines the observed state of EventGatewayStaticKey.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [EventGatewayStaticKey](#configuration-konghq-com-v1alpha1-eventgatewaystatickey)
 
 #### EventGatewayTLSListenerPolicy
 
@@ -3300,7 +3391,8 @@ EventGatewayTLSTrustBundleSpec defines the desired state of EventGatewayTLSTrust
 
 | Field | Description |
 | --- | --- |
-| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. |
+| `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. This field is deprecated, use parentRef instead. Exactly one of gatewayRef and parentRef must be set. |
+| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway, OnPremEventGateway. Exactly one of gatewayRef and parentRef must be set. |
 | `apiSpec` _[EventGatewayTLSTrustBundleAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundleapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -3386,6 +3478,9 @@ EventGatewayVirtualClusterConsumePolicyAPISpec defines the API spec fields for E
 
 
 
+| Field | Description |
+| --- | --- |
+| `parentPolicyRef` _[EventGatewayVirtualClusterConsumePolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyref)_ | ParentPolicyRef references a schemaValidation consume policy in the same namespace and virtual cluster. Required for decryptFields and optional for modifyHeaders and skipRecord. It is immutable once this policy exists in Konnect. Deleting a parent is blocked while child policy objects reference it. |
 
 _Appears in:_
 
@@ -3434,6 +3529,24 @@ Allowed values:
 | `modifyHeaders` |  |
 | `schemaValidation` |  |
 | `skipRecord` |  |
+
+#### EventGatewayVirtualClusterConsumePolicyRef
+
+
+EventGatewayVirtualClusterConsumePolicyRef references an EventGatewayVirtualClusterConsumePolicy in the cluster. The referenced
+object's Konnect id is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterConsumePolicyAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyapispec)
 
 
 
@@ -3564,6 +3677,9 @@ EventGatewayVirtualClusterProducePolicyAPISpec defines the API spec fields for E
 
 
 
+| Field | Description |
+| --- | --- |
+| `parentPolicyRef` _[EventGatewayVirtualClusterProducePolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyref)_ | ParentPolicyRef references a schemaValidation produce policy in the same namespace and virtual cluster. Required for encryptFields and optional for modifyHeaders. It is immutable once this policy exists in Konnect. Deleting a parent is blocked while child policy objects reference it. |
 
 _Appears in:_
 
@@ -3610,6 +3726,24 @@ Allowed values:
 | `encryptFields` |  |
 | `modifyHeaders` |  |
 | `schemaValidation` |  |
+
+#### EventGatewayVirtualClusterProducePolicyRef
+
+
+EventGatewayVirtualClusterProducePolicyRef references an EventGatewayVirtualClusterProducePolicy in the cluster. The referenced
+object's Konnect id is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterProducePolicyAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyapispec)
 
 
 
@@ -5179,6 +5313,7 @@ _Appears in:_
 - [EventGatewayListenerPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicystatus)
 - [EventGatewayListenerStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerstatus)
 - [EventGatewaySchemaRegistryStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistrystatus)
+- [EventGatewayStaticKeyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaystatickeystatus)
 - [EventGatewayTLSTrustBundleStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundlestatus)
 - [EventGatewayVirtualClusterConsumePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicystatus)
 - [EventGatewayVirtualClusterPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicystatus)
@@ -5214,6 +5349,7 @@ _Appears in:_
 - [EventGatewayProduceSchemaValidationPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicy)
 - [EventGatewayRequestRuleValidatorPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestrulevalidatorpolicy)
 - [EventGatewaySkipRecordPolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayskiprecordpolicycreate)
+- [EventGatewayStaticKeyAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaystatickeyapispec)
 - [EventGatewayTLSListenerPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicy)
 - [EventGatewayTLSTrustBundleAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundleapispec)
 - [EventGatewayVirtualClusterAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)
@@ -5597,6 +5733,7 @@ _Appears in:_
 
 - [BackendClusterTLSClientIdentity](#configuration-konghq-com-v1alpha1-types-backendclustertlsclientidentity)
 - [EventGatewayDataPlaneCertificateAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificateapispec)
+- [EventGatewayStaticKeyAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaystatickeyapispec)
 - [SchemaRegistryAuthenticationBasic](#configuration-konghq-com-v1alpha1-types-schemaregistryauthenticationbasic)
 - [TLSCertificate](#configuration-konghq-com-v1alpha1-types-tlscertificate)
 - [TLSTrustBundleConfig](#configuration-konghq-com-v1alpha1-types-tlstrustbundleconfig)

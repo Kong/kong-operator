@@ -93,8 +93,13 @@ func KubebuilderTags(prop *parser.Property, fieldCursor *config.FieldConfig) []s
 		}
 	}
 
-	// Map MaxProperties constraint (applies to both ref and inline map types)
-	if prop.MaxProperties != nil {
+	// Map MaxProperties constraint. Only for inline maps: for properties
+	// referencing a named map type the constraint is emitted on the type
+	// declaration instead (see the map case in generateSchemaTypes).
+	// Field-level markers on named types are dropped by controller-gen — the
+	// field schema still has no `type:` when field markers are applied, so
+	// MaxProperties is rejected with "must apply maxproperties to an object".
+	if prop.MaxProperties != nil && prop.RefName == "" {
 		tags = append(tags, markerValidationMaxProperties(int(*prop.MaxProperties)))
 	}
 

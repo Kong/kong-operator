@@ -17,10 +17,11 @@ limitations under the License.
 package v1alpha1
 
 import (
-	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
 // AIGatewayDataPlane is the Schema for the AIGateway data planes API.
@@ -107,7 +108,8 @@ type AIGatewayDataPlaneSpec struct {
 	// Deployment, the HPA and the ingress Service entirely.
 	//
 	// When Provisioning is Manual, SecretRef must point to an existing Secret
-	// of type kubernetes.io/tls (tls.crt + tls.key) that the operator will use
+	// holding tls.crt and tls.key (typically of type kubernetes.io/tls, but the
+	// type isn't enforced) that the operator will use
 	// as-is: it will never create, modify, rotate, or delete it. The Secret
 	// must live in this AIGatewayDataPlane's own namespace and must carry the operator's
 	// secret label selector (default "konghq.com/secret: \"true\"",
@@ -116,6 +118,15 @@ type AIGatewayDataPlaneSpec struct {
 	// Manual deletes the previously operator-provisioned Secret once the
 	// Deployment has rolled onto the Manual one; switching back to Automatic
 	// later provisions a new one rather than reusing the deleted one.
+	//
+	// The referenced Secret must hold a matching certificate and key that are
+	// currently valid (a NotBefore up to 5 minutes in the future is tolerated
+	// for clock skew), and must not be an operator-provisioned Secret (one labeled
+	// "gateway.konghq.com/secret-provisioning: automatic"); otherwise
+	// CertificateProvisioned goes False with reason InvalidSecret or
+	// SecretRefOperatorManaged. Deleting the referenced Secret while it is in
+	// use leaves running Pods untouched but prevents new ones from starting
+	// until the Secret is recreated or the reference is changed.
 	//
 	// +optional
 	CertificateSecret *CertificateSecret `json:"certificateSecret,omitempty"`
@@ -170,6 +181,7 @@ type SecretRef struct {
 	// Name is the name of the referenced Secret.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	Name string `json:"name,omitempty"`
 }
@@ -218,50 +230,17 @@ type DeploymentOptions struct {
 	PodTemplateSpec *corev1.PodTemplateSpec `json:"podTemplateSpec,omitempty"`
 }
 
+// HorizontalScaling defines horizontal scaling options for the deployment.
+// It holds all the options from the HorizontalPodAutoscalerSpec besides the
+// ScaleTargetRef which is being controlled by the Operator.
+type HorizontalScaling = commonv1alpha1.HorizontalScaling
+
 // Scaling defines the scaling options for the deployment.
 type Scaling struct {
 	// HorizontalScaling defines horizontal scaling options for the deployment.
 	//
 	// +optional
-	HorizontalScaling *HorizontalScaling `json:"horizontal,omitempty"`
-}
-
-// HorizontalScaling defines horizontal scaling options for the deployment.
-// It holds all the options from the HorizontalPodAutoscalerSpec besides the
-// ScaleTargetRef which is being controlled by the Operator.
-type HorizontalScaling struct {
-	// minReplicas is the lower limit for the number of replicas to which the autoscaler
-	// can scale down.  It defaults to 1 pod.  minReplicas is allowed to be 0 if the
-	// alpha feature gate HPAScaleToZero is enabled and at least one Object or External
-	// metric is configured.  Scaling is active as long as at least one metric value is
-	// available.
-	// +optional
-	MinReplicas *int32 `json:"minReplicas,omitempty" protobuf:"varint,2,opt,name=minReplicas"`
-
-	// maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
-	// It cannot be less than minReplicas.
-	//
-	// +required
-	MaxReplicas int32 `json:"maxReplicas" protobuf:"varint,3,opt,name=maxReplicas"`
-
-	// metrics contains the specifications for which to use to calculate the
-	// desired replica count (the maximum replica count across all metrics will
-	// be used).  The desired replica count is calculated multiplying the
-	// ratio between the target value and the current value by the current
-	// number of pods.  Ergo, metrics used must decrease as the pod count is
-	// increased, and vice-versa.  See the individual metric source types for
-	// more information about how each type of metric must respond.
-	// If not set, the default metric will be set to 80% average CPU utilization.
-	// +listType=atomic
-	// +kubebuilder:validation:MaxItems=32
-	// +optional
-	Metrics []autoscalingv2.MetricSpec `json:"metrics,omitempty" protobuf:"bytes,4,rep,name=metrics"`
-
-	// behavior configures the scaling behavior of the target
-	// in both Up and Down directions (scaleUp and scaleDown fields respectively).
-	// If not set, the default HPAScalingRules for scale up and scale down are used.
-	// +optional
-	Behavior *autoscalingv2.HorizontalPodAutoscalerBehavior `json:"behavior,omitempty" protobuf:"bytes,5,opt,name=behavior"`
+	HorizontalScaling *commonv1alpha1.HorizontalScaling `json:"horizontal,omitempty"`
 }
 
 // NetworkOptions defines network-related options for an AIGatewayDataPlane.
@@ -485,4 +464,13 @@ func (a *AIGatewayDataPlane) GetConditions() []metav1.Condition {
 // SetConditions sets the AIGatewayDataPlane Status Conditions.
 func (a *AIGatewayDataPlane) SetConditions(conditions []metav1.Condition) {
 	a.Status.Conditions = conditions
+}
+
+// GetHorizontalScaling returns the AIGatewayDataPlane horizontal scaling options, or nil
+// when horizontal scaling is not configured.
+func (a *AIGatewayDataPlane) GetHorizontalScaling() *commonv1alpha1.HorizontalScaling {
+	if a.Spec.Deployment == nil || a.Spec.Deployment.Scaling == nil {
+		return nil
+	}
+	return a.Spec.Deployment.Scaling.HorizontalScaling
 }

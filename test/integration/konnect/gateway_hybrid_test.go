@@ -120,6 +120,9 @@ func TestGatewayHybridFull(t *testing.T) {
 	require.Len(t, dataPlanes, 1)
 	dataplane := dataPlanes[0]
 
+	t.Log("verifying that the hybrid DataPlane has no admin Service and no admin certificate")
+	requireNoDataPlaneAdminServiceAndCert(t, ctx, cl, &dataplane)
+
 	t.Log("verifying that the KonnectGatewayControlPlane becomes provisioned")
 	require.Eventually(t, testutils.KonnectGatewayControlPlaneIsProgrammed(t, ctx, gateway, integration.GetClients()), testutils.SubresourceReadinessWait, time.Second)
 	konnectGatewayControlPlanes := testutils.MustListKonnectGatewayControlPlanesForGateway(t, ctx, gateway, integration.GetClients())
@@ -135,7 +138,7 @@ func TestGatewayHybridFull(t *testing.T) {
 	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, "http://"+gatewayIPAddress), testutils.SubresourceReadinessWait, time.Second)
 
 	t.Log("verifying GatewayClass has supportedFeatures set")
-	requiredFeatures, err := gatewayapi.GetSupportedFeatures(consts.RouterFlavorTraditionalCompatible)
+	requiredFeatures, err := gatewayapi.GetSupportedFeatures(consts.RouterFlavorTraditionalCompatible, true)
 	require.NoError(t, err)
 	require.Eventually(t, testutils.GatewayClassHasSupportedFeatures(t, ctx, string(gateway.Spec.GatewayClassName), integration.GetClients(), requiredFeatures...), testutils.SubresourceReadinessWait, time.Second)
 
@@ -224,6 +227,9 @@ func TestGatewayHybridFull(t *testing.T) {
 	t.Log("verifying Gateway gets marked as Programmed again")
 	require.Eventually(t, testutils.GatewayIsProgrammed(t, ctx, gatewayNN, cl), testutils.GatewayReadyTimeLimit, time.Second)
 	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, ctx, gatewayNN, integration.GetClients()), testutils.GatewayReadyTimeLimit, time.Second)
+
+	t.Log("verifying that the recreated hybrid DataPlane has no admin Service and no admin certificate")
+	requireNoDataPlaneAdminServiceAndCert(t, ctx, cl, &dataplane)
 
 	t.Log("verifying connectivity to the Gateway")
 	// We're using eventually because Gateway can still have the stale IP address

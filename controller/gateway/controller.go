@@ -41,6 +41,8 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/pkg/extensions"
+	extensionserrors "github.com/kong/kong-operator/v2/controller/pkg/extensions/errors"
+	extensionskonnect "github.com/kong/kong-operator/v2/controller/pkg/extensions/konnect"
 	"github.com/kong/kong-operator/v2/controller/pkg/finalizer"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
@@ -366,7 +368,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 	isHybridGateway := gwconfigutils.IsGatewayHybrid(gatewayConfig)
 	if isHybridGateway {
 		log.Trace(logger, "Hybrid Gateway provisioning")
-		konnectControlPlane, cpReady := r.provisionKonnectGatewayControlPlane(ctx, logger, gateway, gatewayConfig)
+		konnectControlPlane, cpReady := r.provisionKonnectGatewayControlPlane(ctx, logger, gateway, gwc.GatewayClass, gatewayConfig)
 		if konnectControlPlane != nil {
 			patched, res, err := patch.WithFinalizer(ctx, r.Client, konnectControlPlane, KonnectGatewayControlPlaneFinalizer)
 			if patched || err != nil || !res.IsZero() {
@@ -403,7 +405,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 			log.Debug(logger, "KonnectGatewayControlplane is ready")
 		}
 
-		konnectExtension = r.provisionKonnectExtension(ctx, logger, gateway, konnectControlPlane)
+		konnectExtension = r.provisionKonnectExtension(ctx, logger, gateway, gwc.GatewayClass, konnectControlPlane)
 		// Set the KonnectExtensionReadyType Condition to False. This happens only if:
 		// * the new status is false and there was no KonnectExtensionReadyType condition in the gateway
 		// * the new status is false and the previous status was true
@@ -438,12 +440,25 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 	// condition to the Gateway status if the dataplane is ready. If not ready
 	// the status DataPlaneReady=False will be set instead.
 	dataplane, provisionErr := r.provisionDataPlane(ctx, logger, gateway, gatewayConfig, konnectExtension)
+	// Use the same admin API decision as the DataPlane controller.
+	var adminAPIDisabled bool
+	if provisionErr == nil && dataplane != nil {
+		var err error
+		adminAPIDisabled, err = r.dataPlaneAdminAPIDisabled(ctx, dataplane)
+		if err != nil {
+			if extensionserrors.IsKonnectExtensionError(err) {
+				log.Debug(logger, "KonnectExtension not ready, requeueing", "err", err)
+				return ctrl.Result{RequeueAfter: provisionDataPlaneFailRetryAfter}, nil
+			}
+			return ctrl.Result{}, err
+		}
+	}
 	if provisionErr == nil && k8sutils.RunningOnKubernetes() {
 		// DataPlane NetworkPolicies
 		// Only create network policies if KO is running inside k8s.
 		// If the code is run outside of k8s (like in envtest or integration test), do not create network policies.
 		log.Trace(logger, "ensuring DataPlane's NetworkPolicy exists")
-		createdOrUpdated, err := r.ensureDataPlaneHasNetworkPolicy(ctx, gateway, dataplane)
+		createdOrUpdated, err := r.ensureDataPlaneHasNetworkPolicy(ctx, gateway, dataplane, !adminAPIDisabled)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -537,37 +552,40 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// List admin Services
-	adminServices, err := k8sutils.ListServicesForOwner(
-		ctx,
-		r.Client,
-		dataplane.Namespace,
-		dataplane.UID,
-		client.MatchingLabels{
-			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
-			consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneAdminServiceLabelValue),
-		},
-	)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+	// DataPlanes with the admin API disabled have no admin Service.
+	if !adminAPIDisabled {
+		// List admin Services
+		adminServices, err := k8sutils.ListServicesForOwner(
+			ctx,
+			r.Client,
+			dataplane.Namespace,
+			dataplane.UID,
+			client.MatchingLabels{
+				consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+				consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneAdminServiceLabelValue),
+			},
+		)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 
-	count = len(adminServices)
-	// If too many dataplane services are found here, this is a temporary situation.
-	// The number of services will be reduced to 1 by the dataplane controller.
-	if count > 1 {
-		log.Info(logger,
-			fmt.Sprintf("found %d admin services found for dataplane, requeuing...", count),
-			"dataplane", client.ObjectKeyFromObject(dataplane),
-		)
-		return ctrl.Result{Requeue: true}, nil
-	}
-	if count == 0 {
-		log.Info(logger,
-			"no admin services found for dataplane",
-			"dataplane", client.ObjectKeyFromObject(dataplane),
-		)
-		return ctrl.Result{Requeue: true}, nil
+		count = len(adminServices)
+		// If too many dataplane services are found here, this is a temporary situation.
+		// The number of services will be reduced to 1 by the dataplane controller.
+		if count > 1 {
+			log.Info(logger,
+				fmt.Sprintf("found %d admin services found for dataplane, requeuing...", count),
+				"dataplane", client.ObjectKeyFromObject(dataplane),
+			)
+			return ctrl.Result{Requeue: true}, nil
+		}
+		if count == 0 {
+			log.Info(logger,
+				"no admin services found for dataplane",
+				"dataplane", client.ObjectKeyFromObject(dataplane),
+			)
+			return ctrl.Result{Requeue: true}, nil
+		}
 	}
 
 	// DataPlane and its Services are ready so we mark Gateway's listeners as Programmed.
@@ -717,7 +735,7 @@ func (r *Reconciler) provisionDataPlane(
 		expectedDataPlaneOptions = gatewayConfigDataPlaneOptionsToDataPlaneOptions(gatewayConfig.Namespace, *gatewayConfig.Spec.DataPlaneOptions)
 	}
 	// Don't require setting defaults for DataPlane when using Gateway CRD.
-	setDataPlaneOptionsDefaults(expectedDataPlaneOptions, r.DefaultDataPlaneImage)
+	setDataPlaneOptionsDefaults(expectedDataPlaneOptions, r.DefaultDataPlaneImage, gwconfigutils.IsGatewayHybrid(gatewayConfig))
 	// Merge Gateway.spec.infrastructure labels/annotations on top of GatewayConfig options.
 	mergeInfrastructureIntoDataPlane(expectedDataPlaneOptions, gateway.Spec.Infrastructure)
 	// Add the GEP-1762 gateway-name label unconditionally (after mergeInfrastructureIntoDataPlane
@@ -881,6 +899,7 @@ func (r *Reconciler) provisionKonnectGatewayControlPlane(
 	ctx context.Context,
 	logger logr.Logger,
 	gateway *gwtypes.Gateway,
+	gatewayClass *gatewayv1.GatewayClass,
 	gatewayConfig *GatewayConfiguration,
 ) (cp *konnectv1alpha2.KonnectGatewayControlPlane, ready bool) {
 	logger = logger.WithName("konnectGatewayControlPlaneProvisioning")
@@ -898,7 +917,7 @@ func (r *Reconciler) provisionKonnectGatewayControlPlane(
 
 	switch count := len(konnectControlPlanes); {
 	case count == 0:
-		_, err := r.createKonnectGatewayControlPlane(ctx, gateway, gatewayConfig)
+		_, err := r.createKonnectGatewayControlPlane(ctx, gateway, gatewayClass, gatewayConfig)
 		if err != nil {
 			log.Debug(logger, fmt.Sprintf("KonnectGatewayControlPlane creation failed - error: %v", err))
 			k8sutils.SetCondition(
@@ -932,7 +951,7 @@ func (r *Reconciler) provisionKonnectGatewayControlPlane(
 	konnectControlPlane := konnectControlPlanes[0].DeepCopy()
 
 	log.Trace(logger, "ensuring KonnectGatewayControlPlane spec is up to date")
-	patched, err := r.enforceKonnectGatewayControlPlaneSpec(ctx, konnectControlPlane, gatewayConfig)
+	patched, err := r.enforceKonnectGatewayControlPlaneSpec(ctx, gateway, gatewayClass, konnectControlPlane, gatewayConfig)
 	if err != nil {
 		log.Debug(logger, fmt.Sprintf("failed enforcing KonnectGatewayControlPlane spec - error: %v", err))
 		k8sutils.SetCondition(
@@ -969,6 +988,7 @@ func (r *Reconciler) provisionKonnectExtension(
 	ctx context.Context,
 	logger logr.Logger,
 	gateway *gwtypes.Gateway,
+	gatewayClass *gatewayv1.GatewayClass,
 	konnectControlPlane *konnectv1alpha2.KonnectGatewayControlPlane,
 ) *konnectv1alpha2.KonnectExtension {
 	logger = logger.WithName("KonnectExtensionProvisioning")
@@ -986,7 +1006,7 @@ func (r *Reconciler) provisionKonnectExtension(
 
 	switch count := len(konnectExtensions); {
 	case count == 0:
-		_, err := r.createKonnectExtension(ctx, gateway, konnectControlPlane)
+		_, err := r.createKonnectExtension(ctx, gateway, gatewayClass, konnectControlPlane)
 		if err != nil {
 			log.Debug(logger, fmt.Sprintf("KonnectExtension creation failed - error: %v", err))
 			k8sutils.SetCondition(
@@ -1062,6 +1082,22 @@ func (r *Reconciler) provisionKonnectExtension(
 		return nil
 	}
 
+	log.Trace(logger, "ensuring KonnectExtension spec is up to date")
+	if patched, err := r.enforceKonnectExtensionSpec(ctx, gateway, gatewayClass, konnectExtension); err != nil {
+		log.Debug(logger, fmt.Sprintf("failed enforcing KonnectExtension spec - error: %v", err))
+		k8sutils.SetCondition(
+			k8sutils.NewConditionWithGeneration(kcfggateway.KonnectExtensionReadyType, metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
+			gatewayConditionsAndListenersAware(gateway),
+		)
+		return konnectExtension
+	} else if patched {
+		log.Debug(logger, "KonnectExtension spec updated")
+		k8sutils.SetCondition(
+			k8sutils.NewConditionWithGeneration(kcfggateway.KonnectExtensionReadyType, metav1.ConditionFalse, kcfgdataplane.ResourceCreatedOrUpdatedReason, kcfgdataplane.ResourceUpdatedMessage, gateway.Generation),
+			gatewayConditionsAndListenersAware(gateway),
+		)
+	}
+
 	log.Trace(logger, "waiting for KonnectExtension readiness")
 	if !k8sutils.IsReady(konnectExtension) {
 		k8sutils.SetCondition(
@@ -1080,7 +1116,7 @@ func (r *Reconciler) provisionKonnectExtension(
 
 // setDataPlaneOptionsDefaults sets the default DataPlane options not overriding
 // what's been provided only filling in those fields that were unset or empty.
-func setDataPlaneOptionsDefaults(opts *operatorv1beta1.DataPlaneOptions, defaultImage string) {
+func setDataPlaneOptionsDefaults(opts *operatorv1beta1.DataPlaneOptions, defaultImage string, isHybrid bool) {
 	if opts.Deployment.PodTemplateSpec == nil {
 		opts.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
 	}
@@ -1112,6 +1148,18 @@ func setDataPlaneOptionsDefaults(opts *operatorv1beta1.DataPlaneOptions, default
 			Name:           consts.DataPlaneProxyContainerName,
 			Image:          defaultImage,
 			ReadinessProbe: k8sresources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
+		})
+		container = &opts.Deployment.PodTemplateSpec.Spec.Containers[len(opts.Deployment.PodTemplateSpec.Spec.Containers)-1]
+	}
+
+	const routeMatchCalculationEnvKey = "KONG_ROUTE_MATCH_CALCULATION"
+	if isHybrid && !slices.ContainsFunc(container.Env, func(env corev1.EnvVar) bool {
+		return env.Name == routeMatchCalculationEnvKey
+	}) {
+		// The original calculation overlaps regex_priority with native match-field bits.
+		container.Env = append(container.Env, corev1.EnvVar{
+			Name:  routeMatchCalculationEnvKey,
+			Value: "strict",
 		})
 	}
 
@@ -1216,4 +1264,13 @@ func deploymentOptionsDeepEqual(o1, o2 *operatorv1beta1.DataPlaneDeploymentOptio
 		}),
 	}
 	return cmp.Equal(&o1.PodTemplateSpec, &o2.PodTemplateSpec, opts...)
+}
+
+// dataPlaneAdminAPIDisabled mirrors the DataPlane controller: extensions are
+// applied only when Konnect is enabled.
+func (r *Reconciler) dataPlaneAdminAPIDisabled(ctx context.Context, dp *operatorv1beta1.DataPlane) (bool, error) {
+	if !r.KonnectEnabled {
+		return false, nil
+	}
+	return extensionskonnect.DataPlaneAdminAPIDisabled(ctx, r.Client, dp)
 }

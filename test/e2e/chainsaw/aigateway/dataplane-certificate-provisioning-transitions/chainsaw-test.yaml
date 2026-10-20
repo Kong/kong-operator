@@ -11,6 +11,10 @@
 # Scenario B: switch provisioning to Automatic. The operator provisions its own Secret (found by
 #   label since its name isn't predictable) and the Deployment is rolled onto it.
 #
+# Scenario B': a Manual secretRef pointing at the Scenario B operator-provisioned Secret is
+#   rejected with CertificateProvisioned=False/SecretRefOperatorManaged, and the Deployment keeps
+#   mounting the Automatic Secret.
+#
 # Scenario C: switch back to Manual with the same secretRef. The Deployment is rolled back onto
 #   the user-owned Secret from Scenario A.
 #
@@ -237,6 +241,45 @@ spec:
             outputs:
               - name: automatic_cert_secret_name
                 value: (json_parse($stdout).name)
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              spec:
+                template:
+                  spec:
+                    (volumes[?name == 'konnect-cert']):
+                      - secret:
+                          secretName: ($automatic_cert_secret_name)
+        # A Manual reference to the operator-provisioned Secret is rejected: the operator
+        # would otherwise delete it once the switch to Manual completes. The Deployment
+        # keeps mounting it.
+        - patch:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              spec:
+                certificateSecret:
+                  provisioning: Manual
+                  secretRef:
+                    name: ($automatic_cert_secret_name)
+        - assert:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'CertificateProvisioned']):
+                  - status: 'False'
+                    reason: SecretRefOperatorManaged
         - assert:
             resource:
               apiVersion: apps/v1

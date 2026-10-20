@@ -1,0 +1,14 @@
+[
+  {
+    "id": "GO-2025-3547",
+    "reason": "Kubernetes kube-apiserver Vulnerable to Race Condition. It is not relevant to us as we do not run kube-apiserver itself or import code that is affected by this vulnerability. https://github.com/kubernetes/kubernetes/issues/126587"
+  },
+  {
+    "id": "GO-2025-3521",
+    "reason": "Kubernetes GitRepo Volume Inadvertent Local Repository Access in k8s.io/kubernetes. We do not use the GitRepo volume type. https://github.com/kubernetes/kubernetes/issues/130786"
+  },
+  {
+    "id": "GO-2026-5932",
+    "reason": "The golang.org/x/crypto/openpgp package is unsafe by design, has numerous known security issues, is not maintained, and should not be used. A maintained replacement is github.com/ProtonMail/go-crypto/openpgp."
+  }
+]

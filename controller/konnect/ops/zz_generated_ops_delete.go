@@ -54,6 +54,8 @@ func DeleteGeneratedOps[
 		return deleteAIGatewayPolicy(ctx, sdk.GetAIGatewayPoliciesSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewaySNI:
 		return deleteAIGatewaySNI(ctx, sdk.GetAIGatewaySNIsSDK(), ent)
+	case *aiconfigurationv1alpha1.AIGatewayVault:
+		return deleteAIGatewayVault(ctx, sdk.GetAIGatewayVaultsSDK(), ent)
 	case *configurationv1alpha1.EventGatewayBackendCluster:
 		return deleteEventGatewayBackendCluster(ctx, sdk.GetEventGatewayBackendClustersSDK(), ent)
 	case *configurationv1alpha1.EventGatewayDataPlaneCertificate:
@@ -64,6 +66,8 @@ func DeleteGeneratedOps[
 		return deleteEventGatewayListenerPolicy(ctx, sdk.GetEventGatewayListenerPoliciesSDK(), ent)
 	case *configurationv1alpha1.EventGatewaySchemaRegistry:
 		return deleteEventGatewaySchemaRegistry(ctx, sdk.GetEventGatewaySchemaRegistriesSDK(), ent)
+	case *configurationv1alpha1.EventGatewayStaticKey:
+		return deleteEventGatewayStaticKey(ctx, sdk.GetEventGatewayStaticKeysSDK(), ent)
 	case *configurationv1alpha1.EventGatewayTLSTrustBundle:
 		return deleteEventGatewayTLSTrustBundle(ctx, sdk.GetEventGatewayTLSTrustBundlesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualCluster:

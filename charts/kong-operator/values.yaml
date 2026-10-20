@@ -85,6 +85,10 @@ env: {}
 # enable_controller_dataplane_bluegreen: true
 # # aigateway controller. (experimental)
 # enable_controller_aigateway: false
+# # AIGatewayDataPlane controller.
+# enable_controller_aigatewaydataplane: false
+# # on-prem AI Gateway (control plane) controller.
+# enable_controller_onpremaigateway: false
 # # konglicense controller.
 # enable_controller_konglicense: true
 # # controlplane extensions controller.

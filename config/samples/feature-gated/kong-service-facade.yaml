@@ -1,0 +1,255 @@
+# This example demonstrates how to use the KongServiceFacade resource to
+# configure Kong to route traffic to a Kubernetes Service, and secure it
+# with a different plugin for each KongServiceFacade.
+#
+# To verify the example:
+#
+# 1. Install the KongServiceFacade CRD, which `make install.crds` does not include:
+#    $ kubectl apply --server-side -k "github.com/kong/kong-operator/config/crd/ingress-controller-incubator?ref=main"
+#
+# 2. Apply this manifest. It brings its own DataPlane and ControlPlane, with the
+#    `KongServiceFacade` feature gate enabled (see this directory's README.md).
+#
+# 3. Wait for KongServiceFacades to be configured in Kong:
+#
+#    $ kubectl wait --for=condition=Programmed=True kongservicefacade/svc-facade-alpha kongservicefacade/svc-facade-beta
+#
+# 4. Get Proxy's Service external IP:
+#
+#    $ export PROXY_IP=$(kubectl get svc -l gateway-operator.konghq.com/dataplane-service-type=ingress -o=jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}')
+#    $ echo $PROXY_IP # To ensure that the variable is set.
+#    198.19.249.2
+#
+# 5. Verify that paths /alpha and /beta are secured with key-auth and basic-auth respectively (we're using httpie here):
+#
+#    $ http -h ${PROXY_IP}/alpha key:alice-password  # /alpha allows valid key.
+#    HTTP/1.1 200 OK
+#    $ http -h ${PROXY_IP}/alpha key:wrong-key       # /alpha doesn't allow invalid key.
+#    HTTP/1.1 401 Unauthorized
+#    $ http -h ${PROXY_IP}/alpha -a bob:bob-password # /alpha doesn't allow valid basic-auth credentials.
+#    HTTP/1.1 401 Unauthorized
+#    $ http -h ${PROXY_IP}/beta -a bob:bob-password  # /beta allows valid basic-auth credentials.
+#    HTTP/1.1 200 OK
+#    $ http -h ${PROXY_IP}/beta -a bob:wrong         # /beta doesn't allow invalid basic-auth credentials.
+#    HTTP/1.1 401 Unauthorized
+#    $ http -h ${PROXY_IP}/beta key:alice-password   # /beta doesn't allow valid key.
+#    HTTP/1.1 401 Unauthorized
+---
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: kong
+spec:
+  controller: ingress-controllers.konghq.com/kong
+---
+apiVersion: gateway-operator.konghq.com/v1beta1
+kind: DataPlane
+metadata:
+  name: dataplane-service-facade
+  namespace: default
+spec:
+  deployment:
+    podTemplateSpec:
+      spec:
+        containers:
+        - name: proxy
+          # renovate: datasource=docker versioning=docker
+          image: kong/kong-gateway:3.16
+          readinessProbe:
+            initialDelaySeconds: 1
+            periodSeconds: 1
+---
+apiVersion: gateway-operator.konghq.com/v2beta1
+kind: ControlPlane
+metadata:
+  name: controlplane-service-facade
+  namespace: default
+spec:
+  # Required when dataplane.type is ref, and only Ingress is supported in that mode.
+  ingressClass: kong
+  dataplane:
+    type: ref
+    ref:
+      name: dataplane-service-facade
+  featureGates:
+  # Off by default; without it the KongServiceFacade controller does not run
+  # and the facades below never reach Programmed.
+  - name: KongServiceFacade
+    state: enabled
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpbin-deployment
+  namespace: default
+  labels:
+    app: httpbin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: httpbin
+  template:
+    metadata:
+      labels:
+        app: httpbin
+    spec:
+      containers:
+        - name: httpbin
+          image: kong/httpbin:0.1.0
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: httpbin
+  name: httpbin-deployment
+  namespace: default
+spec:
+  ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 80
+  selector:
+    app: httpbin
+  type: ClusterIP
+---
+# KongServiceFacade pointing to the httpbin-deployment,
+# secured with key-auth plugin.
+apiVersion: incubator.ingress-controller.konghq.com/v1alpha1
+kind: KongServiceFacade
+metadata:
+  name: svc-facade-alpha
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: kong
+    konghq.com/plugins: key-auth
+spec:
+  backendRef:
+    name: httpbin-deployment
+    port: 80
+---
+# KongServiceFacade pointing to the same httpbin-deployment,
+# secured with basic-auth plugin.
+apiVersion: incubator.ingress-controller.konghq.com/v1alpha1
+kind: KongServiceFacade
+metadata:
+  name: svc-facade-beta
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: kong
+    konghq.com/plugins: basic-auth
+spec:
+  backendRef:
+    name: httpbin-deployment
+    port: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: httpbin-ingress
+  namespace: default
+  annotations:
+    konghq.com/strip-path: "true"
+spec:
+  ingressClassName: kong
+  rules:
+    - http:
+        paths:
+          - path: /alpha
+            pathType: Prefix
+            backend:
+              # The /alpha path uses the KongServiceFacade secured with key-auth plugin.
+              resource:
+                apiGroup: incubator.ingress-controller.konghq.com
+                kind: KongServiceFacade
+                name: svc-facade-alpha
+          - path: /beta
+            pathType: Prefix
+            backend:
+              # The /beta path uses the KongServiceFacade secured with basic-auth plugin.
+              resource:
+                apiGroup: incubator.ingress-controller.konghq.com
+                kind: KongServiceFacade
+                name: svc-facade-beta
+---
+# The following resources are used to configure the key-auth and basic-auth plugins
+# used by the KongServiceFacade resources.
+#
+# For key-auth it sets up a KongConsumer `alice` that can be authenticated by
+# setting the `key` header to `alice-password`.
+#
+# For basic-auth it sets up a KongConsumer `bob` that can be authenticated by
+# setting the `Authorization` header to `Basic <base64("bob:bob-password")>`.
+#
+# The `konghq.com/secret` label is required on credential Secrets: the operator
+# runs the ControlPlane with `--secret-label-selector=konghq.com/secret`, so
+# unlabelled Secrets are never ingested.
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: key-auth
+  namespace: default
+plugin: key-auth
+config:
+  key_names: ["key"]
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alice-credentials
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: kong
+  labels:
+    konghq.com/credential: key-auth
+    konghq.com/secret: "true"
+type: Opaque
+stringData:
+  key: "alice-password"
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongConsumer
+metadata:
+  name: alice
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: kong
+username: alice
+credentials:
+  - alice-credentials
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: basic-auth
+  namespace: default
+plugin: basic-auth
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bob-credentials
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: kong
+  labels:
+    konghq.com/credential: basic-auth
+    konghq.com/secret: "true"
+type: Opaque
+stringData:
+  username: "bob"
+  password: "bob-password"
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongConsumer
+metadata:
+  name: bob
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: kong
+username: bob
+credentials:
+  - bob-credentials

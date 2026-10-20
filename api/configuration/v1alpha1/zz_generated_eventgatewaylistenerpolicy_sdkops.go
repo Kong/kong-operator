@@ -369,6 +369,9 @@ func RefsAtEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrust
 	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen == nil {
 		return nil
 	}
+	if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.Type != EventGatewayListenerPolicyConfigTypeEventGatewayTLSListen {
+		return nil
+	}
 	var refs []EventGatewayTLSTrustBundleRef
 	for i := range obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.ClientAuthentication.TLSTrustBundles {
 		if obj.Spec.APISpec.EventGatewayListenerPolicyConfig.EventGatewayTLSListen.Config.ClientAuthentication.TLSTrustBundles[i].NamespacedRef == nil {
@@ -409,6 +412,11 @@ func resolveEventGatewayListenerPolicyTLSServerConfigClientAuthenticationTLSTrus
 				continue
 			}
 			errs = append(errs, fmt.Errorf("failed to get referenced EventGatewayTLSTrustBundle %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "EventGatewayTLSTrustBundle", Namespace: ns, Name: ref.Name})
 			continue
 		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
@@ -499,8 +507,8 @@ func (obj *EventGatewayListenerPolicy) ToCreateEventGatewayListenerPolicyRequest
 					if err != nil {
 						return nil, fmt.Errorf("resolving spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles references: %w", err)
 					}
+					rewrittenTLSServerConfigClientAuthenticationTLSTrustBundles := 0
 					if arr, ok := clientAuthentication["tls_trust_bundles"].([]any); ok {
-						ri := 0
 						for i, e := range arr {
 							el, ok := e.(map[string]any)
 							if !ok {
@@ -509,12 +517,17 @@ func (obj *EventGatewayListenerPolicy) ToCreateEventGatewayListenerPolicyRequest
 							if _, has := el["namespaced_ref"]; !has {
 								continue
 							}
-							if ri >= len(resolvedTLSServerConfigClientAuthenticationTLSTrustBundles) {
+							if rewrittenTLSServerConfigClientAuthenticationTLSTrustBundles >= len(resolvedTLSServerConfigClientAuthenticationTLSTrustBundles) {
 								return nil, fmt.Errorf("resolving spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles references: more references set than the %d resolved", len(resolvedTLSServerConfigClientAuthenticationTLSTrustBundles))
 							}
-							arr[i] = map[string]any{"id": resolvedTLSServerConfigClientAuthenticationTLSTrustBundles[ri]}
-							ri++
+							arr[i] = map[string]any{"id": resolvedTLSServerConfigClientAuthenticationTLSTrustBundles[rewrittenTLSServerConfigClientAuthenticationTLSTrustBundles]}
+							rewrittenTLSServerConfigClientAuthenticationTLSTrustBundles++
 						}
+					}
+					// Every resolved reference must have been rewritten: a mismatch means
+					// the references and the payload disagree on which items carry one.
+					if rewrittenTLSServerConfigClientAuthenticationTLSTrustBundles != len(resolvedTLSServerConfigClientAuthenticationTLSTrustBundles) {
+						return nil, fmt.Errorf("resolving spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles references: %d resolved but %d set in the payload", len(resolvedTLSServerConfigClientAuthenticationTLSTrustBundles), rewrittenTLSServerConfigClientAuthenticationTLSTrustBundles)
 					}
 					config["client_authentication"] = clientAuthentication
 				}
@@ -553,8 +566,8 @@ func (obj *EventGatewayListenerPolicy) ToUpdateEventGatewayListenerPolicyRequest
 					if err != nil {
 						return nil, fmt.Errorf("resolving spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles references: %w", err)
 					}
+					rewrittenTLSServerConfigClientAuthenticationTLSTrustBundles := 0
 					if arr, ok := clientAuthentication["tls_trust_bundles"].([]any); ok {
-						ri := 0
 						for i, e := range arr {
 							el, ok := e.(map[string]any)
 							if !ok {
@@ -563,12 +576,17 @@ func (obj *EventGatewayListenerPolicy) ToUpdateEventGatewayListenerPolicyRequest
 							if _, has := el["namespaced_ref"]; !has {
 								continue
 							}
-							if ri >= len(resolvedTLSServerConfigClientAuthenticationTLSTrustBundles) {
+							if rewrittenTLSServerConfigClientAuthenticationTLSTrustBundles >= len(resolvedTLSServerConfigClientAuthenticationTLSTrustBundles) {
 								return nil, fmt.Errorf("resolving spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles references: more references set than the %d resolved", len(resolvedTLSServerConfigClientAuthenticationTLSTrustBundles))
 							}
-							arr[i] = map[string]any{"id": resolvedTLSServerConfigClientAuthenticationTLSTrustBundles[ri]}
-							ri++
+							arr[i] = map[string]any{"id": resolvedTLSServerConfigClientAuthenticationTLSTrustBundles[rewrittenTLSServerConfigClientAuthenticationTLSTrustBundles]}
+							rewrittenTLSServerConfigClientAuthenticationTLSTrustBundles++
 						}
+					}
+					// Every resolved reference must have been rewritten: a mismatch means
+					// the references and the payload disagree on which items carry one.
+					if rewrittenTLSServerConfigClientAuthenticationTLSTrustBundles != len(resolvedTLSServerConfigClientAuthenticationTLSTrustBundles) {
+						return nil, fmt.Errorf("resolving spec.apiSpec.tlsServer.config.clientAuthentication.tlsTrustBundles references: %d resolved but %d set in the payload", len(resolvedTLSServerConfigClientAuthenticationTLSTrustBundles), rewrittenTLSServerConfigClientAuthenticationTLSTrustBundles)
 					}
 					config["client_authentication"] = clientAuthentication
 				}

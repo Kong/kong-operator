@@ -131,7 +131,11 @@ func handleKonnectNetworkRef[T constraints.SupportedKonnectEntityType, TEnt cons
 		konnectv1alpha1.KonnectNetworkRefsReasonValid,
 		"Referenced KonnectCloudGatewayNetwork(s) are valid and programmed",
 	) {
-		if err := cl.Status().Patch(ctx, ent, client.MergeFrom(old)); err != nil {
+		// Optimistic lock: a JSON merge patch replaces the whole conditions
+		// array, so patching from a stale cached object would silently drop
+		// conditions persisted by more recent writes. Conflict instead, and
+		// requeue on a fresh cache.
+		if err := cl.Status().Patch(ctx, ent, client.MergeFromWithOptions(old, client.MergeFromWithOptimisticLock{})); err != nil {
 			if apierrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
 			}

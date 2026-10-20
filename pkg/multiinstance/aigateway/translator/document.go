@@ -23,6 +23,8 @@ import (
 	"slices"
 
 	"github.com/Kong/ai-deck-converter/aigw"
+	"github.com/Kong/ai-deck-converter/convert"
+	yaml "gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,6 +32,13 @@ import (
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
+
+// defaultMinRuntimeVersion is the minimum AI Gateway runtime version declared for
+// rendered configurations when the caller does not specify one: the oldest release
+// that must run the pushed output. Pinned to the converter README's example value;
+// TODO: derive it from the actual data plane version tag set on AIGatewayDataPlane
+// TODO: https://github.com/Kong/kong-operator/issues/6120
+const defaultMinRuntimeVersion = "2.1"
 
 // EntityStatus is the per-entity outcome of the document translation: Err is
 // nil for entities that were translated and included in the document, and the
@@ -130,14 +139,40 @@ func translateKind[
 	}
 }
 
+// checkTranslatedRefs fails the referencing entity when any referenced name is missing from
+// the set of entities of that kind that translated successfully: resolveEntityNames only
+// checks the referenced entity's existence, so without this a referenced entity excluded for
+// its own failed translation would let the referencing entity report success while the
+// converter drops it from the pushed payload (or silently omits the reference).
+func checkTranslatedRefs(translated map[string]struct{}, kind string, names []string) error {
+	for _, name := range names {
+		if _, ok := translated[name]; !ok {
+			return fmt.Errorf(
+				"referenced %s %q was excluded from the document: its own translation failed",
+				kind, name,
+			)
+		}
+	}
+	return nil
+}
+
+// checkTranslatedACLs checks both ACL name lists: every entry comes from a resolved
+// consumer-group CR reference, so each must point at a translated AIGatewayConsumerGroup.
+func checkTranslatedACLs(translated map[string]struct{}, acls aigw.ACLs) error {
+	return cmp.Or(
+		checkTranslatedRefs(translated, "AIGatewayConsumerGroup", acls.Allow),
+		checkTranslatedRefs(translated, "AIGatewayConsumerGroup", acls.Deny),
+	)
+}
+
 // BuildDocument assembles the aigw.Document for the given OnPremAIGateway, translating every
 // aiconfiguration entity kind pointing at it. Alongside the document it returns the per-entity
 // translation status (see EntityStatus), so that the caller can report each entity's outcome on
 // the entity's status.
 //
 // Entity kinds join here as they gain their own ToAIGW* conversion; until then the rendered
-// Document (and the dbless payload built from it) has dangling references and
-// ConvertDocumentToDBLessYAML reports them as warnings, not errors.
+// Document (and the dbless payload built from it) has dangling references, which
+// RenderDBLessYAML reports as converter issues instead of errors.
 //
 // The OnOnPremAIGatewayRef index extractor only matches entities whose aiGatewayRef resolves
 // to an OnPremAIGateway, so a KonnectAIGateway sharing namespace/name with this
@@ -152,15 +187,25 @@ func BuildDocument(
 ) (*aigw.Document, []EntityStatus, error) {
 	doc := &aigw.Document{}
 	var statuses []EntityStatus
-	// Entity names of the certificates that translated successfully, checked when translating
-	// the SNIs referencing them: resolveReferencedCertificate only checks the referenced
-	// certificate's existence and same-gateway membership, so without this a certificate that
-	// failed its own translation (e.g. a missing or unlabeled secretRef Secret) would leave its
-	// SNI reporting success while the converter drops the SNI from the pushed payload.
-	// The same silent-drop class remains for the pre-existing existence-only resolvers
-	// (consumer->policy, model->provider): a referenced entity excluded for its own failed
-	// translation still lets the referencing entity report success.
+	// Entity names of the entities that translated successfully, checked when translating
+	// the entities referencing them: the existence-only resolvers (resolveEntityNames) only
+	// check the referenced entity's existence and same-gateway membership, so without these
+	// a referenced entity that failed its own translation (e.g. a missing or unlabeled
+	// secretRef Secret) would leave its referent reporting success while the converter drops
+	// the referent from the pushed payload. Cross-kind dependencies are ordered first in the
+	// translate list below so the referent's check sees the complete set; the one same-kind
+	// dependency (MCPServer sources) is validated by the fixpoint pass after the loop.
 	translatedCertificates := make(map[string]struct{})
+	translatedModelProviders := make(map[string]struct{})
+	translatedPolicies := make(map[string]struct{})
+	translatedConsumerGroups := make(map[string]struct{})
+	translatedAuthStrategies := make(map[string]struct{})
+	translatedMCPServers := make(map[string]struct{})
+	// translatedMCPCRByName maps a translated MCPServer's entity name to its original CR, so
+	// the same-kind sources post-pass can attribute a dropped listener's failure to the CR
+	// whose EntityStatus already reported success (the maps store the same pointers
+	// translateKind put into the statuses).
+	translatedMCPCRByName := make(map[string]client.Object)
 
 	// CA cert PEMs already claimed by a translated AIGatewayCACertificate, mapped to the
 	// claiming CR's name: ai-deck-converter derives the rendered entity ID from the cert
@@ -170,34 +215,183 @@ func BuildDocument(
 	// from the document.
 	translatedCACertCRs := make(map[string]string)
 
+	// Vault prefixes already claimed by a translated AIGatewayVault, mapped to the claiming
+	// CR's name: ai-deck-converter derives the rendered entity ID from the vault prefix
+	// (internal/kong/to_dbless.go's stableUUID("vault:"+prefix)), so two CRs sharing a prefix
+	// would render two entries with the same ID and fail the whole push. The first CR in
+	// namespace/name order wins; the duplicate is reported per-entity and excluded from the
+	// document.
+	translatedVaultPrefixes := make(map[string]string)
+
+	// The list is ordered so every kind translates after all the kinds it references:
+	// checkTranslatedRefs inside the converting wrappers relies on the referenced kinds'
+	// translated-name sets being complete by then. The one same-kind dependency
+	// (MCPServer -> MCPServer sources) can't be ordered this way, hence the post-pass below.
 	for _, translate := range []func(context.Context) ([]EntityStatus, error){
-		translateKind[aiconfigurationv1alpha1.AIGatewayModelList](
-			cl, gw, index.IndexFieldAIGatewayModelOnOnPremAIGatewayRef,
-			(*aiconfigurationv1alpha1.AIGatewayModel).ToAIGWModel, &doc.Models),
 		translateKind[aiconfigurationv1alpha1.AIGatewayModelProviderList](
 			cl, gw, index.IndexFieldAIGatewayModelProviderOnOnPremAIGatewayRef,
-			(*aiconfigurationv1alpha1.AIGatewayModelProvider).ToAIGWProvider, &doc.ModelProviders),
+			func(p *aiconfigurationv1alpha1.AIGatewayModelProvider, ctx context.Context, cl client.Client) (*aigw.Provider, error) {
+				provider, err := p.ToAIGWProvider(ctx, cl)
+				if err != nil {
+					return nil, err
+				}
+				translatedModelProviders[p.GetKonnectName()] = struct{}{}
+				return provider, nil
+			},
+			&doc.ModelProviders),
 		translateKind[aiconfigurationv1alpha1.AIGatewayPolicyList](
 			cl, gw, index.IndexFieldAIGatewayPolicyOnOnPremAIGatewayRef,
-			(*aiconfigurationv1alpha1.AIGatewayPolicy).ToAIGWPolicy, &doc.Policies),
+			func(p *aiconfigurationv1alpha1.AIGatewayPolicy, ctx context.Context, cl client.Client) (*aigw.Policy, error) {
+				policy, err := p.ToAIGWPolicy(ctx, cl)
+				if err != nil {
+					return nil, err
+				}
+				translatedPolicies[p.GetKonnectName()] = struct{}{}
+				return policy, nil
+			},
+			&doc.Policies),
 		translateKind[aiconfigurationv1alpha1.AIGatewayCustomPolicyList](
 			cl, gw, index.IndexFieldAIGatewayCustomPolicyOnOnPremAIGatewayRef,
 			(*aiconfigurationv1alpha1.AIGatewayCustomPolicy).ToAIGWCustomPolicy, &doc.CustomPolicies),
 		translateKind[aiconfigurationv1alpha1.AIGatewayConsumerGroupList](
 			cl, gw, index.IndexFieldAIGatewayConsumerGroupOnOnPremAIGatewayRef,
-			(*aiconfigurationv1alpha1.AIGatewayConsumerGroup).ToAIGWConsumerGroup, &doc.ConsumerGroups),
+			func(g *aiconfigurationv1alpha1.AIGatewayConsumerGroup, ctx context.Context, cl client.Client) (*aigw.ConsumerGroup, error) {
+				group, err := g.ToAIGWConsumerGroup(ctx, cl)
+				if err != nil {
+					return nil, err
+				}
+				if err := checkTranslatedRefs(translatedPolicies, "AIGatewayPolicy", group.Policies); err != nil {
+					return nil, err
+				}
+				translatedConsumerGroups[g.GetKonnectName()] = struct{}{}
+				return group, nil
+			},
+			&doc.ConsumerGroups),
+		translateKind[aiconfigurationv1alpha1.AIGatewayAuthStrategyList](
+			cl, gw, index.IndexFieldAIGatewayAuthStrategyOnOnPremAIGatewayRef,
+			func(a *aiconfigurationv1alpha1.AIGatewayAuthStrategy, ctx context.Context, cl client.Client) (*aigw.AuthStrategy, error) {
+				authStrategy, err := a.ToAIGWAuthStrategy(ctx, cl)
+				if err != nil {
+					return nil, err
+				}
+				translatedAuthStrategies[a.GetKonnectName()] = struct{}{}
+				return authStrategy, nil
+			},
+			&doc.AuthStrategies),
+		translateKind[aiconfigurationv1alpha1.AIGatewayModelList](
+			cl, gw, index.IndexFieldAIGatewayModelOnOnPremAIGatewayRef,
+			func(m *aiconfigurationv1alpha1.AIGatewayModel, ctx context.Context, cl client.Client) (*aigw.Model, error) {
+				model, err := m.ToAIGWModel(ctx, cl)
+				if err != nil {
+					return nil, err
+				}
+				if err := cmp.Or(
+					checkTranslatedRefs(translatedPolicies, "AIGatewayPolicy", model.Policies),
+					checkTranslatedRefs(translatedAuthStrategies, "AIGatewayAuthStrategy", model.Access.AuthStrategies),
+					checkTranslatedACLs(translatedConsumerGroups, model.Access.ACLs),
+				); err != nil {
+					return nil, err
+				}
+				for i := range model.TargetModels {
+					if err := checkTranslatedRefs(
+						translatedModelProviders, "AIGatewayModelProvider",
+						[]string{model.TargetModels[i].Provider},
+					); err != nil {
+						return nil, err
+					}
+				}
+				return model, nil
+			},
+			&doc.Models),
 		translateKind[aiconfigurationv1alpha1.AIGatewayConsumerList](
 			cl, gw, index.IndexFieldAIGatewayConsumerOnOnPremAIGatewayRef,
 			// The consumer's credential lookup uses this package's index for
 			// AIGatewayConsumerCredential -> AIGatewayConsumer: the field name is passed in
 			// because the api package cannot import internal/utils/index without a cycle.
 			func(c *aiconfigurationv1alpha1.AIGatewayConsumer, ctx context.Context, cl client.Client) (*aigw.Consumer, error) {
-				return c.ToAIGWConsumer(ctx, cl, index.IndexFieldAIGatewayConsumerCredentialOnAIGatewayConsumerRef)
+				consumer, err := c.ToAIGWConsumer(ctx, cl, index.IndexFieldAIGatewayConsumerCredentialOnAIGatewayConsumerRef)
+				if err != nil {
+					return nil, err
+				}
+				if err := cmp.Or(
+					checkTranslatedRefs(translatedPolicies, "AIGatewayPolicy", consumer.Policies),
+					checkTranslatedRefs(translatedConsumerGroups, "AIGatewayConsumerGroup", consumer.ConsumerGroups),
+				); err != nil {
+					return nil, err
+				}
+				return consumer, nil
 			},
 			&doc.Consumers),
-		translateKind[aiconfigurationv1alpha1.AIGatewayAuthStrategyList](
-			cl, gw, index.IndexFieldAIGatewayAuthStrategyOnOnPremAIGatewayRef,
-			(*aiconfigurationv1alpha1.AIGatewayAuthStrategy).ToAIGWAuthStrategy, &doc.AuthStrategies),
+		translateKind[aiconfigurationv1alpha1.AIGatewayAgentList](
+			cl, gw, index.IndexFieldAIGatewayAgentOnOnPremAIGatewayRef,
+			func(a *aiconfigurationv1alpha1.AIGatewayAgent, ctx context.Context, cl client.Client) (*aigw.Agent, error) {
+				agent, err := a.ToAIGWAgent(ctx, cl)
+				if err != nil {
+					return nil, err
+				}
+				if err := cmp.Or(
+					checkTranslatedRefs(translatedPolicies, "AIGatewayPolicy", agent.Policies),
+					checkTranslatedACLs(translatedConsumerGroups, agent.Access.ACLs),
+					checkTranslatedRefs(translatedAuthStrategies, "AIGatewayAuthStrategy", agent.Access.AuthStrategies),
+				); err != nil {
+					return nil, err
+				}
+				return agent, nil
+			},
+			&doc.Agents),
+		translateKind[aiconfigurationv1alpha1.AIGatewayMCPServerList](
+			cl, gw, index.IndexFieldAIGatewayMCPServerOnOnPremAIGatewayRef,
+			func(s *aiconfigurationv1alpha1.AIGatewayMCPServer, ctx context.Context, cl client.Client) (*aigw.MCPServer, error) {
+				mcpServer, err := s.ToAIGWMCPServer(ctx, cl)
+				if err != nil {
+					return nil, err
+				}
+				// Config.Sources is deliberately not checked here: sources reference the same
+				// kind, so a source may be translated after this entity (see the post-pass).
+				if err := cmp.Or(
+					checkTranslatedRefs(translatedPolicies, "AIGatewayPolicy", mcpServer.Policies),
+					checkTranslatedACLs(translatedConsumerGroups, mcpServer.Access.ACLs),
+					checkTranslatedACLs(translatedConsumerGroups, mcpServer.Access.DefaultToolACLs),
+					checkTranslatedRefs(translatedAuthStrategies, "AIGatewayAuthStrategy", mcpServer.Access.AuthStrategies),
+				); err != nil {
+					return nil, err
+				}
+				for i := range mcpServer.Tools {
+					if err := checkTranslatedACLs(
+						translatedConsumerGroups, mcpServer.Tools[i].Access.ACLs,
+					); err != nil {
+						return nil, err
+					}
+				}
+				name := s.GetKonnectName()
+				if _, dup := translatedMCPServers[name]; dup {
+					return nil, fmt.Errorf(
+						"duplicate AIGatewayMCPServer entity name %q: entity names must be unique across AIGatewayMCPServer CRs",
+						name,
+					)
+				}
+				translatedMCPServers[name] = struct{}{}
+				translatedMCPCRByName[name] = s
+				return mcpServer, nil
+			},
+			&doc.MCPServers),
+		translateKind[aiconfigurationv1alpha1.AIGatewayVaultList](
+			cl, gw, index.IndexFieldAIGatewayVaultOnOnPremAIGatewayRef,
+			func(v *aiconfigurationv1alpha1.AIGatewayVault, ctx context.Context, cl client.Client) (*aigw.Vault, error) {
+				vault, err := v.ToAIGWVault(ctx, cl)
+				if err != nil {
+					return nil, err
+				}
+				if first, ok := translatedVaultPrefixes[vault.Name]; ok {
+					return nil, fmt.Errorf(
+						"duplicate vault prefix %q: AIGatewayVault %q already uses it, and the rendered entity ID is derived from the vault prefix",
+						vault.Name, first,
+					)
+				}
+				translatedVaultPrefixes[vault.Name] = v.Name
+				return vault, nil
+			},
+			&doc.Vaults),
 		translateKind[aiconfigurationv1alpha1.AIGatewayCACertificateList](
 			cl, gw, index.IndexFieldAIGatewayCACertificateOnOnPremAIGatewayRef,
 			func(c *aiconfigurationv1alpha1.AIGatewayCACertificate, ctx context.Context, cl client.Client) (*aigw.CACertificate, error) {
@@ -250,5 +444,80 @@ func BuildDocument(
 		statuses = append(statuses, s...)
 	}
 
+	// MCPServer sources reference the same kind, so a translate-time check would wrongly
+	// reject a listener whose source is sorted later in the kind (its own translation may
+	// not have happened yet): validate after all MCP servers translated, dropping listeners
+	// whose sources point outside the translated set. Dropping one listener can orphan
+	// another listener referencing it, hence the fixpoint. A dropped listener's status
+	// reported success during translation, so it is patched in place via pointer identity
+	// with the CR stored in translatedMCPCRByName.
+	// ponytail: the fixpoint cascade is scoped to MCPServer sources; if another kind ever
+	// gains same-kind references, generalize this pass instead of copying it.
+	for dropped := true; dropped; {
+		dropped = false
+		kept := make([]aigw.MCPServer, 0, len(doc.MCPServers))
+		for _, m := range doc.MCPServers {
+			missing := ""
+			for _, src := range m.Config.Sources {
+				if _, ok := translatedMCPServers[src]; !ok {
+					missing = src
+					break
+				}
+			}
+			if missing == "" {
+				kept = append(kept, m)
+				continue
+			}
+			dropped = true
+			delete(translatedMCPServers, m.Name)
+			cr, ok := translatedMCPCRByName[m.Name]
+			if !ok {
+				continue
+			}
+			for i := range statuses {
+				if statuses[i].Obj == cr {
+					statuses[i].Err = fmt.Errorf(
+						"referenced AIGatewayMCPServer %q was excluded from the document: its own translation failed, or it references an excluded server",
+						missing,
+					)
+				}
+			}
+		}
+		doc.MCPServers = kept
+	}
+
 	return doc, statuses, nil
+}
+
+// RenderDBLessYAML converts the translated AI Gateway document into the flattened
+// db-less YAML payload understood by Kong data planes. Alongside the payload it
+// returns the typed conversion issues reported by the converter: a Warning issue
+// means the converter worked around a problem (the output is valid but may not
+// fully match the intent), while an Error issue means the offending entity was
+// left out of the output entirely - the caller is expected to attribute those
+// back to the entities' CRs (see the aigateway package's attributeConversionIssues).
+func RenderDBLessYAML(doc *aigw.Document, opts convert.Options) ([]byte, []convert.ConversionIssue, error) {
+	if opts.MinRuntimeVersion == "" {
+		// Pinned minimum; see defaultMinRuntimeVersion.
+		opts.MinRuntimeVersion = defaultMinRuntimeVersion
+	}
+	// The converter's public entry point (convert.Convert) only accepts YAML bytes,
+	// so the document built by BuildDocument goes through a marshal/reparse
+	// round-trip: aigw.Document is the converter's file format, so it round-trips
+	// losslessly.
+	src, err := yaml.Marshal(doc)
+	if err != nil {
+		return nil, nil, fmt.Errorf("marshaling AI Gateway document: %w", err)
+	}
+	result, err := convert.Convert(src, opts)
+	if err != nil {
+		// Pass any issues the converter reported before failing through to the
+		// caller, so they still reach the gateway status.
+		if result != nil {
+			return nil, result.Issues, err
+		}
+		return nil, nil, err
+	}
+	payload, err := result.Output.ToDBLess().ToYAML()
+	return payload, result.Issues, err
 }

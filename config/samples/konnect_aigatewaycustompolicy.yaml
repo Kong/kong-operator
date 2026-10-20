@@ -38,6 +38,8 @@ spec:
       name: ai-gw-cp-1
       namespace: default
   apiSpec:
+    # Once set, the type is immutable and apiSpec cannot be removed.
+    # Recreate the resource to switch between installed and streaming.
     type: installed
     installed:
       # Unique, immutable identifier of the custom policy.

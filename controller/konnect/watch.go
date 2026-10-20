@@ -334,6 +334,7 @@ type WatchableEntityType interface {
 		aiconfigurationv1alpha1.AIGatewayCACertificate |
 		aiconfigurationv1alpha1.AIGatewayCertificate |
 		aiconfigurationv1alpha1.AIGatewaySNI |
+		aiconfigurationv1alpha1.AIGatewayVault |
 		konnectv1alpha1.KonnectEventGateway |
 		configurationv1alpha1.EventGatewayBackendCluster |
 		configurationv1alpha1.EventGatewayListener |
@@ -345,6 +346,7 @@ type WatchableEntityType interface {
 		configurationv1alpha1.EventGatewayDataPlaneCertificate |
 		configurationv1alpha1.EventGatewaySchemaRegistry |
 		configurationv1alpha1.EventGatewayTLSTrustBundle |
+		configurationv1alpha1.EventGatewayStaticKey |
 		configurationv1alpha1.KongService |
 		configurationv1alpha1.KongRoute |
 		configurationv1.KongConsumer |

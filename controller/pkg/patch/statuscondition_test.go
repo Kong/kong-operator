@@ -2,6 +2,7 @@ package patch
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,6 +18,7 @@ import (
 	kcfgdataplane "github.com/kong/kong-operator/v2/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	kcfgkonnect "github.com/kong/kong-operator/v2/api/konnect"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
@@ -396,4 +398,105 @@ func TestPatchStatusWithoutCondition(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestStatusWithConditionStaleCacheDoesNotClobberNewerConditions verifies that a
+// condition patch built from a stale cached object does not silently drop
+// conditions persisted by more recent writes (e.g. Programmed set right after a
+// create). A JSON merge patch replaces the whole conditions array, so the patch
+// carries the optimistic-lock resourceVersion and conflicts against the newer
+// server state; reconcilers handle that conflict by requeueing on a fresh cache.
+func TestStatusWithConditionStaleCacheDoesNotClobberNewerConditions(t *testing.T) {
+	const (
+		liveRV  = "10"
+		staleRV = "9"
+	)
+
+	// Live state on the "server": Programmed was persisted by a more recent
+	// write than the one the stale cached copy observed.
+	live := &operatorv1beta1.DataPlane{
+		Name:            "dp1",
+		ResourceVersion: liveRV,
+		Generation:      1,
+		Status: operatorv1beta1.DataPlaneStatus{
+			Conditions: []metav1.Condition{
+				{
+					Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
+					Status:             metav1.ConditionTrue,
+					Reason:             string(konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed),
+					ObservedGeneration: 1,
+				},
+			},
+		},
+	}
+
+	// Stale cached copy: older resourceVersion, no Programmed condition.
+	stale := live.DeepCopy()
+	stale.ResourceVersion = staleRV
+	stale.Status.Conditions = nil
+
+	var conflictSeen bool
+	cl := fake.NewClientBuilder().
+		WithObjects(live).
+		WithStatusSubresource(live).
+		WithScheme(scheme.Get()).
+		WithInterceptorFuncs(interceptor.Funcs{
+			SubResourcePatch: func(
+				ctx context.Context, cl client.Client, _ string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption,
+			) error {
+				data, err := patch.Data(obj)
+				if err != nil {
+					return err
+				}
+				var patchData struct {
+					Metadata struct {
+						ResourceVersion string `json:"resourceVersion"`
+					} `json:"metadata"`
+				}
+				if err := json.Unmarshal(data, &patchData); err != nil {
+					return err
+				}
+				if patchData.Metadata.ResourceVersion == "" {
+					t.Error("expected the patch to carry metadata.resourceVersion (optimistic lock)")
+				}
+
+				// Simulate the API server: reject the patch when its
+				// resourceVersion does not match the live object.
+				liveObj := &operatorv1beta1.DataPlane{}
+				if err := cl.Get(ctx, client.ObjectKeyFromObject(obj), liveObj); err != nil {
+					return err
+				}
+				if patchData.Metadata.ResourceVersion != liveObj.ResourceVersion {
+					conflictSeen = true
+					return &apierrors.StatusError{
+						ErrStatus: metav1.Status{
+							Status: metav1.StatusFailure,
+							Reason: metav1.StatusReasonConflict,
+						},
+					}
+				}
+				return cl.Status().Patch(ctx, obj, patch, opts...)
+			},
+		}).
+		Build()
+
+	result, err := StatusWithCondition(
+		t.Context(), cl, stale,
+		kcfgdataplane.ReadyType, metav1.ConditionTrue,
+		kcfgkonnect.KonnectExtensionAppliedReason, "Resource is available",
+	)
+
+	// The stale patch must conflict, and the conflict must surface as a requeue
+	// (the reconcilers' existing conflict handling) rather than a silent clobber.
+	require.NoError(t, err)
+	assert.True(t, conflictSeen, "expected the stale patch to conflict on resourceVersion")
+	assert.Equal(t, ctrl.Result{Requeue: true}, result)
+
+	// The condition persisted by the more recent write must survive.
+	persisted := &operatorv1beta1.DataPlane{}
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(live), persisted))
+	_, ok := k8sutils.GetCondition(
+		kcfgconsts.ConditionType(konnectv1alpha1.KonnectEntityProgrammedConditionType), persisted,
+	)
+	assert.True(t, ok, "Programmed condition should not have been dropped by the stale patch")
 }

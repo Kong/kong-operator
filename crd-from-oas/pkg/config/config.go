@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -114,6 +115,9 @@ type ReferenceConfig struct {
 	// set, so the target keeps accepting literal values (e.g. built-in plugin
 	// names) while the reference offers an in-cluster alternative.
 	InjectInto string `yaml:"injectInto,omitempty"`
+	// RequiredAPISpecType restricts the referenced root-union entity's
+	// apiSpec.type discriminator, e.g. schemaValidation for a policy parent.
+	RequiredAPISpecType string `yaml:"requiredAPISpecType,omitempty"`
 	// UnionMember makes this an additive reference for a field whose OAS type
 	// is a by-id/by-name reference object (anyOf, e.g. TLSTrustBundleReference)
 	// or an array of them: instead of replacing the field's type, the generated
@@ -255,9 +259,9 @@ type TypeConfig struct {
 	// SchemaFieldOmissions maps generated schema type names to JSON field names
 	// that should be omitted when emitting schema_types.go for this API.
 	SchemaFieldOmissions map[string][]string `yaml:"schemaFieldOmissions,omitempty"`
-	// CEL maps field names to their configurations, allowing additional
-	// kubebuilder validation markers to be attached to specific fields.
-	CEL map[string]*FieldConfig `yaml:"cel,omitempty"`
+	// CEL configures additional kubebuilder validation markers on the resource
+	// root and its fields.
+	CEL *EntityConfig `yaml:"cel,omitempty"`
 	// References lists inter-CR reference fields on this entity's spec.
 	// Each entry replaces the OpenAPI-derived field with a *commonv1alpha1.ObjectRef
 	// and emits a corresponding resolved-ID field on the status.
@@ -346,6 +350,46 @@ type ParentRefConfig struct {
 	AllowedKinds []string `yaml:"allowedKinds,omitempty"`
 }
 
+// GatewayRefConfig adds a second parent reference field of the common
+// GatewayRef type (group, kind, name, namespace) next to the OpenAPI-derived
+// parent ref field, which is kept, deprecated and made optional: exactly one
+// of the two must be set. Unlike the OpenAPI-derived field, the new one can
+// also reference gateways other than the Konnect one named by parentEntityGVK.
+type GatewayRefConfig struct {
+	// FieldName is the lowerCamelCase JSON name of the new spec field,
+	// e.g. "parentRef".
+	FieldName string `yaml:"fieldName"`
+	// AdditionalKinds optionally lists the gateway kinds the field may
+	// reference besides parentEntityGVK, e.g. OnPremEventGateway. Entities
+	// referencing one of them are not reconciled against Konnect. Group,
+	// version and kind are all required. When empty, the field only accepts
+	// parentEntityGVK.
+	AdditionalKinds []EntityGVKConfig `yaml:"additionalKinds,omitempty"`
+}
+
+func (c *GatewayRefConfig) validate(rc *ReconcilerConfig) error {
+	if c.FieldName == "" {
+		return fmt.Errorf("gatewayRef: fieldName is required")
+	}
+	if rc.ParentRef != nil {
+		return fmt.Errorf("gatewayRef: gatewayRef and parentRef are mutually exclusive")
+	}
+	if rc.ParentEntityGVK == nil || rc.ParentEntityGVK.Kind == "" || rc.ParentEntityGVK.Group == "" {
+		return fmt.Errorf("gatewayRef: parentEntityGVK with kind and group is required")
+	}
+	seen := map[string]bool{rc.ParentEntityGVK.Kind: true}
+	for _, gvk := range c.AdditionalKinds {
+		if gvk.Group == "" || gvk.Version == "" || gvk.Kind == "" {
+			return fmt.Errorf("gatewayRef: additionalKinds entries require group, version and kind, got %+v", gvk)
+		}
+		if seen[gvk.Kind] {
+			return fmt.Errorf("gatewayRef: kind %q is listed more than once", gvk.Kind)
+		}
+		seen[gvk.Kind] = true
+	}
+	return nil
+}
+
 // ReconcilerConfig holds configuration for reconciler code generation.
 type ReconcilerConfig struct {
 	// IsRoot indicates this is a root entity that directly references
@@ -367,6 +411,9 @@ type ReconcilerConfig struct {
 	// operate on. Requires a parent entity kind override when the immediate parent
 	// kind should differ from the OpenAPI-derived dependency name.
 	ParentRef *ParentRefConfig `yaml:"parentRef,omitempty"`
+	// GatewayRef, when set, adds a GatewayRef typed parent reference field next
+	// to the OpenAPI-derived one. See GatewayRefConfig.
+	GatewayRef *GatewayRefConfig `yaml:"gatewayRef,omitempty"`
 	// AncestorEntityGVKs lists the ancestor entity kinds and optional API groups
 	// for each OpenAPI-derived path-parameter dependency in URL order
 	// (outermost first). Only the Kind values are used by current ancestor-ID
@@ -636,16 +683,16 @@ type typeOpsYAML struct {
 }
 
 type typeConfigYAML struct {
-	Path                 string                  `yaml:"path"`
-	Name                 string                  `yaml:"name,omitempty"`
-	SchemaFieldOmissions map[string][]string     `yaml:"schemaFieldOmissions,omitempty"`
-	CEL                  map[string]*FieldConfig `yaml:"cel,omitempty"`
-	References           []ReferenceConfig       `yaml:"references,omitempty"`
-	Associations         []AssociationConfig     `yaml:"associations,omitempty"`
-	DataSources          []DataSourceConfig      `yaml:"dataSources,omitempty"`
-	Ops                  *typeOpsYAML            `yaml:"ops,omitempty"`
-	Reconciler           *ReconcilerConfig       `yaml:"reconciler,omitempty"`
-	Source               *SourceConfig           `yaml:"source,omitempty"`
+	Path                 string              `yaml:"path"`
+	Name                 string              `yaml:"name,omitempty"`
+	SchemaFieldOmissions map[string][]string `yaml:"schemaFieldOmissions,omitempty"`
+	CEL                  *EntityConfig       `yaml:"cel,omitempty"`
+	References           []ReferenceConfig   `yaml:"references,omitempty"`
+	Associations         []AssociationConfig `yaml:"associations,omitempty"`
+	DataSources          []DataSourceConfig  `yaml:"dataSources,omitempty"`
+	Ops                  *typeOpsYAML        `yaml:"ops,omitempty"`
+	Reconciler           *ReconcilerConfig   `yaml:"reconciler,omitempty"`
+	Source               *SourceConfig       `yaml:"source,omitempty"`
 	// OneOfVariantNamesFromTitle lists generated union wrapper type names opted
 	// into title-based anonymous variant naming. See TypeConfig's doc comment.
 	OneOfVariantNamesFromTitle []string `yaml:"oneOfVariantNamesFromTitle,omitempty"`
@@ -749,7 +796,7 @@ func (c *APIGroupVersionConfig) FieldConfig(pathToEntityName map[string]string) 
 		if !ok {
 			continue
 		}
-		entities[entityName] = &EntityConfig{Fields: tc.CEL}
+		entities[entityName] = tc.CEL
 	}
 	return &Config{Entities: entities}
 }
@@ -999,7 +1046,35 @@ func equalKinds(a, b []string) bool {
 // unionMemberNameRegex matches a lowerCamelCase JSON field name.
 var unionMemberNameRegex = regexp.MustCompile(`^[a-z][a-zA-Z0-9]*$`)
 
+// validateFieldDescriptions checks _description is only set on spec.apiSpec's
+// direct fields, the only ones the generator applies it to.
+func validateFieldDescriptions(fields map[string]*FieldConfig, path []string) error {
+	for name, fc := range fields {
+		if fc == nil {
+			continue
+		}
+		p := append(slices.Clone(path), name)
+		if fc.Description != "" && (len(p) != 3 || p[0] != "spec" || p[1] != "apiSpec") {
+			return fmt.Errorf("cel.%s: _description is only supported on spec.apiSpec's direct fields", strings.Join(p, "."))
+		}
+		if err := validateFieldDescriptions(fc.Fields, p); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (tc *TypeConfig) validate() error {
+	if rc := tc.Reconciler; rc != nil && rc.GatewayRef != nil {
+		if err := rc.GatewayRef.validate(rc); err != nil {
+			return err
+		}
+	}
+	if tc.CEL != nil {
+		if err := validateFieldDescriptions(tc.CEL.Fields, nil); err != nil {
+			return err
+		}
+	}
 	for _, ref := range tc.References {
 		if !strings.HasPrefix(ref.Path, "spec.apiSpec.") {
 			return fmt.Errorf("reference %q: path must start with \"spec.apiSpec.\"", ref.Path)
@@ -1038,15 +1113,18 @@ func (tc *TypeConfig) validate() error {
 			return fmt.Errorf("reference %q: reverseWatch requires exactly one kind", ref.Path)
 		}
 	}
-	seenReverseWatchKinds := make(map[string]string)
+	// Several reverseWatch references to a kind share one generated
+	// <Entity>RefsTo<Kind> accessor; an injectInto one also has its literal
+	// value looked up, which is only supported alone.
+	seenReverseWatchKinds := make(map[string]ReferenceConfig)
 	for _, ref := range tc.References {
 		if !ref.ReverseWatch {
 			continue
 		}
-		if prev, ok := seenReverseWatchKinds[ref.Kinds[0]]; ok {
-			return fmt.Errorf("references %q and %q: reverseWatch is supported for at most one reference per referenced kind", prev, ref.Path)
+		if prev, ok := seenReverseWatchKinds[ref.Kinds[0]]; ok && (prev.InjectInto != "" || ref.InjectInto != "") {
+			return fmt.Errorf("references %q and %q: reverseWatch with injectInto is supported for at most one reference per referenced kind", prev.Path, ref.Path)
 		}
-		seenReverseWatchKinds[ref.Kinds[0]] = ref.Path
+		seenReverseWatchKinds[ref.Kinds[0]] = ref
 	}
 	seenAssocNames := make(map[string]bool)
 	for i, a := range tc.Associations {
@@ -1190,6 +1268,10 @@ func ParseAPIGroupVersion(gv string) (group, version string, err error) {
 type FieldConfig struct {
 	// Validations are additional kubebuilder markers to add to the field.
 	Validations []string `yaml:"_validations,omitempty"`
+	// Description replaces the field's OpenAPI description in the CRD, e.g.
+	// when it describes Konnect behavior that doesn't hold for the CR. Only
+	// supported on spec.apiSpec's direct fields.
+	Description string `yaml:"_description,omitempty"`
 	// Fields maps child field names to their own FieldConfig, allowing
 	// multi-segment CEL paths that traverse referenced schema types.
 	Fields map[string]*FieldConfig `yaml:",inline"`
@@ -1205,6 +1287,8 @@ func (fc *FieldConfig) Sub(name string) *FieldConfig {
 
 // EntityConfig holds configuration for a single entity (CRD type)
 type EntityConfig struct {
+	// Validations are additional kubebuilder markers to add to the resource root.
+	Validations []string `yaml:"_validations,omitempty"`
 	// Fields maps field names to their configurations
 	Fields map[string]*FieldConfig `yaml:",inline"`
 }

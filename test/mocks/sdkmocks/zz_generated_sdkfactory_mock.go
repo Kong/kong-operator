@@ -23,11 +23,13 @@ type generatedMockSDKWrapper struct {
 	AIGatewayModelProvidersSDK                   *mocks.MockAIGatewayModelProvidersSDK
 	AIGatewayPoliciesSDK                         *mocks.MockAIGatewayPoliciesSDK
 	AIGatewaySNIsSDK                             *mocks.MockAIGatewaySNIsSDK
+	AIGatewayVaultsSDK                           *mocks.MockAIGatewayVaultsSDK
 	EventGatewayBackendClustersSDK               *mocks.MockEventGatewayBackendClustersSDK
 	EventGatewayDataPlaneCertificatesSDK         *mocks.MockEventGatewayDataPlaneCertificatesSDK
 	EventGatewayListenersSDK                     *mocks.MockEventGatewayListenersSDK
 	EventGatewayListenerPoliciesSDK              *mocks.MockEventGatewayListenerPoliciesSDK
 	EventGatewaySchemaRegistriesSDK              *mocks.MockEventGatewaySchemaRegistriesSDK
+	EventGatewayStaticKeysSDK                    *mocks.MockEventGatewayStaticKeysSDK
 	EventGatewayTLSTrustBundlesSDK               *mocks.MockEventGatewayTLSTrustBundlesSDK
 	EventGatewayVirtualClustersSDK               *mocks.MockEventGatewayVirtualClustersSDK
 	EventGatewayVirtualClusterConsumePoliciesSDK *mocks.MockEventGatewayVirtualClusterConsumePoliciesSDK
@@ -61,11 +63,13 @@ func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {
 		AIGatewayModelProvidersSDK:                   mocks.NewMockAIGatewayModelProvidersSDK(t),
 		AIGatewayPoliciesSDK:                         mocks.NewMockAIGatewayPoliciesSDK(t),
 		AIGatewaySNIsSDK:                             mocks.NewMockAIGatewaySNIsSDK(t),
+		AIGatewayVaultsSDK:                           mocks.NewMockAIGatewayVaultsSDK(t),
 		EventGatewayBackendClustersSDK:               mocks.NewMockEventGatewayBackendClustersSDK(t),
 		EventGatewayDataPlaneCertificatesSDK:         mocks.NewMockEventGatewayDataPlaneCertificatesSDK(t),
 		EventGatewayListenersSDK:                     mocks.NewMockEventGatewayListenersSDK(t),
 		EventGatewayListenerPoliciesSDK:              mocks.NewMockEventGatewayListenerPoliciesSDK(t),
 		EventGatewaySchemaRegistriesSDK:              mocks.NewMockEventGatewaySchemaRegistriesSDK(t),
+		EventGatewayStaticKeysSDK:                    mocks.NewMockEventGatewayStaticKeysSDK(t),
 		EventGatewayTLSTrustBundlesSDK:               mocks.NewMockEventGatewayTLSTrustBundlesSDK(t),
 		EventGatewayVirtualClustersSDK:               mocks.NewMockEventGatewayVirtualClustersSDK(t),
 		EventGatewayVirtualClusterConsumePoliciesSDK: mocks.NewMockEventGatewayVirtualClusterConsumePoliciesSDK(t),
@@ -150,6 +154,11 @@ func (m generatedMockSDKWrapper) GetAIGatewaySNIsSDK() sdkkonnectgo.AIGatewaySNI
 	return m.AIGatewaySNIsSDK
 }
 
+// GetAIGatewayVaultsSDK returns the SDK to operate AIGatewayVault.
+func (m generatedMockSDKWrapper) GetAIGatewayVaultsSDK() sdkkonnectgo.AIGatewayVaultsSDK {
+	return m.AIGatewayVaultsSDK
+}
+
 // GetEventGatewayBackendClustersSDK returns the SDK to operate EventGatewayBackendCluster.
 func (m generatedMockSDKWrapper) GetEventGatewayBackendClustersSDK() sdkkonnectgo.EventGatewayBackendClustersSDK {
 	return m.EventGatewayBackendClustersSDK
@@ -173,6 +182,11 @@ func (m generatedMockSDKWrapper) GetEventGatewayListenerPoliciesSDK() sdkkonnect
 // GetEventGatewaySchemaRegistriesSDK returns the SDK to operate EventGatewaySchemaRegistry.
 func (m generatedMockSDKWrapper) GetEventGatewaySchemaRegistriesSDK() sdkkonnectgo.EventGatewaySchemaRegistriesSDK {
 	return m.EventGatewaySchemaRegistriesSDK
+}
+
+// GetEventGatewayStaticKeysSDK returns the SDK to operate EventGatewayStaticKey.
+func (m generatedMockSDKWrapper) GetEventGatewayStaticKeysSDK() sdkkonnectgo.EventGatewayStaticKeysSDK {
+	return m.EventGatewayStaticKeysSDK
 }
 
 // GetEventGatewayTLSTrustBundlesSDK returns the SDK to operate EventGatewayTLSTrustBundle.

@@ -2,6 +2,7 @@ package dataplane
 
 import (
 	"maps"
+	"slices"
 	"testing"
 	"time"
 
@@ -79,6 +80,10 @@ func TestDeploymentBuilderWithOptions(t *testing.T) {
 	builder = builder.WithSecretLabelSelector(selector)
 	assert.Equal(t, selector, builder.secretLabelSelector)
 
+	// Test WithAdminAPIDisabled
+	builder = builder.WithAdminAPIDisabled(true)
+	assert.True(t, builder.adminAPIDisabled)
+
 	// Test WithOpts
 	opts := []k8sresources.DeploymentOpt{
 		labelSelectorFromDataPlaneStatusSelectorDeploymentOpt(dataplane),
@@ -91,6 +96,8 @@ func TestDeploymentBuilder_BuildAndDeploy(t *testing.T) {
 	type dataplaneGenParams struct {
 		image   string
 		volumes []corev1.Volume
+		env     []corev1.EnvVar
+		ports   []corev1.ContainerPort
 	}
 	// Helper to generate a DataPlane with specified image and volumes
 	dataplaneGen := func(params dataplaneGenParams) *operatorv1beta1.DataPlane {
@@ -108,6 +115,8 @@ func TestDeploymentBuilder_BuildAndDeploy(t *testing.T) {
 										{
 											Name:  consts.DataPlaneProxyContainerName,
 											Image: params.image,
+											Env:   params.env,
+											Ports: params.ports,
 										},
 									},
 									Volumes: params.volumes,
@@ -124,7 +133,9 @@ func TestDeploymentBuilder_BuildAndDeploy(t *testing.T) {
 		dataplane              *operatorv1beta1.DataPlane
 		enforceConfig          bool
 		validateDataPlaneImage bool
+		adminAPIDisabled       bool
 		expectError            bool
+		assertDeployment       func(t *testing.T, d *appsv1.Deployment)
 	}{
 		{
 			name: "custom image fails validation",
@@ -178,6 +189,76 @@ func TestDeploymentBuilder_BuildAndDeploy(t *testing.T) {
 			validateDataPlaneImage: true,
 			expectError:            false,
 		},
+		{
+			name: "admin API enabled keeps cluster certificate, admin port and admin env",
+			dataplane: dataplaneGen(
+				dataplaneGenParams{
+					image: "kong/kong-gateway:3.11",
+				},
+			),
+			enforceConfig:          true,
+			validateDataPlaneImage: true,
+			assertDeployment: func(t *testing.T, d *appsv1.Deployment) {
+				assert.True(t, hasVolume(d, consts.ClusterCertificateVolume))
+				assert.True(t, hasProxyPort(d, consts.DataPlaneAdminAPIPort))
+				env := proxyEnv(d)
+				assert.NotEqual(t, "off", env["KONG_ADMIN_LISTEN"])
+				assert.Contains(t, env, "KONG_ADMIN_SSL_CERT")
+			},
+		},
+		{
+			name: "admin API disabled drops cluster certificate, admin port and admin env",
+			dataplane: dataplaneGen(
+				dataplaneGenParams{
+					image: "kong/kong-gateway:3.11",
+				},
+			),
+			enforceConfig:          true,
+			validateDataPlaneImage: true,
+			adminAPIDisabled:       true,
+			assertDeployment: func(t *testing.T, d *appsv1.Deployment) {
+				assert.False(t, hasVolume(d, consts.ClusterCertificateVolume))
+				assert.False(t, hasProxyPort(d, consts.DataPlaneAdminAPIPort))
+				env := proxyEnv(d)
+				assert.Equal(t, "off", env["KONG_ADMIN_LISTEN"])
+				for _, k := range []string{
+					"KONG_ADMIN_SSL_CERT",
+					"KONG_ADMIN_SSL_CERT_KEY",
+					"KONG_NGINX_ADMIN_SSL_CLIENT_CERTIFICATE",
+					"KONG_NGINX_ADMIN_SSL_VERIFY_CLIENT",
+					"KONG_NGINX_ADMIN_SSL_VERIFY_DEPTH",
+					"KONG_CLUSTER_CERT",
+					"KONG_CLUSTER_CERT_KEY",
+				} {
+					assert.NotContains(t, env, k)
+				}
+			},
+		},
+		{
+			name: "admin API disabled but user env and port override win",
+			dataplane: dataplaneGen(
+				dataplaneGenParams{
+					image: "kong/kong-gateway:3.11",
+					env: []corev1.EnvVar{
+						{Name: "KONG_ADMIN_LISTEN", Value: "127.0.0.1:8444 ssl"},
+					},
+					ports: []corev1.ContainerPort{
+						{
+							Name:          k8sresources.DataPlaneAdminAPIContainerPortName,
+							ContainerPort: consts.DataPlaneAdminAPIPort,
+							Protocol:      corev1.ProtocolTCP,
+						},
+					},
+				},
+			),
+			enforceConfig:          true,
+			validateDataPlaneImage: true,
+			adminAPIDisabled:       true,
+			assertDeployment: func(t *testing.T, d *appsv1.Deployment) {
+				assert.Equal(t, "127.0.0.1:8444 ssl", proxyEnv(d)["KONG_ADMIN_LISTEN"])
+				assert.True(t, hasProxyPort(d, consts.DataPlaneAdminAPIPort))
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -200,6 +281,7 @@ func TestDeploymentBuilder_BuildAndDeploy(t *testing.T) {
 				WithAdditionalLabels(map[string]string{"app": "test"}).
 				WithSecretLabelSelector("test-selector").
 				WithIPFamily(ipfamily.IPv4).
+				WithAdminAPIDisabled(tc.adminAPIDisabled).
 				WithOpts(
 					labelSelectorFromDataPlaneStatusSelectorDeploymentOpt(tc.dataplane),
 				)
@@ -224,8 +306,36 @@ func TestDeploymentBuilder_BuildAndDeploy(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, deployment.Name, fetchedDeployment.Name)
 			assert.Equal(t, deployment.Namespace, fetchedDeployment.Namespace)
+			if tc.assertDeployment != nil {
+				tc.assertDeployment(t, &fetchedDeployment)
+			}
 		})
 	}
+}
+
+func hasVolume(d *appsv1.Deployment, name string) bool {
+	return slices.ContainsFunc(d.Spec.Template.Spec.Volumes, func(v corev1.Volume) bool { return v.Name == name })
+}
+
+func proxyContainer(d *appsv1.Deployment) corev1.Container {
+	for _, c := range d.Spec.Template.Spec.Containers {
+		if c.Name == consts.DataPlaneProxyContainerName {
+			return c
+		}
+	}
+	return corev1.Container{}
+}
+
+func hasProxyPort(d *appsv1.Deployment, port int32) bool {
+	return slices.ContainsFunc(proxyContainer(d).Ports, func(p corev1.ContainerPort) bool { return p.ContainerPort == port })
+}
+
+func proxyEnv(d *appsv1.Deployment) map[string]string {
+	env := map[string]string{}
+	for _, e := range proxyContainer(d).Env {
+		env[e.Name] = e.Value
+	}
+	return env
 }
 
 // TestDeploymentBuilder_BuildAndDeploy_LabelsAndAnnotations verifies that

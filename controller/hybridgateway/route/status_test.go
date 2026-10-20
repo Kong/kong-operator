@@ -26,6 +26,7 @@ import (
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	hybridgatewayerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/pkg/vars"
@@ -49,13 +50,25 @@ func (f *fakeListClient) List(ctx context.Context, list client.ObjectList, opts 
 	if f.fail {
 		return fmt.Errorf("list error")
 	}
-	ulist, ok := list.(*unstructured.UnstructuredList)
+	if ulist, ok := list.(*unstructured.UnstructuredList); ok {
+		ulist.Items = make([]unstructured.Unstructured, len(f.items))
+		for i, item := range f.items {
+			ulist.Items[i] = *item
+		}
+		return nil
+	}
+	// Children listed through the hybrid-routes field index come back as a
+	// typed list; serve the same items there.
+	kongServices, ok := list.(*configurationv1alpha1.KongServiceList)
 	if !ok {
 		return fmt.Errorf("not unstructured list")
 	}
-	ulist.Items = make([]unstructured.Unstructured, len(f.items))
-	for i, item := range f.items {
-		ulist.Items[i] = *item
+	for _, item := range f.items {
+		var svc configurationv1alpha1.KongService
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(item.Object, &svc); err != nil {
+			return err
+		}
+		kongServices.Items = append(kongServices.Items, svc)
 	}
 	return nil
 }
@@ -841,7 +854,6 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 
 func Test_BuildProgrammedCondition(t *testing.T) {
 	ctx := context.Background()
-	pRef := gwtypes.ParentReference{Name: "gw"}
 	route := &gwtypes.HTTPRoute{
 		Kind: "HTTPRoute", APIVersion: "gateway.networking.k8s.io/v1",
 		Namespace: "default", Name: "route",
@@ -926,7 +938,7 @@ func Test_BuildProgrammedCondition(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		conds, err := BuildProgrammedCondition(ctx, logr.Discard(), tt.client, route, pRef, tt.gvks)
+		conds, err := BuildProgrammedCondition(ctx, logr.Discard(), tt.client, route, tt.gvks)
 		if tt.wantErr {
 			require.Error(t, err, tt.name)
 			require.Nil(t, conds, tt.name)
@@ -3663,3 +3675,77 @@ func kindPtr(s string) *gatewayv1.Kind           { k := gatewayv1.Kind(s); retur
 func nsPtr(s string) *gatewayv1.Namespace        { n := gatewayv1.Namespace(s); return &n }
 func sectionPtr(s string) *gatewayv1.SectionName { sec := gatewayv1.SectionName(s); return &sec }
 func ptrObjName(s string) *gwtypes.ObjectName    { n := gwtypes.ObjectName(s); return &n }
+
+func TestValidateAnnotationsRouteAnnotations(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+	s := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(s))
+	require.NoError(t, gatewayv1.Install(s))
+	cl := fake.NewClientBuilder().WithScheme(s).Build()
+
+	allValid := map[string]string{
+		"konghq.com/strip-path":                 "true",
+		"konghq.com/preserve-host":              "false",
+		"konghq.com/request-buffering":          "true",
+		"konghq.com/response-buffering":         "false",
+		"konghq.com/https-redirect-status-code": "301",
+		"konghq.com/path-handling":              "v1",
+	}
+	httpRoute := func(anns map[string]string) client.Object {
+		return &gwtypes.HTTPRoute{Namespace: "default", Name: "route", Annotations: anns}
+	}
+	grpcRoute := func(anns map[string]string) client.Object {
+		return &gwtypes.GRPCRoute{Namespace: "default", Name: "route", Annotations: anns}
+	}
+
+	tests := []struct {
+		name    string
+		route   client.Object
+		wantErr bool
+	}{
+		{name: "HTTPRoute none", route: httpRoute(nil)},
+		{name: "GRPCRoute none", route: grpcRoute(nil)},
+		{name: "HTTPRoute all valid", route: httpRoute(allValid)},
+		{name: "GRPCRoute all valid", route: grpcRoute(allValid)},
+	}
+	for _, c := range []struct{ key, val string }{
+		{"strip-path", "x"},
+		{"preserve-host", "x"},
+		{"request-buffering", "x"},
+		{"response-buffering", "x"},
+		{"https-redirect-status-code", "200"},
+		{"path-handling", "v2"},
+	} {
+		anns := map[string]string{"konghq.com/" + c.key: c.val}
+		tests = append(tests,
+			struct {
+				name    string
+				route   client.Object
+				wantErr bool
+			}{"HTTPRoute bad " + c.key, httpRoute(anns), true},
+			struct {
+				name    string
+				route   client.Object
+				wantErr bool
+			}{"GRPCRoute bad " + c.key, grpcRoute(anns), true},
+		)
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var err error
+			switch r := tt.route.(type) {
+			case *gwtypes.HTTPRoute:
+				err = validateAnnotations(ctx, logger, cl, r)
+			case *gwtypes.GRPCRoute:
+				err = validateAnnotations(ctx, logger, cl, r)
+			}
+			if tt.wantErr {
+				require.ErrorIs(t, err, hybridgatewayerrors.ErrMalformedAnnotation)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}

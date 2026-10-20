@@ -21,11 +21,13 @@ type GeneratedSDK interface {
 	GetAIGatewayModelProvidersSDK() sdkkonnectgo.AIGatewayModelProvidersSDK
 	GetAIGatewayPoliciesSDK() sdkkonnectgo.AIGatewayPoliciesSDK
 	GetAIGatewaySNIsSDK() sdkkonnectgo.AIGatewaySNIsSDK
+	GetAIGatewayVaultsSDK() sdkkonnectgo.AIGatewayVaultsSDK
 	GetEventGatewayBackendClustersSDK() sdkkonnectgo.EventGatewayBackendClustersSDK
 	GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK
 	GetEventGatewayListenersSDK() sdkkonnectgo.EventGatewayListenersSDK
 	GetEventGatewayListenerPoliciesSDK() sdkkonnectgo.EventGatewayListenerPoliciesSDK
 	GetEventGatewaySchemaRegistriesSDK() sdkkonnectgo.EventGatewaySchemaRegistriesSDK
+	GetEventGatewayStaticKeysSDK() sdkkonnectgo.EventGatewayStaticKeysSDK
 	GetEventGatewayTLSTrustBundlesSDK() sdkkonnectgo.EventGatewayTLSTrustBundlesSDK
 	GetEventGatewayVirtualClustersSDK() sdkkonnectgo.EventGatewayVirtualClustersSDK
 	GetEventGatewayVirtualClusterConsumePoliciesSDK() sdkkonnectgo.EventGatewayVirtualClusterConsumePoliciesSDK
@@ -109,6 +111,11 @@ func (w sdkWrapper) GetAIGatewaySNIsSDK() sdkkonnectgo.AIGatewaySNIsSDK {
 	return w.sdk.AIGatewaySNIs
 }
 
+// GetAIGatewayVaultsSDK returns the SDK to operate AIGatewayVault.
+func (w sdkWrapper) GetAIGatewayVaultsSDK() sdkkonnectgo.AIGatewayVaultsSDK {
+	return w.sdk.AIGatewayVaults
+}
+
 // GetEventGatewayBackendClustersSDK returns the SDK to operate EventGatewayBackendCluster.
 func (w sdkWrapper) GetEventGatewayBackendClustersSDK() sdkkonnectgo.EventGatewayBackendClustersSDK {
 	return w.sdk.EventGatewayBackendClusters
@@ -132,6 +139,11 @@ func (w sdkWrapper) GetEventGatewayListenerPoliciesSDK() sdkkonnectgo.EventGatew
 // GetEventGatewaySchemaRegistriesSDK returns the SDK to operate EventGatewaySchemaRegistry.
 func (w sdkWrapper) GetEventGatewaySchemaRegistriesSDK() sdkkonnectgo.EventGatewaySchemaRegistriesSDK {
 	return w.sdk.EventGatewaySchemaRegistries
+}
+
+// GetEventGatewayStaticKeysSDK returns the SDK to operate EventGatewayStaticKey.
+func (w sdkWrapper) GetEventGatewayStaticKeysSDK() sdkkonnectgo.EventGatewayStaticKeysSDK {
+	return w.sdk.EventGatewayStaticKeys
 }
 
 // GetEventGatewayTLSTrustBundlesSDK returns the SDK to operate EventGatewayTLSTrustBundle.

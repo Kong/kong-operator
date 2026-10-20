@@ -18416,7 +18416,7 @@ spec:
                               maxReplicas:
                                 description: |-
                                   maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
-                                  It cannot be less that minReplicas.
+                                  It cannot be less than minReplicas.
                                 format: int32
                                 type: integer
                               metrics:
@@ -18903,6 +18903,7 @@ spec:
                                   required:
                                   - type
                                   type: object
+                                maxItems: 32
                                 type: array
                                 x-kubernetes-list-type: atomic
                               minReplicas:
@@ -29049,7 +29050,7 @@ spec:
                               maxReplicas:
                                 description: |-
                                   maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
-                                  It cannot be less that minReplicas.
+                                  It cannot be less than minReplicas.
                                 format: int32
                                 type: integer
                               metrics:
@@ -29536,7 +29537,7 @@ spec:
                                   required:
                                   - type
                                   type: object
-                                maxItems: 8
+                                maxItems: 32
                                 type: array
                                 x-kubernetes-list-type: atomic
                               minReplicas:
@@ -29918,6 +29919,7 @@ spec:
                               ID is the ID of the Konnect entity. It can be set only in case
                               the ControlPlane type is Mirror.
                             maxLength: 36
+                            minLength: 1
                             pattern: ^[0-9a-f]{8}(?:\-[0-9a-f]{4}){3}-[0-9a-f]{12}$
                             type: string
                         required:

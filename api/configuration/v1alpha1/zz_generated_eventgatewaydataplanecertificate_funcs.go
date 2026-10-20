@@ -72,13 +72,18 @@ func (obj *EventGatewayDataPlaneCertificate) SetGatewayID(id string) {
 }
 
 // GetGatewayRef returns the reference to the root Gateway.
+// It is taken from spec.parentRef when set, and from the deprecated
+// spec.gatewayRef otherwise.
 func (obj *EventGatewayDataPlaneCertificate) GetGatewayRef() commonv1alpha1.ObjectRef {
+	if ref := obj.Spec.ParentRef; ref != nil {
+		return ref.ToObjectRef()
+	}
 	return obj.Spec.GatewayRef
 }
 
 // GetEventGatewayRef returns the reference to the root EventGateway.
 func (obj *EventGatewayDataPlaneCertificate) GetEventGatewayRef() commonv1alpha1.ObjectRef {
-	return obj.Spec.GatewayRef
+	return obj.GetGatewayRef()
 }
 
 // GetParentRef returns the reference to the parent entity.
@@ -87,8 +92,28 @@ func (obj *EventGatewayDataPlaneCertificate) GetParentRef() commonv1alpha1.Objec
 }
 
 // SetParentRef sets the reference to the parent entity.
+// When spec.parentRef is set and ref is a namespaced reference, only
+// its name and namespace are updated, so the kind of the referenced gateway is
+// kept. Otherwise it sets the deprecated spec.gatewayRef and clears
+// spec.parentRef.
+// A Konnect ID can only be held by spec.gatewayRef: on an object
+// already using spec.parentRef, the API server rejects that change.
 func (obj *EventGatewayDataPlaneCertificate) SetParentRef(ref commonv1alpha1.ObjectRef) {
+	if parentRef := obj.Spec.ParentRef; parentRef != nil && ref.NamespacedRef != nil {
+		parentRef.Name = ref.NamespacedRef.Name
+		parentRef.Namespace = ref.NamespacedRef.DeepCopy().Namespace
+		return
+	}
+	obj.Spec.ParentRef = nil
 	obj.Spec.GatewayRef = ref
+}
+
+// SkipKonnectReconciliation reports whether the entity references a gateway
+// other than a KonnectEventGateway: such entities are not managed by the
+// Konnect reconciler.
+func (obj *EventGatewayDataPlaneCertificate) SkipKonnectReconciliation() bool {
+	ref := obj.Spec.ParentRef
+	return ref != nil && !ref.IsGroupKind("konnect.konghq.com", "KonnectEventGateway")
 }
 
 // SetParentID sets the Konnect ID of the immediate parent entity.
@@ -98,6 +123,13 @@ func (obj *EventGatewayDataPlaneCertificate) SetParentID(id string) {
 
 // GetParentGVK returns the GroupVersionKind of the parent entity.
 func (obj *EventGatewayDataPlaneCertificate) GetParentGVK() schema.GroupVersionKind {
+	if ref := obj.Spec.ParentRef; ref != nil && ref.IsGroupKind("eventgateway.konghq.com", "OnPremEventGateway") {
+		return schema.GroupVersionKind{
+			Group:   "eventgateway.konghq.com",
+			Version: "v1alpha1",
+			Kind:    "OnPremEventGateway",
+		}
+	}
 	return schema.GroupVersionKind{
 		Group:   "konnect.konghq.com",
 		Version: GroupVersion.Version,

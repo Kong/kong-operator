@@ -2,6 +2,7 @@ package resources
 
 import (
 	"fmt"
+	"slices"
 	"sync"
 
 	"github.com/samber/lo"
@@ -267,6 +268,9 @@ func VolumesFromPodTemplateSpecOrNil(pts *corev1.PodTemplateSpec) []corev1.Volum
 	return pts.Spec.Volumes
 }
 
+// DataPlaneAdminAPIContainerPortName is the name of the DataPlane proxy container's Admin API port.
+const DataPlaneAdminAPIContainerPortName = "admin-ssl"
+
 // GenerateDataPlaneContainer generates a DataPlane container.
 func GenerateDataPlaneContainer(image string, pts *corev1.PodTemplateSpec) corev1.Container {
 	return corev1.Container{
@@ -311,7 +315,7 @@ func GenerateDataPlaneContainer(image string, pts *corev1.PodTemplateSpec) corev
 				Protocol:      corev1.ProtocolTCP,
 			},
 			{
-				Name:          "admin-ssl",
+				Name:          DataPlaneAdminAPIContainerPortName,
 				ContainerPort: consts.DataPlaneAdminAPIPort,
 				Protocol:      corev1.ProtocolTCP,
 			},
@@ -493,6 +497,21 @@ func (d *Deployment) WithEnvVar(v corev1.EnvVar, container string) *Deployment {
 				}
 			}
 			d.Spec.Template.Spec.Containers[i].Env = append(d.Spec.Template.Spec.Containers[i].Env, v)
+			return d
+		}
+	}
+	return d
+}
+
+// WithoutContainerPort removes the port with the given name from a container.
+// It takes no action if the container or port does not exist.
+func (d *Deployment) WithoutContainerPort(portName, containerName string) *Deployment {
+	for i, c := range d.Spec.Template.Spec.Containers {
+		if c.Name == containerName {
+			d.Spec.Template.Spec.Containers[i].Ports = slices.DeleteFunc(
+				slices.Clone(c.Ports),
+				func(p corev1.ContainerPort) bool { return p.Name == portName },
+			)
 			return d
 		}
 	}

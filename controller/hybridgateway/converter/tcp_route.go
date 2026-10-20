@@ -92,7 +92,7 @@ func (c *tcpRouteConverter) GetOutputStore(_ context.Context, logger logr.Logger
 // HandleOrphanedResource implements OrphanedResourceHandler.
 // It removes the TCPRoute reference from shared resources before orphan deletion.
 func (c *tcpRouteConverter) HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (skipDelete bool, err error) {
-	return handleOrphanedResourceForRoute(ctx, logger, c.Client, c.route, tcpRouteKind, resource)
+	return HandleOrphanedResourceForRoute(ctx, logger, c.Client, c.route, tcpRouteKind, resource)
 }
 
 // Translate implements the APIConverter interface.

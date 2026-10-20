@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 	"net"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -22,7 +23,7 @@ func TestTCPProxy(t *testing.T) {
 	var (
 		destAcceptedConn atomic.Bool
 		destDroppedConn  atomic.Bool
-		destReceivedData bytes.Buffer
+		destReceivedData lockedBuffer
 	)
 	go func() {
 		for {
@@ -78,4 +79,21 @@ func TestTCPProxy(t *testing.T) {
 		_, err = conn.Write([]byte("hello"))
 		return err == nil
 	}, time.Second, time.Millisecond)
+}
+
+type lockedBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *lockedBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *lockedBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
 }

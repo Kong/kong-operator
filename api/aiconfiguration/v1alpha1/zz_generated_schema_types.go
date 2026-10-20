@@ -2487,7 +2487,6 @@ type AIGatewayAuthStrategyKeyAuth struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -2497,7 +2496,6 @@ type AIGatewayAuthStrategyKeyAuth struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this auth strategy instance, used as a
 	// stable human-readable reference.
@@ -2532,7 +2530,6 @@ type AIGatewayAuthStrategyOpenIDConnect struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -2542,7 +2539,6 @@ type AIGatewayAuthStrategyOpenIDConnect struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this auth strategy instance, used as a
 	// stable human-readable reference.
@@ -3122,7 +3118,6 @@ type AIGatewayMCPServerConversionListener struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -3132,7 +3127,6 @@ type AIGatewayMCPServerConversionListener struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this MCP server, used as a stable
 	// human-readable reference.
@@ -3396,7 +3390,6 @@ type AIGatewayMCPServerConversionOnly struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -3406,7 +3399,6 @@ type AIGatewayMCPServerConversionOnly struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this MCP server, used as a stable
 	// human-readable reference.
@@ -3459,7 +3451,6 @@ type AIGatewayMCPServerListener struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -3469,7 +3460,6 @@ type AIGatewayMCPServerListener struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this MCP server, used as a stable
 	// human-readable reference.
@@ -3835,7 +3825,6 @@ type AIGatewayMCPServerPassthroughListener struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -3845,7 +3834,6 @@ type AIGatewayMCPServerPassthroughListener struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this MCP server, used as a stable
 	// human-readable reference.
@@ -4216,7 +4204,6 @@ type AIGatewayMCPServerUpstreamServer struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -4226,7 +4213,6 @@ type AIGatewayMCPServerUpstreamServer struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this MCP server, used as a stable
 	// human-readable reference.
@@ -5138,7 +5124,6 @@ type AIGatewayModelAPI struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -5148,7 +5133,6 @@ type AIGatewayModelAPI struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model, used as a stable
 	// human-readable reference.
@@ -6684,7 +6668,6 @@ type AIGatewayModelModel struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -6694,7 +6677,6 @@ type AIGatewayModelModel struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model, used as a stable
 	// human-readable reference.
@@ -7017,7 +6999,6 @@ type AIGatewayModelProviderAnthropic struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -7027,7 +7008,6 @@ type AIGatewayModelProviderAnthropic struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -7071,7 +7051,6 @@ type AIGatewayModelProviderAzure struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -7081,7 +7060,6 @@ type AIGatewayModelProviderAzure struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -7279,7 +7257,6 @@ type AIGatewayModelProviderBedrock struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -7289,7 +7266,6 @@ type AIGatewayModelProviderBedrock struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -7449,7 +7425,6 @@ type AIGatewayModelProviderCerebras struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -7459,7 +7434,6 @@ type AIGatewayModelProviderCerebras struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -7503,7 +7477,6 @@ type AIGatewayModelProviderCohere struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -7513,7 +7486,6 @@ type AIGatewayModelProviderCohere struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -7878,7 +7850,6 @@ type AIGatewayModelProviderDashscope struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -7888,7 +7859,6 @@ type AIGatewayModelProviderDashscope struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -7933,7 +7903,6 @@ type AIGatewayModelProviderDatabricks struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -7943,7 +7912,6 @@ type AIGatewayModelProviderDatabricks struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -7987,7 +7955,6 @@ type AIGatewayModelProviderDeepseek struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -7997,7 +7964,6 @@ type AIGatewayModelProviderDeepseek struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -8041,7 +8007,6 @@ type AIGatewayModelProviderGemini struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -8051,7 +8016,6 @@ type AIGatewayModelProviderGemini struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -8212,7 +8176,6 @@ type AIGatewayModelProviderHuggingface struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -8222,7 +8185,6 @@ type AIGatewayModelProviderHuggingface struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -8266,7 +8228,6 @@ type AIGatewayModelProviderKimi struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -8276,7 +8237,6 @@ type AIGatewayModelProviderKimi struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -8320,7 +8280,6 @@ type AIGatewayModelProviderLlama2 struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -8330,7 +8289,6 @@ type AIGatewayModelProviderLlama2 struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -8374,7 +8332,6 @@ type AIGatewayModelProviderMistral struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -8384,7 +8341,6 @@ type AIGatewayModelProviderMistral struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -8428,7 +8384,6 @@ type AIGatewayModelProviderOllama struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -8438,7 +8393,6 @@ type AIGatewayModelProviderOllama struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -8482,7 +8436,6 @@ type AIGatewayModelProviderOpenai struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -8492,7 +8445,6 @@ type AIGatewayModelProviderOpenai struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -8540,7 +8492,6 @@ type AIGatewayModelProviderSagemaker struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -8550,7 +8501,6 @@ type AIGatewayModelProviderSagemaker struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -8710,7 +8660,6 @@ type AIGatewayModelProviderTypesafe struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -8720,7 +8669,6 @@ type AIGatewayModelProviderTypesafe struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -8764,7 +8712,6 @@ type AIGatewayModelProviderVercel struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -8774,7 +8721,6 @@ type AIGatewayModelProviderVercel struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -8818,7 +8764,6 @@ type AIGatewayModelProviderVllm struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -8828,7 +8773,6 @@ type AIGatewayModelProviderVllm struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -8872,7 +8816,6 @@ type AIGatewayModelProviderXai struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -8882,7 +8825,6 @@ type AIGatewayModelProviderXai struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this model provider instance, used as a
 	// stable human-readable reference.
@@ -13380,6 +13322,9 @@ func (s *AIGatewayUpstreamConfig) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// AIGatewayVaultName An immutable user-defined identifier for this resource.
+type AIGatewayVaultName string
+
 // AuthGCPWorkloadIdentityFederation represents a union type for AuthGCPWorkloadIdentityFederation.
 // Only one of the fields should be set based on the Source.
 type AuthGCPWorkloadIdentityFederation struct {
@@ -13481,6 +13426,381 @@ type AuthGCPWorkloadIdentityFederationAwsIam struct {
 	Aws AIGatewayUpstreamAuthAWS `json:"aws,omitzero"`
 }
 
+// AwsSecretsManagerVault is a type alias.
+type AwsSecretsManagerVault struct {
+	//
+	//
+	// +required
+	Config AwsSecretsManagerVaultConfig `json:"config,omitzero"`
+	// The description of the Vault.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1024
+	Description string `json:"description,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this vault instance, used as a stable
+	// human-readable reference.
+	// This value is immutable after creation.
+	// The name is used to load the right Vault configuration and implementation
+	// when referencing secrets with the other entities.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=2
+	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[a-z][a-z0-9-]*[a-z0-9]+$`
+	Name AIGatewayVaultName `json:"name,omitzero"`
+}
+
+// AwsSecretsManagerVaultConfig is a type alias.
+type AwsSecretsManagerVaultConfig struct {
+	// The ARN of the role to assume when retrieving secrets from AWS Secrets
+	// Manager.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AssumeRoleArn string `json:"assumeRoleArn,omitzero"`
+	// Decode all secrets in this vault as base64. Useful for binary data.
+	// If some of the secrets in the vault are not base64-encoded, an error will
+	// occur when using them.
+	// We recommend creating a separate vault for base64 secrets.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Base64Decode string `json:"base64Decode,omitzero"`
+	// The endpoint URL of the AWS Secrets Manager service.
+	// If not specified, the default is
+	// https://secretsmanager.{region}.amazonaws.com.
+	// You can override this by specifying a complete URL including the http/https
+	// scheme.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	EndpointURL string `json:"endpointURL,omitzero"`
+	// Time-to-live (in seconds) for caching failed secret lookups.
+	// A value of 0 disables negative caching.
+	// Kong will retry fetching the secret after neg_ttl expires.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	NegTtl int `json:"negTtl,omitzero"`
+	// The AWS region where your vault is located.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Region string `json:"region,omitzero"`
+	// Time (in seconds) that secrets remain in use after expiration (config.ttl
+	// ends).
+	// Useful if the vault is unreachable or the secret is deleted but not yet
+	// replaced.
+	// Kong continues to retry for resurrect_ttl seconds before giving up.
+	// The default is ~3 years to support uninterrupted service during outages.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	ResurrectTtl int `json:"resurrectTtl,omitzero"`
+	// The session name used when assuming a role.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	RoleSessionName string `json:"roleSessionName,omitzero"`
+	// A custom STS endpoint URL used for IAM role assumption.
+	// Overrides the default https://sts.amazonaws.com or regional variant
+	// https://sts.<region>.amazonaws.com.
+	// Include the full http/https scheme.
+	// Only specify this if using a private VPC endpoint for STS.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	StsEndpointURL string `json:"stsEndpointURL,omitzero"`
+	// Time-to-live (in seconds) for a cached secret.
+	// A value of 0 disables rotation.
+	// For non-zero values, use a minimum of 60 seconds.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	Ttl int `json:"ttl,omitzero"`
+}
+
+// AzureKeyVault is a type alias.
+type AzureKeyVault struct {
+	//
+	//
+	// +required
+	Config AzureKeyVaultConfig `json:"config,omitzero"`
+	// The description of the Vault.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1024
+	Description string `json:"description,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this vault instance, used as a stable
+	// human-readable reference.
+	// This value is immutable after creation.
+	// The name is used to load the right Vault configuration and implementation
+	// when referencing secrets with the other entities.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=2
+	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[a-z][a-z0-9-]*[a-z0-9]+$`
+	Name AIGatewayVaultName `json:"name,omitzero"`
+}
+
+// AzureKeyVaultConfig is a type alias.
+type AzureKeyVaultConfig struct {
+	// Decode all secrets in this vault as base64. Useful for binary data.
+	// If some of the secrets in the vault are not base64-encoded, an error will
+	// occur when using them.
+	// We recommend creating a separate vault for base64 secrets.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Base64Decode string `json:"base64Decode,omitzero"`
+	// The client ID for your registered application.
+	// You can find this in the Azure Dashboard under App Registrations.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	ClientID string `json:"clientID,omitzero"`
+	// The prefix for the credentials stored in the Azure Key Vault.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	CredentialsPrefix string `json:"credentialsPrefix,omitzero"`
+	// Each Azure geography includes one or more regions
+	// that meet specific data residency and compliance requirements.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Location string `json:"location,omitzero"`
+	// Time-to-live (in seconds) for caching failed secret lookups.
+	// A value of 0 disables negative caching.
+	// Kong will retry fetching the secret after neg_ttl expires.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	NegTtl int `json:"negTtl,omitzero"`
+	// Time (in seconds) that secrets remain in use after expiration (config.ttl
+	// ends).
+	// Useful if the vault is unreachable or the secret is deleted but not yet
+	// replaced.
+	// Kong continues to retry for resurrect_ttl seconds before giving up.
+	// The default is ~3 years to support uninterrupted service during outages.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	ResurrectTtl int `json:"resurrectTtl,omitzero"`
+	// The DirectoryId and TenantId are the same: both refer to the GUID
+	// representing your Azure Active Directory tenant.
+	// Microsoft documentation and products may use either term depending on
+	// context.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	TenantID string `json:"tenantID,omitzero"`
+	// Time-to-live (in seconds) for a cached secret.
+	// A value of 0 disables rotation.
+	// For non-zero values, use a minimum of 60 seconds.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	Ttl int `json:"ttl,omitzero"`
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=secrets
+	Type string `json:"type,omitzero"`
+	// The URI from which the vault is reachable.
+	// This value can be found in your Azure Key Vault Dashboard under the Vault
+	// URI entry.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	VaultURI string `json:"vaultURI,omitzero"`
+}
+
+// ConjurVault is a type alias.
+type ConjurVault struct {
+	//
+	//
+	// +required
+	Config ConjurVaultConfig `json:"config,omitzero"`
+	// The description of the Vault.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1024
+	Description string `json:"description,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this vault instance, used as a stable
+	// human-readable reference.
+	// This value is immutable after creation.
+	// The name is used to load the right Vault configuration and implementation
+	// when referencing secrets with the other entities.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=2
+	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[a-z][a-z0-9-]*[a-z0-9]+$`
+	Name AIGatewayVaultName `json:"name,omitzero"`
+}
+
+// ConjurVaultConfig is a type alias.
+type ConjurVaultConfig struct {
+	// The CyberArk Secrets Manager organization account name.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Account string `json:"account,omitzero"`
+	// The API key of the workload identity.
+	//
+	//
+	// +optional
+	APIKey SensitiveDataSource `json:"apiKey,omitzero"`
+	// Decode all secrets in this vault as base64. Useful for binary data.
+	// If some of the secrets in the vault are not base64-encoded, an error will
+	// occur when using them.
+	// We recommend creating a separate vault for base64 secrets.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Base64Decode string `json:"base64Decode,omitzero"`
+	// The CyberArk Secrets Manager backend URL to connect with.
+	// Accepts http or https protocols.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	EndpointURL string `json:"endpointURL,omitzero"`
+	// The login name of the workload identity.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Login string `json:"login,omitzero"`
+	// Time-to-live (in seconds) for caching failed secret lookups.
+	// A value of 0 disables negative caching.
+	// Kong will retry fetching the secret after neg_ttl expires.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	NegTtl int `json:"negTtl,omitzero"`
+	// Time (in seconds) that secrets remain in use after expiration (config.ttl
+	// ends).
+	// Useful if the vault is unreachable or the secret is deleted but not yet
+	// replaced.
+	// Kong continues to retry for resurrect_ttl seconds before giving up.
+	// The default is ~3 years to support uninterrupted service during outages.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	ResurrectTtl int `json:"resurrectTtl,omitzero"`
+	// Time-to-live (in seconds) for a cached secret.
+	// A value of 0 disables rotation.
+	// For non-zero values, use a minimum of 60 seconds.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	Ttl int `json:"ttl,omitzero"`
+}
+
 // CreateAIGatewayCustomPolicyInstalledRequest is a type alias.
 type CreateAIGatewayCustomPolicyInstalledRequest struct {
 	// The display name for this custom policy.
@@ -13499,7 +13819,6 @@ type CreateAIGatewayCustomPolicyInstalledRequest struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -13509,7 +13828,6 @@ type CreateAIGatewayCustomPolicyInstalledRequest struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this custom policy, used as a stable
 	// human-readable reference.
@@ -13551,7 +13869,6 @@ type CreateAIGatewayCustomPolicyStreamingRequest struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 	// Stores information about what manages this entity, such as the tool or
 	// system responsible for its lifecycle (for example, `terraform`).
@@ -13561,7 +13878,6 @@ type CreateAIGatewayCustomPolicyStreamingRequest struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this custom policy, used as a stable
 	// human-readable reference.
@@ -13578,6 +13894,70 @@ type CreateAIGatewayCustomPolicyStreamingRequest struct {
 	//
 	// +required
 	Schema ConfigMapDataSource `json:"schema,omitzero"`
+}
+
+// EnvironmentVariableVault is a type alias.
+type EnvironmentVariableVault struct {
+	//
+	//
+	// +required
+	Config EnvironmentVariableVaultConfig `json:"config,omitzero"`
+	// The description of the Vault.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1024
+	Description string `json:"description,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this vault instance, used as a stable
+	// human-readable reference.
+	// This value is immutable after creation.
+	// The name is used to load the right Vault configuration and implementation
+	// when referencing secrets with the other entities.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=2
+	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[a-z][a-z0-9-]*[a-z0-9]+$`
+	Name AIGatewayVaultName `json:"name,omitzero"`
+}
+
+// EnvironmentVariableVaultConfig is a type alias.
+type EnvironmentVariableVaultConfig struct {
+	// Decode all secrets in this vault as base64. Useful for binary data.
+	// If some of the secrets in the vault are not base64-encoded, an error will
+	// occur when using them.
+	// We recommend creating a separate vault for base64 secrets.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Base64Decode string `json:"base64Decode,omitzero"`
+	// The prefix for the environment variable that the value will be stored in.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Prefix string `json:"prefix,omitzero"`
 }
 
 // GCPModelConfig Configuration for a model hosted on Google Cloud Project.
@@ -13602,6 +13982,1538 @@ type GCPModelConfig struct {
 	ProjectID string `json:"projectID,omitzero"`
 }
 
+// GoogleSecretManagerVault is a type alias.
+type GoogleSecretManagerVault struct {
+	//
+	//
+	// +required
+	Config GoogleSecretManagerVaultConfig `json:"config,omitzero"`
+	// The description of the Vault.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1024
+	Description string `json:"description,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this vault instance, used as a stable
+	// human-readable reference.
+	// This value is immutable after creation.
+	// The name is used to load the right Vault configuration and implementation
+	// when referencing secrets with the other entities.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=2
+	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[a-z][a-z0-9-]*[a-z0-9]+$`
+	Name AIGatewayVaultName `json:"name,omitzero"`
+}
+
+// GoogleSecretManagerVaultConfig is a type alias.
+type GoogleSecretManagerVaultConfig struct {
+	// Decode all secrets in this vault as base64. Useful for binary data.
+	// If some of the secrets in the vault are not base64-encoded, an error will
+	// occur when using them.
+	// We recommend creating a separate vault for base64 secrets.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Base64Decode string `json:"base64Decode,omitzero"`
+	// Time-to-live (in seconds) for caching failed secret lookups.
+	// A value of 0 disables negative caching.
+	// Kong will retry fetching the secret after neg_ttl expires.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	NegTtl int `json:"negTtl,omitzero"`
+	// The project ID from your Google API Console.
+	// You can find it by visiting your Google API Console and selecting “Manage
+	// all projects” in the projects list.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	ProjectID string `json:"projectID,omitzero"`
+	// Time (in seconds) that secrets remain in use after expiration (config.ttl
+	// ends).
+	// Useful if the vault is unreachable or the secret is deleted but not yet
+	// replaced.
+	// Kong continues to retry for resurrect_ttl seconds before giving up.
+	// The default is ~3 years to support uninterrupted service during outages.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	ResurrectTtl int `json:"resurrectTtl,omitzero"`
+	// Time-to-live (in seconds) for a cached secret.
+	// A value of 0 disables rotation.
+	// For non-zero values, use a minimum of 60 seconds.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	Ttl int `json:"ttl,omitzero"`
+}
+
+// HashiCorpVault is a type alias.
+type HashiCorpVault struct {
+	// Configuration for an AI Gateway Vault.
+	//
+	// +required
+	Config *HashiCorpVaultConfig `json:"config,omitempty"`
+	// The description of the Vault.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1024
+	Description string `json:"description,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this vault instance, used as a stable
+	// human-readable reference.
+	// This value is immutable after creation.
+	// The name is used to load the right Vault configuration and implementation
+	// when referencing secrets with the other entities.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=2
+	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[a-z][a-z0-9-]*[a-z0-9]+$`
+	Name AIGatewayVaultName `json:"name,omitzero"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *HashiCorpVault) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling HashiCorpVault: nil receiver")
+	}
+	type alias HashiCorpVault
+	aux := alias{}
+	aux.Config = &HashiCorpVaultConfig{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling HashiCorpVault: %w", err)
+	}
+	if aux.Config != nil && aux.Config.AuthMethod == "" && aux.Config.AppRole == nil && aux.Config.AwsEC2 == nil && aux.Config.AwsIAM == nil && aux.Config.Azure == nil && aux.Config.Cert == nil && aux.Config.GcpGCE == nil && aux.Config.GcpIAM == nil && aux.Config.Oauth2 == nil && aux.Config.Kubernetes == nil && aux.Config.Token == nil {
+		aux.Config = nil
+	}
+	*s = HashiCorpVault(aux)
+	return nil
+}
+
+// HashiCorpVaultAppRoleConfig is a type alias.
+type HashiCorpVaultAppRoleConfig struct {
+	// Decode all secrets in this vault as base64. Useful for binary data.
+	// If some of the secrets in the vault are not base64-encoded, an error will
+	// occur when using them.
+	// We recommend creating a separate vault for base64 secrets.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Base64Decode string `json:"base64Decode,omitzero"`
+	// The hostname of your HashiCorp vault.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	// The secrets engine version.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=v1;v2
+	Kv string `json:"kv,omitzero"`
+	// The mount point.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Mount string `json:"mount,omitzero"`
+	// Namespace for the Vault.
+	// Vault Enterprise requires a namespace to connect successfully.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Namespace string `json:"namespace,omitzero"`
+	// Time-to-live (in seconds) for caching failed secret lookups.
+	// A value of 0 disables negative caching.
+	// Kong will retry fetching the secret after neg_ttl expires.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	NegTtl int `json:"negTtl,omitzero"`
+	// Path for enabling the AppRole auth method.
+	// Single leading/trailing slashes are trimmed.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Path string `json:"path,omitzero"`
+	// The port number of your HashiCorp vault.
+	//
+	// +required
+	Port int `json:"port,omitzero"`
+	// The protocol to connect with.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=http;https
+	Protocol string `json:"protocol,omitzero"`
+	// Whether the secret ID is a response-wrapping token.
+	// When true, Kong unwraps the token to get the actual secret ID.
+	// Note: tokens can only be unwrapped once; distribute them individually to
+	// Kong nodes.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ResponseWrapping string `json:"responseWrapping,omitzero"`
+	// Time (in seconds) that secrets remain in use after expiration (config.ttl
+	// ends).
+	// Useful if the vault is unreachable or the secret is deleted but not yet
+	// replaced.
+	// Kong continues to retry for resurrect_ttl seconds before giving up.
+	// The default is ~3 years to support uninterrupted service during outages.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	ResurrectTtl int `json:"resurrectTtl,omitzero"`
+	// Specifies the AppRole role ID in HashiCorp Vault.
+	// Either `role_id` or `secret_id_file` must be set.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	RoleID string `json:"roleID,omitzero"`
+	// Defines the AppRole’s secret ID in HashiCorp Vault.
+	//
+	// +optional
+	SecretID SensitiveDataSource `json:"secretID,omitzero"`
+	// Path to a file containing the AppRole secret ID.
+	// Either `role_id` or `secret_id_file` must be set.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SecretIDFile string `json:"secretIDFile,omitzero"`
+	// Whether to verify the TLS certificate of the vault when connecting.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSLVerify string `json:"sslVerify,omitzero"`
+	// Time-to-live (in seconds) for a cached secret.
+	// A value of 0 disables rotation.
+	// For non-zero values, use a minimum of 60 seconds.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	Ttl int `json:"ttl,omitzero"`
+}
+
+// HashiCorpVaultAwsEC2Config is a type alias.
+type HashiCorpVaultAwsEC2Config struct {
+	// Decode all secrets in this vault as base64. Useful for binary data.
+	// If some of the secrets in the vault are not base64-encoded, an error will
+	// occur when using them.
+	// We recommend creating a separate vault for base64 secrets.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Base64Decode string `json:"base64Decode,omitzero"`
+	// The hostname of your HashiCorp vault.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	// The secrets engine version.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=v1;v2
+	Kv string `json:"kv,omitzero"`
+	// The login path for AWS auth in HashiCorp Vault.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	LoginPath string `json:"loginPath,omitzero"`
+	// The mount point.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Mount string `json:"mount,omitzero"`
+	// Namespace for the Vault.
+	// Vault Enterprise requires a namespace to connect successfully.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Namespace string `json:"namespace,omitzero"`
+	// Time-to-live (in seconds) for caching failed secret lookups.
+	// A value of 0 disables negative caching.
+	// Kong will retry fetching the secret after neg_ttl expires.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	NegTtl int `json:"negTtl,omitzero"`
+	// The nonce for AWS EC2 auth.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Nonce string `json:"nonce,omitzero"`
+	// The port number of your HashiCorp vault.
+	//
+	// +required
+	Port int `json:"port,omitzero"`
+	// The protocol to connect with.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=http;https
+	Protocol string `json:"protocol,omitzero"`
+	// Time (in seconds) that secrets remain in use after expiration (config.ttl
+	// ends).
+	// Useful if the vault is unreachable or the secret is deleted but not yet
+	// replaced.
+	// Kong continues to retry for resurrect_ttl seconds before giving up.
+	// The default is ~3 years to support uninterrupted service during outages.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	ResurrectTtl int `json:"resurrectTtl,omitzero"`
+	// The role to use for AWS EC2 auth.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Role string `json:"role,omitzero"`
+	// Whether to verify the TLS certificate of the vault when connecting.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSLVerify string `json:"sslVerify,omitzero"`
+	// Time-to-live (in seconds) for a cached secret.
+	// A value of 0 disables rotation.
+	// For non-zero values, use a minimum of 60 seconds.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	Ttl int `json:"ttl,omitzero"`
+}
+
+// HashiCorpVaultAwsIAMConfig is a type alias.
+type HashiCorpVaultAwsIAMConfig struct {
+	// The AWS access key ID for IAM auth.
+	// If not provided, the default credentials provider chain is used.
+	// If set, `secret_access_key` must also be set.
+	//
+	//
+	// +optional
+	AccessKeyID SensitiveDataSource `json:"accessKeyID,omitzero"`
+	// The ARN of the role to assume for AWS IAM authentication.
+	// If set, `role_session_name` must also be set.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AssumeRoleArn string `json:"assumeRoleArn,omitzero"`
+	// Decode all secrets in this vault as base64. Useful for binary data.
+	// If some of the secrets in the vault are not base64-encoded, an error will
+	// occur when using them.
+	// We recommend creating a separate vault for base64 secrets.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Base64Decode string `json:"base64Decode,omitzero"`
+	// The hostname of your HashiCorp vault.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	// The secrets engine version.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=v1;v2
+	Kv string `json:"kv,omitzero"`
+	// The login path for AWS auth in HashiCorp Vault.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	LoginPath string `json:"loginPath,omitzero"`
+	// The mount point.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Mount string `json:"mount,omitzero"`
+	// Namespace for the Vault.
+	// Vault Enterprise requires a namespace to connect successfully.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Namespace string `json:"namespace,omitzero"`
+	// Time-to-live (in seconds) for caching failed secret lookups.
+	// A value of 0 disables negative caching.
+	// Kong will retry fetching the secret after neg_ttl expires.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	NegTtl int `json:"negTtl,omitzero"`
+	// The port number of your HashiCorp vault.
+	//
+	// +required
+	Port int `json:"port,omitzero"`
+	// The protocol to connect with.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=http;https
+	Protocol string `json:"protocol,omitzero"`
+	// The AWS region for auth.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Region string `json:"region,omitzero"`
+	// Time (in seconds) that secrets remain in use after expiration (config.ttl
+	// ends).
+	// Useful if the vault is unreachable or the secret is deleted but not yet
+	// replaced.
+	// Kong continues to retry for resurrect_ttl seconds before giving up.
+	// The default is ~3 years to support uninterrupted service during outages.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	ResurrectTtl int `json:"resurrectTtl,omitzero"`
+	// The role to use for AWS IAM auth.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Role string `json:"role,omitzero"`
+	// The session name to use when assuming a role for AWS IAM authentication.
+	// If set, `assume_role_arn` must also be set.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	RoleSessionName string `json:"roleSessionName,omitzero"`
+	// The AWS secret access key for IAM auth.
+	// If not provided, the default credentials provider chain is used.
+	// If set, `access_key_id` must also be set.
+	//
+	//
+	// +optional
+	SecretAccessKey SensitiveDataSource `json:"secretAccessKey,omitzero"`
+	// Whether to verify the TLS certificate of the vault when connecting.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSLVerify string `json:"sslVerify,omitzero"`
+	// The AWS STS endpoint URL used by Kong Gateway when signing the
+	// GetCallerIdentity request for AWS IAM authentication.
+	// If not provided, defaults to the standard STS endpoint for the specified
+	// region.
+	// This setting only affects the STS endpoint that Kong Gateway itself contacts
+	// -
+	// it does not influence which STS endpoint HashiCorp Vault uses on its side.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	StsEndpointURL string `json:"stsEndpointURL,omitzero"`
+	// Time-to-live (in seconds) for a cached secret.
+	// A value of 0 disables rotation.
+	// For non-zero values, use a minimum of 60 seconds.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	Ttl int `json:"ttl,omitzero"`
+}
+
+// HashiCorpVaultAzureConfig is a type alias.
+type HashiCorpVaultAzureConfig struct {
+	// Decode all secrets in this vault as base64. Useful for binary data.
+	// If some of the secrets in the vault are not base64-encoded, an error will
+	// occur when using them.
+	// We recommend creating a separate vault for base64 secrets.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Base64Decode string `json:"base64Decode,omitzero"`
+	// The hostname of your HashiCorp vault.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	// The secrets engine version.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=v1;v2
+	Kv string `json:"kv,omitzero"`
+	// The login path for Azure auth in HashiCorp Vault
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	LoginPath string `json:"loginPath,omitzero"`
+	// The mount point.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Mount string `json:"mount,omitzero"`
+	// Namespace for the Vault.
+	// Vault Enterprise requires a namespace to connect successfully.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Namespace string `json:"namespace,omitzero"`
+	// Time-to-live (in seconds) for caching failed secret lookups.
+	// A value of 0 disables negative caching.
+	// Kong will retry fetching the secret after neg_ttl expires.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	NegTtl int `json:"negTtl,omitzero"`
+	// The port number of your HashiCorp vault.
+	//
+	// +required
+	Port int `json:"port,omitzero"`
+	// The protocol to connect with.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=http;https
+	Protocol string `json:"protocol,omitzero"`
+	// Time (in seconds) that secrets remain in use after expiration (config.ttl
+	// ends).
+	// Useful if the vault is unreachable or the secret is deleted but not yet
+	// replaced.
+	// Kong continues to retry for resurrect_ttl seconds before giving up.
+	// The default is ~3 years to support uninterrupted service during outages.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	ResurrectTtl int `json:"resurrectTtl,omitzero"`
+	// The role to use for Azure auth.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Role string `json:"role,omitzero"`
+	// Whether to verify the TLS certificate of the vault when connecting.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSLVerify string `json:"sslVerify,omitzero"`
+	// Time-to-live (in seconds) for a cached secret.
+	// A value of 0 disables rotation.
+	// For non-zero values, use a minimum of 60 seconds.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	Ttl int `json:"ttl,omitzero"`
+}
+
+// HashiCorpVaultCertConfig is a type alias.
+type HashiCorpVaultCertConfig struct {
+	// Decode all secrets in this vault as base64. Useful for binary data.
+	// If some of the secrets in the vault are not base64-encoded, an error will
+	// occur when using them.
+	// We recommend creating a separate vault for base64 secrets.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Base64Decode string `json:"base64Decode,omitzero"`
+	// The client certificate.
+	//
+	// +required
+	Cert SensitiveDataSource `json:"cert,omitzero"`
+	// The hostname of your HashiCorp vault.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	// The key for the client certificate.
+	//
+	// +optional
+	Key SensitiveDataSource `json:"key,omitzero"`
+	// The secrets engine version.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=v1;v2
+	Kv string `json:"kv,omitzero"`
+	// The mount point.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Mount string `json:"mount,omitzero"`
+	// Namespace for the Vault.
+	// Vault Enterprise requires a namespace to connect successfully.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Namespace string `json:"namespace,omitzero"`
+	// Time-to-live (in seconds) for caching failed secret lookups.
+	// A value of 0 disables negative caching.
+	// Kong will retry fetching the secret after neg_ttl expires.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	NegTtl int `json:"negTtl,omitzero"`
+	// The port number of your HashiCorp vault.
+	//
+	// +required
+	Port int `json:"port,omitzero"`
+	// The protocol to connect with.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=http;https
+	Protocol string `json:"protocol,omitzero"`
+	// Time (in seconds) that secrets remain in use after expiration (config.ttl
+	// ends).
+	// Useful if the vault is unreachable or the secret is deleted but not yet
+	// replaced.
+	// Kong continues to retry for resurrect_ttl seconds before giving up.
+	// The default is ~3 years to support uninterrupted service during outages.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	ResurrectTtl int `json:"resurrectTtl,omitzero"`
+	// The trusted certificate role name.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	RoleName string `json:"roleName,omitzero"`
+	// Whether to verify the TLS certificate of the vault when connecting.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSLVerify string `json:"sslVerify,omitzero"`
+	// Time-to-live (in seconds) for a cached secret.
+	// A value of 0 disables rotation.
+	// For non-zero values, use a minimum of 60 seconds.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	Ttl int `json:"ttl,omitzero"`
+}
+
+// HashiCorpVaultConfig represents a union type for HashiCorpVaultConfig.
+// Only one of the fields should be set based on the AuthMethod.
+type HashiCorpVaultConfig struct {
+	// AuthMethod designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=approle;awsEc2;awsIam;azure;cert;gcpGce;gcpIam;jwt;kubernetes;token
+	AuthMethod HashiCorpVaultConfigType `json:"authMethod,omitempty"`
+
+	// AppRole configuration.
+	//
+	// +optional
+	AppRole *HashiCorpVaultAppRoleConfig `json:"approle,omitempty"`
+	// AwsEC2 configuration.
+	//
+	// +optional
+	AwsEC2 *HashiCorpVaultAwsEC2Config `json:"awsEc2,omitempty"`
+	// AwsIAM configuration.
+	//
+	// +optional
+	AwsIAM *HashiCorpVaultAwsIAMConfig `json:"awsIam,omitempty"`
+	// Azure configuration.
+	//
+	// +optional
+	Azure *HashiCorpVaultAzureConfig `json:"azure,omitempty"`
+	// Cert configuration.
+	//
+	// +optional
+	Cert *HashiCorpVaultCertConfig `json:"cert,omitempty"`
+	// GcpGCE configuration.
+	//
+	// +optional
+	GcpGCE *HashiCorpVaultGcpGCEConfig `json:"gcpGce,omitempty"`
+	// GcpIAM configuration.
+	//
+	// +optional
+	GcpIAM *HashiCorpVaultGcpIAMConfig `json:"gcpIam,omitempty"`
+	// Oauth2 configuration.
+	//
+	// +optional
+	Oauth2 *HashiCorpVaultOauth2Config `json:"jwt,omitempty"`
+	// Kubernetes configuration.
+	//
+	// +optional
+	Kubernetes *HashiCorpVaultKubernetesConfig `json:"kubernetes,omitempty"`
+	// Token configuration.
+	//
+	// +optional
+	Token *HashiCorpVaultTokenConfig `json:"token,omitempty"`
+}
+
+// HashiCorpVaultConfigType represents the type of HashiCorpVaultConfig.
+type HashiCorpVaultConfigType string
+
+// HashiCorpVaultConfigType values.
+const (
+	HashiCorpVaultConfigTypeAppRole    HashiCorpVaultConfigType = "approle"
+	HashiCorpVaultConfigTypeAwsEC2     HashiCorpVaultConfigType = "awsEc2"
+	HashiCorpVaultConfigTypeAwsIAM     HashiCorpVaultConfigType = "awsIam"
+	HashiCorpVaultConfigTypeAzure      HashiCorpVaultConfigType = "azure"
+	HashiCorpVaultConfigTypeCert       HashiCorpVaultConfigType = "cert"
+	HashiCorpVaultConfigTypeGcpGCE     HashiCorpVaultConfigType = "gcpGce"
+	HashiCorpVaultConfigTypeGcpIAM     HashiCorpVaultConfigType = "gcpIam"
+	HashiCorpVaultConfigTypeOauth2     HashiCorpVaultConfigType = "jwt"
+	HashiCorpVaultConfigTypeKubernetes HashiCorpVaultConfigType = "kubernetes"
+	HashiCorpVaultConfigTypeToken      HashiCorpVaultConfigType = "token"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u HashiCorpVaultConfig) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.AuthMethod))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling HashiCorpVaultConfig authMethod: %w", err)
+	}
+	m["authMethod"] = typeBytes
+	switch u.AuthMethod {
+	case HashiCorpVaultConfigTypeAppRole:
+		if u.AppRole != nil {
+			raw, err := json.Marshal(u.AppRole)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling HashiCorpVaultConfig approle: %w", err)
+			}
+			m["approle"] = raw
+		}
+	case HashiCorpVaultConfigTypeAwsEC2:
+		if u.AwsEC2 != nil {
+			raw, err := json.Marshal(u.AwsEC2)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling HashiCorpVaultConfig aws_ec2: %w", err)
+			}
+			m["awsEc2"] = raw
+		}
+	case HashiCorpVaultConfigTypeAwsIAM:
+		if u.AwsIAM != nil {
+			raw, err := json.Marshal(u.AwsIAM)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling HashiCorpVaultConfig aws_iam: %w", err)
+			}
+			m["awsIam"] = raw
+		}
+	case HashiCorpVaultConfigTypeAzure:
+		if u.Azure != nil {
+			raw, err := json.Marshal(u.Azure)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling HashiCorpVaultConfig azure: %w", err)
+			}
+			m["azure"] = raw
+		}
+	case HashiCorpVaultConfigTypeCert:
+		if u.Cert != nil {
+			raw, err := json.Marshal(u.Cert)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling HashiCorpVaultConfig cert: %w", err)
+			}
+			m["cert"] = raw
+		}
+	case HashiCorpVaultConfigTypeGcpGCE:
+		if u.GcpGCE != nil {
+			raw, err := json.Marshal(u.GcpGCE)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling HashiCorpVaultConfig gcp_gce: %w", err)
+			}
+			m["gcpGce"] = raw
+		}
+	case HashiCorpVaultConfigTypeGcpIAM:
+		if u.GcpIAM != nil {
+			raw, err := json.Marshal(u.GcpIAM)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling HashiCorpVaultConfig gcp_iam: %w", err)
+			}
+			m["gcpIam"] = raw
+		}
+	case HashiCorpVaultConfigTypeOauth2:
+		if u.Oauth2 != nil {
+			raw, err := json.Marshal(u.Oauth2)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling HashiCorpVaultConfig jwt: %w", err)
+			}
+			m["jwt"] = raw
+		}
+	case HashiCorpVaultConfigTypeKubernetes:
+		if u.Kubernetes != nil {
+			raw, err := json.Marshal(u.Kubernetes)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling HashiCorpVaultConfig kubernetes: %w", err)
+			}
+			m["kubernetes"] = raw
+		}
+	case HashiCorpVaultConfigTypeToken:
+		if u.Token != nil {
+			raw, err := json.Marshal(u.Token)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling HashiCorpVaultConfig token: %w", err)
+			}
+			m["token"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *HashiCorpVaultConfig) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling HashiCorpVaultConfig: nil receiver")
+	}
+	var probe struct {
+		AuthMethod string `json:"authMethod"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.AuthMethod = HashiCorpVaultConfigType(probe.AuthMethod)
+	switch probe.AuthMethod {
+	case "approle":
+		payload, ok := raw["approle"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val HashiCorpVaultAppRoleConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling HashiCorpVaultConfig approle: %w", err)
+		}
+		u.AppRole = &val
+	case "awsEc2":
+		payload, ok := raw["awsEc2"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val HashiCorpVaultAwsEC2Config
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling HashiCorpVaultConfig aws_ec2: %w", err)
+		}
+		u.AwsEC2 = &val
+	case "awsIam":
+		payload, ok := raw["awsIam"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val HashiCorpVaultAwsIAMConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling HashiCorpVaultConfig aws_iam: %w", err)
+		}
+		u.AwsIAM = &val
+	case "azure":
+		payload, ok := raw["azure"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val HashiCorpVaultAzureConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling HashiCorpVaultConfig azure: %w", err)
+		}
+		u.Azure = &val
+	case "cert":
+		payload, ok := raw["cert"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val HashiCorpVaultCertConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling HashiCorpVaultConfig cert: %w", err)
+		}
+		u.Cert = &val
+	case "gcpGce":
+		payload, ok := raw["gcpGce"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val HashiCorpVaultGcpGCEConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling HashiCorpVaultConfig gcp_gce: %w", err)
+		}
+		u.GcpGCE = &val
+	case "gcpIam":
+		payload, ok := raw["gcpIam"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val HashiCorpVaultGcpIAMConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling HashiCorpVaultConfig gcp_iam: %w", err)
+		}
+		u.GcpIAM = &val
+	case "jwt":
+		payload, ok := raw["jwt"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val HashiCorpVaultOauth2Config
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling HashiCorpVaultConfig jwt: %w", err)
+		}
+		u.Oauth2 = &val
+	case "kubernetes":
+		payload, ok := raw["kubernetes"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val HashiCorpVaultKubernetesConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling HashiCorpVaultConfig kubernetes: %w", err)
+		}
+		u.Kubernetes = &val
+	case "token":
+		payload, ok := raw["token"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val HashiCorpVaultTokenConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling HashiCorpVaultConfig token: %w", err)
+		}
+		u.Token = &val
+	}
+	return nil
+}
+
+// HashiCorpVaultGcpGCEConfig is a type alias.
+type HashiCorpVaultGcpGCEConfig struct {
+	// Decode all secrets in this vault as base64. Useful for binary data.
+	// If some of the secrets in the vault are not base64-encoded, an error will
+	// occur when using them.
+	// We recommend creating a separate vault for base64 secrets.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Base64Decode string `json:"base64Decode,omitzero"`
+	// The hostname of your HashiCorp vault.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	// The secrets engine version.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=v1;v2
+	Kv string `json:"kv,omitzero"`
+	// The login path for GCP auth in HashiCorp Vault.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	LoginPath string `json:"loginPath,omitzero"`
+	// The mount point.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Mount string `json:"mount,omitzero"`
+	// Namespace for the Vault.
+	// Vault Enterprise requires a namespace to connect successfully.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Namespace string `json:"namespace,omitzero"`
+	// Time-to-live (in seconds) for caching failed secret lookups.
+	// A value of 0 disables negative caching.
+	// Kong will retry fetching the secret after neg_ttl expires.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	NegTtl int `json:"negTtl,omitzero"`
+	// The port number of your HashiCorp vault.
+	//
+	// +required
+	Port int `json:"port,omitzero"`
+	// The protocol to connect with.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=http;https
+	Protocol string `json:"protocol,omitzero"`
+	// Time (in seconds) that secrets remain in use after expiration (config.ttl
+	// ends).
+	// Useful if the vault is unreachable or the secret is deleted but not yet
+	// replaced.
+	// Kong continues to retry for resurrect_ttl seconds before giving up.
+	// The default is ~3 years to support uninterrupted service during outages.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	ResurrectTtl int `json:"resurrectTtl,omitzero"`
+	// The role to use for GCP GCE auth.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Role string `json:"role,omitzero"`
+	// Whether to verify the TLS certificate of the vault when connecting.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSLVerify string `json:"sslVerify,omitzero"`
+	// Time-to-live (in seconds) for a cached secret.
+	// A value of 0 disables rotation.
+	// For non-zero values, use a minimum of 60 seconds.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	Ttl int `json:"ttl,omitzero"`
+}
+
+// HashiCorpVaultGcpIAMConfig is a type alias.
+type HashiCorpVaultGcpIAMConfig struct {
+	// Decode all secrets in this vault as base64. Useful for binary data.
+	// If some of the secrets in the vault are not base64-encoded, an error will
+	// occur when using them.
+	// We recommend creating a separate vault for base64 secrets.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Base64Decode string `json:"base64Decode,omitzero"`
+	// The hostname of your HashiCorp vault.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	// The JWT expiration time in seconds for GCP auth (0-900)
+	//
+	// +required
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=900
+	JwtExp int `json:"jwtExp,omitzero"`
+	// The secrets engine version.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=v1;v2
+	Kv string `json:"kv,omitzero"`
+	// The mount point.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Mount string `json:"mount,omitzero"`
+	// Namespace for the Vault.
+	// Vault Enterprise requires a namespace to connect successfully.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Namespace string `json:"namespace,omitzero"`
+	// Time-to-live (in seconds) for caching failed secret lookups.
+	// A value of 0 disables negative caching.
+	// Kong will retry fetching the secret after neg_ttl expires.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	NegTtl int `json:"negTtl,omitzero"`
+	// The port number of your HashiCorp vault.
+	//
+	// +required
+	Port int `json:"port,omitzero"`
+	// The protocol to connect with.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=http;https
+	Protocol string `json:"protocol,omitzero"`
+	// Time (in seconds) that secrets remain in use after expiration (config.ttl
+	// ends).
+	// Useful if the vault is unreachable or the secret is deleted but not yet
+	// replaced.
+	// Kong continues to retry for resurrect_ttl seconds before giving up.
+	// The default is ~3 years to support uninterrupted service during outages.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	ResurrectTtl int `json:"resurrectTtl,omitzero"`
+	// The role to use for GCP IAM auth.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Role string `json:"role,omitzero"`
+	// The GCP service account for GCE auth.
+	//
+	// +required
+	ServiceAccount SensitiveDataSource `json:"serviceAccount,omitzero"`
+	// Whether to verify the TLS certificate of the vault when connecting.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSLVerify string `json:"sslVerify,omitzero"`
+	// Time-to-live (in seconds) for a cached secret.
+	// A value of 0 disables rotation.
+	// For non-zero values, use a minimum of 60 seconds.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	Ttl int `json:"ttl,omitzero"`
+}
+
+// HashiCorpVaultKubernetesConfig is a type alias.
+type HashiCorpVaultKubernetesConfig struct {
+	// Path to the Kubernetes service account token file.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	APITokenFile string `json:"apiTokenFile,omitzero"`
+	// Decode all secrets in this vault as base64. Useful for binary data.
+	// If some of the secrets in the vault are not base64-encoded, an error will
+	// occur when using them.
+	// We recommend creating a separate vault for base64 secrets.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Base64Decode string `json:"base64Decode,omitzero"`
+	// The hostname of your HashiCorp vault.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	// The secrets engine version.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=v1;v2
+	Kv string `json:"kv,omitzero"`
+	// The mount point.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Mount string `json:"mount,omitzero"`
+	// Namespace for the Vault.
+	// Vault Enterprise requires a namespace to connect successfully.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Namespace string `json:"namespace,omitzero"`
+	// Time-to-live (in seconds) for caching failed secret lookups.
+	// A value of 0 disables negative caching.
+	// Kong will retry fetching the secret after neg_ttl expires.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	NegTtl int `json:"negTtl,omitzero"`
+	// Path for enabling the Kubernetes auth method.
+	// Single leading/trailing slashes are trimmed.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Path string `json:"path,omitzero"`
+	// The port number of your HashiCorp vault.
+	//
+	// +required
+	Port int `json:"port,omitzero"`
+	// The protocol to connect with.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=http;https
+	Protocol string `json:"protocol,omitzero"`
+	// Time (in seconds) that secrets remain in use after expiration (config.ttl
+	// ends).
+	// Useful if the vault is unreachable or the secret is deleted but not yet
+	// replaced.
+	// Kong continues to retry for resurrect_ttl seconds before giving up.
+	// The default is ~3 years to support uninterrupted service during outages.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	ResurrectTtl int `json:"resurrectTtl,omitzero"`
+	// Role assigned to the Kubernetes service account.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Role string `json:"role,omitzero"`
+	// Whether to verify the TLS certificate of the vault when connecting.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSLVerify string `json:"sslVerify,omitzero"`
+	// Time-to-live (in seconds) for a cached secret.
+	// A value of 0 disables rotation.
+	// For non-zero values, use a minimum of 60 seconds.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	Ttl int `json:"ttl,omitzero"`
+}
+
+// HashiCorpVaultOauth2Config is a type alias.
+type HashiCorpVaultOauth2Config struct {
+	// Comma-separated list of OAuth2 audiences.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Audiences string `json:"audiences,omitzero"`
+	// Decode all secrets in this vault as base64. Useful for binary data.
+	// If some of the secrets in the vault are not base64-encoded, an error will
+	// occur when using them.
+	// We recommend creating a separate vault for base64 secrets.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Base64Decode string `json:"base64Decode,omitzero"`
+	// The OAuth2 client ID.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	ClientID string `json:"clientID,omitzero"`
+	// The OAuth2 client secret.
+	//
+	// +optional
+	ClientSecret SensitiveDataSource `json:"clientSecret,omitzero"`
+	// The hostname of your HashiCorp vault.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	// The secrets engine version.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=v1;v2
+	Kv string `json:"kv,omitzero"`
+	// The mount point.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Mount string `json:"mount,omitzero"`
+	// Namespace for the Vault.
+	// Vault Enterprise requires a namespace to connect successfully.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Namespace string `json:"namespace,omitzero"`
+	// Time-to-live (in seconds) for caching failed secret lookups.
+	// A value of 0 disables negative caching.
+	// Kong will retry fetching the secret after neg_ttl expires.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	NegTtl int `json:"negTtl,omitzero"`
+	// The port number of your HashiCorp vault.
+	//
+	// +required
+	Port int `json:"port,omitzero"`
+	// The protocol to connect with.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=http;https
+	Protocol string `json:"protocol,omitzero"`
+	// Time (in seconds) that secrets remain in use after expiration (config.ttl
+	// ends).
+	// Useful if the vault is unreachable or the secret is deleted but not yet
+	// replaced.
+	// Kong continues to retry for resurrect_ttl seconds before giving up.
+	// The default is ~3 years to support uninterrupted service during outages.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	ResurrectTtl int `json:"resurrectTtl,omitzero"`
+	// The configured role name in HashiCorp Vault for JWT auth.
+	// When creating the role in HashiCorp Vault, make sure that the `role_type` is
+	// `jwt`
+	// and the `token_policies` have permissions to read the secrets.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Role string `json:"role,omitzero"`
+	// Whether to verify the TLS certificate of the vault when connecting.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSLVerify string `json:"sslVerify,omitzero"`
+	// The OAuth2 token endpoint for Hashicorp Vault's OAuth2 auth method.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	TokenEndpoint string `json:"tokenEndpoint,omitzero"`
+	// Time-to-live (in seconds) for a cached secret.
+	// A value of 0 disables rotation.
+	// For non-zero values, use a minimum of 60 seconds.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	Ttl int `json:"ttl,omitzero"`
+}
+
+// HashiCorpVaultTokenConfig is a type alias.
+type HashiCorpVaultTokenConfig struct {
+	// Decode all secrets in this vault as base64. Useful for binary data.
+	// If some of the secrets in the vault are not base64-encoded, an error will
+	// occur when using them.
+	// We recommend creating a separate vault for base64 secrets.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Base64Decode string `json:"base64Decode,omitzero"`
+	// The hostname of your HashiCorp vault.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	// The secrets engine version.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=v1;v2
+	Kv string `json:"kv,omitzero"`
+	// The mount point.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Mount string `json:"mount,omitzero"`
+	// Namespace for the Vault.
+	// Vault Enterprise requires a namespace to connect successfully.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Namespace string `json:"namespace,omitzero"`
+	// Time-to-live (in seconds) for caching failed secret lookups.
+	// A value of 0 disables negative caching.
+	// Kong will retry fetching the secret after neg_ttl expires.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	NegTtl int `json:"negTtl,omitzero"`
+	// The port number of your HashiCorp vault.
+	//
+	// +required
+	Port int `json:"port,omitzero"`
+	// The protocol to connect with.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=http;https
+	Protocol string `json:"protocol,omitzero"`
+	// Time (in seconds) that secrets remain in use after expiration (config.ttl
+	// ends).
+	// Useful if the vault is unreachable or the secret is deleted but not yet
+	// replaced.
+	// Kong continues to retry for resurrect_ttl seconds before giving up.
+	// The default is ~3 years to support uninterrupted service during outages.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	ResurrectTtl int `json:"resurrectTtl,omitzero"`
+	// Whether to verify the TLS certificate of the vault when connecting.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSLVerify string `json:"sslVerify,omitzero"`
+	// The token string to be used for authentication.
+	//
+	// +optional
+	Token SensitiveDataSource `json:"token,omitzero"`
+	// Time-to-live (in seconds) for a cached secret.
+	// A value of 0 disables rotation.
+	// For non-zero values, use a minimum of 60 seconds.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=4294967295
+	Ttl int `json:"ttl,omitzero"`
+}
+
+// KonnectConfigStoreVault is a type alias.
+type KonnectConfigStoreVault struct {
+	//
+	//
+	// +required
+	Config KonnectConfigStoreVaultConfig `json:"config,omitzero"`
+	// The description of the Vault.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1024
+	Description string `json:"description,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this vault instance, used as a stable
+	// human-readable reference.
+	// This value is immutable after creation.
+	// The name is used to load the right Vault configuration and implementation
+	// when referencing secrets with the other entities.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=2
+	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[a-z][a-z0-9-]*[a-z0-9]+$`
+	Name AIGatewayVaultName `json:"name,omitzero"`
+}
+
+// KonnectConfigStoreVaultConfig is a type alias.
+type KonnectConfigStoreVaultConfig struct {
+	// The ID of the Konnect Config Store that contains the secrets.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	ConfigStoreID string `json:"configStoreID,omitzero"`
+}
+
 // ManagedByValue is the value type for ManagedBy.
 //
 // +kubebuilder:validation:MinLength=1
@@ -13613,6 +15525,8 @@ type ManagedByValue string
 // or system responsible for its lifecycle (for example, `terraform`).
 //
 // Keys must be 1–63 characters long and start with an alphanumeric character.
+//
+// +kubebuilder:validation:MaxProperties=5
 type ManagedBy map[string]ManagedByValue
 
 // PublicLabelsValue is the value type for PublicLabels.
@@ -13629,4 +15543,6 @@ type PublicLabelsValue string
 //
 // Keys must be of length 1-63 characters, and cannot start with "kong",
 // "konnect", "mesh", "kic", or "_".
+//
+// +kubebuilder:validation:MaxProperties=50
 type PublicLabels map[string]PublicLabelsValue

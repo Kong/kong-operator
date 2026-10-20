@@ -915,8 +915,82 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			setDataPlaneOptionsDefaults(&tc.input, consts.DefaultDataPlaneImage)
+			setDataPlaneOptionsDefaults(&tc.input, consts.DefaultDataPlaneImage, false)
 			require.Equal(t, tc.expected, tc.input)
+		})
+	}
+}
+
+func TestSetDataPlaneOptionsDefaultsRouteMatchCalculation(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		isHybrid    bool
+		env         []corev1.EnvVar
+		expectedEnv []corev1.EnvVar
+	}{
+		{
+			name: "standard Gateway retains Kong defaults",
+		},
+		{
+			name:        "hybrid Gateway uses corrected route priorities",
+			isHybrid:    true,
+			expectedEnv: []corev1.EnvVar{{Name: "KONG_ROUTE_MATCH_CALCULATION", Value: "strict"}},
+		},
+		{
+			name:     "hybrid Gateway preserves other container settings",
+			isHybrid: true,
+			env:      []corev1.EnvVar{{Name: "KONG_LOG_LEVEL", Value: "debug"}},
+			expectedEnv: []corev1.EnvVar{
+				{Name: "KONG_LOG_LEVEL", Value: "debug"},
+				{Name: "KONG_ROUTE_MATCH_CALCULATION", Value: "strict"},
+			},
+		},
+		{
+			name:        "hybrid Gateway preserves explicit legacy calculation",
+			isHybrid:    true,
+			env:         []corev1.EnvVar{{Name: "KONG_ROUTE_MATCH_CALCULATION", Value: "original"}},
+			expectedEnv: []corev1.EnvVar{{Name: "KONG_ROUTE_MATCH_CALCULATION", Value: "original"}},
+		},
+		{
+			name:     "hybrid Gateway preserves calculation from a configuration reference",
+			isHybrid: true,
+			env: []corev1.EnvVar{{
+				Name: "KONG_ROUTE_MATCH_CALCULATION",
+				ValueFrom: &corev1.EnvVarSource{
+					ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+						Name: "kong-config",
+						Key:  "route-match-calculation",
+					},
+				},
+			}},
+			expectedEnv: []corev1.EnvVar{{
+				Name: "KONG_ROUTE_MATCH_CALCULATION",
+				ValueFrom: &corev1.EnvVarSource{
+					ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+						Name: "kong-config",
+						Key:  "route-match-calculation",
+					},
+				},
+			}},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			opts := operatorv1beta1.DataPlaneOptions{}
+			if tc.env != nil {
+				opts.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{Containers: []corev1.Container{{
+						Name: consts.DataPlaneProxyContainerName,
+						Env:  tc.env,
+					}}},
+				}
+			}
+
+			for range 2 {
+				setDataPlaneOptionsDefaults(&opts, consts.DefaultDataPlaneImage, tc.isHybrid)
+				container := k8sutils.GetPodContainerByName(&opts.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+				require.NotNil(t, container)
+				assert.Equal(t, tc.expectedEnv, container.Env)
+			}
 		})
 	}
 }
@@ -1120,7 +1194,7 @@ func TestProvisionKonnectExtension_ControlPlaneRefNotValid(t *testing.T) {
 				Client: fakeClient,
 			}
 
-			result := reconciler.provisionKonnectExtension(ctx, logger, gateway, konnectControlPlane)
+			result := reconciler.provisionKonnectExtension(ctx, logger, gateway, nil, konnectControlPlane)
 
 			if tc.expectReturnNil {
 				assert.Nil(t, result, "provisionKonnectExtension should return nil")
@@ -1145,6 +1219,69 @@ func TestProvisionKonnectExtension_ControlPlaneRefNotValid(t *testing.T) {
 			} else {
 				assert.Empty(t, extList.Items, "KonnectExtension should be deleted")
 			}
+		})
+	}
+}
+
+func TestReconciler_dataPlaneAdminAPIDisabled(t *testing.T) {
+	const ns = "test-namespace"
+
+	ext := func(ct konnectv1alpha2.KonnectExtensionClusterType) *konnectv1alpha2.KonnectExtension {
+		return &konnectv1alpha2.KonnectExtension{
+			Name: "ext", Namespace: ns,
+			Status: konnectv1alpha2.KonnectExtensionStatus{
+				Konnect: &konnectv1alpha2.KonnectExtensionControlPlaneStatus{ClusterType: ct},
+				Conditions: []metav1.Condition{
+					{Type: konnectv1alpha2.KonnectExtensionReadyConditionType, Status: metav1.ConditionTrue},
+				},
+			},
+		}
+	}
+	dataPlane := func(withExt bool, env ...corev1.EnvVar) *operatorv1beta1.DataPlane {
+		dp := &operatorv1beta1.DataPlane{Name: "dp", Namespace: ns}
+		dp.Spec.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{
+			Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: consts.DataPlaneProxyContainerName, Env: env}}},
+		}
+		if withExt {
+			dp.Spec.Extensions = []commonv1alpha1.ExtensionRef{{
+				Group: konnectv1alpha1.SchemeGroupVersion.Group,
+				Kind:  konnectv1alpha2.KonnectExtensionKind,
+				Name:  "ext",
+			}}
+		}
+		return dp
+	}
+
+	tests := []struct {
+		name           string
+		konnectEnabled bool
+		dp             *operatorv1beta1.DataPlane
+		ext            *konnectv1alpha2.KonnectExtension
+		want           bool
+	}{
+		{name: "no extension", konnectEnabled: true, dp: dataPlane(false), want: false},
+		{name: "hybrid ControlPlane extension", konnectEnabled: true, dp: dataPlane(true), ext: ext(konnectv1alpha2.ClusterTypeControlPlane), want: true},
+		{name: "K8sIngressController extension", konnectEnabled: true, dp: dataPlane(true), ext: ext(konnectv1alpha2.ClusterTypeK8sIngressController), want: false},
+		{
+			name:           "hybrid with user KONG_ADMIN_LISTEN",
+			konnectEnabled: true,
+			dp:             dataPlane(true, corev1.EnvVar{Name: "KONG_ADMIN_LISTEN", Value: "0.0.0.0:8444 ssl"}),
+			ext:            ext(konnectv1alpha2.ClusterTypeControlPlane),
+			want:           false,
+		},
+		{name: "Konnect disabled", konnectEnabled: false, dp: dataPlane(true), ext: ext(konnectv1alpha2.ClusterTypeControlPlane), want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get())
+			if tt.ext != nil {
+				b = b.WithObjects(tt.ext)
+			}
+			r := &Reconciler{Client: b.Build(), KonnectEnabled: tt.konnectEnabled}
+			got, err := r.dataPlaneAdminAPIDisabled(t.Context(), tt.dp)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

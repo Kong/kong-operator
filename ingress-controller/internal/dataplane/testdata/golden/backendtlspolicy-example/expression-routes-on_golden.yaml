@@ -1,0 +1,142 @@
+_format_version: "3.0"
+ca_certificates:
+- cert: |
+    -----BEGIN CERTIFICATE-----
+    MIIDuTCCAqGgAwIBAgIUfHvsTCh+g6amgfAAFgXv5GxoHZIwDQYJKoZIhvcNAQEL
+    BQAwYzELMAkGA1UEBhMCVVMxEzARBgNVBAgMCkNhbGlmb3JuaWExGjAYBgNVBAoM
+    EUtvbmcgR29sZGVuIFRlc3RzMSMwIQYDVQQDDBpiYWNrZW5kdGxzcG9saWN5LXNl
+    Y3JldC1jYTAgFw0yNjEwMDUxNDQ0MTRaGA8yMTI2MDkxMTE0NDQxNFowYzELMAkG
+    A1UEBhMCVVMxEzARBgNVBAgMCkNhbGlmb3JuaWExGjAYBgNVBAoMEUtvbmcgR29s
+    ZGVuIFRlc3RzMSMwIQYDVQQDDBpiYWNrZW5kdGxzcG9saWN5LXNlY3JldC1jYTCC
+    ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALRsp3FqUeoojKODdbN90KDx
+    ghm1oQahbLlTJTAyw9JKNM9ciYiLnNMlR24rYoNHKRhSGAfN3uY4dPhIX+zIUpru
+    WS+srZws8gsv+7qMAK+rsWs3MhdnFafLJ0NxLkHr8aK4GFCzZrNU7VfI6oBkzQ0H
+    38gcevXNj+DsUwehZ0mRz6D1mNhdl4CAjf/tOK/OS4Kp7ccEtBJdKEXGHxHxAixf
+    bLecFpOVGINrzMSh+ZkiCN/8Rc9/glBUtnTkQ3YVCwRTmnpeKvodz2uqWNQ3Itr5
+    A6T+HIaoffcDWR65IKTn2+BCnu+6uhB+oCS4P+q+AMFQOuM9fSURYsRqYravExEC
+    AwEAAaNjMGEwHQYDVR0OBBYEFM9L8y4L2TdChqoFWzu7qdMI4f/aMB8GA1UdIwQY
+    MBaAFM9L8y4L2TdChqoFWzu7qdMI4f/aMA8GA1UdEwEB/wQFMAMBAf8wDgYDVR0P
+    AQH/BAQDAgEGMA0GCSqGSIb3DQEBCwUAA4IBAQBhBQK12heGBVjfuHRTeot3DnVS
+    Hgb6NIt0JZ/REHzsT2ocqJ4PnAd5q9gMXolIv4+YSKWOzGA/nHjtaUcp/g5pa/5q
+    3ywo/6CfYhtD5ytEko3PafrNY5PbiU41AJ0JWpciF6/uobSrkSbzN2f+liU3oe2J
+    ioasfKW71hlozKa3LvwFM7qG+E3WlpkXt7/GrrihJAgYipgH74XFqlb+J7ejCorY
+    eArO74Zj7+2VdbizZ0308Sr0jseN9hqy/Nphpb3Ebb6id1vj4rhUL1q31Jg+t/P3
+    5doqCO2FxbiReZx9Xt1eWNb3ubQ6E8SxwBOoulep9kkr97EVhyaTz43SwasN
+    -----END CERTIFICATE-----
+  id: 8f0b3c1e-2d4a-4b6e-9f7a-1c2d3e4f5a6b
+  tags:
+  - k8s-name:ca-secret
+  - k8s-namespace:default
+  - k8s-kind:Secret
+  - k8s-version:v1
+- cert: |
+    -----BEGIN CERTIFICATE-----
+    MIIDbTCCAlWgAwIBAgIUVqWYdKxXFTJEgfsxg0NLgw8KdW0wDQYJKoZIhvcNAQEL
+    BQAwRTELMAkGA1UEBhMCVVMxEzARBgNVBAgMCkNhbGlmb3JuaWExITAfBgNVBAoM
+    GEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDAgFw0yNDEyMTExNDQ0MDFaGA8zMDI0
+    MDQxMzE0NDQwMVowRTELMAkGA1UEBhMCVVMxEzARBgNVBAgMCkNhbGlmb3JuaWEx
+    ITAfBgNVBAoMGEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDCCASIwDQYJKoZIhvcN
+    AQEBBQADggEPADCCAQoCggEBAKwhV817FJ+krSoQwOu+TBL6wy8UHJO7fC4bv8SI
+    TicWicZxEwUc+jS1hx9qtPlUya//f1va2Ii/Dg7dZpSlvmSKibNNKBq9ebBHQ6d8
+    F8UsjvRLH68gBCkJnpTzonW8ed2k25qlDoQ0Wm897A9B/MxQKtIKG/CcR0zw43uq
+    cCd7+q+XtMZXFiKer9qKNmwoUTrAfIe7Oivh2llLD7OmMdR3hJCHuQyM2Lg7cdJx
+    6HUpdy4oCq9/SVeYtxMJvAxUm88YTbeGfiHVWQCGX2UhYexLE69VvOq1ZH7Ic9YW
+    qu9o4mff3fLAJbkjjWoXdxrZIHJe64yimGzjuxmFLO3EBEcCAwEAAaNTMFEwHQYD
+    VR0OBBYEFFFKo6R1+2xojz3YdW7vvhCsHkVOMB8GA1UdIwQYMBaAFFFKo6R1+2xo
+    jz3YdW7vvhCsHkVOMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEB
+    AIYoKhB/NydPYfVBPw66wJ7KCLoowF+qcVn+P/zSqmjlC5ycpK5toe/BkxPCx0YH
+    ysTC4AGD3oxgNn24Bzkq96GcmwgXLscAOScGRlNzeT2WbVmYBDtqzst6mxbYTLWF
+    bHH1A+PBLfmxBS7oswc03bzayGqaRIHru7FWObhjI4s17BYEP4LQtCBIDU6QpR9a
+    1QV8JwDy2L+EMH80JURii801ZuKK6mzisZQEj4PJZvkYpRovc3a804eRvtk9cjDe
+    TChP2U1pgR5LtkWOWFEehLx7s46f68vlBaMV/zWaPjd52g+3ujfXWLYv7jX/3CAk
+    rewqAvVHqaj7J0YW8dWVRb8=
+    -----END CERTIFICATE-----
+  id: 30e144fd-582a-40f7-956c-1fa34308fa9c
+  tags:
+  - k8s-name:ca-configmap
+  - k8s-namespace:default
+  - k8s-kind:ConfigMap
+  - k8s-version:v1
+services:
+- ca_certificates:
+  - 8f0b3c1e-2d4a-4b6e-9f7a-1c2d3e4f5a6b
+  connect_timeout: 60000
+  host: httproute.default.httproute-backendtlspolicy.1
+  id: 32b1d562-bd0e-5447-b5d5-6a4859b4de14
+  name: httproute.default.httproute-backendtlspolicy.1
+  port: 443
+  protocol: https
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - expression: (http.path == "/httpbin") || (http.path ^= "/httpbin/")
+    https_redirect_status_code: 426
+    id: 3182bdb5-d48c-527f-8d1a-75574fd694c3
+    name: httproute.default.httproute-backendtlspolicy._.1.0
+    preserve_host: true
+    priority: 35184430813183
+    strip_path: false
+    tags:
+    - k8s-name:httproute-backendtlspolicy
+    - k8s-namespace:default
+    - k8s-kind:HTTPRoute
+    - k8s-group:gateway.networking.k8s.io
+    - k8s-version:v1
+    - k8s-named-route-rule:httpbin
+  tags:
+  - k8s-name:httpbin
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-version:v1
+  tls_verify: true
+  write_timeout: 60000
+- ca_certificates:
+  - 30e144fd-582a-40f7-956c-1fa34308fa9c
+  connect_timeout: 60000
+  host: httproute.default.httproute-backendtlspolicy.0
+  id: f1a80280-a7b3-5d7a-b39c-51e00382fefd
+  name: httproute.default.httproute-backendtlspolicy.0
+  port: 1028
+  protocol: https
+  read_timeout: 60000
+  retries: 5
+  routes:
+  - expression: (http.path == "/goecho") || (http.path ^= "/goecho/")
+    https_redirect_status_code: 426
+    id: 9afe6137-3f26-5ebc-a5fb-dc17bd6ccf1a
+    name: httproute.default.httproute-backendtlspolicy._.0.0
+    preserve_host: true
+    priority: 35184422424575
+    strip_path: false
+    tags:
+    - k8s-name:httproute-backendtlspolicy
+    - k8s-namespace:default
+    - k8s-kind:HTTPRoute
+    - k8s-group:gateway.networking.k8s.io
+    - k8s-version:v1
+    - k8s-named-route-rule:goecho
+  tags:
+  - k8s-name:goecho
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-version:v1
+  tls_verify: true
+  tls_verify_depth: 1
+  write_timeout: 60000
+upstreams:
+- algorithm: round-robin
+  host_header: httpbin.example
+  name: httproute.default.httproute-backendtlspolicy.1
+  tags:
+  - k8s-name:httpbin
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-version:v1
+- algorithm: round-robin
+  host_header: goecho.example
+  name: httproute.default.httproute-backendtlspolicy.0
+  tags:
+  - k8s-name:goecho
+  - k8s-namespace:default
+  - k8s-kind:Service
+  - k8s-version:v1

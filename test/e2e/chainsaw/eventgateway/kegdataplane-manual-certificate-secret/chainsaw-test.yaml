@@ -1,0 +1,653 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: kegdataplane-manual-certificate-secret
+spec:
+  description: |
+    Exercises spec.certificateSecret (Manual provisioning) on KegDataPlane: the
+    operator references an existing, user-owned TLS Secret instead of generating its own
+    mTLS client certificate.
+    0. An empty secretRef name is rejected at admission.
+    1. Referenced Secret doesn't exist yet -> CertificateProvisioned=False/SecretRefNotFound,
+       Ready=False/DependenciesNotReady, no KonnectCertificateRegistered condition at all.
+    2. Referenced Secret exists but has no tls.key, a tls.key that doesn't match tls.crt,
+       an expired certificate, or one not valid yet -> CertificateProvisioned=False/InvalidSecret.
+    3. Referenced Secret is fixed to a valid TLS keypair -> KegDataPlane reaches Ready=True,
+       and the Deployment mounts that exact Secret.
+    4. The Secret's content is rotated in place (same name, new keypair) -> the Deployment's
+       pod-template checksum annotation changes, and the KegDataPlane is Ready again.
+    5. Switch to Automatic -> the operator provisions its own Secret and the Deployment is
+       rolled onto it. A Manual reference to that operator-provisioned Secret is rejected
+       (SecretRefOperatorManaged). Switch back to Manual with the user-owned Secret -> the
+       Deployment is rolled back onto it and the Automatic Secret is deleted.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: keg_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: keg_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: backend_cluster_name
+      value: (join('-', [($test_name), 'backend']))
+    - name: virtual_cluster_name
+      value: (join('-', [($test_name), 'vcluster']))
+    - name: listener_name
+      value: (join('-', [($test_name), 'listener']))
+    - name: dns_label
+      value: vcluster-1
+    - name: listener_ports
+      value:
+        - "19092-19095"
+    - name: keg_dp_image
+      value: (env('KEG_DP_IMAGE'))
+    - name: cert_secret_name
+      value: (join('-', [($test_name), 'manual-cert']))
+    - name: cert_hostname
+      value: (join('', [($test_name), '.example.com']))
+    - name: cert_managed_by_label_selector
+      value: gateway-operator.konghq.com/managed-by=keg-dataplane,gateway.konghq.com/secret-provisioning=automatic,konghq.com/keg-dp-cert=true
+  steps:
+    - name: 1-Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: 2-Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: 3-Create-kafka-cluster
+      description: Deploy 3-broker Apache Kafka cluster so the backend cluster bootstrapServers reference is valid.
+      use:
+        template: ../../common/_step_templates/apply-assert-kafka-cluster.yaml
+    - name: 4-Create-konnect-eventgateway
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectEventGateway.yaml
+    - name: 5-Create-backend-cluster
+      use:
+        template: ../../common/_step_templates/apply-assert-eventGatewayBackendCluster.yaml
+    - name: 6-Create-virtual-cluster
+      use:
+        template: ../../common/_step_templates/apply-assert-eventGatewayVirtualCluster.yaml
+    - name: 7-Create-listener
+      use:
+        template: ../../common/_step_templates/apply-assert-eventGatewayListener.yaml
+    - name: 7b-Reject-empty-secretref-name
+      description: An empty secretRef name is rejected at admission (MinLength=1).
+      try:
+        - apply:
+            expect:
+              - check:
+                  (contains($error, 'spec.certificateSecret.secretRef.name')): true
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+                namespace: ($namespace)
+              spec:
+                controlPlaneRef:
+                  type: konnectNamespacedRef
+                  konnectNamespacedRef:
+                    name: ($keg_cp_name)
+                certificateSecret:
+                  provisioning: Manual
+                  secretRef:
+                    name: ""
+    - name: 8-Create-kegdataplane-referencing-missing-secret
+      try:
+        - apply:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+                namespace: ($namespace)
+              spec:
+                controlPlaneRef:
+                  type: konnectNamespacedRef
+                  konnectNamespacedRef:
+                    name: ($keg_cp_name)
+                certificateSecret:
+                  provisioning: Manual
+                  secretRef:
+                    name: ($cert_secret_name)
+                deployment:
+                  replicas: 1
+                  podTemplateSpec:
+                    spec:
+                      containers:
+                        - name: keg
+                          image: ($keg_dp_image)
+                network:
+                  services:
+                    kafka:
+                      type: LoadBalancer
+                      ports:
+                        - name: kafka
+                          port: 9092
+                          targetPort: 9092
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'KonnectEventGatewayResolved']):
+                  - status: 'True'
+                    reason: Resolved
+                (conditions[?type == 'CertificateProvisioned']):
+                  - status: 'False'
+                    reason: SecretRefNotFound
+                (length(conditions[?type == 'KonnectCertificateRegistered'])): 0
+                (conditions[?type == 'Ready']):
+                  - status: 'False'
+                    reason: DependenciesNotReady
+    - name: 9-Create-invalid-secret
+      description: |
+        Type is deliberately Opaque, not kubernetes.io/tls: the apiserver enforces
+        tls.crt+tls.key on kubernetes.io/tls Secrets itself, which would reject this
+        apply before the operator ever saw it.
+      try:
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($cert_secret_name)
+                namespace: ($namespace)
+                labels:
+                  konghq.com/secret: "true"
+              type: Opaque
+              stringData:
+                tls.crt: not-a-real-certificate
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'CertificateProvisioned']):
+                  - status: 'False'
+                    reason: InvalidSecret
+                    (contains(message, 'tls.crt and tls.key must both be present')): true
+                (length(conditions[?type == 'KonnectCertificateRegistered'])): 0
+                (conditions[?type == 'Ready']):
+                  - status: 'False'
+                    reason: DependenciesNotReady
+    - name: 9b-Create-secret-with-mismatched-key
+      description: |
+        tls.crt and tls.key are both valid PEM but come from two different keypairs:
+        they decode fine but don't form a key pair, so the Secret must still be rejected.
+      try:
+        - script:
+            env:
+              - name: HOSTNAME
+                value: ($cert_hostname)
+            content: |
+              bash ../../common/scripts/generate_tls_certificate.sh
+            outputs:
+              - name: mismatched_cert
+                value: (json_parse($stdout).cert)
+        - script:
+            env:
+              - name: HOSTNAME
+                value: ($cert_hostname)
+            content: |
+              bash ../../common/scripts/generate_tls_certificate.sh
+            outputs:
+              - name: mismatched_key
+                value: (json_parse($stdout).key)
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($cert_secret_name)
+                namespace: ($namespace)
+                labels:
+                  konghq.com/secret: "true"
+              type: Opaque
+              stringData:
+                tls.crt: ($mismatched_cert)
+                tls.key: ($mismatched_key)
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'CertificateProvisioned']):
+                  - status: 'False'
+                    reason: InvalidSecret
+                    (contains(message, 'do not form a valid key pair')): true
+                (length(conditions[?type == 'KonnectCertificateRegistered'])): 0
+    - name: 9c-Create-secret-with-expired-certificate
+      description: |
+        A matching keypair whose certificate expired (valid 2020-01-01 to 2020-01-02):
+        it can never authenticate to Konnect, so the Secret must be rejected.
+      try:
+        - script:
+            env:
+              - name: HOSTNAME
+                value: ($cert_hostname)
+              - name: EXPIRED
+                value: "true"
+            content: |
+              bash ../../common/scripts/generate_tls_certificate.sh
+            outputs:
+              - name: expired_cert
+                value: (json_parse($stdout).cert)
+              - name: expired_key
+                value: (json_parse($stdout).key)
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($cert_secret_name)
+                namespace: ($namespace)
+                labels:
+                  konghq.com/secret: "true"
+              type: Opaque
+              stringData:
+                tls.crt: ($expired_cert)
+                tls.key: ($expired_key)
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'CertificateProvisioned']):
+                  - status: 'False'
+                    reason: InvalidSecret
+                    (contains(message, 'certificate expired at')): true
+                (length(conditions[?type == 'KonnectCertificateRegistered'])): 0
+    - name: 9d-Create-secret-with-not-yet-valid-certificate
+      description: |
+        A matching keypair whose certificate is not valid yet (valid from 2099-01-01):
+        it can't authenticate to Konnect until then, so the Secret must be rejected.
+      try:
+        - script:
+            env:
+              - name: HOSTNAME
+                value: ($cert_hostname)
+              - name: NOT_YET_VALID
+                value: "true"
+            content: |
+              bash ../../common/scripts/generate_tls_certificate.sh
+            outputs:
+              - name: not_yet_valid_cert
+                value: (json_parse($stdout).cert)
+              - name: not_yet_valid_key
+                value: (json_parse($stdout).key)
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($cert_secret_name)
+                namespace: ($namespace)
+                labels:
+                  konghq.com/secret: "true"
+              type: Opaque
+              stringData:
+                tls.crt: ($not_yet_valid_cert)
+                tls.key: ($not_yet_valid_key)
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'CertificateProvisioned']):
+                  - status: 'False'
+                    reason: InvalidSecret
+                    (contains(message, 'certificate not valid before')): true
+                (length(conditions[?type == 'KonnectCertificateRegistered'])): 0
+    - name: 10-Fix-secret-with-valid-certificate
+      try:
+        - script:
+            env:
+              - name: HOSTNAME
+                value: ($cert_hostname)
+            content: |
+              bash ../../common/scripts/generate_tls_certificate.sh
+            outputs:
+              - name: cert_data
+                value: (json_parse($stdout).cert)
+              - name: key_data
+                value: (json_parse($stdout).key)
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($cert_secret_name)
+                namespace: ($namespace)
+                labels:
+                  konghq.com/secret: "true"
+              type: Opaque
+              stringData:
+                tls.crt: ($cert_data)
+                tls.key: ($key_data)
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'CertificateProvisioned']):
+                  - status: 'True'
+                    reason: CertificateProvisioned
+                (conditions[?type == 'KonnectCertificateRegistered']):
+                  - status: 'True'
+                    reason: KonnectCertificateRegistered
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+                    reason: Ready
+                (readyReplicas > `0`): true
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ($keg_dp_name)
+                namespace: ($namespace)
+              spec:
+                template:
+                  spec:
+                    (volumes[?name == 'konnect-cert']):
+                      - secret:
+                          secretName: ($cert_secret_name)
+    - name: 11-Rotate-secret-in-place-and-assert-rollout
+      description: |
+        Same Secret name, brand new keypair: nothing about the KegDataPlane spec or the
+        Secret's name changes. Capturing the checksum, rotating, and asserting it changed
+        must all happen within this one step: Chainsaw scopes a script's `outputs` to the
+        step's own try: list.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DEPLOYMENT_NAME
+                value: ($keg_dp_name)
+              - name: ANNOTATION_KEY
+                value: konghq.com/keg-dp-cert-checksum
+            content: |
+              bash ../../common/scripts/get_deployment_pod_annotation.sh
+            outputs:
+              - name: checksum_before
+                value: (json_parse($stdout).value)
+        - script:
+            env:
+              - name: HOSTNAME
+                value: ($cert_hostname)
+            content: |
+              bash ../../common/scripts/generate_tls_certificate.sh
+            outputs:
+              - name: cert_data_v2
+                value: (json_parse($stdout).cert)
+              - name: key_data_v2
+                value: (json_parse($stdout).key)
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($cert_secret_name)
+                namespace: ($namespace)
+                labels:
+                  konghq.com/secret: "true"
+              type: Opaque
+              stringData:
+                tls.crt: ($cert_data_v2)
+                tls.key: ($key_data_v2)
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DEPLOYMENT_NAME
+                value: ($keg_dp_name)
+              - name: ANNOTATION_KEY
+                value: konghq.com/keg-dp-cert-checksum
+              - name: BEFORE_VALUE
+                value: ($checksum_before)
+            content: |
+              bash ../../common/scripts/wait_for_deployment_pod_annotation_change.sh
+        # Wait for the rollout to complete, so the Ready assertion below can't be
+        # satisfied by the status from before the rollout started.
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ($keg_dp_name)
+                namespace: ($namespace)
+              (status.observedGeneration == metadata.generation): true
+              (status.updatedReplicas == spec.replicas): true
+              (status.readyReplicas == spec.replicas): true
+              (status.replicas == spec.replicas): true
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+                    reason: Ready
+                (readyReplicas > `0`): true
+    - name: 12-Switch-Automatic-then-back-to-Manual
+      description: |
+        secretRef must be explicitly nulled out when switching to Automatic:
+        server-side-apply only prunes an omitted field if the same field manager that
+        set it now omits it. The Automatic Secret's name is captured and checked in this
+        same step because Chainsaw scopes script outputs to the step.
+      try:
+        - patch:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+                namespace: ($namespace)
+              spec:
+                certificateSecret:
+                  provisioning: Automatic
+                  secretRef: null
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: secrets
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: LABEL_SELECTOR
+                value: ($cert_managed_by_label_selector)
+            content: |
+              bash ../../common/scripts/get_single_resource_name.sh
+            outputs:
+              - name: automatic_cert_secret_name
+                value: (json_parse($stdout).name)
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ($keg_dp_name)
+                namespace: ($namespace)
+              spec:
+                template:
+                  spec:
+                    (volumes[?name == 'konnect-cert']):
+                      - secret:
+                          secretName: ($automatic_cert_secret_name)
+        # Wait for the rollout to complete, so the Ready assertion below can't be
+        # satisfied by the status from before the rollout started.
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ($keg_dp_name)
+                namespace: ($namespace)
+              (status.observedGeneration == metadata.generation): true
+              (status.updatedReplicas == spec.replicas): true
+              (status.readyReplicas == spec.replicas): true
+              (status.replicas == spec.replicas): true
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+                    reason: Ready
+                (readyReplicas > `0`): true
+        # A Manual reference to the operator-provisioned Secret is rejected, and the
+        # Deployment keeps mounting it.
+        - patch:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+                namespace: ($namespace)
+              spec:
+                certificateSecret:
+                  provisioning: Manual
+                  secretRef:
+                    name: ($automatic_cert_secret_name)
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'CertificateProvisioned']):
+                  - status: 'False'
+                    reason: SecretRefOperatorManaged
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ($keg_dp_name)
+                namespace: ($namespace)
+              spec:
+                template:
+                  spec:
+                    (volumes[?name == 'konnect-cert']):
+                      - secret:
+                          secretName: ($automatic_cert_secret_name)
+        - patch:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+                namespace: ($namespace)
+              spec:
+                certificateSecret:
+                  provisioning: Manual
+                  secretRef:
+                    name: ($cert_secret_name)
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ($keg_dp_name)
+                namespace: ($namespace)
+              spec:
+                template:
+                  spec:
+                    (volumes[?name == 'konnect-cert']):
+                      - secret:
+                          secretName: ($cert_secret_name)
+        # Wait for the rollout to complete, so the Ready assertion below can't be
+        # satisfied by the status from before the rollout started.
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ($keg_dp_name)
+                namespace: ($namespace)
+              (status.observedGeneration == metadata.generation): true
+              (status.updatedReplicas == spec.replicas): true
+              (status.readyReplicas == spec.replicas): true
+              (status.replicas == spec.replicas): true
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+                    reason: Ready
+                (readyReplicas > `0`): true
+        # Once the rollout onto the Manual Secret completed, the Automatic Secret must be deleted.
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: secrets
+              - name: RESOURCE_NAME
+                value: ($automatic_cert_secret_name)
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              bash ../../common/scripts/wait_for_resource_deleted.sh
+        # The user-owned Secret is never touched.
+        - assert:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($cert_secret_name)
+                namespace: ($namespace)
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: kegdataplane-manual-certificate-secret
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

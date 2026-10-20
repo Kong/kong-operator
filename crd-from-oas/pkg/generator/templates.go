@@ -103,9 +103,26 @@ type {{.EntityName}}Spec struct {
 {{- else}}
 {{- with .ImmediateParentDependency}}
 	// {{.FieldName}} is the reference to the parent {{.EntityName}} object.
+{{- if $.GatewayRef}}
+	// This field is deprecated, use {{$.GatewayRef.JSONFieldName}} instead. Exactly one of
+	// {{.JSONName}} and {{$.GatewayRef.JSONFieldName}} must be set.
+	//
+	// +optional
+{{- else}}
 	//
 	// +required
+{{- end}}
 	{{.FieldName}} {{objectRefTypeName}} ` + "`" + `json:"{{.JSONName}},omitzero"` + "`" + `
+{{- end}}
+{{- with .GatewayRef}}
+
+	// {{.GoFieldName}} is the reference to the gateway (control plane) this object
+	// belongs to. Supported kinds: {{.KonnectKind}}{{range .AdditionalKinds}}, {{.Kind}}{{end}}.
+	// Exactly one of {{.LegacyJSONFieldName}} and {{.JSONFieldName}} must be set.
+	//
+	// +optional
+	// {{.FieldXValidation}}
+	{{.GoFieldName}} *{{.TypeName}} ` + "`" + `json:"{{.JSONFieldName}},omitempty"` + "`" + `
 {{- end}}
 {{- end}}
 {{- range .Associations}}
@@ -148,11 +165,20 @@ type {{.EntityName}}APISpec struct {
 	//
 	// +optional
 	*{{.EntityName}}Config ` + "`" + `json:",inline"` + "`" + `
+{{- range .References}}
+{{- if .OptionalRef}}
+
+{{formatComment .Description}}
+	//
+	// +optional
+	{{.GoFieldName}} {{.TypeName}} ` + "`" + `json:"{{.JSONFieldName}},omitzero"` + "`" + `
+{{- end}}
+{{- end}}
 {{- else}}
 {{- range $i, $prop := .Schema.Properties}}
 {{- if not (skipProperty $prop)}}
 {{- if not (isParentRefReplacedField $prop.Name)}}
-{{formatComment $prop.Description}}
+{{formatComment (propDescription $prop)}}
 	//
 {{- range kubebuilderTags $prop}}
 	// {{.}}
@@ -173,6 +199,71 @@ type {{.EntityName}}APISpec struct {
 {{- end}}
 {{- end}}
 }
+{{- if hasRootOneOf .Schema}}
+{{- $hasRootRefs := false}}
+{{- range .References}}{{if .OptionalRef}}{{$hasRootRefs = true}}{{end}}{{end}}
+{{- if $hasRootRefs}}
+
+// MarshalJSON preserves the root union and its sibling references.
+func (s {{.EntityName}}APISpec) MarshalJSON() ([]byte, error) {
+	var payload map[string]json.RawMessage
+	if s.{{.EntityName}}Config != nil {
+		data, err := json.Marshal(s.{{.EntityName}}Config)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(data, &payload); err != nil {
+			return nil, err
+		}
+	} else {
+		payload = map[string]json.RawMessage{}
+	}
+{{- range .References}}
+{{- if .OptionalRef}}
+	if s.{{.GoFieldName}}.Name != "" {
+		data, err := json.Marshal(s.{{.GoFieldName}})
+		if err != nil {
+			return nil, err
+		}
+		payload["{{.JSONFieldName}}"] = data
+	}
+{{- end}}
+{{- end}}
+	return json.Marshal(payload)
+}
+
+// UnmarshalJSON decodes the root union and its sibling references.
+func (s *{{.EntityName}}APISpec) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling {{.EntityName}}APISpec: nil receiver")
+	}
+	var config {{.EntityName}}Config
+	if err := json.Unmarshal(data, &config); err != nil {
+		return err
+	}
+	var refs struct {
+{{- range .References}}
+{{- if .OptionalRef}}
+		{{.GoFieldName}} {{.TypeName}} ` + "`" + `json:"{{.JSONFieldName}}"` + "`" + `
+{{- end}}
+{{- end}}
+	}
+	if err := json.Unmarshal(data, &refs); err != nil {
+		return err
+	}
+	s.{{.EntityName}}Config = &config
+	if config.Type == "" {
+		s.{{.EntityName}}Config = nil
+	}
+{{- range .References}}
+{{- if .OptionalRef}}
+	s.{{.GoFieldName}} = refs.{{.GoFieldName}}
+{{- end}}
+{{- end}}
+	return nil
+}
+{{- end}}
+{{- end}}
 
 // {{.EntityName}}Status defines the observed state of {{.EntityName}}.
 type {{.EntityName}}Status struct {
@@ -440,14 +531,27 @@ func (obj *{{.EntityName}}) SetParentID(id string) {
 {{- else}}
 
 // Get{{.RootRefDependency.EntityName}}Ref returns the reference to the root {{.RootRefDependency.EntityName}}.
+{{- with .GatewayRef}}
+// It is taken from spec.{{.JSONFieldName}} when set, and from the deprecated
+// spec.{{.LegacyJSONFieldName}} otherwise.
+{{- end}}
 func (obj *{{.EntityName}}) Get{{.RootRefDependency.EntityName}}Ref() {{.RootRefTypeName}} {
+{{- with .GatewayRef}}
+	if ref := obj.Spec.{{.GoFieldName}}; ref != nil {
+		return ref.ToObjectRef()
+	}
+{{- end}}
 	return obj.Spec.{{.RootRefDependency.FieldName}}
 }
 {{- if and .RootRefAccessorEntityName (ne .RootRefAccessorEntityName .RootRefDependency.EntityName)}}
 
 // Get{{.RootRefAccessorEntityName}}Ref returns the reference to the root {{.RootRefAccessorEntityName}}.
 func (obj *{{.EntityName}}) Get{{.RootRefAccessorEntityName}}Ref() {{.RootRefTypeName}} {
+{{- if .GatewayRef}}
+	return obj.Get{{.RootRefDependency.EntityName}}Ref()
+{{- else}}
 	return obj.Spec.{{.RootRefDependency.FieldName}}
+{{- end}}
 }
 {{- end}}
 
@@ -461,9 +565,37 @@ func (obj *{{.EntityName}}) GetParentRef() {{.RootRefTypeName}} {
 }
 
 // SetParentRef sets the reference to the parent entity.
+{{- with .GatewayRef}}
+// When spec.{{.JSONFieldName}} is set and ref is a namespaced reference, only
+// its name and namespace are updated, so the kind of the referenced gateway is
+// kept. Otherwise it sets the deprecated spec.{{.LegacyJSONFieldName}} and clears
+// spec.{{.JSONFieldName}}.
+// A Konnect ID can only be held by spec.{{.LegacyJSONFieldName}}: on an object
+// already using spec.{{.JSONFieldName}}, the API server rejects that change.
+{{- end}}
 func (obj *{{.EntityName}}) SetParentRef(ref {{.RootRefTypeName}}) {
+{{- with .GatewayRef}}
+	if parentRef := obj.Spec.{{.GoFieldName}}; parentRef != nil && ref.NamespacedRef != nil {
+		parentRef.Name = ref.NamespacedRef.Name
+		parentRef.Namespace = ref.NamespacedRef.DeepCopy().Namespace
+		return
+	}
+	obj.Spec.{{.GoFieldName}} = nil
+{{- end}}
 	obj.Spec.{{.RootRefDependency.FieldName}} = ref
 }
+{{- with .GatewayRef}}
+{{- if .AdditionalKinds}}
+
+// SkipKonnectReconciliation reports whether the entity references a gateway
+// other than a {{.KonnectKind}}: such entities are not managed by the
+// Konnect reconciler.
+func (obj *{{$.EntityName}}) SkipKonnectReconciliation() bool {
+	ref := obj.Spec.{{.GoFieldName}}
+	return ref != nil && !ref.IsGroupKind("{{.KonnectGroup}}", "{{.KonnectKind}}")
+}
+{{- end}}
+{{- end}}
 
 // SetParentID sets the Konnect ID of the immediate parent entity.
 func (obj *{{.EntityName}}) SetParentID(id string) {
@@ -476,6 +608,17 @@ func (obj *{{.EntityName}}) GetParentGVK() schema.GroupVersionKind {
 {{- if .ParentRefCustomTypeName}}
 	return obj.Spec.{{.ParentRefGoFieldName}}.ParentGVK()
 {{- else}}
+{{- with .GatewayRef}}
+	{{- range .AdditionalKinds}}
+	if ref := obj.Spec.{{$.GatewayRef.GoFieldName}}; ref != nil && ref.IsGroupKind("{{.Group}}", "{{.Kind}}") {
+		return schema.GroupVersionKind{
+			Group:   "{{.Group}}",
+			Version: "{{.Version}}",
+			Kind:    "{{.Kind}}",
+		}
+	}
+	{{- end}}
+{{- end}}
 	return schema.GroupVersionKind{
 		Group:   "{{.ParentGroup}}",
 		Version: {{if .ParentEntityVersion}}"{{.ParentEntityVersion}}"{{else}}GroupVersion.Version{{end}},
@@ -1185,6 +1328,12 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 			}
 			return nil, fmt.Errorf("failed to get referenced {{.DefaultKind}} %s/%s: %w", ns, name, err)
 		}
+{{- if index .SkipsKonnectReconciliation .DefaultKind}}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			return nil, ReferenceNotKonnectManagedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name}
+		}
+{{- end}}
 {{- if .SameParentRefField}}
 		// Same-type references embed the referenced object's Konnect ID in a
 		// request scoped to the referrer's parent, so both objects must belong
@@ -1235,9 +1384,19 @@ func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) {{if .Nest
 {{- else}}
 	var refs []{{.TypeName}}
 {{- end}}
+{{- range .ArmChecks}}
+	if {{.}} {
+		return nil
+	}
+{{- end}}
 	for i := range {{.ArrayPath}} {
 {{- range .ElementGuardExprs}}
 		if {{$ref.ArrayPath}}[i].{{.}} == nil {
+			continue
+		}
+{{- end}}
+{{- range .ElementArmChecks}}
+		if {{$ref.ArrayPath}}[i].{{.}} {
 			continue
 		}
 {{- end}}
@@ -1246,6 +1405,16 @@ func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) {{if .Nest
 			continue
 		}
 		refs = append(refs, {{.ArrayPath}}[i].{{.ArrayLeafPath}})
+{{- else if .UnionMemberGoName}}
+{{- if .ArrayLeafPointer}}
+		if {{.ArrayPath}}[i].{{.ArrayLeafPath}} == nil {
+			continue
+		}
+{{- end}}
+		if {{.ArrayPath}}[i].{{.ArrayLeafPath}}.{{.UnionMemberGoName}} == nil {
+			continue
+		}
+		refs = append(refs, *{{.ArrayPath}}[i].{{.ArrayLeafPath}}.{{.UnionMemberGoName}})
 {{- else if .ArrayLeafPointer}}
 		if {{.ArrayPath}}[i].{{.ArrayLeafPath}} == nil {
 			continue
@@ -1265,6 +1434,11 @@ func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) {{if .Nest
 		return nil
 	}
 {{- end}}
+{{- end}}
+{{- range .ArmChecks}}
+	if {{.}} {
+		return nil
+	}
 {{- end}}
 {{- if and .UnionMemberGoName .SingleValueObjectRef}}
 	if {{$path}}.{{.UnionMemberGoName}} == nil {
@@ -1342,6 +1516,13 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 				errs = append(errs, fmt.Errorf("failed to get referenced {{.}} %s/%s: %w", ns, ref.Name, err))
 				continue
 			}
+{{- if index $ref.SkipsKonnectReconciliation .}}
+			// An object the Konnect reconciler does not manage never gets a Konnect ID.
+			if referenced.SkipKonnectReconciliation() {
+				errs = append(errs, ReferenceNotKonnectManagedError{Kind: "{{.}}", Namespace: ns, Name: ref.Name})
+				continue
+			}
+{{- end}}
 			konnectID = referenced.GetKonnectID()
 			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 				errs = append(errs, ReferenceDifferentGatewayError{Kind: "{{.}}", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
@@ -1372,6 +1553,37 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 			errs = append(errs, fmt.Errorf("failed to get referenced {{.DefaultKind}} %s/%s: %w", ns, ref.Name, err))
 			continue
 		}
+{{- if .SameTypeRef}}
+		if ns == obj.GetNamespace() && ref.Name == obj.GetName() {
+			errs = append(errs, ReferenceSelfError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
+			continue
+		}
+{{- if .SameParentRefField}}
+		if {{$.ObjectRefTypePrefix}}ObjectRefsDiffer(obj.Spec.{{.SameParentRefField}}, referenced.Spec.{{.SameParentRefField}}, obj.GetNamespace(), ns) {
+			errs = append(errs, ReferenceDifferentParentError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name, ParentKind: "{{.SameParentRefKind}}"})
+			continue
+		}
+{{- end}}
+{{- if .SameParentIDGetter}}
+		if id := obj.{{.SameParentIDGetter}}(); id != "" && referenced.{{.SameParentIDGetter}}() != "" && id != referenced.{{.SameParentIDGetter}}() {
+			errs = append(errs, ReferenceDifferentParentError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name, ParentKind: "{{.SameParentRefKind}}"})
+			continue
+		}
+{{- end}}
+{{- end}}
+{{- if .RequiredAPISpecType}}
+		if referenced.Spec.APISpec.{{.DefaultKind}}Config == nil || string(referenced.Spec.APISpec.Type) != "{{.RequiredAPISpecType}}" {
+			errs = append(errs, fmt.Errorf("{{.DefaultKind}} %s/%s must have apiSpec.type {{.RequiredAPISpecType}}", ns, ref.Name))
+			continue
+		}
+{{- end}}
+{{- if index .SkipsKonnectReconciliation .DefaultKind}}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
+			continue
+		}
+{{- end}}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
@@ -1380,7 +1592,7 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 		// The resolved value replaces {{.InjectInto}}: {{.DefaultKind}} objects
 		// being deleted must not gain new users, which could keep their deletion
 		// blocked.
-		if !referenced.GetDeletionTimestamp().IsZero() {
+		if !referenced.GetDeletionTimestamp().IsZero(){{if .SameTypeRef}} && obj.GetKonnectID() == ""{{end}} {
 			errs = append(errs, ReferenceBeingDeletedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
 			continue
 		}
@@ -1422,14 +1634,16 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 {{- end}}
 {{- end}}
 {{- range .References}}
-{{- if .ReverseWatch}}
+{{- if .ReverseWatchRefsExprs}}
+{{- $kind := .DefaultKind}}
 
 // {{$.EntityName}}RefsTo{{.DefaultKind}} returns the keys of the {{.DefaultKind}}
-// objects obj references through {{.Path}}, with the default namespace applied.
+// objects obj references through {{range $i, $p := .ReverseWatchPaths}}{{if $i}}, {{end}}{{$p}}{{end}}, with the default namespace applied.
 func {{$.EntityName}}RefsTo{{.DefaultKind}}(obj *{{$.EntityName}}) []client.ObjectKey {
 	var keys []client.ObjectKey
-	for _, ref := range {{.RefsExpr}} {
-		if ref.Kind != "" && ref.Kind != "{{.DefaultKind}}" {
+{{- range .ReverseWatchRefsExprs}}
+	for _, ref := range {{.}} {
+		if ref.Kind != "" && ref.Kind != "{{$kind}}" {
 			continue
 		}
 		ns := ref.Namespace
@@ -1438,6 +1652,7 @@ func {{$.EntityName}}RefsTo{{.DefaultKind}}(obj *{{$.EntityName}}) []client.Obje
 		}
 		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
 	}
+{{- end}}
 	return keys
 }
 
@@ -1580,8 +1795,13 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 		if err != nil {
 			return nil, fmt.Errorf("resolving {{.RefPath}} references: %w", err)
 		}
+{{- if $inj.UnionMemberKey}}
+		rewritten{{.ResolverName}} := 0
+		if arr, ok := {{$inj.TargetVar}}["{{$inj.ArrayKey}}"].([]any); ok {
+{{- else}}
 		if arr, ok := {{$inj.TargetVar}}["{{$inj.ArrayKey}}"].([]any); ok {
 			ri := 0
+{{- end}}
 			for _, e := range arr {
 				el, ok := e.(map[string]any)
 				if !ok {
@@ -1595,6 +1815,20 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 				}
 {{- $lp = .Var}}
 {{- end}}
+{{- if $inj.UnionMemberKey}}
+				leaf, ok := {{$lp}}["{{.LeafSDKKey}}"].(map[string]any)
+				if !ok {
+					continue
+				}
+				if _, has := leaf["{{$inj.UnionMemberKey}}"]; !has {
+					continue
+				}
+				if rewritten{{.ResolverName}} >= len(resolved{{.ResolverName}}) {
+					return nil, fmt.Errorf("resolving {{.RefPath}} references: more references set than the %d resolved", len(resolved{{.ResolverName}}))
+				}
+				{{$lp}}["{{.LeafSDKKey}}"] = map[string]any{"{{$inj.ObjectWrapKey}}": resolved{{.ResolverName}}[rewritten{{.ResolverName}}]}
+				rewritten{{.ResolverName}}++
+{{- else}}
 				if _, has := {{$lp}}["{{.LeafSDKKey}}"]; !has {
 					continue
 				}
@@ -1602,8 +1836,16 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 					{{$lp}}["{{.LeafSDKKey}}"] = resolved{{.ResolverName}}[ri]
 					ri++
 				}
+{{- end}}
 			}
 		}
+{{- if $inj.UnionMemberKey}}
+		// Every resolved reference must have been rewritten: a mismatch means
+		// the references and the payload disagree on which items carry one.
+		if rewritten{{.ResolverName}} != len(resolved{{.ResolverName}}) {
+			return nil, fmt.Errorf("resolving {{.RefPath}} references: %d resolved but %d set in the payload", len(resolved{{.ResolverName}}), rewritten{{.ResolverName}})
+		}
+{{- end}}
 {{- end}}
 {{- else if .ObjectWrap}}
 {{- range .Variants}}
@@ -1622,8 +1864,8 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 			return nil, fmt.Errorf("resolving {{.RefPath}} references: %w", err)
 		}
 {{- if $inj.UnionMemberArray}}
+		rewritten{{.ResolverName}} := 0
 		if arr, ok := {{$inj.TargetVar}}["{{.LeafSDKKey}}"].([]any); ok {
-			ri := 0
 			for i, e := range arr {
 				el, ok := e.(map[string]any)
 				if !ok {
@@ -1632,16 +1874,26 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 				if _, has := el["{{$inj.UnionMemberKey}}"]; !has {
 					continue
 				}
-				if ri >= len(resolved{{.ResolverName}}) {
+				if rewritten{{.ResolverName}} >= len(resolved{{.ResolverName}}) {
 					return nil, fmt.Errorf("resolving {{.RefPath}} references: more references set than the %d resolved", len(resolved{{.ResolverName}}))
 				}
-				arr[i] = map[string]any{"{{$inj.ObjectWrapKey}}": resolved{{.ResolverName}}[ri]}
-				ri++
+				arr[i] = map[string]any{"{{$inj.ObjectWrapKey}}": resolved{{.ResolverName}}[rewritten{{.ResolverName}}]}
+				rewritten{{.ResolverName}}++
 			}
 		}
+		// Every resolved reference must have been rewritten: a mismatch means
+		// the references and the payload disagree on which items carry one.
+		if rewritten{{.ResolverName}} != len(resolved{{.ResolverName}}) {
+			return nil, fmt.Errorf("resolving {{.RefPath}} references: %d resolved but %d set in the payload", len(resolved{{.ResolverName}}), rewritten{{.ResolverName}})
+		}
 {{- else}}
-		if el, ok := {{$inj.TargetVar}}["{{.LeafSDKKey}}"].(map[string]any); ok && len(resolved{{.ResolverName}}) > 0 {
+		if el, ok := {{$inj.TargetVar}}["{{.LeafSDKKey}}"].(map[string]any); ok {
 			if _, has := el["{{$inj.UnionMemberKey}}"]; has {
+				// The reference is set in the payload: it must have resolved,
+				// or it would reach Konnect unresolved.
+				if len(resolved{{.ResolverName}}) == 0 {
+					return nil, fmt.Errorf("resolving {{.RefPath}} references: reference set in the payload but not resolved")
+				}
 				{{$inj.TargetVar}}["{{.LeafSDKKey}}"] = map[string]any{"{{$inj.ObjectWrapKey}}": resolved{{.ResolverName}}[0]}
 			}
 		}
@@ -1923,6 +2175,13 @@ func (s *{{$.EntityName}}APISpec) selectedSDKOpsPayload(payload map[string]any) 
 	selected = flattenSDKUnions(selected)
 	{{- end}}
 	if selectedMap, ok := selected.(map[string]any); ok {
+{{- range $.References}}
+{{- if .OptionalRef}}
+		if value, ok := payload["{{.InjectIntoSDKJSONFieldName}}"]; ok {
+			selectedMap["{{.InjectIntoSDKJSONFieldName}}"] = value
+		}
+{{- end}}
+{{- end}}
 		if typeValue, ok := payload["type"]; ok {
 			if _, hasType := selectedMap["type"]; !hasType {
 				withType := make(map[string]any)
@@ -2023,6 +2282,7 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 	}, nil
 {{- else}}
 	{{$importAlias := .ImportAlias}}
+	{{- if $.UpdateUsesPayloadTarget}}
 	var selected map[string]any
 	if err := json.Unmarshal(data, &selected); err != nil {
 		return nil, fmt.Errorf("failed to decode selected {{$.EntityName}} config: %w", err)
@@ -2031,6 +2291,7 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 	if err := json.Unmarshal(data, &target); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal into {{.TypeName}}: %w", err)
 	}
+	{{- end}}
 	switch variant {
 {{- range $.Variants}}
 	case "{{.FieldName}}":
@@ -2095,6 +2356,18 @@ func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Clie
 	if err != nil {
 		return nil, err
 	}
+{{- range $.References}}
+{{- if .OptionalRef}}
+resolved{{.GoResolverName}}, err := resolve{{$.EntityName}}{{.GoResolverName}}(ctx, cl, obj)
+if err != nil {
+	return nil, fmt.Errorf("resolving {{.Path}} references: %w", err)
+}
+delete(payload, "{{.SDKJSONFieldName}}")
+if len(resolved{{.GoResolverName}}) > 0 {
+	payload["{{.InjectIntoSDKJSONFieldName}}"] = resolved{{.GoResolverName}}[0]
+}
+{{- end}}
+{{- end}}
 {{- template "sdkOpsRefInjections" $}}
 	return spec.{{.FromPayloadMethodName}}(payload)
 {{- else}}
@@ -2153,7 +2426,7 @@ const opsControllerTestTemplate = sharedGeneratedFilePreamble + `
 package ops
 
 import (
-{{- if .AssertsInjectInto}}
+{{- if .NeedsJSON}}
 	"encoding/json"
 {{- end}}
 	"errors"
@@ -2236,6 +2509,9 @@ func TestCreate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 	expectedRequest, err := obj.Spec.APISpec.{{.Create.CreateReqMethod}}()
 {{- end}}
 	require.NoError(t, err)
+{{- if and .RootUnion .RootUnion.ExpectedPayloadCheck}}
+{{.RootUnion.ExpectedPayloadCheck}}
+{{- end}}
 {{- $reqBody := "expectedRequest"}}{{if and .Create.CreateFullyWrapped .Create.CreateBodyField}}{{$reqBody = printf "expectedRequest.%s" .Create.CreateBodyField}}{{end}}
 {{- if .AssertsInjectInto}}
 	{
@@ -4221,6 +4497,11 @@ type ReferenceBeingDeletedError = commonv1alpha1.ReferenceBeingDeletedError
 // namespace. Cross-namespace references are rejected until explicit
 // cross-namespace support and authorization checks are implemented.
 type ReferenceCrossNamespaceError = commonv1alpha1.ReferenceCrossNamespaceError
+
+// ReferenceNotKonnectManagedError is returned when a reference points to a CR
+// the Konnect reconciler does not manage, e.g. one attached to an on-prem
+// gateway.
+type ReferenceNotKonnectManagedError = commonv1alpha1.ReferenceNotKonnectManagedError
 
 // ReferenceDifferentGatewayError is returned when a reference points to a CR
 // programmed under a different AIGatewayControlPlane. References must stay

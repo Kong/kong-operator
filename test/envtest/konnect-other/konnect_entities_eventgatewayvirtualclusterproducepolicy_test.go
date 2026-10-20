@@ -112,7 +112,7 @@ func TestEventGatewayVirtualClusterProducePolicy(t *testing.T) {
 			initialDescription,
 			initialHeaderValue,
 		)
-		expectedCreateRequest, err := policy.Spec.APISpec.ToCreateEventGatewayVirtualClusterProducePolicyRequest()
+		expectedCreateRequest, err := policy.ToCreateEventGatewayVirtualClusterProducePolicyRequest(ctx, clientNamespaced)
 		require.NoError(t, err)
 		expectedCreateRequest.GatewayID = gatewayID
 		expectedCreateRequest.VirtualClusterID = virtualClusterID
@@ -174,7 +174,7 @@ func TestEventGatewayVirtualClusterProducePolicy(t *testing.T) {
 		policyToPatch := policy.DeepCopy()
 		policyToPatch.Spec.APISpec.ModifyHeadersPolicyCreate.Description = updatedDescription
 		policyToPatch.Spec.APISpec.ModifyHeadersPolicyCreate.Config.Actions[0].Set.Value = updatedHeaderValue
-		expectedUpdateRequest, err := policyToPatch.Spec.APISpec.ToUpdateEventGatewayVirtualClusterProducePolicyRequest()
+		expectedUpdateRequest, err := policyToPatch.ToUpdateEventGatewayVirtualClusterProducePolicyRequest(ctx, clientNamespaced)
 		require.NoError(t, err)
 		expectedUpdateRequest.GatewayID = gatewayID
 		expectedUpdateRequest.VirtualClusterID = virtualClusterID

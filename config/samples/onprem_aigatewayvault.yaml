@@ -1,0 +1,87 @@
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongLicense
+metadata:
+  name: kong-license
+enabled: true
+rawLicenseString: |
+  <paste your Kong license payload here>
+---
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: OnPremAIGateway
+metadata:
+  name: ai-gw-cp-onprem-1
+  namespace: default
+spec: {}
+---
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: AIGatewayDataPlane
+metadata:
+  name: ai-gw-dp-onprem-1
+  namespace: default
+spec:
+  controlPlaneRef:
+    type: onpremNamespacedRef
+    onpremNamespacedRef:
+      name: ai-gw-cp-onprem-1
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ai-gw-conjur-apikey
+  namespace: default
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+stringData:
+  # Fake sample API key so the manifest applies out of the box. Replace with the
+  # real CyberArk Secrets Manager workload identity API key for anything real.
+  apiKey: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+---
+kind: AIGatewayVault
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-vault-env
+  namespace: default
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ai-gw-cp-onprem-1
+  apiSpec:
+    # type selects the vault backend; the field named after it holds that
+    # backend's configuration. name is the vault prefix used when referencing
+    # secrets as {vault://<name>/<key>}.
+    type: env
+    env:
+      name: env
+      config:
+        prefix: MY_SECRET_
+---
+kind: AIGatewayVault
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-vault-conjur
+  namespace: default
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ai-gw-cp-onprem-1
+  apiSpec:
+    type: conjur
+    conjur:
+      name: conjur
+      config:
+        account: my-org
+        login: my-workload
+        endpointURL: https://conjur.example.com
+        # Credentials a vault needs for itself are sourced from a Kubernetes
+        # Secret, like a certificate's key. The Secret must carry the
+        # operator's Secret label (konghq.com/secret=true by default).
+        apiKey:
+          type: secretRef
+          secretRef:
+            name: ai-gw-conjur-apikey
+            key: apiKey

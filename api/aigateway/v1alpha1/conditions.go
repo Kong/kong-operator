@@ -69,6 +69,11 @@ const (
 	// CertificateSecretInvalidReason indicates the manually-referenced Secret
 	// does not contain a valid tls.crt/tls.key pair.
 	CertificateSecretInvalidReason consts.ConditionReason = "InvalidSecret"
+	// CertificateSecretRefOperatorManagedReason indicates the manually-referenced
+	// Secret is an operator-provisioned (Automatic) certificate Secret. Such a
+	// Secret is owned and garbage-collected by the operator, so it can't be
+	// used as a user-owned Manual certificate.
+	CertificateSecretRefOperatorManagedReason consts.ConditionReason = "SecretRefOperatorManaged" //nolint:gosec
 	// CertificateControlPlaneRefMissingReason indicates spec.certificateSecret
 	// was configured but spec.controlPlaneRef is unset, so there's no
 	// KonnectAIGateway to ever use the certificate against.
@@ -88,6 +93,10 @@ func CertificateSecretRefNotFoundMessage(name string) string {
 // manually-referenced certificate Secret does not contain a valid TLS
 // certificate and key.
 const CertificateSecretInvalidMessage = "Referenced certificate Secret does not contain a valid tls.crt/tls.key pair"
+
+// CertificateSecretRefOperatorManagedMessage is the message used when the
+// manually-referenced certificate Secret is an operator-provisioned one.
+const CertificateSecretRefOperatorManagedMessage = "Referenced certificate Secret is provisioned and managed by the operator; Manual provisioning requires a user-owned Secret"
 
 // CertificateControlPlaneRefMissingMessage is the message used when
 // spec.certificateSecret is configured but spec.controlPlaneRef is unset.
@@ -237,6 +246,32 @@ const (
 )
 
 // -----------------------------------------------------------------------------
+// OnPremAIGateway - Configuration Translation Condition Constants
+// -----------------------------------------------------------------------------
+
+const (
+	// OnPremAIGatewayConfigurationTranslatedType indicates whether the
+	// configuration entities of the OnPremAIGateway were successfully
+	// translated into the declarative payload pushed to its data planes.
+	OnPremAIGatewayConfigurationTranslatedType consts.ConditionType = "ConfigurationTranslated"
+
+	// OnPremAIGatewayConfigurationTranslatedReason indicates the configuration
+	// was translated successfully.
+	OnPremAIGatewayConfigurationTranslatedReason consts.ConditionReason = "ConfigurationTranslated"
+
+	// OnPremAIGatewayConfigurationTranslationFailedReason indicates the
+	// configuration translation failed for the document as a whole or for at
+	// least one configuration entity.
+	OnPremAIGatewayConfigurationTranslationFailedReason consts.ConditionReason = "ConfigurationTranslationFailed"
+
+	// OnPremAIGatewayConfigurationTranslationWarningReason is the event reason
+	// for translation warnings. Warnings never fail the condition: it stays
+	// True and the warnings are carried by Warning events (and the condition
+	// message carries their count).
+	OnPremAIGatewayConfigurationTranslationWarningReason consts.ConditionReason = "ConfigurationTranslationWarning"
+)
+
+// -----------------------------------------------------------------------------
 // DataPlane - License Condition Constants
 // -----------------------------------------------------------------------------
 
@@ -252,4 +287,23 @@ const (
 	// LicenseInvalidReason indicates the provided KongLicense is invalid.
 	// Currently unused: the operator does not wire a license validator yet.
 	LicenseInvalidReason consts.ConditionReason = "InvalidLicenseProvided"
+)
+
+// -----------------------------------------------------------------------------
+// OnPremAIGateway - Options Validation Condition Constants
+// -----------------------------------------------------------------------------
+
+const (
+	// OnPremAIGatewayOptionsValidType indicates whether the OnPremAIGateway's
+	// spec options (e.g. spec.objectFilters) are valid with the operator's
+	// configuration.
+	OnPremAIGatewayOptionsValidType consts.ConditionType = "OptionsValid"
+
+	// OnPremAIGatewayOptionsValidReason indicates the spec options are valid
+	// with the operator's configuration.
+	OnPremAIGatewayOptionsValidReason consts.ConditionReason = "OptionsValid"
+
+	// OnPremAIGatewayOptionsInvalidReason indicates the spec options conflict
+	// with the operator's configuration.
+	OnPremAIGatewayOptionsInvalidReason consts.ConditionReason = "OptionsInvalid"
 )

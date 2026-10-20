@@ -1,14 +1,22 @@
 # Minimal sample for the on-prem AIGateway control plane CRD.
 #
-# The reconciler (opt in via --enable-controller-onpremaigateway) currently
-# only reports readiness; it does not yet aggregate configuration or push it
-# to data planes.
+# The reconciler for OnPremAIGateway is opt in via --enable-controller-onpremaigateway.
 apiVersion: aigateway.konghq.com/v1alpha1
 kind: OnPremAIGateway
 metadata:
   name: ai-gw-cp-onprem-1
   namespace: default
-spec: {}
+spec:
+  dataplaneSync:
+    intervalSeconds: 5
+    timeoutSeconds: 3
+  # Optional filters limiting the Secrets the gateway's instance watches.
+  # Secrets must carry ALL of these labels (ANDed with the operator's secret
+  # label selector) to be reconciled.
+  objectFilters:
+    secrets:
+      matchLabels:
+        konghq.com/ingestable: "true"
 ---
 apiVersion: aigateway.konghq.com/v1alpha1
 kind: AIGatewayDataPlane

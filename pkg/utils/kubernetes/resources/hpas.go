@@ -7,21 +7,13 @@ import (
 	pkgapisautoscalingv2 "k8s.io/kubernetes/pkg/apis/autoscaling/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
-// HPAScalingSpec holds the autoscaling parameters for a HorizontalPodAutoscaler.
-// It mirrors the fields shared across all operator HorizontalScaling API types.
-type HPAScalingSpec struct {
-	MinReplicas *int32
-	MaxReplicas int32
-	Metrics     []autoscalingv2.MetricSpec
-	Behavior    *autoscalingv2.HorizontalPodAutoscalerBehavior
-}
-
 // GenerateHPA generates a HorizontalPodAutoscaler owned by owner that targets
 // the Deployment named deploymentName. scaling must not be nil.
-func GenerateHPA(owner client.Object, scaling *HPAScalingSpec, deploymentName string) (
+func GenerateHPA(owner client.Object, scaling *commonv1alpha1.HorizontalScaling, deploymentName string) (
 	*autoscalingv2.HorizontalPodAutoscaler, error,
 ) {
 	if scaling == nil {

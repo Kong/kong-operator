@@ -30,7 +30,7 @@ permissions:
 jobs:
   release:
     permissions:
-      contents: write
+      contents: read
       actions: read
       id-token: write
       packages: write

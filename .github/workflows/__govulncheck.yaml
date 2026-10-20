@@ -1,12 +1,36 @@
-name: Reusable govulncheck
+name: govulncheck scan
 
 on:
   workflow_call:
     inputs:
       ref:
-        description: 'Git reference to check out'
-        required: true
+        description: Git ref (branch or tag) to scan.
         type: string
+        required: true
+      artifact-name:
+        description: Name of the artifact carrying the govulncheck output file.
+        type: string
+        required: true
+      work-dir:
+        description: Directory in which to run govulncheck.
+        type: string
+        default: '.'
+      go-package:
+        description: Go package to scan with govulncheck.
+        type: string
+        default: './...'
+      output-format:
+        description: Format of the govulncheck output.
+        type: string
+        default: text
+      output-file:
+        description: File the govulncheck output is saved to.
+        type: string
+        default: results.sarif
+    outputs:
+      output-file:
+        description: Path of the govulncheck output file inside the artifact.
+        value: ${{ jobs.scan.outputs.output-file }}
 
 permissions:
   contents: read
@@ -14,29 +38,41 @@ permissions:
 jobs:
   scan:
     runs-on: ubuntu-latest
-    permissions:
-      security-events: write
+    outputs:
+      output-file: ${{ inputs.output-file }}
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+      uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
       with:
         egress-policy: audit
     - name: Checkout repository
-      id: checkout
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         ref: ${{ inputs.ref }}
-        
-    - uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f # v1.1.0
-      with:
-        repo-checkout: false
-        output-format: sarif
-        output-file: results_${{ steps.checkout.outputs.commit }}.sarif
 
-    - name: Upload SARIF file
-      uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+    - name: Setup go
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
-        sarif_file: results_${{ steps.checkout.outputs.commit }}.sarif
-        ref: refs/heads/${{ inputs.ref }}
-        sha: ${{ steps.checkout.outputs.commit }}
-        category: govulncheck
+        go-version-file: go.mod
+
+    - name: Install govulncheck
+      shell: bash
+      run: go install "golang.org/x/vuln/cmd/govulncheck@v$(yq -r '.govulncheck' .tools_versions.yaml)"
+
+    - name: Run govulncheck and save to file
+      # Only the package scan is run: the symbol scan needs more memory than GitHub runners have
+      # (see the govulncheck target in the Makefile).
+      run: govulncheck -C "$WORK_DIR" -scan package -format "$OUTPUT_FORMAT" "$GO_PACKAGE" > "$OUTPUT_FILE"
+      shell: bash
+      env:
+        WORK_DIR: ${{ inputs.work-dir }}
+        OUTPUT_FORMAT: ${{ inputs.output-format }}
+        GO_PACKAGE: ${{ inputs.go-package }}
+        OUTPUT_FILE: ${{ inputs.output-file }}
+
+    - name: Upload output
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ inputs.output-file }}
+        if-no-files-found: error

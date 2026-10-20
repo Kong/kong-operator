@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
@@ -30,7 +31,7 @@ func TestGenerateHPA(t *testing.T) {
 	})
 
 	t.Run("sets scaleTargetRef to the given deployment name", func(t *testing.T) {
-		hpa, err := GenerateHPA(testAIGWDPOwner(), &HPAScalingSpec{MaxReplicas: 3}, "my-deploy")
+		hpa, err := GenerateHPA(testAIGWDPOwner(), &commonv1alpha1.HorizontalScaling{MaxReplicas: 3}, "my-deploy")
 		require.NoError(t, err)
 		assert.Equal(t, "my-deploy", hpa.Spec.ScaleTargetRef.Name)
 		assert.Equal(t, "Deployment", hpa.Spec.ScaleTargetRef.Kind)
@@ -39,7 +40,7 @@ func TestGenerateHPA(t *testing.T) {
 
 	t.Run("name and namespace match owner", func(t *testing.T) {
 		owner := testAIGWDPOwner()
-		hpa, err := GenerateHPA(owner, &HPAScalingSpec{MaxReplicas: 3}, "my-deploy")
+		hpa, err := GenerateHPA(owner, &commonv1alpha1.HorizontalScaling{MaxReplicas: 3}, "my-deploy")
 		require.NoError(t, err)
 		assert.Equal(t, owner.Name, hpa.Name)
 		assert.Equal(t, owner.Namespace, hpa.Namespace)
@@ -47,7 +48,7 @@ func TestGenerateHPA(t *testing.T) {
 
 	t.Run("propagates scaling fields", func(t *testing.T) {
 		minReplicas := int32(2)
-		scaling := &HPAScalingSpec{
+		scaling := &commonv1alpha1.HorizontalScaling{
 			MinReplicas: &minReplicas,
 			MaxReplicas: 10,
 			Metrics: []autoscalingv2.MetricSpec{
@@ -72,7 +73,7 @@ func TestGenerateHPA(t *testing.T) {
 
 	t.Run("sets owner reference", func(t *testing.T) {
 		owner := testAIGWDPOwner()
-		hpa, err := GenerateHPA(owner, &HPAScalingSpec{MaxReplicas: 3}, "my-deploy")
+		hpa, err := GenerateHPA(owner, &commonv1alpha1.HorizontalScaling{MaxReplicas: 3}, "my-deploy")
 		require.NoError(t, err)
 		require.Len(t, hpa.OwnerReferences, 1)
 		assert.Equal(t, owner.Name, hpa.OwnerReferences[0].Name)
@@ -81,7 +82,7 @@ func TestGenerateHPA(t *testing.T) {
 
 	t.Run("sets app label and managed-by label", func(t *testing.T) {
 		owner := testAIGWDPOwner()
-		hpa, err := GenerateHPA(owner, &HPAScalingSpec{MaxReplicas: 3}, "my-deploy")
+		hpa, err := GenerateHPA(owner, &commonv1alpha1.HorizontalScaling{MaxReplicas: 3}, "my-deploy")
 		require.NoError(t, err)
 		assert.Equal(t, owner.Name, hpa.Labels["app"])
 		assert.Equal(t, consts.AIGatewayDataPlaneManagedByLabelValue, hpa.Labels[consts.GatewayOperatorManagedByLabel])

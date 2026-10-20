@@ -58,6 +58,7 @@ const (
 	konnectPackageName         = "konnect"
 	gatewayOperatorPackageName = "gateway-operator"
 	aigatewayPackageName       = "aigateway"
+	eventgatewayPackageName    = "eventgateway"
 )
 
 func main() {
@@ -143,6 +144,21 @@ func main() {
 					templateContent: listFuncTemplate,
 					outputFile:      listFuncOutputFileName,
 					supportedTypes:  supportedAIGatewayPackageTypesWithList,
+				},
+			},
+		},
+		{
+			packagename: eventgatewayPackageName,
+			renders: []render{
+				{
+					templateContent: statusFuncTemplate,
+					outputFile:      statusFuncOutputFileName,
+					supportedTypes:  supportedEventGatewayTypes,
+				},
+				{
+					templateContent: listFuncTemplate,
+					outputFile:      listFuncOutputFileName,
+					supportedTypes:  supportedEventGatewayPackageTypesWithList,
 				},
 			},
 		},

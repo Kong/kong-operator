@@ -484,6 +484,7 @@ spec:
 
                       Keys must be of length 1-63 characters, and cannot start with "kong",
                       "konnect", "mesh", "kic", or "_".
+                    maxProperties: 50
                     type: object
                   name:
                     description: The name of the virtual cluster.
@@ -892,6 +893,11 @@ spec:
           rule: '!has(self.spec.eventGatewayBackendClusterRef) || !has(self.status.conditions)
             || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
             == ''True'') || oldSelf.spec.eventGatewayBackendClusterRef == self.spec.eventGatewayBackendClusterRef'
+        - fieldPath: .spec.eventGatewayBackendClusterRef
+          message: spec.eventGatewayBackendClusterRef is immutable once the entity
+            has been created in Konnect
+          rule: '!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayBackendClusterRef
+            == oldSelf.spec.eventGatewayBackendClusterRef'
     served: true
     storage: true
     subresources:

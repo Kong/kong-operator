@@ -9,7 +9,7 @@ spec:
     ref:
       name: dataplane-v2
   featureGates:
-  - name: GatewayAlpha
+  - name: RewriteURIs
     state: enabled
   controllers:
   - name: KONG_INGRESS

@@ -580,10 +580,12 @@ apiGroupVersions:
         # type: Konnect rejects an update switching between installed and
         # streaming, so a type change requires recreating the object.
         cel:
+          # Both spec and apiSpec are optional: validate from the resource root
+          # so removing either field cannot reset the immutable type.
+          _validations:
+            - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.spec) || !has(oldSelf.spec.apiSpec) || !has(oldSelf.spec.apiSpec.type) || (has(self.spec) && has(self.spec.apiSpec) && has(self.spec.apiSpec.type) && self.spec.apiSpec.type == oldSelf.spec.apiSpec.type)\",message=\"type is immutable\",fieldPath=\".spec.apiSpec.type\""
           spec:
             apiSpec:
-              _validations:
-                - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.type) || self.type == oldSelf.type\",message=\"type is immutable\""
               installed:
                 name:
                   _validations:
@@ -693,6 +695,54 @@ apiGroupVersions:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
 
+      # The backends whose credentials the OAS carries inline are sourced from
+      # Kubernetes Secrets, like AIGatewayCertificate's cert/key and
+      # AIGatewayAuthStrategy's clientSecret. The other backends carry no
+      # inline secret: aws authenticates through an IAM role, gcp through
+      # project_id, azure through client_id/tenant_id and env through prefix.
+      # Path segments address the type union by its discriminator mapping keys
+      # (conjur, hcv) and the nested HashiCorpVaultConfig auth_method union by
+      # its own (token, cert, jwt, approle, gcp_iam, aws_iam) — a nested union's
+      # variant segment is matched against the mapping key verbatim, unlike the
+      # root union's, which also accepts the camelCase form.
+      - path: /v1/ai-gateways/{gatewayId}/vaults
+        name: AIGatewayVault
+        dataSources:
+          - path: spec.apiSpec.conjur.config.apiKey
+            type: Secret
+          - path: spec.apiSpec.hcv.config.token.token
+            type: Secret
+          - path: spec.apiSpec.hcv.config.cert.cert
+            type: Secret
+          - path: spec.apiSpec.hcv.config.cert.key
+            type: Secret
+          - path: spec.apiSpec.hcv.config.jwt.clientSecret
+            type: Secret
+          - path: spec.apiSpec.hcv.config.approle.secretID
+            type: Secret
+          - path: spec.apiSpec.hcv.config.gcp_iam.serviceAccount
+            type: Secret
+          - path: spec.apiSpec.hcv.config.aws_iam.accessKeyID
+            type: Secret
+          - path: spec.apiSpec.hcv.config.aws_iam.secretAccessKey
+            type: Secret
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayVaultsSDK
+            fieldName: AIGatewayVaults
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayVaultRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayVaultRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectAIGateway
+            group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayRef
+            typeName: AIGatewayRef
+
   configuration.konghq.com/v1alpha1:
     categories:
       - kong
@@ -730,6 +780,14 @@ apiGroupVersions:
           parentEntityGVK:
             kind: KonnectEventGateway
             group: konnect.konghq.com
+          # Adds spec.parentRef, a reference to the gateway by group, kind and
+          # name, next to the deprecated spec.gatewayRef.
+          gatewayRef:
+            fieldName: parentRef
+            additionalKinds:
+              - group: eventgateway.konghq.com
+                version: v1alpha1
+                kind: OnPremEventGateway
       - path: /v1/event-gateways/{gatewayId}/schema-registries
         name: EventGatewaySchemaRegistry
         dataSources:
@@ -748,6 +806,14 @@ apiGroupVersions:
           parentEntityGVK:
             kind: KonnectEventGateway
             group: konnect.konghq.com
+          # Adds spec.parentRef, a reference to the gateway by group, kind and
+          # name, next to the deprecated spec.gatewayRef.
+          gatewayRef:
+            fieldName: parentRef
+            additionalKinds:
+              - group: eventgateway.konghq.com
+                version: v1alpha1
+                kind: OnPremEventGateway
       - path: /v1/event-gateways/{gatewayId}/tls-trust-bundles
         name: EventGatewayTLSTrustBundle
         dataSources:
@@ -766,6 +832,79 @@ apiGroupVersions:
           parentEntityGVK:
             kind: KonnectEventGateway
             group: konnect.konghq.com
+          # Adds spec.parentRef, a reference to the gateway by group, kind and
+          # name, next to the deprecated spec.gatewayRef.
+          gatewayRef:
+            fieldName: parentRef
+            additionalKinds:
+              - group: eventgateway.konghq.com
+                version: v1alpha1
+                kind: OnPremEventGateway
+      - path: /v1/event-gateways/{gatewayId}/static-keys
+        name: EventGatewayStaticKey
+        dataSources:
+          - path: spec.apiSpec.value
+            type: Secret
+        # Konnect has no update API for static keys: apiSpec is immutable once
+        # the static key has been created in Konnect (status.id set), and
+        # editable before (e.g. to fix a value Konnect rejected). To rotate a
+        # key, create a new EventGatewayStaticKey and point the policies at it
+        # (data encrypted with the old key stays decryptable while it exists).
+        # gatewayRef and parentRef are immutable from then on too, not only while it's
+        # Programmed: a static key whose deletion is blocked isn't Programmed,
+        # and repointing it would orphan it in the old gateway, still in use.
+        # status.id isn't cleared if the key is later deleted from Konnect and
+        # can't be recreated: the object must then be deleted and recreated.
+        cel:
+          # Rules on the resource root, spanning spec and status.
+          _validations:
+            - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || !has(self.spec.gatewayRef) || !has(oldSelf.spec.gatewayRef) || self.spec.gatewayRef == oldSelf.spec.gatewayRef\",message=\"gatewayRef is immutable once the static key has been created in Konnect\",fieldPath=\".spec.gatewayRef\""
+            - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || !has(self.spec.parentRef) || !has(oldSelf.spec.parentRef) || self.spec.parentRef == oldSelf.spec.parentRef\",message=\"parentRef is immutable once the static key has been created in Konnect\",fieldPath=\".spec.parentRef\""
+            # The deprecated gatewayRef can still be replaced by a parentRef to
+            # the same gateway. An empty namespace counts as unset.
+            - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || !has(self.spec.parentRef) || has(oldSelf.spec.parentRef) || (has(oldSelf.spec.gatewayRef) && has(oldSelf.spec.gatewayRef.namespacedRef) && self.spec.parentRef.name == oldSelf.spec.gatewayRef.namespacedRef.name && (has(self.spec.parentRef.__namespace__) ? (has(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) && self.spec.parentRef.__namespace__ == oldSelf.spec.gatewayRef.namespacedRef.__namespace__) : (!has(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) || size(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) == 0)))\",message=\"gatewayRef can only be replaced by a parentRef referencing the same gateway, with the same name and namespace as gatewayRef, once the static key has been created in Konnect\",fieldPath=\".spec.parentRef\""
+            - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.apiSpec == oldSelf.spec.apiSpec\",message=\"apiSpec is immutable once the static key has been created in Konnect: Konnect static keys can't be updated, create a new EventGatewayStaticKey instead\",fieldPath=\".spec.apiSpec\""
+          spec:
+            apiSpec:
+              name:
+                _validations:
+                  # Konnect's rule, which the OpenAPI spec doesn't declare
+                  # (checked against the API): letters (incl. non-ASCII) and
+                  # digits at both ends, spaces and _ . : / + ' - inside.
+                  # TODO: drop this once the OAS declares the pattern:
+                  # https://github.com/Kong/platform-api/issues/3703
+                  - '+kubebuilder:validation:Pattern=`^[\p{L}\p{N}][\p{L}\p{N} _.:/+''-]*[\p{L}\p{N}]$`'
+              value:
+                # The OpenAPI description says plain text values are encrypted
+                # and never returned: that holds in Konnect, not for the CR.
+                _description: |-
+                  Value is the static key's secret value: a base64-encoded 256-bit key.
+                  It is read only when the static key is created in Konnect: changing
+                  it afterwards (or the Secret it comes from) doesn't update the key, as
+                  Konnect static keys can't be updated. To rotate a key, create a new
+                  EventGatewayStaticKey and point the policies at it.
+                  Prefer sourcing it from a Secret: an inline value is stored in plain
+                  text in the EventGatewayStaticKey and readable by anyone allowed to
+                  read it.
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.EventGatewayStaticKeysSDK
+            fieldName: EventGatewayStaticKeys
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.EventGatewayStaticKeyCreate
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectEventGateway
+            group: konnect.konghq.com
+          # Adds spec.parentRef, a reference to the gateway by group, kind and
+          # name, next to the deprecated spec.gatewayRef.
+          gatewayRef:
+            fieldName: parentRef
+            additionalKinds:
+              - group: eventgateway.konghq.com
+                version: v1alpha1
+                kind: OnPremEventGateway
       - path: /v1/event-gateways/{gatewayId}/listeners
         name: EventGatewayListener
         ops:
@@ -781,8 +920,24 @@ apiGroupVersions:
           parentEntityGVK:
             kind: KonnectEventGateway
             group: konnect.konghq.com
+          # Adds spec.parentRef, a reference to the gateway by group, kind and
+          # name, next to the deprecated spec.gatewayRef.
+          gatewayRef:
+            fieldName: parentRef
+            additionalKinds:
+              - group: eventgateway.konghq.com
+                version: v1alpha1
+                kind: OnPremEventGateway
       - path: /v1/event-gateways/{gatewayId}/listeners/{eventGatewayListenerId}/policies
         name: EventGatewayListenerPolicy
+        # The parent reference is immutable once the entity has been created in
+        # Konnect (status.id set), not only while it is Programmed: Konnect scopes
+        # the entity under its parent, so it can't move to another one, e.g. one
+        # attached to an OnPremEventGateway, which would orphan it in Konnect.
+        cel:
+          # Rules on the resource root, spanning spec and status.
+          _validations:
+            - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayListenerRef == oldSelf.spec.eventGatewayListenerRef\",message=\"spec.eventGatewayListenerRef is immutable once the entity has been created in Konnect\",fieldPath=\".spec.eventGatewayListenerRef\""
         references:
           # Additive: Konnect trust bundle IDs/names keep working; namespacedRef
           # references an EventGatewayTLSTrustBundle in the cluster instead. It
@@ -852,6 +1007,14 @@ apiGroupVersions:
           parentEntityGVK:
             kind: KonnectEventGateway
             group: konnect.konghq.com
+          # Adds spec.parentRef, a reference to the gateway by group, kind and
+          # name, next to the deprecated spec.gatewayRef.
+          gatewayRef:
+            fieldName: parentRef
+            additionalKinds:
+              - group: eventgateway.konghq.com
+                version: v1alpha1
+                kind: OnPremEventGateway
         dataSources:
           - path: spec.apiSpec.tls.clientIdentity.certificate
             type: Secret
@@ -859,6 +1022,14 @@ apiGroupVersions:
             type: Secret
       - path: /v1/event-gateways/{gatewayId}/virtual-clusters
         name: EventGatewayVirtualCluster
+        # The parent reference is immutable once the entity has been created in
+        # Konnect (status.id set), not only while it is Programmed: Konnect scopes
+        # the entity under its parent, so it can't move to another one, e.g. one
+        # attached to an OnPremEventGateway, which would orphan it in Konnect.
+        cel:
+          # Rules on the resource root, spanning spec and status.
+          _validations:
+            - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayBackendClusterRef == oldSelf.spec.eventGatewayBackendClusterRef\",message=\"spec.eventGatewayBackendClusterRef is immutable once the entity has been created in Konnect\",fieldPath=\".spec.eventGatewayBackendClusterRef\""
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClustersSDK
@@ -879,11 +1050,52 @@ apiGroupVersions:
             replacesAPISpecField: destination
       - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/produce-policies
         name: EventGatewayVirtualClusterProducePolicy
+        references:
+          # The shared variant schemas cannot carry a same-kind reference.
+          # Resolve this root-level reference into the selected SDK variant.
+          - path: spec.apiSpec.parentPolicyRef
+            kinds: [EventGatewayVirtualClusterProducePolicy]
+            resolvesTo: id
+            injectInto: parentPolicyID
+            requiredAPISpecType: schemaValidation
+            reverseWatch: true
+            description: |-
+              ParentPolicyRef references a schemaValidation produce policy in the same
+              namespace and virtual cluster. Required for encryptFields and optional
+              for modifyHeaders. It is immutable once this policy exists in Konnect.
+              Deleting a parent is blocked while child policy objects reference it.
+          # Additive: Konnect static key IDs/names keep working; namespacedRef
+          # references an EventGatewayStaticKey in the cluster instead,
+          # resolved to its Konnect ID. Konnect refuses to delete a static key
+          # while policies use it: the EventGatewayStaticKey controller watches
+          # the policies so a blocked deletion resumes as soon as they stop
+          # using it.
+          - path: spec.apiSpec.encrypt.config.encryptionKey.static.key
+            kinds: [EventGatewayStaticKey]
+            resolvesTo: id
+            unionMember: namespacedRef
+            reverseWatch: true
+          - path: spec.apiSpec.encryptFields.config.encryptFields.encryptionKey.static.key
+            kinds: [EventGatewayStaticKey]
+            resolvesTo: id
+            unionMember: namespacedRef
+            reverseWatch: true
         schemaFieldOmissions:
           EventGatewayModifyHeadersPolicyCreate:
             - parentPolicyID
           EventGatewayParsedRecordEncryptFieldsPolicyCreate:
             - parentPolicyID
+        cel:
+          _validations:
+            # The parent reference is immutable once the entity has been created
+            # in Konnect (status.id set), not only while it is Programmed: Konnect
+            # scopes the entity under its parent, so it can't move to another one,
+            # e.g. one attached to an OnPremEventGateway, which would orphan it in
+            # Konnect.
+            - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayVirtualClusterRef == oldSelf.spec.eventGatewayVirtualClusterRef\",message=\"spec.eventGatewayVirtualClusterRef is immutable once the entity has been created in Konnect\",fieldPath=\".spec.eventGatewayVirtualClusterRef\""
+            - '+kubebuilder:validation:XValidation:rule="!has(oldSelf.status) || !has(oldSelf.status.id) || (has(self.spec.apiSpec) && has(self.spec.apiSpec.parentPolicyRef) ? has(oldSelf.spec.apiSpec) && has(oldSelf.spec.apiSpec.parentPolicyRef) && self.spec.apiSpec.parentPolicyRef == oldSelf.spec.apiSpec.parentPolicyRef : !has(oldSelf.spec.apiSpec) || !has(oldSelf.spec.apiSpec.parentPolicyRef))",message="parentPolicyRef is immutable once the policy has been created in Konnect",fieldPath=".spec.apiSpec.parentPolicyRef"'
+            - '+kubebuilder:validation:XValidation:rule="!has(self.spec.apiSpec) || !has(self.spec.apiSpec.type) || self.spec.apiSpec.type != ''encryptFields'' || has(self.spec.apiSpec.parentPolicyRef) || (oldSelf.hasValue() && has(oldSelf.value().spec.apiSpec) && has(oldSelf.value().spec.apiSpec.type) && oldSelf.value().spec.apiSpec.type == ''encryptFields'' && !has(oldSelf.value().spec.apiSpec.parentPolicyRef))",message="parentPolicyRef is required for encryptFields",fieldPath=".spec.apiSpec.parentPolicyRef",optionalOldSelf=true'
+            - '+kubebuilder:validation:XValidation:rule="!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef) || (has(self.spec.apiSpec.type) && self.spec.apiSpec.type in [''encryptFields'', ''modifyHeaders''])",message="parentPolicyRef is only supported for encryptFields and modifyHeaders",fieldPath=".spec.apiSpec.parentPolicyRef"'
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterProducePoliciesSDK
@@ -906,6 +1118,17 @@ apiGroupVersions:
       - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/consume-policies
         name: EventGatewayVirtualClusterConsumePolicy
         references:
+          - path: spec.apiSpec.parentPolicyRef
+            kinds: [EventGatewayVirtualClusterConsumePolicy]
+            resolvesTo: id
+            injectInto: parentPolicyID
+            requiredAPISpecType: schemaValidation
+            reverseWatch: true
+            description: |-
+              ParentPolicyRef references a schemaValidation consume policy in the same
+              namespace and virtual cluster. Required for decryptFields and optional
+              for modifyHeaders and skipRecord. It is immutable once this policy exists
+              in Konnect. Deleting a parent is blocked while child policy objects reference it.
           - path: spec.apiSpec.schemaValidation.config.json.schemaRegistry
             kinds: [EventGatewaySchemaRegistry]
             resolvesTo: name
@@ -919,6 +1142,17 @@ apiGroupVersions:
             - parentPolicyID
           EventGatewaySkipRecordPolicyCreate:
             - parentPolicyID
+        cel:
+          _validations:
+            # The parent reference is immutable once the entity has been created
+            # in Konnect (status.id set), not only while it is Programmed: Konnect
+            # scopes the entity under its parent, so it can't move to another one,
+            # e.g. one attached to an OnPremEventGateway, which would orphan it in
+            # Konnect.
+            - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayVirtualClusterRef == oldSelf.spec.eventGatewayVirtualClusterRef\",message=\"spec.eventGatewayVirtualClusterRef is immutable once the entity has been created in Konnect\",fieldPath=\".spec.eventGatewayVirtualClusterRef\""
+            - '+kubebuilder:validation:XValidation:rule="!has(oldSelf.status) || !has(oldSelf.status.id) || (has(self.spec.apiSpec) && has(self.spec.apiSpec.parentPolicyRef) ? has(oldSelf.spec.apiSpec) && has(oldSelf.spec.apiSpec.parentPolicyRef) && self.spec.apiSpec.parentPolicyRef == oldSelf.spec.apiSpec.parentPolicyRef : !has(oldSelf.spec.apiSpec) || !has(oldSelf.spec.apiSpec.parentPolicyRef))",message="parentPolicyRef is immutable once the policy has been created in Konnect",fieldPath=".spec.apiSpec.parentPolicyRef"'
+            - '+kubebuilder:validation:XValidation:rule="!has(self.spec.apiSpec) || !has(self.spec.apiSpec.type) || self.spec.apiSpec.type != ''decryptFields'' || has(self.spec.apiSpec.parentPolicyRef) || (oldSelf.hasValue() && has(oldSelf.value().spec.apiSpec) && has(oldSelf.value().spec.apiSpec.type) && oldSelf.value().spec.apiSpec.type == ''decryptFields'' && !has(oldSelf.value().spec.apiSpec.parentPolicyRef))",message="parentPolicyRef is required for decryptFields",fieldPath=".spec.apiSpec.parentPolicyRef",optionalOldSelf=true'
+            - '+kubebuilder:validation:XValidation:rule="!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef) || (has(self.spec.apiSpec.type) && self.spec.apiSpec.type in [''decryptFields'', ''modifyHeaders'', ''skipRecord''])",message="parentPolicyRef is only supported for decryptFields, modifyHeaders and skipRecord",fieldPath=".spec.apiSpec.parentPolicyRef"'
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterConsumePoliciesSDK
@@ -940,6 +1174,14 @@ apiGroupVersions:
             fieldName: eventGatewayVirtualClusterRef
       - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/cluster-policies
         name: EventGatewayVirtualClusterPolicy
+        # The parent reference is immutable once the entity has been created in
+        # Konnect (status.id set), not only while it is Programmed: Konnect scopes
+        # the entity under its parent, so it can't move to another one, e.g. one
+        # attached to an OnPremEventGateway, which would orphan it in Konnect.
+        cel:
+          # Rules on the resource root, spanning spec and status.
+          _validations:
+            - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayVirtualClusterRef == oldSelf.spec.eventGatewayVirtualClusterRef\",message=\"spec.eventGatewayVirtualClusterRef is immutable once the entity has been created in Konnect\",fieldPath=\".spec.eventGatewayVirtualClusterRef\""
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterPoliciesSDK

@@ -68,10 +68,10 @@ metadata:
   name: cp-event-1-dataplane-cert
   namespace: default
 spec:
-  gatewayRef:
-    type: namespacedRef
-    namespacedRef:
-      name: cp-event-1
+  parentRef:
+    group: konnect.konghq.com
+    kind: KonnectEventGateway
+    name: cp-event-1
   apiSpec:
     name: cp-event-1-dataplane-cert
     description: Test Event Gateway CP Dataplane Certificate

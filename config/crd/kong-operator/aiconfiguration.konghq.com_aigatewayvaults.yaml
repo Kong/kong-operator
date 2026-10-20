@@ -1,0 +1,2488 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    kubernetes-configuration.konghq.com/channels: kong-operator
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
+  name: aigatewayvaults.aiconfiguration.konghq.com
+spec:
+  group: aiconfiguration.konghq.com
+  names:
+    categories:
+    - kong
+    kind: AIGatewayVault
+    listKind: AIGatewayVaultList
+    plural: aigatewayvaults
+    singular: aigatewayvault
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Konnect ID
+      jsonPath: .status.id
+      name: ID
+      type: string
+    - description: The Resource is Programmed on Konnect
+      jsonPath: .status.conditions[?(@.type=='Programmed')].status
+      name: Programmed
+      type: string
+    - description: Konnect Organization ID this resource belongs to.
+      jsonPath: .status.organizationID
+      name: OrgID
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: AIGatewayVault is the Schema for the aigatewayvaults API.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: AIGatewayVaultSpec defines the desired state of AIGatewayVault.
+            properties:
+              aiGatewayRef:
+                description: AIGatewayRef is the reference to the parent AI Gateway
+                  (control plane) object.
+                properties:
+                  group:
+                    default: konnect.konghq.com
+                    description: |-
+                      Group is the API group of the referenced AI Gateway (control plane).
+                      Defaults to konnect.konghq.com; an OnPremAIGateway reference must set
+                      it to aigateway.konghq.com explicitly.
+                    enum:
+                    - konnect.konghq.com
+                    - aigateway.konghq.com
+                    type: string
+                  kind:
+                    default: KonnectAIGateway
+                    description: |-
+                      Kind is the kind of the referenced AI Gateway (control plane):
+                      KonnectAIGateway (default) or OnPremAIGateway.
+                    enum:
+                    - KonnectAIGateway
+                    - OnPremAIGateway
+                    type: string
+                  namespacedRef:
+                    description: |-
+                      NamespacedRef references the AI Gateway (control plane) by namespaced
+                      name. When Namespace is unset, the namespace of the referencing entity
+                      is used.
+                    properties:
+                      name:
+                        description: Name is the name of the referred resource.
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace of the referred resource.
+
+                          For namespace-scoped resources if no Namespace is provided then the
+                          namespace of the parent object MUST be used.
+
+                          This field MUST not be set when referring to cluster-scoped resources.
+                        maxLength: 253
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  type:
+                    default: namespacedRef
+                    description: |-
+                      Type is the type of the reference. Only namespacedRef is supported.
+
+                      Deprecated: kept only for backward compatibility with objects written
+                      before the AIGatewayRef type was introduced; it defaults to
+                      namespacedRef and will be removed in a future release.
+                    enum:
+                    - namespacedRef
+                    type: string
+                required:
+                - namespacedRef
+                type: object
+                x-kubernetes-validations:
+                - message: group must be aigateway.konghq.com when kind is OnPremAIGateway,
+                    and konnect.konghq.com when kind is KonnectAIGateway
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com''
+                    : self.group == ''konnect.konghq.com'''
+                - message: repointing an entity between KonnectAIGateway and OnPremAIGateway
+                    is forbidden
+                  rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
+              apiSpec:
+                description: APISpec defines the desired state of the resource's API
+                  spec fields.
+                properties:
+                  aws:
+                    description: AwsSecretsManager configuration.
+                    properties:
+                      config:
+                        description: AwsSecretsManagerVaultConfig is a type alias.
+                        properties:
+                          assumeRoleArn:
+                            description: |-
+                              The ARN of the role to assume when retrieving secrets from AWS Secrets
+                              Manager.
+                            maxLength: 253
+                            type: string
+                          base64Decode:
+                            description: |-
+                              Decode all secrets in this vault as base64. Useful for binary data.
+                              If some of the secrets in the vault are not base64-encoded, an error will
+                              occur when using them.
+                              We recommend creating a separate vault for base64 secrets.
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          endpointURL:
+                            description: |-
+                              The endpoint URL of the AWS Secrets Manager service.
+                              If not specified, the default is
+                              https://secretsmanager.{region}.amazonaws.com.
+                              You can override this by specifying a complete URL including the http/https
+                              scheme.
+                            maxLength: 253
+                            type: string
+                          negTtl:
+                            description: |-
+                              Time-to-live (in seconds) for caching failed secret lookups.
+                              A value of 0 disables negative caching.
+                              Kong will retry fetching the secret after neg_ttl expires.
+                            maximum: 4294967295
+                            minimum: 0
+                            type: integer
+                          region:
+                            description: The AWS region where your vault is located.
+                            maxLength: 253
+                            type: string
+                          resurrectTtl:
+                            description: |-
+                              Time (in seconds) that secrets remain in use after expiration (config.ttl
+                              ends).
+                              Useful if the vault is unreachable or the secret is deleted but not yet
+                              replaced.
+                              Kong continues to retry for resurrect_ttl seconds before giving up.
+                              The default is ~3 years to support uninterrupted service during outages.
+                            maximum: 4294967295
+                            minimum: 0
+                            type: integer
+                          roleSessionName:
+                            description: The session name used when assuming a role.
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          stsEndpointURL:
+                            description: |-
+                              A custom STS endpoint URL used for IAM role assumption.
+                              Overrides the default https://sts.amazonaws.com or regional variant
+                              https://sts.<region>.amazonaws.com.
+                              Include the full http/https scheme.
+                              Only specify this if using a private VPC endpoint for STS.
+                            maxLength: 253
+                            type: string
+                          ttl:
+                            description: |-
+                              Time-to-live (in seconds) for a cached secret.
+                              A value of 0 disables rotation.
+                              For non-zero values, use a minimum of 60 seconds.
+                            maximum: 4294967295
+                            minimum: 0
+                            type: integer
+                        required:
+                        - roleSessionName
+                        type: object
+                      description:
+                        description: The description of the Vault.
+                        maxLength: 1024
+                        type: string
+                      labels:
+                        additionalProperties:
+                          description: PublicLabelsValue is the value type for PublicLabels.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Public labels store information about an entity that can be used for
+                          filtering a list of objects.
+
+                          Public labels are intended to store **PUBLIC** metadata.
+
+                          Keys must be of length 1-63 characters, and cannot start with "kong",
+                          "konnect", "mesh", "kic", or "_".
+                        maxProperties: 50
+                        type: object
+                      managedBy:
+                        additionalProperties:
+                          description: ManagedByValue is the value type for ManagedBy.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Stores information about what manages this entity, such as the tool or
+                          system responsible for its lifecycle (for example, `terraform`).
+
+                          Keys must be 1–63 characters long and start with an alphanumeric
+                          character.
+                        maxProperties: 5
+                        type: object
+                      name:
+                        description: |-
+                          A user-defined unique identifier for this vault instance, used as a stable
+                          human-readable reference.
+                          This value is immutable after creation.
+                          The name is used to load the right Vault configuration and implementation
+                          when referencing secrets with the other entities.
+                        maxLength: 255
+                        minLength: 2
+                        pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                        type: string
+                    required:
+                    - config
+                    - name
+                    type: object
+                  azure:
+                    description: AzureKey configuration.
+                    properties:
+                      config:
+                        description: AzureKeyVaultConfig is a type alias.
+                        properties:
+                          base64Decode:
+                            description: |-
+                              Decode all secrets in this vault as base64. Useful for binary data.
+                              If some of the secrets in the vault are not base64-encoded, an error will
+                              occur when using them.
+                              We recommend creating a separate vault for base64 secrets.
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          clientID:
+                            description: |-
+                              The client ID for your registered application.
+                              You can find this in the Azure Dashboard under App Registrations.
+                            maxLength: 253
+                            type: string
+                          credentialsPrefix:
+                            description: The prefix for the credentials stored in
+                              the Azure Key Vault.
+                            maxLength: 253
+                            type: string
+                          location:
+                            description: |-
+                              Each Azure geography includes one or more regions
+                              that meet specific data residency and compliance requirements.
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          negTtl:
+                            description: |-
+                              Time-to-live (in seconds) for caching failed secret lookups.
+                              A value of 0 disables negative caching.
+                              Kong will retry fetching the secret after neg_ttl expires.
+                            maximum: 4294967295
+                            minimum: 0
+                            type: integer
+                          resurrectTtl:
+                            description: |-
+                              Time (in seconds) that secrets remain in use after expiration (config.ttl
+                              ends).
+                              Useful if the vault is unreachable or the secret is deleted but not yet
+                              replaced.
+                              Kong continues to retry for resurrect_ttl seconds before giving up.
+                              The default is ~3 years to support uninterrupted service during outages.
+                            maximum: 4294967295
+                            minimum: 0
+                            type: integer
+                          tenantID:
+                            description: |-
+                              The DirectoryId and TenantId are the same: both refer to the GUID
+                              representing your Azure Active Directory tenant.
+                              Microsoft documentation and products may use either term depending on
+                              context.
+                            maxLength: 253
+                            type: string
+                          ttl:
+                            description: |-
+                              Time-to-live (in seconds) for a cached secret.
+                              A value of 0 disables rotation.
+                              For non-zero values, use a minimum of 60 seconds.
+                            maximum: 4294967295
+                            minimum: 0
+                            type: integer
+                          type:
+                            enum:
+                            - secrets
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          vaultURI:
+                            description: |-
+                              The URI from which the vault is reachable.
+                              This value can be found in your Azure Key Vault Dashboard under the Vault
+                              URI entry.
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                        required:
+                        - location
+                        - type
+                        - vaultURI
+                        type: object
+                      description:
+                        description: The description of the Vault.
+                        maxLength: 1024
+                        type: string
+                      labels:
+                        additionalProperties:
+                          description: PublicLabelsValue is the value type for PublicLabels.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Public labels store information about an entity that can be used for
+                          filtering a list of objects.
+
+                          Public labels are intended to store **PUBLIC** metadata.
+
+                          Keys must be of length 1-63 characters, and cannot start with "kong",
+                          "konnect", "mesh", "kic", or "_".
+                        maxProperties: 50
+                        type: object
+                      managedBy:
+                        additionalProperties:
+                          description: ManagedByValue is the value type for ManagedBy.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Stores information about what manages this entity, such as the tool or
+                          system responsible for its lifecycle (for example, `terraform`).
+
+                          Keys must be 1–63 characters long and start with an alphanumeric
+                          character.
+                        maxProperties: 5
+                        type: object
+                      name:
+                        description: |-
+                          A user-defined unique identifier for this vault instance, used as a stable
+                          human-readable reference.
+                          This value is immutable after creation.
+                          The name is used to load the right Vault configuration and implementation
+                          when referencing secrets with the other entities.
+                        maxLength: 255
+                        minLength: 2
+                        pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                        type: string
+                    required:
+                    - config
+                    - name
+                    type: object
+                  conjur:
+                    description: Conjur configuration.
+                    properties:
+                      config:
+                        description: ConjurVaultConfig is a type alias.
+                        properties:
+                          account:
+                            description: The CyberArk Secrets Manager organization
+                              account name.
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          apiKey:
+                            description: The API key of the workload identity.
+                            properties:
+                              secretRef:
+                                description: |-
+                                  SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                  Required when type is 'secretRef'.
+                                properties:
+                                  key:
+                                    description: Key is the data key within the Secret.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  name:
+                                    description: Name is the name of the referred
+                                      resource.
+                                    maxLength: 253
+                                    minLength: 1
+                                    type: string
+                                  namespace:
+                                    description: |-
+                                      Namespace is the namespace of the referred resource.
+
+                                      For namespace-scoped resources if no Namespace is provided then the
+                                      namespace of the parent object MUST be used.
+
+                                      This field MUST not be set when referring to cluster-scoped resources.
+                                    maxLength: 253
+                                    type: string
+                                required:
+                                - key
+                                - name
+                                type: object
+                              type:
+                                default: inline
+                                description: 'Type indicates the source of the sensitive
+                                  data: ''inline'' or ''secretRef''.'
+                                enum:
+                                - inline
+                                - secretRef
+                                type: string
+                              value:
+                                description: |-
+                                  Value contains the sensitive data provided inline.
+                                  Required when type is 'inline'.
+                                maxLength: 4096
+                                type: string
+                            required:
+                            - type
+                            type: object
+                            x-kubernetes-validations:
+                            - message: value required when type=inline; secretRef
+                                required when type=secretRef
+                              rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                          base64Decode:
+                            description: |-
+                              Decode all secrets in this vault as base64. Useful for binary data.
+                              If some of the secrets in the vault are not base64-encoded, an error will
+                              occur when using them.
+                              We recommend creating a separate vault for base64 secrets.
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          endpointURL:
+                            description: |-
+                              The CyberArk Secrets Manager backend URL to connect with.
+                              Accepts http or https protocols.
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          login:
+                            description: The login name of the workload identity.
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          negTtl:
+                            description: |-
+                              Time-to-live (in seconds) for caching failed secret lookups.
+                              A value of 0 disables negative caching.
+                              Kong will retry fetching the secret after neg_ttl expires.
+                            maximum: 4294967295
+                            minimum: 0
+                            type: integer
+                          resurrectTtl:
+                            description: |-
+                              Time (in seconds) that secrets remain in use after expiration (config.ttl
+                              ends).
+                              Useful if the vault is unreachable or the secret is deleted but not yet
+                              replaced.
+                              Kong continues to retry for resurrect_ttl seconds before giving up.
+                              The default is ~3 years to support uninterrupted service during outages.
+                            maximum: 4294967295
+                            minimum: 0
+                            type: integer
+                          ttl:
+                            description: |-
+                              Time-to-live (in seconds) for a cached secret.
+                              A value of 0 disables rotation.
+                              For non-zero values, use a minimum of 60 seconds.
+                            maximum: 4294967295
+                            minimum: 0
+                            type: integer
+                        required:
+                        - account
+                        - endpointURL
+                        - login
+                        type: object
+                      description:
+                        description: The description of the Vault.
+                        maxLength: 1024
+                        type: string
+                      labels:
+                        additionalProperties:
+                          description: PublicLabelsValue is the value type for PublicLabels.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Public labels store information about an entity that can be used for
+                          filtering a list of objects.
+
+                          Public labels are intended to store **PUBLIC** metadata.
+
+                          Keys must be of length 1-63 characters, and cannot start with "kong",
+                          "konnect", "mesh", "kic", or "_".
+                        maxProperties: 50
+                        type: object
+                      managedBy:
+                        additionalProperties:
+                          description: ManagedByValue is the value type for ManagedBy.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Stores information about what manages this entity, such as the tool or
+                          system responsible for its lifecycle (for example, `terraform`).
+
+                          Keys must be 1–63 characters long and start with an alphanumeric
+                          character.
+                        maxProperties: 5
+                        type: object
+                      name:
+                        description: |-
+                          A user-defined unique identifier for this vault instance, used as a stable
+                          human-readable reference.
+                          This value is immutable after creation.
+                          The name is used to load the right Vault configuration and implementation
+                          when referencing secrets with the other entities.
+                        maxLength: 255
+                        minLength: 2
+                        pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                        type: string
+                    required:
+                    - config
+                    - name
+                    type: object
+                  env:
+                    description: EnvironmentVariable configuration.
+                    properties:
+                      config:
+                        description: EnvironmentVariableVaultConfig is a type alias.
+                        properties:
+                          base64Decode:
+                            description: |-
+                              Decode all secrets in this vault as base64. Useful for binary data.
+                              If some of the secrets in the vault are not base64-encoded, an error will
+                              occur when using them.
+                              We recommend creating a separate vault for base64 secrets.
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          prefix:
+                            description: The prefix for the environment variable that
+                              the value will be stored in.
+                            maxLength: 253
+                            type: string
+                        type: object
+                      description:
+                        description: The description of the Vault.
+                        maxLength: 1024
+                        type: string
+                      labels:
+                        additionalProperties:
+                          description: PublicLabelsValue is the value type for PublicLabels.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Public labels store information about an entity that can be used for
+                          filtering a list of objects.
+
+                          Public labels are intended to store **PUBLIC** metadata.
+
+                          Keys must be of length 1-63 characters, and cannot start with "kong",
+                          "konnect", "mesh", "kic", or "_".
+                        maxProperties: 50
+                        type: object
+                      managedBy:
+                        additionalProperties:
+                          description: ManagedByValue is the value type for ManagedBy.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Stores information about what manages this entity, such as the tool or
+                          system responsible for its lifecycle (for example, `terraform`).
+
+                          Keys must be 1–63 characters long and start with an alphanumeric
+                          character.
+                        maxProperties: 5
+                        type: object
+                      name:
+                        description: |-
+                          A user-defined unique identifier for this vault instance, used as a stable
+                          human-readable reference.
+                          This value is immutable after creation.
+                          The name is used to load the right Vault configuration and implementation
+                          when referencing secrets with the other entities.
+                        maxLength: 255
+                        minLength: 2
+                        pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                        type: string
+                    required:
+                    - config
+                    - name
+                    type: object
+                  gcp:
+                    description: GoogleSecretManager configuration.
+                    properties:
+                      config:
+                        description: GoogleSecretManagerVaultConfig is a type alias.
+                        properties:
+                          base64Decode:
+                            description: |-
+                              Decode all secrets in this vault as base64. Useful for binary data.
+                              If some of the secrets in the vault are not base64-encoded, an error will
+                              occur when using them.
+                              We recommend creating a separate vault for base64 secrets.
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          negTtl:
+                            description: |-
+                              Time-to-live (in seconds) for caching failed secret lookups.
+                              A value of 0 disables negative caching.
+                              Kong will retry fetching the secret after neg_ttl expires.
+                            maximum: 4294967295
+                            minimum: 0
+                            type: integer
+                          projectID:
+                            description: |-
+                              The project ID from your Google API Console.
+                              You can find it by visiting your Google API Console and selecting “Manage
+                              all projects” in the projects list.
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          resurrectTtl:
+                            description: |-
+                              Time (in seconds) that secrets remain in use after expiration (config.ttl
+                              ends).
+                              Useful if the vault is unreachable or the secret is deleted but not yet
+                              replaced.
+                              Kong continues to retry for resurrect_ttl seconds before giving up.
+                              The default is ~3 years to support uninterrupted service during outages.
+                            maximum: 4294967295
+                            minimum: 0
+                            type: integer
+                          ttl:
+                            description: |-
+                              Time-to-live (in seconds) for a cached secret.
+                              A value of 0 disables rotation.
+                              For non-zero values, use a minimum of 60 seconds.
+                            maximum: 4294967295
+                            minimum: 0
+                            type: integer
+                        required:
+                        - projectID
+                        type: object
+                      description:
+                        description: The description of the Vault.
+                        maxLength: 1024
+                        type: string
+                      labels:
+                        additionalProperties:
+                          description: PublicLabelsValue is the value type for PublicLabels.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Public labels store information about an entity that can be used for
+                          filtering a list of objects.
+
+                          Public labels are intended to store **PUBLIC** metadata.
+
+                          Keys must be of length 1-63 characters, and cannot start with "kong",
+                          "konnect", "mesh", "kic", or "_".
+                        maxProperties: 50
+                        type: object
+                      managedBy:
+                        additionalProperties:
+                          description: ManagedByValue is the value type for ManagedBy.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Stores information about what manages this entity, such as the tool or
+                          system responsible for its lifecycle (for example, `terraform`).
+
+                          Keys must be 1–63 characters long and start with an alphanumeric
+                          character.
+                        maxProperties: 5
+                        type: object
+                      name:
+                        description: |-
+                          A user-defined unique identifier for this vault instance, used as a stable
+                          human-readable reference.
+                          This value is immutable after creation.
+                          The name is used to load the right Vault configuration and implementation
+                          when referencing secrets with the other entities.
+                        maxLength: 255
+                        minLength: 2
+                        pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                        type: string
+                    required:
+                    - config
+                    - name
+                    type: object
+                  hcv:
+                    description: HashiCorp configuration.
+                    properties:
+                      config:
+                        description: Configuration for an AI Gateway Vault.
+                        properties:
+                          approle:
+                            description: AppRole configuration.
+                            properties:
+                              base64Decode:
+                                description: |-
+                                  Decode all secrets in this vault as base64. Useful for binary data.
+                                  If some of the secrets in the vault are not base64-encoded, an error will
+                                  occur when using them.
+                                  We recommend creating a separate vault for base64 secrets.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              host:
+                                description: The hostname of your HashiCorp vault.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              kv:
+                                description: The secrets engine version.
+                                enum:
+                                - v1
+                                - v2
+                                maxLength: 253
+                                type: string
+                              mount:
+                                description: The mount point.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              namespace:
+                                description: |-
+                                  Namespace for the Vault.
+                                  Vault Enterprise requires a namespace to connect successfully.
+                                maxLength: 253
+                                type: string
+                              negTtl:
+                                description: |-
+                                  Time-to-live (in seconds) for caching failed secret lookups.
+                                  A value of 0 disables negative caching.
+                                  Kong will retry fetching the secret after neg_ttl expires.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                              path:
+                                description: |-
+                                  Path for enabling the AppRole auth method.
+                                  Single leading/trailing slashes are trimmed.
+                                maxLength: 253
+                                type: string
+                              port:
+                                description: The port number of your HashiCorp vault.
+                                type: integer
+                              protocol:
+                                description: The protocol to connect with.
+                                enum:
+                                - http
+                                - https
+                                maxLength: 253
+                                type: string
+                              responseWrapping:
+                                description: |-
+                                  Whether the secret ID is a response-wrapping token.
+                                  When true, Kong unwraps the token to get the actual secret ID.
+                                  Note: tokens can only be unwrapped once; distribute them individually to
+                                  Kong nodes.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              resurrectTtl:
+                                description: |-
+                                  Time (in seconds) that secrets remain in use after expiration (config.ttl
+                                  ends).
+                                  Useful if the vault is unreachable or the secret is deleted but not yet
+                                  replaced.
+                                  Kong continues to retry for resurrect_ttl seconds before giving up.
+                                  The default is ~3 years to support uninterrupted service during outages.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                              roleID:
+                                description: |-
+                                  Specifies the AppRole role ID in HashiCorp Vault.
+                                  Either `role_id` or `secret_id_file` must be set.
+                                maxLength: 253
+                                type: string
+                              secretID:
+                                description: Defines the AppRole’s secret ID in HashiCorp
+                                  Vault.
+                                properties:
+                                  secretRef:
+                                    description: |-
+                                      SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                      Required when type is 'secretRef'.
+                                    properties:
+                                      key:
+                                        description: Key is the data key within the
+                                          Secret.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      name:
+                                        description: Name is the name of the referred
+                                          resource.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        description: |-
+                                          Namespace is the namespace of the referred resource.
+
+                                          For namespace-scoped resources if no Namespace is provided then the
+                                          namespace of the parent object MUST be used.
+
+                                          This field MUST not be set when referring to cluster-scoped resources.
+                                        maxLength: 253
+                                        type: string
+                                    required:
+                                    - key
+                                    - name
+                                    type: object
+                                  type:
+                                    default: inline
+                                    description: 'Type indicates the source of the
+                                      sensitive data: ''inline'' or ''secretRef''.'
+                                    enum:
+                                    - inline
+                                    - secretRef
+                                    type: string
+                                  value:
+                                    description: |-
+                                      Value contains the sensitive data provided inline.
+                                      Required when type is 'inline'.
+                                    maxLength: 4096
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                                x-kubernetes-validations:
+                                - message: value required when type=inline; secretRef
+                                    required when type=secretRef
+                                  rule: 'self.type == ''inline'' ? has(self.value)
+                                    : has(self.secretRef)'
+                              secretIDFile:
+                                description: |-
+                                  Path to a file containing the AppRole secret ID.
+                                  Either `role_id` or `secret_id_file` must be set.
+                                maxLength: 253
+                                type: string
+                              sslVerify:
+                                description: Whether to verify the TLS certificate
+                                  of the vault when connecting.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              ttl:
+                                description: |-
+                                  Time-to-live (in seconds) for a cached secret.
+                                  A value of 0 disables rotation.
+                                  For non-zero values, use a minimum of 60 seconds.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                            required:
+                            - host
+                            - mount
+                            - port
+                            type: object
+                          authMethod:
+                            description: AuthMethod designates the type of configuration.
+                            enum:
+                            - approle
+                            - awsEc2
+                            - awsIam
+                            - azure
+                            - cert
+                            - gcpGce
+                            - gcpIam
+                            - jwt
+                            - kubernetes
+                            - token
+                            minLength: 1
+                            type: string
+                          awsEc2:
+                            description: AwsEC2 configuration.
+                            properties:
+                              base64Decode:
+                                description: |-
+                                  Decode all secrets in this vault as base64. Useful for binary data.
+                                  If some of the secrets in the vault are not base64-encoded, an error will
+                                  occur when using them.
+                                  We recommend creating a separate vault for base64 secrets.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              host:
+                                description: The hostname of your HashiCorp vault.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              kv:
+                                description: The secrets engine version.
+                                enum:
+                                - v1
+                                - v2
+                                maxLength: 253
+                                type: string
+                              loginPath:
+                                description: The login path for AWS auth in HashiCorp
+                                  Vault.
+                                maxLength: 253
+                                type: string
+                              mount:
+                                description: The mount point.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              namespace:
+                                description: |-
+                                  Namespace for the Vault.
+                                  Vault Enterprise requires a namespace to connect successfully.
+                                maxLength: 253
+                                type: string
+                              negTtl:
+                                description: |-
+                                  Time-to-live (in seconds) for caching failed secret lookups.
+                                  A value of 0 disables negative caching.
+                                  Kong will retry fetching the secret after neg_ttl expires.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                              nonce:
+                                description: The nonce for AWS EC2 auth.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              port:
+                                description: The port number of your HashiCorp vault.
+                                type: integer
+                              protocol:
+                                description: The protocol to connect with.
+                                enum:
+                                - http
+                                - https
+                                maxLength: 253
+                                type: string
+                              resurrectTtl:
+                                description: |-
+                                  Time (in seconds) that secrets remain in use after expiration (config.ttl
+                                  ends).
+                                  Useful if the vault is unreachable or the secret is deleted but not yet
+                                  replaced.
+                                  Kong continues to retry for resurrect_ttl seconds before giving up.
+                                  The default is ~3 years to support uninterrupted service during outages.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                              role:
+                                description: The role to use for AWS EC2 auth.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              sslVerify:
+                                description: Whether to verify the TLS certificate
+                                  of the vault when connecting.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              ttl:
+                                description: |-
+                                  Time-to-live (in seconds) for a cached secret.
+                                  A value of 0 disables rotation.
+                                  For non-zero values, use a minimum of 60 seconds.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                            required:
+                            - host
+                            - mount
+                            - nonce
+                            - port
+                            - role
+                            type: object
+                          awsIam:
+                            description: AwsIAM configuration.
+                            properties:
+                              accessKeyID:
+                                description: |-
+                                  The AWS access key ID for IAM auth.
+                                  If not provided, the default credentials provider chain is used.
+                                  If set, `secret_access_key` must also be set.
+                                properties:
+                                  secretRef:
+                                    description: |-
+                                      SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                      Required when type is 'secretRef'.
+                                    properties:
+                                      key:
+                                        description: Key is the data key within the
+                                          Secret.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      name:
+                                        description: Name is the name of the referred
+                                          resource.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        description: |-
+                                          Namespace is the namespace of the referred resource.
+
+                                          For namespace-scoped resources if no Namespace is provided then the
+                                          namespace of the parent object MUST be used.
+
+                                          This field MUST not be set when referring to cluster-scoped resources.
+                                        maxLength: 253
+                                        type: string
+                                    required:
+                                    - key
+                                    - name
+                                    type: object
+                                  type:
+                                    default: inline
+                                    description: 'Type indicates the source of the
+                                      sensitive data: ''inline'' or ''secretRef''.'
+                                    enum:
+                                    - inline
+                                    - secretRef
+                                    type: string
+                                  value:
+                                    description: |-
+                                      Value contains the sensitive data provided inline.
+                                      Required when type is 'inline'.
+                                    maxLength: 4096
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                                x-kubernetes-validations:
+                                - message: value required when type=inline; secretRef
+                                    required when type=secretRef
+                                  rule: 'self.type == ''inline'' ? has(self.value)
+                                    : has(self.secretRef)'
+                              assumeRoleArn:
+                                description: |-
+                                  The ARN of the role to assume for AWS IAM authentication.
+                                  If set, `role_session_name` must also be set.
+                                maxLength: 253
+                                type: string
+                              base64Decode:
+                                description: |-
+                                  Decode all secrets in this vault as base64. Useful for binary data.
+                                  If some of the secrets in the vault are not base64-encoded, an error will
+                                  occur when using them.
+                                  We recommend creating a separate vault for base64 secrets.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              host:
+                                description: The hostname of your HashiCorp vault.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              kv:
+                                description: The secrets engine version.
+                                enum:
+                                - v1
+                                - v2
+                                maxLength: 253
+                                type: string
+                              loginPath:
+                                description: The login path for AWS auth in HashiCorp
+                                  Vault.
+                                maxLength: 253
+                                type: string
+                              mount:
+                                description: The mount point.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              namespace:
+                                description: |-
+                                  Namespace for the Vault.
+                                  Vault Enterprise requires a namespace to connect successfully.
+                                maxLength: 253
+                                type: string
+                              negTtl:
+                                description: |-
+                                  Time-to-live (in seconds) for caching failed secret lookups.
+                                  A value of 0 disables negative caching.
+                                  Kong will retry fetching the secret after neg_ttl expires.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                              port:
+                                description: The port number of your HashiCorp vault.
+                                type: integer
+                              protocol:
+                                description: The protocol to connect with.
+                                enum:
+                                - http
+                                - https
+                                maxLength: 253
+                                type: string
+                              region:
+                                description: The AWS region for auth.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              resurrectTtl:
+                                description: |-
+                                  Time (in seconds) that secrets remain in use after expiration (config.ttl
+                                  ends).
+                                  Useful if the vault is unreachable or the secret is deleted but not yet
+                                  replaced.
+                                  Kong continues to retry for resurrect_ttl seconds before giving up.
+                                  The default is ~3 years to support uninterrupted service during outages.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                              role:
+                                description: The role to use for AWS IAM auth.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              roleSessionName:
+                                description: |-
+                                  The session name to use when assuming a role for AWS IAM authentication.
+                                  If set, `assume_role_arn` must also be set.
+                                maxLength: 253
+                                type: string
+                              secretAccessKey:
+                                description: |-
+                                  The AWS secret access key for IAM auth.
+                                  If not provided, the default credentials provider chain is used.
+                                  If set, `access_key_id` must also be set.
+                                properties:
+                                  secretRef:
+                                    description: |-
+                                      SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                      Required when type is 'secretRef'.
+                                    properties:
+                                      key:
+                                        description: Key is the data key within the
+                                          Secret.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      name:
+                                        description: Name is the name of the referred
+                                          resource.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        description: |-
+                                          Namespace is the namespace of the referred resource.
+
+                                          For namespace-scoped resources if no Namespace is provided then the
+                                          namespace of the parent object MUST be used.
+
+                                          This field MUST not be set when referring to cluster-scoped resources.
+                                        maxLength: 253
+                                        type: string
+                                    required:
+                                    - key
+                                    - name
+                                    type: object
+                                  type:
+                                    default: inline
+                                    description: 'Type indicates the source of the
+                                      sensitive data: ''inline'' or ''secretRef''.'
+                                    enum:
+                                    - inline
+                                    - secretRef
+                                    type: string
+                                  value:
+                                    description: |-
+                                      Value contains the sensitive data provided inline.
+                                      Required when type is 'inline'.
+                                    maxLength: 4096
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                                x-kubernetes-validations:
+                                - message: value required when type=inline; secretRef
+                                    required when type=secretRef
+                                  rule: 'self.type == ''inline'' ? has(self.value)
+                                    : has(self.secretRef)'
+                              sslVerify:
+                                description: Whether to verify the TLS certificate
+                                  of the vault when connecting.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              stsEndpointURL:
+                                description: |-
+                                  The AWS STS endpoint URL used by Kong Gateway when signing the
+                                  GetCallerIdentity request for AWS IAM authentication.
+                                  If not provided, defaults to the standard STS endpoint for the specified
+                                  region.
+                                  This setting only affects the STS endpoint that Kong Gateway itself contacts
+                                  -
+                                  it does not influence which STS endpoint HashiCorp Vault uses on its side.
+                                maxLength: 253
+                                type: string
+                              ttl:
+                                description: |-
+                                  Time-to-live (in seconds) for a cached secret.
+                                  A value of 0 disables rotation.
+                                  For non-zero values, use a minimum of 60 seconds.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                            required:
+                            - host
+                            - mount
+                            - port
+                            - region
+                            - role
+                            type: object
+                          azure:
+                            description: Azure configuration.
+                            properties:
+                              base64Decode:
+                                description: |-
+                                  Decode all secrets in this vault as base64. Useful for binary data.
+                                  If some of the secrets in the vault are not base64-encoded, an error will
+                                  occur when using them.
+                                  We recommend creating a separate vault for base64 secrets.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              host:
+                                description: The hostname of your HashiCorp vault.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              kv:
+                                description: The secrets engine version.
+                                enum:
+                                - v1
+                                - v2
+                                maxLength: 253
+                                type: string
+                              loginPath:
+                                description: The login path for Azure auth in HashiCorp
+                                  Vault
+                                maxLength: 253
+                                type: string
+                              mount:
+                                description: The mount point.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              namespace:
+                                description: |-
+                                  Namespace for the Vault.
+                                  Vault Enterprise requires a namespace to connect successfully.
+                                maxLength: 253
+                                type: string
+                              negTtl:
+                                description: |-
+                                  Time-to-live (in seconds) for caching failed secret lookups.
+                                  A value of 0 disables negative caching.
+                                  Kong will retry fetching the secret after neg_ttl expires.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                              port:
+                                description: The port number of your HashiCorp vault.
+                                type: integer
+                              protocol:
+                                description: The protocol to connect with.
+                                enum:
+                                - http
+                                - https
+                                maxLength: 253
+                                type: string
+                              resurrectTtl:
+                                description: |-
+                                  Time (in seconds) that secrets remain in use after expiration (config.ttl
+                                  ends).
+                                  Useful if the vault is unreachable or the secret is deleted but not yet
+                                  replaced.
+                                  Kong continues to retry for resurrect_ttl seconds before giving up.
+                                  The default is ~3 years to support uninterrupted service during outages.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                              role:
+                                description: The role to use for Azure auth.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              sslVerify:
+                                description: Whether to verify the TLS certificate
+                                  of the vault when connecting.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              ttl:
+                                description: |-
+                                  Time-to-live (in seconds) for a cached secret.
+                                  A value of 0 disables rotation.
+                                  For non-zero values, use a minimum of 60 seconds.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                            required:
+                            - host
+                            - mount
+                            - port
+                            - role
+                            type: object
+                          cert:
+                            description: Cert configuration.
+                            properties:
+                              base64Decode:
+                                description: |-
+                                  Decode all secrets in this vault as base64. Useful for binary data.
+                                  If some of the secrets in the vault are not base64-encoded, an error will
+                                  occur when using them.
+                                  We recommend creating a separate vault for base64 secrets.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              cert:
+                                description: The client certificate.
+                                properties:
+                                  secretRef:
+                                    description: |-
+                                      SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                      Required when type is 'secretRef'.
+                                    properties:
+                                      key:
+                                        description: Key is the data key within the
+                                          Secret.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      name:
+                                        description: Name is the name of the referred
+                                          resource.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        description: |-
+                                          Namespace is the namespace of the referred resource.
+
+                                          For namespace-scoped resources if no Namespace is provided then the
+                                          namespace of the parent object MUST be used.
+
+                                          This field MUST not be set when referring to cluster-scoped resources.
+                                        maxLength: 253
+                                        type: string
+                                    required:
+                                    - key
+                                    - name
+                                    type: object
+                                  type:
+                                    default: inline
+                                    description: 'Type indicates the source of the
+                                      sensitive data: ''inline'' or ''secretRef''.'
+                                    enum:
+                                    - inline
+                                    - secretRef
+                                    type: string
+                                  value:
+                                    description: |-
+                                      Value contains the sensitive data provided inline.
+                                      Required when type is 'inline'.
+                                    maxLength: 4096
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                                x-kubernetes-validations:
+                                - message: value required when type=inline; secretRef
+                                    required when type=secretRef
+                                  rule: 'self.type == ''inline'' ? has(self.value)
+                                    : has(self.secretRef)'
+                              host:
+                                description: The hostname of your HashiCorp vault.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              key:
+                                description: The key for the client certificate.
+                                properties:
+                                  secretRef:
+                                    description: |-
+                                      SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                      Required when type is 'secretRef'.
+                                    properties:
+                                      key:
+                                        description: Key is the data key within the
+                                          Secret.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      name:
+                                        description: Name is the name of the referred
+                                          resource.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        description: |-
+                                          Namespace is the namespace of the referred resource.
+
+                                          For namespace-scoped resources if no Namespace is provided then the
+                                          namespace of the parent object MUST be used.
+
+                                          This field MUST not be set when referring to cluster-scoped resources.
+                                        maxLength: 253
+                                        type: string
+                                    required:
+                                    - key
+                                    - name
+                                    type: object
+                                  type:
+                                    default: inline
+                                    description: 'Type indicates the source of the
+                                      sensitive data: ''inline'' or ''secretRef''.'
+                                    enum:
+                                    - inline
+                                    - secretRef
+                                    type: string
+                                  value:
+                                    description: |-
+                                      Value contains the sensitive data provided inline.
+                                      Required when type is 'inline'.
+                                    maxLength: 4096
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                                x-kubernetes-validations:
+                                - message: value required when type=inline; secretRef
+                                    required when type=secretRef
+                                  rule: 'self.type == ''inline'' ? has(self.value)
+                                    : has(self.secretRef)'
+                              kv:
+                                description: The secrets engine version.
+                                enum:
+                                - v1
+                                - v2
+                                maxLength: 253
+                                type: string
+                              mount:
+                                description: The mount point.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              namespace:
+                                description: |-
+                                  Namespace for the Vault.
+                                  Vault Enterprise requires a namespace to connect successfully.
+                                maxLength: 253
+                                type: string
+                              negTtl:
+                                description: |-
+                                  Time-to-live (in seconds) for caching failed secret lookups.
+                                  A value of 0 disables negative caching.
+                                  Kong will retry fetching the secret after neg_ttl expires.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                              port:
+                                description: The port number of your HashiCorp vault.
+                                type: integer
+                              protocol:
+                                description: The protocol to connect with.
+                                enum:
+                                - http
+                                - https
+                                maxLength: 253
+                                type: string
+                              resurrectTtl:
+                                description: |-
+                                  Time (in seconds) that secrets remain in use after expiration (config.ttl
+                                  ends).
+                                  Useful if the vault is unreachable or the secret is deleted but not yet
+                                  replaced.
+                                  Kong continues to retry for resurrect_ttl seconds before giving up.
+                                  The default is ~3 years to support uninterrupted service during outages.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                              roleName:
+                                description: The trusted certificate role name.
+                                maxLength: 253
+                                type: string
+                              sslVerify:
+                                description: Whether to verify the TLS certificate
+                                  of the vault when connecting.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              ttl:
+                                description: |-
+                                  Time-to-live (in seconds) for a cached secret.
+                                  A value of 0 disables rotation.
+                                  For non-zero values, use a minimum of 60 seconds.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                            required:
+                            - cert
+                            - host
+                            - mount
+                            - port
+                            type: object
+                          gcpGce:
+                            description: GcpGCE configuration.
+                            properties:
+                              base64Decode:
+                                description: |-
+                                  Decode all secrets in this vault as base64. Useful for binary data.
+                                  If some of the secrets in the vault are not base64-encoded, an error will
+                                  occur when using them.
+                                  We recommend creating a separate vault for base64 secrets.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              host:
+                                description: The hostname of your HashiCorp vault.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              kv:
+                                description: The secrets engine version.
+                                enum:
+                                - v1
+                                - v2
+                                maxLength: 253
+                                type: string
+                              loginPath:
+                                description: The login path for GCP auth in HashiCorp
+                                  Vault.
+                                maxLength: 253
+                                type: string
+                              mount:
+                                description: The mount point.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              namespace:
+                                description: |-
+                                  Namespace for the Vault.
+                                  Vault Enterprise requires a namespace to connect successfully.
+                                maxLength: 253
+                                type: string
+                              negTtl:
+                                description: |-
+                                  Time-to-live (in seconds) for caching failed secret lookups.
+                                  A value of 0 disables negative caching.
+                                  Kong will retry fetching the secret after neg_ttl expires.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                              port:
+                                description: The port number of your HashiCorp vault.
+                                type: integer
+                              protocol:
+                                description: The protocol to connect with.
+                                enum:
+                                - http
+                                - https
+                                maxLength: 253
+                                type: string
+                              resurrectTtl:
+                                description: |-
+                                  Time (in seconds) that secrets remain in use after expiration (config.ttl
+                                  ends).
+                                  Useful if the vault is unreachable or the secret is deleted but not yet
+                                  replaced.
+                                  Kong continues to retry for resurrect_ttl seconds before giving up.
+                                  The default is ~3 years to support uninterrupted service during outages.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                              role:
+                                description: The role to use for GCP GCE auth.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              sslVerify:
+                                description: Whether to verify the TLS certificate
+                                  of the vault when connecting.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              ttl:
+                                description: |-
+                                  Time-to-live (in seconds) for a cached secret.
+                                  A value of 0 disables rotation.
+                                  For non-zero values, use a minimum of 60 seconds.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                            required:
+                            - host
+                            - mount
+                            - port
+                            - role
+                            type: object
+                          gcpIam:
+                            description: GcpIAM configuration.
+                            properties:
+                              base64Decode:
+                                description: |-
+                                  Decode all secrets in this vault as base64. Useful for binary data.
+                                  If some of the secrets in the vault are not base64-encoded, an error will
+                                  occur when using them.
+                                  We recommend creating a separate vault for base64 secrets.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              host:
+                                description: The hostname of your HashiCorp vault.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              jwtExp:
+                                description: The JWT expiration time in seconds for
+                                  GCP auth (0-900)
+                                maximum: 900
+                                minimum: 0
+                                type: integer
+                              kv:
+                                description: The secrets engine version.
+                                enum:
+                                - v1
+                                - v2
+                                maxLength: 253
+                                type: string
+                              mount:
+                                description: The mount point.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              namespace:
+                                description: |-
+                                  Namespace for the Vault.
+                                  Vault Enterprise requires a namespace to connect successfully.
+                                maxLength: 253
+                                type: string
+                              negTtl:
+                                description: |-
+                                  Time-to-live (in seconds) for caching failed secret lookups.
+                                  A value of 0 disables negative caching.
+                                  Kong will retry fetching the secret after neg_ttl expires.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                              port:
+                                description: The port number of your HashiCorp vault.
+                                type: integer
+                              protocol:
+                                description: The protocol to connect with.
+                                enum:
+                                - http
+                                - https
+                                maxLength: 253
+                                type: string
+                              resurrectTtl:
+                                description: |-
+                                  Time (in seconds) that secrets remain in use after expiration (config.ttl
+                                  ends).
+                                  Useful if the vault is unreachable or the secret is deleted but not yet
+                                  replaced.
+                                  Kong continues to retry for resurrect_ttl seconds before giving up.
+                                  The default is ~3 years to support uninterrupted service during outages.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                              role:
+                                description: The role to use for GCP IAM auth.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              serviceAccount:
+                                description: The GCP service account for GCE auth.
+                                properties:
+                                  secretRef:
+                                    description: |-
+                                      SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                      Required when type is 'secretRef'.
+                                    properties:
+                                      key:
+                                        description: Key is the data key within the
+                                          Secret.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      name:
+                                        description: Name is the name of the referred
+                                          resource.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        description: |-
+                                          Namespace is the namespace of the referred resource.
+
+                                          For namespace-scoped resources if no Namespace is provided then the
+                                          namespace of the parent object MUST be used.
+
+                                          This field MUST not be set when referring to cluster-scoped resources.
+                                        maxLength: 253
+                                        type: string
+                                    required:
+                                    - key
+                                    - name
+                                    type: object
+                                  type:
+                                    default: inline
+                                    description: 'Type indicates the source of the
+                                      sensitive data: ''inline'' or ''secretRef''.'
+                                    enum:
+                                    - inline
+                                    - secretRef
+                                    type: string
+                                  value:
+                                    description: |-
+                                      Value contains the sensitive data provided inline.
+                                      Required when type is 'inline'.
+                                    maxLength: 4096
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                                x-kubernetes-validations:
+                                - message: value required when type=inline; secretRef
+                                    required when type=secretRef
+                                  rule: 'self.type == ''inline'' ? has(self.value)
+                                    : has(self.secretRef)'
+                              sslVerify:
+                                description: Whether to verify the TLS certificate
+                                  of the vault when connecting.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              ttl:
+                                description: |-
+                                  Time-to-live (in seconds) for a cached secret.
+                                  A value of 0 disables rotation.
+                                  For non-zero values, use a minimum of 60 seconds.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                            required:
+                            - host
+                            - jwtExp
+                            - mount
+                            - port
+                            - role
+                            - serviceAccount
+                            type: object
+                          jwt:
+                            description: Oauth2 configuration.
+                            properties:
+                              audiences:
+                                description: Comma-separated list of OAuth2 audiences.
+                                maxLength: 253
+                                type: string
+                              base64Decode:
+                                description: |-
+                                  Decode all secrets in this vault as base64. Useful for binary data.
+                                  If some of the secrets in the vault are not base64-encoded, an error will
+                                  occur when using them.
+                                  We recommend creating a separate vault for base64 secrets.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              clientID:
+                                description: The OAuth2 client ID.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              clientSecret:
+                                description: The OAuth2 client secret.
+                                properties:
+                                  secretRef:
+                                    description: |-
+                                      SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                      Required when type is 'secretRef'.
+                                    properties:
+                                      key:
+                                        description: Key is the data key within the
+                                          Secret.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      name:
+                                        description: Name is the name of the referred
+                                          resource.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        description: |-
+                                          Namespace is the namespace of the referred resource.
+
+                                          For namespace-scoped resources if no Namespace is provided then the
+                                          namespace of the parent object MUST be used.
+
+                                          This field MUST not be set when referring to cluster-scoped resources.
+                                        maxLength: 253
+                                        type: string
+                                    required:
+                                    - key
+                                    - name
+                                    type: object
+                                  type:
+                                    default: inline
+                                    description: 'Type indicates the source of the
+                                      sensitive data: ''inline'' or ''secretRef''.'
+                                    enum:
+                                    - inline
+                                    - secretRef
+                                    type: string
+                                  value:
+                                    description: |-
+                                      Value contains the sensitive data provided inline.
+                                      Required when type is 'inline'.
+                                    maxLength: 4096
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                                x-kubernetes-validations:
+                                - message: value required when type=inline; secretRef
+                                    required when type=secretRef
+                                  rule: 'self.type == ''inline'' ? has(self.value)
+                                    : has(self.secretRef)'
+                              host:
+                                description: The hostname of your HashiCorp vault.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              kv:
+                                description: The secrets engine version.
+                                enum:
+                                - v1
+                                - v2
+                                maxLength: 253
+                                type: string
+                              mount:
+                                description: The mount point.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              namespace:
+                                description: |-
+                                  Namespace for the Vault.
+                                  Vault Enterprise requires a namespace to connect successfully.
+                                maxLength: 253
+                                type: string
+                              negTtl:
+                                description: |-
+                                  Time-to-live (in seconds) for caching failed secret lookups.
+                                  A value of 0 disables negative caching.
+                                  Kong will retry fetching the secret after neg_ttl expires.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                              port:
+                                description: The port number of your HashiCorp vault.
+                                type: integer
+                              protocol:
+                                description: The protocol to connect with.
+                                enum:
+                                - http
+                                - https
+                                maxLength: 253
+                                type: string
+                              resurrectTtl:
+                                description: |-
+                                  Time (in seconds) that secrets remain in use after expiration (config.ttl
+                                  ends).
+                                  Useful if the vault is unreachable or the secret is deleted but not yet
+                                  replaced.
+                                  Kong continues to retry for resurrect_ttl seconds before giving up.
+                                  The default is ~3 years to support uninterrupted service during outages.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                              role:
+                                description: |-
+                                  The configured role name in HashiCorp Vault for JWT auth.
+                                  When creating the role in HashiCorp Vault, make sure that the `role_type` is
+                                  `jwt`
+                                  and the `token_policies` have permissions to read the secrets.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              sslVerify:
+                                description: Whether to verify the TLS certificate
+                                  of the vault when connecting.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              tokenEndpoint:
+                                description: The OAuth2 token endpoint for Hashicorp
+                                  Vault's OAuth2 auth method.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              ttl:
+                                description: |-
+                                  Time-to-live (in seconds) for a cached secret.
+                                  A value of 0 disables rotation.
+                                  For non-zero values, use a minimum of 60 seconds.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                            required:
+                            - clientID
+                            - host
+                            - mount
+                            - port
+                            - role
+                            - tokenEndpoint
+                            type: object
+                          kubernetes:
+                            description: Kubernetes configuration.
+                            properties:
+                              apiTokenFile:
+                                description: Path to the Kubernetes service account
+                                  token file.
+                                maxLength: 253
+                                type: string
+                              base64Decode:
+                                description: |-
+                                  Decode all secrets in this vault as base64. Useful for binary data.
+                                  If some of the secrets in the vault are not base64-encoded, an error will
+                                  occur when using them.
+                                  We recommend creating a separate vault for base64 secrets.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              host:
+                                description: The hostname of your HashiCorp vault.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              kv:
+                                description: The secrets engine version.
+                                enum:
+                                - v1
+                                - v2
+                                maxLength: 253
+                                type: string
+                              mount:
+                                description: The mount point.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              namespace:
+                                description: |-
+                                  Namespace for the Vault.
+                                  Vault Enterprise requires a namespace to connect successfully.
+                                maxLength: 253
+                                type: string
+                              negTtl:
+                                description: |-
+                                  Time-to-live (in seconds) for caching failed secret lookups.
+                                  A value of 0 disables negative caching.
+                                  Kong will retry fetching the secret after neg_ttl expires.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                              path:
+                                description: |-
+                                  Path for enabling the Kubernetes auth method.
+                                  Single leading/trailing slashes are trimmed.
+                                maxLength: 253
+                                type: string
+                              port:
+                                description: The port number of your HashiCorp vault.
+                                type: integer
+                              protocol:
+                                description: The protocol to connect with.
+                                enum:
+                                - http
+                                - https
+                                maxLength: 253
+                                type: string
+                              resurrectTtl:
+                                description: |-
+                                  Time (in seconds) that secrets remain in use after expiration (config.ttl
+                                  ends).
+                                  Useful if the vault is unreachable or the secret is deleted but not yet
+                                  replaced.
+                                  Kong continues to retry for resurrect_ttl seconds before giving up.
+                                  The default is ~3 years to support uninterrupted service during outages.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                              role:
+                                description: Role assigned to the Kubernetes service
+                                  account.
+                                maxLength: 253
+                                type: string
+                              sslVerify:
+                                description: Whether to verify the TLS certificate
+                                  of the vault when connecting.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              ttl:
+                                description: |-
+                                  Time-to-live (in seconds) for a cached secret.
+                                  A value of 0 disables rotation.
+                                  For non-zero values, use a minimum of 60 seconds.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                            required:
+                            - host
+                            - mount
+                            - port
+                            type: object
+                          token:
+                            description: Token configuration.
+                            properties:
+                              base64Decode:
+                                description: |-
+                                  Decode all secrets in this vault as base64. Useful for binary data.
+                                  If some of the secrets in the vault are not base64-encoded, an error will
+                                  occur when using them.
+                                  We recommend creating a separate vault for base64 secrets.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              host:
+                                description: The hostname of your HashiCorp vault.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              kv:
+                                description: The secrets engine version.
+                                enum:
+                                - v1
+                                - v2
+                                maxLength: 253
+                                type: string
+                              mount:
+                                description: The mount point.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              namespace:
+                                description: |-
+                                  Namespace for the Vault.
+                                  Vault Enterprise requires a namespace to connect successfully.
+                                maxLength: 253
+                                type: string
+                              negTtl:
+                                description: |-
+                                  Time-to-live (in seconds) for caching failed secret lookups.
+                                  A value of 0 disables negative caching.
+                                  Kong will retry fetching the secret after neg_ttl expires.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                              port:
+                                description: The port number of your HashiCorp vault.
+                                type: integer
+                              protocol:
+                                description: The protocol to connect with.
+                                enum:
+                                - http
+                                - https
+                                maxLength: 253
+                                type: string
+                              resurrectTtl:
+                                description: |-
+                                  Time (in seconds) that secrets remain in use after expiration (config.ttl
+                                  ends).
+                                  Useful if the vault is unreachable or the secret is deleted but not yet
+                                  replaced.
+                                  Kong continues to retry for resurrect_ttl seconds before giving up.
+                                  The default is ~3 years to support uninterrupted service during outages.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                              sslVerify:
+                                description: Whether to verify the TLS certificate
+                                  of the vault when connecting.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              token:
+                                description: The token string to be used for authentication.
+                                properties:
+                                  secretRef:
+                                    description: |-
+                                      SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                      Required when type is 'secretRef'.
+                                    properties:
+                                      key:
+                                        description: Key is the data key within the
+                                          Secret.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      name:
+                                        description: Name is the name of the referred
+                                          resource.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        description: |-
+                                          Namespace is the namespace of the referred resource.
+
+                                          For namespace-scoped resources if no Namespace is provided then the
+                                          namespace of the parent object MUST be used.
+
+                                          This field MUST not be set when referring to cluster-scoped resources.
+                                        maxLength: 253
+                                        type: string
+                                    required:
+                                    - key
+                                    - name
+                                    type: object
+                                  type:
+                                    default: inline
+                                    description: 'Type indicates the source of the
+                                      sensitive data: ''inline'' or ''secretRef''.'
+                                    enum:
+                                    - inline
+                                    - secretRef
+                                    type: string
+                                  value:
+                                    description: |-
+                                      Value contains the sensitive data provided inline.
+                                      Required when type is 'inline'.
+                                    maxLength: 4096
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                                x-kubernetes-validations:
+                                - message: value required when type=inline; secretRef
+                                    required when type=secretRef
+                                  rule: 'self.type == ''inline'' ? has(self.value)
+                                    : has(self.secretRef)'
+                              ttl:
+                                description: |-
+                                  Time-to-live (in seconds) for a cached secret.
+                                  A value of 0 disables rotation.
+                                  For non-zero values, use a minimum of 60 seconds.
+                                maximum: 4294967295
+                                minimum: 0
+                                type: integer
+                            required:
+                            - host
+                            - mount
+                            - port
+                            type: object
+                        required:
+                        - authMethod
+                        type: object
+                      description:
+                        description: The description of the Vault.
+                        maxLength: 1024
+                        type: string
+                      labels:
+                        additionalProperties:
+                          description: PublicLabelsValue is the value type for PublicLabels.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Public labels store information about an entity that can be used for
+                          filtering a list of objects.
+
+                          Public labels are intended to store **PUBLIC** metadata.
+
+                          Keys must be of length 1-63 characters, and cannot start with "kong",
+                          "konnect", "mesh", "kic", or "_".
+                        maxProperties: 50
+                        type: object
+                      managedBy:
+                        additionalProperties:
+                          description: ManagedByValue is the value type for ManagedBy.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Stores information about what manages this entity, such as the tool or
+                          system responsible for its lifecycle (for example, `terraform`).
+
+                          Keys must be 1–63 characters long and start with an alphanumeric
+                          character.
+                        maxProperties: 5
+                        type: object
+                      name:
+                        description: |-
+                          A user-defined unique identifier for this vault instance, used as a stable
+                          human-readable reference.
+                          This value is immutable after creation.
+                          The name is used to load the right Vault configuration and implementation
+                          when referencing secrets with the other entities.
+                        maxLength: 255
+                        minLength: 2
+                        pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                        type: string
+                    required:
+                    - config
+                    - name
+                    type: object
+                  konnect:
+                    description: KonnectConfigStore configuration.
+                    properties:
+                      config:
+                        description: KonnectConfigStoreVaultConfig is a type alias.
+                        properties:
+                          configStoreID:
+                            description: The ID of the Konnect Config Store that contains
+                              the secrets.
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                        required:
+                        - configStoreID
+                        type: object
+                      description:
+                        description: The description of the Vault.
+                        maxLength: 1024
+                        type: string
+                      labels:
+                        additionalProperties:
+                          description: PublicLabelsValue is the value type for PublicLabels.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Public labels store information about an entity that can be used for
+                          filtering a list of objects.
+
+                          Public labels are intended to store **PUBLIC** metadata.
+
+                          Keys must be of length 1-63 characters, and cannot start with "kong",
+                          "konnect", "mesh", "kic", or "_".
+                        maxProperties: 50
+                        type: object
+                      managedBy:
+                        additionalProperties:
+                          description: ManagedByValue is the value type for ManagedBy.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Stores information about what manages this entity, such as the tool or
+                          system responsible for its lifecycle (for example, `terraform`).
+
+                          Keys must be 1–63 characters long and start with an alphanumeric
+                          character.
+                        maxProperties: 5
+                        type: object
+                      name:
+                        description: |-
+                          A user-defined unique identifier for this vault instance, used as a stable
+                          human-readable reference.
+                          This value is immutable after creation.
+                          The name is used to load the right Vault configuration and implementation
+                          when referencing secrets with the other entities.
+                        maxLength: 255
+                        minLength: 2
+                        pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                        type: string
+                    required:
+                    - config
+                    - name
+                    type: object
+                  type:
+                    description: Type designates the type of configuration.
+                    enum:
+                    - aws
+                    - azure
+                    - conjur
+                    - env
+                    - gcp
+                    - hcv
+                    - konnect
+                    minLength: 1
+                    type: string
+                required:
+                - type
+                type: object
+            required:
+            - aiGatewayRef
+            type: object
+          status:
+            description: AIGatewayVaultStatus defines the observed state of AIGatewayVault.
+            properties:
+              conditions:
+                description: Conditions represent the current state of the resource.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                maxItems: 8
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              gatewayID:
+                description: GatewayID is the Konnect ID of the parent Gateway.
+                properties:
+                  id:
+                    description: ID is the unique identifier of the Konnect entity
+                      as assigned by Konnect API.
+                    maxLength: 256
+                    type: string
+                type: object
+              id:
+                description: |-
+                  ID is the unique identifier of the Konnect entity as assigned by Konnect API.
+                  If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+                maxLength: 256
+                type: string
+              observedGeneration:
+                description: ObservedGeneration is the most recent generation observed
+                format: int64
+                type: integer
+              organizationID:
+                description: OrgID is ID of Konnect Org that this entity has been
+                  created in.
+                maxLength: 256
+                type: string
+              serverURL:
+                description: ServerURL is the URL of the Konnect server in which the
+                  entity exists.
+                maxLength: 512
+                type: string
+            type: object
+        type: object
+        x-kubernetes-validations:
+        - message: spec.aiGatewayRef is immutable when an entity is already Programmed
+          rule: '!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions)
+            || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
+            == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
+    served: true
+    storage: true
+    subresources:
+      status: {}

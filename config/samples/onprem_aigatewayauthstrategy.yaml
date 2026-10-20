@@ -1,0 +1,82 @@
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongLicense
+metadata:
+  name: kong-license
+enabled: true
+rawLicenseString: |
+  <paste your Kong license payload here>
+---
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: OnPremAIGateway
+metadata:
+  name: ai-gw-cp-onprem-1
+  namespace: default
+spec: {}
+---
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: AIGatewayDataPlane
+metadata:
+  name: ai-gw-dp-onprem-1
+  namespace: default
+spec:
+  controlPlaneRef:
+    type: onpremNamespacedRef
+    onpremNamespacedRef:
+      name: ai-gw-cp-onprem-1
+---
+kind: AIGatewayAuthStrategy
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-auth-strategy-key-auth
+  namespace: default
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ai-gw-cp-onprem-1
+  apiSpec:
+    type: key-auth
+    key-auth:
+      name: my-key-auth-provider
+      displayName: My Key Auth Identity Provider
+      config:
+        hideCredentials: Enabled
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ai-gw-oidc-client-secret
+  namespace: default
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+data:
+  clientSecret: eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eA==
+---
+kind: AIGatewayAuthStrategy
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-auth-strategy-oidc
+  namespace: default
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ai-gw-cp-onprem-1
+  apiSpec:
+    type: openid-connect
+    openid-connect:
+      name: my-oidc-provider
+      displayName: My OpenID Connect Identity Provider
+      config:
+        issuer: https://my-idp.example.com/.well-known/openid-configuration
+        cacheTokensSalt: my-cache-salt
+        clientID:
+          - my-client-id
+        clientSecret:
+          - type: secretRef
+            secretRef:
+              name: ai-gw-oidc-client-secret
+              key: clientSecret

@@ -200,6 +200,7 @@ spec:
 
                           Keys must be of length 1-63 characters, and cannot start with "kong",
                           "konnect", "mesh", "kic", or "_".
+                        maxProperties: 50
                         type: object
                       name:
                         description: A unique user-defined name of the policy.
@@ -989,6 +990,7 @@ spec:
 
                           Keys must be of length 1-63 characters, and cannot start with "kong",
                           "konnect", "mesh", "kic", or "_".
+                        maxProperties: 50
                         type: object
                       name:
                         description: A unique user-defined name of the policy.
@@ -1177,6 +1179,11 @@ spec:
           rule: '!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status.conditions)
             || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
             == ''True'') || oldSelf.spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef'
+        - fieldPath: .spec.eventGatewayVirtualClusterRef
+          message: spec.eventGatewayVirtualClusterRef is immutable once the entity
+            has been created in Konnect
+          rule: '!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayVirtualClusterRef
+            == oldSelf.spec.eventGatewayVirtualClusterRef'
     served: true
     storage: true
     subresources:

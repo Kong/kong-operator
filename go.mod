@@ -1,40 +1,40 @@
 module github.com/kong/kong-operator/v2
 
-go 1.27.1
+go 1.27.2
 
 require (
 	cloud.google.com/go/container v1.54.0
 	dario.cat/mergo v1.0.2
-	github.com/Kong/ai-deck-converter v0.19.9-0.20261001144049-e51034bba812
+	github.com/Kong/ai-deck-converter v0.22.0
 	github.com/Kong/sdk-konnect-go v0.73.1
 	github.com/avast/retry-go/v5 v5.0.0
 	github.com/blang/semver/v4 v4.0.0
 	github.com/cert-manager/cert-manager v1.21.2
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/cnf/structhash v0.0.0-20250313080605-df4c6cc74a9a
-	github.com/docker/go-connections v0.8.1
+	github.com/docker/go-connections v0.8.2
 	github.com/dominikbraun/graph v0.23.0
 	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/go-logr/logr v1.4.4
 	github.com/go-logr/zapr v1.3.0
-	github.com/goccy/go-json v0.11.1
+	github.com/goccy/go-json v0.11.2
 	github.com/gohugoio/hashstructure v1.1.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.22.1
-	github.com/google/pprof v0.0.0-20260926063103-aaccee046517
+	github.com/google/pprof v0.0.0-20261016150608-1facf8f91b50
 	github.com/google/uuid v1.6.0
 	github.com/gruntwork-io/terratest v1.0.1
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/jpillora/backoff v1.0.0
-	github.com/kong/go-database-reconciler v1.42.4
-	github.com/kong/go-kong v0.78.0
+	github.com/kong/go-database-reconciler v1.42.5
+	github.com/kong/go-kong v0.79.0
 	github.com/kong/kubernetes-telemetry v0.1.14
 	github.com/kong/kubernetes-testing-framework v0.51.0
 	github.com/kong/semver/v4 v4.0.1
 	github.com/kr/pretty v0.3.1
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/moby/moby/api v1.56.0
+	github.com/moby/moby/api v1.56.1
 	github.com/moul/pb v0.0.0-20220425114252-bca18df4138c
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/prometheus/client_golang v1.24.1
@@ -45,12 +45,13 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/testcontainers/testcontainers-go v0.44.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.44.0
-	github.com/tidwall/gjson v1.19.0
+	github.com/tidwall/gjson v1.19.1
 	github.com/tonglil/buflogr v1.1.1
 	go.uber.org/goleak v1.3.0
 	go.uber.org/zap v1.28.0
 	golang.org/x/mod v0.41.0
-	golang.org/x/sync v0.23.0
+	golang.org/x/sync v0.24.0
+	golang.org/x/tools v0.49.0
 	google.golang.org/api v0.298.0
 	google.golang.org/grpc v1.83.2
 	gopkg.in/yaml.v3 v3.0.1
@@ -62,12 +63,12 @@ require (
 	k8s.io/kube-openapi v0.0.0-20260821135717-be32def86098
 	k8s.io/kubectl v0.37.1
 	k8s.io/kubernetes v1.37.1
-	oras.land/oras-go/v2 v2.6.2
-	sigs.k8s.io/controller-runtime v0.25.1
+	oras.land/oras-go/v2 v2.6.3
+	sigs.k8s.io/controller-runtime v0.25.2
 	sigs.k8s.io/controller-tools v0.22.0
 	sigs.k8s.io/e2e-framework v0.7.0
-	sigs.k8s.io/gateway-api v1.6.2
-	sigs.k8s.io/gateway-api/conformance v1.6.2
+	sigs.k8s.io/gateway-api v1.6.3
+	sigs.k8s.io/gateway-api/conformance v1.6.3
 	sigs.k8s.io/structured-merge-diff/v6 v6.4.2
 	sigs.k8s.io/yaml v1.6.0
 )
@@ -146,7 +147,7 @@ require (
 	github.com/fatih/camelcase v1.0.0 // indirect
 	github.com/fatih/color v1.19.0 // indirect
 	github.com/felixge/httpsnoop v1.1.0 // indirect
-	github.com/fsnotify/fsnotify v1.10.0 // indirect
+	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.1 // indirect
 	github.com/gammazero/deque v1.2.1 // indirect
 	github.com/gammazero/workerpool v1.2.1 // indirect
@@ -286,15 +287,14 @@ require (
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
-	golang.org/x/crypto v0.56.0 // indirect
-	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f // indirect
-	golang.org/x/net v0.58.0 // indirect
+	golang.org/x/crypto v0.57.0 // indirect
+	golang.org/x/exp v0.0.0-20260709172345-9ea1abe57597 // indirect
+	golang.org/x/net v0.60.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/term v0.45.0 // indirect
-	golang.org/x/text v0.41.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/term v0.46.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
-	golang.org/x/tools v0.49.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
 	google.golang.org/genproto v0.0.0-20260715232425-e75dac1f907d // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260803160001-6ac0973c030d // indirect

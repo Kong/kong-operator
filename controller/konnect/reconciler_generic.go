@@ -149,6 +149,16 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 		logger = logger.WithValues("konnect_id", id)
 	}
 	ctx = ctrllog.IntoContext(ctx, logger)
+
+	// Entities referencing a gateway the Konnect reconciler does not manage,
+	// e.g. an OnPremEventGateway, are kept out of its work queue by the watch
+	// predicates and map functions. This covers any other way they could be
+	// enqueued, e.g. by a reverse watch from an entity referencing them.
+	if skipper, ok := any(ent).(konnectReconciliationSkipper); ok && skipper.SkipKonnectReconciliation() {
+		log.Debug(logger, "not managed by the Konnect reconciler, skipping")
+		return ctrl.Result{}, nil
+	}
+
 	log.Debug(logger, "reconciling")
 
 	// If a type has a ControlPlane ref, handle it.
@@ -514,13 +524,10 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 
 	apiAuthRef, err := GetAPIAuthRefNN(ctx, r.Client, ent)
 	if err != nil {
-		// Entities such as KongTargets resolve API authentication through their
-		// parent resource. The parent ControlPlane can disappear between the
-		// reference checks above and this lookup. In that case the ControlPlane's
-		// deletion has already removed its Konnect entities, so keeping the child
-		// cleanup finalizer would only leave the Kubernetes resource terminating
-		// forever.
-		if handled, res, finalizerErr := removeCleanupFinalizerIfControlPlaneIsGone(ctx, r.Client, ent, err); handled {
+		// API authentication can resolve through a chain of parents. If an
+		// ancestor is gone, its Konnect deletion has already removed the child,
+		// so a deleting child no longer needs its cleanup finalizer.
+		if handled, res, finalizerErr := removeCleanupFinalizerIfAncestorIsGone(ctx, r.Client, ent, err); handled {
 			return res, finalizerErr
 		}
 
@@ -571,6 +578,12 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 		// Otherwise, just return the error and requeue.
 		if _, ok := errors.AsType[ReferencedObjectIsBeingDeletedError](err); !ok ||
 			ent.GetDeletionTimestamp().IsZero() {
+			// The status patch in handleKonnectNetworkRef can conflict with a
+			// concurrent write on a stale cached object; the requeue must not be
+			// masked by the Programmed aggregate patch below.
+			if err == nil && !res.IsZero() {
+				return res, nil
+			}
 			log.Debug(logger, "error handling KonnectNetwork ref", "error", err)
 			return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 		}
@@ -849,6 +862,11 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 				return ctrl.Result{RequeueAfter: referenceErr.RetryAfter}, nil
 			}
 			return ctrl.Result{}, nil
+
+		// Konnect 5xx: return the error so controller-runtime's default
+		// exponential backoff applies.
+		case ops.ErrorIsServerError(err):
+			return ctrl.Result{}, err
 		}
 
 	} else if !res.IsZero() {
@@ -863,7 +881,11 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 	}, nil
 }
 
-func removeCleanupFinalizerIfControlPlaneIsGone[
+// removeCleanupFinalizerIfAncestorIsGone handles missing parents anywhere in the
+// API auth reference chain, not only ControlPlanes. For backward compatibility,
+// a missing ControlPlane releases the finalizer even on active entities; other
+// missing ancestors only release it on deleting entities.
+func removeCleanupFinalizerIfAncestorIsGone[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
 ](
@@ -872,7 +894,9 @@ func removeCleanupFinalizerIfControlPlaneIsGone[
 	ent TEnt,
 	err error,
 ) (bool, ctrl.Result, error) {
-	if _, ok := errors.AsType[controlplane.ReferencedControlPlaneDoesNotExistError](err); !ok {
+	_, controlPlaneIsGone := errors.AsType[controlplane.ReferencedControlPlaneDoesNotExistError](err)
+	_, ancestorIsGone := errors.AsType[ReferencedObjectDoesNotExistError](err)
+	if !controlPlaneIsGone && (!ancestorIsGone || ent.GetDeletionTimestamp().IsZero()) {
 		return false, ctrl.Result{}, nil
 	}
 

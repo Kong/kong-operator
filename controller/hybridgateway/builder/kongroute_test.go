@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"testing"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -93,7 +94,7 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 			},
 			validate: func(t *testing.T, route configurationv1alpha1.KongRoute) {
 				assert.Equal(t, []string{"~/api$", "/api/"}, route.Spec.Paths)
-				assert.Equal(t, new(KongHTTPRoutePathRegexPriorityOffset+8), route.Spec.RegexPriority)
+				assert.Nil(t, route.Spec.RegexPriority)
 				assert.Empty(t, route.Spec.Methods)
 				assert.Nil(t, route.Spec.Headers)
 			},
@@ -108,7 +109,7 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 			},
 			validate: func(t *testing.T, route configurationv1alpha1.KongRoute) {
 				assert.Equal(t, []string{"~/api$"}, route.Spec.Paths)
-				assert.Equal(t, new(KongHTTPRoutePathRegexPriorityOffset+9), route.Spec.RegexPriority)
+				assert.Nil(t, route.Spec.RegexPriority)
 				assert.Empty(t, route.Spec.Methods)
 				assert.Nil(t, route.Spec.Headers)
 			},
@@ -168,6 +169,7 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 				assert.Empty(t, route.Spec.Paths)
 				assert.Equal(t, []string{"GET"}, route.Spec.Methods)
 				assert.Nil(t, route.Spec.Headers)
+				assert.Nil(t, route.Spec.RegexPriority)
 			},
 		},
 		{
@@ -239,7 +241,7 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 			},
 			validate: func(t *testing.T, route configurationv1alpha1.KongRoute) {
 				assert.Equal(t, []string{"~/api$", "/api/"}, route.Spec.Paths)
-				assert.Equal(t, new(KongHTTPRoutePathRegexPriorityOffset+8), route.Spec.RegexPriority)
+				assert.Nil(t, route.Spec.RegexPriority)
 				assert.Equal(t, []string{"GET"}, route.Spec.Methods)
 				require.NotNil(t, route.Spec.Headers)
 				assert.Equal(t, []string{"Bearer token"}, route.Spec.Headers["Authorization"])
@@ -279,22 +281,22 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 	}
 }
 
-func TestGenerateKongRoutePathFromHTTPRouteMatch_RegexPriorityFollowsSpecificity(t *testing.T) {
-	shortPrefixPaths, shortPrefixPriority := GenerateKongRoutePathFromHTTPRouteMatch(
+func TestGenerateKongRoutePathFromHTTPRouteMatch(t *testing.T) {
+	shortPrefixPaths := GenerateKongRoutePathFromHTTPRouteMatch(
 		&gatewayv1.HTTPPathMatch{
 			Type:  new(gatewayv1.PathMatchPathPrefix),
 			Value: new("/match"),
 		},
 		false,
 	)
-	longPrefixPaths, longPrefixPriority := GenerateKongRoutePathFromHTTPRouteMatch(
+	longPrefixPaths := GenerateKongRoutePathFromHTTPRouteMatch(
 		&gatewayv1.HTTPPathMatch{
 			Type:  new(gatewayv1.PathMatchPathPrefix),
 			Value: new("/match/prefix/one"),
 		},
 		false,
 	)
-	exactPaths, exactPriority := GenerateKongRoutePathFromHTTPRouteMatch(
+	exactPaths := GenerateKongRoutePathFromHTTPRouteMatch(
 		&gatewayv1.HTTPPathMatch{
 			Type:  new(gatewayv1.PathMatchExact),
 			Value: new("/match"),
@@ -305,12 +307,6 @@ func TestGenerateKongRoutePathFromHTTPRouteMatch_RegexPriorityFollowsSpecificity
 	require.Equal(t, []string{"~/match$", "/match/"}, shortPrefixPaths)
 	require.Equal(t, []string{"~/match/prefix/one$", "/match/prefix/one/"}, longPrefixPaths)
 	require.Equal(t, []string{"~/match$"}, exactPaths)
-	require.NotNil(t, shortPrefixPriority)
-	require.NotNil(t, longPrefixPriority)
-	require.NotNil(t, exactPriority)
-
-	assert.Greater(t, *longPrefixPriority, *shortPrefixPriority)
-	assert.Greater(t, *exactPriority, *shortPrefixPriority)
 }
 
 func TestKongRouteBuilder_WithKongService(t *testing.T) {
@@ -741,4 +737,97 @@ func TestKongRouteBuilder_WithGRPCRouteMatch_NoMethod(t *testing.T) {
 	assert.Equal(t, map[string][]string{
 		"version": {"v1"},
 	}, route.Spec.Headers)
+}
+
+func TestKongRouteBuilder_WithPreserveHost(t *testing.T) {
+	tests := []struct {
+		name  string
+		value *bool
+		want  *bool
+	}{
+		{name: "nil is a no-op", value: nil, want: nil},
+		{name: "true", value: new(true), want: new(true)},
+		{name: "false", value: new(false), want: new(false)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			route, err := NewKongRoute().WithPreserveHost(tt.value).Build()
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, route.Spec.PreserveHost)
+		})
+	}
+}
+
+func TestKongRouteBuilder_WithRequestBuffering(t *testing.T) {
+	tests := []struct {
+		name  string
+		value *bool
+		want  *bool
+	}{
+		{name: "nil is a no-op", value: nil, want: nil},
+		{name: "true", value: new(true), want: new(true)},
+		{name: "false", value: new(false), want: new(false)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			route, err := NewKongRoute().WithRequestBuffering(tt.value).Build()
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, route.Spec.RequestBuffering)
+		})
+	}
+}
+
+func TestKongRouteBuilder_WithResponseBuffering(t *testing.T) {
+	tests := []struct {
+		name  string
+		value *bool
+		want  *bool
+	}{
+		{name: "nil is a no-op", value: nil, want: nil},
+		{name: "true", value: new(true), want: new(true)},
+		{name: "false", value: new(false), want: new(false)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			route, err := NewKongRoute().WithResponseBuffering(tt.value).Build()
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, route.Spec.ResponseBuffering)
+		})
+	}
+}
+
+func TestKongRouteBuilder_WithHTTPSRedirectStatusCode(t *testing.T) {
+	tests := []struct {
+		name  string
+		value *int64
+		want  *sdkkonnectcomp.HTTPSRedirectStatusCode
+	}{
+		{name: "nil is a no-op", value: nil, want: nil},
+		{name: "308", value: new(int64(308)), want: new(sdkkonnectcomp.HTTPSRedirectStatusCodeThreeHundredAndEight)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			route, err := NewKongRoute().WithHTTPSRedirectStatusCode(tt.value).Build()
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, route.Spec.HTTPSRedirectStatusCode)
+		})
+	}
+}
+
+func TestKongRouteBuilder_WithPathHandling(t *testing.T) {
+	tests := []struct {
+		name  string
+		value *string
+		want  *sdkkonnectcomp.PathHandling
+	}{
+		{name: "nil is a no-op", value: nil, want: nil},
+		{name: "v1", value: new("v1"), want: new(sdkkonnectcomp.PathHandlingV1)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			route, err := NewKongRoute().WithPathHandling(tt.value).Build()
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, route.Spec.PathHandling)
+		})
+	}
 }

@@ -20,8 +20,8 @@ package v1alpha1
 //     {{- template "sdkOpsRefInjections" $}} define.
 //   - The method to generate is MarshalAIGatewayEntity(ctx, cl) ([]byte, error): bytes, not a
 //     typed *aigw.Model, so api/ stays free of the ai-deck-converter dependency and callers can
-//     stuff the ten entities' output into a map[string][]json.RawMessage envelope for
-//     aigw.Parse. Ten methods from one template edit.
+//     stuff the eleven entities' output into a map[string][]json.RawMessage envelope for
+//     aigw.Parse. Eleven methods from one template edit.
 //   - What survives hand-written even after that: the name-only resolver below (until the
 //     generator grows an on-prem resolve mode that skips the Konnect-ID gate described on
 //     resolveEntityName), the "managed_by" drop, and the model-selector re-nesting.
@@ -96,8 +96,7 @@ func (obj *AIGatewayModel) ToAIGWModel(ctx context.Context, cl client.Client) (*
 	if err != nil {
 		return nil, fmt.Errorf("resolving AIGatewayModel %s/%s access.authStrategies: %w", obj.Namespace, obj.Name, err)
 	}
-	// aigw.ModelAccess.UnmarshalYAML already folded the deprecated identity_providers key into
-	// Access.AuthStrategies; current-key refs come first.
+	// Resolved current-key refs are re-attached first.
 	model.Access.AuthStrategies = append(authStrategies, model.Access.AuthStrategies...)
 
 	if access.Acls != nil {

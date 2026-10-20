@@ -17,6 +17,8 @@ func TestLoadProjectConfig(t *testing.T) {
 			"    types:\n" +
 			"      - path: /v3/portals\n" +
 			"        cel:\n" +
+			"          _validations:\n" +
+			"            - \"+kubebuilder:validation:XValidation:rule=\\\"self == oldSelf\\\",message=\\\"resource is immutable\\\"\"\n" +
 			"          name:\n" +
 			"            _validations:\n" +
 			"              - \"+kubebuilder:validation:MinLength=1\"\n" +
@@ -41,7 +43,10 @@ func TestLoadProjectConfig(t *testing.T) {
 		require.Len(t, konnect.Types, 2)
 		assert.Equal(t, "/v3/portals", konnect.Types[0].Path)
 		require.NotNil(t, konnect.Types[0].CEL)
-		assert.Contains(t, konnect.Types[0].CEL, "name")
+		assert.Equal(t, []string{`+kubebuilder:validation:XValidation:rule="self == oldSelf",message="resource is immutable"`}, konnect.Types[0].CEL.Validations)
+		assert.Contains(t, konnect.Types[0].CEL.Fields, "name")
+		fieldConfig := konnect.FieldConfig(map[string]string{"/v3/portals": "Portal"})
+		assert.Equal(t, konnect.Types[0].CEL.Validations, fieldConfig.Entities["Portal"].Validations)
 		require.NotNil(t, konnect.Types[0].Ops)
 		assert.Len(t, konnect.Types[0].Ops, 2)
 		assert.Equal(t, "github.com/Kong/sdk-konnect-go/models/components.CreatePortal", konnect.Types[0].Ops["create"].Path)
@@ -779,6 +784,56 @@ func TestTypeConfig_ValidateAssociations(t *testing.T) {
 	})
 }
 
+func TestTypeConfig_ValidateGatewayRef(t *testing.T) {
+	newTypeConfig := func(mutate func(*ReconcilerConfig)) *TypeConfig {
+		rc := &ReconcilerConfig{
+			ParentEntityGVK: &EntityGVKConfig{Group: "konnect.konghq.com", Kind: "KonnectEventGateway"},
+			GatewayRef: &GatewayRefConfig{
+				FieldName: "parentRef",
+				AdditionalKinds: []EntityGVKConfig{
+					{Group: "eventgateway.konghq.com", Version: "v1alpha1", Kind: "OnPremEventGateway"},
+				},
+			},
+		}
+		if mutate != nil {
+			mutate(rc)
+		}
+		return &TypeConfig{Path: "/v1/event-gateways/{gatewayId}/listeners", Reconciler: rc}
+	}
+
+	t.Run("valid", func(t *testing.T) {
+		require.NoError(t, newTypeConfig(nil).validate())
+	})
+	t.Run("fieldName is required", func(t *testing.T) {
+		tc := newTypeConfig(func(rc *ReconcilerConfig) { rc.GatewayRef.FieldName = "" })
+		require.ErrorContains(t, tc.validate(), "fieldName is required")
+	})
+	t.Run("parentRef is mutually exclusive", func(t *testing.T) {
+		tc := newTypeConfig(func(rc *ReconcilerConfig) { rc.ParentRef = &ParentRefConfig{FieldName: "gatewayRef"} })
+		require.ErrorContains(t, tc.validate(), "mutually exclusive")
+	})
+	t.Run("parentEntityGVK is required", func(t *testing.T) {
+		tc := newTypeConfig(func(rc *ReconcilerConfig) { rc.ParentEntityGVK = nil })
+		require.ErrorContains(t, tc.validate(), "parentEntityGVK with kind and group is required")
+	})
+	t.Run("parentEntityGVK group is required", func(t *testing.T) {
+		tc := newTypeConfig(func(rc *ReconcilerConfig) { rc.ParentEntityGVK.Group = "" })
+		require.ErrorContains(t, tc.validate(), "parentEntityGVK with kind and group is required")
+	})
+	t.Run("additionalKinds is optional", func(t *testing.T) {
+		tc := newTypeConfig(func(rc *ReconcilerConfig) { rc.GatewayRef.AdditionalKinds = nil })
+		require.NoError(t, tc.validate())
+	})
+	t.Run("additionalKinds entries need a version", func(t *testing.T) {
+		tc := newTypeConfig(func(rc *ReconcilerConfig) { rc.GatewayRef.AdditionalKinds[0].Version = "" })
+		require.ErrorContains(t, tc.validate(), "require group, version and kind")
+	})
+	t.Run("additionalKinds must not repeat the Konnect kind", func(t *testing.T) {
+		tc := newTypeConfig(func(rc *ReconcilerConfig) { rc.GatewayRef.AdditionalKinds[0].Kind = "KonnectEventGateway" })
+		require.ErrorContains(t, tc.validate(), `kind "KonnectEventGateway" is listed more than once`)
+	})
+}
+
 func TestTypeConfig_ValidateDataSources(t *testing.T) {
 	t.Run("Secret and ConfigMap types are valid", func(t *testing.T) {
 		tc := &TypeConfig{DataSources: []DataSourceConfig{
@@ -829,8 +884,11 @@ func TestAPIGroupVersionConfig_FieldConfig(t *testing.T) {
 			Types: []*TypeConfig{
 				{
 					Path: "/v3/portals",
-					CEL: map[string]*FieldConfig{
-						"name": {Validations: []string{"+required"}},
+					CEL: &EntityConfig{
+						Validations: []string{"+kubebuilder:validation:XValidation:rule=\"self == oldSelf\""},
+						Fields: map[string]*FieldConfig{
+							"name": {Validations: []string{"+required"}},
+						},
 					},
 				},
 				{
@@ -846,6 +904,7 @@ func TestAPIGroupVersionConfig_FieldConfig(t *testing.T) {
 
 		fc := agv.FieldConfig(pathToEntity)
 		require.NotNil(t, fc)
+		assert.Equal(t, agv.Types[0].CEL.Validations, fc.Entities["Portal"].Validations)
 		assert.Equal(t, []string{"+required"}, fc.GetFieldValidations("Portal", "name"))
 		assert.Nil(t, fc.GetFieldValidations("PortalTeam", "name"))
 	})
@@ -875,13 +934,15 @@ func TestAPIGroupVersionConfig_FieldConfig(t *testing.T) {
 			Types: []*TypeConfig{
 				{
 					Path: "/v1/entities/{entityId}/sub",
-					CEL: map[string]*FieldConfig{
-						"tls": {
-							Fields: map[string]*FieldConfig{
-								"client_identity": {
-									Fields: map[string]*FieldConfig{
-										"certificate": {
-											Validations: []string{"+kubebuilder:validation:MaxLength=1024"},
+					CEL: &EntityConfig{
+						Fields: map[string]*FieldConfig{
+							"tls": {
+								Fields: map[string]*FieldConfig{
+									"client_identity": {
+										Fields: map[string]*FieldConfig{
+											"certificate": {
+												Validations: []string{"+kubebuilder:validation:MaxLength=1024"},
+											},
 										},
 									},
 								},
@@ -1391,7 +1452,7 @@ func TestReferenceConfigValidation(t *testing.T) {
 			wantErr: "reverseWatch requires exactly one kind",
 		},
 		{
-			name: "two reverseWatch references to the same kind rejected",
+			name: "two reverseWatch references to the same kind accepted",
 			cfg: func() *APIGroupVersionConfig {
 				cfg := base(func(rc *ReferenceConfig) { rc.ReverseWatch = true })
 				second := cfg.Types[0].References[0]
@@ -1399,7 +1460,22 @@ func TestReferenceConfigValidation(t *testing.T) {
 				cfg.Types[0].References = append(cfg.Types[0].References, second)
 				return cfg
 			}(),
-			wantErr: "reverseWatch is supported for at most one reference per referenced kind",
+		},
+		{
+			name: "two reverseWatch references to the same kind with injectInto rejected",
+			cfg: func() *APIGroupVersionConfig {
+				cfg := base(func(rc *ReferenceConfig) {
+					rc.Path = "spec.apiSpec.customPolicyRef"
+					rc.InjectInto = "type"
+					rc.ReverseWatch = true
+				})
+				second := cfg.Types[0].References[0]
+				second.Path = "spec.apiSpec.otherPolicies"
+				second.InjectInto = ""
+				cfg.Types[0].References = append(cfg.Types[0].References, second)
+				return cfg
+			}(),
+			wantErr: "reverseWatch with injectInto is supported for at most one reference per referenced kind",
 		},
 	}
 	for _, tt := range tests {
@@ -1508,4 +1584,26 @@ func TestSourceConfigs_Accessor(t *testing.T) {
 	require.Contains(t, got, "KonnectEventGateway")
 	require.True(t, got["KonnectEventGateway"].SupportsMirror)
 	require.NotContains(t, got, "Portal")
+}
+
+func TestTypeConfig_ValidateFieldDescriptions(t *testing.T) {
+	tc := &TypeConfig{CEL: &EntityConfig{Fields: map[string]*FieldConfig{
+		"spec": {Fields: map[string]*FieldConfig{
+			"apiSpec": {Fields: map[string]*FieldConfig{
+				"value": {Description: "ok"},
+			}},
+		}},
+	}}}
+	require.NoError(t, tc.validate())
+
+	tc = &TypeConfig{CEL: &EntityConfig{Fields: map[string]*FieldConfig{
+		"spec": {Fields: map[string]*FieldConfig{
+			"apiSpec": {Fields: map[string]*FieldConfig{
+				"tls": {Fields: map[string]*FieldConfig{
+					"caBundle": {Description: "nested"},
+				}},
+			}},
+		}},
+	}}}
+	require.ErrorContains(t, tc.validate(), "cel.spec.apiSpec.tls.caBundle: _description is only supported on spec.apiSpec's direct fields")
 }

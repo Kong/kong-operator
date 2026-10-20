@@ -35,7 +35,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
@@ -806,7 +805,7 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 		return &gatewayapi.TLSRoute{}, nil
 	case schema.GroupVersion(gatewayv1beta1.GroupVersion).WithKind("ReferenceGrant"):
 		return &gatewayapi.ReferenceGrant{}, nil
-	case schema.GroupVersion(gatewayv1alpha3.GroupVersion).WithKind("BackendTLSPolicy"):
+	case schema.GroupVersion(gatewayv1.GroupVersion).WithKind("BackendTLSPolicy"):
 		return &gatewayapi.BackendTLSPolicy{}, nil
 	// ----------------------------------------------------------------------------
 	// Kong APIs

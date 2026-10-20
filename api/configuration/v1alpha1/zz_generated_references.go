@@ -56,6 +56,11 @@ type ReferenceBeingDeletedError = commonv1alpha1.ReferenceBeingDeletedError
 // cross-namespace support and authorization checks are implemented.
 type ReferenceCrossNamespaceError = commonv1alpha1.ReferenceCrossNamespaceError
 
+// ReferenceNotKonnectManagedError is returned when a reference points to a CR
+// the Konnect reconciler does not manage, e.g. one attached to an on-prem
+// gateway.
+type ReferenceNotKonnectManagedError = commonv1alpha1.ReferenceNotKonnectManagedError
+
 // ReferenceDifferentGatewayError is returned when a reference points to a CR
 // programmed under a different AIGatewayControlPlane. References must stay
 // within the same Konnect Gateway because Konnect only accepts policy and ACL
@@ -95,6 +100,28 @@ type EventGatewaySchemaRegistryRef struct {
 	Namespace string `json:"namespace,omitempty"`
 }
 
+// EventGatewayStaticKeyRef references an EventGatewayStaticKey in the cluster. The referenced
+// object's Konnect id is used where the Konnect API accepts it.
+type EventGatewayStaticKeyRef struct {
+	// Kind is the kind of the referenced object.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=EventGatewayStaticKey
+	// +kubebuilder:default=EventGatewayStaticKey
+	Kind string `json:"kind,omitempty"`
+
+	// Name is the name of the referenced object.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+
+	// Namespace is reserved for future cross-namespace support.
+	//
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+}
+
 // EventGatewayTLSTrustBundleRef references an EventGatewayTLSTrustBundle in the cluster. The referenced
 // object's Konnect id is used where the Konnect API accepts it.
 type EventGatewayTLSTrustBundleRef struct {
@@ -103,6 +130,50 @@ type EventGatewayTLSTrustBundleRef struct {
 	// +optional
 	// +kubebuilder:validation:Enum=EventGatewayTLSTrustBundle
 	// +kubebuilder:default=EventGatewayTLSTrustBundle
+	Kind string `json:"kind,omitempty"`
+
+	// Name is the name of the referenced object.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+
+	// Namespace is reserved for future cross-namespace support.
+	//
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+}
+
+// EventGatewayVirtualClusterConsumePolicyRef references an EventGatewayVirtualClusterConsumePolicy in the cluster. The referenced
+// object's Konnect id is used where the Konnect API accepts it.
+type EventGatewayVirtualClusterConsumePolicyRef struct {
+	// Kind is the kind of the referenced object.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=EventGatewayVirtualClusterConsumePolicy
+	// +kubebuilder:default=EventGatewayVirtualClusterConsumePolicy
+	Kind string `json:"kind,omitempty"`
+
+	// Name is the name of the referenced object.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+
+	// Namespace is reserved for future cross-namespace support.
+	//
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+}
+
+// EventGatewayVirtualClusterProducePolicyRef references an EventGatewayVirtualClusterProducePolicy in the cluster. The referenced
+// object's Konnect id is used where the Konnect API accepts it.
+type EventGatewayVirtualClusterProducePolicyRef struct {
+	// Kind is the kind of the referenced object.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=EventGatewayVirtualClusterProducePolicy
+	// +kubebuilder:default=EventGatewayVirtualClusterProducePolicy
 	Kind string `json:"kind,omitempty"`
 
 	// Name is the name of the referenced object.

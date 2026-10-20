@@ -1,6 +1,7 @@
 # Test: HTTPRoute-level Kong annotations.
 # Verifies that the hybrid gateway controller propagates HTTPRoute-level
-# konghq.com annotations (strip-path, preserve-host) to the generated
+# konghq.com annotations (strip-path, preserve-host, request-buffering,
+# response-buffering, https-redirect-status-code, path-handling) to the generated
 # KongRoute spec, and re-reconciles when the annotations change.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
@@ -13,11 +14,18 @@ spec:
     Supported HTTPRoute-level annotations:
     - konghq.com/strip-path:    <bool> (default: false) -> KongRoute.spec.strip_path
     - konghq.com/preserve-host: <bool> (default: true)  -> KongRoute.spec.preserve_host
-    The test sets both annotations to the opposite of their defaults so a
-    regression in propagation surfaces as a failed assertion. It then patches
-    the HTTPRoute to flip them back and re-asserts the KongRoute spec to
-    verify that subsequent annotation changes are reconciled.
-    Finally it sets a malformed konghq.com/strip-path value and verifies the
+    - konghq.com/request-buffering:  <bool> (unset when absent) -> KongRoute.spec.request_buffering
+    - konghq.com/response-buffering: <bool> (unset when absent) -> KongRoute.spec.response_buffering
+    - konghq.com/https-redirect-status-code: 301|302|307|308|426 (unset when absent)
+      -> KongRoute.spec.https_redirect_status_code
+    - konghq.com/path-handling: v0|v1 (unset when absent) -> KongRoute.spec.path_handling
+    The test sets strip-path/preserve-host to the opposite of their defaults and
+    the new annotations to non-default values so a regression in propagation
+    surfaces as a failed assertion. It then patches the HTTPRoute to flip them
+    back and re-asserts the KongRoute spec to verify that subsequent annotation
+    changes are reconciled.
+    Finally it sets malformed konghq.com/strip-path, konghq.com/request-buffering
+    and konghq.com/https-redirect-status-code values, one at a time, and verifies the
     controller treats it as an error (issue #4233): the HTTPRoute gets a dedicated
     implementation-specific KongConfigurationValid condition set to False with reason
     InvalidKongConfiguration (Accepted stays True), and fixing the annotation removes
@@ -177,7 +185,7 @@ spec:
     # Expect the controller to re-reconcile the KongRoute with the new values.
     # ---------------------------------------------------------------------------
     - name: Patch-httproute-add-annotations
-      description: Patch HTTPRoute to add konghq.com/strip-path=true and konghq.com/preserve-host=false.
+      description: Patch HTTPRoute to add non-default konghq.com annotations (strip-path, preserve-host, request/response-buffering, https-redirect-status-code, path-handling).
       try:
         - patch:
             resource:
@@ -189,6 +197,10 @@ spec:
                 annotations:
                   konghq.com/strip-path: "true"
                   konghq.com/preserve-host: "false"
+                  konghq.com/request-buffering: "false"
+                  konghq.com/response-buffering: "false"
+                  konghq.com/https-redirect-status-code: "308"
+                  konghq.com/path-handling: "v1"
         - assert:
             resource:
               apiVersion: gateway.networking.k8s.io/v1
@@ -199,6 +211,10 @@ spec:
                 annotations:
                   konghq.com/strip-path: "true"
                   konghq.com/preserve-host: "false"
+                  konghq.com/request-buffering: "false"
+                  konghq.com/response-buffering: "false"
+                  konghq.com/https-redirect-status-code: "308"
+                  konghq.com/path-handling: "v1"
 
     - name: Assert-kong-route-with-added-annotations
       description: Assert KongRoute reflects the added annotations (strip_path=true, preserve_host=false).
@@ -216,8 +232,25 @@ spec:
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
 
+    - name: Assert-kong-route-new-fields-with-added-annotations
+      description: Assert KongRoute carries the new annotation-driven fields (request_buffering=false, response_buffering=false, https_redirect_status_code=308, path_handling=v1).
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              metadata:
+                namespace: ($namespace)
+                (labels."gateway-operator.konghq.com/managed-by" == 'HTTPRoute'): true
+              spec:
+                request_buffering: false
+                response_buffering: false
+                https_redirect_status_code: 308
+                path_handling: v1
+
     # ---------------------------------------------------------------------------
-    # Phase 3: Patch annotations to a mixed state (strip-path=false, preserve-host=false).
+    # Phase 3: Patch annotations to a mixed state (strip-path=false, preserve-host=false)
+    # and flip the new annotations back (buffering=true, redirect code=301, path-handling=v0).
     # ---------------------------------------------------------------------------
     - name: Patch-httproute-mixed-annotations
       description: Patch HTTPRoute annotations to a mixed state.
@@ -232,6 +265,10 @@ spec:
                 annotations:
                   konghq.com/strip-path: "false"
                   konghq.com/preserve-host: "false"
+                  konghq.com/request-buffering: "true"
+                  konghq.com/response-buffering: "true"
+                  konghq.com/https-redirect-status-code: "301"
+                  konghq.com/path-handling: "v0"
         - assert:
             resource:
               apiVersion: gateway.networking.k8s.io/v1
@@ -242,6 +279,10 @@ spec:
                 annotations:
                   konghq.com/strip-path: "false"
                   konghq.com/preserve-host: "false"
+                  konghq.com/request-buffering: "true"
+                  konghq.com/response-buffering: "true"
+                  konghq.com/https-redirect-status-code: "301"
+                  konghq.com/path-handling: "v0"
 
     - name: Assert-kong-route-with-mixed-annotations
       description: Assert KongRoute reflects mixed annotations (strip_path=false, preserve_host=false).
@@ -258,6 +299,22 @@ spec:
           value: false
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
+
+    - name: Assert-kong-route-new-fields-with-flipped-annotations
+      description: Assert KongRoute reflects flipped values (request_buffering=true, response_buffering=true, https_redirect_status_code=301, path_handling=v0).
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              metadata:
+                namespace: ($namespace)
+                (labels."gateway-operator.konghq.com/managed-by" == 'HTTPRoute'): true
+              spec:
+                request_buffering: true
+                response_buffering: true
+                https_redirect_status_code: 301
+                path_handling: v0
 
     # ---------------------------------------------------------------------------
     # Phase 4: Remove both annotations from the HTTPRoute entirely.
@@ -387,6 +444,130 @@ spec:
           value: true
         - name: resource_type
           value: "kongservices.configuration.konghq.com"
+
+    # ---------------------------------------------------------------------------
+    # Phase 7: Malformed konghq.com/request-buffering (request-buffering), then fix.
+    # ---------------------------------------------------------------------------
+    - name: Patch-httproute-malformed-request-buffering
+      description: Patch HTTPRoute with a malformed konghq.com/request-buffering value.
+      try:
+        - patch:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($http_route_name)
+                annotations:
+                  konghq.com/request-buffering: "notabool"
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($http_route_name)
+              status:
+                parents:
+                  - parentRef:
+                      name: ($gateway_name)
+                      namespace: ($gateway_namespace)
+                    (conditions[?type == 'Accepted'] | [0]):
+                      type: Accepted
+                      status: "True"
+                    (conditions[?type == 'KongConfigurationValid'] | [0]):
+                      type: KongConfigurationValid
+                      status: "False"
+                      reason: InvalidKongConfiguration
+
+    - name: Fix-httproute-malformed-request-buffering
+      description: Patch konghq.com/request-buffering back to a valid value.
+      try:
+        - patch:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($http_route_name)
+                annotations:
+                  konghq.com/request-buffering: "true"
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($http_route_name)
+              status:
+                parents:
+                  - parentRef:
+                      name: ($gateway_name)
+                      namespace: ($gateway_namespace)
+                    # The condition is removed once the configuration is valid again.
+                    (length(conditions[?type == 'KongConfigurationValid'])): 0
+
+    # ---------------------------------------------------------------------------
+    # Phase 8: Malformed konghq.com/https-redirect-status-code (https-redirect-status-code), then fix.
+    # ---------------------------------------------------------------------------
+    - name: Patch-httproute-malformed-https-redirect-status-code
+      description: Patch HTTPRoute with a malformed konghq.com/https-redirect-status-code value.
+      try:
+        - patch:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($http_route_name)
+                annotations:
+                  konghq.com/https-redirect-status-code: "999"
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($http_route_name)
+              status:
+                parents:
+                  - parentRef:
+                      name: ($gateway_name)
+                      namespace: ($gateway_namespace)
+                    (conditions[?type == 'Accepted'] | [0]):
+                      type: Accepted
+                      status: "True"
+                    (conditions[?type == 'KongConfigurationValid'] | [0]):
+                      type: KongConfigurationValid
+                      status: "False"
+                      reason: InvalidKongConfiguration
+
+    - name: Fix-httproute-malformed-https-redirect-status-code
+      description: Patch konghq.com/https-redirect-status-code back to a valid value.
+      try:
+        - patch:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($http_route_name)
+                annotations:
+                  konghq.com/https-redirect-status-code: "301"
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              metadata:
+                namespace: ($namespace)
+                name: ($http_route_name)
+              status:
+                parents:
+                  - parentRef:
+                      name: ($gateway_name)
+                      namespace: ($gateway_namespace)
+                    # The condition is removed once the configuration is valid again.
+                    (length(conditions[?type == 'KongConfigurationValid'])): 0
 
   catch:
     # Capture debug snapshot on test failure.

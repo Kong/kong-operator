@@ -141,7 +141,8 @@ type Config struct {
 	KonnectControllersEnabled bool
 
 	// Controllers for Event Gateway APIs.
-	KEGDataPlaneControllerEnabled bool
+	KEGDataPlaneControllerEnabled       bool
+	OnPremEventGatewayControllerEnabled bool
 
 	// Controllers for AI Gateway APIs.
 	AIGatewayDataPlaneControllerEnabled bool

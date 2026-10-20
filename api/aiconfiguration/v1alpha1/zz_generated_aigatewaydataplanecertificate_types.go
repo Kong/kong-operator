@@ -75,7 +75,6 @@ type AIGatewayDataPlaneCertificateAPISpec struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 
 	// Stores information about what manages this entity, such as the tool or
@@ -86,7 +85,6 @@ type AIGatewayDataPlaneCertificateAPISpec struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 
 	// A human-readable name for the certificate.

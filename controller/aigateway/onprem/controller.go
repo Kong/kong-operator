@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -201,6 +202,34 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 		string(aigatewayv1alpha1.LicenseMissingReason),
 	)
 
+	// Validate the gateway's options against the operator's configuration. If they
+	// are not valid (e.g. the secret label selectors of spec.objectFilters conflict
+	// with the operator's secret label selector), the OnPremAIGateway is marked
+	// invalid and the reconciliation stops.
+	log.Trace(logger, "validating OnPremAIGateway's options with the reconciler's configuration")
+	msg, ok := r.validateOnPremAIGatewayOptions(onprem)
+	if !ok {
+		k8sutils.SetCondition(
+			k8sutils.NewCondition(
+				aigatewayv1alpha1.OnPremAIGatewayOptionsValidType,
+				metav1.ConditionFalse,
+				aigatewayv1alpha1.OnPremAIGatewayOptionsInvalidReason,
+				msg,
+			),
+			onprem,
+		)
+		return ctrl.Result{}, r.applyStatus(ctx, logger, onprem)
+	}
+	k8sutils.SetCondition(
+		k8sutils.NewCondition(
+			aigatewayv1alpha1.OnPremAIGatewayOptionsValidType,
+			metav1.ConditionTrue,
+			aigatewayv1alpha1.OnPremAIGatewayOptionsValidReason,
+			"Controller options are valid",
+		),
+		onprem,
+	)
+
 	// The mTLS client certificate is what the instance presents to the data planes'
 	// Admin API when pushing configuration. Provision it before scheduling the
 	// instance: an instance without it cannot push, and the push loop would only
@@ -212,31 +241,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 		return ctrl.Result{}, fmt.Errorf("failed to ensure the Admin API client certificate Secret: %w", err)
 	}
 
-	cfg, err := r.configFromSpec(ctx, logger, onprem)
-	if err != nil {
-		log.Debug(logger, "failed to render OnPremAIGateway configuration", "error", err)
-		k8sutils.SetCondition(
-			k8sutils.NewCondition(
-				aigatewayv1alpha1.ReadyType,
-				metav1.ConditionFalse,
-				aigatewayv1alpha1.ConfigurationInvalidReason,
-				err.Error(),
-			),
-			onprem,
-		)
-		if err := r.applyStatus(ctx, logger, onprem); err != nil {
-			return ctrl.Result{}, err
-		}
-		// A bad reference or malformed entity is a user-fixable input error, not a transient
-		// failure: don't requeue with backoff. Re-rendering on input changes is handled by the
-		// instance's own configuration-entity controllers via its ChangeNotifier, not by a
-		// watch on this controller.
-
-		// TODO: https://github.com/Kong/kong-operator/issues/5665
-		// return the error so controller-runtime retries with backoff and
-		// keep the no-requeue path only for reference-resolution errors.
-		return ctrl.Result{}, nil
-	}
+	cfg := r.configFromSpec(onprem)
 	// Part of the hashed instance config: when the Secret is renewed under a new
 	// name, the hash drifts and the instance restarts with the new reference.
 	cfg.AdminClientCertSecretNN = client.ObjectKeyFromObject(adminClientCertSecret)
@@ -328,14 +333,45 @@ func setReadySkippingLicenseCondition(onprem *aigatewayv1alpha1.OnPremAIGateway)
 // AIGatewayModel assembly and dbless rendering live in Instance.sendConfig, which converts
 // non-strict until spec.conversion options drive convert.Options: dangling references are
 // warnings, not fatal errors.
-// TODO: https://github.com/Kong/kong-operator/issues/5569
+// TODO: https://github.com/Kong/kong-operator/issues/5569 - fill in the remaining config
+// from the spec; restore the (context, logger, error) signature and the caller's
+// error-handling branch when config building can fail.
 func (r *Reconciler) configFromSpec(
-	ctx context.Context,
-	logger logr.Logger,
 	onprem *aigatewayv1alpha1.OnPremAIGateway,
-) (multiinstanceai.Config, error) {
-	// TODO: fill this in based on the OnPremAIGateway spec.
-	return multiinstanceai.Config{}, nil
+) multiinstanceai.Config {
+	cfg := multiinstanceai.Config{}
+	if dps := onprem.Spec.DataPlaneSync; dps != nil {
+		if dps.IntervalSeconds != nil {
+			cfg.SyncInterval = time.Duration(*dps.IntervalSeconds) * time.Second
+		}
+		if dps.TimeoutSeconds != nil {
+			cfg.SyncTimeout = time.Duration(*dps.TimeoutSeconds) * time.Second
+		}
+	}
+	if of := onprem.Spec.ObjectFilters; of != nil && of.Secrets != nil {
+		cfg.SecretLabelFilters = of.Secrets.MatchLabels
+	}
+	return cfg
+}
+
+// validateOnPremAIGatewayOptions checks if the OnPremAIGateway's options are valid with
+// the operator specific configuration. It returns a boolean as the validation result and
+// a string as the error message when the validation fails. For example, it fails when a
+// matchLabels key of spec.objectFilters.secrets conflicts with the operator's secret
+// label selector or with the operator-managed Admin API client certificate label.
+func (r *Reconciler) validateOnPremAIGatewayOptions(onprem *aigatewayv1alpha1.OnPremAIGateway) (string, bool) {
+	if onprem.Spec.ObjectFilters == nil || onprem.Spec.ObjectFilters.Secrets == nil {
+		return "", true
+	}
+	for key := range onprem.Spec.ObjectFilters.Secrets.MatchLabels {
+		if r.SecretLabelSelector != "" && key == r.SecretLabelSelector {
+			return fmt.Sprintf("secret label selector in spec.objectFilters conflicts with operator's secret label filter '%s'", r.SecretLabelSelector), false
+		}
+		if key == consts.SecretOnPremAIGatewayAdminClientCertificateLabel {
+			return fmt.Sprintf("secret label selector in spec.objectFilters conflicts with the operator-managed label '%s'", key), false
+		}
+	}
+	return "", true
 }
 
 // scheduleInstance creates a new control plane instance and schedules it in the multi-instance manager.
@@ -390,6 +426,13 @@ func (r *Reconciler) ensureAdminClientCertificateSecret(
 	if r.SecretLabelSelector != "" {
 		matchingLabels[r.SecretLabelSelector] = "true"
 	}
+	// Stamp the user's spec.objectFilters.secrets matchLabels onto the cert Secret so
+	// it always matches the instance's filtered Secret cache (validated in
+	// validateOnPremAIGatewayOptions, so it cannot collide with the operator-managed
+	// labels above).
+	if filters := onprem.Spec.ObjectFilters; filters != nil && filters.Secrets != nil {
+		maps.Copy(matchingLabels, filters.Secrets.MatchLabels)
+	}
 	_, secret, err := secrets.EnsureCertificate(
 		ctx,
 		onprem,
@@ -437,13 +480,15 @@ func (r *Reconciler) initStatusToWaitingToBecomeReady(
 
 // applyStatus patches the OnPremAIGateway status subresource via SSA.
 //
-// The instance (pkg/multiinstance/aigateway) owns the DataPlanesConfigured condition
-// under its own field manager (instanceFieldManager), so it is excluded from the
-// controller's apply payload: applying the full cached status under ForceOwnership
-// would steal that condition's ownership on every reconcile with a stale cache, and
-// the instance would steal it back (flapping ownership, duplicate Warning events).
+// The instance (pkg/multiinstance/aigateway) owns the DataPlanesConfigured and
+// ConfigurationTranslated conditions, each under its own per-condition-type field
+// manager (see instanceFieldManagerFor), so they are excluded from the controller's
+// apply payload: applying the full cached status under ForceOwnership would steal
+// those conditions' ownership on every reconcile with a stale cache, and the
+// instance would steal it back (flapping ownership, duplicate Warning events).
 func (r *Reconciler) applyStatus(ctx context.Context, logger logr.Logger, onprem *aigatewayv1alpha1.OnPremAIGateway) error {
 	k8sutils.RemoveCondition(aigatewayv1alpha1.OnPremAIGatewayDataPlanesConfiguredType, onprem)
+	k8sutils.RemoveCondition(aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType, onprem)
 	result, err := controllerpkgssa.ApplyStatusIfChanged(ctx, logger, r.Client, r.TypeConverter, onprem, controllerpkgssa.FieldManager)
 	if err != nil {
 		log.Error(logger, err, "failed to patch OnPremAIGateway status")

@@ -1,0 +1,817 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-parentref
+spec:
+  description: |
+    spec.parentRef of the entities directly under an Event Gateway: the
+    reference to the gateway by group, kind and name which replaces the
+    deprecated spec.gatewayRef. Checks, against the real Konnect API, that:
+
+    - each of these entities, referencing its KonnectEventGateway through
+      spec.parentRef, is created in Konnect, like one using spec.gatewayRef;
+    - an entity attached to an OnPremEventGateway is left alone by the Konnect
+      controllers, and an entity can't move to an OnPremEventGateway;
+    - entities below them (a virtual cluster, a virtual cluster policy, a
+      listener policy) and policies referencing them (a static key, a TLS trust
+      bundle) are created in Konnect too;
+    - each of them, once Programmed, can move from spec.gatewayRef to a
+      spec.parentRef referencing the same gateway, keeping its Konnect entity,
+      but not back;
+    - deleting an entity which uses spec.parentRef deletes it from Konnect.
+
+    No data plane is needed.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: keg_cp_name
+      value: (join('-', [($test_name), 'keg']))
+    - name: cr_api_version
+      value: configuration.konghq.com/v1alpha1
+    - name: parent_ref
+      value:
+        group: konnect.konghq.com
+        kind: KonnectEventGateway
+        name: ($keg_cp_name)
+    - name: listener_resource
+      value: eventgatewaylisteners.configuration.konghq.com
+    - name: listener_collection_path_jq
+      value: '"/v1/event-gateways/" + .status.gatewayID.id + "/listeners"'
+    - name: migrated_listener_name
+      value: listener-migrated
+  steps:
+    - name: Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: Create-konnect-eventgateway
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectEventGateway.yaml
+    - name: Create-tls-secret
+      bindings:
+        - name: sni_hostname
+          value: parentref.example.com
+        - name: cert_secret_name
+          value: parentref-tls
+        - name: cert_secret_namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
+    - name: Create-tls-secret-for-migrated-entities
+      bindings:
+        - name: sni_hostname
+          value: parentref-migrated.example.com
+        - name: cert_secret_name
+          value: parentref-migrated-tls
+        - name: cert_secret_namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
+    - name: Create-key-secret
+      try:
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: parentref-key
+                namespace: ($namespace)
+                labels:
+                  konghq.com/secret: "true"
+              type: Opaque
+              stringData:
+                key: Y2hhaW5zYXctc3RhdGljLWtleS0zMi1ieXRlcy1vayE=
+
+    - name: Create-EventGatewayListener-with-parentRef
+      bindings:
+        - name: cr_kind
+          value: EventGatewayListener
+        - name: cr_name
+          value: listener
+        - name: cr_spec
+          value:
+            parentRef: ($parent_ref)
+            apiSpec:
+              name: parentref-listener
+              addresses:
+                - 0.0.0.0
+              ports:
+                - '19092'
+      use:
+        template: ../../common/_step_templates/konnect-ownership-apply-assert-entity.yaml
+    - name: Assert-EventGatewayListener-in-Konnect
+      bindings:
+        - name: cr_resource
+          value: eventgatewaylisteners.configuration.konghq.com
+        - name: cr_name
+          value: listener
+        - name: collection_path_jq
+          value: '"/v1/event-gateways/" + .status.gatewayID.id + "/listeners"'
+      use:
+        template: ../../common/_step_templates/assert-konnectEntityOfResource.yaml
+
+    - name: Create-EventGatewayBackendCluster-with-parentRef
+      bindings:
+        - name: cr_kind
+          value: EventGatewayBackendCluster
+        - name: cr_name
+          value: backend-cluster
+        - name: cr_spec
+          value:
+            parentRef: ($parent_ref)
+            apiSpec:
+              name: parentref-backend-cluster
+              bootstrapServers:
+                - kafka.example.invalid:9092
+              authentication:
+                type: anonymous
+                anonymous: {}
+              insecureAllowAnonymousVirtualClusterAuth: Enabled
+              tls:
+                enabled: Disabled
+      use:
+        template: ../../common/_step_templates/konnect-ownership-apply-assert-entity.yaml
+    - name: Assert-EventGatewayBackendCluster-in-Konnect
+      bindings:
+        - name: cr_resource
+          value: eventgatewaybackendclusters.configuration.konghq.com
+        - name: cr_name
+          value: backend-cluster
+        - name: collection_path_jq
+          value: '"/v1/event-gateways/" + .status.gatewayID.id + "/backend-clusters"'
+      use:
+        template: ../../common/_step_templates/assert-konnectEntityOfResource.yaml
+
+    - name: Create-EventGatewayDataPlaneCertificate-with-parentRef
+      bindings:
+        - name: cr_kind
+          value: EventGatewayDataPlaneCertificate
+        - name: cr_name
+          value: data-plane-certificate
+        - name: cr_spec
+          value:
+            parentRef: ($parent_ref)
+            apiSpec:
+              name: parentref-data-plane-certificate
+              certificate:
+                type: secretRef
+                secretRef:
+                  name: parentref-tls
+                  key: tls.crt
+      use:
+        template: ../../common/_step_templates/konnect-ownership-apply-assert-entity.yaml
+    - name: Assert-EventGatewayDataPlaneCertificate-in-Konnect
+      bindings:
+        - name: cr_resource
+          value: eventgatewaydataplanecertificates.configuration.konghq.com
+        - name: cr_name
+          value: data-plane-certificate
+        - name: collection_path_jq
+          value: '"/v1/event-gateways/" + .status.gatewayID.id + "/data-plane-certificates"'
+      use:
+        template: ../../common/_step_templates/assert-konnectEntityOfResource.yaml
+
+    - name: Create-EventGatewaySchemaRegistry-with-parentRef
+      bindings:
+        - name: cr_kind
+          value: EventGatewaySchemaRegistry
+        - name: cr_name
+          value: schema-registry
+        - name: cr_spec
+          value:
+            parentRef: ($parent_ref)
+            apiSpec:
+              type: confluent
+              confluent:
+                name: parentref-schema-registry
+                config:
+                  schemaType: avro
+                  endpoint: https://sr.example.invalid
+      use:
+        template: ../../common/_step_templates/konnect-ownership-apply-assert-entity.yaml
+    - name: Assert-EventGatewaySchemaRegistry-in-Konnect
+      bindings:
+        - name: cr_resource
+          value: eventgatewayschemaregistries.configuration.konghq.com
+        - name: cr_name
+          value: schema-registry
+        - name: collection_path_jq
+          value: '"/v1/event-gateways/" + .status.gatewayID.id + "/schema-registries"'
+      use:
+        template: ../../common/_step_templates/assert-konnectEntityOfResource.yaml
+
+    - name: Create-EventGatewayStaticKey-with-parentRef
+      bindings:
+        - name: cr_kind
+          value: EventGatewayStaticKey
+        - name: cr_name
+          value: static-key
+        - name: cr_spec
+          value:
+            parentRef: ($parent_ref)
+            apiSpec:
+              name: parentref-static-key
+              value:
+                type: secretRef
+                secretRef:
+                  name: parentref-key
+                  key: key
+      use:
+        template: ../../common/_step_templates/konnect-ownership-apply-assert-entity.yaml
+    - name: Assert-EventGatewayStaticKey-in-Konnect
+      bindings:
+        - name: cr_resource
+          value: eventgatewaystatickeys.configuration.konghq.com
+        - name: cr_name
+          value: static-key
+        - name: collection_path_jq
+          value: '"/v1/event-gateways/" + .status.gatewayID.id + "/static-keys"'
+      use:
+        template: ../../common/_step_templates/assert-konnectEntityOfResource.yaml
+
+    - name: Create-EventGatewayTLSTrustBundle-with-parentRef
+      bindings:
+        - name: cr_kind
+          value: EventGatewayTLSTrustBundle
+        - name: cr_name
+          value: tls-trust-bundle
+        - name: cr_spec
+          value:
+            parentRef: ($parent_ref)
+            apiSpec:
+              name: parentref-tls-trust-bundle
+              config:
+                trustedCa:
+                  type: secretRef
+                  secretRef:
+                    name: parentref-tls
+                    key: tls.crt
+      use:
+        template: ../../common/_step_templates/konnect-ownership-apply-assert-entity.yaml
+    - name: Assert-EventGatewayTLSTrustBundle-in-Konnect
+      bindings:
+        - name: cr_resource
+          value: eventgatewaytlstrustbundles.configuration.konghq.com
+        - name: cr_name
+          value: tls-trust-bundle
+        - name: collection_path_jq
+          value: '"/v1/event-gateways/" + .status.gatewayID.id + "/tls-trust-bundles"'
+      use:
+        template: ../../common/_step_templates/assert-konnectEntityOfResource.yaml
+
+    # Entities below the ones created above, and policies referencing them.
+    - name: Create-virtual-cluster-under-backend-cluster
+      bindings:
+        - name: cr_kind
+          value: EventGatewayVirtualCluster
+        - name: cr_name
+          value: virtual-cluster
+        - name: cr_spec
+          value:
+            eventGatewayBackendClusterRef:
+              type: namespacedRef
+              namespacedRef:
+                name: backend-cluster
+            apiSpec:
+              name: parentref-virtual-cluster
+              dnsLabel: parentrefvc
+              aclMode: enforce_on_gateway
+              authentication:
+                - type: anonymous
+      use:
+        template: ../../common/_step_templates/konnect-ownership-apply-assert-entity.yaml
+    - name: Assert-EventGatewayVirtualCluster-virtual-cluster-in-Konnect
+      bindings:
+        - name: cr_resource
+          value: eventgatewayvirtualclusters.configuration.konghq.com
+        - name: cr_name
+          value: virtual-cluster
+        - name: collection_path_jq
+          value: '"/v1/event-gateways/" + .status.gatewayID.id + "/virtual-clusters"'
+      use:
+        template: ../../common/_step_templates/assert-konnectEntityOfResource.yaml
+
+    - name: Create-virtual-cluster-policy
+      bindings:
+        - name: cr_kind
+          value: EventGatewayVirtualClusterPolicy
+        - name: cr_name
+          value: virtual-cluster-policy
+        - name: cr_spec
+          value:
+            eventGatewayVirtualClusterRef:
+              type: namespacedRef
+              namespacedRef:
+                name: virtual-cluster
+            apiSpec:
+              type: acls
+              acls:
+                name: parentref-virtual-cluster-policy
+                config:
+                  rules:
+                    - action: allow
+                      resourceType: topic
+                      operations:
+                        - name: all
+                      resourceNames:
+                        type: stat
+                        stat:
+                          - match: '*'
+      use:
+        template: ../../common/_step_templates/konnect-ownership-apply-assert-entity.yaml
+    - name: Assert-EventGatewayVirtualClusterPolicy-virtual-cluster-policy-in-Konnect
+      bindings:
+        - name: cr_resource
+          value: eventgatewayvirtualclusterpolicies.configuration.konghq.com
+        - name: cr_name
+          value: virtual-cluster-policy
+        - name: collection_path_jq
+          value: '"/v1/event-gateways/" + .status.gatewayID.id + "/virtual-clusters/" + .status.virtualClusterID.id + "/cluster-policies"'
+      use:
+        template: ../../common/_step_templates/assert-konnectEntityOfResource.yaml
+
+    - name: Create-produce-policy-referencing-static-key
+      bindings:
+        - name: cr_kind
+          value: EventGatewayVirtualClusterProducePolicy
+        - name: cr_name
+          value: produce-policy
+        - name: cr_spec
+          value:
+            eventGatewayVirtualClusterRef:
+              type: namespacedRef
+              namespacedRef:
+                name: virtual-cluster
+            apiSpec:
+              type: encrypt
+              encrypt:
+                name: parentref-produce-policy
+                config:
+                  failureMode: error
+                  partOfRecord:
+                    - value
+                  encryptionKey:
+                    type: static
+                    static:
+                      key:
+                        namespacedRef:
+                          name: static-key
+      use:
+        template: ../../common/_step_templates/konnect-ownership-apply-assert-entity.yaml
+    - name: Assert-EventGatewayVirtualClusterProducePolicy-produce-policy-in-Konnect
+      bindings:
+        - name: cr_resource
+          value: eventgatewayvirtualclusterproducepolicies.configuration.konghq.com
+        - name: cr_name
+          value: produce-policy
+        - name: collection_path_jq
+          value: '"/v1/event-gateways/" + .status.gatewayID.id + "/virtual-clusters/" + .status.virtualClusterID.id + "/produce-policies"'
+      use:
+        template: ../../common/_step_templates/assert-konnectEntityOfResource.yaml
+
+    - name: Create-listener-policy-referencing-tls-trust-bundle
+      bindings:
+        - name: cr_kind
+          value: EventGatewayListenerPolicy
+        - name: cr_name
+          value: listener-policy
+        - name: cr_spec
+          value:
+            eventGatewayListenerRef:
+              type: namespacedRef
+              namespacedRef:
+                name: listener
+            apiSpec:
+              type: tlsServer
+              tlsServer:
+                name: parentref-listener-policy
+                config:
+                  certificates:
+                    - certificate:
+                        type: secretRef
+                        secretRef:
+                          name: parentref-tls
+                          key: tls.crt
+                      key:
+                        type: secretRef
+                        secretRef:
+                          name: parentref-tls
+                          key: tls.key
+                  clientAuthentication:
+                    mode: required
+                    tlsTrustBundles:
+                      - namespacedRef:
+                          name: tls-trust-bundle
+      use:
+        template: ../../common/_step_templates/konnect-ownership-apply-assert-entity.yaml
+    - name: Assert-EventGatewayListenerPolicy-listener-policy-in-Konnect
+      bindings:
+        - name: cr_resource
+          value: eventgatewaylistenerpolicies.configuration.konghq.com
+        - name: cr_name
+          value: listener-policy
+        - name: collection_path_jq
+          value: '"/v1/event-gateways/" + .status.gatewayID.id + "/listeners/" + .status.eventGatewayListenerID.id + "/policies"'
+      use:
+        template: ../../common/_step_templates/assert-konnectEntityOfResource.yaml
+
+    - name: Assert-policy-references-resolved
+      try:
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              metadata:
+                name: produce-policy
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'KonnectReferencesResolved']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              metadata:
+                name: listener-policy
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'KonnectReferencesResolved']):
+                  - status: 'True'
+
+    - name: OnPremEventGateway-entity-is-left-alone
+      try:
+        - description: An entity attached to an OnPremEventGateway is accepted.
+          apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListener
+              metadata:
+                name: listener-onprem
+                namespace: ($namespace)
+              spec:
+                parentRef:
+                  group: eventgateway.konghq.com
+                  kind: OnPremEventGateway
+                  name: onprem-gateway
+                apiSpec:
+                  name: listener-onprem
+                  addresses:
+                    - 0.0.0.0
+                  ports:
+                    - '19095'
+        # Leave the Konnect controllers time to pick it up, if they were to.
+        - sleep:
+            duration: 10s
+        - description: The Konnect controllers set no status and no finalizer on it.
+          assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListener
+              metadata:
+                name: listener-onprem
+                namespace: ($namespace)
+                (finalizers == null): true
+              (status.conditions == null): true
+
+    - name: Reject-moving-an-entity-to-an-OnPremEventGateway
+      try:
+        - description: The kind of the referenced gateway can't be changed.
+          patch:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListener
+              metadata:
+                name: listener
+                namespace: ($namespace)
+              spec:
+                parentRef:
+                  group: eventgateway.konghq.com
+                  kind: OnPremEventGateway
+                  name: onprem-gateway
+            expect:
+              - check:
+                  ($error != null): true
+                  (contains($error, 'the kind of the referenced gateway is immutable')): true
+
+    - name: Migrate-listener-from-gatewayRef-to-parentRef
+      bindings:
+        - name: listener_name
+          value: ($migrated_listener_name)
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListener
+              metadata:
+                name: ($listener_name)
+                namespace: ($namespace)
+              spec:
+                gatewayRef:
+                  type: namespacedRef
+                  namespacedRef:
+                    name: ($keg_cp_name)
+                apiSpec:
+                  name: ($listener_name)
+                  addresses:
+                    - 0.0.0.0
+                  ports:
+                    - '19093'
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListener
+              metadata:
+                name: ($listener_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                (id != null): true
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: ($listener_resource)
+              - name: RESOURCE_NAME
+                value: ($listener_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: COLLECTION_PATH_JQ
+                value: ($listener_collection_path_jq)
+            content: |
+              bash ../../common/scripts/konnect_entity_of_resource.sh
+            outputs:
+              - name: before
+                value: (json_parse($stdout))
+        - description: Replace spec.gatewayRef with a spec.parentRef to the same gateway and set a label, so that the operator has to update the Konnect entity.
+          script:
+            env:
+              - name: RESOURCE_TYPE
+                value: ($listener_resource)
+              - name: RESOURCE_NAME
+                value: ($listener_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: KEG_CP_NAME
+                value: ($keg_cp_name)
+            content: |
+              kubectl patch "${RESOURCE_TYPE}" "${RESOURCE_NAME}" -n "${NAMESPACE}" --type=merge -p "$(jq -cn '{
+                spec: {
+                  gatewayRef: null,
+                  parentRef: {group: "konnect.konghq.com", kind: "KonnectEventGateway", name: $ENV.KEG_CP_NAME},
+                  apiSpec: {labels: {team: "migrated"}}
+                }
+              }')"
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListener
+              metadata:
+                name: ($listener_name)
+                namespace: ($namespace)
+              spec:
+                (gatewayRef == null): true
+                parentRef:
+                  group: konnect.konghq.com
+                  kind: KonnectEventGateway
+                  name: ($keg_cp_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                id: ($before.id)
+        - description: The same Konnect entity is kept and follows the spec update.
+          script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: API_PATH
+                value: ($before.entity_path)
+              - name: WANT_ID
+                value: ($before.id)
+              - name: EXPECTED_JQ
+                value: .id == $ENV.WANT_ID and .labels.team == "migrated"
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh
+        - description: No second Konnect entity was created for the listener.
+          script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: API_PATH
+                value: ($before.collection_path)
+              - name: WANT_NAME
+                value: ($listener_name)
+              - name: WANT_ID
+                value: ($before.id)
+              - name: EXPECTED_JQ
+                value: '[(if type == "array" then . else .data end)[] | select(.name == $ENV.WANT_NAME) | .id] == [$ENV.WANT_ID]'
+            content: |
+              bash ../../common/scripts/konnect_list_all_entities.sh
+        - description: The listener cannot move back to the deprecated spec.gatewayRef.
+          script:
+            env:
+              - name: RESOURCE_TYPE
+                value: ($listener_resource)
+              - name: RESOURCE_NAME
+                value: ($listener_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: KEG_CP_NAME
+                value: ($keg_cp_name)
+            content: |
+              kubectl patch "${RESOURCE_TYPE}" "${RESOURCE_NAME}" -n "${NAMESPACE}" --type=merge -p "$(jq -cn '{
+                spec: {
+                  parentRef: null,
+                  gatewayRef: {type: "namespacedRef", namespacedRef: {name: $ENV.KEG_CP_NAME}}
+                }
+              }')"
+            check:
+              ($error != null): true
+              (contains($stderr, 'spec.parentRef cannot be replaced by the deprecated spec.gatewayRef')): true
+
+    - name: Migrate-EventGatewayBackendCluster-from-gatewayRef-to-parentRef
+      bindings:
+        - name: cr_kind
+          value: EventGatewayBackendCluster
+        - name: cr_resource
+          value: eventgatewaybackendclusters.configuration.konghq.com
+        - name: cr_name
+          value: backend-cluster-migrated
+        - name: collection_path_jq
+          value: '"/v1/event-gateways/" + .status.gatewayID.id + "/backend-clusters"'
+        - name: cr_spec
+          value:
+            gatewayRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($keg_cp_name)
+            apiSpec:
+              name: parentref-backend-cluster-migrated
+              bootstrapServers:
+                - kafka.example.invalid:9092
+              authentication:
+                type: anonymous
+                anonymous: {}
+              insecureAllowAnonymousVirtualClusterAuth: Enabled
+              tls:
+                enabled: Disabled
+      use:
+        template: ../../common/_step_templates/konnect-migrate-gatewayRef-to-parentRef.yaml
+
+    - name: Migrate-EventGatewayDataPlaneCertificate-from-gatewayRef-to-parentRef
+      bindings:
+        - name: cr_kind
+          value: EventGatewayDataPlaneCertificate
+        - name: cr_resource
+          value: eventgatewaydataplanecertificates.configuration.konghq.com
+        - name: cr_name
+          value: data-plane-certificate-migrated
+        - name: collection_path_jq
+          value: '"/v1/event-gateways/" + .status.gatewayID.id + "/data-plane-certificates"'
+        - name: cr_spec
+          value:
+            gatewayRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($keg_cp_name)
+            apiSpec:
+              name: parentref-data-plane-certificate-migrated
+              certificate:
+                type: secretRef
+                secretRef:
+                  name: parentref-migrated-tls
+                  key: tls.crt
+      use:
+        template: ../../common/_step_templates/konnect-migrate-gatewayRef-to-parentRef.yaml
+
+    - name: Migrate-EventGatewaySchemaRegistry-from-gatewayRef-to-parentRef
+      bindings:
+        - name: cr_kind
+          value: EventGatewaySchemaRegistry
+        - name: cr_resource
+          value: eventgatewayschemaregistries.configuration.konghq.com
+        - name: cr_name
+          value: schema-registry-migrated
+        - name: collection_path_jq
+          value: '"/v1/event-gateways/" + .status.gatewayID.id + "/schema-registries"'
+        - name: cr_spec
+          value:
+            gatewayRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($keg_cp_name)
+            apiSpec:
+              type: confluent
+              confluent:
+                name: parentref-schema-registry-migrated
+                config:
+                  schemaType: avro
+                  endpoint: https://sr.example.invalid
+      use:
+        template: ../../common/_step_templates/konnect-migrate-gatewayRef-to-parentRef.yaml
+
+    - name: Migrate-EventGatewayStaticKey-from-gatewayRef-to-parentRef
+      bindings:
+        - name: cr_kind
+          value: EventGatewayStaticKey
+        - name: cr_resource
+          value: eventgatewaystatickeys.configuration.konghq.com
+        - name: cr_name
+          value: static-key-migrated
+        - name: collection_path_jq
+          value: '"/v1/event-gateways/" + .status.gatewayID.id + "/static-keys"'
+        - name: cr_spec
+          value:
+            gatewayRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($keg_cp_name)
+            apiSpec:
+              name: parentref-static-key-migrated
+              value:
+                type: secretRef
+                secretRef:
+                  name: parentref-key
+                  key: key
+      use:
+        template: ../../common/_step_templates/konnect-migrate-gatewayRef-to-parentRef.yaml
+
+    - name: Migrate-EventGatewayTLSTrustBundle-from-gatewayRef-to-parentRef
+      bindings:
+        - name: cr_kind
+          value: EventGatewayTLSTrustBundle
+        - name: cr_resource
+          value: eventgatewaytlstrustbundles.configuration.konghq.com
+        - name: cr_name
+          value: tls-trust-bundle-migrated
+        - name: collection_path_jq
+          value: '"/v1/event-gateways/" + .status.gatewayID.id + "/tls-trust-bundles"'
+        - name: cr_spec
+          value:
+            gatewayRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($keg_cp_name)
+            apiSpec:
+              name: parentref-tls-trust-bundle-migrated
+              config:
+                trustedCa:
+                  type: secretRef
+                  secretRef:
+                    name: parentref-migrated-tls
+                    key: tls.crt
+      use:
+        template: ../../common/_step_templates/konnect-migrate-gatewayRef-to-parentRef.yaml
+
+    - name: Delete-entity-using-parentRef-deletes-it-from-Konnect
+      try:
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: eventgatewayschemaregistries.configuration.konghq.com
+              - name: RESOURCE_NAME
+                value: schema-registry
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: COLLECTION_PATH_JQ
+                value: '"/v1/event-gateways/" + .status.gatewayID.id + "/schema-registries"'
+            content: |
+              bash ../../common/scripts/konnect_entity_of_resource.sh
+            outputs:
+              - name: entity
+                value: (json_parse($stdout))
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewaySchemaRegistry
+              name: schema-registry
+              namespace: ($namespace)
+        - script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: API_PATH
+                value: ($entity.entity_path)
+              - name: EXPECTED_STATUS
+                value: '404'
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh

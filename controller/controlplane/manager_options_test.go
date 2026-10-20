@@ -107,12 +107,17 @@ func TestWithControllers(t *testing.T) {
 					Name:  "GWAPI_REFERENCE_GRANT",
 					State: gwtypes.ControlPlaneControllerStateEnabled,
 				},
+				{
+					Name:  "GWAPI_BACKEND_TLS_POLICY",
+					State: gwtypes.ControlPlaneControllerStateEnabled,
+				},
 			},
 			validate: func(t *testing.T, cfg *managercfg.Config, logs *bytes.Buffer) {
 				assert.True(t, cfg.GatewayAPIGatewayController)
 				assert.True(t, cfg.GatewayAPIHTTPRouteController)
 				assert.True(t, cfg.GatewayAPIGRPCRouteController)
 				assert.True(t, cfg.GatewayAPIReferenceGrantController)
+				assert.True(t, cfg.GatewayAPIBackendTLSRouteController)
 			},
 		},
 		{
@@ -197,6 +202,20 @@ func TestWithFeatureGates(t *testing.T) {
 			validate: func(t *testing.T, cfg *managercfg.Config, logs *bytes.Buffer) {
 				assert.True(t, cfg.FeatureGates["FillIDs"])
 				assert.True(t, cfg.FeatureGates["RewriteURIs"])
+				assert.Len(t, cfg.FeatureGates, len(managercfg.GetFeatureGatesDefaults()))
+			},
+		},
+		{
+			name: "no-op feature gate is ignored without an error",
+			featureGates: []gwtypes.ControlPlaneFeatureGate{
+				{
+					Name:  "GatewayAlpha",
+					State: gwtypes.FeatureGateStateEnabled,
+				},
+			},
+			validate: func(t *testing.T, cfg *managercfg.Config, logs *bytes.Buffer) {
+				assert.NotContains(t, cfg.FeatureGates, "GatewayAlpha")
+				assert.NotContains(t, logs.String(), "unknown feature gate")
 				assert.Len(t, cfg.FeatureGates, len(managercfg.GetFeatureGatesDefaults()))
 			},
 		},
@@ -331,23 +350,24 @@ func TestManagerConfigToStatusControllers(t *testing.T) {
 		{
 			name: "all controllers disabled",
 			config: managercfg.Config{
-				IngressNetV1Enabled:                false,
-				IngressClassNetV1Enabled:           false,
-				IngressClassParametersEnabled:      false,
-				KongClusterPluginEnabled:           false,
-				KongPluginEnabled:                  false,
-				KongConsumerEnabled:                false,
-				KongUpstreamPolicyEnabled:          false,
-				KongServiceFacadeEnabled:           false,
-				KongVaultEnabled:                   false,
-				KongLicenseEnabled:                 false,
-				KongCustomEntityEnabled:            false,
-				ServiceEnabled:                     false,
-				GatewayAPIGatewayController:        false,
-				GatewayAPIHTTPRouteController:      false,
-				GatewayAPITLSRouteController:       false,
-				GatewayAPIGRPCRouteController:      false,
-				GatewayAPIReferenceGrantController: false,
+				IngressNetV1Enabled:                 false,
+				IngressClassNetV1Enabled:            false,
+				IngressClassParametersEnabled:       false,
+				KongClusterPluginEnabled:            false,
+				KongPluginEnabled:                   false,
+				KongConsumerEnabled:                 false,
+				KongUpstreamPolicyEnabled:           false,
+				KongServiceFacadeEnabled:            false,
+				KongVaultEnabled:                    false,
+				KongLicenseEnabled:                  false,
+				KongCustomEntityEnabled:             false,
+				ServiceEnabled:                      false,
+				GatewayAPIGatewayController:         false,
+				GatewayAPIHTTPRouteController:       false,
+				GatewayAPITLSRouteController:        false,
+				GatewayAPIBackendTLSRouteController: false,
+				GatewayAPIGRPCRouteController:       false,
+				GatewayAPIReferenceGrantController:  false,
 			},
 			expected: []gwtypes.ControlPlaneController{
 				{
@@ -412,6 +432,10 @@ func TestManagerConfigToStatusControllers(t *testing.T) {
 				},
 				{
 					Name:  ControllerNameGatewayAPITLSRoute,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameGatewayAPIBackendTLSPolicy,
 					State: gwtypes.ControlPlaneControllerStateDisabled,
 				},
 				{
@@ -493,6 +517,10 @@ func TestManagerConfigToStatusControllers(t *testing.T) {
 					State: gwtypes.ControlPlaneControllerStateDisabled,
 				},
 				{
+					Name:  ControllerNameGatewayAPIBackendTLSPolicy,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
 					Name:  ControllerNameGatewayAPIReferenceGrant,
 					State: gwtypes.ControlPlaneControllerStateDisabled,
 				},
@@ -566,6 +594,10 @@ func TestManagerConfigToStatusControllers(t *testing.T) {
 				},
 				{
 					Name:  ControllerNameGatewayAPITLSRoute,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameGatewayAPIBackendTLSPolicy,
 					State: gwtypes.ControlPlaneControllerStateDisabled,
 				},
 				{

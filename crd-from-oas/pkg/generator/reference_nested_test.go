@@ -998,7 +998,8 @@ func TestGenerateSDKOps_UnionMemberReference(t *testing.T) {
 	// Injection: only items carrying the member are replaced.
 	require.Contains(t, content, `if arr, ok := clientAuthentication["trust_bundles"].([]any); ok {`)
 	require.Contains(t, content, `if _, has := el["namespaced_ref"]; !has {`)
-	require.Contains(t, content, `arr[i] = map[string]any{"name": resolvedConfigClientAuthenticationTrustBundles[ri]}`)
+	require.Contains(t, content, `arr[i] = map[string]any{"name": resolvedConfigClientAuthenticationTrustBundles[rewrittenConfigClientAuthenticationTrustBundles]}`)
+	require.Contains(t, content, `if rewrittenConfigClientAuthenticationTrustBundles != len(resolvedConfigClientAuthenticationTrustBundles) {`)
 	require.NotContains(t, content, `clientAuthentication["trust_bundles"] = `)
 	// Missing ancestors are skipped, not created: they hold nothing to rewrite.
 	require.Contains(t, content, "if clientAuthentication != nil {")
@@ -1030,7 +1031,7 @@ func TestValidateReferences_UnionMember(t *testing.T) {
 		require.ErrorContains(t, g.validateReferences(parsed), "unionMember is only supported for nested references")
 	})
 
-	t.Run("rejects a field inside a non-leaf array", func(t *testing.T) {
+	t.Run("rejects an array of reference objects inside a non-leaf array", func(t *testing.T) {
 		parsed := trustBundleUnionMemberParsedSpec()
 		parsed.Schemas["Item"] = &parser.Schema{Properties: []*parser.Property{
 			{Name: "bundles", Type: "array", Items: &parser.Property{RefName: "TrustBundleReference"}},
@@ -1043,7 +1044,7 @@ func TestValidateReferences_UnionMember(t *testing.T) {
 		ref.Path = "spec.apiSpec.items.bundles"
 		ref2 := trustBundleUnionMemberRef()
 		g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{"AIGatewayAgent": {ref2, ref}})
-		require.ErrorContains(t, g.validateReferences(parsed), "unionMember is not supported inside a non-leaf array")
+		require.ErrorContains(t, g.validateReferences(parsed), "unionMember is not supported for an array of reference objects inside a non-leaf array")
 	})
 
 	t.Run("rejects an array of reference objects without unionMember", func(t *testing.T) {
@@ -1212,7 +1213,8 @@ func TestGenerateSDKOps_UnionMemberSingleObjectReference(t *testing.T) {
 	require.Contains(t, content, "if obj.Spec.APISpec.Config.ClientAuthentication.Key.NamespacedRef == nil {")
 	require.Contains(t, content, "return []AIGatewayConsumerGroupRef{*obj.Spec.APISpec.Config.ClientAuthentication.Key.NamespacedRef}")
 	// Injection: the reference object is replaced only when it carries the member.
-	require.Contains(t, content, `if el, ok := clientAuthentication2["key"].(map[string]any); ok && len(resolvedConfigClientAuthenticationKey) > 0 {`)
+	require.Contains(t, content, `if el, ok := clientAuthentication2["key"].(map[string]any); ok {`)
+	require.Contains(t, content, `if len(resolvedConfigClientAuthenticationKey) == 0 {`)
 	require.Contains(t, content, `clientAuthentication2["key"] = map[string]any{"name": resolvedConfigClientAuthenticationKey[0]}`)
 }
 
@@ -1240,4 +1242,118 @@ func TestRefFieldTarget_RootAnyOfObjectRequiresUnionMember(t *testing.T) {
 	ref.UnionMember = ""
 	g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{"AIGatewayAgent": {ref}})
 	require.ErrorContains(t, g.validateReferences(parsed), "must be an array property")
+}
+
+// TestGenerateSDKOps_UnionMemberInArrayElements verifies a unionMember
+// reference on a single reference object inside the elements of an array,
+// reached through a discriminated union (e.g. a produce policy's
+// encryptFields[].encryptionKey.static.key): the accessor collects each
+// element's member in order, and the injection rewrites only elements
+// carrying it, navigating the union's variant key.
+func TestGenerateSDKOps_UnionMemberInArrayElements(t *testing.T) {
+	byID := &parser.Property{RefName: "KeyReferenceByID", Properties: []*parser.Property{{Name: "id", Type: "string"}}}
+	byName := &parser.Property{RefName: "KeyReferenceByName", Properties: []*parser.Property{{Name: "name", Type: "string"}}}
+	schemas := func() map[string]*parser.Schema {
+		return map[string]*parser.Schema{
+			"EncryptFieldsPolicy": {Properties: []*parser.Property{
+				{Name: "type", Type: "string", Required: true},
+				{Name: "fields", Type: "array", Items: &parser.Property{RefName: "EncryptField"}},
+			}},
+			"OtherPolicy": {Properties: []*parser.Property{
+				{Name: "type", Type: "string", Required: true},
+			}},
+			"EncryptField": {Properties: []*parser.Property{
+				{Name: "field", Type: "string", Required: true},
+				{
+					Name: "encryption_key", Required: true, Discriminator: "type",
+					OneOf: []*parser.Property{{RefName: "KeyStatic"}, {RefName: "KeyAWS"}},
+					DiscriminatorMapping: map[string]string{
+						"static": "KeyStatic",
+						"aws":    "KeyAWS",
+					},
+				},
+			}},
+			"KeyStatic": {Properties: []*parser.Property{
+				{Name: "type", Type: "string", Required: true},
+				{Name: "key", Type: "object", Required: true, RefName: "KeyReference"},
+			}},
+			"KeyAWS": {Properties: []*parser.Property{
+				{Name: "type", Type: "string", Required: true},
+				{Name: "arn", Type: "string", Required: true},
+			}},
+			"KeyReference":       {AnyOf: []*parser.Property{byID, byName}},
+			"KeyReferenceByID":   {Properties: byID.Properties},
+			"KeyReferenceByName": {Properties: byName.Properties},
+		}
+	}
+	ref := func(path string) config.ReferenceConfig {
+		return config.ReferenceConfig{
+			Path:        path,
+			Kinds:       []string{"AIGatewayConsumerGroup"},
+			ResolvesTo:  "id",
+			UnionMember: "namespacedRef",
+		}
+	}
+
+	// Entities whose schema isn't a root union flatten unions before
+	// references are injected: the union's variant keys are gone by then.
+	t.Run("rejected for entities whose schema isn't a root union", func(t *testing.T) {
+		parsed := &parser.ParsedSpec{
+			RequestBodies: map[string]*parser.Schema{
+				"AIGatewayAgent": {Properties: []*parser.Property{
+					{Name: "fields", Type: "array", Items: &parser.Property{RefName: "EncryptField"}},
+				}},
+			},
+			Schemas: schemas(),
+		}
+		g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{
+			"AIGatewayAgent": {ref("spec.apiSpec.fields.encryptionKey.static.key")},
+		})
+		require.ErrorContains(t, g.validateReferences(parsed), "nested array references only support plain-object hops")
+	})
+
+	t.Run("supported for root union entities", func(t *testing.T) {
+		parsed := &parser.ParsedSpec{
+			RequestBodies: map[string]*parser.Schema{
+				"AIGatewayModel": {
+					OneOf:         []*parser.Property{{RefName: "EncryptFieldsPolicy"}, {RefName: "OtherPolicy"}},
+					Discriminator: "type",
+					DiscriminatorMapping: map[string]string{
+						"encrypt_fields": "EncryptFieldsPolicy",
+						"other":          "OtherPolicy",
+					},
+				},
+			},
+			Schemas: schemas(),
+		}
+		g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{
+			"AIGatewayModel": {ref("spec.apiSpec.encryptFields.fields.encryptionKey.static.key")},
+		})
+		require.NoError(t, g.validateReferences(parsed))
+
+		opsConfig := &config.EntityOpsConfig{
+			Ops: map[string]*config.OpConfig{
+				"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayModelRequest"},
+			},
+		}
+		content, err := g.generateSDKOps("AIGatewayModel", parsed.RequestBodies["AIGatewayModel"], opsConfig)
+		require.NoError(t, err)
+		_, err = format.Source([]byte(content))
+		require.NoError(t, err)
+
+		// Accessor: each element's member, in order, only through the
+		// selected arms of the root union and of the element's union.
+		require.Contains(t, content, "if obj.Spec.APISpec.AIGatewayModelConfig.Type != AIGatewayModelConfigTypeEncryptFields {")
+		require.Contains(t, content, "for i := range obj.Spec.APISpec.AIGatewayModelConfig.EncryptFields.Fields {")
+		require.Contains(t, content, "if obj.Spec.APISpec.AIGatewayModelConfig.EncryptFields.Fields[i].EncryptionKey.Type != EncryptFieldEncryptionKeyTypeStatic {")
+		require.Contains(t, content, "refs = append(refs, *obj.Spec.APISpec.AIGatewayModelConfig.EncryptFields.Fields[i].EncryptionKey.Static.Key.NamespacedRef)")
+		// Injection: per element, through the union's variant key, rewriting
+		// only reference objects carrying the member, and failing when the
+		// counts of resolved and rewritten references differ.
+		require.Contains(t, content, `if arr, ok := encryptFields["fields"].([]any); ok {`)
+		require.Contains(t, content, `static, ok := encryptionKey["static"].(map[string]any)`)
+		require.Contains(t, content, `if _, has := leaf["namespaced_ref"]; !has {`)
+		require.Contains(t, content, `static["key"] = map[string]any{"id": resolvedEncryptFieldsFieldsEncryptionKeyStaticKey[rewrittenEncryptFieldsFieldsEncryptionKeyStaticKey]}`)
+		require.Contains(t, content, `if rewrittenEncryptFieldsFieldsEncryptionKeyStaticKey != len(resolvedEncryptFieldsFieldsEncryptionKeyStaticKey) {`)
+	})
 }

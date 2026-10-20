@@ -59,6 +59,7 @@ type DeploymentBuilder struct {
 	defaultImage           string
 	opts                   []k8sresources.DeploymentOpt
 	ipFamily               ipfamily.IPFamily
+	adminAPIDisabled       bool
 
 	secretLabelSelector string
 }
@@ -103,6 +104,12 @@ func (d *DeploymentBuilder) WithIPFamily(family ipfamily.IPFamily) *DeploymentBu
 	return d
 }
 
+// WithAdminAPIDisabled configures whether the DataPlane Admin API is disabled.
+func (d *DeploymentBuilder) WithAdminAPIDisabled(disabled bool) *DeploymentBuilder {
+	d.adminAPIDisabled = disabled
+	return d
+}
+
 // WithOpts adds option functions to a DeploymentBuilder.
 func (d *DeploymentBuilder) WithOpts(opts ...k8sresources.DeploymentOpt) *DeploymentBuilder {
 	d.opts = opts
@@ -143,8 +150,15 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 		return nil, op.Noop, fmt.Errorf("could not generate Deployment: %w", err)
 	}
 
-	// Add the cluster certificate to the generated Deployment
-	desiredDeployment = setClusterCertVars(desiredDeployment, d.clusterCertificateName)
+	if d.adminAPIDisabled {
+		// Removed before user patches so a user can re-add the port.
+		desiredDeployment = desiredDeployment.WithoutContainerPort(
+			k8sresources.DataPlaneAdminAPIContainerPortName, consts.DataPlaneProxyContainerName,
+		)
+	} else if d.clusterCertificateName != "" {
+		// Add the cluster certificate to the generated Deployment
+		desiredDeployment = setClusterCertVars(desiredDeployment, d.clusterCertificateName)
+	}
 
 	if err := certificates.MountAndUseKonnectCert(ctx, d.logger, dataplane, d.client, desiredDeployment); err != nil {
 		return nil, op.Noop, fmt.Errorf("failed to mount konnect cert: %w", err)
@@ -164,6 +178,10 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 	kongDefaults, err := config.KongDefaults(d.ipFamily)
 	if err != nil {
 		return nil, op.Noop, fmt.Errorf("failed to compute Kong defaults for the DataPlane: %w", err)
+	}
+	if d.adminAPIDisabled {
+		// KongDefaults returns a fresh map, so mutating it is safe.
+		config.DisableAdminAPI(kongDefaults)
 	}
 	desiredDeployment = applyEnvForDataPlane(existingEnvVars, desiredDeployment, kongDefaults)
 

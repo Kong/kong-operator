@@ -229,6 +229,22 @@ var inputControllersNeeded = &typesNeeded{
 		},
 		RBACVerbs: []string{"get", "list", "watch"},
 	},
+	typeNeeded{
+		Group:                            "aiconfiguration.konghq.com",
+		Version:                          "v1alpha1",
+		Kind:                             "AIGatewayVault",
+		PackageImportAlias:               "aiconfigurationv1alpha1",
+		PackageAlias:                     "aiconfigurationv1alpha1",
+		Package:                          aiconfigurationv1alpha1,
+		Plural:                           "aigatewayvaults",
+		CacheType:                        "AIGatewayVault",
+		NeedsStatusPermissions:           true,
+		ConfigStatusNotificationsEnabled: true,
+		ProgrammedCondition: ProgrammedConditionConfiguration{
+			UpdatesEnabled: true,
+		},
+		RBACVerbs: []string{"get", "list", "watch"},
+	},
 }
 
 func main() {

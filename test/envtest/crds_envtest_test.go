@@ -25,7 +25,6 @@ func TestGatewayAPIControllersMayBeDynamicallyStarted(t *testing.T) {
 	envcfg, _ := Setup(t, ctx, scheme, WithInstallGatewayCRDs(false))
 	loggerHook := RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
-		WithGatewayFeatureEnabled,
 		WithGatewayAPIControllers(),
 		WithPublishService("ns"),
 	)
@@ -38,6 +37,7 @@ func TestGatewayAPIControllersMayBeDynamicallyStarted(t *testing.T) {
 		"TCPRoute",
 		"TLSRoute",
 		"GRPCRoute",
+		"BackendTLSPolicy",
 	}
 
 	requireLogForAllControllers := func(expectedLog string) {

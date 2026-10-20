@@ -250,7 +250,7 @@ func (c *httpRouteConverter) DesiredResourcesReady(ctx context.Context, logger l
 // HandleOrphanedResource implements OrphanedResourceHandler.
 // It removes the HTTPRoute reference from shared resources before orphan deletion.
 func (c *httpRouteConverter) HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (skipDelete bool, err error) {
-	return handleOrphanedResourceForRoute(ctx, logger, c.Client, c.route, "HTTPRoute", resource)
+	return HandleOrphanedResourceForRoute(ctx, logger, c.Client, c.route, "HTTPRoute", resource)
 }
 
 // translate converts the HTTPRoute to Kong resources and stores them in outputStore.
@@ -365,10 +365,9 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 			}
 			serviceName := servicePtr.Name
 
-			// Build one KongRoute per match in the rule.
-			// Gateway API semantics require OR across matches within a rule
-			// and AND within a single match. Generating a route per match
-			// preserves the OR semantics for Hybrid Gateway.
+			// Build a KongRoute for each precedence variant of each match, preserving
+			// the original match's backend and priority. Variants remain subsets of
+			// their original match, preserving OR across matches and AND within each match.
 			routes, err := kongroute.RoutesForRule(ctx, logger, c.Client, c.route, rule, ruleIndex, &pRef, cp, namingParentRef, serviceName, hostnames)
 			if err != nil {
 				log.Error(logger, err, "Failed to translate KongRoute resources for rule, skipping rule",

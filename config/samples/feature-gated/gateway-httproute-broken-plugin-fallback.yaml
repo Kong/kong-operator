@@ -1,0 +1,201 @@
+# This configuration file presents fallback configuration (feature gate FallbackConfiguration=true),
+# it contains a plugin that is misconfigured and will not work. The whole route /for-auth-users won't
+# be configured. Only the route /httproute-testing will be configured.
+#
+# See this directory's README.md: the gate is enabled under controlPlaneOptions
+# below, and the operator's KongPlugin validating webhook rejects the broken
+# plugin at admission when it is active — disable it to exercise this path.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo-1
+  labels:
+    app: echo-1
+spec:
+  selector:
+    matchLabels:
+      app: echo-1
+  template:
+    metadata:
+      labels:
+        app: echo-1
+    spec:
+      containers:
+      - name: echo-1
+        image: kong/go-echo:0.5.0
+        env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+        ports:
+        - containerPort: 1027
+        resources:
+          limits:
+            memory: "64Mi"
+            cpu: "250m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: echo-1
+  name: echo-1
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 1027
+  selector:
+    app: echo-1
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo-2
+  labels:
+    app: echo-2
+spec:
+  selector:
+    matchLabels:
+      app: echo-2
+  template:
+    metadata:
+      labels:
+        app: echo-2
+    spec:
+      containers:
+      - name: echo-2
+        image: kong/go-echo:0.5.0
+        env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+        ports:
+        - containerPort: 1027
+        resources:
+          limits:
+            memory: "64Mi"
+            cpu: "250m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: echo-2
+  name: echo-2
+spec:
+  ports:
+  - port: 8080
+    protocol: TCP
+    targetPort: 1027
+  selector:
+    app: echo-2
+  type: ClusterIP
+---
+apiVersion: gateway-operator.konghq.com/v2beta1
+kind: GatewayConfiguration
+metadata:
+  name: kong
+  namespace: default
+spec:
+  controlPlaneOptions:
+    featureGates:
+    # Off by default. Without it a single broken entity fails the whole sync.
+    - name: FallbackConfiguration
+      state: enabled
+  dataPlaneOptions:
+    deployment:
+      podTemplateSpec:
+        spec:
+          containers:
+          - name: proxy
+            # renovate: datasource=docker versioning=docker
+            image: kong/kong-gateway:3.16
+            readinessProbe:
+              initialDelaySeconds: 1
+              periodSeconds: 1
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: kong
+spec:
+  controllerName: konghq.com/gateway-operator
+  parametersRef:
+    group: gateway-operator.konghq.com
+    kind: GatewayConfiguration
+    name: kong
+    namespace: default
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: kong
+spec:
+  gatewayClassName: kong
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-testing
+  annotations:
+    konghq.com/strip-path: "true"
+spec:
+  parentRefs:
+  - name: kong
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /httproute-testing
+    backendRefs:
+    - name: echo-1
+      kind: Service
+      port: 80
+      weight: 75
+    - name: echo-2
+      kind: Service
+      port: 8080
+      weight: 25
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-testing2
+  annotations:
+    konghq.com/strip-path: "true"
+    konghq.com/plugins: key-auth
+spec:
+  parentRefs:
+  - name: kong
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /for-auth-users
+    backendRefs:
+    - name: echo-1
+      kind: Service
+      port: 80
+      weight: 75
+    - name: echo-2
+      kind: Service
+      port: 8080
+      weight: 25
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: key-auth
+  namespace: default
+plugin: key-auth
+config:
+  # Should be key_names, not keys.
+  keys: ["key"]

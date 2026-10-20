@@ -1,0 +1,135 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ca-configmap
+  namespace: default
+  labels:
+    konghq.com/ca-cert: "true"
+data:
+  id: 30e144fd-582a-40f7-956c-1fa34308fa9c
+  cert: |
+    -----BEGIN CERTIFICATE-----
+    MIIDbTCCAlWgAwIBAgIUVqWYdKxXFTJEgfsxg0NLgw8KdW0wDQYJKoZIhvcNAQEL
+    BQAwRTELMAkGA1UEBhMCVVMxEzARBgNVBAgMCkNhbGlmb3JuaWExITAfBgNVBAoM
+    GEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDAgFw0yNDEyMTExNDQ0MDFaGA8zMDI0
+    MDQxMzE0NDQwMVowRTELMAkGA1UEBhMCVVMxEzARBgNVBAgMCkNhbGlmb3JuaWEx
+    ITAfBgNVBAoMGEludGVybmV0IFdpZGdpdHMgUHR5IEx0ZDCCASIwDQYJKoZIhvcN
+    AQEBBQADggEPADCCAQoCggEBAKwhV817FJ+krSoQwOu+TBL6wy8UHJO7fC4bv8SI
+    TicWicZxEwUc+jS1hx9qtPlUya//f1va2Ii/Dg7dZpSlvmSKibNNKBq9ebBHQ6d8
+    F8UsjvRLH68gBCkJnpTzonW8ed2k25qlDoQ0Wm897A9B/MxQKtIKG/CcR0zw43uq
+    cCd7+q+XtMZXFiKer9qKNmwoUTrAfIe7Oivh2llLD7OmMdR3hJCHuQyM2Lg7cdJx
+    6HUpdy4oCq9/SVeYtxMJvAxUm88YTbeGfiHVWQCGX2UhYexLE69VvOq1ZH7Ic9YW
+    qu9o4mff3fLAJbkjjWoXdxrZIHJe64yimGzjuxmFLO3EBEcCAwEAAaNTMFEwHQYD
+    VR0OBBYEFFFKo6R1+2xojz3YdW7vvhCsHkVOMB8GA1UdIwQYMBaAFFFKo6R1+2xo
+    jz3YdW7vvhCsHkVOMA8GA1UdEwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEB
+    AIYoKhB/NydPYfVBPw66wJ7KCLoowF+qcVn+P/zSqmjlC5ycpK5toe/BkxPCx0YH
+    ysTC4AGD3oxgNn24Bzkq96GcmwgXLscAOScGRlNzeT2WbVmYBDtqzst6mxbYTLWF
+    bHH1A+PBLfmxBS7oswc03bzayGqaRIHru7FWObhjI4s17BYEP4LQtCBIDU6QpR9a
+    1QV8JwDy2L+EMH80JURii801ZuKK6mzisZQEj4PJZvkYpRovc3a804eRvtk9cjDe
+    TChP2U1pgR5LtkWOWFEehLx7s46f68vlBaMV/zWaPjd52g+3ujfXWLYv7jX/3CAk
+    rewqAvVHqaj7J0YW8dWVRb8=
+    -----END CERTIFICATE-----
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ca-secret
+  namespace: default
+  labels:
+    konghq.com/ca-cert: "true"
+type: Opaque
+data:
+  id: OGYwYjNjMWUtMmQ0YS00YjZlLTlmN2EtMWMyZDNlNGY1YTZi
+  cert: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUR1VENDQXFHZ0F3SUJBZ0lVZkh2c1RDaCtnNmFtZ2ZBQUZnWHY1R3hvSFpJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd1l6RUxNQWtHQTFVRUJoTUNWVk14RXpBUkJnTlZCQWdNQ2tOaGJHbG1iM0p1YVdFeEdqQVlCZ05WQkFvTQpFVXR2Ym1jZ1IyOXNaR1Z1SUZSbGMzUnpNU013SVFZRFZRUUREQnBpWVdOclpXNWtkR3h6Y0c5c2FXTjVMWE5sClkzSmxkQzFqWVRBZ0Z3MHlOakV3TURVeE5EUTBNVFJhR0E4eU1USTJNRGt4TVRFME5EUXhORm93WXpFTE1Ba0cKQTFVRUJoTUNWVk14RXpBUkJnTlZCQWdNQ2tOaGJHbG1iM0p1YVdFeEdqQVlCZ05WQkFvTUVVdHZibWNnUjI5cwpaR1Z1SUZSbGMzUnpNU013SVFZRFZRUUREQnBpWVdOclpXNWtkR3h6Y0c5c2FXTjVMWE5sWTNKbGRDMWpZVENDCkFTSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBTFJzcDNGcVVlb29qS09EZGJOOTBLRHgKZ2htMW9RYWhiTGxUSlRBeXc5SktOTTljaVlpTG5OTWxSMjRyWW9OSEtSaFNHQWZOM3VZNGRQaElYK3pJVXBydQpXUytzclp3czhnc3YrN3FNQUsrcnNXczNNaGRuRmFmTEowTnhMa0hyOGFLNEdGQ3pack5VN1ZmSTZvQmt6UTBICjM4Z2NldlhOaitEc1V3ZWhaMG1SejZEMW1OaGRsNENBamYvdE9LL09TNEtwN2NjRXRCSmRLRVhHSHhIeEFpeGYKYkxlY0ZwT1ZHSU5yek1TaCtaa2lDTi84UmM5L2dsQlV0blRrUTNZVkN3UlRtbnBlS3ZvZHoydXFXTlEzSXRyNQpBNlQrSElhb2ZmY0RXUjY1SUtUbjIrQkNudSs2dWhCK29DUzRQK3ErQU1GUU91TTlmU1VSWXNScVlyYXZFeEVDCkF3RUFBYU5qTUdFd0hRWURWUjBPQkJZRUZNOUw4eTRMMlRkQ2hxb0ZXenU3cWRNSTRmL2FNQjhHQTFVZEl3UVkKTUJhQUZNOUw4eTRMMlRkQ2hxb0ZXenU3cWRNSTRmL2FNQThHQTFVZEV3RUIvd1FGTUFNQkFmOHdEZ1lEVlIwUApBUUgvQkFRREFnRUdNQTBHQ1NxR1NJYjNEUUVCQ3dVQUE0SUJBUUJoQlFLMTJoZUdCVmpmdUhSVGVvdDNEblZTCkhnYjZOSXQwSlovUkVIenNUMm9jcUo0UG5BZDVxOWdNWG9sSXY0K1lTS1dPekdBL25IanRhVWNwL2c1cGEvNXEKM3l3by82Q2ZZaHRENXl0RWtvM1BhZnJOWTVQYmlVNDFBSjBKV3BjaUY2L3VvYlNya1Niek4yZitsaVUzb2UySgppb2FzZktXNzFobG96S2EzTHZ3Rk03cUcrRTNXbHBrWHQ3L0dycmloSkFnWWlwZ0g3NFhGcWxiK0o3ZWpDb3JZCmVBck83NFpqNysyVmRiaXpaMDMwOFNyMGpzZU45aHF5L05waHBiM0ViYjZpZDF2ajRyaFVMMXEzMUpnK3QvUDMKNWRvcUNPMkZ4YmlSZVp4OVh0MWVXTmIzdWJRNkU4U3h3Qk9vdWxlcDlra3I5N0VWaHlhVHo0M1N3YXNOCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: goecho
+  namespace: default
+spec:
+  ports:
+    - port: 1028
+      protocol: TCP
+      targetPort: 1028
+  selector:
+    app: goecho
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: httpbin
+  namespace: default
+spec:
+  ports:
+    - port: 443
+      protocol: TCP
+      targetPort: 443
+  selector:
+    app: httpbin
+  type: ClusterIP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: BackendTLSPolicy
+metadata:
+  name: goecho-tls-policy
+  namespace: default
+spec:
+  options:
+    tls-verify-depth: "1"
+  targetRefs:
+    - group: core
+      kind: Service
+      name: goecho
+  validation:
+    caCertificateRefs:
+      - group: core
+        kind: ConfigMap
+        name: ca-configmap
+    hostname: goecho.example
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: BackendTLSPolicy
+metadata:
+  name: httpbin-tls-policy
+  namespace: default
+spec:
+  targetRefs:
+    - group: ""
+      kind: Service
+      name: httpbin
+  validation:
+    caCertificateRefs:
+      - group: core
+        kind: Secret
+        name: ca-secret
+    hostname: httpbin.example
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-backendtlspolicy
+  namespace: default
+spec:
+  parentRefs:
+    - name: kong
+  rules:
+    - name: goecho
+      matches:
+        - path:
+            type: PathPrefix
+            value: /goecho
+      backendRefs:
+        - name: goecho
+          kind: Service
+          port: 1028
+    - name: httpbin
+      matches:
+        - path:
+            type: PathPrefix
+            value: /httpbin
+      backendRefs:
+        - name: httpbin
+          kind: Service
+          port: 443

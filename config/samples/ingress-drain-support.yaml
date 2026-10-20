@@ -1,0 +1,140 @@
+# Drain support with sticky sessions.
+#
+# With drain support the ControlPlane keeps terminating endpoints in the Kong
+# Upstream with weight=0 instead of dropping them, so no new sessions land on a
+# Pod that is going away while the ones already pinned to it can finish. It is
+# enabled by default; the ControlPlane below sets it explicitly for visibility.
+#
+# The KongUpstreamPolicy pins clients to a backend Pod with a session cookie,
+# which is what makes draining matter. The `sticky-sessions` algorithm needs
+# Kong Gateway 3.11 or newer.
+#
+# Verify with:
+#   ADDR=$(kubectl get svc -l gateway-operator.konghq.com/dataplane-service-type=ingress -o jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}')
+#   curl -si http://$ADDR/echo                        # note the Set-Cookie: session-id=... and the Pod name
+#   curl -s -b 'session-id=<value>' http://$ADDR/echo # same Pod on every request
+---
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: drain-support
+spec:
+  controller: ingress-controllers.konghq.com/kong
+---
+apiVersion: gateway-operator.konghq.com/v1beta1
+kind: DataPlane
+metadata:
+  name: dataplane-drain-support
+  namespace: default
+spec:
+  deployment:
+    podTemplateSpec:
+      spec:
+        containers:
+        - name: proxy
+          # renovate: datasource=docker versioning=docker
+          image: kong/kong-gateway:3.16
+          readinessProbe:
+            initialDelaySeconds: 1
+            periodSeconds: 1
+---
+apiVersion: gateway-operator.konghq.com/v2beta1
+kind: ControlPlane
+metadata:
+  name: controlplane-drain-support
+  namespace: default
+spec:
+  # Required when dataplane.type is ref, and only Ingress is supported in that mode.
+  ingressClass: drain-support
+  dataplane:
+    type: ref
+    ref:
+      name: dataplane-drain-support
+  translation:
+    drainSupport: enabled
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo-drain-support
+  labels:
+    app: echo-drain-support
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: echo-drain-support
+  template:
+    metadata:
+      labels:
+        app: echo-drain-support
+    spec:
+      containers:
+      - name: echo
+        image: kong/go-echo:0.5.0
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        ports:
+        - containerPort: 1027
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo-drain-support
+  labels:
+    app: echo-drain-support
+  annotations:
+    konghq.com/upstream-policy: echo-drain-support
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 1027
+  selector:
+    app: echo-drain-support
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: echo-drain-support
+  annotations:
+    konghq.com/strip-path: "true"
+    # Kong's default for Ingress differs by version; pin HTTP so the curl checks above work.
+    konghq.com/protocols: "http"
+spec:
+  ingressClassName: drain-support
+  rules:
+  - http:
+      paths:
+      - path: /echo
+        pathType: Prefix
+        backend:
+          service:
+            name: echo-drain-support
+            port:
+              number: 80
+---
+apiVersion: configuration.konghq.com/v1beta1
+kind: KongUpstreamPolicy
+metadata:
+  name: echo-drain-support
+spec:
+  algorithm: sticky-sessions
+  # Sticky sessions take their key from the cookie below, so hashOn must be `none`.
+  hashOn:
+    input: none
+  stickySessions:
+    cookie: session-id
+    cookiePath: /
+  # Passive health checks take failing Pods out of rotation without probing them.
+  healthchecks:
+    passive:
+      type: http
+      healthy:
+        successes: 3
+      unhealthy:
+        timeouts: 5

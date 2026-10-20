@@ -33,6 +33,22 @@ func EventGatewayVirtualClusterProducePolicyReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
+				&configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueEventGatewayVirtualClusterProducePolicyForEventGatewayVirtualClusterProducePolicy(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&configurationv1alpha1.EventGatewayStaticKey{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueEventGatewayVirtualClusterProducePolicyForEventGatewayStaticKey(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
 				&configurationv1alpha1.KongReferenceGrant{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectsForKongReferenceGrant[configurationv1alpha1.EventGatewayVirtualClusterProducePolicyList](cl),
@@ -53,6 +69,46 @@ func enqueueEventGatewayVirtualClusterProducePolicyForEventGatewayVirtualCluster
 		var l configurationv1alpha1.EventGatewayVirtualClusterProducePolicyList
 		if err := cl.List(ctx, &l, client.MatchingFields{
 			index.IndexFieldEventGatewayVirtualClusterProducePolicyOnEventGatewayVirtualClusterRef: client.ObjectKeyFromObject(parent).String(),
+		}); err != nil {
+			return nil
+		}
+		return objectListToReconcileRequests(l.Items)
+	}
+}
+
+func enqueueEventGatewayVirtualClusterProducePolicyForEventGatewayVirtualClusterProducePolicy(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		ref, ok := obj.(*configurationv1alpha1.EventGatewayVirtualClusterProducePolicy)
+		if !ok {
+			return nil
+		}
+		var l configurationv1alpha1.EventGatewayVirtualClusterProducePolicyList
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexFieldEventGatewayVirtualClusterProducePolicyOnEventGatewayVirtualClusterProducePolicyRef: client.ObjectKeyFromObject(ref).String(),
+		}); err != nil {
+			return nil
+		}
+		reqs := objectListToReconcileRequests(l.Items)
+		for _, key := range configurationv1alpha1.EventGatewayVirtualClusterProducePolicyRefsToEventGatewayVirtualClusterProducePolicy(ref) {
+			reqs = append(reqs, reconcile.Request{NamespacedName: key})
+		}
+		return reqs
+	}
+}
+
+func enqueueEventGatewayVirtualClusterProducePolicyForEventGatewayStaticKey(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		ref, ok := obj.(*configurationv1alpha1.EventGatewayStaticKey)
+		if !ok {
+			return nil
+		}
+		var l configurationv1alpha1.EventGatewayVirtualClusterProducePolicyList
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexFieldEventGatewayVirtualClusterProducePolicyOnEventGatewayStaticKeyRef: client.ObjectKeyFromObject(ref).String(),
 		}); err != nil {
 			return nil
 		}

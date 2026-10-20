@@ -155,6 +155,7 @@ spec:
 
                           Keys must be of length 1-63 characters, and cannot start with "kong",
                           "konnect", "mesh", "kic", or "_".
+                        maxProperties: 50
                         type: object
                       managedBy:
                         additionalProperties:
@@ -169,6 +170,7 @@ spec:
 
                           Keys must be 1–63 characters long and start with an alphanumeric
                           character.
+                        maxProperties: 5
                         type: object
                       name:
                         description: |-
@@ -308,6 +310,7 @@ spec:
 
                           Keys must be of length 1-63 characters, and cannot start with "kong",
                           "konnect", "mesh", "kic", or "_".
+                        maxProperties: 50
                         type: object
                       managedBy:
                         additionalProperties:
@@ -322,6 +325,7 @@ spec:
 
                           Keys must be 1–63 characters long and start with an alphanumeric
                           character.
+                        maxProperties: 5
                         type: object
                       name:
                         description: |-
@@ -400,9 +404,6 @@ spec:
                 required:
                 - type
                 type: object
-                x-kubernetes-validations:
-                - message: type is immutable
-                  rule: '!has(oldSelf.type) || self.type == oldSelf.type'
             required:
             - aiGatewayRef
             type: object
@@ -510,6 +511,11 @@ spec:
         - message: 'spec.aiGatewayRef.kind must be one of: KonnectAIGateway, OnPremAIGateway'
           rule: '!has(self.spec.aiGatewayRef) || !has(self.spec.aiGatewayRef.kind)
             || self.spec.aiGatewayRef.kind in [''KonnectAIGateway'', ''OnPremAIGateway'']'
+        - fieldPath: .spec.apiSpec.type
+          message: type is immutable
+          rule: '!has(oldSelf.spec) || !has(oldSelf.spec.apiSpec) || !has(oldSelf.spec.apiSpec.type)
+            || (has(self.spec) && has(self.spec.apiSpec) && has(self.spec.apiSpec.type)
+            && self.spec.apiSpec.type == oldSelf.spec.apiSpec.type)'
     served: true
     storage: true
     subresources:

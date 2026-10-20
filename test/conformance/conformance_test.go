@@ -29,6 +29,7 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	gatewayapipkg "github.com/kong/kong-operator/v2/pkg/gatewayapi"
+	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 	"github.com/kong/kong-operator/v2/pkg/vars"
 	"github.com/kong/kong-operator/v2/test"
 	"github.com/kong/kong-operator/v2/test/helpers"
@@ -60,15 +61,15 @@ func TestGatewayConformance(t *testing.T) {
 		t.Fatalf("unsupported KongRouterFlavor: %s", kongRouterFlavor)
 	}
 
-	supportedFeatures, err := gatewayapipkg.GetSupportedFeatures(kongRouterFlavor)
-	require.NoError(t, err)
-
 	gwType := gatewayType(test.ConformanceGatewayType())
 	switch gwType {
 	case standardGateway, hybridGateway:
 	default:
 		t.Fatalf("unsupported KONG_TEST_CONFORMANCE_GATEWAY_TYPE: %s", gwType)
 	}
+
+	supportedFeatures, err := gatewayapipkg.GetSupportedFeatures(kongRouterFlavor, gwType == hybridGateway)
+	require.NoError(t, err)
 
 	// hybrid gateway does not support expressions router flavor since we do not support expression routes in KongRoute:
 	// https://github.com/Kong/kong-operator/issues/2673
@@ -80,7 +81,7 @@ func TestGatewayConformance(t *testing.T) {
 		t.Fatal("hybrid gateway type requires KONG_TEST_KONNECT_ACCESS_TOKEN to be set")
 	}
 
-	skippedTests := skippedTestsForConfig(gwType)
+	skippedTests := skippedTestsForConfig(kongRouterFlavor, gwType)
 	runConformance(t, gwType, kongRouterFlavor, supportedFeatures, cleanupResources, skippedTests)
 }
 
@@ -155,6 +156,10 @@ func runConformance(
 	opts.Client = clients.MgrClient
 	opts.TimeoutConfig = timeoutConfig
 	opts.RestConfig.QPS = -1
+	// The gateway-api helpers report a transient API error with t.Error, which
+	// marks the whole test as failed even when every later poll succeeds. Retry
+	// those errors instead of letting them reach the test.
+	opts.RestConfig.WrapTransport = testutils.WithTransientConnectionRetries
 
 	// The suite runs top-level tests one at a time. Each test (including its
 	// parallel per-request sub-cases) fully completes before the next starts.
@@ -167,6 +172,12 @@ func runConformance(
 	// mid-test. It returns immediately when nothing is terminating, so it
 	// costs effectively nothing in the common case.
 	opts.Hook = func(t *testing.T, _ suite.ConformanceTest, _ *suite.ConformanceTestSuite) {
+		if t.Failed() {
+			// The failure was reported when it happened, which can be long before
+			// this hook runs and far above the final "--- FAIL" line. Say so, so
+			// the reader does not search the cleanup logs for a cause.
+			t.Log("test already marked failed before cleanup, see the earlier output of this test")
+		}
 		waitForConformanceResourcesCleanup(ctx, clients.MgrClient, t.Logf)
 	}
 

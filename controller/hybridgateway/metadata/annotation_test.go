@@ -19,11 +19,11 @@ import (
 
 var (
 	httpRouteTypeMeta = metav1.TypeMeta{
-		Kind:       kindHTTPRoute,
+		Kind:       KindHTTPRoute,
 		APIVersion: "gateway.networking.k8s.io/v1",
 	}
 	grpcRouteTypeMeta = metav1.TypeMeta{
-		Kind:       kindGRPCRoute,
+		Kind:       KindGRPCRoute,
 		APIVersion: "gateway.networking.k8s.io/v1",
 	}
 	tlsRouteTypeMeta = metav1.TypeMeta{
@@ -31,11 +31,11 @@ var (
 		APIVersion: "gateway.networking.k8s.io/v1",
 	}
 	tcpRouteTypeMeta = metav1.TypeMeta{
-		Kind:       kindTCPRoute,
+		Kind:       KindTCPRoute,
 		APIVersion: "gateway.networking.k8s.io/v1",
 	}
 	udpRouteTypeMeta = metav1.TypeMeta{
-		Kind:       kindUDPRoute,
+		Kind:       KindUDPRoute,
 		APIVersion: "gateway.networking.k8s.io/v1",
 	}
 )
@@ -115,19 +115,19 @@ func TestExtractPreserveHost(t *testing.T) {
 	tests := []struct {
 		name             string
 		annotations      map[string]string
-		expectedVal      bool
+		expectedVal      *bool
 		expectedErrExist bool
 	}{
 		{
 			name:             "nil annotations",
 			annotations:      nil,
-			expectedVal:      true,
+			expectedVal:      nil,
 			expectedErrExist: false,
 		},
 		{
 			name:             "empty annotations",
 			annotations:      map[string]string{},
-			expectedVal:      true,
+			expectedVal:      nil,
 			expectedErrExist: false,
 		},
 		{
@@ -135,7 +135,7 @@ func TestExtractPreserveHost(t *testing.T) {
 			annotations: map[string]string{
 				"konghq.com/preserve-host": "true",
 			},
-			expectedVal:      true,
+			expectedVal:      new(true),
 			expectedErrExist: false,
 		},
 		{
@@ -143,7 +143,7 @@ func TestExtractPreserveHost(t *testing.T) {
 			annotations: map[string]string{
 				"konghq.com/preserve-host": "false",
 			},
-			expectedVal:      false,
+			expectedVal:      new(false),
 			expectedErrExist: false,
 		},
 		{
@@ -151,7 +151,7 @@ func TestExtractPreserveHost(t *testing.T) {
 			annotations: map[string]string{
 				"konghq.com/preserve-host": "invalid",
 			},
-			expectedVal:      true,
+			expectedVal:      nil,
 			expectedErrExist: true,
 		},
 		{
@@ -159,7 +159,7 @@ func TestExtractPreserveHost(t *testing.T) {
 			annotations: map[string]string{
 				"konghq.com/preserve-host": "",
 			},
-			expectedVal:      true,
+			expectedVal:      nil,
 			expectedErrExist: false,
 		},
 		{
@@ -168,7 +168,7 @@ func TestExtractPreserveHost(t *testing.T) {
 				"other-annotation":         "value",
 				"konghq.com/preserve-host": "false",
 			},
-			expectedVal:      false,
+			expectedVal:      new(false),
 			expectedErrExist: false,
 		},
 	}
@@ -282,7 +282,7 @@ func TestBuildAnnotationsGRPCRoute(t *testing.T) {
 	assert.Equal(t, "test-namespace/test-route", result[consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation])
 
 	am := NewAnnotationManager(logr.Discard())
-	assert.Equal(t, consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation, am.RouteAnnotationKeyForKind(kindGRPCRoute))
+	assert.Equal(t, consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation, am.RouteAnnotationKeyForKind(KindGRPCRoute))
 
 	obj := &configurationv1alpha1.KongRoute{}
 	assert.True(t, am.AppendRouteToAnnotation(obj, grpcRoute), "AppendRouteToAnnotation must not no-op for GRPCRoute")
@@ -751,13 +751,13 @@ func TestGetRoutesWithKind(t *testing.T) {
 	}{
 		{
 			name:                "no annotations",
-			routeKind:           kindHTTPRoute,
+			routeKind:           KindHTTPRoute,
 			existingAnnotations: nil,
 			expected:            []string{},
 		},
 		{
 			name:      "empty annotation",
-			routeKind: kindHTTPRoute,
+			routeKind: KindHTTPRoute,
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "",
 			},
@@ -765,7 +765,7 @@ func TestGetRoutesWithKind(t *testing.T) {
 		},
 		{
 			name:      "single route",
-			routeKind: kindHTTPRoute,
+			routeKind: KindHTTPRoute,
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "test-namespace/test-route",
 			},
@@ -773,7 +773,7 @@ func TestGetRoutesWithKind(t *testing.T) {
 		},
 		{
 			name:      "multiple routes",
-			routeKind: kindHTTPRoute,
+			routeKind: KindHTTPRoute,
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,ns2/route2,ns3/route3",
 			},
@@ -781,7 +781,7 @@ func TestGetRoutesWithKind(t *testing.T) {
 		},
 		{
 			name:      "single route - TLSRoute",
-			routeKind: kindTLSRoute,
+			routeKind: KindTLSRoute,
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesTLSRouteAnnotation: "test-namespace/test-route",
 			},
@@ -789,7 +789,7 @@ func TestGetRoutesWithKind(t *testing.T) {
 		},
 		{
 			name:      "single route - TCPRoute",
-			routeKind: kindTCPRoute,
+			routeKind: KindTCPRoute,
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesTCPRouteAnnotation: "test-namespace/test-route",
 			},
@@ -797,7 +797,7 @@ func TestGetRoutesWithKind(t *testing.T) {
 		},
 		{
 			name:      "multiple routes with different kinds",
-			routeKind: kindTLSRoute,
+			routeKind: KindTLSRoute,
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,ns2/route2",
 				consts.GatewayOperatorHybridRoutesTLSRouteAnnotation:  "ns2/route2,ns3/route3",
@@ -807,7 +807,7 @@ func TestGetRoutesWithKind(t *testing.T) {
 		},
 		{
 			name:      "multiple TCPRoutes with different kinds",
-			routeKind: kindTCPRoute,
+			routeKind: KindTCPRoute,
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,ns2/route2",
 				consts.GatewayOperatorHybridRoutesTLSRouteAnnotation:  "ns2/route2,ns3/route3",
@@ -817,7 +817,7 @@ func TestGetRoutesWithKind(t *testing.T) {
 		},
 		{
 			name:      "single route - UDPRoute",
-			routeKind: kindUDPRoute,
+			routeKind: KindUDPRoute,
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesUDPRouteAnnotation: "test-namespace/test-route",
 			},
@@ -825,7 +825,7 @@ func TestGetRoutesWithKind(t *testing.T) {
 		},
 		{
 			name:      "multiple UDPRoutes with different kinds",
-			routeKind: kindUDPRoute,
+			routeKind: KindUDPRoute,
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,ns2/route2",
 				consts.GatewayOperatorHybridRoutesTCPRouteAnnotation:  "ns2/route2,ns3/route3",
@@ -874,7 +874,7 @@ func TestSetRoutesWithKind(t *testing.T) {
 		{
 			name:                "set on empty object",
 			existingAnnotations: nil,
-			routeKind:           kindHTTPRoute,
+			routeKind:           KindHTTPRoute,
 			routes:              []string{"ns1/route1"},
 			expectedAnnotation:  "ns1/route1",
 			expectModification:  true,
@@ -884,7 +884,7 @@ func TestSetRoutesWithKind(t *testing.T) {
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1",
 			},
-			routeKind:          kindHTTPRoute,
+			routeKind:          KindHTTPRoute,
 			routes:             []string{"ns1/route1"},
 			expectedAnnotation: "ns1/route1",
 			expectModification: false,
@@ -894,7 +894,7 @@ func TestSetRoutesWithKind(t *testing.T) {
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1",
 			},
-			routeKind:          kindHTTPRoute,
+			routeKind:          KindHTTPRoute,
 			routes:             []string{"ns2/route2"},
 			expectedAnnotation: "ns2/route2",
 			expectModification: true,
@@ -904,7 +904,7 @@ func TestSetRoutesWithKind(t *testing.T) {
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "old/route",
 			},
-			routeKind:          kindHTTPRoute,
+			routeKind:          KindHTTPRoute,
 			routes:             []string{"ns1/route1", "ns2/route2"},
 			expectedAnnotation: "ns1/route1,ns2/route2",
 			expectModification: true,
@@ -914,7 +914,7 @@ func TestSetRoutesWithKind(t *testing.T) {
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1",
 			},
-			routeKind:          kindHTTPRoute,
+			routeKind:          KindHTTPRoute,
 			routes:             []string{},
 			expectedAnnotation: "",
 			expectModification: true,
@@ -924,7 +924,7 @@ func TestSetRoutesWithKind(t *testing.T) {
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesTLSRouteAnnotation: "ns1/route1",
 			},
-			routeKind:          kindTLSRoute,
+			routeKind:          KindTLSRoute,
 			routes:             []string{"ns1/route1"},
 			expectedAnnotation: "ns1/route1",
 			expectModification: false,
@@ -935,7 +935,7 @@ func TestSetRoutesWithKind(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1",
 				consts.GatewayOperatorHybridRoutesTLSRouteAnnotation:  "ns2/route2",
 			},
-			routeKind:          kindTLSRoute,
+			routeKind:          KindTLSRoute,
 			routes:             []string{"ns1/route1"},
 			expectedAnnotation: "ns1/route1",
 			expectModification: true,
@@ -945,7 +945,7 @@ func TestSetRoutesWithKind(t *testing.T) {
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesTCPRouteAnnotation: "ns1/route1",
 			},
-			routeKind:          kindTCPRoute,
+			routeKind:          KindTCPRoute,
 			routes:             []string{"ns1/route1"},
 			expectedAnnotation: "ns1/route1",
 			expectModification: false,
@@ -956,7 +956,7 @@ func TestSetRoutesWithKind(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1",
 				consts.GatewayOperatorHybridRoutesTCPRouteAnnotation:  "ns2/route2",
 			},
-			routeKind:          kindTCPRoute,
+			routeKind:          KindTCPRoute,
 			routes:             []string{"ns1/route1"},
 			expectedAnnotation: "ns1/route1",
 			expectModification: true,
@@ -966,7 +966,7 @@ func TestSetRoutesWithKind(t *testing.T) {
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesUDPRouteAnnotation: "ns1/route1",
 			},
-			routeKind:          kindUDPRoute,
+			routeKind:          KindUDPRoute,
 			routes:             []string{"ns1/route1"},
 			expectedAnnotation: "ns1/route1",
 			expectModification: false,
@@ -977,7 +977,7 @@ func TestSetRoutesWithKind(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1",
 				consts.GatewayOperatorHybridRoutesUDPRouteAnnotation:  "ns2/route2",
 			},
-			routeKind:          kindUDPRoute,
+			routeKind:          KindUDPRoute,
 			routes:             []string{"ns1/route1"},
 			expectedAnnotation: "ns1/route1",
 			expectModification: true,
@@ -1404,7 +1404,7 @@ func TestGenericObjectTypes(t *testing.T) {
 			assert.True(t, contains)
 
 			// Test getting routes
-			routes := am.GetRoutesWithKind(obj, kindHTTPRoute)
+			routes := am.GetRoutesWithKind(obj, KindHTTPRoute)
 			assert.Equal(t, []string{"test-namespace/test-route"}, routes)
 
 			// Test removing
@@ -1644,6 +1644,114 @@ func TestISServiceUpstream(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := IsServiceUpstream(tt.svc)
 			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestExtractRequestBuffering(t *testing.T) {
+	const key = "konghq.com/request-buffering"
+	tests := []struct {
+		name    string
+		anns    map[string]string
+		want    *bool
+		wantErr bool
+	}{
+		{name: "absent", anns: map[string]string{}},
+		{name: "nil map"},
+		{name: "empty value", anns: map[string]string{key: ""}},
+		{name: "true", anns: map[string]string{key: "true"}, want: new(true)},
+		{name: "false", anns: map[string]string{key: "false"}, want: new(false)},
+		{name: "invalid", anns: map[string]string{key: "x"}, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ExtractRequestBuffering(tt.anns)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestExtractResponseBuffering(t *testing.T) {
+	const key = "konghq.com/response-buffering"
+	tests := []struct {
+		name    string
+		anns    map[string]string
+		want    *bool
+		wantErr bool
+	}{
+		{name: "absent", anns: map[string]string{}},
+		{name: "nil map"},
+		{name: "empty value", anns: map[string]string{key: ""}},
+		{name: "true", anns: map[string]string{key: "true"}, want: new(true)},
+		{name: "false", anns: map[string]string{key: "false"}, want: new(false)},
+		{name: "invalid", anns: map[string]string{key: "x"}, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ExtractResponseBuffering(tt.anns)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestExtractHTTPSRedirectStatusCode(t *testing.T) {
+	tests := []struct {
+		name    string
+		anns    map[string]string
+		want    *int64
+		wantErr bool
+	}{
+		{name: "absent"},
+		{name: "301", anns: map[string]string{"konghq.com/https-redirect-status-code": "301"}, want: new(int64(301))},
+		{name: "426", anns: map[string]string{"konghq.com/https-redirect-status-code": "426"}, want: new(int64(426))},
+		{name: "not allowed", anns: map[string]string{"konghq.com/https-redirect-status-code": "200"}, wantErr: true},
+		{name: "not a number", anns: map[string]string{"konghq.com/https-redirect-status-code": "abc"}, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ExtractHTTPSRedirectStatusCode(tt.anns)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestExtractPathHandling(t *testing.T) {
+	tests := []struct {
+		name    string
+		anns    map[string]string
+		want    *string
+		wantErr bool
+	}{
+		{name: "absent"},
+		{name: "empty", anns: map[string]string{"konghq.com/path-handling": ""}},
+		{name: "v0", anns: map[string]string{"konghq.com/path-handling": "v0"}, want: new("v0")},
+		{name: "v1", anns: map[string]string{"konghq.com/path-handling": "v1"}, want: new("v1")},
+		{name: "invalid", anns: map[string]string{"konghq.com/path-handling": "v2"}, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ExtractPathHandling(tt.anns)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

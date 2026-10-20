@@ -1,8 +1,11 @@
 package manager_test
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -12,6 +15,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlmgr "sigs.k8s.io/controller-runtime/pkg/manager"
 
+	egonprem "github.com/kong/kong-operator/v2/controller/eventgateway/onprem"
 	"github.com/kong/kong-operator/v2/modules/manager"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 )
@@ -41,7 +45,7 @@ func TestSetupControllers(t *testing.T) {
 	controllerDefs, err := manager.SetupControllers(mgr, &cfg, nil, nil)
 	require.NoError(t, err)
 
-	const expectedControllerCount = 90
+	const expectedControllerCount = 93
 	require.Len(t, controllerDefs, expectedControllerCount)
 
 	seenControllerTypes := make(map[string]int, expectedControllerCount)
@@ -62,4 +66,57 @@ func TestSetupControllers(t *testing.T) {
 		}
 	}
 	require.Empty(t, duplicates, "found duplicate controller types: %v", duplicates)
+}
+
+// TestSetupControllers_OnPremEventGatewayController checks that the
+// OnPremEventGateway controller is enabled only by its flag.
+func TestSetupControllers_OnPremEventGatewayController(t *testing.T) {
+	t.Parallel()
+
+	for _, enabled := range []bool{false, true} {
+		t.Run(fmt.Sprintf("flag %t", enabled), func(t *testing.T) {
+			t.Parallel()
+
+			mgr, err := ctrl.NewManager(&rest.Config{}, ctrlmgr.Options{
+				MapperProvider: func(*rest.Config, *http.Client) (meta.RESTMapper, error) {
+					return allKindsRESTMapper{RESTMapper: meta.NewDefaultRESTMapper(nil)}, nil
+				},
+			})
+			require.NoError(t, err)
+			cfg := testutils.DefaultControllerConfigForTests()
+			cfg.OnPremEventGatewayControllerEnabled = enabled
+			controllerDefs, err := manager.SetupControllers(mgr, &cfg, nil, nil)
+			require.NoError(t, err)
+
+			idx := slices.IndexFunc(controllerDefs, func(def manager.ControllerDef) bool {
+				_, ok := def.Controller.(*egonprem.Reconciler)
+				return ok
+			})
+			require.NotEqual(t, -1, idx, "the OnPremEventGateway controller is not defined")
+			require.Equal(t, enabled, controllerDefs[idx].Enabled)
+		})
+	}
+}
+
+// recordingController records whether it was set up.
+type recordingController struct {
+	setUp bool
+}
+
+func (c *recordingController) SetupWithManager(context.Context, ctrl.Manager) error {
+	c.setUp = true
+	return nil
+}
+
+// TestControllerDefMaybeSetupWithManager checks that a disabled controller is
+// not set up, so it registers nothing with the manager.
+func TestControllerDefMaybeSetupWithManager(t *testing.T) {
+	t.Parallel()
+
+	for _, enabled := range []bool{false, true} {
+		controller := &recordingController{}
+		def := manager.ControllerDef{Enabled: enabled, Controller: controller}
+		require.NoError(t, def.MaybeSetupWithManager(t.Context(), nil))
+		require.Equal(t, enabled, controller.setUp)
+	}
 }

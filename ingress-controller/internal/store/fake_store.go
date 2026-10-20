@@ -16,7 +16,6 @@ import (
 	"k8s.io/cli-runtime/pkg/printers"
 	"k8s.io/client-go/tools/cache"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
@@ -295,7 +294,7 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 		reflect.TypeFor[*gatewayapi.ReferenceGrant]():                    schema.GroupVersion(gatewayv1beta1.GroupVersion).WithKind("ReferenceGrant"),
 		reflect.TypeFor[*gatewayapi.Gateway]():                           schema.GroupVersion(gatewayv1.GroupVersion).WithKind("Gateway"),
 		reflect.TypeFor[*gatewayapi.GatewayClass]():                      schema.GroupVersion(gatewayv1.GroupVersion).WithKind("GatewayClass"),
-		reflect.TypeFor[*gatewayapi.BackendTLSPolicy]():                  schema.GroupVersion(gatewayv1alpha3.GroupVersion).WithKind("BackendTLSPolicy"),
+		reflect.TypeFor[*gatewayapi.BackendTLSPolicy]():                  schema.GroupVersion(gatewayv1.GroupVersion).WithKind("BackendTLSPolicy"),
 		reflect.TypeFor[*configurationv1alpha1.IngressClassParameters](): configurationv1alpha1.SchemeGroupVersion.WithKind("IngressClassParameters"),
 		reflect.TypeFor[*corev1.Service]():                               corev1.SchemeGroupVersion.WithKind("Service"),
 		reflect.TypeFor[*discoveryv1.EndpointSlice]():                    discoveryv1.SchemeGroupVersion.WithKind("EndpointSlice"),

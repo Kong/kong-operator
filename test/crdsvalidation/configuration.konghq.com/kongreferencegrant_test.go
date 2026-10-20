@@ -73,6 +73,42 @@ func TestKongReferenceGrant(t *testing.T) {
 		}.RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("EventGatewayStaticKey to Secret reference", func(t *testing.T) {
+		grantFrom := func(kind string) *configurationv1alpha1.KongReferenceGrant {
+			return &configurationv1alpha1.KongReferenceGrant{
+				TypeMeta:   typeMeta,
+				ObjectMeta: common.CommonObjectMeta(ns.Name),
+				Spec: configurationv1alpha1.KongReferenceGrantSpec{
+					From: []configurationv1alpha1.ReferenceGrantFrom{
+						{
+							Namespace: configurationv1alpha1.Namespace("other"),
+							Kind:      configurationv1alpha1.Kind(kind),
+							Group:     "configuration.konghq.com",
+						},
+					},
+					To: []configurationv1alpha1.ReferenceGrantTo{
+						{
+							Group: "core",
+							Kind:  "Secret",
+						},
+					},
+				},
+			}
+		}
+		common.TestCasesGroup[*configurationv1alpha1.KongReferenceGrant]{
+			{
+				Name:       "from an EventGatewayStaticKey works",
+				TestObject: grantFrom("EventGatewayStaticKey"),
+			},
+			{
+				// Only the static key is supported among Event Gateway kinds.
+				Name:                 "from another Event Gateway kind is rejected",
+				TestObject:           grantFrom("EventGatewayBackendCluster"),
+				ExpectedErrorMessage: new("kinds are supported for 'configuration.konghq.com' group"),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("KongRoute to KonnectGatewayControlPlane reference", func(t *testing.T) {
 		common.TestCasesGroup[*configurationv1alpha1.KongReferenceGrant]{
 			{

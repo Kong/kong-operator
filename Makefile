@@ -208,14 +208,12 @@ HELM = helm
 download.helm: mise ## Download helm locally if necessary.
 	$(MAKE) mise-install-global DEP_BIN=$(HELM) DEP_VER=aqua:helm/helm
 
-# NOTE: temporary override to work around:
-# export data version 4 is greater than maximum supported version 2
-# Upstream issue: https://github.com/kubernetes-sigs/kube-api-linter/issues/260
-KUBE_API_LINTER_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["go:github.com/pmalek/kube-api-linter/cmd/golangci-lint-kube-api-linter"].version' < $(MISE_FILE))
-KUBE_API_LINTER = $(PROJECT_DIR)/bin/installs/go-github-com-pmalek-kube-api-linter-cmd-golangci-lint-kube-api-linter/$(KUBE_API_LINTER_VERSION)/bin/golangci-lint-kube-api-linter
+KUBE_API_LINTER_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"].version' < $(MISE_FILE))
+.PHONY: download.kube-api-linter
+KUBE_API_LINTER = $(PROJECT_DIR)/bin/installs/go-sigs-k8s-io-kube-api-linter-cmd-golangci-lint-kube-api-linter/$(KUBE_API_LINTER_VERSION)/bin/golangci-lint-kube-api-linter
 .PHONY: download.kube-api-linter
 download.kube-api-linter: mise ## Download kube-api-linter locally if necessary.
-	$(MAKE) mise-install TOOL_BIN=$(KUBE_API_LINTER) DEP_VER=go:github.com/pmalek/kube-api-linter/cmd/golangci-lint-kube-api-linter@$(KUBE_API_LINTER_VERSION)
+	$(MAKE) mise-install TOOL_BIN=$(KUBE_API_LINTER) DEP_VER=go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter@$(KUBE_API_LINTER_VERSION)
 
 CHAINSAW_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["aqua:kyverno/chainsaw"].version' < $(MISE_FILE))
 CHAINSAW = $(PROJECT_DIR)/bin/installs/aqua-kyverno-chainsaw/$(CHAINSAW_VERSION)/chainsaw
@@ -270,9 +268,11 @@ build: generate
 	$(MAKE) build.operator
 
 .PHONY: _govulncheck
-_govulncheck:
+_govulncheck: download.govulncheck
 	GOVULNCHECK=$(GOVULNCHECK) SCAN=$(SCAN) ./hack/govulncheck-with-excludes.sh ./...
 
+# NOTE: SCAN=symbol runs out of memory on GitHub runners, so CI runs the package scan only:
+# `make _govulncheck SCAN=package`. Both scans are run here, for local use.
 .PHONY: govulncheck
 govulncheck: download.govulncheck
 	$(MAKE) _govulncheck SCAN=symbol
@@ -609,7 +609,7 @@ E2E_TEST_TIMEOUT ?= "20m"
 _CLUSTER_VERSION ?= $(shell $(YQ) eval -r -o=json '.[0] | sub("^v"; "")' .github/supported_k8s_node_versions.yaml)
 CLUSTER_VERSION ?=$(patsubst v%,%,$(_CLUSTER_VERSION ))
 TEST_KONG_HELM_CHART_VERSION ?= $(shell $(YQ) -ojson -r '.integration.helm.kong' < $(TEST_DEPENDENCIES_FILE))
-KONG_CONTROLLER_FEATURE_GATES ?= GatewayAlpha=true
+KONG_CONTROLLER_FEATURE_GATES ?=
 
 .PHONY: tune.inotify
 tune.inotify: ## Raise host fs.inotify limits to avoid "too many open files" in kind-based tests (Linux host / Docker VM).
@@ -619,7 +619,9 @@ tune.inotify: ## Raise host fs.inotify limits to avoid "too many open files" in 
 .PHONY: test
 test: test.unit
 
-UNIT_TEST_PATHS := ./api/... ./controller/... ./internal/... ./pkg/... ./modules/... ./ingress-controller/internal/... ./ingress-controller/pkg/... ./test/helpers/...
+UNIT_TEST_PATHS := ./api/... ./controller/... ./internal/... ./pkg/... ./modules/... ./ingress-controller/internal/... ./ingress-controller/pkg/... ./test/helpers/... \
+	./test/mocks/sdkmocks ./scripts/apitypes-funcs \
+	./ingress-controller/test/helpers ./ingress-controller/test/mocks ./ingress-controller/test/kongintegration/containers
 UNIT_TEST_PATHS_CRD_GEN := ./pkg/...
 
 .PHONY: _test.unit
@@ -888,7 +890,7 @@ test.e2e.chainsaw.prereq.uninstall:
 .PHONY: test.e2e.chainsaw
 test.e2e.chainsaw: chainsaw grpcurl ## Run chainsaw e2e tests.
 	GATEWAY_IMAGE=$(shell $(YQ) -r '.chainsaw.kong-ee | .image + ":" + .tag' < $(TEST_DEPENDENCIES_FILE)) \
-	AIGW_DP_IMAGE=$(shell $(YQ) -r '.chainsaw.aigw-dp | .image + ":" + .tag' < $(TEST_DEPENDENCIES_FILE)) \
+	AIGW_DP_IMAGE=$(or $(AIGW_DP_IMAGE),$(shell $(YQ) -r '.chainsaw.aigw-dp | .image + ":" + .tag' < $(TEST_DEPENDENCIES_FILE))) \
 	KEG_DP_IMAGE=$(shell $(YQ) -r '.chainsaw.keg-dp | .image + ":" + .tag' < $(TEST_DEPENDENCIES_FILE)) \
 	GRPCURL_BIN=$(GRPCURL) \
 		$(CHAINSAW) test --config $(CHAINSAW_CONFIG) --quiet --test-dir $(CHAINSAW_TEST_DIR)
@@ -939,7 +941,8 @@ _test.kongintegration: gotestsum
 		-parallel $(NCPU) \
 		-coverpkg=$(PKG_LIST) \
 		-coverprofile=coverage.kongintegration.out \
-		./ingress-controller/test/kongintegration
+		./ingress-controller/test/kongintegration \
+		./test/runtimeintegration/aigateway
 
 .PHONY: test.samples
 test.samples: kustomize
@@ -948,6 +951,10 @@ test.samples: kustomize
 	@$(KUSTOMIZE) build config/crd | kubectl apply --server-side --force-conflicts --field-manager=kong-operator-tests -f -
 	@kubectl apply --server-side --force-conflicts --field-manager=kong-operator-tests -f charts/kong-operator/charts/gwapi-standard-crds/crds/gwapi-crds.yaml || true
 	@kubectl get crd -ojsonpath='{.items[*].metadata.name}' | xargs -n1 kubectl wait --for condition=established crd
+	# NOTE: the glob is intentionally non-recursive. Samples that need setup
+	# beyond a stock install (an extra CRD channel, a feature gate that is off
+	# by default) live in subdirectories such as config/samples/feature-gated
+	# and are skipped here. See that directory's README.md.
 	@set -e; \
 	for file in config/samples/*.yaml; do \
 		[ "$$(basename "$$file")" = "kustomization.yaml" ] && continue; \

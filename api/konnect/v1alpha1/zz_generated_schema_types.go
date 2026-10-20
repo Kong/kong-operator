@@ -139,6 +139,8 @@ type LabelsValue string
 //
 // Keys must be of length 1-63 characters, and cannot start with "kong",
 // "konnect", "mesh", "kic", or "_".
+//
+// +kubebuilder:validation:MaxProperties=50
 type Labels map[string]LabelsValue
 
 // LabelsUpdateValue is the value type for LabelsUpdate.
@@ -155,6 +157,8 @@ type LabelsUpdateValue string
 //
 // Keys must be of length 1-63 characters, and cannot start with "kong",
 // "konnect", "mesh", "kic", or "_".
+//
+// +kubebuilder:validation:MaxProperties=50
 type LabelsUpdate map[string]LabelsUpdateValue
 
 // MinRuntimeVersion The minimum runtime version supported by the API.
@@ -329,6 +333,8 @@ type PublicLabelsValue string
 //
 // Keys must be of length 1-63 characters, and cannot start with "kong",
 // "konnect", "mesh", "kic", or "_".
+//
+// +kubebuilder:validation:MaxProperties=50
 type PublicLabels map[string]PublicLabelsValue
 
 // PublishedStatus Whether the resource is visible on a given portal.

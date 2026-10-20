@@ -63,7 +63,7 @@ AIGatewayDataPlaneSpec defines the desired state of AIGatewayDataPlane.
 | `controlPlaneRef` _[ControlPlaneRef](#aigateway-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef references the control plane this AIGatewayDataPlane connects to. The type field identifies which kind of control plane is being referenced. Currently only konnectNamespacedRef is supported, which references a KonnectAIGateway resource in the same namespace.<br /><br />When unset, the operator performs no Konnect lookup or certificate automation for this AIGatewayDataPlane. The user is expected to configure Konnect (or any other) connectivity manually, e.g. by supplying the required env vars and cert volume through Deployment.PodTemplateSpec.<br /><br />This field is immutable once set: it can be added later, but not removed or changed to a different reference. |
 | `deployment` _[DeploymentOptions](#aigateway-konghq-com-v1alpha1-types-deploymentoptions)_ | Deployment configures the AI Gateway Deployment: image, replicas, resources, extra env vars, volume mounts, etc. |
 | `network` _[NetworkOptions](#aigateway-konghq-com-v1alpha1-types-networkoptions)_ | Network configures how the AI Gateway pod is exposed to clients. |
-| `certificateSecret` _[CertificateSecret](#aigateway-konghq-com-v1alpha1-types-certificatesecret)_ | CertificateSecret configures how the mTLS client certificate Secret used by this AIGatewayDataPlane is provisioned.<br /><br />If left unset entirely, the effective provisioning depends on ControlPlaneRef: when ControlPlaneRef is set, it defaults to Automatic (operator-managed); when ControlPlaneRef is unset, no certificate is provisioned at all (there's no KonnectAIGateway to ever register one against), and mTLS, if the AI Gateway needs it for a manually-wired control plane, must be configured entirely by hand via Deployment.PodTemplateSpec. Setting this field while ControlPlaneRef is unset is rejected rather than ignored: CertificateProvisioned goes False/ControlPlaneRefMissing and the operator stops reconciling the Deployment, the HPA and the ingress Service entirely.<br /><br />When Provisioning is Manual, SecretRef must point to an existing Secret of type kubernetes.io/tls (tls.crt + tls.key) that the operator will use as-is: it will never create, modify, rotate, or delete it. The Secret must live in this AIGatewayDataPlane's own namespace and must carry the operator's secret label selector (default "konghq.com/secret: \"true\"", configurable via --secret-label-selector on the operator), or the operator cannot see it at all. Switching Provisioning from Automatic to Manual deletes the previously operator-provisioned Secret once the Deployment has rolled onto the Manual one; switching back to Automatic later provisions a new one rather than reusing the deleted one. |
+| `certificateSecret` _[CertificateSecret](#aigateway-konghq-com-v1alpha1-types-certificatesecret)_ | CertificateSecret configures how the mTLS client certificate Secret used by this AIGatewayDataPlane is provisioned.<br /><br />If left unset entirely, the effective provisioning depends on ControlPlaneRef: when ControlPlaneRef is set, it defaults to Automatic (operator-managed); when ControlPlaneRef is unset, no certificate is provisioned at all (there's no KonnectAIGateway to ever register one against), and mTLS, if the AI Gateway needs it for a manually-wired control plane, must be configured entirely by hand via Deployment.PodTemplateSpec. Setting this field while ControlPlaneRef is unset is rejected rather than ignored: CertificateProvisioned goes False/ControlPlaneRefMissing and the operator stops reconciling the Deployment, the HPA and the ingress Service entirely.<br /><br />When Provisioning is Manual, SecretRef must point to an existing Secret holding tls.crt and tls.key (typically of type kubernetes.io/tls, but the type isn't enforced) that the operator will use as-is: it will never create, modify, rotate, or delete it. The Secret must live in this AIGatewayDataPlane's own namespace and must carry the operator's secret label selector (default "konghq.com/secret: \"true\"", configurable via --secret-label-selector on the operator), or the operator cannot see it at all. Switching Provisioning from Automatic to Manual deletes the previously operator-provisioned Secret once the Deployment has rolled onto the Manual one; switching back to Automatic later provisions a new one rather than reusing the deleted one.<br /><br />The referenced Secret must hold a matching certificate and key that are currently valid (a NotBefore up to 5 minutes in the future is tolerated for clock skew), and must not be an operator-provisioned Secret (one labeled "gateway.konghq.com/secret-provisioning: automatic"); otherwise CertificateProvisioned goes False with reason InvalidSecret or SecretRefOperatorManaged. Deleting the referenced Secret while it is in use leaves running Pods untouched but prevents new ones from starting until the Secret is recreated or the reference is changed. |
 
 _Appears in:_
 
@@ -241,25 +241,7 @@ _Appears in:_
 
 - [AIGatewayDataPlaneSpec](#aigateway-konghq-com-v1alpha1-types-aigatewaydataplanespec)
 
-#### HorizontalScaling
 
-
-HorizontalScaling defines horizontal scaling options for the deployment.
-It holds all the options from the HorizontalPodAutoscalerSpec besides the
-ScaleTargetRef which is being controlled by the Operator.
-
-
-
-| Field | Description |
-| --- | --- |
-| `minReplicas` _*int32_ | minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.  It defaults to 1 pod.  minReplicas is allowed to be 0 if the alpha feature gate HPAScaleToZero is enabled and at least one Object or External metric is configured.  Scaling is active as long as at least one metric value is available. |
-| `maxReplicas` _int32_ | maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up. It cannot be less than minReplicas. |
-| `metrics` _[MetricSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#metricspec-v2-autoscaling) array_ | metrics contains the specifications for which to use to calculate the desired replica count (the maximum replica count across all metrics will be used).  The desired replica count is calculated multiplying the ratio between the target value and the current value by the current number of pods.  Ergo, metrics used must decrease as the pod count is increased, and vice-versa.  See the individual metric source types for more information about how each type of metric must respond. If not set, the default metric will be set to 80% average CPU utilization. |
-| `behavior` _[HorizontalPodAutoscalerBehavior](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#horizontalpodautoscalerbehavior-v2-autoscaling)_ | behavior configures the scaling behavior of the target in both Up and Down directions (scaleUp and scaleDown fields respectively). If not set, the default HPAScalingRules for scale up and scale down are used. |
-
-_Appears in:_
-
-- [Scaling](#aigateway-konghq-com-v1alpha1-types-scaling)
 
 #### LabelName
 
@@ -319,14 +301,64 @@ _Appears in:_
 
 - [AIGatewayDataPlaneSpec](#aigateway-konghq-com-v1alpha1-types-aigatewaydataplanespec)
 
+#### OnPremAIGatewayDataPlaneSync
+
+
+OnPremAIGatewayDataPlaneSync defines the configuration for syncing
+configuration to the data planes referencing this OnPremAIGateway.
+
+
+
+| Field | Description |
+| --- | --- |
+| `intervalSeconds` _*int32_ | IntervalSeconds is the interval between two rounds of syncing configuration with data planes, in seconds. If not specified, the default interval as defined by the operator will be used. |
+| `timeoutSeconds` _*int32_ | TimeoutSeconds is the timeout of a single run of syncing configuration with data planes, in seconds. If not specified, no timeout is applied to a sync run. |
+
+_Appears in:_
+
+- [OnPremAIGatewaySpec](#aigateway-konghq-com-v1alpha1-types-onpremaigatewayspec)
+
+#### OnPremAIGatewayFilterForObjectType
+
+
+OnPremAIGatewayFilterForObjectType defines the filters for a certain type of object.
+
+
+
+| Field | Description |
+| --- | --- |
+| `matchLabels` _map[string]string_ | MatchLabels defines the labels that the object must match to get reconciled by the controller for the OnPremAIGateway. For example, if `secrets.matchLabels` is `{"label1":"val1","label2":"val2"}`, only secrets with labels `label1=val1` and `label2=val2` are reconciled. |
+
+_Appears in:_
+
+- [OnPremAIGatewayObjectFilters](#aigateway-konghq-com-v1alpha1-types-onpremaigatewayobjectfilters)
+
+#### OnPremAIGatewayObjectFilters
+
+
+OnPremAIGatewayObjectFilters defines filters to limit watched objects by the controllers.
+
+
+
+| Field | Description |
+| --- | --- |
+| `secrets` _[OnPremAIGatewayFilterForObjectType](#aigateway-konghq-com-v1alpha1-types-onpremaigatewayfilterforobjecttype)_ | Secrets defines the filters for watched secrets. |
+
+_Appears in:_
+
+- [OnPremAIGatewaySpec](#aigateway-konghq-com-v1alpha1-types-onpremaigatewayspec)
+
 #### OnPremAIGatewaySpec
 
 
-OnPremAIGatewaySpec defines the desired state of OnPremAIGateway.<br /><br />It is intentionally empty for now: fields land alongside the reconciler
-logic that consumes them.
+OnPremAIGatewaySpec defines the desired state of OnPremAIGateway.
 
 
 
+| Field | Description |
+| --- | --- |
+| `dataplaneSync` _[OnPremAIGatewayDataPlaneSync](#aigateway-konghq-com-v1alpha1-types-onpremaigatewaydataplanesync)_ | DataPlaneSync defines the configuration for syncing configuration to the data planes referencing this OnPremAIGateway. |
+| `objectFilters` _[OnPremAIGatewayObjectFilters](#aigateway-konghq-com-v1alpha1-types-onpremaigatewayobjectfilters)_ | ObjectFilters defines the filters to limit watched objects by the controllers. |
 
 _Appears in:_
 
@@ -357,7 +389,7 @@ Scaling defines the scaling options for the deployment.
 
 | Field | Description |
 | --- | --- |
-| `horizontal` _[HorizontalScaling](#aigateway-konghq-com-v1alpha1-types-horizontalscaling)_ | HorizontalScaling defines horizontal scaling options for the deployment. |
+| `horizontal` _[HorizontalScaling](#common-konghq-com-v1alpha1-types-horizontalscaling)_ | HorizontalScaling defines horizontal scaling options for the deployment. |
 
 _Appears in:_
 

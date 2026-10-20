@@ -367,7 +367,7 @@ spec:
                           maxReplicas:
                             description: |-
                               maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
-                              It cannot be less that minReplicas.
+                              It cannot be less than minReplicas.
                             format: int32
                             type: integer
                           metrics:
@@ -853,7 +853,7 @@ spec:
                               required:
                               - type
                               type: object
-                            maxItems: 8
+                            maxItems: 32
                             type: array
                             x-kubernetes-list-type: atomic
                           minReplicas:

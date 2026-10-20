@@ -71,7 +71,6 @@ type AIGatewayConsumerGroupAPISpec struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 
 	// Stores information about what manages this entity, such as the tool or
@@ -82,7 +81,6 @@ type AIGatewayConsumerGroupAPISpec struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 
 	// A user-defined unique identifier for this consumer group, used as a stable

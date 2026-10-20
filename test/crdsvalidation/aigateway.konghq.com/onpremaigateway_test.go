@@ -37,6 +37,150 @@ func TestOnPremAIGateway(t *testing.T) {
 		}.RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("spec.dataplaneSync", func(t *testing.T) {
+		t.Parallel()
+
+		common.TestCasesGroup[*aigatewayv1alpha1.OnPremAIGateway]{
+			{
+				Name: "dataplaneSync with interval and timeout - valid",
+				TestObject: func() *aigatewayv1alpha1.OnPremAIGateway {
+					obj := validOnPremAIGateway(ns.Name)
+					obj.Spec.DataPlaneSync = &aigatewayv1alpha1.OnPremAIGatewayDataPlaneSync{
+						IntervalSeconds: new(int32(5)),
+						TimeoutSeconds:  new(int32(30)),
+					}
+					return obj
+				}(),
+				Assert: func(t *testing.T, obj *aigatewayv1alpha1.OnPremAIGateway) {
+					t.Helper()
+					// The values must survive a read-back: the API server prunes
+					// fields missing from the CRD schema, so Create succeeding
+					// alone proves nothing about the schema.
+					require.NotNil(t, obj.Spec.DataPlaneSync)
+					require.NotNil(t, obj.Spec.DataPlaneSync.IntervalSeconds)
+					require.Equal(t, int32(5), *obj.Spec.DataPlaneSync.IntervalSeconds)
+					require.NotNil(t, obj.Spec.DataPlaneSync.TimeoutSeconds)
+					require.Equal(t, int32(30), *obj.Spec.DataPlaneSync.TimeoutSeconds)
+				},
+			},
+			{
+				Name: "empty dataplaneSync - valid",
+				TestObject: func() *aigatewayv1alpha1.OnPremAIGateway {
+					obj := validOnPremAIGateway(ns.Name)
+					obj.Spec.DataPlaneSync = &aigatewayv1alpha1.OnPremAIGatewayDataPlaneSync{}
+					return obj
+				}(),
+				Assert: func(t *testing.T, obj *aigatewayv1alpha1.OnPremAIGateway) {
+					t.Helper()
+					// The API server materializes the empty object, so the pointer
+					// reads back non-nil; what matters is that no values leak in.
+					require.NotNil(t, obj.Spec.DataPlaneSync)
+					require.Nil(t, obj.Spec.DataPlaneSync.IntervalSeconds)
+					require.Nil(t, obj.Spec.DataPlaneSync.TimeoutSeconds)
+				},
+			},
+			{
+				Name: "negative intervalSeconds - invalid",
+				TestObject: func() *aigatewayv1alpha1.OnPremAIGateway {
+					obj := validOnPremAIGateway(ns.Name)
+					obj.Spec.DataPlaneSync = &aigatewayv1alpha1.OnPremAIGatewayDataPlaneSync{
+						IntervalSeconds: new(int32(-1)),
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("Invalid value"),
+			},
+			{
+				Name: "negative timeoutSeconds - invalid",
+				TestObject: func() *aigatewayv1alpha1.OnPremAIGateway {
+					obj := validOnPremAIGateway(ns.Name)
+					obj.Spec.DataPlaneSync = &aigatewayv1alpha1.OnPremAIGatewayDataPlaneSync{
+						TimeoutSeconds: new(int32(-1)),
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("Invalid value"),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("spec.objectFilters", func(t *testing.T) {
+		t.Parallel()
+
+		common.TestCasesGroup[*aigatewayv1alpha1.OnPremAIGateway]{
+			{
+				Name: "objectFilters with secrets matchLabels - valid",
+				TestObject: func() *aigatewayv1alpha1.OnPremAIGateway {
+					obj := validOnPremAIGateway(ns.Name)
+					obj.Spec.ObjectFilters = &aigatewayv1alpha1.OnPremAIGatewayObjectFilters{
+						Secrets: &aigatewayv1alpha1.OnPremAIGatewayFilterForObjectType{
+							MatchLabels: map[string]string{"team": "foo", "konghq.com/secret": "true"},
+						},
+					}
+					return obj
+				}(),
+				Assert: func(t *testing.T, obj *aigatewayv1alpha1.OnPremAIGateway) {
+					t.Helper()
+					// The values must survive a read-back: the API server prunes
+					// fields missing from the CRD schema, so Create succeeding
+					// alone proves nothing about the schema.
+					require.NotNil(t, obj.Spec.ObjectFilters)
+					require.NotNil(t, obj.Spec.ObjectFilters.Secrets)
+					require.Equal(t, map[string]string{"team": "foo", "konghq.com/secret": "true"}, obj.Spec.ObjectFilters.Secrets.MatchLabels)
+				},
+			},
+			{
+				Name: "maximum items in matchLabels is 8",
+				TestObject: func() *aigatewayv1alpha1.OnPremAIGateway {
+					obj := validOnPremAIGateway(ns.Name)
+					obj.Spec.ObjectFilters = &aigatewayv1alpha1.OnPremAIGatewayObjectFilters{
+						Secrets: &aigatewayv1alpha1.OnPremAIGatewayFilterForObjectType{
+							MatchLabels: map[string]string{
+								"label1": "value1",
+								"label2": "value2",
+								"label3": "value3",
+								"label4": "value4",
+								"label5": "value5",
+								"label6": "value6",
+								"label7": "value7",
+								"label8": "value8",
+								"label9": "value9",
+							},
+						},
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("spec.objectFilters.secrets.matchLabels: Too many: 9: must have at most 8 items"),
+			},
+			{
+				Name: "key of matchLabels must have minimum length 1",
+				TestObject: func() *aigatewayv1alpha1.OnPremAIGateway {
+					obj := validOnPremAIGateway(ns.Name)
+					obj.Spec.ObjectFilters = &aigatewayv1alpha1.OnPremAIGatewayObjectFilters{
+						Secrets: &aigatewayv1alpha1.OnPremAIGatewayFilterForObjectType{
+							MatchLabels: map[string]string{"": "aaa"},
+						},
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("Minimum length of key in matchLabels is 1"),
+			},
+			{
+				Name: "value of matchLabels must have maximum length 63",
+				TestObject: func() *aigatewayv1alpha1.OnPremAIGateway {
+					obj := validOnPremAIGateway(ns.Name)
+					obj.Spec.ObjectFilters = &aigatewayv1alpha1.OnPremAIGatewayObjectFilters{
+						Secrets: &aigatewayv1alpha1.OnPremAIGatewayFilterForObjectType{
+							MatchLabels: map[string]string{"key": strings.Repeat("a", 64)},
+						},
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("Maximum length of value in matchLabels is 63"),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("status defaults", func(t *testing.T) {
 		common.TestCasesGroup[*aigatewayv1alpha1.OnPremAIGateway]{
 			{

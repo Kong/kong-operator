@@ -11,10 +11,6 @@ import (
 // We want to avoid that by using this file and moving the source of truth to test/envtest/consts/.
 
 const (
-	// konnectInfiniteSyncTime is used for tests that want to verify behavior of the reconcilers not relying on the fixed
-	// sync period. It's set to 60m that is virtually infinite for the tests.
-	konnectInfiniteSyncTime = consts.KonnectInfiniteSyncTime
-
 	// waitTime is a generic wait time for the tests' eventual conditions.
 	waitTime = consts.WaitTime
 

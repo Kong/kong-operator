@@ -22,7 +22,7 @@ func (c *errListClient) List(_ context.Context, _ client.ObjectList, _ ...client
 	return assert.AnError
 }
 
-func Test_EnqueueDataPlanesForControlPlane(t *testing.T) {
+func Test_EnqueueDataPlanesByIndex(t *testing.T) {
 	const (
 		ns       = "test-ns"
 		aigwcpNM = "my-aigwcp"
@@ -93,7 +93,7 @@ func Test_EnqueueDataPlanesForControlPlane(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			mapFunc := EnqueueDataPlanesForControlPlane(tc.cl, testConfig.NewObjectList, testControlPlaneKind.ControlPlaneRefIndexField, testConfig.Kind, testControlPlaneKind.Kind)
+			mapFunc := EnqueueDataPlanesByIndex(tc.cl, testConfig.NewObjectList, testControlPlaneKind.ControlPlaneRefIndexField, testConfig.Kind, testControlPlaneKind.Kind)
 			requests := mapFunc(t.Context(), tc.obj)
 			if tc.wantNil {
 				require.Nil(t, requests)

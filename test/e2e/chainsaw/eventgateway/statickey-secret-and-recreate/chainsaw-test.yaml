@@ -1,0 +1,208 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-statickey-secret-and-recreate
+spec:
+  description: |
+    EventGatewayStaticKey lifecycle once created, against the real Konnect API:
+
+    - the key value is read from its Secret only when the key is created: a
+      missing Secret is reported (SecretRefValid False) but the key stays
+      Programmed;
+    - a key deleted from Konnect out of band is recreated, with a new Konnect
+      ID, on the next periodic sync (the operator's Konnect sync period,
+      one minute by default).
+
+    No data plane is needed.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: keg_cp_name
+      value: (join('-', [($test_name), 'keg']))
+    - name: static_key_name
+      value: encryption-key
+  steps:
+    - name: Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: Create-konnect-eventgateway
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectEventGateway.yaml
+
+    - name: Create-static-key
+      try:
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: encryption-key
+                namespace: ($namespace)
+                labels:
+                  konghq.com/secret: "true"
+              type: Opaque
+              stringData:
+                key: Y2hhaW5zYXctc3RhdGljLWtleS0zMi1ieXRlcy1vayE=
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayStaticKey
+              metadata:
+                name: ($static_key_name)
+                namespace: ($namespace)
+              spec:
+                gatewayRef:
+                  type: namespacedRef
+                  namespacedRef:
+                    name: ($keg_cp_name)
+                apiSpec:
+                  name: (join('-', [($test_name), 'encryption-key']))
+                  value:
+                    type: secretRef
+                    secretRef:
+                      name: encryption-key
+                      key: key
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayStaticKey
+              metadata:
+                name: ($static_key_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+
+    - name: Missing-Secret-is-reported-but-does-not-affect-the-key
+      try:
+        - delete:
+            ref:
+              apiVersion: v1
+              kind: Secret
+              name: encryption-key
+              namespace: ($namespace)
+        - assert:
+            timeout: 150s
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayStaticKey
+              metadata:
+                name: ($static_key_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'SecretRefValid']):
+                  - status: 'False'
+                    (contains(message, 'required to recreate it')): true
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: encryption-key
+                namespace: ($namespace)
+                labels:
+                  konghq.com/secret: "true"
+              type: Opaque
+              stringData:
+                key: Y2hhaW5zYXctc3RhdGljLWtleS0zMi1ieXRlcy1vayE=
+        - assert:
+            timeout: 150s
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayStaticKey
+              metadata:
+                name: ($static_key_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'SecretRefValid']):
+                  - status: 'True'
+
+    - name: Key-deleted-out-of-band-is-recreated
+      try:
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: eventgatewaystatickeys.configuration.konghq.com
+              - name: RESOURCE_NAME
+                value: ($static_key_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: COLLECTION_PATH_JQ
+                value: '"/v1/event-gateways/" + .status.gatewayID.id + "/static-keys"'
+            content: |
+              bash ../../common/scripts/konnect_entity_of_resource.sh
+            outputs:
+              - name: static_key
+                value: (json_parse($stdout))
+        - description: Delete the static key in Konnect, behind the operator's back.
+          script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: API_PATH
+                value: ($static_key.entity_path)
+              - name: METHOD
+                value: DELETE
+              - name: EXPECTED_STATUS
+                value: "204"
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh
+        - assert:
+            timeout: 150s
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayStaticKey
+              metadata:
+                name: ($static_key_name)
+                namespace: ($namespace)
+              status:
+                (id != null && id != $static_key.id): true
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: eventgatewaystatickeys.configuration.konghq.com
+              - name: RESOURCE_NAME
+                value: ($static_key_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: COLLECTION_PATH_JQ
+                value: '"/v1/event-gateways/" + .status.gatewayID.id + "/static-keys"'
+            content: |
+              bash ../../common/scripts/konnect_entity_of_resource.sh
+            outputs:
+              - name: recreated_static_key
+                value: (json_parse($stdout))
+        - description: The recreated static key exists in Konnect.
+          script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: API_PATH
+                value: ($recreated_static_key.entity_path)
+              - name: EXPECTED_STATUS
+                value: "200"
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh

@@ -36,6 +36,12 @@ const (
 
 	// SecretKEGDataPlaneCertificateLabel marks a Secret as the mTLS certificate for a KEG DataPlane.
 	SecretKEGDataPlaneCertificateLabel = "konghq.com/keg-dp-cert" //nolint:gosec
+
+	// KEGDataPlaneCertificateChecksumAnnotation records a checksum of the mTLS
+	// certificate Secret's tls.crt/tls.key content on the Pod template, so that an
+	// in-place edit to a manually-referenced Secret (whose name does not change)
+	// still triggers a Deployment rollout.
+	KEGDataPlaneCertificateChecksumAnnotation = "konghq.com/keg-dp-cert-checksum" //nolint:gosec
 )
 
 // -----------------------------------------------------------------------------

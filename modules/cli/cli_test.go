@@ -430,6 +430,7 @@ func expectedDefaultCfg() manager.Config {
 		ControlPlaneExtensionsControllerEnabled:  true,
 		KonnectControllersEnabled:                false,
 		KEGDataPlaneControllerEnabled:            false,
+		OnPremEventGatewayControllerEnabled:      false,
 		FeatureGates:                             manager.FeatureGates{},
 		KonnectSyncPeriod:                        consts.DefaultKonnectSyncPeriod,
 		KonnectRequestTimeout:                    consts.DefaultKonnectRequestTimeout,

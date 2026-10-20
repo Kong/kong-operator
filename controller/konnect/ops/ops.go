@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -228,6 +229,7 @@ func isCreateNameConflict[
 		*configurationv1alpha1.EventGatewayVirtualCluster,
 		*configurationv1alpha1.EventGatewaySchemaRegistry,
 		*configurationv1alpha1.EventGatewayTLSTrustBundle,
+		*configurationv1alpha1.EventGatewayStaticKey,
 		*configurationv1alpha1.EventGatewayDataPlaneCertificate,
 		*configurationv1alpha1.EventGatewayListenerPolicy,
 		*configurationv1alpha1.EventGatewayVirtualClusterPolicy,
@@ -392,10 +394,18 @@ func Delete[
 		err = deleteKonnectConfigStoreGuarded(ctx, sdk.GetConfigStoresSDK(), sdk.GetConfigStoreSecretsSDK(), e)
 	case *aiconfigurationv1alpha1.AIGatewayCustomPolicy:
 		err = deleteAIGatewayCustomPolicyGuarded(ctx, sdk.GetAIGatewayCustomPoliciesSDK(), sdk.GetAIGatewayPoliciesSDK(), cl, e)
+	case *configurationv1alpha1.EventGatewayStaticKey:
+		err = deleteEventGatewayStaticKeyGuarded(
+			ctx, sdk.GetEventGatewayStaticKeysSDK(), sdk.GetEventGatewayVirtualClustersSDK(), sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), cl, e,
+		)
 	case *configurationv1alpha1.EventGatewayTLSTrustBundle:
 		err = deleteEventGatewayTLSTrustBundleGuarded(
 			ctx, sdk.GetEventGatewayTLSTrustBundlesSDK(), sdk.GetEventGatewayListenersSDK(), sdk.GetEventGatewayListenerPoliciesSDK(), cl, e,
 		)
+	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy:
+		err = deleteEventGatewayVirtualClusterProducePolicyGuarded(ctx, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), cl, e)
+	case *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy:
+		err = deleteEventGatewayVirtualClusterConsumePolicyGuarded(ctx, sdk.GetEventGatewayVirtualClusterConsumePoliciesSDK(), cl, e)
 	case *configurationv1alpha1.KongService:
 		err = deleteService(ctx, sdk.GetServicesSDK(), e)
 	case *configurationv1alpha1.KongRoute:
@@ -599,6 +609,8 @@ func Update[
 		err = nil // DataPlaneCertificates are immutable.
 	case *aiconfigurationv1alpha1.AIGatewayConsumerCredential:
 		err = nil // AIGatewayConsumerCredentials are immutable.
+	case *configurationv1alpha1.EventGatewayStaticKey:
+		err = updateEventGatewayStaticKey(ctx, cl, sdk.GetEventGatewayStaticKeysSDK(), ent)
 	case *konnectv1alpha1.MCPServer:
 		// MCPServer is mirror-only, so we use Konnect as the source of truth for it.
 		break
@@ -969,8 +981,9 @@ func getMatchingEntryFromListResponseData[
 func ClearInstanceFromError(err error) error {
 	// Some delete operations wrap the typed SDK error in a richer error that
 	// carries extra context for the reconciler (a DeletionBlockedError such as
-	// KonnectConfigStoreNotEmptyError, AIGatewayCustomPolicyInUseError or
-	// EventGatewayTLSTrustBundleInUseError describes what blocks the deletion). Keep such wrappers intact so
+	// KonnectConfigStoreNotEmptyError, AIGatewayCustomPolicyInUseError,
+	// EventGatewayTLSTrustBundleInUseError or EventGatewayStaticKeyInUseError
+	// describes what blocks the deletion). Keep such wrappers intact so
 	// reconcilers can act on them; the instance field of the underlying typed
 	// error is still cleared in place. This check must stay ahead of the
 	// typed-error branches below, which unwrap and would otherwise silently
@@ -995,6 +1008,38 @@ func ClearInstanceFromError(err error) error {
 	if errNotFound, ok := errors.AsType[*sdkkonnecterrs.NotFoundError](err); ok {
 		errNotFound.Instance = ""
 		return errNotFound
+	}
+
+	// 5xx: clear a copy so logs and the returned error keep the trace ID.
+	if errInternal, ok := errors.AsType[*sdkkonnecterrs.InternalError](err); ok {
+		c := *errInternal
+		c.Instance = ""
+		return &c
+	}
+
+	if errInternalServer, ok := errors.AsType[*sdkkonnecterrs.InternalServerError](err); ok {
+		c := *errInternalServer
+		c.Instance = ""
+		return &c
+	}
+
+	if errServiceUnavailable, ok := errors.AsType[*sdkkonnecterrs.ServiceUnavailable](err); ok {
+		c := *errServiceUnavailable
+		c.Instance = ""
+		return &c
+	}
+
+	if errNotAvailable, ok := errors.AsType[*sdkkonnecterrs.NotAvailableError](err); ok {
+		c := *errNotAvailable
+		c.Instance = ""
+		return &c
+	}
+
+	// Generic 5xx body may carry per-request IDs (e.g. Kong's request_id).
+	if errSDK, ok := errors.AsType[*sdkkonnecterrs.SDKError](err); ok && errSDK.StatusCode >= http.StatusInternalServerError {
+		c := *errSDK
+		c.Body = ""
+		return &c
 	}
 
 	return err

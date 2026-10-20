@@ -5,7 +5,8 @@
 #
 # Required bindings:
 #   - aigw_dp_name: Name of the AIGatewayDataPlane to create.
-#   - aigw_cp_name: Name of the KonnectAIGateway it attaches to (same namespace).
+#   - aigw_cp_name: Name of the AI Gateway control plane it attaches to (same
+#     namespace). Referenced by the control_plane_ref binding below.
 #   - namespace: Namespace where the AIGatewayDataPlane will be created.
 #   - aigw_dp_image: AI Gateway data plane container image. Overrides the operator
 #     default. Must be pre-loaded into the cluster.
@@ -15,12 +16,18 @@
 #   - aigw_dp_env: Extra environment variables of the aigw container.
 #   - aigw_dp_volumes: Pod volumes.
 #   - aigw_dp_volume_mounts: Volume mounts of the aigw container.
+#
+# Override control_plane_ref to attach the data plane to a different control
+# plane kind, e.g. an on-prem one:
+#   control_plane_ref: "({type: 'onpremNamespacedRef', onpremNamespacedRef: {name: ($aigw_cp_name)}})"
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
 metadata:
   name: apply-assert-aigateway-dataplane
 spec:
   bindings:
+    - name: control_plane_ref
+      value: "({type: 'konnectNamespacedRef', konnectNamespacedRef: {name: ($aigw_cp_name)}})"
     - name: aigw_dp_env
       value: (`[]`)
     - name: aigw_dp_volumes
@@ -36,10 +43,7 @@ spec:
             name: ($aigw_dp_name)
             namespace: ($namespace)
           spec:
-            controlPlaneRef:
-              type: konnectNamespacedRef
-              konnectNamespacedRef:
-                name: ($aigw_cp_name)
+            controlPlaneRef: ($control_plane_ref)
             deployment:
               replicas: 1
               podTemplateSpec:

@@ -20,6 +20,7 @@ import (
 // +apireference:kgo:include
 // +kong:channels=kong-operator
 // +kubebuilder:validation:XValidation:rule="!has(self.spec.eventGatewayBackendClusterRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.eventGatewayBackendClusterRef == self.spec.eventGatewayBackendClusterRef", message="spec.eventGatewayBackendClusterRef is immutable when an entity is already Programmed"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayBackendClusterRef == oldSelf.spec.eventGatewayBackendClusterRef",message="spec.eventGatewayBackendClusterRef is immutable once the entity has been created in Konnect",fieldPath=".spec.eventGatewayBackendClusterRef"
 type EventGatewayVirtualCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitzero"`
@@ -105,7 +106,6 @@ type EventGatewayVirtualClusterAPISpec struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxProperties=50
 	Labels Labels `json:"labels,omitzero"`
 
 	// The name of the virtual cluster.

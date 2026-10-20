@@ -1,0 +1,133 @@
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongLicense
+metadata:
+  name: kong-license
+enabled: true
+rawLicenseString: |
+  <paste your Kong license payload here>
+---
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: OnPremAIGateway
+metadata:
+  name: ai-gw-cp-onprem-1
+  namespace: default
+spec: {}
+---
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: AIGatewayDataPlane
+metadata:
+  name: ai-gw-dp-onprem-1
+  namespace: default
+spec:
+  controlPlaneRef:
+    type: onpremNamespacedRef
+    onpremNamespacedRef:
+      name: ai-gw-cp-onprem-1
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ai-gw-serving-cert
+  namespace: default
+  labels:
+    konghq.com/secret: "true"
+type: kubernetes.io/tls
+stringData:
+  # Fake sample certificate and key (CN=api.example.com, self-signed sample CA) so
+  # the manifest applies out of the box. Replace with your own PEM-encoded certificate and
+  # matching private key for anything real.
+  tls.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIIDdTCCAl2gAwIBAgIUU6xK9yWAJBsiExlHq6vwmqMW76cwDQYJKoZIhvcNAQEL
+    BQAwWjEwMC4GA1UEAwwnRkFLRSBLb25nIE9wZXJhdG9yIFNhbXBsZSBDQSBETyBO
+    T1QgVVNFMRkwFwYDVQQKDBBLb25nIEZha2UgU2FtcGxlMQswCQYDVQQGEwJYWDAe
+    Fw0yNjEwMTIwOTExMjFaFw0zNjEwMDkwOTExMjFaMEIxGDAWBgNVBAMMD2FwaS5l
+    eGFtcGxlLmNvbTEZMBcGA1UECgwQS29uZyBGYWtlIFNhbXBsZTELMAkGA1UEBhMC
+    WFgwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDxbNKs9Pr7EIhcmIF0
+    8VkyekwCwZEjAtuICY3iYIM04GZ0qRoLOFUNjLoMRWyGMTTz9IflMfi0CfrHkJR2
+    9YfyzsUc9q7s9SLl28KkgfIdFXMxBsDkgQIsOpqh54i6AOyg5hZO/1+F3tmVP0Z1
+    4kV3Bxwgo9QsnvceFN+gDEnhYo/GDK49Q5LqDrL3zgsUO2GunuXPphuelgez5vzh
+    tGW2IsVkJ1KF+8pfSMBpoyEqFUK2xj3r7pm3taTvVNsfEy3GKzxKstjvVEOfxn8P
+    7NqxCAhmzJod94V0ay8h7++jeP/lDLNquqToB2UYg7IzqGKbh9ezEbX0PwvLqb1C
+    hjI5AgMBAAGjSzBJMCUGA1UdEQQeMByCD2FwaS5leGFtcGxlLmNvbYIJbG9jYWxo
+    b3N0MAsGA1UdDwQEAwIFoDATBgNVHSUEDDAKBggrBgEFBQcDATANBgkqhkiG9w0B
+    AQsFAAOCAQEAKFSul+ds0VtyJEEvqa6MsLm7d51VbVnEszoXUMJ2FtO3cN5whnSU
+    b+6CtxESxHEoWJlvXj2vwoMIee5Ns9KjWfP4EAb2M4FveoJJ9CIwbb0qEtNvN6CD
+    bNvSIbUZkQbOdtto3/3YoIn8YIzUj1nupfwnUQ0gzoCKSFJxxPib3KA2TDvjEPB2
+    KlweGBXKkTjeStecf3yDpHy/UpB8h6xFiASIhgpl8KzkTAtnTSPRWdYoq0rkrLaL
+    p75sSkLzf0lDQ9UjX7J+cn2WEab+LPxnQv5ePTrh4QEhoTYlgIY/EKsM0pUVdNsR
+    gi8bwsGlWfr7brHsXqZY1didK8ym9xGEaA==
+    -----END CERTIFICATE-----
+  tls.key: |
+    -----BEGIN PRIVATE KEY-----
+    MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDxbNKs9Pr7EIhc
+    mIF08VkyekwCwZEjAtuICY3iYIM04GZ0qRoLOFUNjLoMRWyGMTTz9IflMfi0CfrH
+    kJR29YfyzsUc9q7s9SLl28KkgfIdFXMxBsDkgQIsOpqh54i6AOyg5hZO/1+F3tmV
+    P0Z14kV3Bxwgo9QsnvceFN+gDEnhYo/GDK49Q5LqDrL3zgsUO2GunuXPphuelgez
+    5vzhtGW2IsVkJ1KF+8pfSMBpoyEqFUK2xj3r7pm3taTvVNsfEy3GKzxKstjvVEOf
+    xn8P7NqxCAhmzJod94V0ay8h7++jeP/lDLNquqToB2UYg7IzqGKbh9ezEbX0PwvL
+    qb1ChjI5AgMBAAECggEAEL58w2906MIgyFXwxJeTRCOkmfGq4JlreGfmkJ4jpiCE
+    z+/af+S29sBH4bSpmN+uIy1WhNg5E444TRcDSleFHPCnoyFIyI5yjoFLYqAl6/Z3
+    jXLry0KspTyl9OIGDZXQKOihq3ZIExTS/72VDsqpXrP+M2qpZd7bQhmDLlUr2pca
+    O4UCKC6MxUyohmAnk/7Vsynpea2ullRC3YpQ8y+3W5unZxp4963Ubpe9kM+lB2sq
+    8xflNmZNTEGejzn/plW03Ocqc7w1vpqvKI1YmMP+sv2R+ixH9Dgx9Rr/ca4L/+9R
+    GwcCE8Pt2LGVHiC+MhM/XEsdAZ69QYqKfzo4N5JE8QKBgQD9+VpdJuzAn8CD9ebv
+    6t9YI2bKzWvaKB6bm8+JgdQuoiwMtRVk3+vvOs5E1b4HcDmUxwMSoYhE8j5oVRu7
+    QEL9iNlOC/pGmxqUVlMiH2tHZOwdADFSqpatklZ/Kf2vvpk5NzUS6O2gZriqyJro
+    RYvaPUNQFwHXFxoiEQIWFJuSnwKBgQDzWdfrkQFPLqo5DK2fi9LkjziYXaqCHoUF
+    tnnpHU3JQGaYFl7lpHpChmSe/dyC1k7keodNB4Ri5TeMJ+WIFXs5x6TfSa9m1yrd
+    45fLb5v2x9nbMdZo1wV614N/RMKLZ0cy6Nxe8VrIKyFX4OODjqi627ARcX9M3Nrx
+    I5kKbfukJwKBgA/pcXnomGixGZSq8V8Srg+NmEEYgatXXCOPrX8F/U82pd/d8Isz
+    ZErGummhophAtbrWhSDDsg/vxW0v997RdeEAk+zJ31JRIWctyWOX6Fa+wfRHMM/n
+    FC2nv3eUH+rE3ECzbsXShiDIjsVUcDAhO1PfBrqb1metcNu1iRXtEJotAoGBAJtv
+    E18/a1qsL8Xoty1lHfsnD7sieLpLzCNt/khLk1esbttNzqdXe0/qj3KOK77WK+X7
+    7VfiKUkRp306Ln3RWrf5MPH+Gq7RWGwJ5vbl/vSNijVbi9vDG5ju9urffHOWL//w
+    hHGQL7AS/GUpG6j4AgX4NGmv2OO7XY0Qc7wZq9WZAoGAdtzYQZCjZngq8CPunNam
+    KF/TeC3KtNyzT/G+AXjCpp+cBgOsFQ30dyZ6ULbR+aVO9tw/5vcaZaXfu7uyU8dN
+    BotJav9RhO4L6NPi0neRtFCxZwuVAmB4TrqMMkr2hlbbq4h2KweS0YQ4sGG0nuM9
+    Oa20A5EoDp21OrcdZE+z1VI=
+    -----END PRIVATE KEY-----
+---
+kind: AIGatewayCertificate
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-serving-cert
+  namespace: default
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ai-gw-cp-onprem-1
+  apiSpec:
+    # Name of the certificate. The name must be unique within the AI Gateway.
+    name: ai-gw-serving-cert
+    cert:
+      type: secretRef
+      secretRef:
+        name: ai-gw-serving-cert
+        key: tls.crt
+    key:
+      type: secretRef
+      secretRef:
+        name: ai-gw-serving-cert
+        key: tls.key
+---
+kind: AIGatewaySNI
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-sni-1
+  namespace: default
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ai-gw-cp-onprem-1
+  apiSpec:
+    # Name of the SNI. The name must be unique within the AI Gateway.
+    name: ai-gw-sni-1
+    displayName: AI Gateway SNI
+    hostname: api.example.com
+    certificate:
+      name: ai-gw-serving-cert

@@ -9,7 +9,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/configuration"
@@ -471,11 +470,8 @@ func setupControllers(
 				},
 			},
 		},
-		// ---------------------------------------------------------------------------
-		// Gateway API Controllers - Alpha APIs
-		// ---------------------------------------------------------------------------
 		{
-			Enabled: c.GatewayAPIBackendTLSRouteController && featureGates.Enabled(managercfg.GatewayAlphaFeature) &&
+			Enabled: c.GatewayAPIBackendTLSRouteController &&
 				c.GatewayAPIGatewayController &&
 				c.GatewayAPIHTTPRouteController,
 			Controller: &crds.DynamicCRDController{
@@ -490,8 +486,8 @@ func setupControllers(
 						Resource: "httproutes",
 					},
 					schema.GroupVersionResource{
-						Group:    gatewayv1alpha3.GroupVersion.Group,
-						Version:  gatewayv1alpha3.GroupVersion.Version,
+						Group:    gatewayv1.GroupVersion.Group,
+						Version:  gatewayv1.GroupVersion.Version,
 						Resource: "backendtlspolicies",
 					}),
 				Controller: &gateway.BackendTLSPolicyReconciler{

@@ -3,19 +3,24 @@ package aigateway
 import (
 	"context"
 	"errors"
+	"io"
 	"testing"
 	"time"
 
+	"github.com/Kong/ai-deck-converter/convert"
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
+	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/status"
@@ -112,6 +117,46 @@ func TestHash(t *testing.T) {
 		DBLessConfig:            base.DBLessConfig,
 		AdminClientCertSecretNN: types.NamespacedName{Namespace: "default", Name: "cert-2"},
 	}), "a renewed Secret under a new name must drift the hash")
+
+	require.NotEqual(t, hashOf(base), hashOf(Config{
+		DBLessConfig:            base.DBLessConfig,
+		AdminClientCertSecretNN: base.AdminClientCertSecretNN,
+		SyncInterval:            10 * time.Second,
+	}), "a changed sync interval must drift the hash so the instance restarts with it")
+
+	require.NotEqual(t, hashOf(base), hashOf(Config{
+		DBLessConfig:            base.DBLessConfig,
+		AdminClientCertSecretNN: base.AdminClientCertSecretNN,
+		SyncTimeout:             30 * time.Second,
+	}), "a changed sync timeout must drift the hash so the instance restarts with it")
+
+	// The hash input is prefixed with a per-field discriminator: equal values on
+	// different fields must not collapse to the same hash.
+	require.NotEqual(t, hashOf(Config{
+		DBLessConfig:            base.DBLessConfig,
+		AdminClientCertSecretNN: base.AdminClientCertSecretNN,
+		SyncInterval:            30 * time.Second,
+	}), hashOf(Config{
+		DBLessConfig:            base.DBLessConfig,
+		AdminClientCertSecretNN: base.AdminClientCertSecretNN,
+		SyncTimeout:             30 * time.Second,
+	}), "equal interval and timeout values must produce different hashes")
+
+	require.Equal(t, hashOf(Config{
+		DBLessConfig:            base.DBLessConfig,
+		AdminClientCertSecretNN: base.AdminClientCertSecretNN,
+		SecretLabelFilters:      map[string]string{"a": "1", "b": "2"},
+	}), hashOf(Config{
+		DBLessConfig:            base.DBLessConfig,
+		AdminClientCertSecretNN: base.AdminClientCertSecretNN,
+		SecretLabelFilters:      map[string]string{"b": "2", "a": "1"},
+	}), "filters must hash order-independently")
+
+	require.NotEqual(t, hashOf(base), hashOf(Config{
+		DBLessConfig:            base.DBLessConfig,
+		AdminClientCertSecretNN: base.AdminClientCertSecretNN,
+		SecretLabelFilters:      map[string]string{"team": "foo"},
+	}), "changed object filters must drift the hash so the instance restarts with the new cache")
 }
 
 // testAIGatewayModel returns a valid AIGatewayModel pointing at the test gateway.
@@ -177,6 +222,13 @@ func TestSendConfig(t *testing.T) {
 		// The payload was still pushed for the surviving entity.
 		require.Len(t, factory.built, 1)
 		require.Len(t, factory.clients["https://10.0.0.1:8444"].payloads, 1)
+
+		// The per-entity failure is aggregated on the gateway's
+		// ConfigurationTranslated condition.
+		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType)
+		require.Equal(t, metav1.ConditionFalse, condition.Status)
+		require.Equal(t, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslationFailedReason), condition.Reason)
+		require.Contains(t, condition.Message, "model-broken")
 	})
 
 	t.Run("reports all entities as failed when the push fails", func(t *testing.T) {
@@ -197,6 +249,12 @@ func TestSendConfig(t *testing.T) {
 			require.Equal(t, status.ConfigurationStatusFailed, statusOf(instance, m))
 			require.Contains(t, messageOf(instance, m), "connection refused")
 		}
+
+		// A push failure does not alter the translation condition: it belongs
+		// to the DataPlanesConfigured condition.
+		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType)
+		require.Equal(t, metav1.ConditionTrue, condition.Status)
+		require.Equal(t, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedReason), condition.Reason)
 	})
 
 	t.Run("reports all entities as failed when no endpoints are discovered", func(t *testing.T) {
@@ -228,6 +286,10 @@ func TestSendConfig(t *testing.T) {
 			require.Equal(t, status.ConfigurationStatusSucceeded, statusOf(instance, m))
 			require.Empty(t, messageOf(instance, m))
 		}
+
+		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType)
+		require.Equal(t, metav1.ConditionTrue, condition.Status)
+		require.Equal(t, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedReason), condition.Reason)
 	})
 
 	t.Run("the skip path lets syncPending drop the gateway from pending", func(t *testing.T) {
@@ -242,6 +304,261 @@ func TestSendConfig(t *testing.T) {
 		require.Empty(t, pending, "the skipped sync must still drop the gateway from pending")
 		require.Equal(t, status.ConfigurationStatusFailed, statusOf(instance, model))
 	})
+
+	t.Run("reports dangling provider references at translation and still pushes the rest", func(t *testing.T) {
+		// The provider CR exists (so the model's reference resolves) but fails its
+		// own translation, so it is excluded from the document. The model referencing
+		// it is rejected at translation time (checkTranslatedRefs) instead of failing
+		// later through a converter ERROR issue attributed back to the model.
+		model := testAIGatewayModel("model-a")
+		model.Spec.APISpec.Model.Targets = []aiconfigurationv1alpha1.AIGatewayTarget{{
+			Name:     "t",
+			Provider: aiconfigurationv1alpha1.AIGatewayModelProviderRef{Name: "broken-provider"},
+			Config: &aiconfigurationv1alpha1.AIGatewayTargetConfig{
+				Type:   aiconfigurationv1alpha1.AIGatewayTargetConfigTypeOpenai,
+				Openai: &aiconfigurationv1alpha1.AIGatewayTargetOpenaiConfig{UpstreamURL: "https://api.openai.com/v1"},
+			},
+		}}
+		brokenProvider := &aiconfigurationv1alpha1.AIGatewayModelProvider{
+			Name: "broken-provider", Namespace: testGatewayNamespace,
+			Spec: aiconfigurationv1alpha1.AIGatewayModelProviderSpec{
+				AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+					Group:         aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+					Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+					NamespacedRef: &commonv1alpha1.NamespacedRef{Name: testGatewayName},
+				},
+				// No APISpec: the provider's translation fails, so it is excluded
+				// from the document and the model referencing it is rejected at
+				// translation time.
+			},
+		}
+		instance := testPushInstance(t, adminClientCertSecret(), model, brokenProvider)
+		factory := &fakePushClientFactory{}
+		instance.newPushClient = factory.newPushClient
+		instance.setAdminAPIs(sets.New(adminAPI("https://10.0.0.1:8444")))
+
+		require.NoError(t, instance.sendConfig(ctx, &gwNN))
+
+		// The model's Programmed condition reports the dangling reference.
+		require.Equal(t, status.ConfigurationStatusFailed, statusOf(instance, model))
+		require.Contains(t, messageOf(instance, model), "referenced AIGatewayModelProvider")
+
+		// The provider's own translation failure is reported separately.
+		require.Equal(t, status.ConfigurationStatusFailed, statusOf(instance, brokenProvider))
+		require.Contains(t, messageOf(instance, brokenProvider), "spec.apiSpec is required")
+
+		// The rest of the payload was still pushed.
+		require.Len(t, factory.built, 1)
+
+		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType)
+		require.Equal(t, metav1.ConditionFalse, condition.Status)
+		require.Equal(t, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslationFailedReason), condition.Reason)
+		require.Contains(t, condition.Message, "model-a")
+	})
+}
+
+// namedCR is a minimal client.Object carrying the generated GetTypeName and
+// GetKonnectName methods attributeConversionIssues type-asserts: exercising the
+// attribution logic needs no full CR fixtures.
+type namedCR struct {
+	metav1.TypeMeta
+	metav1.ObjectMeta
+
+	typeName    string
+	konnectName string
+}
+
+func (c *namedCR) GetTypeName() string    { return c.typeName }
+func (c *namedCR) GetKonnectName() string { return c.konnectName }
+func (c *namedCR) DeepCopyObject() runtime.Object {
+	return c
+}
+
+// TestAttributeConversionIssues pins the converter-issue attribution: every
+// entry of conversionIssueKindToCRTypeName routes its kind's ERROR issues to the
+// matching CRs, CRs sharing a Konnect name fail together, and everything else
+// degrades to a warning.
+func TestAttributeConversionIssues(t *testing.T) {
+	i := &Instance{logger: logr.Discard()}
+
+	issue := func(severity convert.ConversionIssueSeverity, kind, name string) convert.ConversionIssue {
+		return convert.ConversionIssue{
+			Code:     convert.ConfigFieldInvalid,
+			Reason:   "test issue",
+			Source:   convert.ConversionIssueSource{Kind: kind, Name: name},
+			Severity: severity,
+		}
+	}
+	cr := func(typeName, konnectName string) *namedCR {
+		return &namedCR{typeName: typeName, konnectName: konnectName}
+	}
+
+	t.Run("every map value is a real CR type name", func(t *testing.T) {
+		// Zero-value CRs suffice: GetTypeName is constant per type.
+		crs := map[string]client.Object{
+			"AIGatewayModel":         new(aiconfigurationv1alpha1.AIGatewayModel),
+			"AIGatewayMCPServer":     new(aiconfigurationv1alpha1.AIGatewayMCPServer),
+			"AIGatewayAgent":         new(aiconfigurationv1alpha1.AIGatewayAgent),
+			"AIGatewayPolicy":        new(aiconfigurationv1alpha1.AIGatewayPolicy),
+			"AIGatewayCustomPolicy":  new(aiconfigurationv1alpha1.AIGatewayCustomPolicy),
+			"AIGatewayAuthStrategy":  new(aiconfigurationv1alpha1.AIGatewayAuthStrategy),
+			"AIGatewayConsumer":      new(aiconfigurationv1alpha1.AIGatewayConsumer),
+			"AIGatewayConsumerGroup": new(aiconfigurationv1alpha1.AIGatewayConsumerGroup),
+			"AIGatewaySNI":           new(aiconfigurationv1alpha1.AIGatewaySNI),
+		}
+		require.Len(t, conversionIssueKindToCRTypeName, len(crs))
+		for kind, typeName := range conversionIssueKindToCRTypeName {
+			obj, ok := crs[typeName]
+			require.True(t, ok, "kind %q maps to %q, which is no CR type name", kind, typeName)
+			typeNamer := obj.(interface{ GetTypeName() string })
+			require.Equal(t, typeName, typeNamer.GetTypeName(), "kind %q", kind)
+		}
+	})
+
+	t.Run("ERROR issues attribute the drop to the matching CRs", func(t *testing.T) {
+		for kind, typeName := range conversionIssueKindToCRTypeName {
+			obj := cr(typeName, "entity-"+kind)
+			included, failures, warnings := i.attributeConversionIssues(
+				[]client.Object{obj},
+				nil,
+				[]convert.ConversionIssue{issue(convert.Error, kind, "entity-"+kind)},
+			)
+			require.Empty(t, included, "kind %q", kind)
+			require.Len(t, failures, 1, "kind %q", kind)
+			require.Equal(t, obj, failures[0].Obj, "kind %q", kind)
+			require.Contains(t, failures[0].Err.Error(), "dropped the entity from the rendered configuration")
+			require.Empty(t, warnings, "kind %q", kind)
+		}
+	})
+
+	t.Run("CRs sharing a Konnect name all fail together", func(t *testing.T) {
+		// GetKonnectName derives from the spec, so two model CRs can share it; both
+		// translate into the same document entity, so one issue drops both.
+		a, b := cr("AIGatewayModel", "shared"), cr("AIGatewayModel", "shared")
+		included, failures, warnings := i.attributeConversionIssues(
+			[]client.Object{a, b},
+			nil,
+			[]convert.ConversionIssue{issue(convert.Error, "model", "shared")},
+		)
+		require.Empty(t, included)
+		require.Len(t, failures, 2)
+		require.Equal(t, a, failures[0].Obj)
+		require.Equal(t, b, failures[1].Obj)
+		require.Empty(t, warnings)
+	})
+
+	t.Run("ERROR issues matching no entity degrade to warnings", func(t *testing.T) {
+		obj := cr("AIGatewayModel", "model-a")
+		for _, tc := range []struct {
+			name  string
+			issue convert.ConversionIssue
+		}{
+			{"unmatched kind", issue(convert.Error, "option", "model-a")},
+			{"unmatched name", issue(convert.Error, "model", "other-model")},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				included, failures, warnings := i.attributeConversionIssues(
+					[]client.Object{obj},
+					nil,
+					[]convert.ConversionIssue{tc.issue},
+				)
+				require.Equal(t, []client.Object{obj}, included, "the CR stays included")
+				require.Empty(t, failures)
+				require.Equal(t, []string{tc.issue.String()}, warnings)
+			})
+		}
+	})
+
+	t.Run("WARNING issues become warnings", func(t *testing.T) {
+		obj := cr("AIGatewayModel", "model-a")
+		included, failures, warnings := i.attributeConversionIssues(
+			[]client.Object{obj},
+			nil,
+			[]convert.ConversionIssue{issue(convert.Warning, "model", "model-a")},
+		)
+		require.Equal(t, []client.Object{obj}, included)
+		require.Empty(t, failures)
+		require.Equal(t, []string{issue(convert.Warning, "model", "model-a").String()}, warnings)
+	})
+}
+
+// blockingPushClient blocks every push until its context is done, then returns
+// the context error. fakePushClient ignores the context, so it cannot exercise
+// the SyncTimeout branch of syncPending.
+type blockingPushClient struct{}
+
+func (blockingPushClient) ReloadDeclarativeRawConfig(ctx context.Context, _ io.Reader, _, _ bool) error {
+	<-ctx.Done()
+	return ctx.Err()
+}
+
+// ctxCheckingClient fails every Get and status apply on an already-cancelled
+// context, as the real API server client does. The fake client ignores context
+// cancellation, so without this wrapper a report issued on the expired sync
+// deadline would silently succeed and the test could not catch the regression.
+type ctxCheckingClient struct {
+	client.Client
+}
+
+func (c ctxCheckingClient) Get(
+	ctx context.Context,
+	key client.ObjectKey,
+	obj client.Object,
+	opts ...client.GetOption,
+) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return c.Client.Get(ctx, key, obj, opts...)
+}
+
+func (c ctxCheckingClient) Status() client.SubResourceWriter {
+	return ctxCheckingStatusWriter{c.Client.Status()}
+}
+
+type ctxCheckingStatusWriter struct {
+	client.SubResourceWriter
+}
+
+func (w ctxCheckingStatusWriter) Apply(
+	ctx context.Context,
+	obj runtime.ApplyConfiguration,
+	opts ...client.SubResourceApplyOption,
+) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	return w.SubResourceWriter.Apply(ctx, obj, opts...)
+}
+
+// TestSyncPendingTimeout exercises the SyncTimeout branch of syncPending: a push
+// that blocks past the configured timeout must fail the sync, leave the gateway
+// in pending so the next tick retries it, and report the entity as failed.
+func TestSyncPendingTimeout(t *testing.T) {
+	model := testAIGatewayModel("model-a")
+	instance := testPushInstance(t, adminClientCertSecret(), model)
+	instance.cfg.SyncTimeout = 50 * time.Millisecond
+	instance.newPushClient = func(_, _ string, _, _, _ []byte) (pusher, error) {
+		return blockingPushClient{}, nil
+	}
+	instance.setAdminAPIs(sets.New(adminAPI("https://10.0.0.1:8444")))
+	instance.client = ctxCheckingClient{Client: instance.client}
+
+	gwNN := types.NamespacedName{Namespace: testGatewayNamespace, Name: testGatewayName}
+	pending := map[types.NamespacedName]struct{}{gwNN: {}}
+	var lastSyncTS time.Time
+	instance.syncPending(context.Background(), pending, &lastSyncTS)
+
+	require.Contains(t, pending, gwNN, "the timed-out sync must leave the gateway in pending so the next tick retries it")
+	require.Equal(t, status.ConfigurationStatusFailed, instance.statusReporter.KubernetesObjectConfigurationStatus(model))
+	require.Contains(t, instance.statusReporter.KubernetesObjectConfigurationStatusMessage(model), "deadline exceeded")
+	// The sync deadline must not bound the status report: the expired sync
+	// context must not stop the DataPlanesConfigured condition from recording
+	// the push failure (a report failure is only logged, so the condition would
+	// keep its last value otherwise).
+	pushCondition := getGatewayPushCondition(t, instance)
+	require.Equal(t, metav1.ConditionFalse, pushCondition.Status)
+	require.Equal(t, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationPushFailedReason), pushCondition.Reason)
 }
 
 // secretCacheCfg finds the cache config for corev1.Secret in opts.ByObject: its keys are
@@ -280,6 +597,51 @@ func TestCacheOpts(t *testing.T) {
 		secretCfg, ok := secretCacheCfg(opts)
 		require.True(t, ok)
 		require.Nil(t, secretCfg.Label)
+	})
+
+	t.Run("spec.objectFilters.secrets matchLabels are ANDed with the operator label", func(t *testing.T) {
+		i := Instance{
+			env: Env{
+				GatewayNN:           types.NamespacedName{Namespace: "ns", Name: "gw"},
+				SecretLabelSelector: "app",
+			},
+			cfg: Config{SecretLabelFilters: map[string]string{"team": "foo"}},
+		}
+		opts := i.cacheOpts()
+		secretCfg, ok := secretCacheCfg(opts)
+		require.True(t, ok)
+		require.NotNil(t, secretCfg.Label)
+		require.True(t, secretCfg.Label.Matches(labels.Set{"app": "true", "team": "foo"}))
+		require.True(t, secretCfg.Label.Matches(labels.Set{"app": "internal", "team": "foo"}))
+		require.False(t, secretCfg.Label.Matches(labels.Set{"app": "true"}), "missing the user filter label")
+		require.False(t, secretCfg.Label.Matches(labels.Set{"team": "foo"}), "missing the operator label")
+	})
+
+	t.Run("spec.objectFilters.secrets matchLabels without an operator selector", func(t *testing.T) {
+		i := Instance{
+			env: Env{GatewayNN: types.NamespacedName{Namespace: "ns", Name: "gw"}},
+			cfg: Config{SecretLabelFilters: map[string]string{"team": "foo"}},
+		}
+		opts := i.cacheOpts()
+		secretCfg, ok := secretCacheCfg(opts)
+		require.True(t, ok)
+		require.NotNil(t, secretCfg.Label)
+		require.True(t, secretCfg.Label.Matches(labels.Set{"team": "foo"}))
+		require.False(t, secretCfg.Label.Matches(labels.Set{"team": "bar"}))
+	})
+
+	t.Run("invalid matchLabels: never-matching selector keeps the manager startable", func(t *testing.T) {
+		// The CRD rejects invalid keys/values, but out-of-band writes exist: an
+		// empty key makes labels.NewRequirement fail, which must not crash the
+		// instance manager.
+		i := Instance{
+			env: Env{GatewayNN: types.NamespacedName{Namespace: "ns", Name: "gw"}},
+			cfg: Config{SecretLabelFilters: map[string]string{"": "v"}},
+		}
+		secretCfg, ok := secretCacheCfg(i.cacheOpts())
+		require.True(t, ok)
+		require.NotNil(t, secretCfg.Label)
+		require.False(t, secretCfg.Label.Matches(labels.Set{"a": "b"}))
 	})
 
 	t.Run("namespace scoping of the other objects", func(t *testing.T) {

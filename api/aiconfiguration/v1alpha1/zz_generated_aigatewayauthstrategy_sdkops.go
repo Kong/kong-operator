@@ -840,14 +840,6 @@ func (s *AIGatewayAuthStrategyAPISpec) ToUpdateAIGatewayAuthStrategyRequest() (*
 		return nil, err
 	}
 
-	var selected map[string]any
-	if err := json.Unmarshal(data, &selected); err != nil {
-		return nil, fmt.Errorf("failed to decode selected AIGatewayAuthStrategy config: %w", err)
-	}
-	var target sdkkonnectcomp.UpdateAIGatewayAuthStrategyRequest
-	if err := json.Unmarshal(data, &target); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal into UpdateAIGatewayAuthStrategyRequest: %w", err)
-	}
 	switch variant {
 	case "KeyAuth":
 		var member sdkkonnectcomp.AIGatewayAuthStrategyKeyAuth

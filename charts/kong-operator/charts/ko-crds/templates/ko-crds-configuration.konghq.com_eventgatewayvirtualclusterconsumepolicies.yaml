@@ -105,6 +105,7 @@ spec:
                           minLength: 1
                           pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
                           type: string
+                        maxProperties: 50
                         type: object
                       name:
                         maxLength: 255
@@ -193,6 +194,7 @@ spec:
                           minLength: 1
                           pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
                           type: string
+                        maxProperties: 50
                         type: object
                       name:
                         maxLength: 255
@@ -258,12 +260,28 @@ spec:
                           minLength: 1
                           pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
                           type: string
+                        maxProperties: 50
                         type: object
                       name:
                         maxLength: 255
                         type: string
                     required:
                     - config
+                    type: object
+                  parentPolicyRef:
+                    properties:
+                      kind:
+                        default: EventGatewayVirtualClusterConsumePolicy
+                        enum:
+                        - EventGatewayVirtualClusterConsumePolicy
+                        type: string
+                      name:
+                        minLength: 1
+                        type: string
+                      namespace:
+                        type: string
+                    required:
+                    - name
                     type: object
                   schemaValidation:
                     properties:
@@ -447,6 +465,7 @@ spec:
                           minLength: 1
                           pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
                           type: string
+                        maxProperties: 50
                         type: object
                       name:
                         maxLength: 255
@@ -473,6 +492,7 @@ spec:
                           minLength: 1
                           pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
                           type: string
+                        maxProperties: 50
                         type: object
                       name:
                         maxLength: 255
@@ -602,6 +622,36 @@ spec:
           rule: '!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status.conditions)
             || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
             == ''True'') || oldSelf.spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef'
+        - fieldPath: .spec.eventGatewayVirtualClusterRef
+          message: spec.eventGatewayVirtualClusterRef is immutable once the entity
+            has been created in Konnect
+          rule: '!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayVirtualClusterRef
+            == oldSelf.spec.eventGatewayVirtualClusterRef'
+        - fieldPath: .spec.apiSpec.parentPolicyRef
+          message: parentPolicyRef is immutable once the policy has been created in
+            Konnect
+          rule: '!has(oldSelf.status) || !has(oldSelf.status.id) || (has(self.spec.apiSpec)
+            && has(self.spec.apiSpec.parentPolicyRef) ? has(oldSelf.spec.apiSpec)
+            && has(oldSelf.spec.apiSpec.parentPolicyRef) && self.spec.apiSpec.parentPolicyRef
+            == oldSelf.spec.apiSpec.parentPolicyRef : !has(oldSelf.spec.apiSpec) ||
+            !has(oldSelf.spec.apiSpec.parentPolicyRef))'
+        - fieldPath: .spec.apiSpec.parentPolicyRef
+          message: parentPolicyRef is required for decryptFields
+          optionalOldSelf: true
+          rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.type) || self.spec.apiSpec.type
+            != ''decryptFields'' || has(self.spec.apiSpec.parentPolicyRef) || (oldSelf.hasValue()
+            && has(oldSelf.value().spec.apiSpec) && has(oldSelf.value().spec.apiSpec.type)
+            && oldSelf.value().spec.apiSpec.type == ''decryptFields'' && !has(oldSelf.value().spec.apiSpec.parentPolicyRef))'
+        - fieldPath: .spec.apiSpec.parentPolicyRef
+          message: parentPolicyRef is only supported for decryptFields, modifyHeaders
+            and skipRecord
+          rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef)
+            || (has(self.spec.apiSpec.type) && self.spec.apiSpec.type in [''decryptFields'',
+            ''modifyHeaders'', ''skipRecord''])'
+        - message: parentPolicyRef must not reference the EventGatewayVirtualClusterConsumePolicy
+            itself
+          rule: '!has(self.spec.apiSpec) || !has(self.spec.apiSpec.parentPolicyRef)
+            || self.spec.apiSpec.parentPolicyRef.name != self.metadata.name'
     served: true
     storage: true
     subresources:

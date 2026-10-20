@@ -3,6 +3,9 @@ package config
 const (
 	// GatewayAlphaFeature is the name of the feature-gate for enabling or
 	// disabling the Alpha maturity APIs and relevant features for Gateway API.
+	// NOTE: It currently doesn't enable any feature, so it's a no-op feature gate:
+	// it's accepted, but not part of the defaults and not reported. It's kept so that
+	// future Gateway API alpha features can be gated by it without re-adding the gate.
 	GatewayAlphaFeature = "GatewayAlpha"
 
 	// FillIDsFeature is the name of the feature-gate that makes KIC fill in the ID fields of Kong entities (Services,
@@ -33,7 +36,6 @@ const (
 // NOTE: if you're adding a new feature gate, it needs to be added here.
 func GetFeatureGatesDefaults() FeatureGates {
 	return map[string]bool{
-		GatewayAlphaFeature:               false,
 		FillIDsFeature:                    true,
 		RewriteURIsFeature:                false,
 		KongServiceFacadeFeature:          false,
@@ -41,4 +43,10 @@ func GetFeatureGatesDefaults() FeatureGates {
 		FallbackConfigurationFeature:      false,
 		KongCustomEntityFeature:           true,
 	}
+}
+
+// IsNoOpFeatureGate returns true for feature gates that are accepted but don't
+// enable any feature. They're ignored rather than rejected as unknown.
+func IsNoOpFeatureGate(name string) bool {
+	return name == GatewayAlphaFeature
 }

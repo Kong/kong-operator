@@ -101,6 +101,7 @@ type MirrorKonnect struct {
 	// only when source is Mirror.
 	//
 	// +required
+	// +kubebuilder:validation:Type=string
 	// +kubebuilder:validation:MinLength=1
 	ID commonv1alpha1.KonnectIDType `json:"id"`
 }

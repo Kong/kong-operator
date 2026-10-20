@@ -50,6 +50,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(GroupVersion,
 		&KegDataPlane{},
 		&KegDataPlaneList{},
+		&OnPremEventGateway{},
+		&OnPremEventGatewayList{},
 	)
 
 	metav1.AddToGroupVersion(scheme, GroupVersion)

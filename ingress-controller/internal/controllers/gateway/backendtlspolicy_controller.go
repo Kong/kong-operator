@@ -373,7 +373,7 @@ func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForGateways(ctx conte
 
 // Reconcile processes the watched objects.
 func (r *BackendTLSPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("GatewayV1alpha3BackendTLSPolicy", req.NamespacedName)
+	log := r.Log.WithValues("GatewayV1BackendTLSPolicy", req.NamespacedName)
 
 	backendTLSPolicy := new(gatewayapi.BackendTLSPolicy)
 	if err := r.Get(ctx, req.NamespacedName, backendTLSPolicy); err != nil {

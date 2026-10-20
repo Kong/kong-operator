@@ -143,6 +143,7 @@ spec:
 
                       Keys must be of length 1-63 characters, and cannot start with "kong",
                       "konnect", "mesh", "kic", or "_".
+                    maxProperties: 50
                     type: object
                   name:
                     description: The unique name of the TLS trust bundle.
@@ -154,7 +155,10 @@ spec:
                 - name
                 type: object
               gatewayRef:
-                description: GatewayRef is the reference to the parent Gateway object.
+                description: |-
+                  GatewayRef is the reference to the parent Gateway object.
+                  This field is deprecated, use parentRef instead. Exactly one of
+                  gatewayRef and parentRef must be set.
                 properties:
                   konnectID:
                     description: |-
@@ -208,8 +212,48 @@ spec:
                   rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
                 - message: when type is konnectID, namespacedRef must not be set
                   rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
-            required:
-            - gatewayRef
+              parentRef:
+                description: |-
+                  ParentRef is the reference to the gateway (control plane) this object
+                  belongs to. Supported kinds: KonnectEventGateway, OnPremEventGateway.
+                  Exactly one of gatewayRef and parentRef must be set.
+                properties:
+                  group:
+                    description: |-
+                      Group is the API group of the referred gateway,
+                      e.g. konnect.konghq.com.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  kind:
+                    description: Kind is the kind of the referred gateway, e.g. KonnectEventGateway.
+                    maxLength: 63
+                    minLength: 1
+                    type: string
+                  name:
+                    description: Name is the name of the referred gateway.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace is the namespace of the referred gateway.
+
+                      If no Namespace is provided then the namespace of the referring object
+                      is used.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                required:
+                - group
+                - kind
+                - name
+                type: object
+                x-kubernetes-validations:
+                - message: 'parentRef must reference one of: konnect.konghq.com/KonnectEventGateway,
+                    eventgateway.konghq.com/OnPremEventGateway'
+                  rule: (self.group == 'konnect.konghq.com' && self.kind == 'KonnectEventGateway')
+                    || (self.group == 'eventgateway.konghq.com' && self.kind == 'OnPremEventGateway')
             type: object
           status:
             description: EventGatewayTLSTrustBundleStatus defines the observed state
@@ -308,10 +352,34 @@ spec:
             type: object
         type: object
         x-kubernetes-validations:
+        - message: exactly one of spec.gatewayRef and spec.parentRef must be set
+          rule: has(self.spec.gatewayRef) != has(self.spec.parentRef)
+        - message: the kind of the referenced gateway is immutable
+          rule: '(has(self.spec.parentRef) ? self.spec.parentRef.kind : ''KonnectEventGateway'')
+            == (has(oldSelf.spec.parentRef) ? oldSelf.spec.parentRef.kind : ''KonnectEventGateway'')'
+        - message: spec.parentRef cannot be replaced by the deprecated spec.gatewayRef
+          rule: '!has(oldSelf.spec.parentRef) || has(self.spec.parentRef)'
         - message: spec.gatewayRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.gatewayRef) || !has(self.status.conditions) || !self.status.conditions.exists(c,
-            c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.gatewayRef
+          rule: '!has(self.spec.gatewayRef) || !has(oldSelf.spec.gatewayRef) || !has(self.status)
+            || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type
+            == ''Programmed'' && c.status == ''True'') || oldSelf.spec.gatewayRef
             == self.spec.gatewayRef'
+        - message: spec.parentRef is immutable when an entity is already Programmed
+          rule: '!has(self.spec.parentRef) || !has(oldSelf.spec.parentRef) || !has(self.status)
+            || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type
+            == ''Programmed'' && c.status == ''True'') || oldSelf.spec.parentRef ==
+            self.spec.parentRef'
+        - message: spec.gatewayRef can only be replaced by a spec.parentRef referencing
+            the same gateway, with the same name and namespace as spec.gatewayRef,
+            once an entity is already Programmed
+          rule: '!has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c,
+            c.type == ''Programmed'' && c.status == ''True'') || !has(self.spec.parentRef)
+            || has(oldSelf.spec.parentRef) || (has(oldSelf.spec.gatewayRef) && has(oldSelf.spec.gatewayRef.namespacedRef)
+            && self.spec.parentRef.name == oldSelf.spec.gatewayRef.namespacedRef.name
+            && (has(self.spec.parentRef.__namespace__) ? (has(oldSelf.spec.gatewayRef.namespacedRef.__namespace__)
+            && self.spec.parentRef.__namespace__ == oldSelf.spec.gatewayRef.namespacedRef.__namespace__)
+            : (!has(oldSelf.spec.gatewayRef.namespacedRef.__namespace__) || size(oldSelf.spec.gatewayRef.namespacedRef.__namespace__)
+            == 0)))'
     served: true
     storage: true
     subresources:

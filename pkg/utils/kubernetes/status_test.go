@@ -860,6 +860,25 @@ func TestUpdatedConditionPreservingLastTransitionTime(t *testing.T) {
 			expectedChanged:   true,
 		},
 		{
+			// A message-only change updates the condition but keeps the stored
+			// LastTransitionTime: that timestamp marks the last transition
+			// between statuses, not the last update.
+			name:       "message-only change keeps the stored transition time",
+			conditions: []metav1.Condition{stored},
+			updated: func() metav1.Condition {
+				c := updated
+				c.Message = "a different message"
+				return c
+			}(),
+			expectedCondition: func() metav1.Condition {
+				c := updated
+				c.Message = "a different message"
+				c.LastTransitionTime = stored.LastTransitionTime
+				return c
+			}(),
+			expectedChanged: true,
+		},
+		{
 			name:              "absent condition type returns the updated one",
 			conditions:        nil,
 			updated:           updated,

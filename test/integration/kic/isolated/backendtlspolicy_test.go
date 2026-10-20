@@ -254,7 +254,7 @@ func TestBackendTLSPolicy(t *testing.T) {
 					},
 				},
 			}
-			backendTLSPolicy, err = gwapiClient.GatewayV1alpha3().BackendTLSPolicies(ns).Create(ctx, backendTLSPolicy, metav1.CreateOptions{})
+			backendTLSPolicy, err = gwapiClient.GatewayV1().BackendTLSPolicies(ns).Create(ctx, backendTLSPolicy, metav1.CreateOptions{})
 			assert.NoError(t, err)
 			ctx = SetInCtxForT(ctx, t, backendTLSPolicy)
 
@@ -284,13 +284,13 @@ func TestBackendTLSPolicy(t *testing.T) {
 
 			t.Log("Fixing TLS verification depth to a sufficient value = 1")
 			require.Eventually(t, func() bool {
-				backendTLSPolicy, err := gwapiClient.GatewayV1alpha3().BackendTLSPolicies(GetNamespaceForT(ctx, t)).Get(ctx, backendTLSPolicy.Name, metav1.GetOptions{})
+				backendTLSPolicy, err := gwapiClient.GatewayV1().BackendTLSPolicies(GetNamespaceForT(ctx, t)).Get(ctx, backendTLSPolicy.Name, metav1.GetOptions{})
 				if err != nil {
 					t.Logf("Failed to get BackendTLSPolicy: %v", err)
 					return false
 				}
 				backendTLSPolicy.Spec.Options[gatewayapi.TLSVerifyDepthKey] = "1"
-				_, err = gwapiClient.GatewayV1alpha3().BackendTLSPolicies(GetNamespaceForT(ctx, t)).Update(ctx, backendTLSPolicy, metav1.UpdateOptions{})
+				_, err = gwapiClient.GatewayV1().BackendTLSPolicies(GetNamespaceForT(ctx, t)).Update(ctx, backendTLSPolicy, metav1.UpdateOptions{})
 				if err != nil {
 					t.Logf("Failed to update BackendTLSPolicy: %v", err)
 					return false

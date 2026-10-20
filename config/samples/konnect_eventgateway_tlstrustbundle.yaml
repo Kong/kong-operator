@@ -53,10 +53,10 @@ spec:
         secretRef:
           name: cp-event-1-client-ca
           key: ca.crt
-  gatewayRef:
-    type: namespacedRef
-    namespacedRef:
-      name: cp-event-1
+  parentRef:
+    group: konnect.konghq.com
+    kind: KonnectEventGateway
+    name: cp-event-1
 ---
 kind: EventGatewayListener
 apiVersion: configuration.konghq.com/v1alpha1
@@ -70,10 +70,10 @@ spec:
       - "0.0.0.0"
     ports:
       - 9093
-  gatewayRef:
-    type: namespacedRef
-    namespacedRef:
-      name: cp-event-1
+  parentRef:
+    group: konnect.konghq.com
+    kind: KonnectEventGateway
+    name: cp-event-1
 ---
 apiVersion: v1
 kind: Secret

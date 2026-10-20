@@ -43,7 +43,7 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 
 	ns := CreateNamespace(ctx, t, ctrlClient)
 	ingressClassName := "kongenvtest"
-	deployIngressClass(ctx, t, ingressClassName, ctrlClient)
+	DeployIngressClass(ctx, t, ingressClassName, ctrlClient)
 
 	const podName = "kong-ingress-controller-tyjh1"
 	t.Setenv("POD_NAMESPACE", ns.Name)
@@ -172,7 +172,7 @@ func TestConfigErrorEventGenerationDBMode(t *testing.T) {
 	ctrlClient := client.NewNamespacedClient(ctrlClientGlobal, ns.Name)
 
 	ingressClassName := "kongenvtest"
-	deployIngressClass(ctx, t, ingressClassName, ctrlClient)
+	DeployIngressClass(ctx, t, ingressClassName, ctrlClient)
 
 	const podName = "kong-ingress-controller-tyjh1"
 	t.Setenv("POD_NAMESPACE", ns.Name)
@@ -238,7 +238,7 @@ func TestStickySessionsNotSupportedEventGeneration(t *testing.T) {
 	ctrlClient := client.NewNamespacedClient(ctrlClientGlobal, ns.Name)
 
 	ingressClassName := "kongenvtest"
-	deployIngressClass(ctx, t, ingressClassName, ctrlClient)
+	DeployIngressClass(ctx, t, ingressClassName, ctrlClient)
 
 	const podName = "kong-ingress-controller-tyjh1"
 	t.Setenv("POD_NAMESPACE", ns.Name)

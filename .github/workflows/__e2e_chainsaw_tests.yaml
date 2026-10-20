@@ -7,6 +7,28 @@ on:
         description: "Kind node image version"
         type: string
         required: true
+      aigw-dp-image:
+        description: "AIGatewayDataPlane image to test with (repository:tag). Defaults
+          to the image defined in test/test_dependencies.yaml."
+        type: string
+        required: false
+        default: ""
+      suites:
+        description: "JSON array of matrix entries ({suite, ip_family}) to run."
+        type: string
+        required: false
+        default: >-
+          [
+            {"suite": "gateway"},
+            {"suite": "gateway", "ip_family": "ipv6"},
+            {"suite": "hybridgateway"},
+            {"suite": "hybridgateway", "ip_family": "ipv6"},
+            {"suite": "konnect"},
+            {"suite": "aigateway"},
+            {"suite": "onpremaigateway"},
+            {"suite": "eventgateway"},
+            {"suite": "conversion-webhook"}
+          ]
 
 permissions:
   contents: read
@@ -28,25 +50,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-        - suite: gateway
-        - suite: gateway
-          ip_family: ipv6
-        - suite: hybridgateway
-        - suite: hybridgateway
-          ip_family: ipv6
-        - suite: konnect
-        - suite: aigateway
-        - suite: eventgateway
+        include: ${{ fromJSON(inputs.suites) }}
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+      uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
       with:
         egress-policy: audit
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
     - name: download e2e image artifact
-      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
       with:
         name: kong-operator-e2e-image-${{ github.run_id }}
 
@@ -103,6 +116,7 @@ jobs:
           --set env.enable_controller_konnect=true \
           --set env.enable_controller_kegdataplane=true \
           --set env.enable_controller_aigatewaydataplane=true \
+          --set env.enable_controller_onpremaigateway=true \
           --wait
 
     - name: Apply chainsaw suite prerequisites
@@ -117,6 +131,7 @@ jobs:
         KONNECT_TOKEN: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
         KONNECT_SERVER_URL: us.api.konghq.tech
         TEST_ID: ${{ env.TEST_ID }}
+        AIGW_DP_IMAGE: ${{ inputs.aigw-dp-image }}
         CHAINSAW_TEST_DIR: test/e2e/chainsaw/${{ matrix.suite }}
         CHAINSAW_CONFIG: test/e2e/chainsaw/.chainsaw.yaml
         EXPECTED_DEFAULT_STREAM_LISTEN: ${{ matrix.ip_family == 'ipv6' && '[::]:8899 ssl reuseport' || '0.0.0.0:8899 ssl reuseport' }}
