@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -72,8 +71,9 @@ func TestCreateInputsHashUsesCanonicalUserInputs(t *testing.T) {
 	}
 	cl = fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(
 		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Name: "key", Namespace: staticKey.Namespace},
-			Data:       map[string][]byte{"value": []byte("test-value")},
+			Name:      "key",
+			Namespace: staticKey.Namespace,
+			Data:      map[string][]byte{"value": []byte("test-value")},
 		},
 	).Build()
 	secretHash, err := staticKey.CalculateCreateInputsHash(t.Context(), cl)
