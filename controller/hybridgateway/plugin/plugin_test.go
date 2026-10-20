@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -245,6 +246,69 @@ func TestPluginForFilter(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestPluginsForRule_IdenticalFiltersDifferentMatches is a regression test for the shared-plugin
+// config flip: two rules with identical URLRewrite filters but different prefix match paths must
+// produce distinct KongPlugins, each carrying the config.uri derived from its own rule's match
+// path. When the plugin name was derived from the filters alone, both rules collided on a single
+// shared KongPlugin whose config.uri flipped between the two translations depending on which
+// reconcile applied last, even though nothing changed in the cluster.
+func TestPluginsForRule_IdenticalFiltersDifferentMatches(t *testing.T) {
+	logger := logr.Discard()
+	ctx := context.Background()
+
+	urlRewriteFilter := gwtypes.HTTPRouteFilter{
+		Type: gatewayv1.HTTPRouteFilterURLRewrite,
+		URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+			Path: &gatewayv1.HTTPPathModifier{
+				Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+				ReplacePrefixMatch: new("/"),
+			},
+		},
+	}
+	ruleWithMatch := func(path string) gwtypes.HTTPRouteRule {
+		return gwtypes.HTTPRouteRule{
+			Matches: []gatewayv1.HTTPRouteMatch{
+				{Path: &gatewayv1.HTTPPathMatch{Type: new(gatewayv1.PathMatchPathPrefix), Value: new(path)}},
+			},
+			Filters: []gwtypes.HTTPRouteFilter{urlRewriteFilter},
+		}
+	}
+
+	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
+	}
+	parentRef := &gwtypes.ParentReference{Name: "test-gateway"}
+
+	extractReplaceURI := func(t *testing.T, p configurationv1.KongPlugin) string {
+		var cfg struct {
+			Replace struct {
+				URI string `json:"uri"`
+			} `json:"replace"`
+		}
+		require.NoError(t, json.Unmarshal(p.Config.Raw, &cfg))
+		return cfg.Replace.URI
+	}
+
+	fakeClient := fakectrlruntimeclient.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		Build()
+
+	rootPlugins, err := PluginsForRule(ctx, logger, fakeClient, httpRoute, ruleWithMatch("/"), parentRef)
+	require.NoError(t, err)
+	require.Len(t, rootPlugins, 1)
+
+	apiPlugins, err := PluginsForRule(ctx, logger, fakeClient, httpRoute, ruleWithMatch("/api"), parentRef)
+	require.NoError(t, err)
+	require.Len(t, apiPlugins, 1)
+
+	assert.NotEqual(t, rootPlugins[0].Name, apiPlugins[0].Name, "identical filters with different match paths must not share one KongPlugin")
+	assert.Equal(t, `$(uri_captures[1] == nil and "/" or "/" .. uri_captures[1])`, extractReplaceURI(t, rootPlugins[0]))
+	assert.Equal(t, `$(uri_captures[1] == nil and "/" or uri_captures[1])`, extractReplaceURI(t, apiPlugins[0]))
 }
 
 func TestGetReferencedKongPlugin(t *testing.T) {

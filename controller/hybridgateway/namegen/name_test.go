@@ -886,51 +886,74 @@ func TestNewKongPluginNameForFilters(t *testing.T) {
 			},
 		},
 	}
+	// Two rules whose matches differ: the URLRewrite config.uri is computed from the rule's match
+	// path, so identical filters under different matches must not produce the same plugin name.
+	rootMatchRule := gatewayv1.HTTPRouteRule{
+		Matches: []gatewayv1.HTTPRouteMatch{
+			{Path: &gatewayv1.HTTPPathMatch{Type: new(gatewayv1.PathMatchPathPrefix), Value: new("/")}},
+		},
+	}
+	apiMatchRule := gatewayv1.HTTPRouteRule{
+		Matches: []gatewayv1.HTTPRouteMatch{
+			{Path: &gatewayv1.HTTPPathMatch{Type: new(gatewayv1.PathMatchPathPrefix), Value: new("/api")}},
+		},
+	}
 
 	const ns, pluginName = "default", "request-transformer"
 
 	tests := []struct {
-		name    string
-		filters []gatewayv1.HTTPRouteFilter
+		name      string
+		filters   []gatewayv1.HTTPRouteFilter
+		routeName string
+		rule      gatewayv1.HTTPRouteRule
 		// want is the name to compare against; wantEqual decides whether the generated name must
 		// equal it or differ from it.
 		want      string
 		wantEqual bool
 	}{
 		{
-			// Critical: renaming an existing single-filter plugin would momentarily leave two
-			// plugins of the same type on a route, reintroducing the unique-plugin-per-entity error.
-			name:      "single filter is backward compatible with NewKongPluginName",
-			filters:   []gatewayv1.HTTPRouteFilter{headerModifier},
-			want:      NewKongPluginName(headerModifier, ns, pluginName),
+			name:      "same filters, rule and route produce a stable name",
+			filters:   []gatewayv1.HTTPRouteFilter{urlRewrite},
+			routeName: "route-a",
+			rule:      rootMatchRule,
+			want:      NewKongPluginNameForFilters([]gatewayv1.HTTPRouteFilter{urlRewrite}, ns, pluginName, "route-a", rootMatchRule),
 			wantEqual: true,
 		},
 		{
-			name:      "merged name differs from the URLRewrite single-filter name",
-			filters:   []gatewayv1.HTTPRouteFilter{urlRewrite, headerModifier},
-			want:      NewKongPluginName(urlRewrite, ns, pluginName),
+			// Regression: two routes (or rules) with identical filters but different match paths
+			// used to collide on one shared KongPlugin whose config.uri flipped between the two
+			// translations depending on which reconcile applied last.
+			name:      "identical filters with different match paths produce different names",
+			filters:   []gatewayv1.HTTPRouteFilter{urlRewrite},
+			routeName: "route-a",
+			rule:      rootMatchRule,
+			want:      NewKongPluginNameForFilters([]gatewayv1.HTTPRouteFilter{urlRewrite}, ns, pluginName, "route-a", apiMatchRule),
 			wantEqual: false,
 		},
 		{
-			name:      "merged name differs from the RequestHeaderModifier single-filter name",
-			filters:   []gatewayv1.HTTPRouteFilter{urlRewrite, headerModifier},
-			want:      NewKongPluginName(headerModifier, ns, pluginName),
+			name:      "identical filters and rule under different routes produce different names",
+			filters:   []gatewayv1.HTTPRouteFilter{urlRewrite},
+			routeName: "route-a",
+			rule:      rootMatchRule,
+			want:      NewKongPluginNameForFilters([]gatewayv1.HTTPRouteFilter{urlRewrite}, ns, pluginName, "route-b", rootMatchRule),
 			wantEqual: false,
 		},
 		{
 			name:      "merged name changes when filter order changes",
 			filters:   []gatewayv1.HTTPRouteFilter{urlRewrite, headerModifier},
-			want:      NewKongPluginNameForFilters([]gatewayv1.HTTPRouteFilter{headerModifier, urlRewrite}, ns, pluginName),
+			routeName: "route-a",
+			rule:      rootMatchRule,
+			want:      NewKongPluginNameForFilters([]gatewayv1.HTTPRouteFilter{headerModifier, urlRewrite}, ns, pluginName, "route-a", rootMatchRule),
 			wantEqual: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := NewKongPluginNameForFilters(tt.filters, ns, pluginName)
+			got := NewKongPluginNameForFilters(tt.filters, ns, pluginName, tt.routeName, tt.rule)
 
 			// The name must be deterministic and carry the readable namespace.pluginType prefix.
-			again := NewKongPluginNameForFilters(tt.filters, ns, pluginName)
+			again := NewKongPluginNameForFilters(tt.filters, ns, pluginName, tt.routeName, tt.rule)
 			assert.Equal(t, got, again)
 			assert.True(t, strings.HasPrefix(got, "default.request-transformer."))
 
@@ -944,48 +967,113 @@ func TestNewKongPluginNameForFilters(t *testing.T) {
 }
 
 func TestNewKongPluginNameForGRPCRouteFilter(t *testing.T) {
-	tests := []struct {
-		name   string
-		filter gatewayv1.GRPCRouteFilter
-	}{
-		{
-			name: "request header modifier filter",
-			filter: gatewayv1.GRPCRouteFilter{
-				Type: gatewayv1.GRPCRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Set: []gatewayv1.HTTPHeader{
-						{Name: "X-Test", Value: "test-value"},
-					},
-				},
+	requestHeaderModifier := gatewayv1.GRPCRouteFilter{
+		Type: gatewayv1.GRPCRouteFilterRequestHeaderModifier,
+		RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+			Set: []gatewayv1.HTTPHeader{
+				{Name: "X-Test", Value: "test-value"},
 			},
 		},
-		{
-			name: "response header modifier filter",
-			filter: gatewayv1.GRPCRouteFilter{
-				Type: gatewayv1.GRPCRouteFilterResponseHeaderModifier,
-				ResponseHeaderModifier: &gatewayv1.HTTPHeaderFilter{
-					Add: []gatewayv1.HTTPHeader{
-						{Name: "X-Response", Value: "response-value"},
-					},
-				},
+	}
+	responseHeaderModifier := gatewayv1.GRPCRouteFilter{
+		Type: gatewayv1.GRPCRouteFilterResponseHeaderModifier,
+		ResponseHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+			Add: []gatewayv1.HTTPHeader{
+				{Name: "X-Response", Value: "response-value"},
 			},
+		},
+	}
+	ruleWithServiceA := gatewayv1.GRPCRouteRule{
+		Matches: []gatewayv1.GRPCRouteMatch{
+			{Method: &gatewayv1.GRPCMethodMatch{Service: new("a.Service")}},
+		},
+	}
+	ruleWithServiceB := gatewayv1.GRPCRouteRule{
+		Matches: []gatewayv1.GRPCRouteMatch{
+			{Method: &gatewayv1.GRPCMethodMatch{Service: new("b.Service")}},
+		},
+	}
+
+	const ns, pluginName = "default", "request-transformer"
+
+	tests := []struct {
+		name      string
+		filter    gatewayv1.GRPCRouteFilter
+		routeName string
+		rule      gatewayv1.GRPCRouteRule
+		// want is the name to compare against; wantEqual decides whether the generated name must
+		// equal it or differ from it.
+		want      string
+		wantEqual bool
+	}{
+		{
+			name:      "same filter, rule and route produce a stable name",
+			filter:    requestHeaderModifier,
+			routeName: "route-a",
+			rule:      ruleWithServiceA,
+			want:      NewKongPluginNameForGRPCRouteFilter(requestHeaderModifier, ns, pluginName, "route-a", ruleWithServiceA),
+			wantEqual: true,
+		},
+		{
+			// Regression: identical filters under different rules (or routes) must not collide on
+			// one shared KongPlugin, mirroring the HTTPRoute fix.
+			name:      "identical filters with different rules produce different names",
+			filter:    requestHeaderModifier,
+			routeName: "route-a",
+			rule:      ruleWithServiceA,
+			want:      NewKongPluginNameForGRPCRouteFilter(requestHeaderModifier, ns, pluginName, "route-a", ruleWithServiceB),
+			wantEqual: false,
+		},
+		{
+			name:      "identical filters and rule under different routes produce different names",
+			filter:    requestHeaderModifier,
+			routeName: "route-a",
+			rule:      ruleWithServiceA,
+			want:      NewKongPluginNameForGRPCRouteFilter(requestHeaderModifier, ns, pluginName, "route-b", ruleWithServiceA),
+			wantEqual: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := NewKongPluginNameForGRPCRouteFilter(tt.filter, "default", "request-transformer")
-			assert.NotEmpty(t, result)
-			assert.True(t, strings.HasPrefix(result, "default.request-transformer."), "should start with plugin namespace.name prefix")
-			assert.Equal(t, result, NewKongPluginNameForGRPCRouteFilter(tt.filter, "default", "request-transformer"), "must be deterministic")
+			got := NewKongPluginNameForGRPCRouteFilter(tt.filter, ns, pluginName, tt.routeName, tt.rule)
+
+			// The name must be deterministic and carry the readable namespace.pluginType prefix.
+			again := NewKongPluginNameForGRPCRouteFilter(tt.filter, ns, pluginName, tt.routeName, tt.rule)
+			assert.Equal(t, got, again)
+			assert.True(t, strings.HasPrefix(got, "default.request-transformer."), "should start with plugin namespace.name prefix")
+
+			if tt.wantEqual {
+				assert.Equal(t, tt.want, got)
+			} else {
+				assert.NotEqual(t, tt.want, got)
+			}
 		})
 	}
 
 	assert.NotEqual(t,
-		NewKongPluginNameForGRPCRouteFilter(tests[0].filter, "default", "request-transformer"),
-		NewKongPluginNameForGRPCRouteFilter(tests[1].filter, "default", "request-transformer"),
+		NewKongPluginNameForGRPCRouteFilter(requestHeaderModifier, ns, pluginName, "route-a", ruleWithServiceA),
+		NewKongPluginNameForGRPCRouteFilter(responseHeaderModifier, ns, pluginName, "route-a", ruleWithServiceA),
 		"different filter content must produce different names",
 	)
+}
+
+func TestNewKongPluginNameForGRPCExtensionRef(t *testing.T) {
+	filter := gatewayv1.GRPCRouteFilter{
+		Type: gatewayv1.GRPCRouteFilterExtensionRef,
+		ExtensionRef: &gatewayv1.LocalObjectReference{
+			Group: "configuration.konghq.com",
+			Kind:  "KongPlugin",
+			Name:  "test-plugin",
+		},
+	}
+
+	// The ExtensionRef copy carries the referenced plugin's configuration verbatim and is shared
+	// across routes and rules, so its name must exclude the route and rule.
+	name := NewKongPluginNameForGRPCExtensionRef(filter, "default", "rate-limiting")
+	assert.NotEmpty(t, name)
+	assert.True(t, strings.HasPrefix(name, "default.rate-limiting."), "should start with plugin namespace.name prefix")
+	assert.Equal(t, name, NewKongPluginNameForGRPCExtensionRef(filter, "default", "rate-limiting"), "must be deterministic")
 }
 
 func TestNewKongPluginBindingName(t *testing.T) {

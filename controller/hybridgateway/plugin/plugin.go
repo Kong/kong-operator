@@ -69,7 +69,7 @@ func PluginsForRule(
 	}
 	for i := range pluginConfs {
 		pConf := &pluginConfs[i]
-		pluginName := namegen.NewKongPluginNameForFilters(pConf.filters, httpRoute.Namespace, pConf.name)
+		pluginName := namegen.NewKongPluginNameForFilters(pConf.filters, httpRoute.Namespace, pConf.name, httpRoute.Name, rule)
 		logger := logger.WithValues("kongplugin", pluginName)
 		log.Debug(logger, "Generating KongPlugin for HTTPRoute filters")
 

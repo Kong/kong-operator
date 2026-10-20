@@ -73,6 +73,55 @@ func TestGRPCPluginsForRule(t *testing.T) {
 	assert.Empty(t, plugin.Annotations[pkgmetadata.AnnotationKeyTags])
 }
 
+// TestGRPCPluginsForRule_IdenticalFiltersDifferentRules is a regression test for the
+// shared-plugin naming collision: two rules with identical GRPCRoute filters must produce
+// distinct KongPlugins, mirroring the HTTPRoute fix. GRPC filter configs depend only on the
+// filter contents today, but a shared name keyed on the filters alone would let any future
+// filter type whose config depends on the rule reintroduce the config flip across reconciles.
+func TestGRPCPluginsForRule_IdenticalFiltersDifferentRules(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	grpcRoute := &gwtypes.GRPCRoute{
+		TypeMeta:  grpcRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
+	}
+	parentRef := &gwtypes.ParentReference{Name: "test-gateway"}
+
+	filter := gatewayv1.GRPCRouteFilter{
+		Type: gatewayv1.GRPCRouteFilterRequestHeaderModifier,
+		RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+			Set: []gatewayv1.HTTPHeader{
+				{Name: "X-Custom-Header", Value: "custom-value"},
+			},
+		},
+	}
+	ruleWithService := func(service string) gwtypes.GRPCRouteRule {
+		return gwtypes.GRPCRouteRule{
+			Matches: []gatewayv1.GRPCRouteMatch{
+				{Method: &gatewayv1.GRPCMethodMatch{Service: new(service)}},
+			},
+			Filters: []gatewayv1.GRPCRouteFilter{filter},
+		}
+	}
+
+	fakeClient := fakectrlruntimeclient.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		Build()
+
+	pluginsA, err := GRPCPluginsForRule(ctx, logger, fakeClient, grpcRoute, ruleWithService("a.Service"), parentRef)
+	require.NoError(t, err)
+	require.Len(t, pluginsA, 1)
+
+	pluginsB, err := GRPCPluginsForRule(ctx, logger, fakeClient, grpcRoute, ruleWithService("b.Service"), parentRef)
+	require.NoError(t, err)
+	require.Len(t, pluginsB, 1)
+
+	assert.NotEqual(t, pluginsA[0].Name, pluginsB[0].Name, "identical filters under different rules must not share one KongPlugin")
+}
+
 func TestGRPCPluginsForRule_UnsupportedFilterErrors(t *testing.T) {
 	ctx := context.Background()
 	logger := logr.Discard()

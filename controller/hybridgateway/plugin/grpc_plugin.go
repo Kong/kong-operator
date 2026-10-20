@@ -48,7 +48,7 @@ func GRPCPluginsForRule(
 		}
 
 		for _, conf := range confs {
-			pluginName := namegen.NewKongPluginNameForGRPCRouteFilter(filter, grpcRoute.Namespace, conf.name)
+			pluginName := namegen.NewKongPluginNameForGRPCRouteFilter(filter, grpcRoute.Namespace, conf.name, grpcRoute.Name, rule)
 			logger := logger.WithValues("kongplugin", pluginName)
 			log.Debug(logger, "Generating KongPlugin for GRPCRoute filter")
 
@@ -96,7 +96,7 @@ func GRPCPluginsForRule(
 			return nil, err
 		}
 		pluginCopy, err := builder.NewKongPlugin().
-			WithName(namegen.NewKongPluginNameForGRPCRouteFilter(filter, grpcRoute.Namespace, plugin.PluginName)).
+			WithName(namegen.NewKongPluginNameForGRPCExtensionRef(filter, grpcRoute.Namespace, plugin.PluginName)).
 			WithNamespace(metadata.NamespaceFromParentRef(grpcRoute, pRef)).
 			WithLabels(grpcRoute, pRef).
 			WithPluginName(plugin.PluginName).

@@ -423,19 +423,48 @@ func NewKongPluginName(filter gatewayv1.HTTPRouteFilter, namespace string, plugi
 }
 
 // NewKongPluginNameForFilters generates a KongPlugin name for a plugin produced by one or more
-// HTTPRoute filters. When several filters map to the same Kong plugin type (e.g. URLRewrite and
-// RequestHeaderModifier both map to request-transformer) they are merged into a single KongPlugin,
-// so the name must be derived from the whole set of contributing filters. The single-filter case
-// is kept identical to NewKongPluginName to avoid renaming existing resources.
-func NewKongPluginNameForFilters(filters []gatewayv1.HTTPRouteFilter, namespace string, pluginName string) string {
-	if len(filters) == 1 {
-		return NewKongPluginName(filters[0], namespace, pluginName)
-	}
-	return newName(namespace, pluginName, utils.Hash32(filters))
+// HTTPRoute filters of a rule. When several filters map to the same Kong plugin type (e.g.
+// URLRewrite and RequestHeaderModifier both map to request-transformer) they are merged into a
+// single KongPlugin, so the name must be derived from the whole set of contributing filters.
+//
+// The route name and the rule are also part of the name: the plugin config can depend on the
+// rule beyond its filters (e.g. a URLRewrite PrefixMatch config.uri is computed from the rule's
+// match path), so identical filters used by different routes or by different rules of the same
+// route must not collide on a single shared KongPlugin. Otherwise each competing reconcile keeps
+// applying its own config onto the shared object and the config flips back and forth between the
+// two variants even though nothing changed in the cluster.
+func NewKongPluginNameForFilters(
+	filters []gatewayv1.HTTPRouteFilter,
+	namespace string,
+	pluginName string,
+	routeName string,
+	rule gatewayv1.HTTPRouteRule,
+) string {
+	return newName(namespace, pluginName, routeName, utils.Hash32(filters), utils.Hash32(rule))
 }
 
-// NewKongPluginNameForGRPCRouteFilter generates a KongPlugin name based on the GRPCRouteFilter.
-func NewKongPluginNameForGRPCRouteFilter(filter gatewayv1.GRPCRouteFilter, namespace string, pluginName string) string {
+// NewKongPluginNameForGRPCRouteFilter generates a KongPlugin name for a plugin produced by a
+// GRPCRoute filter of a rule. The route name and the rule are part of the name so that identical
+// filters used by different routes or by different rules of the same route cannot collide on a
+// single shared KongPlugin, mirroring NewKongPluginNameForFilters. Today GRPC filter configs
+// depend only on the filter contents, but a future filter type whose config depends on the rule
+// (e.g. RequestMirror) would otherwise reintroduce a shared-plugin config flip.
+func NewKongPluginNameForGRPCRouteFilter(
+	filter gatewayv1.GRPCRouteFilter,
+	namespace string,
+	pluginName string,
+	routeName string,
+	rule gatewayv1.GRPCRouteRule,
+) string {
+	return newName(namespace, pluginName, routeName, utils.Hash32(filter), utils.Hash32(rule))
+}
+
+// NewKongPluginNameForGRPCExtensionRef generates a KongPlugin name for the mirrored copy of a
+// KongPlugin referenced by a GRPCRoute ExtensionRef filter. The copy carries the referenced
+// plugin's configuration verbatim, so it is shared by every route and rule referencing the same
+// plugin; the name deliberately excludes the route and rule, matching the HTTPRoute ExtensionRef
+// naming.
+func NewKongPluginNameForGRPCExtensionRef(filter gatewayv1.GRPCRouteFilter, namespace string, pluginName string) string {
 	return newName(namespace, pluginName, utils.Hash32(filter))
 }
 
