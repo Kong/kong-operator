@@ -1,0 +1,52 @@
+# Phase A (initial): the streaming policy names its custom policy via
+# customPolicyRef; the installed one via the literal type (the custom policy's
+# plugin name). Both are GLOBAL: the runtime does not execute model-scoped
+# instances of custom plugins (built-in plugins only) — a model-scoped
+# instance is accepted at push time but silently never runs, so custom
+# policies must be global to take effect.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayPolicy
+metadata:
+  name: ($streaming_policy_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    displayName: Uses the streaming custom policy via customPolicyRef
+    enabled: "Enabled"
+    global: "Enabled"
+    name: ($streaming_policy_name)
+    customPolicyRef:
+      name: ($streaming_custom_policy_name)
+    config:
+      type: inline
+      value:
+        header_name: X-Streaming-Custom-Policy
+        header_value: ($streaming_header_value_via_ref)
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayPolicy
+metadata:
+  name: ($installed_policy_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: ($installed_plugin_name)
+    displayName: Uses the installed custom policy via literal type
+    enabled: "Enabled"
+    global: "Enabled"
+    name: ($installed_policy_name)
+    config:
+      type: inline
+      value:
+        header_name: X-Installed-Custom-Policy
+        header_value: ($installed_header_value_via_type)
