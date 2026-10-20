@@ -47,7 +47,7 @@ type grpcRouteConverter struct {
 
 // HandleOrphanedResource removes this GRPCRoute from an orphaned resource's hybrid-routes annotation.
 func (c *grpcRouteConverter) HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (skipDelete bool, err error) {
-	return handleOrphanedResourceForRoute(ctx, logger, c.Client, c.route, "GRPCRoute", resource)
+	return HandleOrphanedResourceForRoute(ctx, logger, c.Client, c.route, "GRPCRoute", resource)
 }
 
 // DesiredResourcesReady implements DesiredStateReadinessChecker. It decides whether orphan cleanup

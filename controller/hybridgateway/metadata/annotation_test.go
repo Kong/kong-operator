@@ -19,11 +19,11 @@ import (
 
 var (
 	httpRouteTypeMeta = metav1.TypeMeta{
-		Kind:       kindHTTPRoute,
+		Kind:       KindHTTPRoute,
 		APIVersion: "gateway.networking.k8s.io/v1",
 	}
 	grpcRouteTypeMeta = metav1.TypeMeta{
-		Kind:       kindGRPCRoute,
+		Kind:       KindGRPCRoute,
 		APIVersion: "gateway.networking.k8s.io/v1",
 	}
 	tlsRouteTypeMeta = metav1.TypeMeta{
@@ -31,11 +31,11 @@ var (
 		APIVersion: "gateway.networking.k8s.io/v1",
 	}
 	tcpRouteTypeMeta = metav1.TypeMeta{
-		Kind:       kindTCPRoute,
+		Kind:       KindTCPRoute,
 		APIVersion: "gateway.networking.k8s.io/v1",
 	}
 	udpRouteTypeMeta = metav1.TypeMeta{
-		Kind:       kindUDPRoute,
+		Kind:       KindUDPRoute,
 		APIVersion: "gateway.networking.k8s.io/v1",
 	}
 )
@@ -292,7 +292,7 @@ func TestBuildAnnotationsGRPCRoute(t *testing.T) {
 	assert.Equal(t, "test-namespace/test-route", result[consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation])
 
 	am := NewAnnotationManager(logr.Discard())
-	assert.Equal(t, consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation, am.RouteAnnotationKeyForKind(kindGRPCRoute))
+	assert.Equal(t, consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation, am.RouteAnnotationKeyForKind(KindGRPCRoute))
 
 	obj := &configurationv1alpha1.KongRoute{}
 	assert.True(t, am.AppendRouteToAnnotation(obj, grpcRoute), "AppendRouteToAnnotation must not no-op for GRPCRoute")
@@ -805,13 +805,13 @@ func TestGetRoutesWithKind(t *testing.T) {
 	}{
 		{
 			name:                "no annotations",
-			routeKind:           kindHTTPRoute,
+			routeKind:           KindHTTPRoute,
 			existingAnnotations: nil,
 			expected:            []string{},
 		},
 		{
 			name:      "empty annotation",
-			routeKind: kindHTTPRoute,
+			routeKind: KindHTTPRoute,
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "",
 			},
@@ -819,7 +819,7 @@ func TestGetRoutesWithKind(t *testing.T) {
 		},
 		{
 			name:      "single route",
-			routeKind: kindHTTPRoute,
+			routeKind: KindHTTPRoute,
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "test-namespace/test-route",
 			},
@@ -827,7 +827,7 @@ func TestGetRoutesWithKind(t *testing.T) {
 		},
 		{
 			name:      "multiple routes",
-			routeKind: kindHTTPRoute,
+			routeKind: KindHTTPRoute,
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,ns2/route2,ns3/route3",
 			},
@@ -835,7 +835,7 @@ func TestGetRoutesWithKind(t *testing.T) {
 		},
 		{
 			name:      "single route - TLSRoute",
-			routeKind: kindTLSRoute,
+			routeKind: KindTLSRoute,
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesTLSRouteAnnotation: "test-namespace/test-route",
 			},
@@ -843,7 +843,7 @@ func TestGetRoutesWithKind(t *testing.T) {
 		},
 		{
 			name:      "single route - TCPRoute",
-			routeKind: kindTCPRoute,
+			routeKind: KindTCPRoute,
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesTCPRouteAnnotation: "test-namespace/test-route",
 			},
@@ -851,7 +851,7 @@ func TestGetRoutesWithKind(t *testing.T) {
 		},
 		{
 			name:      "multiple routes with different kinds",
-			routeKind: kindTLSRoute,
+			routeKind: KindTLSRoute,
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,ns2/route2",
 				consts.GatewayOperatorHybridRoutesTLSRouteAnnotation:  "ns2/route2,ns3/route3",
@@ -861,7 +861,7 @@ func TestGetRoutesWithKind(t *testing.T) {
 		},
 		{
 			name:      "multiple TCPRoutes with different kinds",
-			routeKind: kindTCPRoute,
+			routeKind: KindTCPRoute,
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,ns2/route2",
 				consts.GatewayOperatorHybridRoutesTLSRouteAnnotation:  "ns2/route2,ns3/route3",
@@ -871,7 +871,7 @@ func TestGetRoutesWithKind(t *testing.T) {
 		},
 		{
 			name:      "single route - UDPRoute",
-			routeKind: kindUDPRoute,
+			routeKind: KindUDPRoute,
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesUDPRouteAnnotation: "test-namespace/test-route",
 			},
@@ -879,7 +879,7 @@ func TestGetRoutesWithKind(t *testing.T) {
 		},
 		{
 			name:      "multiple UDPRoutes with different kinds",
-			routeKind: kindUDPRoute,
+			routeKind: KindUDPRoute,
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,ns2/route2",
 				consts.GatewayOperatorHybridRoutesTCPRouteAnnotation:  "ns2/route2,ns3/route3",
@@ -930,7 +930,7 @@ func TestSetRoutesWithKind(t *testing.T) {
 		{
 			name:                "set on empty object",
 			existingAnnotations: nil,
-			routeKind:           kindHTTPRoute,
+			routeKind:           KindHTTPRoute,
 			routes:              []string{"ns1/route1"},
 			expectedAnnotation:  "ns1/route1",
 			expectModification:  true,
@@ -940,7 +940,7 @@ func TestSetRoutesWithKind(t *testing.T) {
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1",
 			},
-			routeKind:          kindHTTPRoute,
+			routeKind:          KindHTTPRoute,
 			routes:             []string{"ns1/route1"},
 			expectedAnnotation: "ns1/route1",
 			expectModification: false,
@@ -950,7 +950,7 @@ func TestSetRoutesWithKind(t *testing.T) {
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1",
 			},
-			routeKind:          kindHTTPRoute,
+			routeKind:          KindHTTPRoute,
 			routes:             []string{"ns2/route2"},
 			expectedAnnotation: "ns2/route2",
 			expectModification: true,
@@ -960,7 +960,7 @@ func TestSetRoutesWithKind(t *testing.T) {
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "old/route",
 			},
-			routeKind:          kindHTTPRoute,
+			routeKind:          KindHTTPRoute,
 			routes:             []string{"ns1/route1", "ns2/route2"},
 			expectedAnnotation: "ns1/route1,ns2/route2",
 			expectModification: true,
@@ -970,7 +970,7 @@ func TestSetRoutesWithKind(t *testing.T) {
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1",
 			},
-			routeKind:          kindHTTPRoute,
+			routeKind:          KindHTTPRoute,
 			routes:             []string{},
 			expectedAnnotation: "",
 			expectModification: true,
@@ -980,7 +980,7 @@ func TestSetRoutesWithKind(t *testing.T) {
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesTLSRouteAnnotation: "ns1/route1",
 			},
-			routeKind:          kindTLSRoute,
+			routeKind:          KindTLSRoute,
 			routes:             []string{"ns1/route1"},
 			expectedAnnotation: "ns1/route1",
 			expectModification: false,
@@ -991,7 +991,7 @@ func TestSetRoutesWithKind(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1",
 				consts.GatewayOperatorHybridRoutesTLSRouteAnnotation:  "ns2/route2",
 			},
-			routeKind:          kindTLSRoute,
+			routeKind:          KindTLSRoute,
 			routes:             []string{"ns1/route1"},
 			expectedAnnotation: "ns1/route1",
 			expectModification: true,
@@ -1001,7 +1001,7 @@ func TestSetRoutesWithKind(t *testing.T) {
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesTCPRouteAnnotation: "ns1/route1",
 			},
-			routeKind:          kindTCPRoute,
+			routeKind:          KindTCPRoute,
 			routes:             []string{"ns1/route1"},
 			expectedAnnotation: "ns1/route1",
 			expectModification: false,
@@ -1012,7 +1012,7 @@ func TestSetRoutesWithKind(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1",
 				consts.GatewayOperatorHybridRoutesTCPRouteAnnotation:  "ns2/route2",
 			},
-			routeKind:          kindTCPRoute,
+			routeKind:          KindTCPRoute,
 			routes:             []string{"ns1/route1"},
 			expectedAnnotation: "ns1/route1",
 			expectModification: true,
@@ -1022,7 +1022,7 @@ func TestSetRoutesWithKind(t *testing.T) {
 			existingAnnotations: map[string]string{
 				consts.GatewayOperatorHybridRoutesUDPRouteAnnotation: "ns1/route1",
 			},
-			routeKind:          kindUDPRoute,
+			routeKind:          KindUDPRoute,
 			routes:             []string{"ns1/route1"},
 			expectedAnnotation: "ns1/route1",
 			expectModification: false,
@@ -1033,7 +1033,7 @@ func TestSetRoutesWithKind(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1",
 				consts.GatewayOperatorHybridRoutesUDPRouteAnnotation:  "ns2/route2",
 			},
-			routeKind:          kindUDPRoute,
+			routeKind:          KindUDPRoute,
 			routes:             []string{"ns1/route1"},
 			expectedAnnotation: "ns1/route1",
 			expectModification: true,
@@ -1464,7 +1464,7 @@ func TestGenericObjectTypes(t *testing.T) {
 			assert.True(t, contains)
 
 			// Test getting routes
-			routes := am.GetRoutesWithKind(obj, kindHTTPRoute)
+			routes := am.GetRoutesWithKind(obj, KindHTTPRoute)
 			assert.Equal(t, []string{"test-namespace/test-route"}, routes)
 
 			// Test removing

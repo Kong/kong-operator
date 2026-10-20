@@ -107,7 +107,7 @@ func (c *tlsRouteConverter) GetOutputStore(_ context.Context, logger logr.Logger
 //   - skipDelete: true if the resource should NOT be deleted (skip deletion), false if it should be deleted
 //   - err: any error that occurred during processing
 func (c *tlsRouteConverter) HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (skipDelete bool, err error) {
-	return handleOrphanedResourceForRoute(ctx, logger, c.Client, c.route, "TLSRoute", resource)
+	return HandleOrphanedResourceForRoute(ctx, logger, c.Client, c.route, "TLSRoute", resource)
 }
 
 // Translate implements APIConverter.
