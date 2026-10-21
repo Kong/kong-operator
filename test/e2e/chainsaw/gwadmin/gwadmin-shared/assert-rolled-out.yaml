@@ -1,0 +1,11 @@
+# The Deployment of the GWAdmin rolled out its current spec, with replicas
+# Ready pods (the peers provisioned them) and no old one left.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ($gwadmin_name)
+(status.observedGeneration >= metadata.generation): true
+status:
+  replicas: ($replicas)
+  updatedReplicas: ($replicas)
+  readyReplicas: ($replicas)

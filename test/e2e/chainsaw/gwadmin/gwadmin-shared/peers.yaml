@@ -1,0 +1,241 @@
+# Peers of a GWAdmin, standing in for Kong Operator pushing the configuration
+# and for the data planes pulling it, until both exist.
+#
+# Every second, for every gw-admin pod that is not terminating, the peers:
+#   - provision it through the API listener with the operator client
+#     certificate, verifying the server against the API trust bundle
+#     (declaring an empty set of Event Gateways turns it Ready);
+#   - connect to its cp listener with a data plane client certificate,
+#     verifying the server against the cp server trust bundle
+#     (status.tls.cpServerCABundleSecretName), which also holds the issuers
+#     of a Manual cp certificate;
+#   - check that neither listener accepts the client certificate of the
+#     other: the operator client certificate on the cp listener, the data
+#     plane client certificate on the API listener;
+#   - check that a server certificate for the cp host, issued from the
+#     published cp client CA, is rejected by a client verifying with the cp
+#     server trust bundle: whoever issues data plane certificates can't
+#     impersonate gw-admin.
+# Every connection presents a client certificate, so it fails if any side
+# doesn't trust the other. The trust material is read through the API on
+# every round, like Kong Operator does.
+#
+# The operator client certificate and the published cp client CA are read
+# from the operator namespace (OPERATOR_NAMESPACE), where Kong Operator keeps
+# them, named after the UID of the GWAdmin.
+#
+# The peers also stand in for the controller managing the data plane
+# gwadmin-dp (below), as the OnPrem controller will: on every round, when
+# the cp client CA published in gwadmin-<uid>-cp-client-ca isn't the one
+# gwadmin-dp's certificate comes from, they issue a client certificate from it into Secret
+# gwadmin-dp-client; then, when gwadmin-dp's Pod template doesn't record the
+# published CA and the current cp server bundle, they record them, which
+# rolls it. Kong Operator waits for that rollout to move the cp server
+# certificate to a new issuer, and to stop trusting a previous cp client
+# CA. Creating ConfigMap gwadmin-dp-pause pauses that part (gwadmin.sh
+# dp-pause / dp-resume), stopping the peers too. The peers log a "PAUSED"
+# line once they see it: no roll of gwadmin-dp is in progress anymore.
+#
+# The peers' own checks of the cp listener use gwadmin-dp-client, read
+# through the API: always issued from a CA the gw-admin pods trust.
+#
+# Every TLS failure of a pod that is still alive (not terminating) is logged
+# as a "FAIL" line: Kong Operator orders the changes of the trust material so
+# that any combination of the Secrets read at any time works, so no failure is
+# tolerated. A TLS failure of a pod that turned terminating meanwhile is
+# logged as "GONE" and ignored: its connections may be cut mid-handshake.
+# Connection-level errors (a pod starting or stopping) are not failures.
+# Every round logs a "ROUND" line once every pod was checked, and only when
+# at least one pod passed every check: a round checking nothing proves
+# nothing.
+#
+# gwadmin-dp is the data plane: it loads the cp server bundle and its client
+# certificate mounted at start, never reloading them, and checks every
+# gw-admin pod's cp listener with them every second. As its pods are rolled,
+# losing their logs, a TLS failure of a pod that is still alive is recorded
+# in ConfigMap gwadmin-dp-failures too, which assert-no-failures reads. Like
+# the peers, it logs a "DPROUND" line only when at least one pod accepted it.
+#
+# The peers run peers.sh, gwadmin-dp runs dp.sh, both next to this file and
+# mounted from ConfigMaps gwadmin-peers and gwadmin-dp, which
+# `gwadmin.sh peers-scripts` creates before this file is applied.
+#
+# Bindings: gwadmin_name. Kong Operator runs in kong-system.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gwadmin-peers
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: gwadmin-peers
+rules:
+  - apiGroups: [""]
+    resources: [secrets]
+    verbs: [get, create, update, patch]
+  - apiGroups: [""]
+    resources: [configmaps]
+    verbs: [get]
+  - apiGroups: [apps]
+    resources: [deployments]
+    verbs: [get, patch]
+  - apiGroups: [discovery.k8s.io]
+    resources: [endpointslices]
+    verbs: [list]
+  - apiGroups: [gateway-operator.konghq.com]
+    resources: [gwadmins]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gwadmin-peers
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: gwadmin-peers
+subjects:
+  - kind: ServiceAccount
+    name: gwadmin-peers
+---
+# The operator client certificate and the published cp client CA live in the
+# operator namespace.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: (join('-', ['gwadmin-peers', $namespace]))
+  namespace: kong-system
+rules:
+  - apiGroups: [""]
+    resources: [secrets]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: (join('-', ['gwadmin-peers', $namespace]))
+  namespace: kong-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: (join('-', ['gwadmin-peers', $namespace]))
+subjects:
+  - kind: ServiceAccount
+    name: gwadmin-peers
+    namespace: ($namespace)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gwadmin-peers
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gwadmin-peers
+  template:
+    metadata:
+      labels:
+        app: gwadmin-peers
+    spec:
+      serviceAccountName: gwadmin-peers
+      # sh ignores SIGTERM as PID 1: don't keep provisioning gw-admin pods
+      # for 30s once the peers are stopped.
+      terminationGracePeriodSeconds: 1
+      containers:
+        - name: peers
+          image: alpine/k8s:1.33.4
+          command: [sh, /scripts/peers.sh]
+          env:
+            - name: GWADMIN
+              value: ($gwadmin_name)
+            - name: OPERATOR_NAMESPACE
+              value: kong-system
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+      volumes:
+        - name: scripts
+          configMap:
+            name: gwadmin-peers
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gwadmin-dp
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: gwadmin-dp
+rules:
+  - apiGroups: [""]
+    resources: [configmaps]
+    verbs: [get, create, patch]
+  - apiGroups: [discovery.k8s.io]
+    resources: [endpointslices]
+    verbs: [list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: gwadmin-dp
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: gwadmin-dp
+subjects:
+  - kind: ServiceAccount
+    name: gwadmin-dp
+---
+# The data plane of the GWAdmin, as Kong Operator manages them: labelled
+# with it, and recording on its Pod template what it mounts (set by the
+# peers, standing in for its controller).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gwadmin-dp
+  labels:
+    gateway-operator.konghq.com/gwadmin-namespace: ($namespace)
+    gateway-operator.konghq.com/gwadmin-name: ($gwadmin_name)
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gwadmin-dp
+  template:
+    metadata:
+      labels:
+        app: gwadmin-dp
+    spec:
+      serviceAccountName: gwadmin-dp
+      terminationGracePeriodSeconds: 1
+      containers:
+        - name: dp
+          image: alpine/k8s:1.33.4
+          command: [sh, /scripts/dp.sh]
+          env:
+            - name: GWADMIN
+              value: ($gwadmin_name)
+          volumeMounts:
+            - name: scripts
+              mountPath: /scripts
+            - name: server-bundle
+              mountPath: /etc/dp/server
+              readOnly: true
+            - name: client
+              mountPath: /etc/dp/client
+              readOnly: true
+      volumes:
+        - name: scripts
+          configMap:
+            name: gwadmin-dp
+        - name: server-bundle
+          secret:
+            secretName: (join('-', [$gwadmin_name, 'cp-server-ca-bundle']))
+            optional: true
+        - name: client
+          secret:
+            secretName: gwadmin-dp-client
+            optional: true

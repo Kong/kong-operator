@@ -1,0 +1,10 @@
+# The certificates of the GWAdmin wait for the data plane dp_name to roll out.
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: GWAdmin
+metadata:
+  name: ($gwadmin_name)
+status:
+  (conditions[?type == 'CertificateProvisioned']):
+    - status: "True"
+      reason: CARotationInProgress
+      (contains(message, $dp_name)): true

@@ -31,6 +31,35 @@ type ruleKongPluginConfig struct {
 	kongPluginConfig
 
 	filters []gwtypes.HTTPRouteFilter
+
+	// dependsOnRuleMatchPaths reports whether the configuration was produced by filters whose
+	// translation reads the rule's paths in matches (see filterDependsOnRuleMatchPaths). Such plugins must
+	// be named with the matches hashed in (namegen.NewKongPluginNameForFiltersAndMatches) or
+	// two rules with identical filters but different matches collide on one shared KongPlugin.
+	dependsOnRuleMatchPaths bool
+}
+
+// filterDependsOnRuleMatchPaths reports whether translating filter produces a config that depends
+// on the rule's paths in matches, not just on the filter contents. MUST be kept in sync with the
+// translation functions in this file: any filter whose translation reads path(s) in rule.Matches must be
+// listed here, otherwise two rules with identical filters but different matches collide on one
+// shared KongPlugin whose config flips between the two translations (see
+// translatePathReplacePrefixMatch and translateRequestRedirectPreFunction).
+func filterDependsOnRuleMatchPaths(filter gwtypes.HTTPRouteFilter) bool {
+	switch filter.Type {
+	case gatewayv1.HTTPRouteFilterURLRewrite:
+		// translateURLRewrite computes the replacement URI from the rule's first prefix match
+		// (the root-vs-non-root branch in translatePathReplacePrefixMatch).
+		return filter.URLRewrite != nil && filter.URLRewrite.Path != nil &&
+			filter.URLRewrite.Path.Type == gatewayv1.PrefixMatchHTTPPathModifier
+	case gatewayv1.HTTPRouteFilterRequestRedirect:
+		// translateRequestRedirectPreFunction embeds the rule's first prefix match in the
+		// generated pre-function body.
+		return filter.RequestRedirect != nil && filter.RequestRedirect.Path != nil &&
+			filter.RequestRedirect.Path.Type == gatewayv1.PrefixMatchHTTPPathModifier
+	default:
+		return false
+	}
 }
 
 // translateRuleFilters translates all non-ExtensionRef filters of a rule into KongPlugin
@@ -58,12 +87,14 @@ func translateRuleFilters(rule gwtypes.HTTPRouteRule) ([]ruleKongPluginConfig, e
 		}
 
 		for _, conf := range confs {
+			dependsOnRuleMatchPaths := filterDependsOnRuleMatchPaths(filter)
 			existing, ok := byName[conf.name]
 			if !ok {
 				order = append(order, conf.name)
 				byName[conf.name] = &ruleKongPluginConfig{
-					kongPluginConfig: conf,
-					filters:          []gwtypes.HTTPRouteFilter{filter},
+					kongPluginConfig:        conf,
+					filters:                 []gwtypes.HTTPRouteFilter{filter},
+					dependsOnRuleMatchPaths: dependsOnRuleMatchPaths,
 				}
 				continue
 			}
@@ -74,6 +105,9 @@ func translateRuleFilters(rule gwtypes.HTTPRouteRule) ([]ruleKongPluginConfig, e
 			}
 			existing.config = merged
 			existing.filters = append(existing.filters, filter)
+			// A merged plugin carrying a match-dependent contribution (e.g. a URLRewrite URI
+			// merged with header operations) is itself match-dependent.
+			existing.dependsOnRuleMatchPaths = existing.dependsOnRuleMatchPaths || dependsOnRuleMatchPaths
 		}
 	}
 

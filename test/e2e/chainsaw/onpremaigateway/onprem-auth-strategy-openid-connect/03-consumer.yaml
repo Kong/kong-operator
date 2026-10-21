@@ -1,0 +1,19 @@
+# An oauth-typed AIGatewayConsumer whose customID equals the oidc-mock client's
+# client_id: the openid-connect strategy's consumerClaims maps a validated
+# token's client_id claim onto this customID.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayConsumer
+metadata:
+  name: ($consumer_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    name: ($consumer_name)
+    displayName: ($consumer_name)
+    type: oauth
+    customID: ($oidc_client_id)

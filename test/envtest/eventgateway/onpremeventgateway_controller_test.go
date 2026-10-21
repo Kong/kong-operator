@@ -90,8 +90,7 @@ func TestOnPremEventGatewayReconciler(t *testing.T) {
 		return objectFromYAML[eventgatewayv1alpha1.OnPremEventGateway](t, ns.Name, `
 metadata: {name: `+name+`}
 spec:
-  gwAdmin:
-    service: {name: gw-admin, portName: admin}
+  gwAdminRef: {name: gw-admin}
 `)
 	}
 	gatewayA := newGateway("gateway-a")

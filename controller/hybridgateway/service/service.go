@@ -187,7 +187,7 @@ func ServiceForRuleWithName[
 
 	pRefNamespace := metadata.NamespaceFromParentRef(parentRoute, pRef)
 
-	tags := utils.TagsFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+	backendTags := utils.TagsFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
 
 	// Resolve client certificate from the backend Service annotations (first-wins).
 	certSecretName, certOwnerSvc := resolveClientCertFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
@@ -222,7 +222,6 @@ func ServiceForRuleWithName[
 		WithRetries(retries).
 		WithClientCertificateRef(clientCertRefName(kongCertificate)).
 		WithControlPlaneRef(*cp).
-		WithSpecTags(tags).
 		Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongService resource")
@@ -231,6 +230,14 @@ func ServiceForRuleWithName[
 
 	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &service, parentRoute, false); err != nil {
 		return nil, nil, nil, err
+	}
+
+	// Tags are set after VerifyAndUpdate, once the KongService identity is final: a KongService is
+	// shared by every route with the same backends and ControlPlane, so the inherited tags must be
+	// resolved from all of its attached routes rather than from this one alone.
+	if tags := utils.MergeTags(logger, backendTags,
+		utils.InheritedTagsForKongObject(ctx, logger, cl, parentRoute, &service)); len(tags) > 0 {
+		service.Spec.Tags = commonv1alpha1.Tags(tags)
 	}
 
 	return &service, kongCertificate, kongReferenceGrant, nil
@@ -315,8 +322,9 @@ func buildClientCertificate[
 		return nil
 	}
 
-	// KongCertificate tags come solely from the client-cert Secret's konghq.com/tags
-	// annotation. Tags on the backend Service must not leak here.
+	// KongCertificate tags come from the client-cert Secret's konghq.com/tags annotation plus the
+	// tags inherited from the parent Gateway and its GatewayClass. Tags on the backend Service
+	// must still not leak here.
 	certTags := pkgmetadata.ExtractTags(secret)
 
 	cert, err := builder.NewKongCertificate().
@@ -326,7 +334,6 @@ func buildClientCertificate[
 		WithControlPlaneRef(*cp).
 		WithLabelsForRoute(parentRoute, pRef).
 		WithAnnotationsForRoute(parentRoute, pRef).
-		WithSpecTags(certTags).
 		Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongCertificate resource", "cert", serviceName)
@@ -336,6 +343,13 @@ func buildClientCertificate[
 	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &cert, parentRoute, false); err != nil {
 		log.Error(logger, err, "Failed to verify/update KongCertificate", "cert", serviceName)
 		return nil
+	}
+
+	// Resolved after VerifyAndUpdate for the same reason as the KongService's: this certificate is
+	// named after the KongService, so it is shared by every route that shares that service.
+	if tags := utils.MergeTags(logger, certTags,
+		utils.InheritedTagsForKongObject(ctx, logger, cl, parentRoute, &cert)); len(tags) > 0 {
+		cert.Spec.Tags = commonv1alpha1.Tags(tags)
 	}
 
 	return &cert

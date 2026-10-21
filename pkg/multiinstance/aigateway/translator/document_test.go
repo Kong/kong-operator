@@ -291,6 +291,10 @@ func aiGatewayAgentFixture(name string) *aiconfigurationv1alpha1.AIGatewayAgent 
 				Type:        "http",
 				Config: aiconfigurationv1alpha1.AIGatewayAgentConfig{
 					URL: "http://upstream:8080",
+					// A route with no matcher matches every request, and the
+					// converter warns about it (ROUTING_CONFLICT), which would
+					// break the pristine-render no-warnings assertion below.
+					Route: aiconfigurationv1alpha1.AIGatewayRouteConfig{Paths: []string{"/agent/" + name}},
 				},
 				// Resolves to the referenced entities' names (their spec names equal their
 				// k8s names in the fixtures).
@@ -577,6 +581,41 @@ func TestBuildDocument(t *testing.T) {
 	}
 	require.NotNil(t, modelErr, "expected an ERROR issue for the unconvertible model, got %v", issues)
 	require.Equal(t, "model-a", modelErr.Source.Name)
+}
+
+// TestRenderDBLessYAML_EmptyConfigGetsStubUpstream covers the stub entity: a Kong data
+// plane does not report ready while its applied configuration is empty, so a gateway
+// with no configuration entities gets an inert upstream instead of an empty payload.
+func TestRenderDBLessYAML_EmptyConfigGetsStubUpstream(t *testing.T) {
+	t.Parallel()
+
+	payload, issues, err := RenderDBLessYAML(&aigw.Document{}, convert.Options{})
+	require.NoError(t, err)
+	require.Empty(t, issues)
+
+	var content struct {
+		FormatVersion string `yaml:"_format_version"`
+		Upstreams     []struct {
+			Name string `yaml:"name"`
+		} `yaml:"upstreams"`
+	}
+	require.NoError(t, yaml.Unmarshal(payload, &content))
+	require.NotEmpty(t, content.FormatVersion, "the rendered format version must be kept")
+	require.Len(t, content.Upstreams, 1)
+	require.Equal(t, stubUpstreamName, content.Upstreams[0].Name)
+
+	// A payload that carries entities is not touched.
+	withEntities := []byte("_format_version: \"3.0\"\n_transform: false\nservices:\n- name: svc\n")
+	out, err := ensureNonEmptyConfig(withEntities)
+	require.NoError(t, err)
+	require.Equal(t, withEntities, out)
+
+	// A payload that decodes to no mapping at all is stubbed too, rather than
+	// failing on a write to a nil map. The format version is seeded, because
+	// Kong rejects a payload that carries none.
+	out, err = ensureNonEmptyConfig(nil)
+	require.NoError(t, err)
+	require.Equal(t, "_format_version: \"3.0\"\nupstreams:\n    - name: kong\n", string(out))
 }
 
 // TestBuildDocument_NoModels covers the empty case: an OnPremAIGateway with no AIGatewayModels

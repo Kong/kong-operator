@@ -1,0 +1,12 @@
+# The status of the GWAdmin names the trust bundles of its listeners, and
+# never the Secret holding the key of the cp client CA, which Kong Operator
+# keeps in its own namespace.
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: GWAdmin
+metadata:
+  name: ($gwadmin_name)
+status:
+  tls:
+    (cpClientCASecretName == null): true
+    cpServerCABundleSecretName: (join('-', [$gwadmin_name, 'cp-server-ca-bundle']))
+    apiCABundleSecretName: (join('-', [$gwadmin_name, 'api-ca-bundle']))

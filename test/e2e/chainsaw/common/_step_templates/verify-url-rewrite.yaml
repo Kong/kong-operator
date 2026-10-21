@@ -1,0 +1,54 @@
+# Template for verifying that the gateway rewrites the request path before proxying it
+# upstream. The upstream must be go-httpbin: its /anything endpoint echoes the received
+# request as JSON, including the final "url" the backend saw. The check succeeds when that
+# "url" ends with the expected suffix (e.g. a request to /get/a rewritten by a URLRewrite
+# filter with replacePrefixMatch "/anything/" produces a "url" ending with "/anything/a").
+#
+# Required bindings:
+#   - gateway_name: Name of the Gateway.
+#   - gateway_namespace: Namespace of the Gateway.
+#   - route_path: HTTP path to test (e.g., "/get/a").
+#   - expected_url_suffix: The suffix the echoed "url" must end with (e.g., "/anything/a").
+#   - host_header: (optional) Host header to send with the request.
+#   - listener_http_port: (optional) HTTP port to test. Default: 80.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: verify-url-rewrite
+spec:
+  try:
+    # 1. Dynamically discover the Gateway's Proxy IP.
+    - script:
+        env:
+          - name: GATEWAY_NAME
+            value: ($gateway_name)
+          - name: GATEWAY_NAMESPACE
+            value: ($gateway_namespace)
+        content: |
+          bash ../../common/scripts/proxy_ip_address.sh
+        outputs:
+          - name: proxy_ip
+            value: (json_parse($stdout).proxy_ip_address)
+        check:
+          (json_parse($stdout).proxy_ip_address != null): true
+          (json_parse($stdout).proxy_ip_address != ''): true
+
+    # 2. Perform the request and verify the rewritten URL echoed by the backend.
+    - script:
+        env:
+          - name: PROXY_IP
+            value: ($proxy_ip)
+          - name: ROUTE_PATH
+            value: ($route_path)
+          - name: EXPECTED_URL_SUFFIX
+            value: ($expected_url_suffix)
+          - name: PROXY_PORT
+            # The global listener_http_port binding is an integer, but chainsaw script env
+            # values must be strings - convert explicitly (same as verify-header-match-routing).
+            value: (to_string($listener_http_port))
+          - name: HOST
+            value: ($host_header)
+        content: |
+          bash ../../common/scripts/verify_url_rewrite.sh
+        check:
+          (json_parse($stdout).success): true

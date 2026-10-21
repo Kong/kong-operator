@@ -683,7 +683,14 @@ func (i *Instance) Run(ctx context.Context) error {
 	defer func() {
 		// Drain the manager result so its goroutine never leaks.
 		select {
-		case <-mgrErrCh:
+		case err, ok := <-mgrErrCh:
+			if !ok {
+				return
+			}
+			if err != nil {
+				i.logger.Error(err, "Instance controller manager failed when draining")
+			}
+
 		default:
 		}
 	}()

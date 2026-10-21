@@ -1,0 +1,11 @@
+# The rotation waits for the data plane gwadmin-dp, which runs the previous
+# cp server bundle.
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: GWAdmin
+metadata:
+  name: ($gwadmin_name)
+status:
+  (conditions[?type == 'CertificateProvisioned']):
+    - status: "True"
+      reason: CARotationInProgress
+      (contains(message, 'gwadmin-dp')): true

@@ -1,0 +1,13 @@
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: GWAdmin
+metadata:
+  name: ($gwadmin_name)
+  annotations:
+    # Rotates the API CA and the cp server CA at the same time.
+    gateway-operator.konghq.com/rotate-certificate-authorities: "1"
+spec:
+  tls:
+    clientCA:
+      provisioning: Manual
+      secretRef:
+        name: user-ca

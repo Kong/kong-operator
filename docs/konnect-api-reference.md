@@ -1227,8 +1227,8 @@ KonnectEndpoints defines the Konnect endpoints for the control plane.
 
 | Field | Description |
 | --- | --- |
-| `telemetry` _string_ | TelemetryEndpoint is the endpoint for telemetry. |
-| `controlPlane` _string_ | ControlPlaneEndpoint is the endpoint for the control plane. |
+| `telemetry` _string_ | TelemetryEndpoint is the telemetry endpoint of the Konnect control plane, as returned by Konnect: it may carry a path, e.g. reached over PrivateLink. |
+| `controlPlane` _string_ | ControlPlaneEndpoint is the control plane endpoint, as returned by Konnect: it may carry a path, e.g. reached over PrivateLink. |
 
 _Appears in:_
 
@@ -2731,8 +2731,8 @@ KonnectEndpoints defines the Konnect endpoints for the control plane.
 
 | Field | Description |
 | --- | --- |
-| `telemetry` _string_ | TelemetryEndpoint is the endpoint for telemetry. |
-| `controlPlane` _string_ | ControlPlaneEndpoint is the endpoint for the control plane. |
+| `telemetry` _string_ | TelemetryEndpoint is the telemetry endpoint of the Konnect control plane, as returned by Konnect: it may carry a path, e.g. reached over PrivateLink. |
+| `controlPlane` _string_ | ControlPlaneEndpoint is the control plane endpoint, as returned by Konnect: it may carry a path, e.g. reached over PrivateLink. |
 
 _Appears in:_
 

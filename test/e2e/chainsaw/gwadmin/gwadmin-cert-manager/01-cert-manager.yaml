@@ -1,0 +1,73 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigned
+spec:
+  selfSigned: {}
+---
+# The CA of the GWAdmin. Changing its subject makes cert-manager reissue it
+# with a new key (rotationPolicy: Always).
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: gw-cm-user-ca
+spec:
+  isCA: true
+  commonName: gw-cm-user-ca
+  subject:
+    organizations:
+      - ($ca_organization)
+  secretName: gw-cm-user-ca
+  secretTemplate:
+    labels:
+      konghq.com/secret: "true"
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  issuerRef:
+    kind: Issuer
+    name: selfsigned
+---
+# A CA standing in for a public one, issuing the cp server certificate.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: public-ca
+spec:
+  isCA: true
+  commonName: public-ca
+  secretName: public-ca
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    kind: Issuer
+    name: selfsigned
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: public
+spec:
+  ca:
+    secretName: public-ca
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: cp-cert
+spec:
+  secretName: cp-cert
+  secretTemplate:
+    labels:
+      konghq.com/secret: "true"
+  dnsNames:
+    - (join('', [($gwadmin_name), '-cp.', ($namespace), '.svc']))
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  issuerRef:
+    kind: Issuer
+    name: public

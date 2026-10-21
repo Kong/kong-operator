@@ -1,0 +1,222 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: gwadmin-data-plane-scope
+spec:
+  description: |
+    Only the data planes the owner of the GWAdmin allows hold its rotations
+    back, and a compromise rotation can skip them:
+    1. A GWAdmin and its data plane gwadmin-dp, in its namespace, whose
+       controller the peers stand in for. In another namespace, a Deployment
+       dp-other is labelled as a data plane of the GWAdmin, but never records
+       the trust material it mounts.
+    2. Without a KongReferenceGrant, dp-other doesn't count: the
+       certificate authorities rotated with the
+       rotate-certificate-authorities annotation, the cp server certificate
+       moves to the new cp server CA once gwadmin-dp runs the bundle trusting
+       it, and the previous cp client CA is dropped once gwadmin-dp runs a
+       certificate from the new one.
+    3. A KongReferenceGrant in the namespace of the GWAdmin allows the
+       OnPremEventGateways of the other namespace to reference it: dp-other
+       counts, and the next rotation waits for it, naming it in the
+       CertificateProvisioned condition.
+    4. The rotation-skip-data-planes annotation stops the rotations from
+       waiting for the data planes, as for a compromised certificate
+       authority: the rotation completes, and the condition warns about it.
+    The peers and gwadmin-dp never see a TLS failure.
+  bindings:
+    - name: gwadmin_name
+      value: gw-scope
+    - name: other_namespace
+      value: (join('-', [$namespace, 'other']))
+    - name: work_dir
+      value: (join('', ['/tmp/gwadmin-e2e-', ($namespace)]))
+  steps:
+    - name: 1-Create-gwadmin-and-data-planes
+      try:
+        - apply:
+            file: 01-gwadmin.yaml
+        # The scripts the peers and gwadmin-dp run, from gwadmin-shared.
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+            content: ../gwadmin-shared/gwadmin.sh peers-scripts
+        - apply:
+            file: ../gwadmin-shared/peers.yaml
+        - assert:
+            timeout: 4m
+            file: ../gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 1}
+        - apply:
+            file: 01-other-data-plane.yaml
+        - script:
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+              - name: WORK_DIR
+                value: ($work_dir)
+            timeout: 4m
+            content: ../gwadmin-shared/gwadmin.sh wait-dp-current "$GWADMIN" 180
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../gwadmin-shared/gwadmin.sh save-private-ca "$GWADMIN" cp-server-ca "$WORK_DIR/server-0"
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../gwadmin-shared/gwadmin.sh save-private-ca "$GWADMIN" cp-client-ca "$WORK_DIR/client-0"
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../gwadmin-shared/gwadmin.sh assert-leaves-on "$GWADMIN" "$WORK_DIR/server-0/tls.crt" cp
+      cleanup:
+        - script:
+            env: *env
+            content: ../gwadmin-shared/gwadmin.sh clean-work-dir
+    - name: 2-An-ungranted-data-plane-is-ignored
+      try:
+        - patch:
+            resource:
+              apiVersion: gateway-operator.konghq.com/v1alpha1
+              kind: GWAdmin
+              metadata:
+                name: ($gwadmin_name)
+                annotations:
+                  gateway-operator.konghq.com/rotate-certificate-authorities: "1"
+        - script:
+            env: *env
+            timeout: 8m
+            content: ../gwadmin-shared/gwadmin.sh wait-new-private-ca "$GWADMIN" cp-server-ca "$WORK_DIR/server-0/tls.crt" "$WORK_DIR/server-1" 60
+        - script:
+            env: *env
+            timeout: 8m
+            content: ../gwadmin-shared/gwadmin.sh wait-leaves-on "$GWADMIN" "$WORK_DIR/server-1/tls.crt" 240 cp
+        - script:
+            env: *env
+            timeout: 8m
+            content: ../gwadmin-shared/gwadmin.sh wait-new-private-ca "$GWADMIN" cp-client-ca "$WORK_DIR/client-0/tls.crt" "$WORK_DIR/client-1" 240
+        - script:
+            env: *env
+            timeout: 8m
+            content: ../gwadmin-shared/gwadmin.sh wait-dp-current "$GWADMIN" 180
+        # dp-other never ran anything: had it counted, the previous cp client
+        # CA would stay trusted.
+        - assert:
+            timeout: 2m
+            file: ../gwadmin-shared/assert-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 1}
+        - assert:
+            timeout: 2m
+            file: ../gwadmin-shared/assert-server-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 1}
+        - assert:
+            timeout: 3m
+            file: ../gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 1}
+    - name: 3-A-granted-data-plane-holds-the-rotation-back
+      try:
+        - apply:
+            file: 03-grant.yaml
+        - patch:
+            resource:
+              apiVersion: gateway-operator.konghq.com/v1alpha1
+              kind: GWAdmin
+              metadata:
+                name: ($gwadmin_name)
+                annotations:
+                  gateway-operator.konghq.com/rotate-certificate-authorities: "2"
+        - script:
+            env: *env
+            timeout: 8m
+            content: ../gwadmin-shared/gwadmin.sh wait-new-private-ca "$GWADMIN" cp-server-ca "$WORK_DIR/server-1/tls.crt" "$WORK_DIR/server-2" 60
+        # The new cp client CA is published once the gw-admin pods
+        # trust it, and gwadmin-dp moves to it.
+        - script:
+            env: *env
+            timeout: 8m
+            content: ../gwadmin-shared/gwadmin.sh wait-new-private-ca "$GWADMIN" cp-client-ca "$WORK_DIR/client-1/tls.crt" "$WORK_DIR/client-2" 240
+        - script:
+            env: *env
+            timeout: 8m
+            content: ../gwadmin-shared/gwadmin.sh wait-dp-current "$GWADMIN" 180
+        - assert:
+            timeout: 1m
+            file: assert-waiting-on.yaml
+            bindings:
+              - name: dp_name
+                value: (join('/', [$other_namespace, 'dp-other']))
+        # dp-other doesn't run the bundle trusting the new cp server CA, nor a
+        # certificate from the new cp client CA.
+        - script:
+            env: *env
+            timeout: 1m
+            content: ../gwadmin-shared/gwadmin.sh expect-leaves-stay-on "$GWADMIN" "$WORK_DIR/server-1/tls.crt" 20 cp
+        - assert:
+            timeout: 5s
+            file: ../gwadmin-shared/assert-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 2}
+    - name: 4-Skipping-the-data-planes-completes-the-rotation
+      try:
+        - patch:
+            resource:
+              apiVersion: gateway-operator.konghq.com/v1alpha1
+              kind: GWAdmin
+              metadata:
+                name: ($gwadmin_name)
+                annotations:
+                  gateway-operator.konghq.com/rotation-skip-data-planes: "true"
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../gwadmin-shared/gwadmin.sh wait-leaves-on "$GWADMIN" "$WORK_DIR/server-2/tls.crt" 120 cp
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../gwadmin-shared/gwadmin.sh wait-dp-current "$GWADMIN" 180
+        - assert:
+            timeout: 2m
+            file: ../gwadmin-shared/assert-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 1}
+        - assert:
+            timeout: 3m
+            file: ../gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 1}
+        - assert:
+            timeout: 2m
+            file: ../gwadmin-shared/assert-server-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 1}
+        - assert:
+            timeout: 1m
+            file: assert-skipping-data-planes.yaml
+        # A few more rounds of handshakes against the final state.
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../gwadmin-shared/gwadmin.sh wait-rounds 3 60
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../gwadmin-shared/gwadmin.sh assert-no-failures
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

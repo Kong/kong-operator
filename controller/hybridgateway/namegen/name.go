@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/samber/lo"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -427,11 +428,32 @@ func NewKongPluginName(filter gatewayv1.HTTPRouteFilter, namespace string, plugi
 // RequestHeaderModifier both map to request-transformer) they are merged into a single KongPlugin,
 // so the name must be derived from the whole set of contributing filters. The single-filter case
 // is kept identical to NewKongPluginName to avoid renaming existing resources.
+//
+// Only use this for filters whose translation depends solely on the filter contents. For filters
+// whose translation also depends on the rule's matches (see plugin.filterDependsOnRuleMatches)
+// use NewKongPluginNameForFiltersAndMatches instead: two rules with identical filters but
+// different matches would otherwise collide on a single shared KongPlugin whose config flips
+// between the two translations.
 func NewKongPluginNameForFilters(filters []gatewayv1.HTTPRouteFilter, namespace string, pluginName string) string {
 	if len(filters) == 1 {
 		return NewKongPluginName(filters[0], namespace, pluginName)
 	}
 	return newName(namespace, pluginName, utils.Hash32(filters))
+}
+
+// NewKongPluginNameForFiltersAndMatchPaths generates a KongPlugin name for a plugin produced by
+// filters whose configuration depends on the rule's paths in matches (see
+// plugin.filterDependsOnRuleMatches). Hashing both the filters and the paths in matches guarantees that
+// any two rules producing the same name produce the same config, so the plugin can still be
+// shared across routes with identical rules.
+func NewKongPluginNameForFiltersAndMatchPaths(
+	filters []gatewayv1.HTTPRouteFilter,
+	namespace string,
+	pluginName string,
+	matches []gatewayv1.HTTPRouteMatch,
+) string {
+	paths := lo.Map(matches, func(m gatewayv1.HTTPRouteMatch, _ int) *gatewayv1.HTTPPathMatch { return m.Path })
+	return newName(namespace, pluginName, utils.Hash32(filters), utils.Hash32(paths))
 }
 
 // NewKongPluginNameForGRPCRouteFilter generates a KongPlugin name based on the GRPCRouteFilter.

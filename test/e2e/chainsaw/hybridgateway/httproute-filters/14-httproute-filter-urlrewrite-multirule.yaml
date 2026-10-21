@@ -1,0 +1,95 @@
+##
+# Two HTTPRoutes, each with one rule carrying the IDENTICAL URLRewrite filter (path.type
+# ReplacePrefixMatch, replacePrefixMatch: "/anything/") but a different match path
+# (/get and /).
+#
+# Each route translates to its own request-transformer KongPlugin whose replace.uri is derived
+# from that rule's match path (see translatePathReplacePrefixMatch in
+# controller/hybridgateway/plugin/converter.go):
+#   - route matching /get (non-root) -> /anything$(uri_captures[1])
+#   - route matching / (root)        -> /anything$(uri_captures[1] == nil and "" or "/" .. uri_captures[1])
+#
+# Regression test for the shared-plugin name collision: when the generated KongPlugin name was
+# derived from the filter contents alone, both routes collided on ONE shared KongPlugin whose
+# config.uri flipped between the two translations on every reconcile, even though nothing
+# changed in the cluster. With the fix, each route gets its own KongPlugin with the correct
+# config, asserted in the chainsaw-test.yaml steps for these routes.
+#
+# Required bindings:
+#   - http_route_urlrewrite_multirule_get_name: Name of the HTTPRoute matching /get
+#   - http_route_urlrewrite_multirule_root_name: Name of the HTTPRoute matching /
+#   - http_route_urlrewrite_multirule_namespace: Namespace of both HTTPRoute resources
+#   - test_name: The test name label to match (used for labels)
+#   - urlrewrite_multirule_get_hosts: List of hostnames for the /get route
+#   - urlrewrite_multirule_root_hosts: List of hostnames for the / route
+#   - gateway_name: Name of the Gateway parent resource
+#   - httpbin_deployment_name: Name of the httpbin backend service
+#   - httpbin_deployment_namespace: Namespace of the httpbin backend service
+
+---
+kind: HTTPRoute
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: ($http_route_urlrewrite_multirule_get_name)
+  namespace: ($http_route_urlrewrite_multirule_namespace)
+  labels:
+    chainsaw/test: ($test_name)
+  annotations:
+    konghq.com/strip-path: "false"
+spec:
+  hostnames: ($urlrewrite_multirule_get_hosts)
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ($gateway_name)
+  rules:
+    # Non-root prefix match: the translated uri appends the capture group (which includes the
+    # leading slash) directly to the replacement prefix.
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /get
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /anything/
+      backendRefs:
+        - name: ($httpbin_deployment_name)
+          port: 80
+          namespace: ($httpbin_deployment_namespace)
+
+---
+kind: HTTPRoute
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: ($http_route_urlrewrite_multirule_root_name)
+  namespace: ($http_route_urlrewrite_multirule_namespace)
+  labels:
+    chainsaw/test: ($test_name)
+  annotations:
+    konghq.com/strip-path: "false"
+spec:
+  hostnames: ($urlrewrite_multirule_root_hosts)
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ($gateway_name)
+  rules:
+    # Root prefix match: the capture group excludes the leading slash (Kong route paths must
+    # begin with a slash), so the translated uri prepends a slash before appending it.
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /anything/
+      backendRefs:
+        - name: ($httpbin_deployment_name)
+          port: 80
+          namespace: ($httpbin_deployment_namespace)
