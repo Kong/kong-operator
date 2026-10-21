@@ -14,8 +14,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	ingressmgrconfig "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 	konnectserver "github.com/kong/kong-operator/v2/controller/konnect/server"
+	ingressmgrconfig "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/v2/modules/manager"
 	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
