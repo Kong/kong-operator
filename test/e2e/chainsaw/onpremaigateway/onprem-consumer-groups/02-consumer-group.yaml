@@ -1,0 +1,18 @@
+# An AIGatewayConsumerGroup attaching one AIGatewayPolicy (policy-one). The
+# second policy is added in place later by a step in chainsaw-test.yaml.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayConsumerGroup
+metadata:
+  name: ($consumer_group_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    name: ($consumer_group_name)
+    displayName: ($consumer_group_name)
+    policies:
+      - name: ($policy_one_name)
