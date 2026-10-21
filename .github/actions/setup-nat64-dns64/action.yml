@@ -139,16 +139,20 @@ runs:
           sleep 2
         done
 
-        # Prove the NAT64 path end-to-end with a TCP connection to the
-        # DNS64-resolved target - the same path the tests use. Bind the probe
-        # source: without it, curl uses the route's default source (the tun's
-        # in-prefix address), which tayga rejects. (Do not probe 1.1.1.1:
-        # runners black-hole it, native IPv4 included.)
+        # Prove the host's NAT64 path end-to-end with a TCP connection to
+        # the DNS64-resolved target. This probe runs on the host (OUTPUT in,
+        # INPUT back), so the pod path - the v6 FORWARD rules and the docker
+        # rule bypasses - is not covered by it; the e2e Konnect tests cover
+        # that. Bind the probe source: without it, curl uses the route's
+        # default source (the tun's in-prefix address), which tayga rejects.
+        # (Do not probe 1.1.1.1: runners black-hole it, native IPv4 included.)
         PROBE_ADDR=fd00:64ff::1
         sudo ip addr add "${PROBE_ADDR}/128" dev lo || true
         for i in $(seq 1 5); do
           rc=0
-          curl --connect-timeout 8 --interface "${PROBE_ADDR}" -sS -o /dev/null "https://[${TARGET_V6}]/" 2>/dev/null || rc=$?
+          # --max-time bounds the whole attempt: --connect-timeout alone
+          # would let a stalled post-connect read hang on kernel TCP timers.
+          curl --connect-timeout 8 --max-time 15 --interface "${PROBE_ADDR}" -sS -o /dev/null "https://[${TARGET_V6}]/" || rc=$?
           # Any exit other than connection-level failure (7 refused,
           # 28 timeout) proves the flow traversed NAT64 in both directions;
           # TLS/app-layer errors are still successful connections.
@@ -157,7 +161,7 @@ runs:
             break
           fi
           if [ "$i" = 5 ]; then
-            echo "NAT64 path never came up (tcp via ${PROBE_ADDR} to ${TARGET_V6})" >&2
+            echo "NAT64 path never came up (tcp via ${PROBE_ADDR} to ${TARGET_V6}, last curl exit code ${rc})" >&2
             exit 1
           fi
           sleep 2
