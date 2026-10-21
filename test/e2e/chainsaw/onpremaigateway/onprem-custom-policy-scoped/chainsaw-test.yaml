@@ -1,0 +1,943 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: onprem-custom-policy-scoped
+spec:
+  description: |
+    On-prem AIGateway - Custom Policies scoped to entities rather than applied
+    globally, verified on real traffic. One streaming custom policy sets a
+    response header from its config; one AIGatewayPolicy using it is attached
+    at each level, each with its own header value:
+
+    - global (global: Enabled)
+    - a model (AIGatewayModel policies)
+    - a consumer (AIGatewayConsumer policies)
+    - a consumer group (AIGatewayConsumerGroup policies)
+    - an agent (AIGatewayAgent policies)
+    - an MCP server (AIGatewayMCPServer policies)
+
+    Two key-auth protected models are driven with three consumers: A has its
+    own policy and is in group G, B is only in group G, C has neither. When
+    several instances match a request, Kong runs only the most specific one:
+    consumer > consumer group > model > global, as in the data plane's
+    kong/runloop/plugins_iterator.lua (Consumer, Consumer Group, then Route +
+    Model, where the model-scoped instance lands, then Global). On the model
+    without a policy A, B and C get the consumer, group and global values; on
+    the model with one, A and B keep their consumer and group values and C
+    gets the model's value instead of the global one, which is the check that
+    proves model scope. The agent and the MCP server each get their own value
+    on their own route.
+
+    Model scope needs the custom plugin to run after ai-model-selector
+    (PRIORITY 957), which selects the model the request is scoped to: the data
+    plane evaluates plugins in PRIORITY order and skips, for the whole request,
+    a model-scoped plugin evaluated before a model is selected. Hence the
+    handler's PRIORITY of 900.
+
+    On-prem differences from the Konnect suite's `custom-policy-scoped` test,
+    both forced by the dbless document's constraints:
+
+    - The models declare no model-selector header (config.route.model): two
+      models sharing the same selector alias would render two ai_models
+      entities with the same name, which the dbless document rejects as a
+      uniqueness violation (Konnect accepts the same CR set). The route paths
+      disambiguate the models instead, and the rendered ai_model names fall
+      back to the CR names.
+    - The model traffic steps use the aigw_chat_completion.sh script inline
+      with INCLUDE_HEADER=false and MODEL_ALIAS set to the model CR's name,
+      the shape proven by onprem-custom-policy-dataplane; the shared
+      verify-aigw-chat-completion-from-cluster template does not carry the
+      INCLUDE_HEADER binding.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'onprem-cp']))
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+    - name: echo_deployment_name
+      value: echo
+    - name: echo_deployment_namespace
+      value: ($namespace)
+    - name: echo_deployment_replicas
+      value: 1
+    # Streaming custom policy (CR and plugin name). Its handler sets the
+    # header named by the policy config to the configured value. PRIORITY
+    # must stay below ai-model-selector's 957 for model scope (see above).
+    - name: custom_policy_name
+      value: scope-header
+    - name: custom_policy_plugin_name
+      value: (join('-', [($test_name), 'scope-header']))
+    - name: scope_header
+      value: X-Chainsaw-Scope
+    - name: plugin_schema_prefix
+      value: 'local typedefs = require "kong.db.schema.typedefs" return { name = "'
+    - name: plugin_schema_suffix
+      value: '", fields = { { protocols = typedefs.protocols_http }, { config = { type = "record", fields = { { header_name = { type = "string", default = "X-Chainsaw-Scope" } }, { header_value = { type = "string", default = "applied" } } } } } } }'
+    - name: plugin_handler
+      value: 'local P = { PRIORITY = 900, VERSION = "1.0.0" } function P:header_filter(conf) kong.response.set_header(conf.header_name, conf.header_value) end return P'
+    # One AIGatewayPolicy per level; each sets the header to the level's name.
+    - name: global_policy_name
+      value: (join('-', [($test_name), 'global-policy']))
+    - name: model_policy_name
+      value: (join('-', [($test_name), 'model-policy']))
+    - name: consumer_policy_name
+      value: (join('-', [($test_name), 'consumer-policy']))
+    - name: consumer_group_policy_name
+      value: (join('-', [($test_name), 'consumer-group-policy']))
+    - name: agent_policy_name
+      value: (join('-', [($test_name), 'agent-policy']))
+    - name: mcp_policy_name
+      value: (join('-', [($test_name), 'mcp-policy']))
+    # Key-auth, the consumer group and the consumers with their api keys.
+    - name: auth_strategy_name
+      value: keyauth
+    - name: consumer_group_name
+      value: group-g
+    - name: consumer_a_name
+      value: consumer-a
+    - name: consumer_b_name
+      value: consumer-b
+    - name: consumer_c_name
+      value: consumer-c
+    - name: consumer_a_api_key
+      value: chainsaw-scoped-key-a
+    - name: consumer_b_api_key
+      value: chainsaw-scoped-key-b
+    - name: consumer_c_api_key
+      value: chainsaw-scoped-key-c
+    # Models: one without a policy of its own, one with the model policy.
+    - name: plain_model_name
+      value: plain-model
+    - name: plain_model_route_path
+      value: /scoped/plain
+    - name: scoped_model_name
+      value: scoped-model
+    - name: scoped_model_route_path
+      value: /scoped/model
+    # Agent and MCP server.
+    - name: agent_name
+      value: scoped-agent
+    - name: agent_route_path
+      value: /scoped/agent
+    - name: mcp_server_name
+      value: scoped-mcp
+    - name: mcp_route_path
+      value: /scoped/mcp
+    # Defaults of the request scripts.
+    - name: method
+      value: GET
+    - name: request_headers
+      value: ''
+    - name: request_body
+      value: ''
+    - name: content_type
+      value: application/json
+    - name: expected_status
+      value: "200"
+    - name: expected_status_not
+      value: ''
+    - name: expected_body
+      value: ''
+    - name: unexpected_body
+      value: ''
+    - name: expected_jsonrpc
+      value: ''
+    - name: expected_json_id
+      value: ''
+    - name: expected_json_result_text
+      value: ''
+    - name: oidc_token_url
+      value: ''
+    - name: oidc_client_id
+      value: ''
+    - name: oidc_client_secret
+      value: ''
+    - name: oidc_scope
+      value: ''
+    - name: expected_success
+      value: 'true'
+  steps:
+    - name: Create-onprem-aigateway
+      use:
+        template: ../../common/_step_templates/apply-assert-onpremAIGateway.yaml
+    - name: Start-echo-backend
+      description: Backend of the agent and the MCP server.
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
+    - name: Create-streaming-custom-policy
+      try:
+        - apply:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayCustomPolicy
+              metadata:
+                name: ($custom_policy_name)
+                namespace: ($namespace)
+              spec:
+                aiGatewayRef:
+                  group: aigateway.konghq.com
+                  kind: OnPremAIGateway
+                  namespacedRef:
+                    name: ($aigw_cp_name)
+                apiSpec:
+                  type: streaming
+                  streaming:
+                    name: ($custom_policy_plugin_name)
+                    displayName: Chainsaw scoped streaming custom policy
+                    schema:
+                      type: inline
+                      value: (join('', [$plugin_schema_prefix, $custom_policy_plugin_name, $plugin_schema_suffix]))
+                    handler:
+                      type: inline
+                      value: ($plugin_handler)
+    # One AIGatewayPolicy per level; each sets the header to the level's name.
+    - name: Create-global-policy
+      description: Applies to all traffic, unless a more specific instance matches.
+      try:
+        - apply:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                name: ($global_policy_name)
+                namespace: ($namespace)
+              spec:
+                aiGatewayRef:
+                  group: aigateway.konghq.com
+                  kind: OnPremAIGateway
+                  namespacedRef:
+                    name: ($aigw_cp_name)
+                apiSpec:
+                  name: ($global_policy_name)
+                  displayName: Custom policy scoped to global
+                  customPolicyRef:
+                    name: ($custom_policy_name)
+                  enabled: Enabled
+                  global: Enabled
+                  config:
+                    type: inline
+                    value:
+                      header_name: ($scope_header)
+                      header_value: global
+    - name: Create-model-policy
+      description: Attached to the scoped model.
+      try:
+        - apply:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                name: ($model_policy_name)
+                namespace: ($namespace)
+              spec:
+                aiGatewayRef:
+                  group: aigateway.konghq.com
+                  kind: OnPremAIGateway
+                  namespacedRef:
+                    name: ($aigw_cp_name)
+                apiSpec:
+                  name: ($model_policy_name)
+                  displayName: Custom policy scoped to model
+                  customPolicyRef:
+                    name: ($custom_policy_name)
+                  enabled: Enabled
+                  global: Disabled
+                  config:
+                    type: inline
+                    value:
+                      header_name: ($scope_header)
+                      header_value: model
+    - name: Create-consumer-policy
+      description: Attached to consumer A.
+      try:
+        - apply:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                name: ($consumer_policy_name)
+                namespace: ($namespace)
+              spec:
+                aiGatewayRef:
+                  group: aigateway.konghq.com
+                  kind: OnPremAIGateway
+                  namespacedRef:
+                    name: ($aigw_cp_name)
+                apiSpec:
+                  name: ($consumer_policy_name)
+                  displayName: Custom policy scoped to consumer
+                  customPolicyRef:
+                    name: ($custom_policy_name)
+                  enabled: Enabled
+                  global: Disabled
+                  config:
+                    type: inline
+                    value:
+                      header_name: ($scope_header)
+                      header_value: consumer
+    - name: Create-consumer-group-policy
+      description: Attached to consumer group G.
+      try:
+        - apply:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                name: ($consumer_group_policy_name)
+                namespace: ($namespace)
+              spec:
+                aiGatewayRef:
+                  group: aigateway.konghq.com
+                  kind: OnPremAIGateway
+                  namespacedRef:
+                    name: ($aigw_cp_name)
+                apiSpec:
+                  name: ($consumer_group_policy_name)
+                  displayName: Custom policy scoped to consumer group
+                  customPolicyRef:
+                    name: ($custom_policy_name)
+                  enabled: Enabled
+                  global: Disabled
+                  config:
+                    type: inline
+                    value:
+                      header_name: ($scope_header)
+                      header_value: consumer-group
+    - name: Create-agent-policy
+      description: Attached to the agent.
+      try:
+        - apply:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                name: ($agent_policy_name)
+                namespace: ($namespace)
+              spec:
+                aiGatewayRef:
+                  group: aigateway.konghq.com
+                  kind: OnPremAIGateway
+                  namespacedRef:
+                    name: ($aigw_cp_name)
+                apiSpec:
+                  name: ($agent_policy_name)
+                  displayName: Custom policy scoped to agent
+                  customPolicyRef:
+                    name: ($custom_policy_name)
+                  enabled: Enabled
+                  global: Disabled
+                  config:
+                    type: inline
+                    value:
+                      header_name: ($scope_header)
+                      header_value: agent
+    - name: Create-mcp-policy
+      description: Attached to the MCP server.
+      try:
+        - apply:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                name: ($mcp_policy_name)
+                namespace: ($namespace)
+              spec:
+                aiGatewayRef:
+                  group: aigateway.konghq.com
+                  kind: OnPremAIGateway
+                  namespacedRef:
+                    name: ($aigw_cp_name)
+                apiSpec:
+                  name: ($mcp_policy_name)
+                  displayName: Custom policy scoped to mcp
+                  customPolicyRef:
+                    name: ($custom_policy_name)
+                  enabled: Enabled
+                  global: Disabled
+                  config:
+                    type: inline
+                    value:
+                      header_name: ($scope_header)
+                      header_value: mcp
+    - name: Create-keyauth-auth-strategy
+      try:
+        - apply:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayAuthStrategy
+              metadata:
+                name: ($auth_strategy_name)
+                namespace: ($namespace)
+              spec:
+                aiGatewayRef:
+                  group: aigateway.konghq.com
+                  kind: OnPremAIGateway
+                  namespacedRef:
+                    name: ($aigw_cp_name)
+                apiSpec:
+                  type: key-auth
+                  key-auth:
+                    name: ($auth_strategy_name)
+                    displayName: ($auth_strategy_name)
+                    config:
+                      hideCredentials: Enabled
+    - name: Create-consumer-group
+      try:
+        - apply:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumerGroup
+              metadata:
+                name: ($consumer_group_name)
+                namespace: ($namespace)
+              spec:
+                aiGatewayRef:
+                  group: aigateway.konghq.com
+                  kind: OnPremAIGateway
+                  namespacedRef:
+                    name: ($aigw_cp_name)
+                apiSpec:
+                  name: ($consumer_group_name)
+                  displayName: ($consumer_group_name)
+                  policies:
+                    - name: ($consumer_group_policy_name)
+    - name: Create-consumer-a
+      description: Own policy, and a member of group G.
+      try:
+        - apply:
+            file: 02-consumer.yaml
+            bindings:
+              - name: consumer_name
+                value: ($consumer_a_name)
+              - name: consumer_policies
+                value: '([{name: $consumer_policy_name}])'
+              - name: consumer_groups
+                value: '([{name: $consumer_group_name}])'
+    - name: Create-consumer-a-credential
+      try:
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: (join('-', [($consumer_a_name), 'key']))
+                namespace: ($namespace)
+                labels:
+                  konghq.com/secret: "true"
+              type: Opaque
+              stringData:
+                key: ($consumer_a_api_key)
+        - apply:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumerCredential
+              metadata:
+                name: (join('-', [($consumer_a_name), 'key']))
+                namespace: ($namespace)
+              spec:
+                aiGatewayConsumerRef:
+                  type: namespacedRef
+                  namespacedRef:
+                    name: ($consumer_a_name)
+                apiSpec:
+                  name: (join('-', [($consumer_a_name), 'key']))
+                  displayName: (join('-', [($consumer_a_name), 'key']))
+                  type: api-key
+                  apiKey:
+                    type: secretRef
+                    secretRef:
+                      name: (join('-', [($consumer_a_name), 'key']))
+                      key: key
+    - name: Create-consumer-b
+      description: No policy of its own, a member of group G.
+      try:
+        - apply:
+            file: 02-consumer.yaml
+            bindings:
+              - name: consumer_name
+                value: ($consumer_b_name)
+              - name: consumer_policies
+                value: (`[]`)
+              - name: consumer_groups
+                value: '([{name: $consumer_group_name}])'
+    - name: Create-consumer-b-credential
+      try:
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: (join('-', [($consumer_b_name), 'key']))
+                namespace: ($namespace)
+                labels:
+                  konghq.com/secret: "true"
+              type: Opaque
+              stringData:
+                key: ($consumer_b_api_key)
+        - apply:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumerCredential
+              metadata:
+                name: (join('-', [($consumer_b_name), 'key']))
+                namespace: ($namespace)
+              spec:
+                aiGatewayConsumerRef:
+                  type: namespacedRef
+                  namespacedRef:
+                    name: ($consumer_b_name)
+                apiSpec:
+                  name: (join('-', [($consumer_b_name), 'key']))
+                  displayName: (join('-', [($consumer_b_name), 'key']))
+                  type: api-key
+                  apiKey:
+                    type: secretRef
+                    secretRef:
+                      name: (join('-', [($consumer_b_name), 'key']))
+                      key: key
+    - name: Create-consumer-c
+      description: No policy of its own, in no group.
+      try:
+        - apply:
+            file: 02-consumer.yaml
+            bindings:
+              - name: consumer_name
+                value: ($consumer_c_name)
+              - name: consumer_policies
+                value: (`[]`)
+              - name: consumer_groups
+                value: (`[]`)
+    - name: Create-consumer-c-credential
+      try:
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: (join('-', [($consumer_c_name), 'key']))
+                namespace: ($namespace)
+                labels:
+                  konghq.com/secret: "true"
+              type: Opaque
+              stringData:
+                key: ($consumer_c_api_key)
+        - apply:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumerCredential
+              metadata:
+                name: (join('-', [($consumer_c_name), 'key']))
+                namespace: ($namespace)
+              spec:
+                aiGatewayConsumerRef:
+                  type: namespacedRef
+                  namespacedRef:
+                    name: ($consumer_c_name)
+                apiSpec:
+                  name: (join('-', [($consumer_c_name), 'key']))
+                  displayName: (join('-', [($consumer_c_name), 'key']))
+                  type: api-key
+                  apiKey:
+                    type: secretRef
+                    secretRef:
+                      name: (join('-', [($consumer_c_name), 'key']))
+                      key: key
+    - name: Create-plain-model
+      description: Model without a policy of its own.
+      try:
+        - apply:
+            file: 01-model.yaml
+            bindings:
+              - name: model_name
+                value: ($plain_model_name)
+              - name: model_route_path
+                value: ($plain_model_route_path)
+              - name: model_policies
+                value: (`[]`)
+    - name: Create-scoped-model
+      description: Model with the model policy attached.
+      try:
+        - apply:
+            file: 01-model.yaml
+            bindings:
+              - name: model_name
+                value: ($scoped_model_name)
+              - name: model_route_path
+                value: ($scoped_model_route_path)
+              - name: model_policies
+                value: '([{name: $model_policy_name}])'
+    - name: Create-agent-and-mcp-server
+      try:
+        - apply:
+            file: 03-agent-and-mcp-server.yaml
+    - name: Create-aigateway-dataplane
+      description: |
+        KONG_CUSTOM_PLUGIN_STREAMING_ENABLED lets the data plane accept the
+        streaming custom policy's handler carried in the pushed payload.
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+        with:
+          bindings:
+            - name: control_plane_ref
+              value: "({type: 'onpremNamespacedRef', onpremNamespacedRef: {name: ($aigw_cp_name)}})"
+            - name: aigw_dp_env
+              value: >-
+                ([{name: 'KONG_CUSTOM_PLUGIN_STREAMING_ENABLED', value: 'on'}])
+    - name: Assert-entities-programmed
+      try:
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayCustomPolicy
+              metadata:
+                name: ($custom_policy_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                name: ($global_policy_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                name: ($model_policy_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                name: ($consumer_policy_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                name: ($consumer_group_policy_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                name: ($agent_policy_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                name: ($mcp_policy_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayAuthStrategy
+              metadata:
+                name: ($auth_strategy_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumerGroup
+              metadata:
+                name: ($consumer_group_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumer
+              metadata:
+                name: ($consumer_a_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumer
+              metadata:
+                name: ($consumer_b_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumer
+              metadata:
+                name: ($consumer_c_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayModel
+              metadata:
+                name: ($plain_model_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayModel
+              metadata:
+                name: ($scoped_model_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayAgent
+              metadata:
+                name: ($agent_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayMCPServer
+              metadata:
+                name: ($mcp_server_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+    # --- The plain model (no policy of its own): consumer and consumer group
+    # instances win over the global one, in that order. The models declare no
+    # model-selector header, so the requests carry none (INCLUDE_HEADER=false)
+    # and the alias is the model CR's name; see the description.
+    - name: Verify-plain-model-consumer-a-gets-consumer-policy
+      description: Consumer A's own policy wins over its group's and the global one.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: ($plain_model_route_path)
+              - name: MODEL_ALIAS
+                value: ($plain_model_name)
+              - name: INCLUDE_HEADER
+                value: "false"
+              - name: REQUEST_HEADERS
+                value: (join('', ['apikey:', ($consumer_a_api_key)]))
+              - name: EXPECT_HEADER
+                value: ($scope_header)
+              - name: EXPECT_HEADER_VALUE
+                value: consumer
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+    - name: Verify-plain-model-consumer-b-gets-consumer-group-policy
+      description: Consumer B has no policy of its own, so its group's wins over the global one.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: ($plain_model_route_path)
+              - name: MODEL_ALIAS
+                value: ($plain_model_name)
+              - name: INCLUDE_HEADER
+                value: "false"
+              - name: REQUEST_HEADERS
+                value: (join('', ['apikey:', ($consumer_b_api_key)]))
+              - name: EXPECT_HEADER
+                value: ($scope_header)
+              - name: EXPECT_HEADER_VALUE
+                value: consumer-group
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+    - name: Verify-plain-model-consumer-c-gets-global-policy
+      description: Consumer C matches nothing more specific than the global policy.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: ($plain_model_route_path)
+              - name: MODEL_ALIAS
+                value: ($plain_model_name)
+              - name: INCLUDE_HEADER
+                value: "false"
+              - name: REQUEST_HEADERS
+                value: (join('', ['apikey:', ($consumer_c_api_key)]))
+              - name: EXPECT_HEADER
+                value: ($scope_header)
+              - name: EXPECT_HEADER_VALUE
+                value: global
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+    # --- The scoped model (with its own policy): consumer and consumer group
+    # instances still win; the model instance beats the global one.
+    - name: Verify-scoped-model-consumer-a-gets-consumer-policy
+      description: >-
+        A consumer policy still wins on a model with its own policy (Consumer
+        ranks above Route + Model). This alone does not prove model scope: the
+        same value comes back if the model's instance is not applied at all.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: ($scoped_model_route_path)
+              - name: MODEL_ALIAS
+                value: ($scoped_model_name)
+              - name: INCLUDE_HEADER
+                value: "false"
+              - name: REQUEST_HEADERS
+                value: (join('', ['apikey:', ($consumer_a_api_key)]))
+              - name: EXPECT_HEADER
+                value: ($scope_header)
+              - name: EXPECT_HEADER_VALUE
+                value: consumer
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+    - name: Verify-scoped-model-consumer-b-gets-consumer-group-policy
+      description: >-
+        A consumer group policy still wins on a model with its own policy
+        (Consumer Group ranks above Route + Model). Like the previous check,
+        this alone does not prove model scope.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: ($scoped_model_route_path)
+              - name: MODEL_ALIAS
+                value: ($scoped_model_name)
+              - name: INCLUDE_HEADER
+                value: "false"
+              - name: REQUEST_HEADERS
+                value: (join('', ['apikey:', ($consumer_b_api_key)]))
+              - name: EXPECT_HEADER
+                value: ($scope_header)
+              - name: EXPECT_HEADER_VALUE
+                value: consumer-group
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+    - name: Verify-scoped-model-consumer-c-gets-model-policy
+      description: >-
+        The model's policy wins over the global one: the check proving that
+        model scope works.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: ($scoped_model_route_path)
+              - name: MODEL_ALIAS
+                value: ($scoped_model_name)
+              - name: INCLUDE_HEADER
+                value: "false"
+              - name: REQUEST_HEADERS
+                value: (join('', ['apikey:', ($consumer_c_api_key)]))
+              - name: EXPECT_HEADER
+                value: ($scope_header)
+              - name: EXPECT_HEADER_VALUE
+                value: model
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+    # --- Agent and MCP server get their own values on their own routes.
+    - name: Verify-agent-gets-agent-policy
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+        with:
+          bindings:
+            - name: method
+              value: GET
+            - name: route_path
+              value: ($agent_route_path)
+            - name: expected_header
+              value: ($scope_header)
+            - name: expected_header_value
+              value: agent
+    - name: Verify-mcp-server-gets-mcp-policy
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+        with:
+          bindings:
+            - name: method
+              value: POST
+            - name: route_path
+              value: ($mcp_route_path)
+            - name: request_body
+              value: '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+            - name: expected_header
+              value: ($scope_header)
+            - name: expected_header_value
+              value: mcp
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: onprem-custom-policy-scoped
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
