@@ -562,7 +562,10 @@ func ensureNonEmptyConfig(payload []byte) ([]byte, error) {
 		// to. Seed the format version: Kong rejects a payload without one.
 		content = map[string]any{"_format_version": "3.0"}
 	}
-	content["upstreams"] = []any{map[string]any{"name": stubUpstreamName}}
+	content["upstreams"] = []any{map[string]any{
+		"id":   stubUpstreamID,
+		"name": stubUpstreamName,
+	}}
 	out, err := yaml.Marshal(content)
 	if err != nil {
 		return nil, fmt.Errorf("marshaling dbless configuration with the stub upstream: %w", err)
