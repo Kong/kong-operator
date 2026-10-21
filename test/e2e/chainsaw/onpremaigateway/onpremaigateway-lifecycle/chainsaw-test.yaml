@@ -35,7 +35,7 @@ spec:
     - name: Create-onprem-aigateway
       use:
         template: ../../common/_step_templates/apply-assert-onpremAIGateway.yaml
-    - name: Create-aigateway-dataplane
+    - name: Create-aigateway-dataplane-without-configuration
       use:
         template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
         with:
