@@ -193,7 +193,9 @@ dp_records_bundle() {
 dp_runs_rounds() {
   local pod
   for pod in $(kubectl get pods -n "$(ns)" -l app=gwadmin-dp --field-selector=status.phase=Running -o name 2>/dev/null); do
-    kubectl logs -n "$(ns)" "$pod" --tail=-1 2>/dev/null | grep -q '^DPROUND' && return 0
+    # Not grep -q: exiting on the first match would kill kubectl with
+    # SIGPIPE on long logs, and pipefail would turn the match into a failure.
+    kubectl logs -n "$(ns)" "$pod" --tail=-1 2>/dev/null | grep '^DPROUND' >/dev/null && return 0
   done
   return 1
 }
@@ -476,11 +478,14 @@ assert-no-failures) # every handshake of the peers succeeded
   # failure, even if a retry would have succeeded. The peers only skip (and
   # log as GONE) failures of a pod that turned terminating meanwhile: its
   # connections may be cut mid-handshake.
-  if echo "$logs" | grep -qE '^(FAIL|RECOVERED)'; then
+  # The logs are matched from a here-string, not piped from echo: grep -q
+  # exits on the first match, echo of long logs then dies with SIGPIPE, and
+  # pipefail turns the match into a miss.
+  if grep -qE '^(FAIL|RECOVERED)' <<<"$logs"; then
     echo "the peers saw TLS failures" >&2
     exit 1
   fi
-  echo "$logs" | grep -q '^ROUND' || { echo "the peers never ran a round" >&2; exit 1; }
+  grep -q '^ROUND' <<<"$logs" || { echo "the peers never ran a round" >&2; exit 1; }
   # A restarted peers container lost the logs of its previous run, failures
   # included.
   restarts=$(kubectl get pods -n "$(ns)" -l "$PEERS_SELECTOR" -o json |
