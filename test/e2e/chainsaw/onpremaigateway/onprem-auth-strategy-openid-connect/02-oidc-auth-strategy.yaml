@@ -1,0 +1,50 @@
+# An openid-connect AIGatewayAuthStrategy targeting the OnPremAIGateway, with its
+# client secret sourced from a Secret. The config mirrors the Konnect suite's
+# apply-assert-aigatewayAuthStrategy-openid-connect template:
+#   - issuer points at this test's own oidc-mock's discovery endpoint.
+#   - consumerOptional Disabled: a validated token must map to an AIGatewayConsumer.
+#   - consumerClaims maps the token's client_id claim to the consumer's customID.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ($oidc_client_secret_name)
+  namespace: ($namespace)
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+stringData:
+  clientSecret: ($oidc_client_secret_value)
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayAuthStrategy
+metadata:
+  name: ($oidc_auth_strategy_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: openid-connect
+    openid-connect:
+      name: ($oidc_auth_strategy_name)
+      displayName: ($oidc_auth_strategy_name)
+      config:
+        issuer: ($oidc_issuer)
+        cacheTokensSalt: (join('-', [($test_name), 'cache-salt']))
+        authMethods:
+          - bearer
+        scopes:
+          - ($oidc_scope)
+        consumerOptional: Disabled
+        consumerClaims:
+          - - client_id
+        clientID:
+          - ($oidc_client_id)
+        clientSecret:
+          - type: secretRef
+            secretRef:
+              name: ($oidc_client_secret_name)
+              key: clientSecret
