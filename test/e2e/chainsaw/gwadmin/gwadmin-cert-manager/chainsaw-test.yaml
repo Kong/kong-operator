@@ -31,6 +31,11 @@ spec:
   steps:
     - name: 1-Create-cert-manager-certificates-and-gwadmin
       try:
+        # public-ca settles before it issues cp-cert.
+        - apply:
+            file: 01-public-ca.yaml
+        - assert:
+            file: 01-assert-public-ca-ready.yaml
         - apply:
             file: 01-cert-manager.yaml
             bindings:
