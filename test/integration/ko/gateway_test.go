@@ -664,13 +664,6 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	controlplanes := testutils.MustListControlPlanesForGateway(t, ctx, gateway, clients)
 	require.Len(t, controlplanes, 1)
 
-	t.Log("verifying DataPlane's NetworkPolicies is created")
-	require.Eventually(t, testutils.GatewayNetworkPoliciesExist(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
-	networkpolicies := testutils.MustListNetworkPoliciesForGateway(t, ctx, gateway, clients)
-	require.Len(t, networkpolicies, 1)
-	networkPolicy := networkpolicies[0]
-	require.Equal(t, map[string]string{"app": dataplane.Name}, networkPolicy.Spec.PodSelector.MatchLabels)
-
 	t.Log("verifying that the DataPlane's Pod Admin API is network restricted to ControlPlane Pods")
 	var expectLimitedAdminAPI networkPolicyIngressRuleDecorator
 	expectLimitedAdminAPI.withTCPPort(consts.DataPlaneAdminAPIPort)
@@ -690,10 +683,18 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	var expectAllowMetricsIngress networkPolicyIngressRuleDecorator
 	expectAllowMetricsIngress.withTCPPort(consts.DataPlaneMetricsPort)
 
-	t.Log("verifying DataPlane's NetworkPolicies ingress rules correctness")
-	require.Contains(t, networkPolicy.Spec.Ingress, expectLimitedAdminAPI.Rule)
-	require.Contains(t, networkPolicy.Spec.Ingress, expectAllowProxyIngress.Rule)
-	require.Contains(t, networkPolicy.Spec.Ingress, expectAllowMetricsIngress.Rule)
+	// Concurrent reconciles of the Gateway can briefly create a duplicate
+	// NetworkPolicy before the operator reduces them to one, so wait for
+	// exactly one rather than asserting on the first list that finds any.
+	t.Log("verifying DataPlane's NetworkPolicies is created with the expected ingress rules")
+	require.Eventually(t,
+		testutils.GatewayNetworkPolicyForGatewayContainsRules(t, ctx, gateway, clients,
+			expectLimitedAdminAPI.Rule, expectAllowProxyIngress.Rule, expectAllowMetricsIngress.Rule),
+		testutils.SubresourceReadinessWait, time.Second)
+	networkpolicies := testutils.MustListNetworkPoliciesForGateway(t, ctx, gateway, clients)
+	require.Len(t, networkpolicies, 1)
+	networkPolicy := networkpolicies[0]
+	require.Equal(t, map[string]string{"app": dataplane.Name}, networkPolicy.Spec.PodSelector.MatchLabels)
 
 	t.Log("deleting DataPlane's NetworkPolicies")
 	require.NoError(t,
@@ -702,17 +703,11 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 			Delete(ctx, networkPolicy.Name, metav1.DeleteOptions{}),
 	)
 
-	t.Log("verifying NetworkPolicies are recreated")
-	require.Eventually(t, testutils.GatewayNetworkPoliciesExist(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
-	networkpolicies = testutils.MustListNetworkPoliciesForGateway(t, ctx, gateway, clients)
-	require.Len(t, networkpolicies, 1)
-	networkPolicy = networkpolicies[0]
-	t.Logf("NetworkPolicy generation %d", networkPolicy.Generation)
-
-	t.Log("verifying DataPlane's NetworkPolicies ingress rules correctness")
-	require.Contains(t, networkPolicy.Spec.Ingress, expectLimitedAdminAPI.Rule)
-	require.Contains(t, networkPolicy.Spec.Ingress, expectAllowProxyIngress.Rule)
-	require.Contains(t, networkPolicy.Spec.Ingress, expectAllowMetricsIngress.Rule)
+	t.Log("verifying NetworkPolicies are recreated with the expected ingress rules")
+	require.Eventually(t,
+		testutils.GatewayNetworkPolicyForGatewayContainsRules(t, ctx, gateway, clients,
+			expectLimitedAdminAPI.Rule, expectAllowProxyIngress.Rule, expectAllowMetricsIngress.Rule),
+		testutils.SubresourceReadinessWait, time.Second)
 
 	t.Run("verifying DataPlane's NetworkPolicies get updated after customizing kong proxy listen port through GatewayConfiguration", func(t *testing.T) {
 		gwcClient := integration.GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(namespace.Name)
