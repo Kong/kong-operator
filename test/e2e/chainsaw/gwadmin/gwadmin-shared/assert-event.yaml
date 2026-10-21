@@ -1,0 +1,9 @@
+# Kong Operator recorded an event_type event for event_reason on the GWAdmin.
+# Its events.EventRecorder writes events.k8s.io/v1 Events.
+apiVersion: events.k8s.io/v1
+kind: Event
+regarding:
+  kind: GWAdmin
+  name: ($gwadmin_name)
+type: ($event_type)
+reason: ($event_reason)

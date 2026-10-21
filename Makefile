@@ -892,6 +892,7 @@ test.e2e.chainsaw: chainsaw grpcurl ## Run chainsaw e2e tests.
 	GATEWAY_IMAGE=$(shell $(YQ) -r '.chainsaw.kong-ee | .image + ":" + .tag' < $(TEST_DEPENDENCIES_FILE)) \
 	AIGW_DP_IMAGE=$(or $(AIGW_DP_IMAGE),$(shell $(YQ) -r '.chainsaw.aigw-dp | .image + ":" + .tag' < $(TEST_DEPENDENCIES_FILE))) \
 	KEG_DP_IMAGE=$(shell $(YQ) -r '.chainsaw.keg-dp | .image + ":" + .tag' < $(TEST_DEPENDENCIES_FILE)) \
+	GW_ADMIN_IMAGE=$(or $(GW_ADMIN_IMAGE),$(shell $(YQ) -r '.chainsaw.gw-admin | .image + ":" + .tag' < $(TEST_DEPENDENCIES_FILE))) \
 	GRPCURL_BIN=$(GRPCURL) \
 		$(CHAINSAW) test --config $(CHAINSAW_CONFIG) --quiet --test-dir $(CHAINSAW_TEST_DIR)
 

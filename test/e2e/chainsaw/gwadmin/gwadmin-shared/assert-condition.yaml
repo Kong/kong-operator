@@ -1,0 +1,14 @@
+# The condition_type condition of the GWAdmin is condition_status, for
+# condition_reason, and was written for the current generation of its spec.
+# Kong Operator writes the status at the end of a reconciliation, after the
+# Deployment: once it holds, the Deployment reflects the current spec too.
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: GWAdmin
+metadata:
+  name: ($gwadmin_name)
+(@)->gwadmin:
+  status:
+    (conditions[?type == $condition_type]):
+      - status: ($condition_status)
+        reason: ($condition_reason)
+        observedGeneration: ($gwadmin.metadata.generation)

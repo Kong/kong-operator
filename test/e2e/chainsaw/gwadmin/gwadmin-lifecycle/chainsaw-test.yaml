@@ -1,0 +1,180 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: gwadmin-lifecycle
+spec:
+  description: |
+    Lifecycle test for GWAdmin with a zero-config spec:
+    1. Creates a GWAdmin and asserts its certificates are provisioned and its
+       status publishes the cp server URL and the trust material Secrets.
+    2. Asserts the trust bundle and certificate Secrets in the GWAdmin
+       namespace, the API CA, cp server CA, published cp client CA and
+       operator client certificate Secrets in the operator namespace
+       (labeled with the GWAdmin UID, no owner reference), and that no
+       Secret holding the key of the cp client CA is in the GWAdmin
+       namespace, the API Service
+       (publishing not-ready addresses, since gw-admin pods only turn Ready
+       once provisioned) and the cp Service, and the Deployment wiring the TLS
+       material into gw-admin, run with the gw-admin image Kong Operator is
+       configured with (GW_ADMIN_IMAGE, pinned in test/test_dependencies.yaml),
+       without a service account token.
+       Every Secret Kong Operator provisioned carries the
+       gateway.konghq.com/secret-provisioning: automatic label.
+    3. Verifies every certificate chains to the trust bundle of its trust
+       domain, and never to another one, and their subjects: the server
+       certificates are issued to their Service, the operator client
+       certificate to kong-operator, without any DNS name. A client
+       certificate issued from the published cp client CA, as data planes get
+       theirs, chains to the cp client bundle and not to the API
+       one, and a server certificate for the cp host issued from it is not
+       trusted by the cp server bundle: whoever issues data plane
+       certificates can't impersonate gw-admin.
+    4. The konghq.com/secret label is stripped from a Secret the GWAdmin
+       owns, hiding it from Kong Operator: it is labeled again, and the
+       certificate it holds is kept (no SecretConflict).
+    5. A GWAdmin with an unnamed cp port is rejected.
+    6. Deletes the GWAdmin and asserts its Deployment, Secrets and Services
+       are garbage collected, and its Secrets in the operator namespace are
+       deleted by its finalizer.
+    The gw-admin pods are not expected to turn Ready: provisioning them
+    through the API is not part of this test.
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gw_admin_image
+      value: (env('GW_ADMIN_IMAGE'))
+  steps:
+    - name: 1-Create-gwadmin
+      try:
+        - apply:
+            file: 01-gwadmin.yaml
+        - assert:
+            file: 01-assert-gwadmin.yaml
+    - name: 2-Assert-owned-resources
+      try:
+        - assert:
+            file: 02-assert-owned-resources.yaml
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: NAME
+                value: ($gwadmin_name)
+            content: ../gwadmin-shared/gwadmin.sh gwadmin-uid "$NAME"
+            outputs:
+              - name: uid
+                value: ($stdout)
+        - assert:
+            file: 02-assert-private-secrets.yaml
+        # The key of the cp client CA never lands in the GWAdmin namespace,
+        # under any name.
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+            content: ../gwadmin-shared/gwadmin.sh assert-ca-key-not-in-namespace "$GWADMIN"
+    - name: 3-Verify-certificate-chains
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: NAME
+                value: ($gwadmin_name)
+            content: ../gwadmin-shared/gwadmin.sh verify-certificate-chains "$NAME"
+    - name: 4-Restore-stripped-secret-label
+      bindings:
+        - name: secret_name
+          value: (join('-', [($gwadmin_name), 'api-tls']))
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: SECRET
+                value: ($secret_name)
+            content: ../gwadmin-shared/gwadmin.sh secret-json "$SECRET"
+            outputs:
+              - name: before
+                value: (json_parse($stdout))
+        - patch:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($secret_name)
+                labels:
+                  konghq.com/secret: null
+        - assert:
+            timeout: 1m
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($secret_name)
+                uid: ($before.metadata.uid)
+                labels:
+                  konghq.com/secret: "true"
+                  gateway.konghq.com/secret-provisioning: automatic
+              data:
+                tls.crt: ($before.data."tls.crt")
+        - assert:
+            timeout: 1m
+            file: 01-assert-gwadmin.yaml
+    - name: 5-Reject-unnamed-cp-port
+      try:
+        - create:
+            resource:
+              apiVersion: gateway-operator.konghq.com/v1alpha1
+              kind: GWAdmin
+              metadata:
+                name: gw-admin-unnamed-port
+              spec:
+                network:
+                  cp:
+                    ports:
+                      - port: 8099
+            expect:
+              - check:
+                  (contains($error || '', 'Every port must be named')): true
+    - name: 6-Delete-gwadmin
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: NAME
+                value: ($gwadmin_name)
+            content: ../gwadmin-shared/gwadmin.sh gwadmin-uid "$NAME"
+            outputs:
+              - name: uid
+                value: ($stdout)
+        - delete:
+            ref:
+              apiVersion: gateway-operator.konghq.com/v1alpha1
+              kind: GWAdmin
+              name: ($gwadmin_name)
+        - error:
+            file: 06-error-owned-resources.yaml
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN_UID
+                value: ($uid)
+            timeout: 2m
+            content: ../gwadmin-shared/gwadmin.sh wait-private-secrets-gone "$GWADMIN_UID" 60
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: gwadmin-lifecycle
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

@@ -1,0 +1,8 @@
+# The trust bundle of the API listener of the GWAdmin holds bundle_size
+# certificate authorities.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: (join('-', [$gwadmin_name, 'api-ca-bundle']))
+data:
+  (length(split(base64_decode("ca.crt"), '-----BEGIN CERTIFICATE-----')) - `1`): ($bundle_size)

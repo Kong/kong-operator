@@ -1,0 +1,11 @@
+# The CertificateProvisioned condition of the GWAdmin is condition_status for
+# condition_reason, and its message contains (or not, per contained) text.
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: GWAdmin
+metadata:
+  name: ($gwadmin_name)
+status:
+  (conditions[?type == 'CertificateProvisioned']):
+    - status: ($condition_status)
+      reason: ($condition_reason)
+      (contains(message, $text)): ($contained)

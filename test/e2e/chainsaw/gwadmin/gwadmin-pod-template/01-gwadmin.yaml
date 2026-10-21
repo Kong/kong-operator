@@ -1,0 +1,24 @@
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: GWAdmin
+metadata:
+  name: ($gwadmin_name)
+spec:
+  deployment:
+    podTemplateSpec:
+      metadata:
+        labels:
+          e2e.konghq.com/label: kept
+        annotations:
+          e2e.konghq.com/revision: ($revision)
+      spec:
+        containers:
+          - name: gw-admin
+            env:
+              - name: E2E_MARK
+                value: kept
+            volumeMounts:
+              - name: extra
+                mountPath: /extra
+        volumes:
+          - name: extra
+            emptyDir: {}

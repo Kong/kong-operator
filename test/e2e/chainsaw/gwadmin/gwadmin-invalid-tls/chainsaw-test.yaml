@@ -1,0 +1,396 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: gwadmin-invalid-tls
+spec:
+  description: |
+    An unusable TLS configuration is reported and never disturbs the running
+    gw-admin pods:
+    1. A GWAdmin runs on its Automatic CA, provisioned and checked by peers.
+    2. spec.tls.clientCA references a missing Secret: CertificateProvisioned turns
+       False/SecretRefNotFound (with a Warning event), Ready
+       False/DependenciesNotReady, and the pods are not rolled.
+    3. Meanwhile, the other certificate authorities still rotate: the
+       rotate-certificate-authorities annotation moves the API certificates
+       and the cp server certificate to new ones, while the cp client CA
+       keeps reporting its missing Secret.
+    4. The Secret appears holding a certificate that is not a CA:
+       CertificateProvisioned turns False/InvalidSecret.
+    5. The Secret is fixed with a CA: the GWAdmin rotates to it, and
+       publishes it in the operator namespace.
+    6. spec.tls.cp references a missing Secret while the replicas go to 2:
+       reported, and the Deployment keeps being applied (the Secrets the pods
+       mount exist) without rolling the pods for new TLS material. The
+       Secret then appears holding a certificate without any issuer the data
+       planes could verify it with (no chain, no ca.crt): InvalidSecret.
+       The peers never saw a TLS failure.
+    7. Another GWAdmin whose certificate Secret name is already taken by a
+       Secret it doesn't own (labeled konghq.com/secret) reports
+       SecretConflict (with a Warning event) and leaves that Secret alone; it
+       recovers once the Secret is gone.
+    8. Same with an unlabeled Secret, which Kong Operator never provisioned:
+       it is not adopted either.
+  bindings:
+    - name: gwadmin_name
+      value: gw-invalid
+    - name: conflict_gwadmin_name
+      value: gw-conflict
+    - name: unlabeled_gwadmin_name
+      value: gw-unlabeled
+    - name: work_dir
+      value: (join('', ['/tmp/gwadmin-e2e-', ($namespace)]))
+  steps:
+    - name: 1-Create-gwadmin
+      try:
+        - apply:
+            file: 01-gwadmin.yaml
+        # The scripts the peers and gwadmin-dp run, from gwadmin-shared.
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+            content: ../gwadmin-shared/gwadmin.sh peers-scripts
+        - apply:
+            file: ../gwadmin-shared/peers.yaml
+        - assert:
+            file: ../gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 1}
+      cleanup:
+        # Holds CA keys: removed whatever the outcome of the test.
+        - script:
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+              - name: WORK_DIR
+                value: ($work_dir)
+            content: ../gwadmin-shared/gwadmin.sh clean-work-dir
+    - name: 2-Missing-ca-secret
+      try:
+        # The checksums of the TLS material the pods run, before the change.
+        - script: &template-annotations
+            env: *env
+            content: ../gwadmin-shared/gwadmin.sh template-annotations "$GWADMIN"
+            check:
+              ($error): ~
+              (json_parse($stdout)."konghq.com/gw-admin-tls-checksum" != null): true
+              (json_parse($stdout)."konghq.com/gw-admin-trust-checksum" != null): true
+            outputs:
+              - name: template_annotations
+                value: (json_parse($stdout))
+        - patch:
+            resource:
+              apiVersion: gateway-operator.konghq.com/v1alpha1
+              kind: GWAdmin
+              metadata:
+                name: ($gwadmin_name)
+              spec:
+                tls:
+                  clientCA:
+                    provisioning: Manual
+                    secretRef:
+                      name: user-ca
+        - assert:
+            timeout: 1m
+            file: ../gwadmin-shared/assert-condition.yaml
+            bindings:
+              - {name: condition_type, value: CertificateProvisioned}
+              - {name: condition_status, value: "False"}
+              - {name: condition_reason, value: SecretRefNotFound}
+        - assert:
+            timeout: 30s
+            file: ../gwadmin-shared/assert-condition.yaml
+            bindings:
+              - {name: condition_type, value: Ready}
+              - {name: condition_status, value: "False"}
+              - {name: condition_reason, value: DependenciesNotReady}
+        - assert:
+            timeout: 30s
+            file: ../gwadmin-shared/assert-event.yaml
+            bindings:
+              - {name: event_type, value: Warning}
+              - {name: event_reason, value: SecretRefNotFound}
+        # The conditions above carry the current generation, so the
+        # Deployment was applied for this spec already.
+        - assert:
+            timeout: 5s
+            file: ../gwadmin-shared/assert-tls-checksums.yaml
+        - assert:
+            timeout: 5s
+            file: ../gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 1}
+    - name: 3-Other-certificate-authorities-still-rotate
+      try:
+        - script:
+            env: *env
+            content: ../gwadmin-shared/gwadmin.sh save-private-ca "$GWADMIN" api-ca "$WORK_DIR/api-0"
+        - script:
+            env: *env
+            content: ../gwadmin-shared/gwadmin.sh save-private-ca "$GWADMIN" cp-server-ca "$WORK_DIR/server-0"
+        - patch:
+            resource:
+              apiVersion: gateway-operator.konghq.com/v1alpha1
+              kind: GWAdmin
+              metadata:
+                name: ($gwadmin_name)
+                annotations:
+                  gateway-operator.konghq.com/rotate-certificate-authorities: "1"
+        - script:
+            env: *env
+            timeout: 8m
+            content: ../gwadmin-shared/gwadmin.sh wait-new-private-ca "$GWADMIN" api-ca "$WORK_DIR/api-0/tls.crt" "$WORK_DIR/api-1" 60
+        - script:
+            env: *env
+            timeout: 8m
+            content: ../gwadmin-shared/gwadmin.sh wait-new-private-ca "$GWADMIN" cp-server-ca "$WORK_DIR/server-0/tls.crt" "$WORK_DIR/server-1" 60
+        - script:
+            env: *env
+            timeout: 8m
+            content: ../gwadmin-shared/gwadmin.sh wait-leaves-on "$GWADMIN" "$WORK_DIR/api-1/tls.crt" 240 api operator-client
+        - script:
+            env: *env
+            timeout: 8m
+            content: ../gwadmin-shared/gwadmin.sh wait-leaves-on "$GWADMIN" "$WORK_DIR/server-1/tls.crt" 240 cp
+        - script:
+            env: *env
+            timeout: 8m
+            content: ../gwadmin-shared/gwadmin.sh wait-dp-current "$GWADMIN" 180
+        - assert:
+            timeout: 2m
+            file: ../gwadmin-shared/assert-api-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 1}
+        - assert:
+            timeout: 2m
+            file: ../gwadmin-shared/assert-server-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 1}
+        - assert:
+            timeout: 3m
+            file: ../gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 1}
+        - assert:
+            timeout: 30s
+            file: ../gwadmin-shared/assert-condition.yaml
+            bindings:
+              - {name: condition_type, value: CertificateProvisioned}
+              - {name: condition_status, value: "False"}
+              - {name: condition_reason, value: SecretRefNotFound}
+    - name: 4-Ca-secret-is-not-a-ca
+      try:
+        - script:
+            env: *env
+            content: ../gwadmin-shared/gwadmin.sh gen-ca some-ca "$WORK_DIR/some-ca"
+        - script:
+            env: *env
+            content: ../gwadmin-shared/gwadmin.sh gen-leaf "$WORK_DIR/some-ca" not-a-ca "$WORK_DIR/leaf"
+        - script:
+            env: *env
+            content: ../gwadmin-shared/gwadmin.sh put-tls-secret user-ca "$WORK_DIR/leaf"
+        - assert:
+            timeout: 1m
+            file: ../gwadmin-shared/assert-condition.yaml
+            bindings:
+              - {name: condition_type, value: CertificateProvisioned}
+              - {name: condition_status, value: "False"}
+              - {name: condition_reason, value: InvalidSecret}
+        - assert:
+            timeout: 30s
+            file: ../gwadmin-shared/assert-event.yaml
+            bindings:
+              - {name: event_type, value: Warning}
+              - {name: event_reason, value: InvalidSecret}
+        - assert:
+            timeout: 5s
+            file: ../gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 1}
+    - name: 5-Ca-secret-fixed
+      try:
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../gwadmin-shared/gwadmin.sh gen-ca fixed-ca "$WORK_DIR/fixed"
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../gwadmin-shared/gwadmin.sh put-tls-secret user-ca "$WORK_DIR/fixed"
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../gwadmin-shared/gwadmin.sh wait-published "$GWADMIN" "$WORK_DIR/fixed/tls.crt" 300
+        - assert:
+            timeout: 2m
+            file: ../gwadmin-shared/assert-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 1}
+        - assert:
+            timeout: 1m
+            file: ../gwadmin-shared/assert-gwadmin-ready.yaml
+        - assert:
+            timeout: 1m
+            file: ../gwadmin-shared/assert-tls-status.yaml
+        - assert:
+            timeout: 3m
+            file: ../gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 1}
+    - name: 6-Missing-cp-secret
+      try:
+        - script: *template-annotations
+        - patch:
+            resource:
+              apiVersion: gateway-operator.konghq.com/v1alpha1
+              kind: GWAdmin
+              metadata:
+                name: ($gwadmin_name)
+              spec:
+                deployment:
+                  replicas: 2
+                tls:
+                  cp:
+                    provisioning: Manual
+                    secretRef:
+                      name: missing-cp
+        - assert:
+            timeout: 1m
+            file: ../gwadmin-shared/assert-condition.yaml
+            bindings:
+              - {name: condition_type, value: CertificateProvisioned}
+              - {name: condition_status, value: "False"}
+              - {name: condition_reason, value: SecretRefNotFound}
+        # The Secrets the pods mount exist, so the Deployment keeps being
+        # applied: the new replica count is, the TLS material is unchanged.
+        - assert:
+            timeout: 5s
+            file: ../gwadmin-shared/assert-tls-checksums.yaml
+        - assert:
+            timeout: 3m
+            file: ../gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 2}
+        # A certificate whose issuer is nowhere in the Secret: the data
+        # planes would have nothing to verify it with.
+        - script:
+            env: *env
+            content: ../gwadmin-shared/gwadmin.sh put-tls-secret missing-cp "$WORK_DIR/leaf"
+        - assert:
+            timeout: 1m
+            resource:
+              apiVersion: gateway-operator.konghq.com/v1alpha1
+              kind: GWAdmin
+              metadata:
+                name: ($gwadmin_name)
+              status:
+                (conditions[?type == 'CertificateProvisioned']):
+                  - status: "False"
+                    reason: InvalidSecret
+                    (contains(message, 'carries no issuer')): true
+        - assert:
+            timeout: 5s
+            file: ../gwadmin-shared/assert-tls-checksums.yaml
+        # A few more rounds of handshakes against the final state.
+        - script:
+            env: *env
+            timeout: 2m
+            content: ../gwadmin-shared/gwadmin.sh wait-rounds 3 60
+        - script:
+            env: *env
+            timeout: 2m
+            content: ../gwadmin-shared/gwadmin.sh assert-no-failures
+    - name: 7-Secret-name-conflict-labeled
+      bindings:
+        - name: gwadmin_name
+          value: ($conflict_gwadmin_name)
+        - name: secret_name
+          value: (join('-', [($conflict_gwadmin_name), 'api-tls']))
+      try:
+        - apply:
+            file: 06-foreign-secret.yaml
+        - apply:
+            file: 01-gwadmin.yaml
+        - assert:
+            timeout: 1m
+            file: ../gwadmin-shared/assert-condition.yaml
+            bindings:
+              - {name: condition_type, value: CertificateProvisioned}
+              - {name: condition_status, value: "False"}
+              - {name: condition_reason, value: SecretConflict}
+        - assert:
+            timeout: 30s
+            file: ../gwadmin-shared/assert-event.yaml
+            bindings:
+              - {name: event_type, value: Warning}
+              - {name: event_reason, value: SecretConflict}
+        - assert:
+            timeout: 5s
+            file: ../gwadmin-shared/assert-foreign-secret.yaml
+        # Not a chainsaw delete: it waits for the name to be gone, which it
+        # never is for long once Kong Operator creates its own Secret.
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: SECRET
+                value: ($secret_name)
+            content: ../gwadmin-shared/gwadmin.sh delete-secret "$SECRET"
+        - assert:
+            timeout: 1m
+            file: ../gwadmin-shared/assert-condition.yaml
+            bindings:
+              - {name: condition_type, value: CertificateProvisioned}
+              - {name: condition_status, value: "True"}
+              - {name: condition_reason, value: CertificateProvisioned}
+    - name: 8-Secret-name-conflict-unlabeled
+      bindings:
+        - name: gwadmin_name
+          value: ($unlabeled_gwadmin_name)
+        - name: secret_name
+          value: (join('-', [($unlabeled_gwadmin_name), 'api-tls']))
+      try:
+        - apply:
+            file: 07-foreign-secret-unlabeled.yaml
+        - apply:
+            file: 01-gwadmin.yaml
+        - assert:
+            timeout: 1m
+            file: ../gwadmin-shared/assert-condition.yaml
+            bindings:
+              - {name: condition_type, value: CertificateProvisioned}
+              - {name: condition_status, value: "False"}
+              - {name: condition_reason, value: SecretConflict}
+        - assert:
+            timeout: 5s
+            file: ../gwadmin-shared/assert-foreign-secret.yaml
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: SECRET
+                value: ($secret_name)
+            content: ../gwadmin-shared/gwadmin.sh delete-secret "$SECRET"
+        # Kong Operator doesn't watch unlabeled Secrets: the recovery relies
+        # on the retries of the GWAdmin's reconciliation.
+        - assert:
+            timeout: 3m
+            file: ../gwadmin-shared/assert-condition.yaml
+            bindings:
+              - {name: condition_type, value: CertificateProvisioned}
+              - {name: condition_status, value: "True"}
+              - {name: condition_reason, value: CertificateProvisioned}
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
