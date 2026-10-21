@@ -1,0 +1,13 @@
+# The Pod template of the GWAdmin's Deployment still records the checksums of
+# template_annotations (captured before a change): the gw-admin pods were not
+# rolled for new TLS material.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ($gwadmin_name)
+spec:
+  template:
+    metadata:
+      annotations:
+        konghq.com/gw-admin-tls-checksum: ($template_annotations."konghq.com/gw-admin-tls-checksum")
+        konghq.com/gw-admin-trust-checksum: ($template_annotations."konghq.com/gw-admin-trust-checksum")

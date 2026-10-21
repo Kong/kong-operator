@@ -301,14 +301,64 @@ _Appears in:_
 
 - [AIGatewayDataPlaneSpec](#aigateway-konghq-com-v1alpha1-types-aigatewaydataplanespec)
 
+#### OnPremAIGatewayDataPlaneSync
+
+
+OnPremAIGatewayDataPlaneSync defines the configuration for syncing
+configuration to the data planes referencing this OnPremAIGateway.
+
+
+
+| Field | Description |
+| --- | --- |
+| `intervalSeconds` _*int32_ | IntervalSeconds is the interval between two rounds of syncing configuration with data planes, in seconds. If not specified, the default interval as defined by the operator will be used. |
+| `timeoutSeconds` _*int32_ | TimeoutSeconds is the timeout of a single run of syncing configuration with data planes, in seconds. If not specified, no timeout is applied to a sync run. |
+
+_Appears in:_
+
+- [OnPremAIGatewaySpec](#aigateway-konghq-com-v1alpha1-types-onpremaigatewayspec)
+
+#### OnPremAIGatewayFilterForObjectType
+
+
+OnPremAIGatewayFilterForObjectType defines the filters for a certain type of object.
+
+
+
+| Field | Description |
+| --- | --- |
+| `matchLabels` _map[string]string_ | MatchLabels defines the labels that the object must match to get reconciled by the controller for the OnPremAIGateway. For example, if `secrets.matchLabels` is `{"label1":"val1","label2":"val2"}`, only secrets with labels `label1=val1` and `label2=val2` are reconciled. |
+
+_Appears in:_
+
+- [OnPremAIGatewayObjectFilters](#aigateway-konghq-com-v1alpha1-types-onpremaigatewayobjectfilters)
+
+#### OnPremAIGatewayObjectFilters
+
+
+OnPremAIGatewayObjectFilters defines filters to limit watched objects by the controllers.
+
+
+
+| Field | Description |
+| --- | --- |
+| `secrets` _[OnPremAIGatewayFilterForObjectType](#aigateway-konghq-com-v1alpha1-types-onpremaigatewayfilterforobjecttype)_ | Secrets defines the filters for watched secrets. |
+
+_Appears in:_
+
+- [OnPremAIGatewaySpec](#aigateway-konghq-com-v1alpha1-types-onpremaigatewayspec)
+
 #### OnPremAIGatewaySpec
 
 
-OnPremAIGatewaySpec defines the desired state of OnPremAIGateway.<br /><br />It is intentionally empty for now: fields land alongside the reconciler
-logic that consumes them.
+OnPremAIGatewaySpec defines the desired state of OnPremAIGateway.
 
 
 
+| Field | Description |
+| --- | --- |
+| `dataplaneSync` _[OnPremAIGatewayDataPlaneSync](#aigateway-konghq-com-v1alpha1-types-onpremaigatewaydataplanesync)_ | DataPlaneSync defines the configuration for syncing configuration to the data planes referencing this OnPremAIGateway. |
+| `objectFilters` _[OnPremAIGatewayObjectFilters](#aigateway-konghq-com-v1alpha1-types-onpremaigatewayobjectfilters)_ | ObjectFilters defines the filters to limit watched objects by the controllers. |
 
 _Appears in:_
 

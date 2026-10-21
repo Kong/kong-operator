@@ -16,6 +16,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/service"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/target"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/upstream"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
@@ -107,7 +108,7 @@ func (c *tlsRouteConverter) GetOutputStore(_ context.Context, logger logr.Logger
 //   - skipDelete: true if the resource should NOT be deleted (skip deletion), false if it should be deleted
 //   - err: any error that occurred during processing
 func (c *tlsRouteConverter) HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (skipDelete bool, err error) {
-	return handleOrphanedResourceForRoute(ctx, logger, c.Client, c.route, "TLSRoute", resource)
+	return HandleOrphanedResourceForRoute(ctx, logger, c.Client, c.route, "TLSRoute", resource)
 }
 
 // Translate implements APIConverter.
@@ -130,6 +131,8 @@ func (c *tlsRouteConverter) translate(ctx context.Context, logger logr.Logger) e
 
 	logger = logger.WithValues("phase", "tlsroute-translate")
 	log.Debug(logger, "Starting TLSRoute translation")
+
+	ctx = utils.WithTagCache(ctx)
 
 	var translationErrors []error
 

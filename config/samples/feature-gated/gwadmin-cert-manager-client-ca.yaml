@@ -1,0 +1,58 @@
+# GWAdmin whose cp client CA comes from cert-manager (Manual), while Kong
+# Operator issues the server certificate of the cp listener (Automatic).
+# Prerequisites:
+# - cert-manager installed in the cluster (https://cert-manager.io/docs/installation/)
+#
+# The cp listener the data planes connect to accepts the data plane client
+# certificates issued from a cert-manager CA. When cert-manager renews that
+# CA, Kong Operator rotates to it without breaking connections: it publishes
+# it in its own namespace once the gw-admin pods trust it, for the data plane
+# certificates to be issued from it, and drops the previous CA once every
+# data plane rolled out with them.
+# The server certificate of the cp listener comes from a certificate
+# authority Kong Operator keeps to itself, so whoever can issue data plane
+# certificates can't impersonate gw-admin.
+#
+# The Secrets cert-manager writes must carry the operator's secret label
+# (default konghq.com/secret: "true") for Kong Operator to see them, and must
+# not be named <GWAdmin name>-api-tls, -api-ca-bundle, -cp-tls,
+# -cp-server-ca-bundle or -cp-client-ca-bundle: Kong Operator keeps its own
+# Secrets under those names.
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: gwadmin-client-ca-selfsigned
+spec:
+  selfSigned: {}
+---
+# The CA the cp listener verifies the data plane client certificates with.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: gwadmin-client-ca-dataplane-ca
+spec:
+  isCA: true
+  commonName: gwadmin-client-ca-dataplane-ca
+  secretName: gwadmin-client-ca-dataplane-ca
+  secretTemplate:
+    labels:
+      konghq.com/secret: "true"
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    kind: Issuer
+    name: gwadmin-client-ca-selfsigned
+---
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: GWAdmin
+metadata:
+  name: gwadmin-client-ca
+spec:
+  tls:
+    clientCA:
+      provisioning: Manual
+      secretRef:
+        name: gwadmin-client-ca-dataplane-ca
+    cp:
+      provisioning: Automatic

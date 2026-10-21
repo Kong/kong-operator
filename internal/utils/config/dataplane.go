@@ -13,6 +13,7 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	"github.com/kong/kong-operator/v2/internal/utils/konnectendpoint"
 )
 
 // ListenValue renders a Kong listen value for the given port, bound to the
@@ -106,15 +107,34 @@ func KongDefaults(family ipfamily.IPFamily) (map[string]string, error) {
 	return defaults, nil
 }
 
+// DisableAdminAPI turns off the Kong Admin API listener and drops the related
+// admin TLS/mTLS settings from the given env map. It mutates env in place, so
+// callers must not pass a shared map.
+func DisableAdminAPI(env map[string]string) {
+	if env == nil {
+		return
+	}
+	env["KONG_ADMIN_LISTEN"] = "off"
+	for _, k := range []string{
+		"KONG_ADMIN_SSL_CERT",
+		"KONG_ADMIN_SSL_CERT_KEY",
+		"KONG_NGINX_ADMIN_SSL_CLIENT_CERTIFICATE",
+		"KONG_NGINX_ADMIN_SSL_VERIFY_CLIENT",
+		"KONG_NGINX_ADMIN_SSL_VERIFY_DEPTH",
+	} {
+		delete(env, k)
+	}
+}
+
 // kongInKonnectClusterTypeControlPlane are the baseline Kong proxy configuration options needed for
 // the proxy to function when configured in Konnect Hybrid ControlPlanes.
 var kongInKonnectClusterTypeControlPlane = map[string]string{
 	"KONG_ROLE":                          "data_plane",
 	"KONG_CLUSTER_MTLS":                  "pki",
-	"KONG_CLUSTER_CONTROL_PLANE":         "<CONTROL-PLANE-ENDPOINT>:443",
-	"KONG_CLUSTER_SERVER_NAME":           "<CONTROL-PLANE-ENDPOINT>",
-	"KONG_CLUSTER_TELEMETRY_ENDPOINT":    "<TELEMETRY-ENDPOINT>:443",
-	"KONG_CLUSTER_TELEMETRY_SERVER_NAME": "<TELEMETRY-ENDPOINT>",
+	"KONG_CLUSTER_CONTROL_PLANE":         "<CONTROL-PLANE-ADDRESS>",
+	"KONG_CLUSTER_SERVER_NAME":           "<CONTROL-PLANE-SERVER-NAME>",
+	"KONG_CLUSTER_TELEMETRY_ENDPOINT":    "<TELEMETRY-ADDRESS>",
+	"KONG_CLUSTER_TELEMETRY_SERVER_NAME": "<TELEMETRY-SERVER-NAME>",
 	"KONG_CLUSTER_CERT":                  "/etc/secrets/kong-cluster-cert/tls.crt",
 	"KONG_CLUSTER_CERT_KEY":              "/etc/secrets/kong-cluster-cert/tls.key",
 	"KONG_INCREMENTAL_SYNC":              "on",
@@ -128,8 +148,8 @@ var kongInKonnectClusterTypeControlPlane = map[string]string{
 var kongInKonnectClusterTypeIngressController = map[string]string{
 	"KONG_ROLE":                          "traditional",
 	"KONG_CLUSTER_MTLS":                  "pki",
-	"KONG_CLUSTER_TELEMETRY_ENDPOINT":    "<TELEMETRY-ENDPOINT>:443",
-	"KONG_CLUSTER_TELEMETRY_SERVER_NAME": "<TELEMETRY-ENDPOINT>",
+	"KONG_CLUSTER_TELEMETRY_ENDPOINT":    "<TELEMETRY-ADDRESS>",
+	"KONG_CLUSTER_TELEMETRY_SERVER_NAME": "<TELEMETRY-SERVER-NAME>",
 	"KONG_CLUSTER_CERT":                  "/etc/secrets/kong-cluster-cert/tls.crt",
 	"KONG_CLUSTER_CERT_KEY":              "/etc/secrets/kong-cluster-cert/tls.key",
 	"KONG_LUA_SSL_TRUSTED_CERTIFICATE":   "system",
@@ -138,10 +158,11 @@ var kongInKonnectClusterTypeIngressController = map[string]string{
 }
 
 // KongInKonnectDefaults returns the map of Konnect-related env vars properly configured.
+// It returns an error when a value the selected template renders cannot be used.
 func KongInKonnectDefaults(
 	dpLabels map[string]konnectv1alpha2.DataPlaneLabelValue,
 	konnectExtensionStatus konnectv1alpha2.KonnectExtensionStatus,
-) map[string]string {
+) (map[string]string, error) {
 	newEnvSet := make(map[string]string, len(kongInKonnectClusterTypeControlPlane))
 	var template map[string]string
 
@@ -155,9 +176,30 @@ func KongInKonnectDefaults(
 		panic(fmt.Sprintf("unsupported Konnect cluster type: %s", konnectExtensionStatus.Konnect.ClusterType))
 	}
 
+	// Only the endpoints the selected template renders are parsed: a value the
+	// cluster type never uses must not fail the DataPlane.
+	endpointValues := map[string]string{}
+	if _, ok := template["KONG_CLUSTER_CONTROL_PLANE"]; ok {
+		cpEndpoint, err := konnectendpoint.Parse(konnectExtensionStatus.Konnect.Endpoints.ControlPlaneEndpoint)
+		if err != nil {
+			return nil, fmt.Errorf("control plane endpoint %q: %w", konnectExtensionStatus.Konnect.Endpoints.ControlPlaneEndpoint, err)
+		}
+		endpointValues["<CONTROL-PLANE-ADDRESS>"] = cpEndpoint.ControlPlaneAddress()
+		endpointValues["<CONTROL-PLANE-SERVER-NAME>"] = cpEndpoint.ServerName()
+	}
+	if _, ok := template["KONG_CLUSTER_TELEMETRY_ENDPOINT"]; ok {
+		tpEndpoint, err := konnectendpoint.Parse(konnectExtensionStatus.Konnect.Endpoints.TelemetryEndpoint)
+		if err != nil {
+			return nil, fmt.Errorf("telemetry endpoint %q: %w", konnectExtensionStatus.Konnect.Endpoints.TelemetryEndpoint, err)
+		}
+		endpointValues["<TELEMETRY-ADDRESS>"] = tpEndpoint.TelemetryAddress()
+		endpointValues["<TELEMETRY-SERVER-NAME>"] = tpEndpoint.ServerName()
+	}
+
 	for k, v := range template {
-		v = strings.ReplaceAll(v, "<CONTROL-PLANE-ENDPOINT>", sanitizeEndpoint(konnectExtensionStatus.Konnect.Endpoints.ControlPlaneEndpoint))
-		v = strings.ReplaceAll(v, "<TELEMETRY-ENDPOINT>", sanitizeEndpoint(konnectExtensionStatus.Konnect.Endpoints.TelemetryEndpoint))
+		for placeholder, value := range endpointValues {
+			v = strings.ReplaceAll(v, placeholder, value)
+		}
 		newEnvSet[k] = v
 	}
 
@@ -165,11 +207,7 @@ func KongInKonnectDefaults(
 		newEnvSet["KONG_CLUSTER_DP_LABELS"] = clusterDataPlaneLabelStringFromLabels(dpLabels)
 	}
 
-	return newEnvSet
-}
-
-func sanitizeEndpoint(endpoint string) string {
-	return strings.TrimPrefix(endpoint, "https://")
+	return newEnvSet, nil
 }
 
 func clusterDataPlaneLabelStringFromLabels(labels map[string]konnectv1alpha2.DataPlaneLabelValue) string {

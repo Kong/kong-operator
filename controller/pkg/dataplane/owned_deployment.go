@@ -32,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/managedfields"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/kong-operator/v2/controller/pkg/hpa"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/controller/pkg/reservedkeys"
@@ -51,9 +52,24 @@ func (r *Reconciler[T, Cert]) ensureDeployment(
 	certChecksum string,
 ) error {
 	image := ResolveImage(dp, r.Config.Deployment)
-	desired, err := BuildDeployment(logger, r.TypeConverter, dp, cp, image, certSecretName, adminCertSecretName, certChecksum, r.Config)
+	desired, err := BuildDeployment(logger, r.TypeConverter, dp, cp, image, certSecretName, adminCertSecretName, certChecksum, r.Config.Deployment, r.Config.Certificate.ChecksumAnnotation)
 	if err != nil {
 		return fmt.Errorf("failed to build Deployment for %s %s/%s: %w",
+			r.Config.Kind, dp.GetNamespace(), dp.GetName(), err)
+	}
+
+	// With horizontal scaling the HPA owns the replica count: keep the current
+	// value instead of applying minReplicas, which would revert every scale-up,
+	// and once the HPA has scaled the Deployment, do not apply it at all.
+	desiredReplicas, err := hpa.DesiredDeploymentReplicas(ctx, r.Client, dp, client.ObjectKeyFromObject(desired))
+	if err != nil {
+		return fmt.Errorf("failed to resolve Deployment replicas for %s %s/%s: %w",
+			r.Config.Kind, dp.GetNamespace(), dp.GetName(), err)
+	}
+	if desiredReplicas == nil {
+		unstructured.RemoveNestedField(desired.Object, "spec", "replicas")
+	} else if err := unstructured.SetNestedField(desired.Object, int64(*desiredReplicas), "spec", "replicas"); err != nil {
+		return fmt.Errorf("failed to set Deployment replicas for %s %s/%s: %w",
 			r.Config.Kind, dp.GetNamespace(), dp.GetName(), err)
 	}
 
@@ -126,7 +142,7 @@ func ResolveImage[T Object](dp T, cfg DeploymentConfig[T]) string {
 // overlay, it is merged with the operator base via SMD. The result always has
 // spec.strategy removed so that SSA does not claim ownership of it, leaving
 // the API server (or admission webhooks) free to apply their own default.
-func BuildDeployment[T Object, Cert CertificateObject](
+func BuildDeployment[T Object](
 	logger logr.Logger,
 	tc managedfields.TypeConverter,
 	dp T,
@@ -135,15 +151,16 @@ func BuildDeployment[T Object, Cert CertificateObject](
 	certSecretName string,
 	adminCertSecretName string,
 	certChecksum string,
-	cfg Config[T, Cert],
+	cfg DeploymentConfig[T],
+	checksumAnnotation string,
 ) (*unstructured.Unstructured, error) {
-	base, err := GenerateBaseDeployment(logger, dp, cp, image, certSecretName, adminCertSecretName, certChecksum, cfg)
+	base, err := GenerateBaseDeployment(logger, dp, cp, image, certSecretName, adminCertSecretName, certChecksum, cfg, checksumAnnotation)
 	if err != nil {
 		return nil, err
 	}
 
 	var u *unstructured.Unstructured
-	if pts := cfg.Deployment.PodTemplateSpec(dp); pts == nil {
+	if pts := cfg.PodTemplateSpec(dp); pts == nil {
 		raw, err := runtime.DefaultUnstructuredConverter.ToUnstructured(base)
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert Deployment to unstructured: %w", err)
@@ -158,7 +175,7 @@ func BuildDeployment[T Object, Cert CertificateObject](
 			Namespace:  dp.GetNamespace(),
 			Spec: appsv1.DeploymentSpec{
 				Selector: &metav1.LabelSelector{
-					MatchLabels: SelectorLabels(dp, cfg.Deployment.ManagedByLabelValue),
+					MatchLabels: SelectorLabels(dp, cfg.ManagedByLabelValue),
 				},
 				Template: *pts,
 			},
@@ -171,16 +188,16 @@ func BuildDeployment[T Object, Cert CertificateObject](
 		// KONG_LICENSE_DATA with no enabled KongLicense or with a Konnect
 		// control plane) are left untouched so the user's overlay value is not
 		// silently deleted.
-		if len(cfg.Deployment.ReassertEnvVars) > 0 {
+		if len(cfg.ReassertEnvVars) > 0 {
 			injected := map[string]bool{}
-			if bc := k8sutils.GetPodContainerByName(&base.Spec.Template.Spec, cfg.Deployment.ContainerName); bc != nil {
+			if bc := k8sutils.GetPodContainerByName(&base.Spec.Template.Spec, cfg.ContainerName); bc != nil {
 				for _, e := range bc.Env {
-					if slices.Contains(cfg.Deployment.ReassertEnvVars, e.Name) {
+					if slices.Contains(cfg.ReassertEnvVars, e.Name) {
 						injected[e.Name] = true
 					}
 				}
 			}
-			if c := k8sutils.GetPodContainerByName(&userDeployment.Spec.Template.Spec, cfg.Deployment.ContainerName); c != nil {
+			if c := k8sutils.GetPodContainerByName(&userDeployment.Spec.Template.Spec, cfg.ContainerName); c != nil {
 				c.Env = slices.DeleteFunc(c.Env, func(e corev1.EnvVar) bool {
 					return injected[e.Name]
 				})
@@ -195,10 +212,10 @@ func BuildDeployment[T Object, Cert CertificateObject](
 		// The user overlay wins on annotation conflicts, so a user-supplied
 		// value for the checksum key would otherwise silently pin the checksum
 		// and stop rollouts from being triggered on certificate rotation.
-		if certChecksum != "" && cfg.Certificate.ChecksumAnnotation != "" {
+		if certChecksum != "" && checksumAnnotation != "" {
 			if err := unstructured.SetNestedField(u.Object, certChecksum,
 				"spec", "template", "metadata", "annotations",
-				cfg.Certificate.ChecksumAnnotation); err != nil {
+				checksumAnnotation); err != nil {
 				return nil, fmt.Errorf("failed to re-assert certificate checksum annotation: %w", err)
 			}
 		}
@@ -223,7 +240,7 @@ func SelectorLabels[T Object](dp T, managedByLabelValue string) map[string]strin
 
 // GenerateBaseDeployment creates the operator-managed DataPlane Deployment
 // without user overlays.
-func GenerateBaseDeployment[T Object, Cert CertificateObject](
+func GenerateBaseDeployment[T Object](
 	logger logr.Logger,
 	dp T,
 	cp ResolvedControlPlane,
@@ -231,14 +248,15 @@ func GenerateBaseDeployment[T Object, Cert CertificateObject](
 	certSecretName string,
 	adminCertSecretName string,
 	certChecksum string,
-	cfg Config[T, Cert],
+	cfg DeploymentConfig[T],
+	checksumAnnotation string,
 ) (*appsv1.Deployment, error) {
-	labels := SelectorLabels(dp, cfg.Deployment.ManagedByLabelValue)
-	labels["app.kubernetes.io/name"] = cfg.Deployment.ContainerName
+	labels := SelectorLabels(dp, cfg.ManagedByLabelValue)
+	labels["app.kubernetes.io/name"] = cfg.ContainerName
 
-	selector := SelectorLabels(dp, cfg.Deployment.ManagedByLabelValue)
+	selector := SelectorLabels(dp, cfg.ManagedByLabelValue)
 
-	container, volumes, err := cfg.Deployment.BuildContainer(dp, cp, image, certSecretName, adminCertSecretName)
+	container, volumes, err := cfg.BuildContainer(dp, cp, image, certSecretName, adminCertSecretName)
 	if err != nil {
 		return nil, err
 	}
@@ -274,14 +292,14 @@ func GenerateBaseDeployment[T Object, Cert CertificateObject](
 		Namespace:  dp.GetNamespace(),
 		Labels:     labels,
 		Spec: appsv1.DeploymentSpec{
-			Replicas: cfg.Deployment.Replicas(dp),
+			Replicas: hpa.DeploymentReplicas(dp, nil),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: selector,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      labels,
-					Annotations: certChecksumAnnotation(certChecksum, cfg.Certificate.ChecksumAnnotation),
+					Annotations: certChecksumAnnotation(certChecksum, checksumAnnotation),
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{container},
@@ -292,13 +310,13 @@ func GenerateBaseDeployment[T Object, Cert CertificateObject](
 	}
 
 	k8sutils.SetOwnerForObject(d, dp)
-	if cfg.Deployment.LabelManaged != nil {
-		cfg.Deployment.LabelManaged(d)
-		cfg.Deployment.LabelManaged(&d.Spec.Template)
+	if cfg.LabelManaged != nil {
+		cfg.LabelManaged(d)
+		cfg.LabelManaged(&d.Spec.Template)
 	}
 
-	addAnnotationsForDataPlaneDeployment(logger, d, cfg.Deployment.DeploymentAnnotations(dp))
-	addLabelsForDataPlaneDeployment(logger, d, cfg.Deployment.DeploymentLabels(dp))
+	addAnnotationsForDataPlaneDeployment(logger, d, cfg.DeploymentAnnotations(dp))
+	addLabelsForDataPlaneDeployment(logger, d, cfg.DeploymentLabels(dp))
 
 	return d, nil
 }

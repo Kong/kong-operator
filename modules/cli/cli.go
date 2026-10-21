@@ -88,6 +88,12 @@ func New(m metadata.Info) *CLI {
 
 	// controllers for Event Gateway APIs
 	flagSet.BoolVar(&cfg.KEGDataPlaneControllerEnabled, "enable-controller-kegdataplane", false, "Enable the KEG (Kong Event Gateway) DataPlane controller.")
+	flagSet.BoolVar(&cfg.OnPremEventGatewayControllerEnabled, "enable-controller-onpremeventgateway", false, "Enable the on-prem Event Gateway controller (alpha, no configuration is pushed to gw-admin yet).")
+
+	// controller for gw-admin, the on-prem control plane of the data planes that do not use Konnect
+	flagSet.BoolVar(&cfg.GWAdminControllerEnabled, "enable-controller-gwadmin", false, "Enable the GWAdmin controller, deploying gw-admin and managing its certificates.")
+	flagSet.DurationVar(&cfg.GWAdminCATTL, "gwadmin-ca-ttl", consts.GWAdminCATTL, "Validity of the certificate authorities created for a GWAdmin, renewed once two thirds of it have elapsed (e.g. '8760h'). At least 10m.")
+	flagSet.DurationVar(&cfg.GWAdminCertTTL, "gwadmin-cert-ttl", consts.GWAdminLeafTTL, "Validity of the certificates issued for a GWAdmin, renewed once two thirds of it have elapsed, and capped at the expiry of their certificate authority (e.g. '2160h'). At least 10m, and at most gwadmin-ca-ttl.")
 
 	// controllers for AI Gateway APIs
 	flagSet.BoolVar(&cfg.AIGatewayDataPlaneControllerEnabled, "enable-controller-aigatewaydataplane", false, "Enable the AI Gateway DataPlane controller.")
@@ -140,6 +146,19 @@ func validateKonnectListPageSize(size int64) error {
 func validateKonnectSyncPeriod(duration time.Duration) error {
 	if duration <= 0 {
 		return fmt.Errorf("must be greater than 0")
+	}
+	return nil
+}
+
+// validateGWAdminTTLs checks --gwadmin-ca-ttl and --gwadmin-cert-ttl.
+func validateGWAdminTTLs(caTTL, certTTL time.Duration) error {
+	switch {
+	case caTTL < consts.GWAdminMinTTL:
+		return fmt.Errorf("--gwadmin-ca-ttl (%s) must be at least %s", caTTL, consts.GWAdminMinTTL)
+	case certTTL < consts.GWAdminMinTTL:
+		return fmt.Errorf("--gwadmin-cert-ttl (%s) must be at least %s", certTTL, consts.GWAdminMinTTL)
+	case certTTL > caTTL:
+		return fmt.Errorf("--gwadmin-cert-ttl (%s) must not exceed --gwadmin-ca-ttl (%s)", certTTL, caTTL)
 	}
 	return nil
 }
@@ -307,6 +326,11 @@ func (c *CLI) Parse(arguments []string) manager.Config {
 
 	if c.cfg.CertExpirationMargin >= c.cfg.CertTTL {
 		fmt.Printf("ERROR: --cert-expiration-margin (%s) must be lower than --cert-ttl (%s)\n", c.cfg.CertExpirationMargin, c.cfg.CertTTL)
+		os.Exit(1)
+	}
+
+	if err := validateGWAdminTTLs(c.cfg.GWAdminCATTL, c.cfg.GWAdminCertTTL); err != nil {
+		fmt.Printf("ERROR: %s\n", err)
 		os.Exit(1)
 	}
 

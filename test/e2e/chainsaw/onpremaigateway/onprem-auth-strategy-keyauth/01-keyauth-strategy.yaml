@@ -1,0 +1,19 @@
+# A key-auth AIGatewayAuthStrategy targeting the OnPremAIGateway.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayAuthStrategy
+metadata:
+  name: ($keyauth_auth_strategy_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: key-auth
+    key-auth:
+      name: ($keyauth_auth_strategy_name)
+      displayName: ($keyauth_auth_strategy_name)
+      config:
+        hideCredentials: Enabled

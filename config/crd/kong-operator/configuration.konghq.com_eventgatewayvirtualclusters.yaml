@@ -893,6 +893,11 @@ spec:
           rule: '!has(self.spec.eventGatewayBackendClusterRef) || !has(self.status.conditions)
             || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
             == ''True'') || oldSelf.spec.eventGatewayBackendClusterRef == self.spec.eventGatewayBackendClusterRef'
+        - fieldPath: .spec.eventGatewayBackendClusterRef
+          message: spec.eventGatewayBackendClusterRef is immutable once the entity
+            has been created in Konnect
+          rule: '!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayBackendClusterRef
+            == oldSelf.spec.eventGatewayBackendClusterRef'
     served: true
     storage: true
     subresources:

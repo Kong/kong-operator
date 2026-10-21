@@ -15,8 +15,10 @@ import (
 // is interrupted), the cleanup logic can still recover the Konnect ID from this
 // store and delete the entity, avoiding orphaned Konnect entities.
 //
-// Only the entity's own Konnect ID is stored. The parent references needed to
-// delete an entity (control plane, consumer, service, upstream, key set, network,
+// The entity's ID and create-input fingerprint are stored together, so a failed
+// status write cannot lose the fingerprint of the request actually sent.
+// The parent references needed to delete an entity (control plane, consumer,
+// service, upstream, key set, network,
 // ...) are persisted to the status by their dedicated reference handlers in
 // earlier reconcile passes, so they are already present on the object that the
 // deletion logic operates on; the create pass only ever risks losing the entity's
@@ -30,25 +32,30 @@ import (
 // deletion reconcile has run and purged the entry.
 type pendingKonnectIDStore struct {
 	mu  sync.RWMutex
-	ids map[client.ObjectKey]string
+	ids map[client.ObjectKey]pendingKonnectEntityStatus
+}
+
+type pendingKonnectEntityStatus struct {
+	ID               string
+	CreateInputsHash string
 }
 
 // newPendingKonnectIDStore returns an initialized pendingKonnectIDStore.
 func newPendingKonnectIDStore() *pendingKonnectIDStore {
 	return &pendingKonnectIDStore{
-		ids: make(map[client.ObjectKey]string),
+		ids: make(map[client.ObjectKey]pendingKonnectEntityStatus),
 	}
 }
 
-// Store saves the Konnect ID for the given object key.
-func (s *pendingKonnectIDStore) Store(key client.ObjectKey, id string) {
+// Store saves the Konnect ID and create-input fingerprint for the given object key.
+func (s *pendingKonnectIDStore) Store(key client.ObjectKey, status pendingKonnectEntityStatus) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.ids[key] = id
+	s.ids[key] = status
 }
 
-// Get returns the Konnect ID stored for the given object key, if any.
-func (s *pendingKonnectIDStore) Get(key client.ObjectKey) (string, bool) {
+// Get returns the pending Konnect status for the given object key, if any.
+func (s *pendingKonnectIDStore) Get(key client.ObjectKey) (pendingKonnectEntityStatus, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	id, ok := s.ids[key]

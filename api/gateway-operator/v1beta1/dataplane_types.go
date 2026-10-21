@@ -610,6 +610,21 @@ func (d *DataPlane) SetConditions(conditions []metav1.Condition) {
 	d.Status.Conditions = conditions
 }
 
+// GetReplicas returns the DataPlane static replica count, or nil when it is
+// not set.
+func (d *DataPlane) GetReplicas() *int32 {
+	return d.Spec.Deployment.Replicas
+}
+
+// GetHorizontalScaling returns the DataPlane horizontal scaling options, or nil
+// when horizontal scaling is not configured.
+func (d *DataPlane) GetHorizontalScaling() *commonv1alpha1.HorizontalScaling {
+	if d.Spec.Deployment.Scaling == nil {
+		return nil
+	}
+	return d.Spec.Deployment.Scaling.HorizontalScaling
+}
+
 // GetExtensions retrieves the DataPlane Extensions.
 func (d *DataPlane) GetExtensions() []commonv1alpha1.ExtensionRef {
 	return d.Spec.Extensions

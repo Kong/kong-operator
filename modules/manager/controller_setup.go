@@ -40,8 +40,10 @@ import (
 	"github.com/kong/kong-operator/v2/controller/crdschema"
 	"github.com/kong/kong-operator/v2/controller/dataplane"
 	egdataplane "github.com/kong/kong-operator/v2/controller/eventgateway/dataplane"
+	egonprem "github.com/kong/kong-operator/v2/controller/eventgateway/onprem"
 	"github.com/kong/kong-operator/v2/controller/gateway"
 	"github.com/kong/kong-operator/v2/controller/gatewayclass"
+	"github.com/kong/kong-operator/v2/controller/gwadmin"
 	hybridgateway "github.com/kong/kong-operator/v2/controller/hybridgateway"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/converter"
 	"github.com/kong/kong-operator/v2/controller/kongplugininstallation"
@@ -220,6 +222,12 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 		)
 	}
 
+	if cfg.GWAdminControllerEnabled {
+		indexOptions = slices.Concat(indexOptions,
+			gwadmin.IndexOptions(),
+		)
+	}
+
 	if cfg.FeatureGates.Enabled(FeatureGateMCPServer) {
 		cl := mgr.GetClient()
 		indexOptions = slices.Concat(indexOptions,
@@ -393,6 +401,31 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 					Group:    konnectv1alpha1.SchemeGroupVersion.Group,
 					Version:  konnectv1alpha1.SchemeGroupVersion.Version,
 					Resource: "konnecteventgateways",
+				},
+			},
+		},
+		{
+			// The OnPremEventGateway controller watches the gateways and every
+			// Event Gateway entity that can belong to one.
+			condition: c.OnPremEventGatewayControllerEnabled,
+			gvrs: slices.Concat(
+				[]schema.GroupVersionResource{{
+					Group:    eventgatewayv1alpha1.SchemeGroupVersion.Group,
+					Version:  eventgatewayv1alpha1.SchemeGroupVersion.Version,
+					Resource: "onpremeventgateways",
+				}},
+				egonprem.EntityGroupVersionResources(),
+			),
+		},
+		{
+			condition: c.GWAdminControllerEnabled,
+			gvrs: []schema.GroupVersionResource{
+				operatorv1alpha1.GWAdminGVR(),
+				// The grants allowing data planes in other namespaces.
+				{
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "kongreferencegrants",
 				},
 			},
 		},
@@ -912,6 +945,28 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				SecretLabelSelector:      c.SecretLabelSelector,
 				CertTTL:                  c.CertTTL,
 				TypeConverter:            ssaProvider,
+			},
+		},
+		// On-prem EventGateway controller
+		{
+			Enabled: c.OnPremEventGatewayControllerEnabled,
+			Controller: &egonprem.Reconciler{
+				Client:      mgr.GetClient(),
+				LoggingMode: c.LoggingMode,
+			},
+		},
+		// GWAdmin controller
+		{
+			Enabled: c.GWAdminControllerEnabled,
+			Controller: &gwadmin.Reconciler{
+				Client:              mgr.GetClient(),
+				LoggingMode:         c.LoggingMode,
+				ClusterDomain:       c.ClusterDomain,
+				SecretLabelSelector: c.SecretLabelSelector,
+				OperatorNamespace:   c.ControllerNamespace,
+				CATTL:               c.GWAdminCATTL,
+				CertTTL:             c.GWAdminCertTTL,
+				TypeConverter:       ssaProvider,
 			},
 		},
 		// AIGateway DataPlane controller

@@ -55,6 +55,14 @@ resources:
     crdVersion: v1
     namespaced: true
   controller: true
+  group: gateway-operator.konghq.com
+  kind: GWAdmin
+  path: github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
   group: eventgateway.konghq.com
   kind: KegDataPlane
   path: github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1

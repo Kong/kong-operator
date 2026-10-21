@@ -1,0 +1,17 @@
+# The GWAdmin reconciled its current spec without anything left to do: its
+# certificates are provisioned, no rotation is in progress, and its
+# Deployment observed the applied spec.
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: GWAdmin
+metadata:
+  name: ($gwadmin_name)
+(@)->gwadmin:
+  status:
+    (conditions[?type == 'CertificateProvisioned']):
+      - status: "True"
+        reason: CertificateProvisioned
+        observedGeneration: ($gwadmin.metadata.generation)
+    (conditions[?type == 'Ready']):
+      - status: "True"
+        reason: Ready
+        observedGeneration: ($gwadmin.metadata.generation)

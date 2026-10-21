@@ -11,6 +11,8 @@ import (
 const (
 	// IndexFieldEventGatewayListenerOnKonnectEventGatewayRef is the index field for EventGatewayListener -> KonnectEventGateway.
 	IndexFieldEventGatewayListenerOnKonnectEventGatewayRef = "eventGatewayListenerOnKonnectEventGatewayRef"
+	// IndexFieldEventGatewayListenerOnOnPremEventGatewayRef is the index field for EventGatewayListener -> OnPremEventGateway.
+	IndexFieldEventGatewayListenerOnOnPremEventGatewayRef = "eventGatewayListenerOnOnPremEventGatewayRef"
 )
 
 // OptionsForEventGatewayListener returns required Index options for EventGatewayListener reconciler.
@@ -21,12 +23,22 @@ func OptionsForEventGatewayListener() []Option {
 			Field:          IndexFieldEventGatewayListenerOnKonnectEventGatewayRef,
 			ExtractValueFn: eventGatewayListenerOnKonnectEventGatewayRef,
 		},
+		{
+			Object:         &configurationv1alpha1.EventGatewayListener{},
+			Field:          IndexFieldEventGatewayListenerOnOnPremEventGatewayRef,
+			ExtractValueFn: eventGatewayListenerOnOnPremEventGatewayRef,
+		},
 	}
 }
 
 func eventGatewayListenerOnKonnectEventGatewayRef(object client.Object) []string {
 	ent, ok := object.(*configurationv1alpha1.EventGatewayListener)
 	if !ok {
+		return nil
+	}
+	// Only entities referencing a KonnectEventGateway are visible to the Konnect
+	// reconciler: the others are indexed separately.
+	if ent.SkipKonnectReconciliation() {
 		return nil
 	}
 	// The reference comes from spec.parentRef or the deprecated spec.gatewayRef.
@@ -41,4 +53,22 @@ func eventGatewayListenerOnKonnectEventGatewayRef(object client.Object) []string
 	}
 
 	return []string{refNamespace + "/" + ref.NamespacedRef.Name}
+}
+
+func eventGatewayListenerOnOnPremEventGatewayRef(object client.Object) []string {
+	ent, ok := object.(*configurationv1alpha1.EventGatewayListener)
+	if !ok {
+		return nil
+	}
+	ref := ent.Spec.ParentRef
+	if ref == nil || !ref.IsGroupKind("eventgateway.konghq.com", "OnPremEventGateway") {
+		return nil
+	}
+
+	refNamespace := ent.GetNamespace()
+	if ref.Namespace != nil && *ref.Namespace != "" {
+		refNamespace = *ref.Namespace
+	}
+
+	return []string{refNamespace + "/" + ref.Name}
 }

@@ -1,13 +1,13 @@
 module github.com/kong/kong-operator/v2/crd-from-oas
 
-go 1.27.2
+go 1.27.3
 
 require (
 	github.com/caarlos0/env/v11 v11.4.1
 	github.com/getkin/kin-openapi v0.149.0
 	github.com/gobuffalo/flect v1.0.3
 	github.com/stretchr/testify v1.12.1
-	golang.org/x/mod v0.41.0
+	golang.org/x/mod v0.42.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apimachinery v0.37.1
 	k8s.io/client-go v0.37.1

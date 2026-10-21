@@ -23,6 +23,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/service"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/target"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/upstream"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
@@ -47,7 +48,7 @@ type grpcRouteConverter struct {
 
 // HandleOrphanedResource removes this GRPCRoute from an orphaned resource's hybrid-routes annotation.
 func (c *grpcRouteConverter) HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (skipDelete bool, err error) {
-	return handleOrphanedResourceForRoute(ctx, logger, c.Client, c.route, "GRPCRoute", resource)
+	return HandleOrphanedResourceForRoute(ctx, logger, c.Client, c.route, "GRPCRoute", resource)
 }
 
 // DesiredResourcesReady implements DesiredStateReadinessChecker. It decides whether orphan cleanup
@@ -175,6 +176,8 @@ func newGRPCRouteConverter(
 func (c *grpcRouteConverter) translate(ctx context.Context, logger logr.Logger) error {
 	logger = logger.WithValues("phase", "grpcroute-translate")
 	log.Debug(logger, "Starting GRPCRoute translation")
+
+	ctx = utils.WithTagCache(ctx)
 
 	var translationErrors []error
 

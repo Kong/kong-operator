@@ -1,0 +1,31 @@
+# The cp Service carries every option of spec.network.cp, as the API server
+# stored it.
+apiVersion: v1
+kind: Service
+metadata:
+  name: (join('-', [($gwadmin_name), 'cp']))
+  annotations:
+    e2e.konghq.com/annotation: kept
+  labels:
+    e2e.konghq.com/label: kept
+spec:
+  type: ClusterIP
+  trafficDistribution: PreferSameZone
+  internalTrafficPolicy: Local
+  (length(ports)): 2
+  (ports[?name == 'cp']):
+    - port: 443
+      targetPort: cp
+  (ports[?name == 'extra']):
+    - port: 9443
+      targetPort: cp
+---
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: GWAdmin
+metadata:
+  name: ($gwadmin_name)
+status:
+  cp:
+    # The host may carry the cluster domain.
+    (starts_with(serverURL, join('', ['https://', ($gwadmin_name), '-cp.', ($namespace), '.svc']))): true
+    (ends_with(serverURL, ':443')): true

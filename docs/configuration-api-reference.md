@@ -1494,7 +1494,7 @@ EventGatewayBackendClusterSpec defines the desired state of EventGatewayBackendC
 | Field | Description |
 | --- | --- |
 | `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. This field is deprecated, use parentRef instead. Exactly one of gatewayRef and parentRef must be set. |
-| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway. Exactly one of gatewayRef and parentRef must be set. |
+| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway, OnPremEventGateway. Exactly one of gatewayRef and parentRef must be set. |
 | `apiSpec` _[EventGatewayBackendClusterAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -1810,7 +1810,7 @@ EventGatewayDataPlaneCertificateSpec defines the desired state of EventGatewayDa
 | Field | Description |
 | --- | --- |
 | `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. This field is deprecated, use parentRef instead. Exactly one of gatewayRef and parentRef must be set. |
-| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway. Exactly one of gatewayRef and parentRef must be set. |
+| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway, OnPremEventGateway. Exactly one of gatewayRef and parentRef must be set. |
 | `apiSpec` _[EventGatewayDataPlaneCertificateAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificateapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -2206,7 +2206,7 @@ EventGatewayListenerSpec defines the desired state of EventGatewayListener.
 | Field | Description |
 | --- | --- |
 | `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. This field is deprecated, use parentRef instead. Exactly one of gatewayRef and parentRef must be set. |
-| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway. Exactly one of gatewayRef and parentRef must be set. |
+| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway, OnPremEventGateway. Exactly one of gatewayRef and parentRef must be set. |
 | `apiSpec` _[EventGatewayListenerAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -3159,7 +3159,7 @@ EventGatewaySchemaRegistrySpec defines the desired state of EventGatewaySchemaRe
 | Field | Description |
 | --- | --- |
 | `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. This field is deprecated, use parentRef instead. Exactly one of gatewayRef and parentRef must be set. |
-| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway. Exactly one of gatewayRef and parentRef must be set. |
+| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway, OnPremEventGateway. Exactly one of gatewayRef and parentRef must be set. |
 | `apiSpec` _[EventGatewaySchemaRegistryAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -3261,7 +3261,7 @@ EventGatewayStaticKeySpec defines the desired state of EventGatewayStaticKey.
 | Field | Description |
 | --- | --- |
 | `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. This field is deprecated, use parentRef instead. Exactly one of gatewayRef and parentRef must be set. |
-| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway. Exactly one of gatewayRef and parentRef must be set. |
+| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway, OnPremEventGateway. Exactly one of gatewayRef and parentRef must be set. |
 | `apiSpec` _[EventGatewayStaticKeyAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaystatickeyapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -3279,6 +3279,7 @@ EventGatewayStaticKeyStatus defines the observed state of EventGatewayStaticKey.
 | --- | --- |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
 | `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `createInputsHash` _string_ | CreateInputsHash fingerprints the resolved user-supplied request body last successfully created in Konnect, before operator metadata is added. For entities predating this field, it is initialized from current inputs as a baseline, which cannot verify the values already stored in Konnect. Readers of this resource can use the fingerprint to verify guesses of low-entropy Secret values offline. Use high-entropy secret material. |
 | `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
 
 _Appears in:_
@@ -3392,7 +3393,7 @@ EventGatewayTLSTrustBundleSpec defines the desired state of EventGatewayTLSTrust
 | Field | Description |
 | --- | --- |
 | `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. This field is deprecated, use parentRef instead. Exactly one of gatewayRef and parentRef must be set. |
-| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway. Exactly one of gatewayRef and parentRef must be set. |
+| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway, OnPremEventGateway. Exactly one of gatewayRef and parentRef must be set. |
 | `apiSpec` _[EventGatewayTLSTrustBundleAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundleapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -3478,6 +3479,9 @@ EventGatewayVirtualClusterConsumePolicyAPISpec defines the API spec fields for E
 
 
 
+| Field | Description |
+| --- | --- |
+| `parentPolicyRef` _[EventGatewayVirtualClusterConsumePolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyref)_ | ParentPolicyRef references a schemaValidation consume policy in the same namespace and virtual cluster. Required for decryptFields and optional for modifyHeaders and skipRecord. It is immutable once this policy exists in Konnect. Deleting a parent is blocked while child policy objects reference it. |
 
 _Appears in:_
 
@@ -3526,6 +3530,24 @@ Allowed values:
 | `modifyHeaders` |  |
 | `schemaValidation` |  |
 | `skipRecord` |  |
+
+#### EventGatewayVirtualClusterConsumePolicyRef
+
+
+EventGatewayVirtualClusterConsumePolicyRef references an EventGatewayVirtualClusterConsumePolicy in the cluster. The referenced
+object's Konnect id is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterConsumePolicyAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyapispec)
 
 
 
@@ -3656,6 +3678,9 @@ EventGatewayVirtualClusterProducePolicyAPISpec defines the API spec fields for E
 
 
 
+| Field | Description |
+| --- | --- |
+| `parentPolicyRef` _[EventGatewayVirtualClusterProducePolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyref)_ | ParentPolicyRef references a schemaValidation produce policy in the same namespace and virtual cluster. Required for encryptFields and optional for modifyHeaders. It is immutable once this policy exists in Konnect. Deleting a parent is blocked while child policy objects reference it. |
 
 _Appears in:_
 
@@ -3702,6 +3727,24 @@ Allowed values:
 | `encryptFields` |  |
 | `modifyHeaders` |  |
 | `schemaValidation` |  |
+
+#### EventGatewayVirtualClusterProducePolicyRef
+
+
+EventGatewayVirtualClusterProducePolicyRef references an EventGatewayVirtualClusterProducePolicy in the cluster. The referenced
+object's Konnect id is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterProducePolicyAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyapispec)
 
 
 

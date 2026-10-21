@@ -162,6 +162,9 @@ func TestDataPlaneWithKonnectExtension(t *testing.T) {
 	t.Log("Verifying that the dataplane is marked as ready")
 	require.Eventually(t, testutils.DataPlaneIsReady(t, ctx, dataplaneName, operatorClient), waitTime, tickTime)
 
+	t.Log("Verifying that the hybrid dataplane has no admin Service and no admin certificate")
+	requireNoDataPlaneAdminServiceAndCert(t, ctx, cl, dataplane)
+
 	t.Log("Verifying deployments managed by the dataplane")
 	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, ctx, dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
 		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
@@ -215,4 +218,25 @@ func TestDataPlaneWithKonnectExtension(t *testing.T) {
 	// Verify dataplane status
 	t.Log("Verifying that the dataplane status is correctly populated with the backup service name and its addresses")
 	require.Eventually(t, testutils.DataPlaneHasServiceAndAddressesInStatus(t, ctx, dataplaneName, clients), waitTime, tickTime)
+}
+
+// requireNoDataPlaneAdminServiceAndCert asserts that a Konnect hybrid DataPlane
+// owns neither an admin Service nor an admin certificate Secret.
+func requireNoDataPlaneAdminServiceAndCert(t *testing.T, ctx context.Context, cl client.Client, dp client.Object) {
+	t.Helper()
+
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		services, err := k8sutils.ListServicesForOwner(ctx, cl, dp.GetNamespace(), dp.GetUID(), client.MatchingLabels{
+			consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneAdminServiceLabelValue),
+		})
+		require.NoError(c, err)
+		assert.Empty(c, services, "hybrid DataPlane must not have an admin Service")
+
+		secrets, err := k8sutils.ListSecretsForOwner(ctx, cl, dp.GetUID(),
+			client.InNamespace(dp.GetNamespace()),
+			client.HasLabels{consts.ServiceSecretLabel},
+		)
+		require.NoError(c, err)
+		assert.Empty(c, secrets, "hybrid DataPlane must not have an admin certificate Secret")
+	}, waitTime, tickTime)
 }

@@ -1,0 +1,20 @@
+# The outsider consumer: a second oauth-typed consumer whose customID equals
+# the oidc-mock's second client's client_id. Its tokens are perfectly valid,
+# but the consumer is deliberately never enrolled in the allowed consumer
+# group.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayConsumer
+metadata:
+  name: ($outsider_consumer_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    name: ($outsider_consumer_name)
+    displayName: ($outsider_consumer_name)
+    type: oauth
+    customID: ($oidc_outsider_client_id)

@@ -1,0 +1,396 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: onprem-custom-policy-dataplane
+spec:
+  description: |
+    Completes the Konnect `custom-policy-dataplane` coverage on-prem (the core
+    — both custom policy kinds through one naming method each — is covered by
+    `onprem-custom-policy`). This test adds the three behaviors that original
+    carries beyond the core, adapted to on-prem semantics:
+
+    1. Naming-method switching: each policy re-points to the OTHER
+       way of naming its custom policy (streaming: customPolicyRef -> literal
+       type; installed: literal type -> customPolicyRef) with new header
+       values, re-verified on real traffic.
+    2. Referencing-policy failure isolation: deleting the installed custom
+       policy CR is NOT blocked on-prem (no finalizers) — the referencing
+       policy flips Programmed=False with the resolution error, its plugin
+       instance leaves the pushed payload, and the OTHER policy's header is
+       unaffected (per-entity isolation). Konnect blocks the deletion instead.
+    3. Late re-creation: re-creating the custom policy flips the referencing
+       policy back to Programmed=True and restores its header — the change
+       notifier re-renders on custom-policy create and delete events.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'onprem-cp']))
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+    - name: model_name
+      value: (join('-', [($test_name), 'model']))
+    - name: provider_name
+      value: (join('-', [($test_name), 'provider']))
+    - name: provider_credentials_name
+      value: (join('-', [($provider_name), 'credentials']))
+    # Streaming custom policy (CR name and its plugin name) and the policy
+    # referencing it.
+    - name: streaming_custom_policy_name
+      value: custom-policy-streaming
+    - name: streaming_plugin_name
+      value: (join('-', [($test_name), 'streaming']))
+    - name: streaming_policy_name
+      value: (join('-', [($test_name), 'streaming-policy']))
+    # Installed custom policy (CR name and its plugin name), its ConfigMap,
+    # and the policy referencing it.
+    - name: installed_custom_policy_name
+      value: custom-policy-installed
+    - name: installed_plugin_name
+      value: (join('-', [($test_name), 'installed']))
+    - name: installed_plugin_configmap
+      value: installed-custom-plugin
+    - name: installed_policy_name
+      value: (join('-', [($test_name), 'installed-policy']))
+    # The plugin Lua schema, split around the plugin name (which must equal
+    # the custom policy's plugin name), and header values per phase.
+    - name: plugin_schema_prefix
+      value: 'local typedefs = require "kong.db.schema.typedefs" return { name = "'
+    - name: plugin_schema_suffix
+      value: '", fields = { { protocols = typedefs.protocols_http }, { config = { type = "record", fields = { { header_name = { type = "string", default = "X-Custom-Policy" } }, { header_value = { type = "string", default = "applied" } } } } } } }'
+    - name: streaming_plugin_handler
+      value: 'local P = { PRIORITY = 1000, VERSION = "1.0.0" } function P:header_filter(conf) kong.response.set_header(conf.header_name, conf.header_value) end return P'
+    - name: streaming_header_value_via_ref
+      value: chainsaw-streaming-via-ref
+    - name: installed_header_value_via_type
+      value: chainsaw-installed-via-type
+    - name: streaming_header_value_via_type
+      value: chainsaw-streaming-via-type
+    - name: installed_header_value_via_ref
+      value: chainsaw-installed-via-ref
+  steps:
+    - name: Create-onprem-aigateway
+      use:
+        template: ../../common/_step_templates/apply-assert-onpremAIGateway.yaml
+    - name: Create-installed-plugin-configmap
+      try:
+        - apply:
+            file: 01-installed-plugin-configmap.yaml
+    - name: Create-provider
+      try:
+        - apply:
+            file: 02-provider.yaml
+    - name: Create-custom-policies
+      try:
+        - apply:
+            file: 03-custom-policies.yaml
+    - name: Create-policies
+      try:
+        - apply:
+            file: 04-policies.yaml
+    - name: Create-model
+      try:
+        - apply:
+            file: 05-model.yaml
+    - name: Create-aigateway-dataplane
+      description: |
+        KONG_CUSTOM_PLUGIN_STREAMING_ENABLED lets the data plane accept the
+        streaming custom policy's handler carried in the pushed payload. The
+        installed custom policy's plugin is mounted from the ConfigMap on the
+        Lua package path (the trailing ";;" keeps Kong's default one) and
+        enabled via KONG_PLUGINS.
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+        with:
+          bindings:
+            - name: control_plane_ref
+              value: "({type: 'onpremNamespacedRef', onpremNamespacedRef: {name: ($aigw_cp_name)}})"
+            - name: aigw_dp_env
+              value: >-
+                ([{name: 'KONG_CUSTOM_PLUGIN_STREAMING_ENABLED', value: 'on'},
+                {name: 'KONG_PLUGINS', value: join(',', ['bundled', $installed_plugin_name])},
+                {name: 'KONG_LUA_PACKAGE_PATH', value: '/opt/kong-plugins/?.lua;/opt/kong-plugins/?/init.lua;;'}])
+            - name: aigw_dp_volume_mounts
+              value: >-
+                ([{name: 'installed-custom-plugin', readOnly: `true`,
+                mountPath: join('', ['/opt/kong-plugins/kong/plugins/', $installed_plugin_name])}])
+            - name: aigw_dp_volumes
+              value: >-
+                ([{name: 'installed-custom-plugin', configMap: {name: $installed_plugin_configmap}}])
+    - name: Assert-all-entities-pushed
+      try:
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayCustomPolicy
+              metadata:
+                name: ($streaming_custom_policy_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayCustomPolicy
+              metadata:
+                name: ($installed_custom_policy_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                name: ($streaming_policy_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                name: ($installed_policy_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayModel
+              metadata:
+                name: ($model_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+    - name: Verify-initial-headers
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: /chat
+              - name: MODEL_ALIAS
+                value: ($model_name)
+              - name: INCLUDE_HEADER
+                value: "false"
+              - name: EXPECT_HEADER
+                value: X-Streaming-Custom-Policy
+              - name: EXPECT_HEADER_VALUE
+                value: ($streaming_header_value_via_ref)
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: /chat
+              - name: MODEL_ALIAS
+                value: ($model_name)
+              - name: INCLUDE_HEADER
+                value: "false"
+              - name: EXPECT_HEADER
+                value: X-Installed-Custom-Policy
+              - name: EXPECT_HEADER_VALUE
+                value: ($installed_header_value_via_type)
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+    - name: Repoint-policies-to-swapped-naming-methods
+      description: |
+        Re-point both policies to the other naming method with new header
+        values. An omitted field is not reliably pruned across apply steps,
+        so the removed field is explicitly nulled; the CEL rule requires
+        exactly one of type and customPolicyRef.
+      try:
+        - apply:
+            file: 06-policies-repointed.yaml
+    - name: Verify-headers-after-repoint
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: /chat
+              - name: MODEL_ALIAS
+                value: ($model_name)
+              - name: INCLUDE_HEADER
+                value: "false"
+              - name: EXPECT_HEADER
+                value: X-Streaming-Custom-Policy
+              - name: EXPECT_HEADER_VALUE
+                value: ($streaming_header_value_via_type)
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: /chat
+              - name: MODEL_ALIAS
+                value: ($model_name)
+              - name: INCLUDE_HEADER
+                value: "false"
+              - name: EXPECT_HEADER
+                value: X-Installed-Custom-Policy
+              - name: EXPECT_HEADER_VALUE
+                value: ($installed_header_value_via_ref)
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+    - name: Delete-installed-custom-policy
+      description: |
+        Deleting a custom policy referenced via customPolicyRef is NOT blocked
+        on-prem (no finalizers): the referencing policy's next translation
+        fails its resolution and the policy is excluded from the pushed
+        payload.
+      try:
+        - delete:
+            ref:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayCustomPolicy
+              name: ($installed_custom_policy_name)
+              namespace: ($namespace)
+    - name: Assert-referencing-policy-unprogrammed
+      description: |
+        The policy referencing the deleted custom policy flips Programmed to
+        False (resolution error), while the streaming policy — attached via a
+        literal type whose custom policy still exists — stays Programmed:
+        per-entity isolation of the failure.
+      try:
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                name: ($installed_policy_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                name: ($streaming_policy_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+    - name: Verify-installed-header-disappears
+      description: |
+        The installed custom policy's plugin instance left the pushed payload,
+        so its header stops appearing. The streaming policy's header is
+        asserted in the next step to prove the failure stayed isolated to the
+        one entity.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: /chat
+              - name: MODEL_ALIAS
+                value: ($model_name)
+              - name: INCLUDE_HEADER
+                value: "false"
+              - name: EXPECT_HEADER
+                value: X-Installed-Custom-Policy
+              - name: EXPECTED_SUCCESS
+                value: "false"
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+    - name: Verify-streaming-header-unaffected
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: /chat
+              - name: MODEL_ALIAS
+                value: ($model_name)
+              - name: INCLUDE_HEADER
+                value: "false"
+              - name: EXPECT_HEADER
+                value: X-Streaming-Custom-Policy
+              - name: EXPECT_HEADER_VALUE
+                value: ($streaming_header_value_via_type)
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+    - name: Recreate-installed-custom-policy
+      description: |
+        Re-creating the custom policy (the late-creation flow): the change
+        notifier re-renders on custom-policy create events, the referencing
+        policy's customPolicyRef resolves again, and the push restores its
+        plugin instance.
+      try:
+        - apply:
+            file: 07-installed-custom-policy-recreated.yaml
+    - name: Assert-referencing-policy-reprogrammed
+      try:
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                name: ($installed_policy_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+    - name: Verify-installed-header-returns
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ADDRESS
+                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
+              - name: ROUTE_PATH
+                value: /chat
+              - name: MODEL_ALIAS
+                value: ($model_name)
+              - name: INCLUDE_HEADER
+                value: "false"
+              - name: EXPECT_HEADER
+                value: X-Installed-Custom-Policy
+              - name: EXPECT_HEADER_VALUE
+                value: ($installed_header_value_via_ref)
+            content: |
+              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: onprem-custom-policy-dataplane
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

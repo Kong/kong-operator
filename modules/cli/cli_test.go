@@ -153,6 +153,14 @@ func TestSetFlagFromEnvVar(t *testing.T) {
 	}
 }
 
+func TestValidateGWAdminTTLs(t *testing.T) {
+	require.NoError(t, validateGWAdminTTLs(consts.GWAdminCATTL, consts.GWAdminLeafTTL))
+	require.NoError(t, validateGWAdminTTLs(10*time.Minute, 10*time.Minute))
+	require.EqualError(t, validateGWAdminTTLs(9*time.Minute, 9*time.Minute), "--gwadmin-ca-ttl (9m0s) must be at least 10m0s")
+	require.EqualError(t, validateGWAdminTTLs(time.Hour, 5*time.Minute), "--gwadmin-cert-ttl (5m0s) must be at least 10m0s")
+	require.EqualError(t, validateGWAdminTTLs(time.Hour, 2*time.Hour), "--gwadmin-cert-ttl (2h0m0s) must not exceed --gwadmin-ca-ttl (1h0m0s)")
+}
+
 func TestValidateKonnectSyncPeriod(t *testing.T) {
 	require.NoError(t, validateKonnectSyncPeriod(30*time.Second))
 
@@ -449,6 +457,7 @@ func expectedDefaultCfg() manager.Config {
 		ControlPlaneExtensionsControllerEnabled:  true,
 		KonnectControllersEnabled:                false,
 		KEGDataPlaneControllerEnabled:            false,
+		OnPremEventGatewayControllerEnabled:      false,
 		FeatureGates:                             manager.FeatureGates{},
 		KonnectSyncPeriod:                        consts.DefaultKonnectSyncPeriod,
 		KonnectRequestTimeout:                    consts.DefaultKonnectRequestTimeout,
@@ -469,5 +478,7 @@ func expectedDefaultCfg() manager.Config {
 		FQDNModeEnabled:                          false,
 		CertTTL:                                  consts.DefaultCertTTL,
 		CertExpirationMargin:                     consts.DefaultCertExpirationMargin,
+		GWAdminCATTL:                             consts.GWAdminCATTL,
+		GWAdminCertTTL:                           consts.GWAdminLeafTTL,
 	}
 }

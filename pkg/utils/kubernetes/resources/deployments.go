@@ -2,6 +2,7 @@ package resources
 
 import (
 	"fmt"
+	"slices"
 	"sync"
 
 	"github.com/samber/lo"
@@ -121,31 +122,6 @@ func GenerateNewDeploymentForDataPlane(
 		},
 	}
 
-	dpOpts := dataplane.Spec.Deployment
-	switch {
-	// When the replicas are set and scaling is unset then set the replicas
-	// to the value of the replicas field.
-	case dpOpts.Replicas != nil && dpOpts.Scaling == nil:
-		deployment.Spec.Replicas = dpOpts.Replicas
-
-	// When replicas field is unset and scaling is set, we set the replicas
-	// to the minReplicas value (if it's specified).
-	// We do this to ensure immediate scaling up to the minReplicas value
-	// before the HPA kicks in.
-	case dpOpts.Replicas == nil &&
-		dpOpts.Scaling != nil &&
-		dpOpts.Scaling.HorizontalScaling != nil &&
-		dpOpts.Scaling.HorizontalScaling.MinReplicas != nil:
-		deployment.Spec.Replicas = dpOpts.Scaling.HorizontalScaling.MinReplicas
-
-	// We set the default to 1 if no replicas or scaling is specified because
-	// we cannot set the default in the CRD due to the fact that the default
-	// would prevent us from being able to use CRD Validation Rules to enforce
-	// wither replicas or scaling sections specified.
-	case dpOpts.Replicas == nil && dpOpts.Scaling == nil:
-		deployment.Spec.Replicas = new(int32(1))
-	}
-
 	SetDefaultsPodTemplateSpec(&deployment.Spec.Template)
 	LabelObjectAsDataPlaneManaged(deployment)
 
@@ -178,6 +154,9 @@ const (
 	DataPlaneTypeKeg
 	// DataPlaneTypeMcpServer represents a Kong MCP Server data plane or its init container.
 	DataPlaneTypeMcpServer
+	// DataPlaneTypeGWAdmin represents gw-admin, the on-prem control plane of
+	// the data planes that do not use Konnect.
+	DataPlaneTypeGWAdmin
 )
 
 // HardenContainerWithSecurityContext hardens a container with a security context and returns
@@ -228,7 +207,7 @@ func HardenContainerWithSecurityContext(container corev1.Container, dpType DataP
 
 	// For standard Kong Gateway runtime it is required to have
 	// additional writable path.
-	if dpType != DataPlaneTypeKeg {
+	if dpType != DataPlaneTypeKeg && dpType != DataPlaneTypeGWAdmin {
 		const (
 			volumeVarKong          = "var-kong"
 			volumeVarKongMountPath = "/var/kong"
@@ -266,6 +245,9 @@ func VolumesFromPodTemplateSpecOrNil(pts *corev1.PodTemplateSpec) []corev1.Volum
 	}
 	return pts.Spec.Volumes
 }
+
+// DataPlaneAdminAPIContainerPortName is the name of the DataPlane proxy container's Admin API port.
+const DataPlaneAdminAPIContainerPortName = "admin-ssl"
 
 // GenerateDataPlaneContainer generates a DataPlane container.
 func GenerateDataPlaneContainer(image string, pts *corev1.PodTemplateSpec) corev1.Container {
@@ -311,7 +293,7 @@ func GenerateDataPlaneContainer(image string, pts *corev1.PodTemplateSpec) corev
 				Protocol:      corev1.ProtocolTCP,
 			},
 			{
-				Name:          "admin-ssl",
+				Name:          DataPlaneAdminAPIContainerPortName,
 				ContainerPort: consts.DataPlaneAdminAPIPort,
 				Protocol:      corev1.ProtocolTCP,
 			},
@@ -493,6 +475,21 @@ func (d *Deployment) WithEnvVar(v corev1.EnvVar, container string) *Deployment {
 				}
 			}
 			d.Spec.Template.Spec.Containers[i].Env = append(d.Spec.Template.Spec.Containers[i].Env, v)
+			return d
+		}
+	}
+	return d
+}
+
+// WithoutContainerPort removes the port with the given name from a container.
+// It takes no action if the container or port does not exist.
+func (d *Deployment) WithoutContainerPort(portName, containerName string) *Deployment {
+	for i, c := range d.Spec.Template.Spec.Containers {
+		if c.Name == containerName {
+			d.Spec.Template.Spec.Containers[i].Ports = slices.DeleteFunc(
+				slices.Clone(c.Ports),
+				func(p corev1.ContainerPort) bool { return p.Name == portName },
+			)
 			return d
 		}
 	}

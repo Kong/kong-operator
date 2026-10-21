@@ -6,6 +6,7 @@ import (
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
+	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
@@ -110,6 +111,10 @@ func GetManagedLabelForOwner(owner metav1.Object) client.MatchingLabels {
 	case *aigatewayv1alpha1.OnPremAIGateway:
 		return client.MatchingLabels{
 			consts.GatewayOperatorManagedByLabel: consts.OnPremAIGatewayManagedByLabelValue,
+		}
+	case *operatorv1alpha1.GWAdmin:
+		return client.MatchingLabels{
+			consts.GatewayOperatorManagedByLabel: consts.GWAdminManagedByLabelValue,
 		}
 	}
 	return client.MatchingLabels{}

@@ -1,0 +1,47 @@
+# The streaming AIGatewayCustomPolicy: schema and Lua handler travel in the
+# payload (custom_plugins), so the data plane needs no on-disk plugin for it —
+# only KONG_CUSTOM_PLUGIN_STREAMING_ENABLED.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayCustomPolicy
+metadata:
+  name: ($streaming_custom_policy_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: streaming
+    streaming:
+      name: ($streaming_plugin_name)
+      displayName: On-prem streaming custom policy
+      schema:
+        type: inline
+        value: (join('', [$plugin_schema_prefix, $streaming_plugin_name, $plugin_schema_suffix]))
+      handler:
+        type: inline
+        value: ($streaming_plugin_handler)
+---
+# The installed AIGatewayCustomPolicy: only the schema travels in the payload;
+# the handler comes from the ConfigMap mounted on the data plane.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayCustomPolicy
+metadata:
+  name: ($installed_custom_policy_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: installed
+    installed:
+      name: ($installed_plugin_name)
+      displayName: On-prem installed custom policy
+      schema:
+        type: inline
+        value: (join('', [$plugin_schema_prefix, $installed_plugin_name, $plugin_schema_suffix]))

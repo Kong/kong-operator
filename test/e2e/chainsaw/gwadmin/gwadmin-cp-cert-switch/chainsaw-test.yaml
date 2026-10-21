@@ -1,0 +1,283 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: gwadmin-cp-cert-switch
+spec:
+  description: |
+    The cp server certificate changes issuer without a TLS failure for the
+    data plane gwadmin-dp, which verifies the cp listener with the cp server
+    bundle (status.tls.cpServerCABundleSecretName) it loaded when it started,
+    while the cp client CA stays Automatic. The peers stand in for the
+    controller of gwadmin-dp: they roll it with every new bundle, unless
+    paused.
+    1. A GWAdmin starts with Automatic certificates: the cp certificate comes
+       from the cp server CA, the only CA of the cp server bundle.
+    2. With gwadmin-dp paused, spec.tls.cp switches to a Manual certificate
+       from issuer A. A joins the cp server bundle at once, but the cp
+       certificate stays on the cp server CA, the condition naming
+       gwadmin-dp, as long as gwadmin-dp runs the previous bundle. Once
+       resumed, gwadmin-dp rolls out with the new bundle, and the cp
+       certificate moves to A. The cp server CA stays in the bundle: it is
+       always trusted.
+    3. The Manual certificate is renewed from A: gwadmin-dp already runs a
+       bundle trusting A, so it is copied right away.
+    4. With gwadmin-dp paused, the Manual certificate is renewed from issuer
+       B: B joins the bundle, the cp certificate stays on A. Once resumed,
+       gwadmin-dp rolls out and the cp certificate moves to B. Once the
+       gw-admin pods serve it, A leaves the bundle.
+    5. spec.tls.cp switches back to Automatic: gwadmin-dp already runs a
+       bundle trusting the cp server CA, so the cp certificate moves to it
+       right away, and B leaves the bundle once the pods serve it.
+    Peers provision the pods and check every listener throughout.
+  bindings:
+    - name: gwadmin_name
+      value: gw-cp-switch
+    - name: work_dir
+      value: (join('', ['/tmp/gwadmin-e2e-', ($namespace)]))
+    - name: cp_host
+      value: (join('', [($gwadmin_name), '-cp.', ($namespace), '.svc']))
+  steps:
+    - name: 1-Automatic-cp-certificate
+      try:
+        - apply:
+            file: 01-gwadmin.yaml
+        # The scripts the peers and gwadmin-dp run, from gwadmin-shared.
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+            content: ../gwadmin-shared/gwadmin.sh peers-scripts
+        - apply:
+            file: ../gwadmin-shared/peers.yaml
+        - assert:
+            timeout: 4m
+            file: ../gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 1}
+        - assert:
+            timeout: 30s
+            file: ../gwadmin-shared/assert-server-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 1}
+        - script:
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+              - name: WORK_DIR
+                value: ($work_dir)
+              - name: CP_HOST
+                value: ($cp_host)
+            timeout: 4m
+            content: ../gwadmin-shared/gwadmin.sh wait-dp-current "$GWADMIN" 180
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../gwadmin-shared/gwadmin.sh save-private-ca "$GWADMIN" cp-server-ca "$WORK_DIR/server-ca"
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../gwadmin-shared/gwadmin.sh assert-leaves-on "$GWADMIN" "$WORK_DIR/server-ca/tls.crt" cp
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../gwadmin-shared/gwadmin.sh gen-ca issuer-a "$WORK_DIR/issuer-a"
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../gwadmin-shared/gwadmin.sh gen-ca issuer-b "$WORK_DIR/issuer-b"
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../gwadmin-shared/gwadmin.sh put-server-cert cp-cert "$WORK_DIR/issuer-a" "$CP_HOST" "$WORK_DIR/cp-a1"
+      cleanup:
+        - script:
+            env: *env
+            content: ../gwadmin-shared/gwadmin.sh clean-work-dir
+    - name: 2-switch-to-a-Manual-certificate-from-issuer-A
+      try:
+        - script:
+            env: *env
+            content: ../gwadmin-shared/gwadmin.sh dp-pause
+        - patch:
+            file: 02-gwadmin-manual-cp.yaml
+        # A joins the bundle right away, next to the cp server CA.
+        - assert:
+            timeout: 30s
+            file: ../gwadmin-shared/assert-server-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 2}
+        - assert:
+            timeout: 30s
+            file: assert-waiting-for-the-data-plane.yaml
+        # The cp certificate waits for gwadmin-dp, which runs the
+        # previous bundle.
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../gwadmin-shared/gwadmin.sh assert-dp-behind "$GWADMIN"
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../gwadmin-shared/gwadmin.sh expect-leaves-stay-on "$GWADMIN" "$WORK_DIR/server-ca/tls.crt" 20 cp
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../gwadmin-shared/gwadmin.sh dp-resume
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../gwadmin-shared/gwadmin.sh wait-dp-current "$GWADMIN" 180
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../gwadmin-shared/gwadmin.sh wait-leaves-on "$GWADMIN" "$WORK_DIR/issuer-a/tls.crt" 60 cp
+        - assert:
+            timeout: 30s
+            file: assert-cp-certificate-copied.yaml
+        - assert:
+            timeout: 3m
+            file: ../gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 1}
+        - assert:
+            timeout: 30s
+            file: ../gwadmin-shared/assert-server-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 2}
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../gwadmin-shared/gwadmin.sh wait-dp-current "$GWADMIN" 180
+    - name: 3-renewal-from-the-same-issuer-is-immediate
+      try:
+        - script:
+            env: *env
+            timeout: 1m
+            content: ../gwadmin-shared/gwadmin.sh put-server-cert cp-cert "$WORK_DIR/issuer-a" "$CP_HOST" "$WORK_DIR/cp-a2"
+        # gwadmin-dp already runs a bundle trusting A.
+        - assert:
+            timeout: 20s
+            file: assert-cp-certificate-copied.yaml
+        - assert:
+            timeout: 5s
+            file: ../gwadmin-shared/assert-server-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 2}
+        - assert:
+            timeout: 3m
+            file: ../gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 1}
+    - name: 4-renewal-from-a-new-issuer-waits-for-the-data-plane
+      try:
+        - script:
+            env: *env
+            timeout: 1m
+            content: ../gwadmin-shared/gwadmin.sh dp-pause
+        - script:
+            env: *env
+            timeout: 1m
+            content: ../gwadmin-shared/gwadmin.sh put-server-cert cp-cert "$WORK_DIR/issuer-b" "$CP_HOST" "$WORK_DIR/cp-b"
+        # The cp server CA, A (still served) and B.
+        - assert:
+            timeout: 30s
+            file: ../gwadmin-shared/assert-server-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 3}
+        - assert:
+            timeout: 30s
+            file: assert-waiting-for-the-data-plane.yaml
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../gwadmin-shared/gwadmin.sh assert-dp-behind "$GWADMIN"
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../gwadmin-shared/gwadmin.sh expect-leaves-stay-on "$GWADMIN" "$WORK_DIR/issuer-a/tls.crt" 20 cp
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../gwadmin-shared/gwadmin.sh dp-resume
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../gwadmin-shared/gwadmin.sh wait-dp-current "$GWADMIN" 180
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../gwadmin-shared/gwadmin.sh wait-leaves-on "$GWADMIN" "$WORK_DIR/issuer-b/tls.crt" 60 cp
+        - assert:
+            timeout: 30s
+            file: assert-cp-certificate-copied.yaml
+        - assert:
+            timeout: 3m
+            file: ../gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 1}
+        # Once the pods serve B, A leaves the bundle.
+        - assert:
+            timeout: 1m
+            file: ../gwadmin-shared/assert-server-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 2}
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../gwadmin-shared/gwadmin.sh wait-dp-current "$GWADMIN" 180
+    - name: 5-switch-back-to-Automatic-is-immediate
+      try:
+        - patch:
+            resource:
+              apiVersion: gateway-operator.konghq.com/v1alpha1
+              kind: GWAdmin
+              metadata:
+                name: ($gwadmin_name)
+              spec:
+                tls:
+                  cp:
+                    provisioning: Automatic
+                    # Set to null, so that the merge patch removes it.
+                    secretRef: null
+        - script:
+            env: *env
+            timeout: 1m
+            # gwadmin-dp already runs a bundle trusting the cp server CA.
+            content: ../gwadmin-shared/gwadmin.sh wait-leaves-on "$GWADMIN" "$WORK_DIR/server-ca/tls.crt" 20 cp
+        - assert:
+            timeout: 3m
+            file: ../gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 1}
+        - assert:
+            timeout: 1m
+            file: ../gwadmin-shared/assert-server-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 1}
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../gwadmin-shared/gwadmin.sh wait-dp-current "$GWADMIN" 180
+        # A few more rounds of handshakes against the final state.
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../gwadmin-shared/gwadmin.sh wait-rounds 3 60
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../gwadmin-shared/gwadmin.sh assert-no-failures
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

@@ -4,6 +4,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	kubernetesclient "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	ctrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -35,7 +36,10 @@ func NewK8sClients(env environments.Environment) (K8sClients, error) {
 	var err error
 	var clients K8sClients
 
-	restConfig := env.Cluster().Config()
+	// WrapTransport is set below, so work on a copy: the cluster's config is
+	// shared with the rest of the test suite.
+	restConfig := rest.CopyConfig(env.Cluster().Config())
+	restConfig.WrapTransport = WithTransientConnectionRetries
 
 	clients.K8sClient = env.Cluster().Client()
 	clients.OperatorClient, err = configurationclient.NewForConfig(restConfig)

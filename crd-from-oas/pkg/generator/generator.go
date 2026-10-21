@@ -2896,8 +2896,10 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	}
 
 	var responseStatusFields []config.ResponseStatusFieldConfig
+	var trackCreateInputs bool
 	if oc := g.config.OpsConfig[entityName]; oc != nil {
 		responseStatusFields = oc.ResponseStatusFields
+		trackCreateInputs = oc.TrackCreateInputs
 	}
 
 	// The parent reference must not change once the entity has been programmed in
@@ -2932,7 +2934,9 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	if parentRef != nil && len(parentRef.AllowedKinds) > 0 {
 		typeXValidations = append(typeXValidations, parentRefAllowedKindsXValidation(parentRef))
 	}
-	typeXValidations = append(typeXValidations, injectIntoReferenceXValidations(g.config.References[entityName])...)
+	if !hasRootOneOf(schema) {
+		typeXValidations = append(typeXValidations, injectIntoReferenceXValidations(g.config.References[entityName])...)
+	}
 	if g.config.FieldConfig != nil {
 		if entityConfig := g.config.FieldConfig.Entities[entityName]; entityConfig != nil {
 			typeXValidations = append(typeXValidations, entityConfig.Validations...)
@@ -2946,6 +2950,13 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	// ID is only known after it is programmed), so the generated resolver
 	// rejects it instead (see SameTypeRef).
 	for _, ref := range g.templateReferences(entityName) {
+		if ref.SameTypeRef && !ref.ObjectRefField {
+			p := "self.spec.apiSpec." + ref.JSONFieldName
+			typeXValidations = append(typeXValidations, fmt.Sprintf(
+				`+kubebuilder:validation:XValidation:rule="!has(self.spec.apiSpec) || !has(%s) || %s.name != self.metadata.name", message="%s must not reference the %s itself"`,
+				p, p, ref.JSONFieldName, entityName,
+			))
+		}
 		if !ref.ObjectRefField || len(ref.Kinds) != 1 || ref.Kinds[0] != entityName {
 			continue
 		}
@@ -2980,6 +2991,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ParentStatusEntityName    string
 		EmitParentRefStatusField  bool
 		ResponseStatusFields      []config.ResponseStatusFieldConfig
+		TrackCreateInputs         bool
 		TypeXValidations          []string
 		// APISpecValidations are the markers configured directly on
 		// spec.apiSpec (cel.spec.apiSpec._validations), emitted on the APISpec
@@ -3010,6 +3022,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ParentStatusEntityName:    parentStatusEntityName,
 		EmitParentRefStatusField:  emitParentRefStatusField,
 		ResponseStatusFields:      responseStatusFields,
+		TrackCreateInputs:         trackCreateInputs,
 		TypeXValidations:          typeXValidations,
 		APISpecValidations:        apiSpecCursorValidations(apiSpecCursor),
 		SupportsMirror:            g.entitySupportsMirror(entityName),
@@ -3038,6 +3051,14 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	}
 
 	apiSpecUnionFields := g.buildCRDAPISpecUnionFieldSpecs(schema)
+	for _, ref := range g.templateReferences(entityName) {
+		if hasRootOneOf(schema) && ref.OptionalRef {
+			// The root-union reference marshaler handles both the union and
+			// its sibling fields; the union-only wrapper would drop them.
+			apiSpecUnionFields = nil
+			break
+		}
+	}
 	if wrapper := emitInlineUnionWrapperMarshalJSON(entityName+"APISpec", apiSpecUnionFields); wrapper != "" {
 		buf.WriteString("\n")
 		buf.WriteString(wrapper)
@@ -4966,6 +4987,12 @@ type TemplateReferenceConfig struct {
 	// rejects such references when they point at the referencing object
 	// itself, which can never resolve to a usable ID.
 	SameTypeRef bool
+	// SkipsKonnectReconciliation reports, for each referenced kind, whether
+	// objects of that kind can opt out of the Konnect reconciler (they get a
+	// SkipKonnectReconciliation method). Only references to such kinds get
+	// the check rejecting a referenced object the Konnect reconciler does not
+	// manage.
+	SkipsKonnectReconciliation map[string]bool
 	// SameParentRefField is the Go name of the spec field holding the
 	// entity's parent reference (e.g. "PortalRef"). It is set only for
 	// same-type ObjectRefField references (e.g. PortalPage's
@@ -4977,6 +5004,9 @@ type TemplateReferenceConfig struct {
 	// ReferenceDifferentParentError message. Set together with
 	// SameParentRefField.
 	SameParentRefKind string
+	// SameParentIDGetter compares resolved parent IDs for optional same-kind
+	// references, including when the parent references use different types.
+	SameParentIDGetter string
 }
 
 // templateReferences returns the references for an entity with computed Go field names.
@@ -5112,8 +5142,9 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 		// parentPageIDRef) resolve to an ID embedded in a request scoped to
 		// the referrer's parent, so the resolver guards against referencing
 		// the object itself or an object under a different parent.
-		sameTypeRef := objectRefField && len(ref.Kinds) == 1 && ref.Kinds[0] == entityName
+		sameTypeRef := (objectRefField || optionalRef) && len(ref.Kinds) == 1 && ref.Kinds[0] == entityName
 		var sameParentRefField, sameParentRefKind string
+		var sameParentIDGetter string
 		if sameTypeRef {
 			if rc := g.config.ReconcilerConfig[entityName]; rc != nil && rc.ParentRef != nil {
 				sameParentRefField = goFieldName(rc.ParentRef.FieldName)
@@ -5124,37 +5155,46 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 					sameParentRefKind = dep.EntityName
 				}
 			}
+			if optionalRef {
+				if schema := findEntitySchema(g.parsed, entityName); schema != nil {
+					if dep := rootRefDependency(schema); dep != nil {
+						sameParentIDGetter = "Get" + dep.EntityName + "ID"
+					}
+				}
+			}
 		}
 		result[i] = TemplateReferenceConfig{
-			ReferenceConfig:      ref,
-			GoFieldName:          goFieldNameStr,
-			JSONFieldName:        tail,
-			SDKJSONFieldName:     sdkJSONFieldName,
-			DefaultKind:          defaultKind,
-			GoResolverName:       goResolverName,
-			NestedRef:            nested,
-			RefsExpr:             refsExpr,
-			GoPathSegments:       goPathSegments,
-			MultiKind:            len(ref.Kinds) > 1,
-			ResolvesToName:       ref.ResolvesTo == "name",
-			NestedArrayScalar:    nestedArrayScalar,
-			NestedArrayList:      nestedArrayList,
-			ArrayGuardExprs:      arrayGuardExprs,
-			ArrayPath:            arrayPath,
-			ElementGuardExprs:    elementGuardExprs,
-			ArrayLeafPath:        arrayLeafPath,
-			ArrayLeafPointer:     arrayLeafPointer,
-			SingleValueObjectRef: singleValueObjectRef,
-			ObjectWrapKey:        objectWrapKey,
-			UnionMemberGoName:    unionMemberGoName,
-			ArmChecks:            armChecks,
-			ElementArmChecks:     elementArmChecks,
-			DirectScalarRef:      directScalarRef,
-			ObjectRefField:       objectRefField,
-			SameTypeRef:          sameTypeRef,
-			SameParentRefField:   sameParentRefField,
-			SameParentRefKind:    sameParentRefKind,
-			OptionalRef:          optionalRef,
+			ReferenceConfig:            ref,
+			GoFieldName:                goFieldNameStr,
+			JSONFieldName:              tail,
+			SDKJSONFieldName:           sdkJSONFieldName,
+			DefaultKind:                defaultKind,
+			GoResolverName:             goResolverName,
+			NestedRef:                  nested,
+			RefsExpr:                   refsExpr,
+			GoPathSegments:             goPathSegments,
+			MultiKind:                  len(ref.Kinds) > 1,
+			ResolvesToName:             ref.ResolvesTo == "name",
+			NestedArrayScalar:          nestedArrayScalar,
+			NestedArrayList:            nestedArrayList,
+			ArrayGuardExprs:            arrayGuardExprs,
+			ArrayPath:                  arrayPath,
+			ElementGuardExprs:          elementGuardExprs,
+			ArrayLeafPath:              arrayLeafPath,
+			ArrayLeafPointer:           arrayLeafPointer,
+			SingleValueObjectRef:       singleValueObjectRef,
+			ObjectWrapKey:              objectWrapKey,
+			UnionMemberGoName:          unionMemberGoName,
+			ArmChecks:                  armChecks,
+			ElementArmChecks:           elementArmChecks,
+			DirectScalarRef:            directScalarRef,
+			ObjectRefField:             objectRefField,
+			SameTypeRef:                sameTypeRef,
+			SkipsKonnectReconciliation: g.kindsSkippingKonnectReconciliation(ref.Kinds),
+			SameParentRefField:         sameParentRefField,
+			SameParentRefKind:          sameParentRefKind,
+			SameParentIDGetter:         sameParentIDGetter,
+			OptionalRef:                optionalRef,
 		}
 		if optionalRef {
 			result[i].InjectIntoSDKJSONFieldName = g.injectIntoTargetSDKKey(entityName, ref.InjectInto)
@@ -5682,7 +5722,32 @@ func (g *Generator) addInjectIntoReferenceProperties(parsed *parser.ParsedSpec) 
 				}
 				found = true
 				if len(schema.OneOf) > 0 {
-					return fmt.Errorf("entity %q: reference %q: injectInto is not supported for root-union entities", entityName, ref.Path)
+					// Root-union variants share schema types across entities.
+					// Keep the typed reference on apiSpec and replace the omitted
+					// SDK field of the selected variant instead.
+					targetFound := false
+					for _, variant := range schema.OneOf {
+						targetSchema := parsed.Schemas[variant.RefName]
+						if targetSchema == nil {
+							continue
+						}
+						for _, p := range targetSchema.Properties {
+							if jsonName(p.Name) != ref.InjectInto {
+								continue
+							}
+							targetFound = true
+							if !g.shouldSkipSchemaProperty(variant.RefName, p) {
+								return fmt.Errorf("entity %q: reference %q: root-union injectInto target %q must be omitted from schema %q", entityName, ref.Path, ref.InjectInto, variant.RefName)
+							}
+						}
+					}
+					if !targetFound {
+						return fmt.Errorf("entity %q: reference %q: injectInto target %q not found in root-union variants", entityName, ref.Path, ref.InjectInto)
+					}
+					schema.Properties = append(schema.Properties, &parser.Property{
+						Name: sdkJSONKey(field), Type: "string", Description: ref.Description,
+					})
+					continue
 				}
 				var target *parser.Property
 				for _, p := range schema.Properties {
@@ -5788,7 +5853,7 @@ func (g *Generator) reverseWatchReferrers(entityName string) []reverseWatchRefer
 				continue
 			}
 			rw := reverseWatchReferrer{Referrer: referrer}
-			if ref.InjectInto != "" {
+			if ref.InjectInto != "" && !g.hasRootUnionEntity(referrer) {
 				rw.LiteralGoField = goFieldName(g.injectIntoTargetSDKKey(referrer, ref.InjectInto))
 				rw.KonnectKeySuffix = konnectKeyIndexSuffix(ref.ResolvesTo)
 			}
@@ -5831,11 +5896,15 @@ func (g *Generator) konnectKeyIndexes(entityName string) []konnectKeyIndex {
 // reference) can be found: by the entity's own watch on the referenced kind,
 // and by the referenced kind's reverse watch.
 func (g *Generator) literalTargetIndexes(entityName string) []string {
+	if g.hasRootUnionEntity(entityName) {
+		return nil
+	}
 	var fields []string
 	for _, ref := range g.config.References[entityName] {
 		if ref.InjectInto == "" {
 			continue
 		}
+
 		field := goFieldName(g.injectIntoTargetSDKKey(entityName, ref.InjectInto))
 		if !slices.Contains(fields, field) {
 			fields = append(fields, field)
@@ -5843,6 +5912,11 @@ func (g *Generator) literalTargetIndexes(entityName string) []string {
 	}
 	slices.Sort(fields)
 	return fields
+}
+
+func (g *Generator) hasRootUnionEntity(entityName string) bool {
+	schema := findEntitySchema(g.parsed, entityName)
+	return schema != nil && hasRootOneOf(schema)
 }
 
 // isInjectIntoTarget reports whether jsonFieldName is the InjectInto target of
@@ -6365,7 +6439,7 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 	// generated APISpec embeds a *<Entity>Config union wrapper (inline in JSON,
 	// so the hop has no JSON key of its own) whose variant fields the first
 	// path segment selects.
-	if hasRootOneOf(entitySchema) {
+	if hasRootOneOf(entitySchema) && ref.InjectInto == "" {
 		union = &parser.Property{
 			Name:                 entityName + "Config",
 			OneOf:                entitySchema.OneOf,
@@ -7031,6 +7105,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		ConstFields              []sdkOpsConstField
 		FreeformKeyFields        []sdkOpsFreeformKeyField
 		Methods                  []sdkOpsMethod
+		TrackCreateInputs        bool
 		NeedsClient              bool
 		DataSources              []DataSourceForTemplate
 		HasSecretSourceRefs      bool
@@ -7052,6 +7127,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		ConstFields:              constFields,
 		FreeformKeyFields:        freeformKeyFields,
 		Methods:                  standardMethods,
+		TrackCreateInputs:        opsConfig.TrackCreateInputs,
 		NeedsClient:              opsConfig.RequireClient || g.entityHasReferences(entityName),
 		DataSources:              dataSources,
 		HasSecretSourceRefs:      templateReferencesHaveSource(dataSources, false),
@@ -7364,6 +7440,13 @@ func (g *Generator) generateRootUnionSDKOps(
 		NeedsCrossNamespaceCheck bool
 		RefInjections            []TemplateRefInjection
 		ObjectRefTypePrefix      string
+		// UpdateUsesPayloadTarget is true when at least one variant rebuilds the
+		// update request from a nested payload field of the selected config
+		// rather than from the variant itself. Only those variants read the
+		// shared `selected` / `target` pair; when every variant is direct,
+		// emitting the pair adds two unmarshals of the same payload that no
+		// branch ever reads.
+		UpdateUsesPayloadTarget bool
 	}{
 		APIVersion:               g.config.APIVersion,
 		EntityName:               entityName,
@@ -7375,6 +7458,7 @@ func (g *Generator) generateRootUnionSDKOps(
 		FreeformKeyFields:        freeformKeyFields,
 		Methods:                  rootUnionMethods,
 		Variants:                 variants,
+		UpdateUsesPayloadTarget:  slices.ContainsFunc(variants, func(v sdkOpsRootUnionVariant) bool { return !v.UpdateDirectUnion }),
 		NeedsClient:              opsConfig.RequireClient || g.entityHasReferences(entityName),
 		DataSources:              dataSources,
 		HasSecretSourceRefs:      templateReferencesHaveSource(dataSources, false),
@@ -7400,7 +7484,7 @@ func (g *Generator) generateRootUnionSDKOps(
 func (g *Generator) addObjectRefImportIfNeeded(imports []*sdkOpsImport, references []TemplateReferenceConfig) ([]*sdkOpsImport, string) {
 	hasObjectRefField := false
 	for _, ref := range references {
-		if ref.ObjectRefField {
+		if ref.ObjectRefField || ref.SameParentRefField != "" {
 			hasObjectRefField = true
 			break
 		}
@@ -7710,6 +7794,27 @@ func (g *Generator) collectSDKOpsBoolFieldsFromProperty(prop *parser.Property, p
 	}
 	if prop.AdditionalProperties != nil {
 		g.collectSDKOpsBoolFieldsFromProperty(prop.AdditionalProperties, append(path, "{}"), fields)
+	}
+	// A discriminated union nested inside an object (e.g. HashiCorpVault's
+	// config.auth_method union) keeps the CRD's {"<disc>": "X", "X": {...}}
+	// shape on the wire at the point where bool normalization runs. Each
+	// variant's own fields are addressed under its discriminator mapping key,
+	// verbatim and snake_case, mirroring how a dataSource path selects a
+	// nested union variant (see walkSensitiveLeafPath).
+	if len(prop.OneOf) > 0 && len(prop.DiscriminatorMapping) > 0 {
+		discValueForRef := make(map[string]string, len(prop.DiscriminatorMapping))
+		for discValue, refName := range prop.DiscriminatorMapping {
+			discValueForRef[refName] = discValue
+		}
+		for _, variant := range prop.OneOf {
+			memberKey := discValueForRef[variant.RefName]
+			if memberKey == "" {
+				continue
+			}
+			for _, nestedProp := range variant.Properties {
+				g.collectSDKOpsBoolFieldsFromProperty(nestedProp, append(path, memberKey, nestedProp.Name), fields)
+			}
+		}
 	}
 }
 
@@ -8716,4 +8821,20 @@ func propertyUsesJSON(g *Generator, prop *parser.Property, parsed *parser.Parsed
 		}
 	}
 	return false
+}
+
+// kindsSkippingKonnectReconciliation returns, for each of the given kinds,
+// whether its objects can opt out of the Konnect reconciler: entities with a
+// typed parent ref (e.g. AIGatewayRef, which can target an OnPremAIGateway)
+// and entities whose gatewayRef accepts additional, non-Konnect kinds. Both get
+// a generated SkipKonnectReconciliation method.
+func (g *Generator) kindsSkippingKonnectReconciliation(kinds []string) map[string]bool {
+	result := make(map[string]bool, len(kinds))
+	for _, kind := range kinds {
+		rc := g.config.ReconcilerConfig[kind]
+		result[kind] = rc != nil &&
+			((rc.ParentRef != nil && rc.ParentRef.TypeName != "") ||
+				(rc.GatewayRef != nil && len(rc.GatewayRef.AdditionalKinds) > 0))
+	}
+	return result
 }

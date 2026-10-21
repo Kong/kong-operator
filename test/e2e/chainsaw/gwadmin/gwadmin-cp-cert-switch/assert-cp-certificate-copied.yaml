@@ -1,0 +1,10 @@
+# The cp server certificate of the GWAdmin is the one in Secret cp-cert,
+# copied with its issuer (ca.crt) into the Secret Kong Operator owns.
+# x_k8s_get reads cp-cert again on every attempt of the assertion.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: (join('-', [($gwadmin_name), 'cp-tls']))
+data:
+  tls.crt: (x_k8s_get($client, 'v1', 'Secret', $namespace, 'cp-cert').data."tls.crt")
+  ca.crt: (x_k8s_get($client, 'v1', 'Secret', $namespace, 'cp-cert').data."ca.crt")

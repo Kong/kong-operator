@@ -13,6 +13,7 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectoper "github.com/Kong/sdk-konnect-go/models/operations"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
 // EventGatewayVirtualClusterProducePolicySDKOpsBoolField describes a boolean enum field that must be normalized for SDK payloads.
@@ -42,6 +43,60 @@ var EventGatewayVirtualClusterProducePolicySDKOpsBoolFields = []EventGatewayVirt
 		Path: []string{
 			"modify_headers",
 			"enabled",
+		},
+	},
+	{
+		Label: "schema_validation.config.confluent_schema_registry.validate_key",
+		Path: []string{
+			"schema_validation",
+			"config",
+			"confluent_schema_registry",
+			"validate_key",
+		},
+	},
+	{
+		Label: "schema_validation.config.confluent_schema_registry.validate_value",
+		Path: []string{
+			"schema_validation",
+			"config",
+			"confluent_schema_registry",
+			"validate_value",
+		},
+	},
+	{
+		Label: "schema_validation.config.inline_schema.validate_key",
+		Path: []string{
+			"schema_validation",
+			"config",
+			"inline_schema",
+			"validate_key",
+		},
+	},
+	{
+		Label: "schema_validation.config.inline_schema.validate_value",
+		Path: []string{
+			"schema_validation",
+			"config",
+			"inline_schema",
+			"validate_value",
+		},
+	},
+	{
+		Label: "schema_validation.config.json.validate_key",
+		Path: []string{
+			"schema_validation",
+			"config",
+			"json",
+			"validate_key",
+		},
+	},
+	{
+		Label: "schema_validation.config.json.validate_value",
+		Path: []string{
+			"schema_validation",
+			"config",
+			"json",
+			"validate_value",
 		},
 	},
 	{
@@ -220,6 +275,9 @@ func (s *EventGatewayVirtualClusterProducePolicyAPISpec) selectedSDKOpsPayload(p
 	}
 	selected = flattenSDKUnionsExceptUnder(selected, EventGatewayVirtualClusterProducePolicySDKOpsFreeformKeyFields, variantJSON)
 	if selectedMap, ok := selected.(map[string]any); ok {
+		if value, ok := payload["parent_policy_id"]; ok {
+			selectedMap["parent_policy_id"] = value
+		}
 		if typeValue, ok := payload["type"]; ok {
 			if _, hasType := selectedMap["type"]; !hasType {
 				withType := make(map[string]any)
@@ -309,6 +367,87 @@ func (s *EventGatewayVirtualClusterProducePolicyAPISpec) toUpdateEventGatewayVir
 	}, nil
 }
 
+// RefsAtEventGatewayVirtualClusterProducePolicyParentPolicyRef returns the reference at spec.apiSpec.parentPolicyRef,
+// or nil when it is unset.
+func RefsAtEventGatewayVirtualClusterProducePolicyParentPolicyRef(obj *EventGatewayVirtualClusterProducePolicy) []EventGatewayVirtualClusterProducePolicyRef {
+	if obj.Spec.APISpec.ParentPolicyRef.Name == "" {
+		return nil
+	}
+	return []EventGatewayVirtualClusterProducePolicyRef{obj.Spec.APISpec.ParentPolicyRef}
+}
+
+// resolveEventGatewayVirtualClusterProducePolicyParentPolicyRef resolves the CR references in spec.apiSpec.parentPolicyRef
+// to Konnect IDs.
+func resolveEventGatewayVirtualClusterProducePolicyParentPolicyRef(ctx context.Context, cl client.Client, obj *EventGatewayVirtualClusterProducePolicy) ([]string, error) {
+	refs := RefsAtEventGatewayVirtualClusterProducePolicyParentPolicyRef(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "EventGatewayVirtualClusterProducePolicy"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		if ns != obj.GetNamespace() {
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
+		}
+		var referenced EventGatewayVirtualClusterProducePolicy
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "EventGatewayVirtualClusterProducePolicy", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced EventGatewayVirtualClusterProducePolicy %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		if ns == obj.GetNamespace() && ref.Name == obj.GetName() {
+			errs = append(errs, ReferenceSelfError{Kind: "EventGatewayVirtualClusterProducePolicy", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if commonv1alpha1.ObjectRefsDiffer(obj.Spec.EventGatewayVirtualClusterRef, referenced.Spec.EventGatewayVirtualClusterRef, obj.GetNamespace(), ns) {
+			errs = append(errs, ReferenceDifferentParentError{Kind: "EventGatewayVirtualClusterProducePolicy", Namespace: ns, Name: ref.Name, ParentKind: "EventGatewayVirtualCluster"})
+			continue
+		}
+		if id := obj.GetVirtualClusterID(); id != "" && referenced.GetVirtualClusterID() != "" && id != referenced.GetVirtualClusterID() {
+			errs = append(errs, ReferenceDifferentParentError{Kind: "EventGatewayVirtualClusterProducePolicy", Namespace: ns, Name: ref.Name, ParentKind: "EventGatewayVirtualCluster"})
+			continue
+		}
+		if referenced.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig == nil || string(referenced.Spec.APISpec.Type) != "schemaValidation" {
+			errs = append(errs, fmt.Errorf("EventGatewayVirtualClusterProducePolicy %s/%s must have apiSpec.type schemaValidation", ns, ref.Name))
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "EventGatewayVirtualClusterProducePolicy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		// The resolved value replaces parentPolicyID: EventGatewayVirtualClusterProducePolicy objects
+		// being deleted must not gain new users, which could keep their deletion
+		// blocked.
+		if !referenced.GetDeletionTimestamp().IsZero() && obj.GetKonnectID() == "" {
+			errs = append(errs, ReferenceBeingDeletedError{Kind: "EventGatewayVirtualClusterProducePolicy", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		id := referenced.GetKonnectID()
+		if id == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "EventGatewayVirtualClusterProducePolicy", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, id)
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
 // RefsAtEventGatewayVirtualClusterProducePolicyEncryptConfigEncryptionKeyStaticKey returns the references at spec.apiSpec.encrypt.config.encryptionKey.static.key,
 // or nil when any ancestor is unset.
 func RefsAtEventGatewayVirtualClusterProducePolicyEncryptConfigEncryptionKeyStaticKey(obj *EventGatewayVirtualClusterProducePolicy) []EventGatewayStaticKeyRef {
@@ -369,6 +508,11 @@ func resolveEventGatewayVirtualClusterProducePolicyEncryptConfigEncryptionKeySta
 				continue
 			}
 			errs = append(errs, fmt.Errorf("failed to get referenced EventGatewayStaticKey %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "EventGatewayStaticKey", Namespace: ns, Name: ref.Name})
 			continue
 		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
@@ -462,6 +606,11 @@ func resolveEventGatewayVirtualClusterProducePolicyEncryptFieldsConfigEncryptFie
 			errs = append(errs, fmt.Errorf("failed to get referenced EventGatewayStaticKey %s/%s: %w", ns, ref.Name, err))
 			continue
 		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "EventGatewayStaticKey", Namespace: ns, Name: ref.Name})
+			continue
+		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "EventGatewayStaticKey", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
@@ -485,6 +634,23 @@ func resolveEventGatewayVirtualClusterProducePolicyEncryptFieldsConfigEncryptFie
 		return nil, err
 	}
 	return resolved, nil
+}
+
+// EventGatewayVirtualClusterProducePolicyRefsToEventGatewayVirtualClusterProducePolicy returns the keys of the EventGatewayVirtualClusterProducePolicy
+// objects obj references through spec.apiSpec.parentPolicyRef, with the default namespace applied.
+func EventGatewayVirtualClusterProducePolicyRefsToEventGatewayVirtualClusterProducePolicy(obj *EventGatewayVirtualClusterProducePolicy) []client.ObjectKey {
+	var keys []client.ObjectKey
+	for _, ref := range RefsAtEventGatewayVirtualClusterProducePolicyParentPolicyRef(obj) {
+		if ref.Kind != "" && ref.Kind != "EventGatewayVirtualClusterProducePolicy" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
+	}
+	return keys
 }
 
 // EventGatewayVirtualClusterProducePolicyRefsToEventGatewayStaticKey returns the keys of the EventGatewayStaticKey
@@ -518,6 +684,9 @@ func EventGatewayVirtualClusterProducePolicyRefsToEventGatewayStaticKey(obj *Eve
 // returns the joined resolution errors, or nil when all references resolve.
 func (obj *EventGatewayVirtualClusterProducePolicy) ResolveKonnectReferences(ctx context.Context, cl client.Client) error {
 	var errs []error
+	if _, err := resolveEventGatewayVirtualClusterProducePolicyParentPolicyRef(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
 	if _, err := resolveEventGatewayVirtualClusterProducePolicyEncryptConfigEncryptionKeyStaticKey(ctx, cl, obj); err != nil {
 		errs = append(errs, err)
 	}
@@ -543,6 +712,14 @@ func (obj *EventGatewayVirtualClusterProducePolicy) ToCreateEventGatewayVirtualC
 	payload, err := spec.marshalSDKOpsPayload()
 	if err != nil {
 		return nil, err
+	}
+	resolvedParentPolicyRef, err := resolveEventGatewayVirtualClusterProducePolicyParentPolicyRef(ctx, cl, obj)
+	if err != nil {
+		return nil, fmt.Errorf("resolving spec.apiSpec.parentPolicyRef references: %w", err)
+	}
+	delete(payload, "parent_policy_ref")
+	if len(resolvedParentPolicyRef) > 0 {
+		payload["parent_policy_id"] = resolvedParentPolicyRef[0]
 	}
 	// spec.apiSpec.encrypt.config.encryptionKey.static.key may carry CR references: replace each reference object set to
 	// "namespaced_ref" in the SDK payload with one wrapping its resolved
@@ -643,6 +820,14 @@ func (obj *EventGatewayVirtualClusterProducePolicy) ToUpdateEventGatewayVirtualC
 	payload, err := spec.marshalSDKOpsPayload()
 	if err != nil {
 		return nil, err
+	}
+	resolvedParentPolicyRef, err := resolveEventGatewayVirtualClusterProducePolicyParentPolicyRef(ctx, cl, obj)
+	if err != nil {
+		return nil, fmt.Errorf("resolving spec.apiSpec.parentPolicyRef references: %w", err)
+	}
+	delete(payload, "parent_policy_ref")
+	if len(resolvedParentPolicyRef) > 0 {
+		payload["parent_policy_id"] = resolvedParentPolicyRef[0]
 	}
 	// spec.apiSpec.encrypt.config.encryptionKey.static.key may carry CR references: replace each reference object set to
 	// "namespaced_ref" in the SDK payload with one wrapping its resolved

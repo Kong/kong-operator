@@ -329,6 +329,19 @@ var supportedAIGatewayTypes = []supportedTypesT{
 
 var supportedAIGatewayPackageTypesWithList = supportedAIGatewayTypes
 
+var supportedEventGatewayTypes = []supportedTypesT{
+	{
+		PackageVersion: "v1alpha1",
+		Types: []templateDataT{
+			{
+				Type: "OnPremEventGateway",
+			},
+		},
+	},
+}
+
+var supportedEventGatewayPackageTypesWithList = supportedEventGatewayTypes
+
 var supportedConfigurationPackageTypesWithAdopt = []supportedTypesT{
 	{
 		PackageVersion: "v1",

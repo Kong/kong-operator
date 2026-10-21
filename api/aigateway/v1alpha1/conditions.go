@@ -288,3 +288,22 @@ const (
 	// Currently unused: the operator does not wire a license validator yet.
 	LicenseInvalidReason consts.ConditionReason = "InvalidLicenseProvided"
 )
+
+// -----------------------------------------------------------------------------
+// OnPremAIGateway - Options Validation Condition Constants
+// -----------------------------------------------------------------------------
+
+const (
+	// OnPremAIGatewayOptionsValidType indicates whether the OnPremAIGateway's
+	// spec options (e.g. spec.objectFilters) are valid with the operator's
+	// configuration.
+	OnPremAIGatewayOptionsValidType consts.ConditionType = "OptionsValid"
+
+	// OnPremAIGatewayOptionsValidReason indicates the spec options are valid
+	// with the operator's configuration.
+	OnPremAIGatewayOptionsValidReason consts.ConditionReason = "OptionsValid"
+
+	// OnPremAIGatewayOptionsInvalidReason indicates the spec options conflict
+	// with the operator's configuration.
+	OnPremAIGatewayOptionsInvalidReason consts.ConditionReason = "OptionsInvalid"
+)

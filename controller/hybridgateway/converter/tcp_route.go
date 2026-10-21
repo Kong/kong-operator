@@ -16,6 +16,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/service"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/target"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/upstream"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
@@ -92,7 +93,7 @@ func (c *tcpRouteConverter) GetOutputStore(_ context.Context, logger logr.Logger
 // HandleOrphanedResource implements OrphanedResourceHandler.
 // It removes the TCPRoute reference from shared resources before orphan deletion.
 func (c *tcpRouteConverter) HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (skipDelete bool, err error) {
-	return handleOrphanedResourceForRoute(ctx, logger, c.Client, c.route, tcpRouteKind, resource)
+	return HandleOrphanedResourceForRoute(ctx, logger, c.Client, c.route, tcpRouteKind, resource)
 }
 
 // Translate implements the APIConverter interface.
@@ -107,6 +108,8 @@ func (c *tcpRouteConverter) Translate(ctx context.Context, logger logr.Logger) (
 func (c *tcpRouteConverter) translate(ctx context.Context, logger logr.Logger) error {
 	logger = logger.WithValues("phase", "tcproute-translate")
 	log.Debug(logger, "Starting TCPRoute translation")
+
+	ctx = utils.WithTagCache(ctx)
 
 	var translationErrors []error
 

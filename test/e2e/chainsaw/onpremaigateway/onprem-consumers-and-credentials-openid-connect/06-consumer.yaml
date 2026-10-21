@@ -1,0 +1,22 @@
+# The main AIGatewayConsumer: oauth-typed, customID equal to the oidc-mock
+# primary client's client_id, enrolled in the consumer group. Re-applying this
+# file restores the group membership after it has been removed (see the
+# restore-group-membership step in chainsaw-test.yaml).
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayConsumer
+metadata:
+  name: ($consumer_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  consumerGroups:
+    - name: ($consumer_group_name)
+  apiSpec:
+    name: ($consumer_name)
+    displayName: ($consumer_name)
+    type: oauth
+    customID: ($oidc_client_id)

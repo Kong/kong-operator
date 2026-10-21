@@ -1,0 +1,30 @@
+# A Deployment labelled as a data plane of the GWAdmin, in another namespace.
+# It never records the trust material it mounts: when it counts, it holds
+# every rotation of the GWAdmin back. Scaled to 0, it needs no image.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ($other_namespace)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dp-other
+  namespace: ($other_namespace)
+  labels:
+    gateway-operator.konghq.com/gwadmin-namespace: ($namespace)
+    gateway-operator.konghq.com/gwadmin-name: ($gwadmin_name)
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: dp-other
+  template:
+    metadata:
+      labels:
+        app: dp-other
+    spec:
+      containers:
+        - name: dp
+          image: alpine/k8s:1.33.4
+          command: [sleep, infinity]

@@ -1,0 +1,16 @@
+# Branches scanned by the scheduled govulncheck workflow, with the name of the artifact that carries
+# the branch's SARIF file. Artifact names cannot contain "/", hence the separate artifact name.
+# Keep this in sync with the release checklist (.github/ISSUE_TEMPLATE/---release.md).
+include:
+- branch: main
+  artifact: govulncheck-main
+- branch: release/2.1.x
+  artifact: govulncheck-release-2.1.x
+- branch: release/2.2.x
+  artifact: govulncheck-release-2.2.x
+- branch: release/2.3.x
+  artifact: govulncheck-release-2.3.x
+- branch: release/2.4.0-rapid.1.x
+  artifact: govulncheck-release-2.4.0-rapid.1.x
+- branch: release/2.4.0-rapid.2.x
+  artifact: govulncheck-release-2.4.0-rapid.2.x

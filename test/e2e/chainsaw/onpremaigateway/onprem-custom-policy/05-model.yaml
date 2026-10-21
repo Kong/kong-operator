@@ -1,0 +1,35 @@
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModel
+metadata:
+  name: ($model_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: model
+    model:
+      name: ($model_name)
+      displayName: On-prem custom-policy test model
+      enabled: Enabled
+      formats:
+        - type: openai
+      capabilities:
+        - generate
+      config:
+        model:
+          nameHeader: Enabled
+        route:
+          paths:
+            - /chat
+      targets:
+        - name: qwen2.5:0.5b
+          provider:
+            name: ($provider_name)
+          config:
+            type: openai
+            openai:
+              upstreamURL: http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/provider-a

@@ -157,14 +157,6 @@ func (s *AIGatewayCustomPolicyAPISpec) ToUpdateAIGatewayCustomPolicyRequest() (*
 		return nil, err
 	}
 
-	var selected map[string]any
-	if err := json.Unmarshal(data, &selected); err != nil {
-		return nil, fmt.Errorf("failed to decode selected AIGatewayCustomPolicy config: %w", err)
-	}
-	var target sdkkonnectcomp.UpdateAIGatewayCustomPolicyRequest
-	if err := json.Unmarshal(data, &target); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal into UpdateAIGatewayCustomPolicyRequest: %w", err)
-	}
 	switch variant {
 	case "Installed":
 		var member sdkkonnectcomp.UpdateAIGatewayCustomPolicyInstalledRequest

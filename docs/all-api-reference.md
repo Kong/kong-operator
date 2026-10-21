@@ -35,6 +35,7 @@ Package v1alpha1 contains API Schema definitions for the aiconfiguration.konghq.
 - [AIGatewayModelProvider](#aiconfiguration-konghq-com-v1alpha1-aigatewaymodelprovider)
 - [AIGatewayPolicy](#aiconfiguration-konghq-com-v1alpha1-aigatewaypolicy)
 - [AIGatewaySNI](#aiconfiguration-konghq-com-v1alpha1-aigatewaysni)
+- [AIGatewayVault](#aiconfiguration-konghq-com-v1alpha1-aigatewayvault)
 
 ### AIGatewayAgent
 
@@ -245,6 +246,21 @@ AIGatewaySNI is the Schema for the aigatewaysnis API.
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[AIGatewaySNISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaysnispec)_ |  |
 | `status` _[AIGatewaySNIStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaysnistatus)_ |  |
+
+### AIGatewayVault
+
+
+AIGatewayVault is the Schema for the aigatewayvaults API.
+
+<!-- ai_gateway_vault description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `aiconfiguration.konghq.com/v1alpha1`
+| `kind` _string_ | `AIGatewayVault`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[AIGatewayVaultSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayvaultspec)_ |  |
+| `status` _[AIGatewayVaultStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayvaultstatus)_ |  |
 
 ### Types
 
@@ -1551,6 +1567,7 @@ AIGatewayConsumerCredentialStatus defines the observed state of AIGatewayConsume
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
 | `gatewayID` _[KonnectEntityRef](#aiconfiguration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
 | `consumerID` _[KonnectEntityRef](#aiconfiguration-konghq-com-v1alpha1-types-konnectentityref)_ | ConsumerID is the Konnect ID of the parent Consumer. |
+| `createInputsHash` _string_ | CreateInputsHash fingerprints the resolved user-supplied request body last successfully created in Konnect, before operator metadata is added. For entities predating this field, it is initialized from current inputs as a baseline, which cannot verify the values already stored in Konnect. Readers of this resource can use the fingerprint to verify guesses of low-entropy Secret values offline. Use high-entropy secret material. |
 | `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
 
 _Appears in:_
@@ -1840,6 +1857,7 @@ AIGatewayDataPlaneCertificateStatus defines the observed state of AIGatewayDataP
 | --- | --- |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
 | `gatewayID` _[KonnectEntityRef](#aiconfiguration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `createInputsHash` _string_ | CreateInputsHash fingerprints the resolved user-supplied request body last successfully created in Konnect, before operator metadata is added. For entities predating this field, it is initialized from current inputs as a baseline, which cannot verify the values already stored in Konnect. Readers of this resource can use the fingerprint to verify guesses of low-entropy Secret values offline. Use high-entropy secret material. |
 | `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
 
 _Appears in:_
@@ -4843,6 +4861,8 @@ _Appears in:_
 
 - [AIGatewayModelBalancerSemanticConfigEmbeddings](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddings)
 
+
+
 #### AIGatewayModelProviderSagemaker
 
 
@@ -5997,6 +6017,7 @@ _Appears in:_
 - [AIGatewayModelSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelspec)
 - [AIGatewayPolicySpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyspec)
 - [AIGatewaySNISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaysnispec)
+- [AIGatewayVaultSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayvaultspec)
 
 #### AIGatewayRefGroup
 
@@ -6941,6 +6962,120 @@ Allowed values:
 | --- | --- |
 | `aws` |  |
 
+#### AIGatewayVaultAPISpec
+
+
+AIGatewayVaultAPISpec defines the API spec fields for AIGatewayVault.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayVaultSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayvaultspec)
+
+#### AIGatewayVaultConfig
+
+
+AIGatewayVaultConfig represents a union type for AIGatewayVaultConfig.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayVaultConfigType](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayvaultconfigtype)_ | Type designates the type of configuration. |
+| `aws` _[AwsSecretsManagerVault](#aiconfiguration-konghq-com-v1alpha1-types-awssecretsmanagervault)_ | AwsSecretsManager configuration. |
+| `azure` _[AzureKeyVault](#aiconfiguration-konghq-com-v1alpha1-types-azurekeyvault)_ | AzureKey configuration. |
+| `conjur` _[ConjurVault](#aiconfiguration-konghq-com-v1alpha1-types-conjurvault)_ | Conjur configuration. |
+| `env` _[EnvironmentVariableVault](#aiconfiguration-konghq-com-v1alpha1-types-environmentvariablevault)_ | EnvironmentVariable configuration. |
+| `gcp` _[GoogleSecretManagerVault](#aiconfiguration-konghq-com-v1alpha1-types-googlesecretmanagervault)_ | GoogleSecretManager configuration. |
+| `hcv` _[HashiCorpVault](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvault)_ | HashiCorp configuration. |
+| `konnect` _[KonnectConfigStoreVault](#aiconfiguration-konghq-com-v1alpha1-types-konnectconfigstorevault)_ | KonnectConfigStore configuration. |
+
+_Appears in:_
+
+- [AIGatewayVaultAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayvaultapispec)
+
+#### AIGatewayVaultConfigType
+
+_Underlying type:_ `string`
+
+AIGatewayVaultConfigType represents the type of AIGatewayVaultConfig.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayvaultconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `aws` |  |
+| `azure` |  |
+| `conjur` |  |
+| `env` |  |
+| `gcp` |  |
+| `hcv` |  |
+| `konnect` |  |
+
+#### AIGatewayVaultName
+
+_Underlying type:_ `string`
+
+AIGatewayVaultName An immutable user-defined identifier for this resource.
+
+
+
+
+_Appears in:_
+
+- [AwsSecretsManagerVault](#aiconfiguration-konghq-com-v1alpha1-types-awssecretsmanagervault)
+- [AzureKeyVault](#aiconfiguration-konghq-com-v1alpha1-types-azurekeyvault)
+- [ConjurVault](#aiconfiguration-konghq-com-v1alpha1-types-conjurvault)
+- [EnvironmentVariableVault](#aiconfiguration-konghq-com-v1alpha1-types-environmentvariablevault)
+- [GoogleSecretManagerVault](#aiconfiguration-konghq-com-v1alpha1-types-googlesecretmanagervault)
+- [HashiCorpVault](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvault)
+- [KonnectConfigStoreVault](#aiconfiguration-konghq-com-v1alpha1-types-konnectconfigstorevault)
+
+
+
+#### AIGatewayVaultSpec
+
+
+AIGatewayVaultSpec defines the desired state of AIGatewayVault.
+
+
+
+| Field | Description |
+| --- | --- |
+| `aiGatewayRef` _[AIGatewayRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayref)_ | AIGatewayRef is the reference to the parent AI Gateway (control plane) object. |
+| `apiSpec` _[AIGatewayVaultAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayvaultapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [AIGatewayVault](#aiconfiguration-konghq-com-v1alpha1-aigatewayvault)
+
+#### AIGatewayVaultStatus
+
+
+AIGatewayVaultStatus defines the observed state of AIGatewayVault.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#aiconfiguration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [AIGatewayVault](#aiconfiguration-konghq-com-v1alpha1-aigatewayvault)
+
 
 
 #### AuthGCPWorkloadIdentityFederationAwsIam
@@ -6980,6 +7115,91 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `awsIam` |  |
+
+#### AwsSecretsManagerVault
+
+
+AwsSecretsManagerVault is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AwsSecretsManagerVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-awssecretsmanagervaultconfig)_ |  |
+| `description` _string_ | The description of the Vault. |
+| `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayVaultName](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayvaultname)_ | A user-defined unique identifier for this vault instance, used as a stable human-readable reference. This value is immutable after creation. The name is used to load the right Vault configuration and implementation when referencing secrets with the other entities. |
+
+_Appears in:_
+
+- [AIGatewayVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayvaultconfig)
+
+#### AwsSecretsManagerVaultConfig
+
+
+AwsSecretsManagerVaultConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `assumeRoleArn` _string_ | The ARN of the role to assume when retrieving secrets from AWS Secrets Manager. |
+| `base64Decode` _string_ | Decode all secrets in this vault as base64. Useful for binary data. If some of the secrets in the vault are not base64-encoded, an error will occur when using them. We recommend creating a separate vault for base64 secrets. |
+| `endpointURL` _string_ | The endpoint URL of the AWS Secrets Manager service. If not specified, the default is https://secretsmanager.{region}.amazonaws.com. You can override this by specifying a complete URL including the http/https scheme. |
+| `negTtl` _int_ | Time-to-live (in seconds) for caching failed secret lookups. A value of 0 disables negative caching. Kong will retry fetching the secret after neg_ttl expires. |
+| `region` _string_ | The AWS region where your vault is located. |
+| `resurrectTtl` _int_ | Time (in seconds) that secrets remain in use after expiration (config.ttl ends). Useful if the vault is unreachable or the secret is deleted but not yet replaced. Kong continues to retry for resurrect_ttl seconds before giving up. The default is ~3 years to support uninterrupted service during outages. |
+| `roleSessionName` _string_ | The session name used when assuming a role. |
+| `stsEndpointURL` _string_ | A custom STS endpoint URL used for IAM role assumption. Overrides the default https://sts.amazonaws.com or regional variant https://sts.<region>.amazonaws.com. Include the full http/https scheme. Only specify this if using a private VPC endpoint for STS. |
+| `ttl` _int_ | Time-to-live (in seconds) for a cached secret. A value of 0 disables rotation. For non-zero values, use a minimum of 60 seconds. |
+
+_Appears in:_
+
+- [AwsSecretsManagerVault](#aiconfiguration-konghq-com-v1alpha1-types-awssecretsmanagervault)
+
+#### AzureKeyVault
+
+
+AzureKeyVault is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AzureKeyVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-azurekeyvaultconfig)_ |  |
+| `description` _string_ | The description of the Vault. |
+| `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayVaultName](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayvaultname)_ | A user-defined unique identifier for this vault instance, used as a stable human-readable reference. This value is immutable after creation. The name is used to load the right Vault configuration and implementation when referencing secrets with the other entities. |
+
+_Appears in:_
+
+- [AIGatewayVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayvaultconfig)
+
+#### AzureKeyVaultConfig
+
+
+AzureKeyVaultConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `base64Decode` _string_ | Decode all secrets in this vault as base64. Useful for binary data. If some of the secrets in the vault are not base64-encoded, an error will occur when using them. We recommend creating a separate vault for base64 secrets. |
+| `clientID` _string_ | The client ID for your registered application. You can find this in the Azure Dashboard under App Registrations. |
+| `credentialsPrefix` _string_ | The prefix for the credentials stored in the Azure Key Vault. |
+| `location` _string_ | Each Azure geography includes one or more regions that meet specific data residency and compliance requirements. |
+| `negTtl` _int_ | Time-to-live (in seconds) for caching failed secret lookups. A value of 0 disables negative caching. Kong will retry fetching the secret after neg_ttl expires. |
+| `resurrectTtl` _int_ | Time (in seconds) that secrets remain in use after expiration (config.ttl ends). Useful if the vault is unreachable or the secret is deleted but not yet replaced. Kong continues to retry for resurrect_ttl seconds before giving up. The default is ~3 years to support uninterrupted service during outages. |
+| `tenantID` _string_ | The DirectoryId and TenantId are the same: both refer to the GUID representing your Azure Active Directory tenant. Microsoft documentation and products may use either term depending on context. |
+| `ttl` _int_ | Time-to-live (in seconds) for a cached secret. A value of 0 disables rotation. For non-zero values, use a minimum of 60 seconds. |
+| `type` _string_ |  |
+| `vaultURI` _string_ | The URI from which the vault is reachable. This value can be found in your Azure Key Vault Dashboard under the Vault URI entry. |
+
+_Appears in:_
+
+- [AzureKeyVault](#aiconfiguration-konghq-com-v1alpha1-types-azurekeyvault)
 
 #### ConfigMapDataSource
 
@@ -7043,6 +7263,47 @@ Allowed values:
 
 
 
+#### ConjurVault
+
+
+ConjurVault is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[ConjurVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-conjurvaultconfig)_ |  |
+| `description` _string_ | The description of the Vault. |
+| `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayVaultName](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayvaultname)_ | A user-defined unique identifier for this vault instance, used as a stable human-readable reference. This value is immutable after creation. The name is used to load the right Vault configuration and implementation when referencing secrets with the other entities. |
+
+_Appears in:_
+
+- [AIGatewayVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayvaultconfig)
+
+#### ConjurVaultConfig
+
+
+ConjurVaultConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `account` _string_ | The CyberArk Secrets Manager organization account name. |
+| `apiKey` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ | The API key of the workload identity. |
+| `base64Decode` _string_ | Decode all secrets in this vault as base64. Useful for binary data. If some of the secrets in the vault are not base64-encoded, an error will occur when using them. We recommend creating a separate vault for base64 secrets. |
+| `endpointURL` _string_ | The CyberArk Secrets Manager backend URL to connect with. Accepts http or https protocols. |
+| `login` _string_ | The login name of the workload identity. |
+| `negTtl` _int_ | Time-to-live (in seconds) for caching failed secret lookups. A value of 0 disables negative caching. Kong will retry fetching the secret after neg_ttl expires. |
+| `resurrectTtl` _int_ | Time (in seconds) that secrets remain in use after expiration (config.ttl ends). Useful if the vault is unreachable or the secret is deleted but not yet replaced. Kong continues to retry for resurrect_ttl seconds before giving up. The default is ~3 years to support uninterrupted service during outages. |
+| `ttl` _int_ | Time-to-live (in seconds) for a cached secret. A value of 0 disables rotation. For non-zero values, use a minimum of 60 seconds. |
+
+_Appears in:_
+
+- [ConjurVault](#aiconfiguration-konghq-com-v1alpha1-types-conjurvault)
+
 #### CreateAIGatewayCustomPolicyInstalledRequest
 
 
@@ -7084,6 +7345,41 @@ _Appears in:_
 
 
 
+#### EnvironmentVariableVault
+
+
+EnvironmentVariableVault is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[EnvironmentVariableVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-environmentvariablevaultconfig)_ |  |
+| `description` _string_ | The description of the Vault. |
+| `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayVaultName](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayvaultname)_ | A user-defined unique identifier for this vault instance, used as a stable human-readable reference. This value is immutable after creation. The name is used to load the right Vault configuration and implementation when referencing secrets with the other entities. |
+
+_Appears in:_
+
+- [AIGatewayVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayvaultconfig)
+
+#### EnvironmentVariableVaultConfig
+
+
+EnvironmentVariableVaultConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `base64Decode` _string_ | Decode all secrets in this vault as base64. Useful for binary data. If some of the secrets in the vault are not base64-encoded, an error will occur when using them. We recommend creating a separate vault for base64 secrets. |
+| `prefix` _string_ | The prefix for the environment variable that the value will be stored in. |
+
+_Appears in:_
+
+- [EnvironmentVariableVault](#aiconfiguration-konghq-com-v1alpha1-types-environmentvariablevault)
+
 #### GCPModelConfig
 
 
@@ -7101,6 +7397,436 @@ _Appears in:_
 
 - [AIGatewayGeminiEmbeddingsModelConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaygeminiembeddingsmodelconfig)
 - [AIGatewayTargetGeminiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetgeminiconfig)
+
+#### GoogleSecretManagerVault
+
+
+GoogleSecretManagerVault is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[GoogleSecretManagerVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-googlesecretmanagervaultconfig)_ |  |
+| `description` _string_ | The description of the Vault. |
+| `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayVaultName](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayvaultname)_ | A user-defined unique identifier for this vault instance, used as a stable human-readable reference. This value is immutable after creation. The name is used to load the right Vault configuration and implementation when referencing secrets with the other entities. |
+
+_Appears in:_
+
+- [AIGatewayVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayvaultconfig)
+
+#### GoogleSecretManagerVaultConfig
+
+
+GoogleSecretManagerVaultConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `base64Decode` _string_ | Decode all secrets in this vault as base64. Useful for binary data. If some of the secrets in the vault are not base64-encoded, an error will occur when using them. We recommend creating a separate vault for base64 secrets. |
+| `negTtl` _int_ | Time-to-live (in seconds) for caching failed secret lookups. A value of 0 disables negative caching. Kong will retry fetching the secret after neg_ttl expires. |
+| `projectID` _string_ | The project ID from your Google API Console. You can find it by visiting your Google API Console and selecting “Manage all projects” in the projects list. |
+| `resurrectTtl` _int_ | Time (in seconds) that secrets remain in use after expiration (config.ttl ends). Useful if the vault is unreachable or the secret is deleted but not yet replaced. Kong continues to retry for resurrect_ttl seconds before giving up. The default is ~3 years to support uninterrupted service during outages. |
+| `ttl` _int_ | Time-to-live (in seconds) for a cached secret. A value of 0 disables rotation. For non-zero values, use a minimum of 60 seconds. |
+
+_Appears in:_
+
+- [GoogleSecretManagerVault](#aiconfiguration-konghq-com-v1alpha1-types-googlesecretmanagervault)
+
+#### HashiCorpVault
+
+
+HashiCorpVault is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[HashiCorpVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultconfig)_ | Configuration for an AI Gateway Vault. |
+| `description` _string_ | The description of the Vault. |
+| `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayVaultName](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayvaultname)_ | A user-defined unique identifier for this vault instance, used as a stable human-readable reference. This value is immutable after creation. The name is used to load the right Vault configuration and implementation when referencing secrets with the other entities. |
+
+_Appears in:_
+
+- [AIGatewayVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayvaultconfig)
+
+#### HashiCorpVaultAppRoleConfig
+
+
+HashiCorpVaultAppRoleConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `base64Decode` _string_ | Decode all secrets in this vault as base64. Useful for binary data. If some of the secrets in the vault are not base64-encoded, an error will occur when using them. We recommend creating a separate vault for base64 secrets. |
+| `host` _string_ | The hostname of your HashiCorp vault. |
+| `kv` _string_ | The secrets engine version. |
+| `mount` _string_ | The mount point. |
+| `namespace` _string_ | Namespace for the Vault. Vault Enterprise requires a namespace to connect successfully. |
+| `negTtl` _int_ | Time-to-live (in seconds) for caching failed secret lookups. A value of 0 disables negative caching. Kong will retry fetching the secret after neg_ttl expires. |
+| `path` _string_ | Path for enabling the AppRole auth method. Single leading/trailing slashes are trimmed. |
+| `port` _int_ | The port number of your HashiCorp vault. |
+| `protocol` _string_ | The protocol to connect with. |
+| `responseWrapping` _string_ | Whether the secret ID is a response-wrapping token. When true, Kong unwraps the token to get the actual secret ID. Note: tokens can only be unwrapped once; distribute them individually to Kong nodes. |
+| `resurrectTtl` _int_ | Time (in seconds) that secrets remain in use after expiration (config.ttl ends). Useful if the vault is unreachable or the secret is deleted but not yet replaced. Kong continues to retry for resurrect_ttl seconds before giving up. The default is ~3 years to support uninterrupted service during outages. |
+| `roleID` _string_ | Specifies the AppRole role ID in HashiCorp Vault. Either `role_id` or `secret_id_file` must be set. |
+| `secretID` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ | Defines the AppRole’s secret ID in HashiCorp Vault. |
+| `secretIDFile` _string_ | Path to a file containing the AppRole secret ID. Either `role_id` or `secret_id_file` must be set. |
+| `sslVerify` _string_ | Whether to verify the TLS certificate of the vault when connecting. |
+| `ttl` _int_ | Time-to-live (in seconds) for a cached secret. A value of 0 disables rotation. For non-zero values, use a minimum of 60 seconds. |
+
+_Appears in:_
+
+- [HashiCorpVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultconfig)
+
+#### HashiCorpVaultAwsEC2Config
+
+
+HashiCorpVaultAwsEC2Config is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `base64Decode` _string_ | Decode all secrets in this vault as base64. Useful for binary data. If some of the secrets in the vault are not base64-encoded, an error will occur when using them. We recommend creating a separate vault for base64 secrets. |
+| `host` _string_ | The hostname of your HashiCorp vault. |
+| `kv` _string_ | The secrets engine version. |
+| `loginPath` _string_ | The login path for AWS auth in HashiCorp Vault. |
+| `mount` _string_ | The mount point. |
+| `namespace` _string_ | Namespace for the Vault. Vault Enterprise requires a namespace to connect successfully. |
+| `negTtl` _int_ | Time-to-live (in seconds) for caching failed secret lookups. A value of 0 disables negative caching. Kong will retry fetching the secret after neg_ttl expires. |
+| `nonce` _string_ | The nonce for AWS EC2 auth. |
+| `port` _int_ | The port number of your HashiCorp vault. |
+| `protocol` _string_ | The protocol to connect with. |
+| `resurrectTtl` _int_ | Time (in seconds) that secrets remain in use after expiration (config.ttl ends). Useful if the vault is unreachable or the secret is deleted but not yet replaced. Kong continues to retry for resurrect_ttl seconds before giving up. The default is ~3 years to support uninterrupted service during outages. |
+| `role` _string_ | The role to use for AWS EC2 auth. |
+| `sslVerify` _string_ | Whether to verify the TLS certificate of the vault when connecting. |
+| `ttl` _int_ | Time-to-live (in seconds) for a cached secret. A value of 0 disables rotation. For non-zero values, use a minimum of 60 seconds. |
+
+_Appears in:_
+
+- [HashiCorpVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultconfig)
+
+#### HashiCorpVaultAwsIAMConfig
+
+
+HashiCorpVaultAwsIAMConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `accessKeyID` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ | The AWS access key ID for IAM auth. If not provided, the default credentials provider chain is used. If set, `secret_access_key` must also be set. |
+| `assumeRoleArn` _string_ | The ARN of the role to assume for AWS IAM authentication. If set, `role_session_name` must also be set. |
+| `base64Decode` _string_ | Decode all secrets in this vault as base64. Useful for binary data. If some of the secrets in the vault are not base64-encoded, an error will occur when using them. We recommend creating a separate vault for base64 secrets. |
+| `host` _string_ | The hostname of your HashiCorp vault. |
+| `kv` _string_ | The secrets engine version. |
+| `loginPath` _string_ | The login path for AWS auth in HashiCorp Vault. |
+| `mount` _string_ | The mount point. |
+| `namespace` _string_ | Namespace for the Vault. Vault Enterprise requires a namespace to connect successfully. |
+| `negTtl` _int_ | Time-to-live (in seconds) for caching failed secret lookups. A value of 0 disables negative caching. Kong will retry fetching the secret after neg_ttl expires. |
+| `port` _int_ | The port number of your HashiCorp vault. |
+| `protocol` _string_ | The protocol to connect with. |
+| `region` _string_ | The AWS region for auth. |
+| `resurrectTtl` _int_ | Time (in seconds) that secrets remain in use after expiration (config.ttl ends). Useful if the vault is unreachable or the secret is deleted but not yet replaced. Kong continues to retry for resurrect_ttl seconds before giving up. The default is ~3 years to support uninterrupted service during outages. |
+| `role` _string_ | The role to use for AWS IAM auth. |
+| `roleSessionName` _string_ | The session name to use when assuming a role for AWS IAM authentication. If set, `assume_role_arn` must also be set. |
+| `secretAccessKey` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ | The AWS secret access key for IAM auth. If not provided, the default credentials provider chain is used. If set, `access_key_id` must also be set. |
+| `sslVerify` _string_ | Whether to verify the TLS certificate of the vault when connecting. |
+| `stsEndpointURL` _string_ | The AWS STS endpoint URL used by Kong Gateway when signing the GetCallerIdentity request for AWS IAM authentication. If not provided, defaults to the standard STS endpoint for the specified region. This setting only affects the STS endpoint that Kong Gateway itself contacts - it does not influence which STS endpoint HashiCorp Vault uses on its side. |
+| `ttl` _int_ | Time-to-live (in seconds) for a cached secret. A value of 0 disables rotation. For non-zero values, use a minimum of 60 seconds. |
+
+_Appears in:_
+
+- [HashiCorpVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultconfig)
+
+#### HashiCorpVaultAzureConfig
+
+
+HashiCorpVaultAzureConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `base64Decode` _string_ | Decode all secrets in this vault as base64. Useful for binary data. If some of the secrets in the vault are not base64-encoded, an error will occur when using them. We recommend creating a separate vault for base64 secrets. |
+| `host` _string_ | The hostname of your HashiCorp vault. |
+| `kv` _string_ | The secrets engine version. |
+| `loginPath` _string_ | The login path for Azure auth in HashiCorp Vault |
+| `mount` _string_ | The mount point. |
+| `namespace` _string_ | Namespace for the Vault. Vault Enterprise requires a namespace to connect successfully. |
+| `negTtl` _int_ | Time-to-live (in seconds) for caching failed secret lookups. A value of 0 disables negative caching. Kong will retry fetching the secret after neg_ttl expires. |
+| `port` _int_ | The port number of your HashiCorp vault. |
+| `protocol` _string_ | The protocol to connect with. |
+| `resurrectTtl` _int_ | Time (in seconds) that secrets remain in use after expiration (config.ttl ends). Useful if the vault is unreachable or the secret is deleted but not yet replaced. Kong continues to retry for resurrect_ttl seconds before giving up. The default is ~3 years to support uninterrupted service during outages. |
+| `role` _string_ | The role to use for Azure auth. |
+| `sslVerify` _string_ | Whether to verify the TLS certificate of the vault when connecting. |
+| `ttl` _int_ | Time-to-live (in seconds) for a cached secret. A value of 0 disables rotation. For non-zero values, use a minimum of 60 seconds. |
+
+_Appears in:_
+
+- [HashiCorpVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultconfig)
+
+#### HashiCorpVaultCertConfig
+
+
+HashiCorpVaultCertConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `base64Decode` _string_ | Decode all secrets in this vault as base64. Useful for binary data. If some of the secrets in the vault are not base64-encoded, an error will occur when using them. We recommend creating a separate vault for base64 secrets. |
+| `cert` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ | The client certificate. |
+| `host` _string_ | The hostname of your HashiCorp vault. |
+| `key` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ | The key for the client certificate. |
+| `kv` _string_ | The secrets engine version. |
+| `mount` _string_ | The mount point. |
+| `namespace` _string_ | Namespace for the Vault. Vault Enterprise requires a namespace to connect successfully. |
+| `negTtl` _int_ | Time-to-live (in seconds) for caching failed secret lookups. A value of 0 disables negative caching. Kong will retry fetching the secret after neg_ttl expires. |
+| `port` _int_ | The port number of your HashiCorp vault. |
+| `protocol` _string_ | The protocol to connect with. |
+| `resurrectTtl` _int_ | Time (in seconds) that secrets remain in use after expiration (config.ttl ends). Useful if the vault is unreachable or the secret is deleted but not yet replaced. Kong continues to retry for resurrect_ttl seconds before giving up. The default is ~3 years to support uninterrupted service during outages. |
+| `roleName` _string_ | The trusted certificate role name. |
+| `sslVerify` _string_ | Whether to verify the TLS certificate of the vault when connecting. |
+| `ttl` _int_ | Time-to-live (in seconds) for a cached secret. A value of 0 disables rotation. For non-zero values, use a minimum of 60 seconds. |
+
+_Appears in:_
+
+- [HashiCorpVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultconfig)
+
+#### HashiCorpVaultConfig
+
+
+HashiCorpVaultConfig represents a union type for HashiCorpVaultConfig.
+Only one of the fields should be set based on the AuthMethod.
+
+
+
+| Field | Description |
+| --- | --- |
+| `authMethod` _[HashiCorpVaultConfigType](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultconfigtype)_ | AuthMethod designates the type of configuration. |
+| `approle` _[HashiCorpVaultAppRoleConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultapproleconfig)_ | AppRole configuration. |
+| `awsEc2` _[HashiCorpVaultAwsEC2Config](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultawsec2config)_ | AwsEC2 configuration. |
+| `awsIam` _[HashiCorpVaultAwsIAMConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultawsiamconfig)_ | AwsIAM configuration. |
+| `azure` _[HashiCorpVaultAzureConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultazureconfig)_ | Azure configuration. |
+| `cert` _[HashiCorpVaultCertConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultcertconfig)_ | Cert configuration. |
+| `gcpGce` _[HashiCorpVaultGcpGCEConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultgcpgceconfig)_ | GcpGCE configuration. |
+| `gcpIam` _[HashiCorpVaultGcpIAMConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultgcpiamconfig)_ | GcpIAM configuration. |
+| `jwt` _[HashiCorpVaultOauth2Config](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultoauth2config)_ | Oauth2 configuration. |
+| `kubernetes` _[HashiCorpVaultKubernetesConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultkubernetesconfig)_ | Kubernetes configuration. |
+| `token` _[HashiCorpVaultTokenConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaulttokenconfig)_ | Token configuration. |
+
+_Appears in:_
+
+- [HashiCorpVault](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvault)
+
+#### HashiCorpVaultConfigType
+
+_Underlying type:_ `string`
+
+HashiCorpVaultConfigType represents the type of HashiCorpVaultConfig.
+
+
+
+
+_Appears in:_
+
+- [HashiCorpVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `approle` |  |
+| `awsEc2` |  |
+| `awsIam` |  |
+| `azure` |  |
+| `cert` |  |
+| `gcpGce` |  |
+| `gcpIam` |  |
+| `jwt` |  |
+| `kubernetes` |  |
+| `token` |  |
+
+#### HashiCorpVaultGcpGCEConfig
+
+
+HashiCorpVaultGcpGCEConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `base64Decode` _string_ | Decode all secrets in this vault as base64. Useful for binary data. If some of the secrets in the vault are not base64-encoded, an error will occur when using them. We recommend creating a separate vault for base64 secrets. |
+| `host` _string_ | The hostname of your HashiCorp vault. |
+| `kv` _string_ | The secrets engine version. |
+| `loginPath` _string_ | The login path for GCP auth in HashiCorp Vault. |
+| `mount` _string_ | The mount point. |
+| `namespace` _string_ | Namespace for the Vault. Vault Enterprise requires a namespace to connect successfully. |
+| `negTtl` _int_ | Time-to-live (in seconds) for caching failed secret lookups. A value of 0 disables negative caching. Kong will retry fetching the secret after neg_ttl expires. |
+| `port` _int_ | The port number of your HashiCorp vault. |
+| `protocol` _string_ | The protocol to connect with. |
+| `resurrectTtl` _int_ | Time (in seconds) that secrets remain in use after expiration (config.ttl ends). Useful if the vault is unreachable or the secret is deleted but not yet replaced. Kong continues to retry for resurrect_ttl seconds before giving up. The default is ~3 years to support uninterrupted service during outages. |
+| `role` _string_ | The role to use for GCP GCE auth. |
+| `sslVerify` _string_ | Whether to verify the TLS certificate of the vault when connecting. |
+| `ttl` _int_ | Time-to-live (in seconds) for a cached secret. A value of 0 disables rotation. For non-zero values, use a minimum of 60 seconds. |
+
+_Appears in:_
+
+- [HashiCorpVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultconfig)
+
+#### HashiCorpVaultGcpIAMConfig
+
+
+HashiCorpVaultGcpIAMConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `base64Decode` _string_ | Decode all secrets in this vault as base64. Useful for binary data. If some of the secrets in the vault are not base64-encoded, an error will occur when using them. We recommend creating a separate vault for base64 secrets. |
+| `host` _string_ | The hostname of your HashiCorp vault. |
+| `jwtExp` _int_ | The JWT expiration time in seconds for GCP auth (0-900) |
+| `kv` _string_ | The secrets engine version. |
+| `mount` _string_ | The mount point. |
+| `namespace` _string_ | Namespace for the Vault. Vault Enterprise requires a namespace to connect successfully. |
+| `negTtl` _int_ | Time-to-live (in seconds) for caching failed secret lookups. A value of 0 disables negative caching. Kong will retry fetching the secret after neg_ttl expires. |
+| `port` _int_ | The port number of your HashiCorp vault. |
+| `protocol` _string_ | The protocol to connect with. |
+| `resurrectTtl` _int_ | Time (in seconds) that secrets remain in use after expiration (config.ttl ends). Useful if the vault is unreachable or the secret is deleted but not yet replaced. Kong continues to retry for resurrect_ttl seconds before giving up. The default is ~3 years to support uninterrupted service during outages. |
+| `role` _string_ | The role to use for GCP IAM auth. |
+| `serviceAccount` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ | The GCP service account for GCE auth. |
+| `sslVerify` _string_ | Whether to verify the TLS certificate of the vault when connecting. |
+| `ttl` _int_ | Time-to-live (in seconds) for a cached secret. A value of 0 disables rotation. For non-zero values, use a minimum of 60 seconds. |
+
+_Appears in:_
+
+- [HashiCorpVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultconfig)
+
+#### HashiCorpVaultKubernetesConfig
+
+
+HashiCorpVaultKubernetesConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiTokenFile` _string_ | Path to the Kubernetes service account token file. |
+| `base64Decode` _string_ | Decode all secrets in this vault as base64. Useful for binary data. If some of the secrets in the vault are not base64-encoded, an error will occur when using them. We recommend creating a separate vault for base64 secrets. |
+| `host` _string_ | The hostname of your HashiCorp vault. |
+| `kv` _string_ | The secrets engine version. |
+| `mount` _string_ | The mount point. |
+| `namespace` _string_ | Namespace for the Vault. Vault Enterprise requires a namespace to connect successfully. |
+| `negTtl` _int_ | Time-to-live (in seconds) for caching failed secret lookups. A value of 0 disables negative caching. Kong will retry fetching the secret after neg_ttl expires. |
+| `path` _string_ | Path for enabling the Kubernetes auth method. Single leading/trailing slashes are trimmed. |
+| `port` _int_ | The port number of your HashiCorp vault. |
+| `protocol` _string_ | The protocol to connect with. |
+| `resurrectTtl` _int_ | Time (in seconds) that secrets remain in use after expiration (config.ttl ends). Useful if the vault is unreachable or the secret is deleted but not yet replaced. Kong continues to retry for resurrect_ttl seconds before giving up. The default is ~3 years to support uninterrupted service during outages. |
+| `role` _string_ | Role assigned to the Kubernetes service account. |
+| `sslVerify` _string_ | Whether to verify the TLS certificate of the vault when connecting. |
+| `ttl` _int_ | Time-to-live (in seconds) for a cached secret. A value of 0 disables rotation. For non-zero values, use a minimum of 60 seconds. |
+
+_Appears in:_
+
+- [HashiCorpVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultconfig)
+
+#### HashiCorpVaultOauth2Config
+
+
+HashiCorpVaultOauth2Config is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `audiences` _string_ | Comma-separated list of OAuth2 audiences. |
+| `base64Decode` _string_ | Decode all secrets in this vault as base64. Useful for binary data. If some of the secrets in the vault are not base64-encoded, an error will occur when using them. We recommend creating a separate vault for base64 secrets. |
+| `clientID` _string_ | The OAuth2 client ID. |
+| `clientSecret` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ | The OAuth2 client secret. |
+| `host` _string_ | The hostname of your HashiCorp vault. |
+| `kv` _string_ | The secrets engine version. |
+| `mount` _string_ | The mount point. |
+| `namespace` _string_ | Namespace for the Vault. Vault Enterprise requires a namespace to connect successfully. |
+| `negTtl` _int_ | Time-to-live (in seconds) for caching failed secret lookups. A value of 0 disables negative caching. Kong will retry fetching the secret after neg_ttl expires. |
+| `port` _int_ | The port number of your HashiCorp vault. |
+| `protocol` _string_ | The protocol to connect with. |
+| `resurrectTtl` _int_ | Time (in seconds) that secrets remain in use after expiration (config.ttl ends). Useful if the vault is unreachable or the secret is deleted but not yet replaced. Kong continues to retry for resurrect_ttl seconds before giving up. The default is ~3 years to support uninterrupted service during outages. |
+| `role` _string_ | The configured role name in HashiCorp Vault for JWT auth. When creating the role in HashiCorp Vault, make sure that the `role_type` is `jwt` and the `token_policies` have permissions to read the secrets. |
+| `sslVerify` _string_ | Whether to verify the TLS certificate of the vault when connecting. |
+| `tokenEndpoint` _string_ | The OAuth2 token endpoint for Hashicorp Vault's OAuth2 auth method. |
+| `ttl` _int_ | Time-to-live (in seconds) for a cached secret. A value of 0 disables rotation. For non-zero values, use a minimum of 60 seconds. |
+
+_Appears in:_
+
+- [HashiCorpVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultconfig)
+
+#### HashiCorpVaultTokenConfig
+
+
+HashiCorpVaultTokenConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `base64Decode` _string_ | Decode all secrets in this vault as base64. Useful for binary data. If some of the secrets in the vault are not base64-encoded, an error will occur when using them. We recommend creating a separate vault for base64 secrets. |
+| `host` _string_ | The hostname of your HashiCorp vault. |
+| `kv` _string_ | The secrets engine version. |
+| `mount` _string_ | The mount point. |
+| `namespace` _string_ | Namespace for the Vault. Vault Enterprise requires a namespace to connect successfully. |
+| `negTtl` _int_ | Time-to-live (in seconds) for caching failed secret lookups. A value of 0 disables negative caching. Kong will retry fetching the secret after neg_ttl expires. |
+| `port` _int_ | The port number of your HashiCorp vault. |
+| `protocol` _string_ | The protocol to connect with. |
+| `resurrectTtl` _int_ | Time (in seconds) that secrets remain in use after expiration (config.ttl ends). Useful if the vault is unreachable or the secret is deleted but not yet replaced. Kong continues to retry for resurrect_ttl seconds before giving up. The default is ~3 years to support uninterrupted service during outages. |
+| `sslVerify` _string_ | Whether to verify the TLS certificate of the vault when connecting. |
+| `token` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ | The token string to be used for authentication. |
+| `ttl` _int_ | Time-to-live (in seconds) for a cached secret. A value of 0 disables rotation. For non-zero values, use a minimum of 60 seconds. |
+
+_Appears in:_
+
+- [HashiCorpVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultconfig)
+
+#### KonnectConfigStoreVault
+
+
+KonnectConfigStoreVault is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[KonnectConfigStoreVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-konnectconfigstorevaultconfig)_ |  |
+| `description` _string_ | The description of the Vault. |
+| `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayVaultName](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayvaultname)_ | A user-defined unique identifier for this vault instance, used as a stable human-readable reference. This value is immutable after creation. The name is used to load the right Vault configuration and implementation when referencing secrets with the other entities. |
+
+_Appears in:_
+
+- [AIGatewayVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayvaultconfig)
+
+#### KonnectConfigStoreVaultConfig
+
+
+KonnectConfigStoreVaultConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `configStoreID` _string_ | The ID of the Konnect Config Store that contains the secrets. |
+
+_Appears in:_
+
+- [KonnectConfigStoreVault](#aiconfiguration-konghq-com-v1alpha1-types-konnectconfigstorevault)
 
 #### KonnectEntityRef
 
@@ -7129,6 +7855,7 @@ _Appears in:_
 - [AIGatewayModelStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelstatus)
 - [AIGatewayPolicyStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicystatus)
 - [AIGatewaySNIStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaysnistatus)
+- [AIGatewayVaultStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayvaultstatus)
 
 
 
@@ -7182,8 +7909,15 @@ _Appears in:_
 - [AIGatewayModelProviderXai](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderxai)
 - [AIGatewayPolicyAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyapispec)
 - [AIGatewaySNIAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaysniapispec)
+- [AwsSecretsManagerVault](#aiconfiguration-konghq-com-v1alpha1-types-awssecretsmanagervault)
+- [AzureKeyVault](#aiconfiguration-konghq-com-v1alpha1-types-azurekeyvault)
+- [ConjurVault](#aiconfiguration-konghq-com-v1alpha1-types-conjurvault)
 - [CreateAIGatewayCustomPolicyInstalledRequest](#aiconfiguration-konghq-com-v1alpha1-types-createaigatewaycustompolicyinstalledrequest)
 - [CreateAIGatewayCustomPolicyStreamingRequest](#aiconfiguration-konghq-com-v1alpha1-types-createaigatewaycustompolicystreamingrequest)
+- [EnvironmentVariableVault](#aiconfiguration-konghq-com-v1alpha1-types-environmentvariablevault)
+- [GoogleSecretManagerVault](#aiconfiguration-konghq-com-v1alpha1-types-googlesecretmanagervault)
+- [HashiCorpVault](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvault)
+- [KonnectConfigStoreVault](#aiconfiguration-konghq-com-v1alpha1-types-konnectconfigstorevault)
 
 #### ManagedByValue
 
@@ -7249,8 +7983,15 @@ _Appears in:_
 - [AIGatewayModelProviderXai](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderxai)
 - [AIGatewayPolicyAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyapispec)
 - [AIGatewaySNIAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaysniapispec)
+- [AwsSecretsManagerVault](#aiconfiguration-konghq-com-v1alpha1-types-awssecretsmanagervault)
+- [AzureKeyVault](#aiconfiguration-konghq-com-v1alpha1-types-azurekeyvault)
+- [ConjurVault](#aiconfiguration-konghq-com-v1alpha1-types-conjurvault)
 - [CreateAIGatewayCustomPolicyInstalledRequest](#aiconfiguration-konghq-com-v1alpha1-types-createaigatewaycustompolicyinstalledrequest)
 - [CreateAIGatewayCustomPolicyStreamingRequest](#aiconfiguration-konghq-com-v1alpha1-types-createaigatewaycustompolicystreamingrequest)
+- [EnvironmentVariableVault](#aiconfiguration-konghq-com-v1alpha1-types-environmentvariablevault)
+- [GoogleSecretManagerVault](#aiconfiguration-konghq-com-v1alpha1-types-googlesecretmanagervault)
+- [HashiCorpVault](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvault)
+- [KonnectConfigStoreVault](#aiconfiguration-konghq-com-v1alpha1-types-konnectconfigstorevault)
 
 #### PublicLabelsValue
 
@@ -7314,6 +8055,13 @@ _Appears in:_
 - [AIGatewayModelProviderConfigAuthBasicHeaders](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasicheaders)
 - [AIGatewayModelProviderConfigAuthBasicParams](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasicparams)
 - [AIGatewayModelProviderConfigAuthGCP](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthgcp)
+- [ConjurVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-conjurvaultconfig)
+- [HashiCorpVaultAppRoleConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultapproleconfig)
+- [HashiCorpVaultAwsIAMConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultawsiamconfig)
+- [HashiCorpVaultCertConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultcertconfig)
+- [HashiCorpVaultGcpIAMConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultgcpiamconfig)
+- [HashiCorpVaultOauth2Config](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultoauth2config)
+- [HashiCorpVaultTokenConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaulttokenconfig)
 
 #### SensitiveDataSourceType
 
@@ -7633,14 +8381,64 @@ _Appears in:_
 
 - [AIGatewayDataPlaneSpec](#aigateway-konghq-com-v1alpha1-types-aigatewaydataplanespec)
 
+#### OnPremAIGatewayDataPlaneSync
+
+
+OnPremAIGatewayDataPlaneSync defines the configuration for syncing
+configuration to the data planes referencing this OnPremAIGateway.
+
+
+
+| Field | Description |
+| --- | --- |
+| `intervalSeconds` _*int32_ | IntervalSeconds is the interval between two rounds of syncing configuration with data planes, in seconds. If not specified, the default interval as defined by the operator will be used. |
+| `timeoutSeconds` _*int32_ | TimeoutSeconds is the timeout of a single run of syncing configuration with data planes, in seconds. If not specified, no timeout is applied to a sync run. |
+
+_Appears in:_
+
+- [OnPremAIGatewaySpec](#aigateway-konghq-com-v1alpha1-types-onpremaigatewayspec)
+
+#### OnPremAIGatewayFilterForObjectType
+
+
+OnPremAIGatewayFilterForObjectType defines the filters for a certain type of object.
+
+
+
+| Field | Description |
+| --- | --- |
+| `matchLabels` _map[string]string_ | MatchLabels defines the labels that the object must match to get reconciled by the controller for the OnPremAIGateway. For example, if `secrets.matchLabels` is `{"label1":"val1","label2":"val2"}`, only secrets with labels `label1=val1` and `label2=val2` are reconciled. |
+
+_Appears in:_
+
+- [OnPremAIGatewayObjectFilters](#aigateway-konghq-com-v1alpha1-types-onpremaigatewayobjectfilters)
+
+#### OnPremAIGatewayObjectFilters
+
+
+OnPremAIGatewayObjectFilters defines filters to limit watched objects by the controllers.
+
+
+
+| Field | Description |
+| --- | --- |
+| `secrets` _[OnPremAIGatewayFilterForObjectType](#aigateway-konghq-com-v1alpha1-types-onpremaigatewayfilterforobjecttype)_ | Secrets defines the filters for watched secrets. |
+
+_Appears in:_
+
+- [OnPremAIGatewaySpec](#aigateway-konghq-com-v1alpha1-types-onpremaigatewayspec)
+
 #### OnPremAIGatewaySpec
 
 
-OnPremAIGatewaySpec defines the desired state of OnPremAIGateway.<br /><br />It is intentionally empty for now: fields land alongside the reconciler
-logic that consumes them.
+OnPremAIGatewaySpec defines the desired state of OnPremAIGateway.
 
 
 
+| Field | Description |
+| --- | --- |
+| `dataplaneSync` _[OnPremAIGatewayDataPlaneSync](#aigateway-konghq-com-v1alpha1-types-onpremaigatewaydataplanesync)_ | DataPlaneSync defines the configuration for syncing configuration to the data planes referencing this OnPremAIGateway. |
+| `objectFilters` _[OnPremAIGatewayObjectFilters](#aigateway-konghq-com-v1alpha1-types-onpremaigatewayobjectfilters)_ | ObjectFilters defines the filters to limit watched objects by the controllers. |
 
 _Appears in:_
 
@@ -8003,6 +8801,7 @@ ScaleTargetRef which is being controlled by the Operator.
 
 _Appears in:_
 
+- [GWAdminScaling](#gateway-operator-konghq-com-v1alpha1-types-gwadminscaling)
 - [Scaling](#aigateway-konghq-com-v1alpha1-types-scaling)
 - [Scaling](#eventgateway-konghq-com-v1alpha1-types-scaling)
 - [Scaling](#gateway-operator-konghq-com-v1beta1-types-scaling)
@@ -9699,7 +10498,7 @@ EventGatewayBackendClusterSpec defines the desired state of EventGatewayBackendC
 | Field | Description |
 | --- | --- |
 | `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. This field is deprecated, use parentRef instead. Exactly one of gatewayRef and parentRef must be set. |
-| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway. Exactly one of gatewayRef and parentRef must be set. |
+| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway, OnPremEventGateway. Exactly one of gatewayRef and parentRef must be set. |
 | `apiSpec` _[EventGatewayBackendClusterAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -10015,7 +10814,7 @@ EventGatewayDataPlaneCertificateSpec defines the desired state of EventGatewayDa
 | Field | Description |
 | --- | --- |
 | `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. This field is deprecated, use parentRef instead. Exactly one of gatewayRef and parentRef must be set. |
-| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway. Exactly one of gatewayRef and parentRef must be set. |
+| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway, OnPremEventGateway. Exactly one of gatewayRef and parentRef must be set. |
 | `apiSpec` _[EventGatewayDataPlaneCertificateAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificateapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -10411,7 +11210,7 @@ EventGatewayListenerSpec defines the desired state of EventGatewayListener.
 | Field | Description |
 | --- | --- |
 | `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. This field is deprecated, use parentRef instead. Exactly one of gatewayRef and parentRef must be set. |
-| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway. Exactly one of gatewayRef and parentRef must be set. |
+| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway, OnPremEventGateway. Exactly one of gatewayRef and parentRef must be set. |
 | `apiSpec` _[EventGatewayListenerAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -11364,7 +12163,7 @@ EventGatewaySchemaRegistrySpec defines the desired state of EventGatewaySchemaRe
 | Field | Description |
 | --- | --- |
 | `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. This field is deprecated, use parentRef instead. Exactly one of gatewayRef and parentRef must be set. |
-| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway. Exactly one of gatewayRef and parentRef must be set. |
+| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway, OnPremEventGateway. Exactly one of gatewayRef and parentRef must be set. |
 | `apiSpec` _[EventGatewaySchemaRegistryAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayschemaregistryapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -11466,7 +12265,7 @@ EventGatewayStaticKeySpec defines the desired state of EventGatewayStaticKey.
 | Field | Description |
 | --- | --- |
 | `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. This field is deprecated, use parentRef instead. Exactly one of gatewayRef and parentRef must be set. |
-| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway. Exactly one of gatewayRef and parentRef must be set. |
+| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway, OnPremEventGateway. Exactly one of gatewayRef and parentRef must be set. |
 | `apiSpec` _[EventGatewayStaticKeyAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaystatickeyapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -11484,6 +12283,7 @@ EventGatewayStaticKeyStatus defines the observed state of EventGatewayStaticKey.
 | --- | --- |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
 | `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `createInputsHash` _string_ | CreateInputsHash fingerprints the resolved user-supplied request body last successfully created in Konnect, before operator metadata is added. For entities predating this field, it is initialized from current inputs as a baseline, which cannot verify the values already stored in Konnect. Readers of this resource can use the fingerprint to verify guesses of low-entropy Secret values offline. Use high-entropy secret material. |
 | `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
 
 _Appears in:_
@@ -11597,7 +12397,7 @@ EventGatewayTLSTrustBundleSpec defines the desired state of EventGatewayTLSTrust
 | Field | Description |
 | --- | --- |
 | `gatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | GatewayRef is the reference to the parent Gateway object. This field is deprecated, use parentRef instead. Exactly one of gatewayRef and parentRef must be set. |
-| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway. Exactly one of gatewayRef and parentRef must be set. |
+| `parentRef` _[GatewayRef](#common-konghq-com-v1alpha1-types-gatewayref)_ | ParentRef is the reference to the gateway (control plane) this object belongs to. Supported kinds: KonnectEventGateway, OnPremEventGateway. Exactly one of gatewayRef and parentRef must be set. |
 | `apiSpec` _[EventGatewayTLSTrustBundleAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundleapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -11683,6 +12483,9 @@ EventGatewayVirtualClusterConsumePolicyAPISpec defines the API spec fields for E
 
 
 
+| Field | Description |
+| --- | --- |
+| `parentPolicyRef` _[EventGatewayVirtualClusterConsumePolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyref)_ | ParentPolicyRef references a schemaValidation consume policy in the same namespace and virtual cluster. Required for decryptFields and optional for modifyHeaders and skipRecord. It is immutable once this policy exists in Konnect. Deleting a parent is blocked while child policy objects reference it. |
 
 _Appears in:_
 
@@ -11731,6 +12534,24 @@ Allowed values:
 | `modifyHeaders` |  |
 | `schemaValidation` |  |
 | `skipRecord` |  |
+
+#### EventGatewayVirtualClusterConsumePolicyRef
+
+
+EventGatewayVirtualClusterConsumePolicyRef references an EventGatewayVirtualClusterConsumePolicy in the cluster. The referenced
+object's Konnect id is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterConsumePolicyAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyapispec)
 
 
 
@@ -11861,6 +12682,9 @@ EventGatewayVirtualClusterProducePolicyAPISpec defines the API spec fields for E
 
 
 
+| Field | Description |
+| --- | --- |
+| `parentPolicyRef` _[EventGatewayVirtualClusterProducePolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyref)_ | ParentPolicyRef references a schemaValidation produce policy in the same namespace and virtual cluster. Required for encryptFields and optional for modifyHeaders. It is immutable once this policy exists in Konnect. Deleting a parent is blocked while child policy objects reference it. |
 
 _Appears in:_
 
@@ -11907,6 +12731,24 @@ Allowed values:
 | `encryptFields` |  |
 | `modifyHeaders` |  |
 | `schemaValidation` |  |
+
+#### EventGatewayVirtualClusterProducePolicyRef
+
+
+EventGatewayVirtualClusterProducePolicyRef references an EventGatewayVirtualClusterProducePolicy in the cluster. The referenced
+object's Konnect id is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterProducePolicyAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyapispec)
 
 
 
@@ -14780,6 +15622,7 @@ _Appears in:_
 Package v1alpha1 contains API Schema definitions for the eventgateway.konghq.com v1alpha1 API group.
 
 - [KegDataPlane](#eventgateway-konghq-com-v1alpha1-kegdataplane)
+- [OnPremEventGateway](#eventgateway-konghq-com-v1alpha1-onpremeventgateway)
 
 ### KegDataPlane
 
@@ -14797,6 +15640,25 @@ referenced KonnectEventGateway resource.
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KegDataPlaneSpec](#eventgateway-konghq-com-v1alpha1-types-kegdataplanespec)_ | Spec defines the desired state of KegDataPlane. |
 | `status` _[KegDataPlaneStatus](#eventgateway-konghq-com-v1alpha1-types-kegdataplanestatus)_ | Status defines the observed state of KegDataPlane. |
+
+### OnPremEventGateway
+
+
+OnPremEventGateway is the Schema for the on-prem Event Gateway control planes API.
+It stands for one Event Gateway whose control plane is gw-admin, running in
+the cluster, instead of Konnect: Kong Operator pushes the configuration of
+the entities that reference it to gw-admin, and the data planes pull it
+from there.
+
+<!-- on_prem_event_gateway description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `eventgateway.konghq.com/v1alpha1`
+| `kind` _string_ | `OnPremEventGateway`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[OnPremEventGatewaySpec](#eventgateway-konghq-com-v1alpha1-types-onpremeventgatewayspec)_ | Spec defines the desired state of OnPremEventGateway. |
+| `status` _[OnPremEventGatewayStatus](#eventgateway-konghq-com-v1alpha1-types-onpremeventgatewaystatus)_ | Status defines the observed state of OnPremEventGateway. |
 
 ### Types
 
@@ -14973,6 +15835,37 @@ _Appears in:_
 
 - [KegDataPlaneSpec](#eventgateway-konghq-com-v1alpha1-types-kegdataplanespec)
 
+#### GWAdmin
+
+
+GWAdmin configures how Kong Operator reaches gw-admin.
+
+
+
+| Field | Description |
+| --- | --- |
+| `service` _[GWAdminService](#eventgateway-konghq-com-v1alpha1-types-gwadminservice)_ | Service is the Service in front of the gw-admin pods, in the namespace of the OnPremEventGateway. Kong Operator pushes the configuration to each pod of this Service. |
+
+_Appears in:_
+
+- [OnPremEventGatewaySpec](#eventgateway-konghq-com-v1alpha1-types-onpremeventgatewayspec)
+
+#### GWAdminService
+
+
+GWAdminService identifies the gw-admin Service and its port.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the name of the Service. |
+| `portName` _string_ | PortName is the name of the Service port gw-admin serves its API on. Service port names are DNS-1123 labels. |
+
+_Appears in:_
+
+- [GWAdmin](#eventgateway-konghq-com-v1alpha1-types-gwadmin)
+
 
 
 #### KegDataPlaneConfiguration
@@ -15124,6 +16017,38 @@ _Appears in:_
 
 - [KegDataPlaneConfiguration](#eventgateway-konghq-com-v1alpha1-types-kegdataplaneconfiguration)
 
+#### OnPremEventGatewaySpec
+
+
+OnPremEventGatewaySpec defines the desired state of OnPremEventGateway.
+
+
+
+| Field | Description |
+| --- | --- |
+| `gwAdmin` _[GWAdmin](#eventgateway-konghq-com-v1alpha1-types-gwadmin)_ | GWAdmin configures how Kong Operator reaches the gw-admin of this gateway. |
+
+_Appears in:_
+
+- [OnPremEventGateway](#eventgateway-konghq-com-v1alpha1-onpremeventgateway)
+
+#### OnPremEventGatewayStatus
+
+
+OnPremEventGatewayStatus defines the observed state of OnPremEventGateway.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the OnPremEventGateway. |
+| `serverURL` _string_ | ServerURL is the address the data planes of this gateway use to reach gw-admin. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed. |
+
+_Appears in:_
+
+- [OnPremEventGateway](#eventgateway-konghq-com-v1alpha1-onpremeventgateway)
+
 #### RuntimeOptions
 
 
@@ -15257,6 +16182,7 @@ Package v1alpha1 contains API Schema definitions for the gateway-operator.konghq
 - [AIGateway](#gateway-operator-konghq-com-v1alpha1-aigateway)
 - [DBBackedHybridControlPlane](#gateway-operator-konghq-com-v1alpha1-dbbackedhybridcontrolplane)
 - [DataPlaneMetricsExtension](#gateway-operator-konghq-com-v1alpha1-dataplanemetricsextension)
+- [GWAdmin](#gateway-operator-konghq-com-v1alpha1-gwadmin)
 - [KongPluginInstallation](#gateway-operator-konghq-com-v1alpha1-kongplugininstallation)
 - [WatchNamespaceGrant](#gateway-operator-konghq-com-v1alpha1-watchnamespacegrant)
 
@@ -15333,6 +16259,60 @@ enriched with metadata required for in-cluster Kubernetes autoscaling.
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[DataPlaneMetricsExtensionSpec](#gateway-operator-konghq-com-v1alpha1-types-dataplanemetricsextensionspec)_ |  |
 | `status` _[DataPlaneMetricsExtensionStatus](#gateway-operator-konghq-com-v1alpha1-types-dataplanemetricsextensionstatus)_ |  |
+
+### GWAdmin
+
+
+GWAdmin is the Schema for the GWAdmin API. It deploys gw-admin, the
+on-prem control plane of the next-generation Kong data planes, such as the
+Kong Event Gateway, when they run without Konnect. Kong Gateway 3.x data
+planes are not supported. Kong Operator pushes the configuration to gw-admin on its
+API listener, and the data planes pull it from its control plane (cp)
+listener. Both listeners use mutual TLS: Kong Operator provisions and
+rotates every certificate they need, from three certificate authorities:<br /><br />  - the API CA: the API listener and Kong Operator authenticate each other
+    with it. Kong Operator creates it and keeps its key in its own
+    namespace.
+  - the cp server CA: the data planes verify the cp listener with it.
+    Kong Operator creates it and keeps its key in its own namespace, so
+    that nothing else can issue a certificate the data planes trust.
+  - the cp client CA: the cp listener verifies the data plane client
+    certificates with it. Automatic or the user's, Kong Operator copies it,
+    with its key, into its own namespace, where it issues the certificates
+    of the data planes it manages from it.<br /><br />The certificate authorities live and die with the GWAdmin object: deleting
+it, or restoring it under a new UID, creates new ones, and the data plane
+certificates must be issued again. gw-admin doesn't reload certificates:
+every change of the mounted ones rolls its pods.<br /><br />The server certificates of the listeners are mounted into the gw-admin
+pods, so they live in the namespace of the GWAdmin: whoever can read its
+Secrets can impersonate gw-admin with them, until they are renewed.<br /><br />Only data planes Kong Operator manages are supported. Their Deployments
+carry the gateway-operator.konghq.com/gwadmin-namespace and
+gateway-operator.konghq.com/gwadmin-name labels naming the GWAdmin, and
+their Pod template records what its pods mount: the SHA-256 of the ca.crt
+of status.tls.cpServerCABundleSecretName in the
+konghq.com/gw-admin-cp-server-bundle-checksum annotation, and the SHA-256
+fingerprint of the CA that issued their client certificate in the
+konghq.com/gw-admin-cp-client-ca annotation. They count when they run in
+the namespace of the GWAdmin, or in a namespace a KongReferenceGrant in the
+namespace of the GWAdmin grants, from OnPremEventGateway to GWAdmin. A
+rotation waits for them to roll out: the cp server certificate moves to a
+new issuer once every data plane runs a server bundle trusting it, and the
+previous cp client CA is dropped once every data plane runs a client
+certificate from the new one. The
+gateway-operator.konghq.com/rotation-skip-data-planes annotation set to
+"true" stops the rotations from waiting for them, e.g. to stop trusting a
+compromised certificate authority right away.<br /><br />The gw-admin pods only report Ready once Kong Operator has provisioned
+them through the API listener, so the Ready condition of the GWAdmin does
+not wait for the pods to be Ready: it reports whether the certificates, the
+Services and the Deployment are in place.
+
+<!-- gw_admin description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway-operator.konghq.com/v1alpha1`
+| `kind` _string_ | `GWAdmin`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[GWAdminSpec](#gateway-operator-konghq-com-v1alpha1-types-gwadminspec)_ | Spec defines the desired state of GWAdmin. |
+| `status` _[GWAdminStatus](#gateway-operator-konghq-com-v1alpha1-types-gwadminstatus)_ | Status defines the observed state of GWAdmin. |
 
 ### KongPluginInstallation
 
@@ -15596,6 +16576,262 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `internet-accessible` | NetworkInternetAccessible indicates that the endpoint is accessible from<br />the public internet.<br /> |
+
+#### GWAdminAPIStatus
+
+
+GWAdminAPIStatus describes the Service Kong Operator pushes the
+configuration through.
+
+
+
+| Field | Description |
+| --- | --- |
+| `serviceName` _string_ | ServiceName is the name of the Service. |
+| `portName` _string_ | PortName is the name of the Service port. |
+| `port` _int32_ | Port is the Service port. |
+
+_Appears in:_
+
+- [GWAdminStatus](#gateway-operator-konghq-com-v1alpha1-types-gwadminstatus)
+
+#### GWAdminCPStatus
+
+
+GWAdminCPStatus describes the endpoint the data planes pull the
+configuration from.
+
+
+
+| Field | Description |
+| --- | --- |
+| `serverURL` _string_ | ServerURL is the in-cluster URL of the cp listener. |
+
+_Appears in:_
+
+- [GWAdminStatus](#gateway-operator-konghq-com-v1alpha1-types-gwadminstatus)
+
+#### GWAdminCertificateProvisioning
+
+_Underlying type:_ `string`
+
+GWAdminCertificateProvisioning is the method used to provision a certificate.
+
+
+
+
+_Appears in:_
+
+- [GWAdminCertificateSecret](#gateway-operator-konghq-com-v1alpha1-types-gwadmincertificatesecret)
+- [GWAdminServerCertificate](#gateway-operator-konghq-com-v1alpha1-types-gwadminservercertificate)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `Manual` | GWAdminCertificateProvisioningManual indicates the certificate is<br />supplied by the user through a Secret.<br /> |
+| `Automatic` | GWAdminCertificateProvisioningAutomatic indicates the certificate is<br />generated and managed by the operator.<br /> |
+
+#### GWAdminCertificateSecret
+
+
+GWAdminCertificateSecret configures how a certificate is provisioned.
+
+
+
+| Field | Description |
+| --- | --- |
+| `provisioning` _[GWAdminCertificateProvisioning](#gateway-operator-konghq-com-v1alpha1-types-gwadmincertificateprovisioning)_ | Provisioning is the method used to provision the certificate. |
+| `secretRef` _[GWAdminSecretRef](#gateway-operator-konghq-com-v1alpha1-types-gwadminsecretref)_ | SecretRef references the Secret holding the certificate. Only used, and required, when Provisioning is Manual. The Secret must carry the operator's secret label selector (default "konghq.com/secret: \"true\"") or the operator cannot see it; with cert-manager set it through spec.secretTemplate.labels of the Certificate. |
+
+_Appears in:_
+
+- [GWAdminTLS](#gateway-operator-konghq-com-v1alpha1-types-gwadmintls)
+
+#### GWAdminDeploymentOptions
+
+
+GWAdminDeploymentOptions specifies options for the gw-admin Deployment.
+
+
+
+| Field | Description |
+| --- | --- |
+| `replicas` _*int32_ | Replicas describes the number of desired pods. This field and the scaling field are mutually exclusive. |
+| `scaling` _[GWAdminScaling](#gateway-operator-konghq-com-v1alpha1-types-gwadminscaling)_ | Scaling defines the scaling options for the Deployment. |
+| `annotations` _map[string]string_ | Annotations are custom annotations that are propagated to the gw-admin Deployment metadata by the operator. |
+| `labels` _map[string]string_ | Labels are custom labels that are propagated to the gw-admin Deployment metadata by the operator. |
+| `podTemplateSpec` _[PodTemplateSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podtemplatespec-v1-core)_ | PodTemplateSpec defines PodTemplateSpec for Deployment's pods. It's being applied on top of the generated Deployment using [StrategicMergePatch](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/strategicpatch#StrategicMergePatch). The gw-admin container is named "gw-admin": set its image here to override the default one. |
+
+_Appears in:_
+
+- [GWAdminSpec](#gateway-operator-konghq-com-v1alpha1-types-gwadminspec)
+
+#### GWAdminNetworkOptions
+
+
+GWAdminNetworkOptions defines the network options of gw-admin.
+
+
+
+| Field | Description |
+| --- | --- |
+| `cp` _[GWAdminServiceOptions](#gateway-operator-konghq-com-v1alpha1-types-gwadminserviceoptions)_ | CP configures the Service the data planes pull the configuration from. It is always a ClusterIP Service: the data planes run in the cluster. The Service Kong Operator pushes the configuration through is not configurable. |
+
+_Appears in:_
+
+- [GWAdminSpec](#gateway-operator-konghq-com-v1alpha1-types-gwadminspec)
+
+#### GWAdminScaling
+
+
+GWAdminScaling defines the scaling options for the gw-admin Deployment.
+
+
+
+| Field | Description |
+| --- | --- |
+| `horizontal` _[HorizontalScaling](#common-konghq-com-v1alpha1-types-horizontalscaling)_ | HorizontalScaling defines horizontal scaling options for the Deployment. |
+
+_Appears in:_
+
+- [GWAdminDeploymentOptions](#gateway-operator-konghq-com-v1alpha1-types-gwadmindeploymentoptions)
+
+#### GWAdminSecretRef
+
+
+GWAdminSecretRef references a Secret in the namespace of the GWAdmin.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the name of the referenced Secret. |
+
+_Appears in:_
+
+- [GWAdminCertificateSecret](#gateway-operator-konghq-com-v1alpha1-types-gwadmincertificatesecret)
+- [GWAdminServerCertificate](#gateway-operator-konghq-com-v1alpha1-types-gwadminservercertificate)
+
+#### GWAdminServerCertificate
+
+
+GWAdminServerCertificate configures the server certificate of a listener.
+
+
+
+| Field | Description |
+| --- | --- |
+| `provisioning` _[GWAdminCertificateProvisioning](#gateway-operator-konghq-com-v1alpha1-types-gwadmincertificateprovisioning)_ | Provisioning is the method used to provision the certificate.<br /><br />With Automatic provisioning (the default) Kong Operator issues the certificate from the cp server CA, for the in-cluster names of the Service.<br /><br />With Manual provisioning the referenced Secret holds the certificate in tls.crt and its key in tls.key, e.g. the Secret of a cert-manager Certificate. The issuers the data planes verify it with are taken from the chain in tls.crt and from ca.crt, and added to status.tls.cpServerCABundleSecretName: the Secret must carry at least one of them. Kong Operator copies the certificate into a Secret it owns once every data plane rolled out with a bundle trusting one of its issuers, so a renewal from the same issuer is copied right away, and warns when less than a sixth of its validity is left. |
+| `secretRef` _[GWAdminSecretRef](#gateway-operator-konghq-com-v1alpha1-types-gwadminsecretref)_ | SecretRef references the Secret holding the certificate. Only used, and required, when Provisioning is Manual. The Secret must carry the operator's secret label selector (default "konghq.com/secret: \"true\"") or the operator cannot see it. |
+
+_Appears in:_
+
+- [GWAdminTLS](#gateway-operator-konghq-com-v1alpha1-types-gwadmintls)
+
+#### GWAdminServiceOptions
+
+
+GWAdminServiceOptions contains Service configuration for gw-admin.
+
+
+
+| Field | Description |
+| --- | --- |
+| `annotations` _map[string]string_ | Annotations is an unstructured key value map stored with the Service resource. |
+| `labels` _map[string]string_ | Labels are propagated to the Service. |
+| `trafficDistribution` _*string_ | TrafficDistribution offers a way to express preferences for how traffic is distributed to Service endpoints.<br /><br />More info: https://kubernetes.io/docs/concepts/services-networking/service/#traffic-distribution |
+| `internalTrafficPolicy` _[ServiceInternalTrafficPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#serviceinternaltrafficpolicy-v1-core)_ | InternalTrafficPolicy describes how nodes distribute service traffic they receive on the ClusterIP.<br /><br />More info: https://kubernetes.io/docs/concepts/services-networking/service/#internal-traffic-policy |
+| `ports` _[][GWAdminServicePort](#gateway-operator-konghq-com-v1alpha1-types-gwadminserviceport)_ | Ports defines the list of ports that are exposed by the Service. |
+
+_Appears in:_
+
+- [GWAdminNetworkOptions](#gateway-operator-konghq-com-v1alpha1-types-gwadminnetworkoptions)
+
+#### GWAdminServicePort
+
+
+GWAdminServicePort contains information on a Service port.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _*string_ | The name of this port within the Service. It must be a DNS-1123 label. The port named "cp" replaces the default cp port. Required: every port must be named. |
+| `port` _int32_ | The port that will be exposed by this Service. |
+| `targetPort` _*k8s.io/apimachinery/pkg/util/intstr.IntOrString_ | Number or name of the port to access on the pods targeted by the Service. Defaults to the cp listener of gw-admin. |
+
+_Appears in:_
+
+- [GWAdminServiceOptions](#gateway-operator-konghq-com-v1alpha1-types-gwadminserviceoptions)
+
+#### GWAdminSpec
+
+
+GWAdminSpec defines the desired state of GWAdmin.
+
+
+
+| Field | Description |
+| --- | --- |
+| `deployment` _[GWAdminDeploymentOptions](#gateway-operator-konghq-com-v1alpha1-types-gwadmindeploymentoptions)_ | Deployment configures the gw-admin Deployment. |
+| `network` _[GWAdminNetworkOptions](#gateway-operator-konghq-com-v1alpha1-types-gwadminnetworkoptions)_ | Network configures the Services in front of gw-admin. |
+| `tls` _[GWAdminTLS](#gateway-operator-konghq-com-v1alpha1-types-gwadmintls)_ | TLS configures the certificates of gw-admin. By default Kong Operator creates a certificate authority for this GWAdmin and issues and rotates every certificate from it, so nothing has to be configured. |
+
+_Appears in:_
+
+- [GWAdmin](#gateway-operator-konghq-com-v1alpha1-gwadmin)
+
+#### GWAdminStatus
+
+
+GWAdminStatus defines the observed state of GWAdmin.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the GWAdmin. |
+| `api` _[GWAdminAPIStatus](#gateway-operator-konghq-com-v1alpha1-types-gwadminapistatus)_ | API describes the Service Kong Operator pushes the configuration through. |
+| `cp` _[GWAdminCPStatus](#gateway-operator-konghq-com-v1alpha1-types-gwadmincpstatus)_ | CP describes the endpoint the data planes pull the configuration from. |
+| `tls` _[GWAdminTLSStatus](#gateway-operator-konghq-com-v1alpha1-types-gwadmintlsstatus)_ | TLS lists the Secrets holding the trust material of gw-admin. |
+
+_Appears in:_
+
+- [GWAdmin](#gateway-operator-konghq-com-v1alpha1-gwadmin)
+
+#### GWAdminTLS
+
+
+GWAdminTLS configures the certificates of gw-admin.
+
+
+
+| Field | Description |
+| --- | --- |
+| `clientCA` _[GWAdminCertificateSecret](#gateway-operator-konghq-com-v1alpha1-types-gwadmincertificatesecret)_ | ClientCA is the certificate authority the cp listener verifies the data plane client certificates with. Only data plane client certificates are issued from it: the server certificate of the cp listener comes from a certificate authority of its own, so that whoever issues data plane certificates can't impersonate gw-admin.<br /><br />With Automatic provisioning (the default) Kong Operator creates a certificate authority for this GWAdmin, valid for a year, and renews it once two thirds of that have elapsed.<br /><br />With Manual provisioning the referenced Secret holds the certificate authority in tls.crt and its key in tls.key, e.g. the Secret of a cert-manager Certificate with isCA set to true. When tls.crt holds a chain, the first certificate is the signer, and it is the one gw-admin trusts, even when it is an intermediate. Kong Operator never modifies that Secret, and warns when less than a sixth of its validity is left.<br /><br />Either way, Kong Operator publishes the certificate authority, with its key, in a Secret of its own namespace once the gw-admin pods trust it, and issues the data plane certificates from that copy, never from the user's Secret, so that they never come from a certificate authority the pods don't trust yet. Its key never lands in the namespace of the GWAdmin. The previous one stays trusted until every data plane rolled out with a certificate from the new one.<br /><br />A rotation waits for the gw-admin Deployment to roll out, which needs the new pods to turn Ready, i.e. to be provisioned by Kong Operator, and for the data plane Deployments to roll out: it stalls, safely, while they don't. |
+| `cp` _[GWAdminServerCertificate](#gateway-operator-konghq-com-v1alpha1-types-gwadminservercertificate)_ | CP configures the server certificate of the listener the data planes connect to. |
+
+_Appears in:_
+
+- [GWAdminSpec](#gateway-operator-konghq-com-v1alpha1-types-gwadminspec)
+
+#### GWAdminTLSStatus
+
+
+GWAdminTLSStatus lists the Secrets holding the trust material of gw-admin
+that its peers need.
+
+
+
+| Field | Description |
+| --- | --- |
+| `cpServerCABundleSecretName` _string_ | CPServerCABundleSecretName is the name of the Secret whose ca.crt holds the certificate authorities the data planes verify the cp listener with. It holds more than one certificate while the cp server certificate moves to a new issuer, which waits for every data plane to roll out with it. |
+| `apiCABundleSecretName` _string_ | APICABundleSecretName is the name of the Secret whose ca.crt holds the certificate authorities of the API listener: Kong Operator verifies the API listener with it, and the API listener verifies the client certificate of Kong Operator with it. It holds more than one certificate while a certificate authority rotation is in progress. |
+
+_Appears in:_
+
+- [GWAdminStatus](#gateway-operator-konghq-com-v1alpha1-types-gwadminstatus)
 
 
 
@@ -19178,8 +20414,8 @@ KonnectEndpoints defines the Konnect endpoints for the control plane.
 
 | Field | Description |
 | --- | --- |
-| `telemetry` _string_ | TelemetryEndpoint is the endpoint for telemetry. |
-| `controlPlane` _string_ | ControlPlaneEndpoint is the endpoint for the control plane. |
+| `telemetry` _string_ | TelemetryEndpoint is the telemetry endpoint of the Konnect control plane, as returned by Konnect: it may carry a path, e.g. reached over PrivateLink. |
+| `controlPlane` _string_ | ControlPlaneEndpoint is the control plane endpoint, as returned by Konnect: it may carry a path, e.g. reached over PrivateLink. |
 
 _Appears in:_
 
@@ -20683,8 +21919,8 @@ KonnectEndpoints defines the Konnect endpoints for the control plane.
 
 | Field | Description |
 | --- | --- |
-| `telemetry` _string_ | TelemetryEndpoint is the endpoint for telemetry. |
-| `controlPlane` _string_ | ControlPlaneEndpoint is the endpoint for the control plane. |
+| `telemetry` _string_ | TelemetryEndpoint is the telemetry endpoint of the Konnect control plane, as returned by Konnect: it may carry a path, e.g. reached over PrivateLink. |
+| `controlPlane` _string_ | ControlPlaneEndpoint is the control plane endpoint, as returned by Konnect: it may carry a path, e.g. reached over PrivateLink. |
 
 _Appears in:_
 

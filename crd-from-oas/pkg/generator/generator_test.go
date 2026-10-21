@@ -4226,6 +4226,87 @@ func TestGenerateKonnectIndexOptionsDispatcher(t *testing.T) {
 	assert.Equal(t, string(formatted), file.Content)
 }
 
+func TestGenerateOnPremEventGatewayEntitiesDispatcher(t *testing.T) {
+	const (
+		group = "configuration.konghq.com"
+		alias = "configurationv1alpha1"
+		path  = "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	)
+	onPrem := []config.EntityGVKConfig{{Group: "eventgateway.konghq.com", Version: "v1alpha1", Kind: "OnPremEventGateway"}}
+	entity := func(name, parentKind string, gatewayKinds []config.EntityGVKConfig) *WatchFileInfo {
+		info := &WatchFileInfo{
+			Entity:         name,
+			APIAlias:       alias,
+			APIPackagePath: path,
+			Group:          group,
+			GatewayKinds:   gatewayKinds,
+		}
+		if parentKind != "" {
+			info.ParentKind = parentKind
+			info.ParentGroup = group
+		}
+		return info
+	}
+
+	t.Run("roots accepting the gateway and their descendants", func(t *testing.T) {
+		infos := []*WatchFileInfo{
+			// Listed before its parent: the descendants are found whatever the order.
+			entity("EventGatewayVirtualClusterProducePolicy", "EventGatewayVirtualCluster", nil),
+			entity("EventGatewayVirtualCluster", "EventGatewayBackendCluster", nil),
+			entity("EventGatewayBackendCluster", "KonnectEventGateway", onPrem),
+			entity("EventGatewayListenerPolicy", "EventGatewayListener", nil),
+			entity("EventGatewayListener", "KonnectEventGateway", onPrem),
+			// A root that only accepts a KonnectEventGateway, and its child.
+			entity("KonnectOnlyRoot", "KonnectEventGateway", nil),
+			entity("KonnectOnlyChild", "KonnectOnlyRoot", nil),
+			// A root accepting another gateway kind.
+			entity("AIGatewayPolicy", "KonnectAIGateway", []config.EntityGVKConfig{
+				{Group: "aigateway.konghq.com", Version: "v1alpha1", Kind: "OnPremAIGateway"},
+			}),
+			// A child of a same-named kind in another group.
+			{
+				Entity: "OtherGroupChild", APIAlias: "otherv1alpha1", APIPackagePath: "example.com/other",
+				Group: "other.konghq.com", ParentKind: "EventGatewayListener", ParentGroup: "other.konghq.com",
+			},
+		}
+
+		file, err := GenerateOnPremEventGatewayEntitiesDispatcher(infos)
+		require.NoError(t, err)
+		require.NotNil(t, file)
+
+		assert.Equal(t, "zz_generated_entities.go", file.Name)
+		assert.Equal(t, "controller/eventgateway/onprem", file.RelativeDir)
+		assert.Contains(t, file.Content, "package onprem")
+		for _, kind := range []string{
+			"EventGatewayBackendCluster", "EventGatewayListener", "EventGatewayListenerPolicy",
+			"EventGatewayVirtualCluster", "EventGatewayVirtualClusterProducePolicy",
+		} {
+			assert.Contains(t, file.Content, "&configurationv1alpha1."+kind+"{},")
+			assert.Contains(t, file.Content, `{Group: "configuration.konghq.com", Kind: "`+kind+`"}:`)
+		}
+		for _, kind := range []string{"KonnectOnlyRoot", "KonnectOnlyChild", "AIGatewayPolicy", "OtherGroupChild"} {
+			assert.NotContains(t, file.Content, kind)
+		}
+		assert.NotContains(t, file.Content, "example.com/other")
+		assert.Contains(t, file.Content,
+			`// +kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaybackendclusters;eventgatewaylistenerpolicies;eventgatewaylisteners;eventgatewayvirtualclusterproducepolicies;eventgatewayvirtualclusters,verbs=get;list;watch`)
+		assert.Contains(t, file.Content, `configurationv1alpha1.GroupVersion.WithResource("eventgatewaylistenerpolicies"),`)
+		assert.Contains(t, file.Content, `configurationv1alpha1.GroupVersion.WithResource("eventgatewayvirtualclusterproducepolicies"),`)
+
+		formatted, err := format.Source([]byte(file.Content))
+		require.NoError(t, err)
+		assert.Equal(t, string(formatted), file.Content)
+	})
+
+	t.Run("no entity accepts the gateway", func(t *testing.T) {
+		file, err := GenerateOnPremEventGatewayEntitiesDispatcher([]*WatchFileInfo{
+			entity("KonnectOnlyRoot", "KonnectEventGateway", nil),
+		})
+		require.NoError(t, err)
+		assert.Nil(t, file)
+	})
+}
+
 func TestGenerateKonnectConstraintsDispatcher(t *testing.T) {
 	infos := []*WatchFileInfo{
 		{
@@ -6046,6 +6127,11 @@ func TestGenerateSDKOps_ClientRequestMethodsResolveReferences(t *testing.T) {
 	require.Contains(t, content, `if apierrors.IsNotFound(err) {`)
 	require.Contains(t, content, `errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, Err: err})`)
 	require.Contains(t, content, `errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayPolicy %s/%s: %w", ns, ref.Name, err))`)
+	// AIGatewayPolicy has no reconciler config here, so it can't opt out of the
+	// Konnect reconciler: no check for it (see
+	// TestGenerateSDKOps_ReferenceToKindNotManagedByKonnect).
+	require.NotContains(t, content, "SkipKonnectReconciliation")
+	require.NotContains(t, content, "ReferenceNotKonnectManagedError{")
 	require.Contains(t, content, `errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})`)
 	require.Contains(t, content, `errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayPolicy", Namespace: ns, Name: ref.Name})`)
 	require.Contains(t, content, "if err := errors.Join(errs...); err != nil {")
@@ -6916,6 +7002,7 @@ func TestGenerateReferencesFile(t *testing.T) {
 	require.Contains(t, out, "type ReferenceNotProgrammedError = commonv1alpha1.ReferenceNotProgrammedError")
 	require.Contains(t, out, "type ReferenceCrossNamespaceError = commonv1alpha1.ReferenceCrossNamespaceError")
 	require.Contains(t, out, "type ReferenceDifferentGatewayError = commonv1alpha1.ReferenceDifferentGatewayError")
+	require.Contains(t, out, "type ReferenceNotKonnectManagedError = commonv1alpha1.ReferenceNotKonnectManagedError")
 }
 
 func TestGenerateReferencesFile_MultiKind(t *testing.T) {
@@ -7412,6 +7499,71 @@ func TestParentRefAllowedKindsXValidation(t *testing.T) {
 				AllowedKinds: tt.allowedKinds,
 			})
 			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// TestGenerateSDKOps_ReferenceToKindNotManagedByKonnect verifies that a
+// reference to a kind whose objects can opt out of the Konnect reconciler
+// rejects such an object instead of waiting for a Konnect ID it never gets,
+// and that references to other kinds don't get that check.
+func TestGenerateSDKOps_ReferenceToKindNotManagedByKonnect(t *testing.T) {
+	schema := &parser.Schema{
+		Properties: []*parser.Property{
+			{Name: "policies", Type: "array"},
+			{Name: "name", Type: "string"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayAgentRequest"},
+		},
+	}
+	references := map[string][]config.ReferenceConfig{
+		"AIGatewayAgent": {
+			{Path: "spec.apiSpec.policies", Kinds: []string{"AIGatewayPolicy"}, ResolvesTo: "id"},
+		},
+	}
+	const check = "if referenced.SkipKonnectReconciliation() {\n\t\t\terrs = append(errs, ReferenceNotKonnectManagedError{Kind: \"AIGatewayPolicy\", Namespace: ns, Name: ref.Name})\n\t\t\tcontinue\n\t\t}"
+
+	for _, tc := range []struct {
+		name       string
+		reconciler *config.ReconcilerConfig
+		want       bool
+	}{
+		{
+			name:       "typed parent ref, e.g. AIGatewayRef",
+			reconciler: &config.ReconcilerConfig{ParentRef: &config.ParentRefConfig{FieldName: "aiGatewayRef", TypeName: "AIGatewayRef"}},
+			want:       true,
+		},
+		{
+			name: "gatewayRef with additional kinds",
+			reconciler: &config.ReconcilerConfig{GatewayRef: &config.GatewayRefConfig{
+				FieldName:       "parentRef",
+				AdditionalKinds: []config.EntityGVKConfig{{Group: "eventgateway.konghq.com", Version: "v1alpha1", Kind: "OnPremEventGateway"}},
+			}},
+			want: true,
+		},
+		{
+			name:       "gatewayRef without additional kinds",
+			reconciler: &config.ReconcilerConfig{GatewayRef: &config.GatewayRefConfig{FieldName: "parentRef"}},
+		},
+		{
+			name: "no reconciler config",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := Config{APIVersion: "v1alpha1", References: references}
+			if tc.reconciler != nil {
+				cfg.ReconcilerConfig = map[string]*config.ReconcilerConfig{"AIGatewayPolicy": tc.reconciler}
+			}
+			content, err := NewGenerator(cfg).generateSDKOps("AIGatewayAgent", schema, opsConfig)
+			require.NoError(t, err)
+			if tc.want {
+				require.Contains(t, content, check)
+			} else {
+				require.NotContains(t, content, "SkipKonnectReconciliation")
+			}
 		})
 	}
 }

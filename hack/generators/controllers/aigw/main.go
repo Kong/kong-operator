@@ -100,6 +100,15 @@ var inputControllersNeeded = &typesNeeded{
 			UpdatesEnabled: true,
 		},
 		RBACVerbs: []string{"get", "list", "watch"},
+		// Credentials are rendered inside the consumer's document and have no
+		// aiGatewayRef, so a credential event must re-reconcile its parent consumer.
+		WatchedResources: []WatchedResource{
+			{
+				Kind:               "AIGatewayConsumerCredential",
+				PackageImportAlias: "aiconfigurationv1alpha1",
+				MapFunc:            "r.mapCredentialToConsumer",
+			},
+		},
 	},
 	typeNeeded{
 		Group:                            "aiconfiguration.konghq.com",
@@ -229,6 +238,22 @@ var inputControllersNeeded = &typesNeeded{
 		},
 		RBACVerbs: []string{"get", "list", "watch"},
 	},
+	typeNeeded{
+		Group:                            "aiconfiguration.konghq.com",
+		Version:                          "v1alpha1",
+		Kind:                             "AIGatewayVault",
+		PackageImportAlias:               "aiconfigurationv1alpha1",
+		PackageAlias:                     "aiconfigurationv1alpha1",
+		Package:                          aiconfigurationv1alpha1,
+		Plural:                           "aigatewayvaults",
+		CacheType:                        "AIGatewayVault",
+		NeedsStatusPermissions:           true,
+		ConfigStatusNotificationsEnabled: true,
+		ProgrammedCondition: ProgrammedConditionConfiguration{
+			UpdatesEnabled: true,
+		},
+		RBACVerbs: []string{"get", "list", "watch"},
+	},
 }
 
 func main() {
@@ -320,6 +345,21 @@ type typeNeeded struct {
 
 	// ProgrammedCondition contains the configuration for the Programmed condition for the resource.
 	ProgrammedCondition ProgrammedConditionConfiguration
+
+	// WatchedResources are resources the reconciler watches in addition to the entity itself.
+	WatchedResources []WatchedResource
+}
+
+// WatchedResource is a resource the generated reconciler watches in addition to its own
+// entity, mapped to the entity's keys by a hand-written method on the reconciler: a map
+// function cannot live in a generated file.
+//
+// The watched kind must live in the same API package as the entity, because the template
+// reuses the entity's own package import for it.
+type WatchedResource struct {
+	Kind               string
+	PackageImportAlias string
+	MapFunc            string
 }
 
 // ProgrammedConditionConfiguration contains the configuration for the Programmed condition for a resource.

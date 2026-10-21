@@ -19,3 +19,12 @@ func KongPluginInstallationGVR() schema.GroupVersionResource {
 		Resource: "kongplugininstallations",
 	}
 }
+
+// GWAdminGVR returns current package GWAdmin GVR.
+func GWAdminGVR() schema.GroupVersionResource {
+	return schema.GroupVersionResource{
+		Group:    SchemeGroupVersion.Group,
+		Version:  SchemeGroupVersion.Version,
+		Resource: "gwadmins",
+	}
+}

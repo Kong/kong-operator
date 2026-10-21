@@ -23,7 +23,7 @@ func createEventGatewayStaticKey(
 	if parentID == "" {
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectEventGateway", Op: CreateOp}
 	}
-	req, err := obj.ToEventGatewayStaticKeyCreate(ctx, cl)
+	req, createInputsHash, err := obj.ToCreateRequestWithInputsHash(ctx, cl)
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
@@ -38,6 +38,8 @@ func createEventGatewayStaticKey(
 	}
 
 	obj.SetKonnectID(resp.EventGatewayStaticKey.ID)
+	obj.SetCreateInputsHash(createInputsHash)
+	SetKonnectEntityCreateInputsAppliedConditionTrue(obj)
 	return nil
 }
 

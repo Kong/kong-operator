@@ -51,6 +51,8 @@ func TestCreateAIGatewayDataPlaneCertificate_UsesSDKOpsConversion(t *testing.T) 
 	obj.SetGatewayID(parentID)
 	expectedRequest, err := obj.ToCreateAIGatewayDataPlaneCertificateRequest(ctx, cl)
 	require.NoError(t, err)
+	expectedCreateInputsHash, err := obj.CalculateCreateInputsHash(ctx, cl)
+	require.NoError(t, err)
 	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
 	expectedID := "aigatewaydataplanecertificate-id"
 
@@ -69,6 +71,7 @@ func TestCreateAIGatewayDataPlaneCertificate_UsesSDKOpsConversion(t *testing.T) 
 
 	require.NoError(t, createAIGatewayDataPlaneCertificate(ctx, cl, sdk, obj))
 	require.Equal(t, expectedID, obj.GetKonnectID())
+	require.Equal(t, expectedCreateInputsHash, obj.GetCreateInputsHash())
 }
 
 func TestCreateAIGatewayDataPlaneCertificate_PropagatesSDKError(t *testing.T) {
@@ -96,6 +99,7 @@ func TestCreateAIGatewayDataPlaneCertificate_PropagatesSDKError(t *testing.T) {
 
 	err = createAIGatewayDataPlaneCertificate(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
+	require.Empty(t, obj.GetCreateInputsHash())
 }
 
 func TestDeleteAIGatewayDataPlaneCertificate_UsesGeneratedSDKOps(t *testing.T) {

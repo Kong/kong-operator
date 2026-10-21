@@ -49,6 +49,35 @@ func MapGatewayForTLSSecret(cl client.Client) handler.MapFunc {
 	}
 }
 
+// MapGatewayForGatewayClass returns a handler.MapFunc that, given a GatewayClass object, lists
+// all Gateways referencing it (using the GatewayClassOnGatewayIndex) and enqueues them.
+// The Gateway translation reads the GatewayClass's konghq.com/tags annotation when tagging the
+// KongCertificate and KongSNI built from listener TLS, so a change to the GatewayClass has to
+// re-reconcile the Gateways under it.
+func MapGatewayForGatewayClass(cl client.Client) handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		gatewayClass, ok := obj.(*gwtypes.GatewayClass)
+		if !ok {
+			return nil
+		}
+
+		gateways := &gwtypes.GatewayList{}
+		if err := cl.List(ctx, gateways, client.MatchingFields{
+			index.GatewayClassOnGatewayIndex: gatewayClass.Name,
+		}); err != nil {
+			return nil
+		}
+
+		requests := make([]reconcile.Request, 0, len(gateways.Items))
+		for _, gateway := range gateways.Items {
+			requests = append(requests, reconcile.Request{
+				NamespacedName: client.ObjectKeyFromObject(&gateway),
+			})
+		}
+		return requests
+	}
+}
+
 // MapGatewayForReferenceGrant returns a handler.MapFunc that, given a ReferenceGrant object,
 // lists all Gateways that could be affected by this ReferenceGrant. This includes Gateways
 // that reference TLS Secrets in the ReferenceGrant's namespace from a different namespace.

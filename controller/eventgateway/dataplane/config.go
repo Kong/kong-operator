@@ -142,7 +142,6 @@ var config = shareddataplane.Config[
 		PodTemplateSpec:       podTemplateSpec,
 		DeploymentLabels:      deploymentLabels,
 		DeploymentAnnotations: deploymentAnnotations,
-		Replicas:              replicas,
 		BuildContainer:        buildContainer,
 	},
 
@@ -157,7 +156,6 @@ var config = shareddataplane.Config[
 		SetStatusAddresses: setStatusAddresses,
 	},
 
-	HorizontalScaling: horizontalScaling,
 	SetStatusReplicas: setStatusReplicas,
 }
 
@@ -180,37 +178,6 @@ func deploymentAnnotations(egdp *eventgatewayv1alpha1.KegDataPlane) map[string]s
 		return nil
 	}
 	return egdp.Spec.Deployment.Annotations
-}
-
-// replicas returns the replica count to seed on the Deployment: the static
-// replica count, or the HPA minReplicas when horizontal scaling is configured
-// so the Deployment scales up immediately before the HPA's first evaluation.
-func replicas(egdp *eventgatewayv1alpha1.KegDataPlane) *int32 {
-	if egdp.Spec.Deployment == nil {
-		return nil
-	}
-	var hs *eventgatewayv1alpha1.HorizontalScaling
-	if egdp.Spec.Deployment.Scaling != nil {
-		hs = egdp.Spec.Deployment.Scaling.HorizontalScaling
-	}
-	switch {
-	case hs == nil:
-		return egdp.Spec.Deployment.Replicas
-	case hs.MinReplicas != nil:
-		return hs.MinReplicas
-	}
-	return nil
-}
-
-// horizontalScaling returns the horizontal scaling options, or nil when
-// horizontal scaling is not configured.
-func horizontalScaling(egdp *eventgatewayv1alpha1.KegDataPlane) *commonv1alpha1.HorizontalScaling {
-	if egdp.Spec.Deployment == nil ||
-		egdp.Spec.Deployment.Scaling == nil ||
-		egdp.Spec.Deployment.Scaling.HorizontalScaling == nil {
-		return nil
-	}
-	return egdp.Spec.Deployment.Scaling.HorizontalScaling
 }
 
 func setStatusReplicas(egdp *eventgatewayv1alpha1.KegDataPlane, replicas, readyReplicas int32) {

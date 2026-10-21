@@ -1,0 +1,8 @@
+# The trust bundle the cp listener of the GWAdmin verifies the data plane
+# client certificates with holds bundle_size certificate authorities.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: (join('-', [$gwadmin_name, 'cp-client-ca-bundle']))
+data:
+  (length(split(base64_decode("ca.crt"), '-----BEGIN CERTIFICATE-----')) - `1`): ($bundle_size)

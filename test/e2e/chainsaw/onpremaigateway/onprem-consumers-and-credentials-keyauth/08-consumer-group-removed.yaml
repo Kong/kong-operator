@@ -1,0 +1,23 @@
+# The main consumer re-applied with its group membership removed: the agent's
+# allow-type ACL then denies it (403) even though its credential is unchanged.
+# The empty list is set explicitly: chainsaw's apply treats omitted fields as
+# "unchanged", so omitting consumerGroups would leave the membership in place.
+#
+# This is a spec change on the consumer itself, so it is event-driven already:
+# the consumer's own watch catches it without needing the credential watch.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayConsumer
+metadata:
+  name: ($consumer_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  consumerGroups: []
+  apiSpec:
+    name: ($consumer_name)
+    displayName: ($consumer_name)
+    type: api-key

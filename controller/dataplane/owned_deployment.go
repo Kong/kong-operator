@@ -17,6 +17,7 @@ import (
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/v2/controller/dataplane/certificates"
+	"github.com/kong/kong-operator/v2/controller/pkg/hpa"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
@@ -59,6 +60,7 @@ type DeploymentBuilder struct {
 	defaultImage           string
 	opts                   []k8sresources.DeploymentOpt
 	ipFamily               ipfamily.IPFamily
+	adminAPIDisabled       bool
 
 	secretLabelSelector string
 }
@@ -103,6 +105,12 @@ func (d *DeploymentBuilder) WithIPFamily(family ipfamily.IPFamily) *DeploymentBu
 	return d
 }
 
+// WithAdminAPIDisabled configures whether the DataPlane Admin API is disabled.
+func (d *DeploymentBuilder) WithAdminAPIDisabled(disabled bool) *DeploymentBuilder {
+	d.adminAPIDisabled = disabled
+	return d
+}
+
 // WithOpts adds option functions to a DeploymentBuilder.
 func (d *DeploymentBuilder) WithOpts(opts ...k8sresources.DeploymentOpt) *DeploymentBuilder {
 	d.opts = opts
@@ -137,14 +145,21 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 
 	// generate the initial Deployment struct
 	desiredDeployment, err := generateDataPlaneDeployment(
-		d.logger, validateDataPlaneImage, dataplane, d.defaultImage, d.additionalLabels, d.opts...,
+		d.logger, validateDataPlaneImage, dataplane, existingDeployment, d.defaultImage, d.additionalLabels, d.opts...,
 	)
 	if err != nil {
 		return nil, op.Noop, fmt.Errorf("could not generate Deployment: %w", err)
 	}
 
-	// Add the cluster certificate to the generated Deployment
-	desiredDeployment = setClusterCertVars(desiredDeployment, d.clusterCertificateName)
+	if d.adminAPIDisabled {
+		// Removed before user patches so a user can re-add the port.
+		desiredDeployment = desiredDeployment.WithoutContainerPort(
+			k8sresources.DataPlaneAdminAPIContainerPortName, consts.DataPlaneProxyContainerName,
+		)
+	} else if d.clusterCertificateName != "" {
+		// Add the cluster certificate to the generated Deployment
+		desiredDeployment = setClusterCertVars(desiredDeployment, d.clusterCertificateName)
+	}
 
 	if err := certificates.MountAndUseKonnectCert(ctx, d.logger, dataplane, d.client, desiredDeployment); err != nil {
 		return nil, op.Noop, fmt.Errorf("failed to mount konnect cert: %w", err)
@@ -165,6 +180,10 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 	if err != nil {
 		return nil, op.Noop, fmt.Errorf("failed to compute Kong defaults for the DataPlane: %w", err)
 	}
+	if d.adminAPIDisabled {
+		// KongDefaults returns a fresh map, so mutating it is safe.
+		config.DisableAdminAPI(kongDefaults)
+	}
 	desiredDeployment = applyEnvForDataPlane(existingEnvVars, desiredDeployment, kongDefaults)
 
 	if err := k8sresources.AnnotateObjWithHash(desiredDeployment.Unwrap(), deploymentRelevantDataPlaneSpec(dataplane)); err != nil {
@@ -182,14 +201,24 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 
 // generateDataPlaneDeployment generates the base Deployment for a DataPlane. It determines the image to use and
 // generates an opt transform function to add additional labels before invoking the generator utility.
+// existing is the current DataPlane Deployment, or nil when it does not exist yet.
 func generateDataPlaneDeployment(
 	logger logr.Logger,
 	validateDataPlaneImage bool,
 	dataplane *operatorv1beta1.DataPlane,
+	existing *appsv1.Deployment,
 	defaultImage string,
 	additionalDeploymentLabels client.MatchingLabels,
 	opts ...k8sresources.DeploymentOpt,
 ) (deployment *k8sresources.Deployment, err error) {
+	// Seed the replicas before the other opts, so that an opt forcing the
+	// replica count (e.g. the blue/green preview scaled down to 0) still wins.
+	opts = append([]k8sresources.DeploymentOpt{
+		func(d *appsv1.Deployment) {
+			d.Spec.Replicas = hpa.DeploymentReplicas(dataplane, existing)
+		}},
+		opts...,
+	)
 	if len(additionalDeploymentLabels) > 0 {
 		opts = append(opts, matchingLabelsToDeploymentOpt(additionalDeploymentLabels))
 	}
@@ -490,27 +519,14 @@ func reconcileDataPlaneDeployment(
 		}
 
 		// Always process replica updates, even during/after restart operations
-		// This ensures that if a user scales after a restart, the changes take effect
-		if scaling := dataplane.Spec.Deployment.Scaling; false ||
-			// If the scaling strategy is not specified, we compare the replicas.
-			(scaling == nil || scaling.HorizontalScaling == nil) ||
-			// If the scaling strategy is specified with minReplicas, we compare
-			// the minReplicas with the existing Deployment replicas and we set
-			// the replicas to the minReplicas if the existing Deployment replicas
-			// are less than the minReplicas to enforce faster scaling before HPA
-			// kicks in.
-			(scaling.HorizontalScaling != nil &&
-				scaling.HorizontalScaling.MinReplicas != nil &&
-				existing.Spec.Replicas != nil &&
-				*existing.Spec.Replicas < *scaling.HorizontalScaling.MinReplicas) {
-
-			// Always check for replica changes, regardless of restart status
-			// Fixed issue #1390: Ensure replicas update correctly after restart
-			if !cmp.Equal(existing.Spec.Replicas, desired.Spec.Replicas) {
-				log.Debug(logger, "updating replica count", "original", originalReplicaCount, "from", existing.Spec.Replicas, "to", desired.Spec.Replicas)
-				existing.Spec.Replicas = desired.Spec.Replicas
-				updated = true
-			}
+		// This ensures that if a user scales after a restart, the changes take effect.
+		// Fixed issue #1390: Ensure replicas update correctly after restart.
+		// With horizontal scaling the desired replicas already account for the
+		// count set by the HPA, see hpa.DeploymentReplicas.
+		if !cmp.Equal(existing.Spec.Replicas, desired.Spec.Replicas) {
+			log.Debug(logger, "updating replica count", "original", originalReplicaCount, "from", existing.Spec.Replicas, "to", desired.Spec.Replicas)
+			existing.Spec.Replicas = desired.Spec.Replicas
+			updated = true
 		}
 		if updated {
 			diff := cmp.Diff(original.Spec.Template, desired.Spec.Template, opts...)

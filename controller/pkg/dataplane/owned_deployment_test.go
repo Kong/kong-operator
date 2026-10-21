@@ -237,7 +237,7 @@ func Test_GenerateBaseDeployment_hardening(t *testing.T) {
 	}
 	aigwcp := testKonnectAIGateway()
 
-	d, err := GenerateBaseDeployment(logr.Discard(), aigwdp, resolvedTestCP(aigwcp), "kong/aigw:test", "cert-secret", "", "", testConfig)
+	d, err := GenerateBaseDeployment(logr.Discard(), aigwdp, resolvedTestCP(aigwcp), "kong/aigw:test", "cert-secret", "", "", testConfig.Deployment, testConfig.Certificate.ChecksumAnnotation)
 	require.NoError(t, err)
 	require.Len(t, d.Spec.Template.Spec.Containers, 1)
 	container := d.Spec.Template.Spec.Containers[0]
@@ -291,7 +291,7 @@ func Test_GenerateBaseDeployment_LabelsAndAnnotations(t *testing.T) {
 	}
 	aigwcp := testKonnectAIGateway()
 
-	d, err := GenerateBaseDeployment(logr.Discard(), aigwdp, resolvedTestCP(aigwcp), "kong/aigw:test", "cert-secret", "", "", testConfig)
+	d, err := GenerateBaseDeployment(logr.Discard(), aigwdp, resolvedTestCP(aigwcp), "kong/aigw:test", "cert-secret", "", "", testConfig.Deployment, testConfig.Certificate.ChecksumAnnotation)
 	require.NoError(t, err)
 
 	assert.Equal(t, "value", d.Labels["deployment-label"])
@@ -349,14 +349,15 @@ func Test_BuildDeployment(t *testing.T) {
 			},
 		},
 		{
-			name:           "replicas absent when deployment spec not set",
+			name:           "replicas default to 1 when deployment spec not set",
 			aigwdp:         &aigatewayv1alpha1.AIGatewayDataPlane{},
 			aigwcp:         validCP,
 			image:          "kong/aigw:test",
 			certSecretName: "secret",
 			check: func(t *testing.T, u *unstructured.Unstructured) {
-				_, hasReplicas, _ := unstructured.NestedFieldNoCopy(u.Object, "spec", "replicas")
-				assert.False(t, hasReplicas)
+				replicas, found, _ := unstructured.NestedInt64(u.Object, "spec", "replicas")
+				assert.True(t, found)
+				assert.Equal(t, int64(1), replicas)
 			},
 		},
 		{
@@ -410,7 +411,7 @@ func Test_BuildDeployment(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			u, err := BuildDeployment(logr.Discard(), tc, tt.aigwdp, resolvedTestCP(tt.aigwcp), tt.image, tt.certSecretName, "", "", testConfig)
+			u, err := BuildDeployment(logr.Discard(), tc, tt.aigwdp, resolvedTestCP(tt.aigwcp), tt.image, tt.certSecretName, "", "", testConfig.Deployment, testConfig.Certificate.ChecksumAnnotation)
 			if tt.wantErr {
 				require.Error(t, err)
 				return
@@ -463,7 +464,7 @@ func Test_BuildDeployment_ReassertEnvVars(t *testing.T) {
 	// container env as a name->value map.
 	buildAndExtractEnv := func(t *testing.T, cfg Config[*aigatewayv1alpha1.AIGatewayDataPlane, *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate]) map[string]string {
 		t.Helper()
-		u, err := BuildDeployment(logr.Discard(), tc, overlayAIGwdp(), resolvedTestCP(testKonnectAIGateway()), "kong/aigw:test", "cert-secret", "", "", cfg)
+		u, err := BuildDeployment(logr.Discard(), tc, overlayAIGwdp(), resolvedTestCP(testKonnectAIGateway()), "kong/aigw:test", "cert-secret", "", "", cfg.Deployment, cfg.Certificate.ChecksumAnnotation)
 		require.NoError(t, err)
 		require.NotNil(t, u)
 
@@ -616,4 +617,110 @@ func Test_ensureDeployment(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_ensureDeployment_Replicas(t *testing.T) {
+	const (
+		ns     = "test-ns"
+		dpName = "my-dp"
+	)
+
+	tests := []struct {
+		name       string
+		deployment *aigatewayv1alpha1.DeploymentOptions
+		want       *int32
+	}{
+		{
+			name: "no deployment options defaults replicas to 1",
+			want: new(int32(1)),
+		},
+		{
+			name:       "explicit replicas",
+			deployment: &aigatewayv1alpha1.DeploymentOptions{Replicas: new(int32(3))},
+			want:       new(int32(3)),
+		},
+		{
+			name: "HPA without minReplicas seeds HPA default of 1",
+			deployment: &aigatewayv1alpha1.DeploymentOptions{
+				Replicas: new(int32(3)),
+				Scaling: &aigatewayv1alpha1.Scaling{
+					HorizontalScaling: &aigatewayv1alpha1.HorizontalScaling{MaxReplicas: 5},
+				},
+			},
+			want: new(int32(1)),
+		},
+		{
+			name: "HPA with minReplicas seeds replicas from it",
+			deployment: &aigatewayv1alpha1.DeploymentOptions{
+				Scaling: &aigatewayv1alpha1.Scaling{
+					HorizontalScaling: &aigatewayv1alpha1.HorizontalScaling{MaxReplicas: 5, MinReplicas: new(int32(2))},
+				},
+			},
+			want: new(int32(2)),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{
+				Namespace: ns, Name: dpName,
+				Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{Deployment: tt.deployment},
+			}
+			cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
+			r := &testReconciler{
+				Config:        testConfig,
+				Client:        cl,
+				TypeConverter: managedfields.NewDeducedTypeConverter(),
+				EventRecorder: events.NewFakeRecorder(10),
+			}
+
+			require.NoError(t, r.ensureDeployment(t.Context(), logr.Discard(), aigwdp, resolvedTestCP(testKonnectAIGateway()), "cert-secret", "", ""))
+
+			var deploy appsv1.Deployment
+			require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Namespace: ns, Name: dpName}, &deploy))
+			assert.Equal(t, tt.want, deploy.Spec.Replicas)
+		})
+	}
+}
+
+func Test_ensureDeployment_ReplicasResetWhenScalingRemoved(t *testing.T) {
+	const (
+		ns     = "test-ns"
+		dpName = "my-dp"
+	)
+
+	aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{
+		Namespace: ns, Name: dpName,
+		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+			Deployment: &aigatewayv1alpha1.DeploymentOptions{
+				Scaling: &aigatewayv1alpha1.Scaling{
+					HorizontalScaling: &aigatewayv1alpha1.HorizontalScaling{MaxReplicas: 10},
+				},
+			},
+		},
+	}
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
+	r := &testReconciler{
+		Config:        testConfig,
+		Client:        cl,
+		TypeConverter: managedfields.NewDeducedTypeConverter(),
+		EventRecorder: events.NewFakeRecorder(10),
+	}
+	cp := resolvedTestCP(testKonnectAIGateway())
+	key := client.ObjectKey{Namespace: ns, Name: dpName}
+
+	require.NoError(t, r.ensureDeployment(t.Context(), logr.Discard(), aigwdp, cp, "cert-secret", "", ""))
+
+	// Simulate the HPA scaling the Deployment up.
+	var deploy appsv1.Deployment
+	require.NoError(t, cl.Get(t.Context(), key, &deploy))
+	deploy.Spec.Replicas = new(int32(10))
+	require.NoError(t, cl.Update(t.Context(), &deploy))
+
+	// Removing horizontal scaling must reset the Deployment to the default.
+	aigwdp.Spec.Deployment = nil
+	require.NoError(t, r.ensureDeployment(t.Context(), logr.Discard(), aigwdp, cp, "cert-secret", "", ""))
+
+	require.NoError(t, cl.Get(t.Context(), key, &deploy))
+	assert.Equal(t, new(int32(1)), deploy.Spec.Replicas)
 }

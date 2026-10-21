@@ -13,6 +13,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/translator"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
@@ -51,6 +52,12 @@ func RequestTerminationForBackendNotFound(
 	if _, err := translator.VerifyAndUpdate(ctx, logger.WithValues("kongplugin", pluginName), cl, &plugin, httpRoute, false); err != nil {
 		return nil, err
 	}
+
+	// This plugin is named after the KongService it terminates for, whose name has no parentRef in
+	// it: the route builds the same plugin once per parent and the converter keeps only the first,
+	// so resolve the tags over every parent this controller accepted.
+	utils.AppendTagsAnnotation(logger, &plugin,
+		utils.InheritedTagsForKongObject(ctx, logger, cl, httpRoute, &plugin))
 
 	return &plugin, nil
 }

@@ -38,13 +38,44 @@ const (
 	serviceUpstreamAnnotation  = "ingress.kubernetes.io/service-upstream"
 )
 
+// The Gateway API kinds of the root objects that own their children through the
+// hybrid-routes annotations. Exported so the reconcilers that build those
+// annotations carry the same kind strings this package keys on.
 const (
-	kindHTTPRoute = "HTTPRoute"
-	kindGRPCRoute = "GRPCRoute"
-	kindTLSRoute  = "TLSRoute"
-	kindTCPRoute  = "TCPRoute"
-	kindUDPRoute  = "UDPRoute"
+	// KindHTTPRoute is the Gateway API kind of an HTTPRoute.
+	KindHTTPRoute = "HTTPRoute"
+
+	// KindGRPCRoute is the Gateway API kind of a GRPCRoute.
+	KindGRPCRoute = "GRPCRoute"
+
+	// KindTLSRoute is the Gateway API kind of a TLSRoute.
+	KindTLSRoute = "TLSRoute"
+
+	// KindTCPRoute is the Gateway API kind of a TCPRoute.
+	KindTCPRoute = "TCPRoute"
+
+	// KindUDPRoute is the Gateway API kind of a UDPRoute.
+	KindUDPRoute = "UDPRoute"
 )
+
+// routeKindFromObject returns the route kind of obj. It resolves the kind from
+// the Go type, because TypeMeta is not guaranteed to be populated on cached
+// objects. It returns "" for an object that carries no route kind.
+func routeKindFromObject(obj client.Object) string {
+	switch obj.(type) {
+	case *gwtypes.HTTPRoute:
+		return KindHTTPRoute
+	case *gwtypes.GRPCRoute:
+		return KindGRPCRoute
+	case *gwtypes.TLSRoute:
+		return KindTLSRoute
+	case *gwtypes.TCPRoute:
+		return KindTCPRoute
+	case *gwtypes.UDPRoute:
+		return KindUDPRoute
+	}
+	return obj.GetObjectKind().GroupVersionKind().Kind
+}
 
 // Defaults for the annotations when not specified that match the behavior of on-prem.
 const (
@@ -288,19 +319,11 @@ func BuildAnnotations(obj client.Object, parentRef *gwtypes.ParentReference) map
 		consts.GatewayOperatorHybridGatewaysAnnotation: gwObjKey.String(),
 	}
 
-	// Add route annotation for TLSRoute and HTTPRoute objects.
-	// Use different annotation keys for each type to distinguish the routes with same namespace/name but different kinds.
-	switch obj.(type) {
-	case *gwtypes.HTTPRoute:
-		annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation] = client.ObjectKeyFromObject(obj).String()
-	case *gwtypes.GRPCRoute:
-		annotations[consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation] = client.ObjectKeyFromObject(obj).String()
-	case *gwtypes.TLSRoute:
-		annotations[consts.GatewayOperatorHybridRoutesTLSRouteAnnotation] = client.ObjectKeyFromObject(obj).String()
-	case *gwtypes.TCPRoute:
-		annotations[consts.GatewayOperatorHybridRoutesTCPRouteAnnotation] = client.ObjectKeyFromObject(obj).String()
-	case *gwtypes.UDPRoute:
-		annotations[consts.GatewayOperatorHybridRoutesUDPRouteAnnotation] = client.ObjectKeyFromObject(obj).String()
+	// Use a distinct annotation key per route kind so routes with the same
+	// namespace/name but different kinds do not collide. The keys come from the
+	// shared kind-to-annotation table.
+	if key := hybridRouteAnnotationKeyForKind(routeKindFromObject(obj)); key != "" {
+		annotations[key] = client.ObjectKeyFromObject(obj).String()
 	}
 
 	return annotations
@@ -603,21 +626,10 @@ func (am *AnnotationManager) SetRoutesWithKind(obj metav1.Object, routeKind stri
 
 // RouteAnnotationKeyForKind returns the annotation key for the route kind to
 // mark the namespace and name of the route with given kind that owns the object.
+// It reads the same kind-to-annotation table as the hybrid-route owner index, so
+// a route kind added there is picked up here as well.
 func (am *AnnotationManager) RouteAnnotationKeyForKind(routeKind string) string {
-	switch routeKind {
-	case kindHTTPRoute:
-		return consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation
-	case kindGRPCRoute:
-		return consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation
-	case kindTLSRoute:
-		return consts.GatewayOperatorHybridRoutesTLSRouteAnnotation
-	case kindTCPRoute:
-		return consts.GatewayOperatorHybridRoutesTCPRouteAnnotation
-	case kindUDPRoute:
-		return consts.GatewayOperatorHybridRoutesUDPRouteAnnotation
-	}
-	// Not supported route kind. Should be unreachable.
-	return ""
+	return hybridRouteAnnotationKeyForKind(routeKind)
 }
 
 // RouteAnnotationMatch returns true if the hybrid route annotation matches the given route by its namespace and name.

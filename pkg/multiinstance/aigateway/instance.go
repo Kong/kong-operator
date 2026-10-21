@@ -5,7 +5,9 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"maps"
 	"net/http"
+	"slices"
 	"sync"
 	"time"
 
@@ -39,17 +41,43 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/multiinstance/manager"
 )
 
+// DefaultSyncInterval is the interval between two rounds of syncing configuration
+// with the data planes used when the OnPremAIGateway doesn't specify one.
+const DefaultSyncInterval = 3 * time.Second
+
 // Config is the resolved configuration of a single on-prem AI Gateway control plane instance.
 type Config struct {
 	// DBLessConfig is the rendered dbless declarative payload for this gateway, ready to be
 	// pushed to its data planes' Admin API.
 	DBLessConfig []byte
 
+	// SyncInterval is the interval between two rounds of syncing configuration with the
+	// data planes. Zero means the operator default (DefaultSyncInterval) applies.
+	// It's part of the hashed config so that changing it restarts the instance,
+	// whose sync loop reads it at start-up.
+	SyncInterval time.Duration
+
+	// SyncTimeout is the timeout of a single run of syncing configuration with
+	// a gateway's data planes. Zero means no timeout is applied to a sync run.
+	// It's part of the hashed config so that changing it restarts the instance
+	// with the new value.
+	SyncTimeout time.Duration
+
 	// AdminClientCertSecretNN is the reference to the mTLS client certificate Secret the
 	// instance reads when pushing configuration to its data planes. It is part of the
 	// hashed config so that a renewed Secret - recreated under a new GenerateName by
 	// EnsureCertificate - drifts the hash and restarts the instance with the new reference.
 	AdminClientCertSecretNN types.NamespacedName
+
+	// SecretLabelFilters are the matchLabels from the OnPremAIGateway's
+	// spec.objectFilters.secrets.matchLabels. They are ANDed with the operator's
+	// SecretLabelSelector on the instance's Secret cache, so user entity Secrets
+	// must carry both. The Admin API client certificate Secret is stamped with
+	// them by the OnPremAIGateway controller, so it always stays visible.
+	// They are part of the hashed config so that changing them restarts the
+	// instance: its cache is built at manager start and cannot pick the new
+	// filters up otherwise.
+	SecretLabelFilters map[string]string
 }
 
 // Hash computes a hash of the given config. It's used to detect configuration drift of running instances.
@@ -60,6 +88,20 @@ func Hash(cfg Config) (string, error) {
 	// zero NN's String() is "/", which would otherwise shift every hash.
 	if cfg.AdminClientCertSecretNN != (types.NamespacedName{}) {
 		h.Write([]byte(cfg.AdminClientCertSecretNN.String()))
+	}
+	if cfg.SyncInterval != 0 {
+		h.Write([]byte("interval:"))
+		h.Write([]byte(cfg.SyncInterval.String()))
+	}
+	if cfg.SyncTimeout != 0 {
+		h.Write([]byte("timeout:"))
+		h.Write([]byte(cfg.SyncTimeout.String()))
+	}
+	if len(cfg.SecretLabelFilters) > 0 {
+		// Sorted so the hash is stable regardless of map iteration order.
+		for _, k := range slices.Sorted(maps.Keys(cfg.SecretLabelFilters)) {
+			h.Write([]byte("secretFilter:" + k + "=" + cfg.SecretLabelFilters[k]))
+		}
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
@@ -280,23 +322,42 @@ func (i *Instance) cacheOpts() cache.Options {
 // secretSelector mirrors the main manager's Secret cache filter (modules/manager's
 // setByObjectFor): Secrets must carry the configured label key with value "true" or
 // "internal". When no selector is configured, no label filter is applied, exactly
-// like the main manager's cache.
+// like the main manager's cache. The OnPremAIGateway's spec.objectFilters.secrets
+// matchLabels (cfg.SecretLabelFilters) are ANDed on top, so user entity Secrets must
+// satisfy both; the Admin API client certificate Secret is stamped with them by the
+// OnPremAIGateway controller.
 func (i *Instance) secretSelector() labels.Selector {
-	if i.env.SecretLabelSelector == "" {
+	selector := labels.NewSelector()
+	if i.env.SecretLabelSelector != "" {
+		req, err := labels.NewRequirement(
+			i.env.SecretLabelSelector,
+			selection.In,
+			[]string{mgrconfig.LabelValueForSelectorTrue, mgrconfig.LabelValueForSelectorInternal},
+		)
+		if err != nil {
+			// The label key comes from operator configuration; an invalid key means a
+			// broken deployment, but returning a never-matching selector keeps the
+			// manager startable instead of crashing it here.
+			return labels.Nothing()
+		}
+		selector = selector.Add(*req)
+	}
+	for _, k := range slices.Sorted(maps.Keys(i.cfg.SecretLabelFilters)) {
+		// Sorted so the selector is deterministic for a given config.
+		req, err := labels.NewRequirement(k, selection.Equals, []string{i.cfg.SecretLabelFilters[k]})
+		if err != nil {
+			// The CRD rejects invalid keys/values, but out-of-band writes exist: a
+			// never-matching selector keeps the manager startable instead of
+			// crashing it here.
+			return labels.Nothing()
+		}
+		selector = selector.Add(*req)
+	}
+	// No requirement at all: no label filter, exactly like the main manager's cache.
+	if selector.Empty() {
 		return nil
 	}
-	req, err := labels.NewRequirement(
-		i.env.SecretLabelSelector,
-		selection.In,
-		[]string{mgrconfig.LabelValueForSelectorTrue, mgrconfig.LabelValueForSelectorInternal},
-	)
-	if err != nil {
-		// The label key comes from operator configuration; an invalid key means a
-		// broken deployment, but returning a never-matching selector keeps the
-		// manager startable instead of crashing it here.
-		return labels.Nothing()
-	}
-	return labels.NewSelector().Add(*req)
+	return selector
 }
 
 func (i *Instance) sendConfig(
@@ -317,16 +378,19 @@ func (i *Instance) sendConfig(
 	}
 	included, failures := splitEntityStatuses(entityStatuses)
 
-	payload, warnings, err := convert.ConvertDocumentToDBLessYAML(doc, convert.Options{Strict: false})
+	payload, issues, err := translator.RenderDBLessYAML(doc, convert.Options{})
 	if err != nil {
 		// The rendered payload is broken, so nothing gets pushed: every entity
 		// included in the document failed to be applied.
 		i.statusReporter.Report(nil, append(failuresForAll(included, err), failures...))
 		// Surface the translation failure (and any warnings the converter
 		// reported before failing) on the gateway status and events.
-		i.reportTranslationStatus(ctx, *gw, err, failures, warnings)
+		i.reportTranslationStatus(ctx, *gw, err, failures, conversionIssueWarnings(issues))
 		return fmt.Errorf("rendering dbless configuration: %w", err)
 	}
+	// attributeConversionIssues turns WARNING issues into events and ERROR
+	// issues into per-entity failures; see its doc for the contract.
+	included, failures, warnings := i.attributeConversionIssues(included, failures, issues)
 	// The translation outcome is fully known here: report it before the push, so
 	// that push failures - which belong to the DataPlanesConfigured condition -
 	// do not alter it.
@@ -388,6 +452,117 @@ func failuresForAll(objs []client.Object, err error) []EntityFailure {
 	return failures
 }
 
+// conversionIssueKindToCRTypeName maps a conversion issue's Source.Kind (the
+// converter's singular document keys, public API in ai-deck-converter) to the
+// aiconfiguration CR type name (GetTypeName) the entity is translated from.
+// The list is exhaustive for the converter's public API (v0.22.0): every
+// issue-carrying entity kind is covered. The document's remaining translated
+// kinds have no entries because the converter reports no issues for them: model
+// providers are only indexed into the converter's reference registry (their
+// problems surface as issues on the model referencing them, kind "model"), and
+// the certificate and CA certificate conversions are infallible pass-throughs.
+// Kinds with no entry degrade their ERROR issues to warnings.
+var conversionIssueKindToCRTypeName = map[string]string{
+	"model":          "AIGatewayModel",
+	"mcp_server":     "AIGatewayMCPServer",
+	"agent":          "AIGatewayAgent",
+	"policy":         "AIGatewayPolicy",
+	"custom_policy":  "AIGatewayCustomPolicy",
+	"auth_strategy":  "AIGatewayAuthStrategy",
+	"consumer":       "AIGatewayConsumer",
+	"consumer_group": "AIGatewayConsumerGroup",
+	"sni":            "AIGatewaySNI",
+}
+
+// attributeConversionIssues applies the converter's issues to the sync's entity
+// status. An ERROR-severity issue means the converter dropped the offending
+// entity from the rendered payload, so the entity's CR is attributed the failure
+// (its Programmed condition reports the drop) and removed from the included set:
+// the issue's Source.Kind and Source.Name match the CR's type name (GetTypeName)
+// and AI Gateway name (GetKonnectName). The remaining payload is still pushed.
+//
+// It returns the warning texts to report as events: every WARNING-severity issue
+// (the converter worked around the problem), plus - defensively, since today
+// every issue Source.Kind is a kind translated into the document and a dropped
+// entity is always included - any ERROR issue matching no included entity, which
+// is then logged loudly as an error so the drop is not lost in silence.
+func (i *Instance) attributeConversionIssues(
+	included []client.Object,
+	failures []EntityFailure,
+	issues []convert.ConversionIssue,
+) (remainingIncluded []client.Object, remainingFailures []EntityFailure, warnings []string) {
+	// GetKonnectName derives from the CR's spec, not its metadata name, so two
+	// CRs of one kind can share a key (and a nil AIGatewayModelConfig yields
+	// ""). Map the key to all matching CRs and attribute the issue to each of
+	// them: they translate into the same document entity, whose drop is
+	// reported against the shared name.
+	type key struct{ typeName, konnectName string }
+	byKey := make(map[key][]client.Object, len(included))
+	for _, obj := range included {
+		// Every aiconfiguration CR carries the generated GetTypeName and
+		// GetKonnectName methods.
+		typeNamer, ok1 := obj.(interface{ GetTypeName() string })
+		nameNamer, ok2 := obj.(interface{ GetKonnectName() string })
+		if !ok1 || !ok2 {
+			continue
+		}
+		k := key{typeNamer.GetTypeName(), nameNamer.GetKonnectName()}
+		byKey[k] = append(byKey[k], obj)
+	}
+
+	dropped := make(map[client.Object]struct{})
+	warnings = make([]string, 0, len(issues))
+	for _, issue := range issues {
+		if issue.Severity != convert.Error {
+			warnings = append(warnings, issue.String())
+			continue
+		}
+		var matches []client.Object
+		if typeName, ok := conversionIssueKindToCRTypeName[issue.Source.Kind]; ok {
+			matches = byKey[key{typeName, issue.Source.Name}]
+		}
+		if len(matches) == 0 {
+			// An unattributed ERROR issue means a dropped CR keeps Programmed
+			// True while the pushed payload lacks its entity. Log it loudly
+			// instead of degrading it to a warning in silence.
+			i.logger.Error(nil, "unattributed converter ERROR issue", "issue", issue.String())
+			warnings = append(warnings, issue.String())
+			continue
+		}
+		for _, obj := range matches {
+			if _, already := dropped[obj]; already {
+				continue
+			}
+			dropped[obj] = struct{}{}
+			failures = append(failures, EntityFailure{
+				Obj: obj,
+				Err: fmt.Errorf("the converter dropped the entity from the rendered configuration: %s", issue),
+			})
+		}
+	}
+	if len(dropped) == 0 {
+		return included, failures, warnings
+	}
+	remainingIncluded = make([]client.Object, 0, len(included)-len(dropped))
+	for _, obj := range included {
+		if _, drop := dropped[obj]; !drop {
+			remainingIncluded = append(remainingIncluded, obj)
+		}
+	}
+	return remainingIncluded, failures, warnings
+}
+
+// conversionIssueWarnings formats the given converter issues as one-line warning
+// texts, used when the rendering failed as a whole and the issues cannot be
+// attributed to entities (nothing gets pushed anyway).
+func conversionIssueWarnings(issues []convert.ConversionIssue) []string {
+	warnings := make([]string, 0, len(issues))
+	for _, issue := range issues {
+		warnings = append(warnings, issue.String())
+	}
+	return warnings
+}
+
 // syncPending re-renders the configuration for every gateway with pending changes and removes
 // the rendered ones from the set. Failed renders stay in the set so that the timer retries
 // them. lastSyncTS is updated on every attempt so that bursts of changes debounce even
@@ -402,7 +577,16 @@ func (i *Instance) syncPending(
 	}
 	*lastSyncTS = time.Now()
 	for nn := range pending {
-		if err := i.sendConfig(ctx, &nn); err != nil {
+		// A per-gateway timeout keeps one slow sync from starving the other
+		// gateways in the round.
+		syncCtx := ctx
+		cancel := func() {}
+		if i.cfg.SyncTimeout > 0 {
+			syncCtx, cancel = context.WithTimeout(ctx, i.cfg.SyncTimeout)
+		}
+		err := i.sendConfig(syncCtx, &nn)
+		cancel()
+		if err != nil {
 			i.logger.Error(err, "Failed to send configuration",
 				"namespace", nn.Namespace, "name", nn.Name)
 			continue
@@ -447,6 +631,7 @@ func (i *Instance) Run(ctx context.Context) error {
 		index.OptionsForAIGatewayModelProvider(),
 		index.OptionsForAIGatewayPolicy(),
 		index.OptionsForAIGatewaySNI(),
+		index.OptionsForAIGatewayVault(),
 	} {
 		for _, opt := range opts {
 			if err := mgr.GetFieldIndexer().IndexField(ctx, opt.Object, opt.Field, opt.ExtractValueFn); err != nil {
@@ -498,19 +683,33 @@ func (i *Instance) Run(ctx context.Context) error {
 	defer func() {
 		// Drain the manager result so its goroutine never leaks.
 		select {
-		case <-mgrErrCh:
+		case err, ok := <-mgrErrCh:
+			if !ok {
+				return
+			}
+			if err != nil {
+				i.logger.Error(err, "Instance controller manager failed when draining")
+			}
+
 		default:
 		}
 	}()
 
+	// The sync interval comes from the OnPremAIGateway spec via the instance
+	// config, so changing it restarts the instance (it's part of the hashed
+	// config).
+	syncInterval := i.cfg.SyncInterval
+	if syncInterval <= 0 {
+		// A non-positive interval would panic time.NewTicker. The CRD rejects
+		// negative values, but 0 is admitted and out-of-band writes exist.
+		syncInterval = DefaultSyncInterval
+	}
 	var (
 		ch         = i.cn.NotifyChannel()
 		lastSyncTS time.Time
 		// TODO: make this configurable
 		minimumInterval = time.Second
-		// TODO: make this configurable
-		syncInterval = 3 * time.Second
-		timer        = time.NewTicker(syncInterval)
+		timer           = time.NewTicker(syncInterval)
 		// pending holds the gateways with configuration changes that have not been synced
 		// yet. Changes arriving within the debounce window land here and are re-driven by
 		// the timer instead of being dropped, as are syncs that failed.

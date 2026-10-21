@@ -33,6 +33,14 @@ func EventGatewayVirtualClusterConsumePolicyReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
+				&configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueEventGatewayVirtualClusterConsumePolicyForEventGatewayVirtualClusterConsumePolicy(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
 				&configurationv1alpha1.EventGatewaySchemaRegistry{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueEventGatewayVirtualClusterConsumePolicyForEventGatewaySchemaRegistry(cl),
@@ -65,6 +73,28 @@ func enqueueEventGatewayVirtualClusterConsumePolicyForEventGatewayVirtualCluster
 			return nil
 		}
 		return objectListToReconcileRequests(l.Items)
+	}
+}
+
+func enqueueEventGatewayVirtualClusterConsumePolicyForEventGatewayVirtualClusterConsumePolicy(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		ref, ok := obj.(*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy)
+		if !ok {
+			return nil
+		}
+		var l configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyList
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexFieldEventGatewayVirtualClusterConsumePolicyOnEventGatewayVirtualClusterConsumePolicyRef: client.ObjectKeyFromObject(ref).String(),
+		}); err != nil {
+			return nil
+		}
+		reqs := objectListToReconcileRequests(l.Items)
+		for _, key := range configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyRefsToEventGatewayVirtualClusterConsumePolicy(ref) {
+			reqs = append(reqs, reconcile.Request{NamespacedName: key})
+		}
+		return reqs
 	}
 }
 

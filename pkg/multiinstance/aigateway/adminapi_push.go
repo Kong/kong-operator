@@ -246,6 +246,10 @@ func (i *Instance) reportPushStatus(
 	total int,
 	failures []string,
 ) error {
+	// The report must land even when the sync deadline expired: a status patch
+	// failure is only logged, so the gateway condition would keep its last
+	// value while every push keeps timing out.
+	ctx = context.WithoutCancel(ctx)
 	var condition metav1.Condition
 	if len(failures) == 0 {
 		condition = k8sutils.NewCondition(
@@ -292,7 +296,10 @@ func (i *Instance) reportPushStatus(
 //
 // renderErr is the whole-document rendering failure (nil when the rendering
 // succeeded), entityFailures the per-entity translation failures, and warnings
-// the free-text warnings returned by the ai-deck-converter. Warnings never fail
+// the one-line texts of the conversion issues reported by the ai-deck-converter:
+// every issue's text on a failed render; on a successful render, its
+// WARNING-severity issues plus any ERROR issue that matched no entity.
+// Warnings never fail
 // the condition: it stays True and the warnings are carried by Warning events
 // (see reportTranslationWarnings), with only their count noted in the condition
 // message. On a successful translation the warnings are reported by the caller

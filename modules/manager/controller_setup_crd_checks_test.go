@@ -32,6 +32,7 @@ func defaultConfigWithDisabledControllers() Config {
 	c.ControlPlaneExtensionsControllerEnabled = false
 	c.KonnectControllersEnabled = false
 	c.KEGDataPlaneControllerEnabled = false
+	c.GWAdminControllerEnabled = false
 	return c
 }
 
@@ -114,6 +115,48 @@ func TestEnsureRequiredCRDsChecksKegDataPlaneForKEGDataPlaneController(t *testin
 		Version:  eventgatewayv1alpha1.SchemeGroupVersion.Version,
 		Resource: "kegdataplanes",
 	}
+	checker := crdCheckerMissing(missingGVR)
+
+	err := ensureRequiredCRDs(&cfg, checker)
+	require.Error(t, err)
+	require.ErrorContains(t, err, missingGVR.String())
+}
+
+func TestEnsureRequiredCRDsChecksOnPremEventGatewayController(t *testing.T) {
+	t.Parallel()
+
+	for _, missingGVR := range []schema.GroupVersionResource{
+		{
+			Group:    eventgatewayv1alpha1.SchemeGroupVersion.Group,
+			Version:  eventgatewayv1alpha1.SchemeGroupVersion.Version,
+			Resource: "onpremeventgateways",
+		},
+		{
+			Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+			Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+			Resource: "eventgatewayvirtualclusterproducepolicies",
+		},
+	} {
+		t.Run(missingGVR.Resource, func(t *testing.T) {
+			t.Parallel()
+
+			cfg := defaultConfigWithDisabledControllers()
+			cfg.OnPremEventGatewayControllerEnabled = true
+
+			err := ensureRequiredCRDs(&cfg, crdCheckerMissing(missingGVR))
+			require.Error(t, err)
+			require.ErrorContains(t, err, missingGVR.String())
+		})
+	}
+}
+
+func TestEnsureRequiredCRDsChecksGWAdminForGWAdminController(t *testing.T) {
+	t.Parallel()
+
+	cfg := defaultConfigWithDisabledControllers()
+	cfg.GWAdminControllerEnabled = true
+
+	missingGVR := operatorv1alpha1.GWAdminGVR()
 	checker := crdCheckerMissing(missingGVR)
 
 	err := ensureRequiredCRDs(&cfg, checker)

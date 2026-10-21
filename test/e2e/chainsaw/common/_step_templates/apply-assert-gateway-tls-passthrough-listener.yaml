@@ -30,6 +30,9 @@ spec:
                 mode: Passthrough
                 # Passthrough mode does not require certificate references.
 
+    # Kept as two asserts on purpose: chainsaw gives every assert operation its own
+    # timeout, so the Konnect stages get a full budget before the DataPlane rollout
+    # and the Gateway being Programmed are waited for in a second budget.
     - assert:
         resource:
           apiVersion: gateway.networking.k8s.io/v1
@@ -41,16 +44,24 @@ spec:
             (conditions[?type == 'Accepted']):
               - status: 'True'
                 reason: Accepted
-            (conditions[?type == 'Programmed']):
-              - status: 'True'
-                reason: Programmed
-            (conditions[?type == 'DataPlaneReady']):
-              - status: 'True'
-                reason: Ready
             (conditions[?type == 'KonnectGatewayControlPlaneProgrammed']):
               - status: 'True'
                 reason: Programmed
             (conditions[?type == 'KonnectExtensionReady']):
+              - status: 'True'
+                reason: Ready
+    - assert:
+        resource:
+          apiVersion: gateway.networking.k8s.io/v1
+          kind: Gateway
+          metadata:
+            name: ($gateway_name)
+            namespace: ($namespace)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+                reason: Programmed
+            (conditions[?type == 'DataPlaneReady']):
               - status: 'True'
                 reason: Ready
             (conditions[?type == 'GatewayService']):

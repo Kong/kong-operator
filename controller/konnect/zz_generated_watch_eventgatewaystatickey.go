@@ -7,8 +7,10 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -23,7 +25,21 @@ func EventGatewayStaticKeyReconciliationWatchOptions(
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	return []func(*ctrl.Builder) *ctrl.Builder{
 		func(b *ctrl.Builder) *ctrl.Builder {
-			return b.For(&configurationv1alpha1.EventGatewayStaticKey{})
+			// Entities referencing a gateway other than a KonnectEventGateway are
+			// not managed by the Konnect reconciler and must never be enqueued
+			// into it.
+			return b.For(
+				&configurationv1alpha1.EventGatewayStaticKey{},
+				builder.WithPredicates(
+					predicate.NewPredicateFuncs(func(object client.Object) bool {
+						ent, ok := object.(*configurationv1alpha1.EventGatewayStaticKey)
+						if !ok {
+							return true
+						}
+						return !ent.SkipKonnectReconciliation()
+					}),
+				),
+			)
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(

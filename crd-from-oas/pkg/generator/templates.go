@@ -165,6 +165,15 @@ type {{.EntityName}}APISpec struct {
 	//
 	// +optional
 	*{{.EntityName}}Config ` + "`" + `json:",inline"` + "`" + `
+{{- range .References}}
+{{- if .OptionalRef}}
+
+{{formatComment .Description}}
+	//
+	// +optional
+	{{.GoFieldName}} {{.TypeName}} ` + "`" + `json:"{{.JSONFieldName}},omitzero"` + "`" + `
+{{- end}}
+{{- end}}
 {{- else}}
 {{- range $i, $prop := .Schema.Properties}}
 {{- if not (skipProperty $prop)}}
@@ -190,6 +199,71 @@ type {{.EntityName}}APISpec struct {
 {{- end}}
 {{- end}}
 }
+{{- if hasRootOneOf .Schema}}
+{{- $hasRootRefs := false}}
+{{- range .References}}{{if .OptionalRef}}{{$hasRootRefs = true}}{{end}}{{end}}
+{{- if $hasRootRefs}}
+
+// MarshalJSON preserves the root union and its sibling references.
+func (s {{.EntityName}}APISpec) MarshalJSON() ([]byte, error) {
+	var payload map[string]json.RawMessage
+	if s.{{.EntityName}}Config != nil {
+		data, err := json.Marshal(s.{{.EntityName}}Config)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(data, &payload); err != nil {
+			return nil, err
+		}
+	} else {
+		payload = map[string]json.RawMessage{}
+	}
+{{- range .References}}
+{{- if .OptionalRef}}
+	if s.{{.GoFieldName}}.Name != "" {
+		data, err := json.Marshal(s.{{.GoFieldName}})
+		if err != nil {
+			return nil, err
+		}
+		payload["{{.JSONFieldName}}"] = data
+	}
+{{- end}}
+{{- end}}
+	return json.Marshal(payload)
+}
+
+// UnmarshalJSON decodes the root union and its sibling references.
+func (s *{{.EntityName}}APISpec) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling {{.EntityName}}APISpec: nil receiver")
+	}
+	var config {{.EntityName}}Config
+	if err := json.Unmarshal(data, &config); err != nil {
+		return err
+	}
+	var refs struct {
+{{- range .References}}
+{{- if .OptionalRef}}
+		{{.GoFieldName}} {{.TypeName}} ` + "`" + `json:"{{.JSONFieldName}}"` + "`" + `
+{{- end}}
+{{- end}}
+	}
+	if err := json.Unmarshal(data, &refs); err != nil {
+		return err
+	}
+	s.{{.EntityName}}Config = &config
+	if config.Type == "" {
+		s.{{.EntityName}}Config = nil
+	}
+{{- range .References}}
+{{- if .OptionalRef}}
+	s.{{.GoFieldName}} = refs.{{.GoFieldName}}
+{{- end}}
+{{- end}}
+	return nil
+}
+{{- end}}
+{{- end}}
 
 // {{.EntityName}}Status defines the observed state of {{.EntityName}}.
 type {{.EntityName}}Status struct {
@@ -231,6 +305,19 @@ type {{.EntityName}}Status struct {
 {{- else}}
 	{{.StatusField}} *{{$.EntityName}}{{.StatusField}} ` + "`" + `json:"{{.StatusJSON}},omitempty"` + "`" + `
 {{- end}}
+{{- end}}
+{{- if .TrackCreateInputs}}
+
+	// CreateInputsHash fingerprints the resolved user-supplied request body last
+	// successfully created in Konnect, before operator metadata is added.
+	// For entities predating this field, it is initialized from current inputs
+	// as a baseline, which cannot verify the values already stored in Konnect.
+	// Readers of this resource can use the fingerprint to verify guesses of
+	// low-entropy Secret values offline. Use high-entropy secret material.
+	//
+	// +optional
+	// +kubebuilder:validation:Pattern=` + "`" + `^sha256:[0-9a-f]{64}$` + "`" + `
+	CreateInputsHash string ` + "`" + `json:"createInputsHash,omitempty"` + "`" + `
 {{- end}}
 	// ObservedGeneration is the most recent generation observed
 	//
@@ -492,11 +579,20 @@ func (obj *{{.EntityName}}) GetParentRef() {{.RootRefTypeName}} {
 
 // SetParentRef sets the reference to the parent entity.
 {{- with .GatewayRef}}
-// It sets the deprecated spec.{{.LegacyJSONFieldName}}, which is the one holding an
-// ObjectRef, and clears spec.{{.JSONFieldName}}.
+// When spec.{{.JSONFieldName}} is set and ref is a namespaced reference, only
+// its name and namespace are updated, so the kind of the referenced gateway is
+// kept. Otherwise it sets the deprecated spec.{{.LegacyJSONFieldName}} and clears
+// spec.{{.JSONFieldName}}.
+// A Konnect ID can only be held by spec.{{.LegacyJSONFieldName}}: on an object
+// already using spec.{{.JSONFieldName}}, the API server rejects that change.
 {{- end}}
 func (obj *{{.EntityName}}) SetParentRef(ref {{.RootRefTypeName}}) {
 {{- with .GatewayRef}}
+	if parentRef := obj.Spec.{{.GoFieldName}}; parentRef != nil && ref.NamespacedRef != nil {
+		parentRef.Name = ref.NamespacedRef.Name
+		parentRef.Namespace = ref.NamespacedRef.DeepCopy().Namespace
+		return
+	}
 	obj.Spec.{{.GoFieldName}} = nil
 {{- end}}
 	obj.Spec.{{.RootRefDependency.FieldName}} = ref
@@ -648,7 +744,54 @@ import (
 {{- end}}
 
 {{range .Imports}}	{{.Alias}} "{{.Path}}"
-{{end}})
+{{end}}
+{{- if .TrackCreateInputs}}
+	"github.com/kong/kong-operator/v2/internal/utils/createinputs"
+{{- end}}
+)
+{{- if .TrackCreateInputs}}
+
+// GetCreateInputsHash returns the fingerprint recorded at creation or baselining.
+func (obj *{{.EntityName}}) GetCreateInputsHash() string {
+	return obj.Status.CreateInputsHash
+}
+
+// SetCreateInputsHash records a fingerprint without storing sensitive values.
+func (obj *{{.EntityName}}) SetCreateInputsHash(hash string) {
+	obj.Status.CreateInputsHash = hash
+}
+
+{{- range .Methods}}
+{{- if eq .OpName "create"}}
+// CalculateCreateInputsHash resolves and fingerprints the current create inputs.
+func (obj *{{$.EntityName}}) CalculateCreateInputsHash(ctx context.Context, cl client.Client) (string, error) {
+	_, hash, err := obj.ToCreateRequestWithInputsHash(ctx, cl)
+	return hash, err
+}
+
+// ToCreateRequestWithInputsHash resolves the inputs once for both the SDK request and its fingerprint.
+func (obj *{{$.EntityName}}) ToCreateRequestWithInputsHash(ctx context.Context, cl client.Client) (*{{.ImportAlias}}.{{.TypeName}}, string, error) {
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
+	if err != nil {
+		return nil, "", err
+	}
+	data, err := spec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, "", err
+	}
+	req, err := spec.{{.MethodName}}()
+	if err != nil {
+		return nil, "", err
+	}
+	hash, err := createinputs.Hash(json.RawMessage(data))
+	if err != nil {
+		return nil, "", err
+	}
+	return req, hash, nil
+}
+{{- end}}
+{{- end}}
+{{- end}}
 {{- if .BoolFields}}
 
 // {{$.EntityName}}SDKOpsBoolField describes a boolean enum field that must be normalized for SDK payloads.
@@ -1245,6 +1388,12 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 			}
 			return nil, fmt.Errorf("failed to get referenced {{.DefaultKind}} %s/%s: %w", ns, name, err)
 		}
+{{- if index .SkipsKonnectReconciliation .DefaultKind}}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			return nil, ReferenceNotKonnectManagedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name}
+		}
+{{- end}}
 {{- if .SameParentRefField}}
 		// Same-type references embed the referenced object's Konnect ID in a
 		// request scoped to the referrer's parent, so both objects must belong
@@ -1427,6 +1576,13 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 				errs = append(errs, fmt.Errorf("failed to get referenced {{.}} %s/%s: %w", ns, ref.Name, err))
 				continue
 			}
+{{- if index $ref.SkipsKonnectReconciliation .}}
+			// An object the Konnect reconciler does not manage never gets a Konnect ID.
+			if referenced.SkipKonnectReconciliation() {
+				errs = append(errs, ReferenceNotKonnectManagedError{Kind: "{{.}}", Namespace: ns, Name: ref.Name})
+				continue
+			}
+{{- end}}
 			konnectID = referenced.GetKonnectID()
 			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 				errs = append(errs, ReferenceDifferentGatewayError{Kind: "{{.}}", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
@@ -1457,6 +1613,37 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 			errs = append(errs, fmt.Errorf("failed to get referenced {{.DefaultKind}} %s/%s: %w", ns, ref.Name, err))
 			continue
 		}
+{{- if .SameTypeRef}}
+		if ns == obj.GetNamespace() && ref.Name == obj.GetName() {
+			errs = append(errs, ReferenceSelfError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
+			continue
+		}
+{{- if .SameParentRefField}}
+		if {{$.ObjectRefTypePrefix}}ObjectRefsDiffer(obj.Spec.{{.SameParentRefField}}, referenced.Spec.{{.SameParentRefField}}, obj.GetNamespace(), ns) {
+			errs = append(errs, ReferenceDifferentParentError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name, ParentKind: "{{.SameParentRefKind}}"})
+			continue
+		}
+{{- end}}
+{{- if .SameParentIDGetter}}
+		if id := obj.{{.SameParentIDGetter}}(); id != "" && referenced.{{.SameParentIDGetter}}() != "" && id != referenced.{{.SameParentIDGetter}}() {
+			errs = append(errs, ReferenceDifferentParentError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name, ParentKind: "{{.SameParentRefKind}}"})
+			continue
+		}
+{{- end}}
+{{- end}}
+{{- if .RequiredAPISpecType}}
+		if referenced.Spec.APISpec.{{.DefaultKind}}Config == nil || string(referenced.Spec.APISpec.Type) != "{{.RequiredAPISpecType}}" {
+			errs = append(errs, fmt.Errorf("{{.DefaultKind}} %s/%s must have apiSpec.type {{.RequiredAPISpecType}}", ns, ref.Name))
+			continue
+		}
+{{- end}}
+{{- if index .SkipsKonnectReconciliation .DefaultKind}}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
+			continue
+		}
+{{- end}}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
@@ -1465,7 +1652,7 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 		// The resolved value replaces {{.InjectInto}}: {{.DefaultKind}} objects
 		// being deleted must not gain new users, which could keep their deletion
 		// blocked.
-		if !referenced.GetDeletionTimestamp().IsZero() {
+		if !referenced.GetDeletionTimestamp().IsZero(){{if .SameTypeRef}} && obj.GetKonnectID() == ""{{end}} {
 			errs = append(errs, ReferenceBeingDeletedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
 			continue
 		}
@@ -2048,6 +2235,13 @@ func (s *{{$.EntityName}}APISpec) selectedSDKOpsPayload(payload map[string]any) 
 	selected = flattenSDKUnions(selected)
 	{{- end}}
 	if selectedMap, ok := selected.(map[string]any); ok {
+{{- range $.References}}
+{{- if .OptionalRef}}
+		if value, ok := payload["{{.InjectIntoSDKJSONFieldName}}"]; ok {
+			selectedMap["{{.InjectIntoSDKJSONFieldName}}"] = value
+		}
+{{- end}}
+{{- end}}
 		if typeValue, ok := payload["type"]; ok {
 			if _, hasType := selectedMap["type"]; !hasType {
 				withType := make(map[string]any)
@@ -2148,6 +2342,7 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 	}, nil
 {{- else}}
 	{{$importAlias := .ImportAlias}}
+	{{- if $.UpdateUsesPayloadTarget}}
 	var selected map[string]any
 	if err := json.Unmarshal(data, &selected); err != nil {
 		return nil, fmt.Errorf("failed to decode selected {{$.EntityName}} config: %w", err)
@@ -2156,6 +2351,7 @@ func (s *{{$.EntityName}}APISpec) {{.MethodName}}() (*{{.ImportAlias}}.{{.TypeNa
 	if err := json.Unmarshal(data, &target); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal into {{.TypeName}}: %w", err)
 	}
+	{{- end}}
 	switch variant {
 {{- range $.Variants}}
 	case "{{.FieldName}}":
@@ -2220,6 +2416,18 @@ func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Clie
 	if err != nil {
 		return nil, err
 	}
+{{- range $.References}}
+{{- if .OptionalRef}}
+resolved{{.GoResolverName}}, err := resolve{{$.EntityName}}{{.GoResolverName}}(ctx, cl, obj)
+if err != nil {
+	return nil, fmt.Errorf("resolving {{.Path}} references: %w", err)
+}
+delete(payload, "{{.SDKJSONFieldName}}")
+if len(resolved{{.GoResolverName}}) > 0 {
+	payload["{{.InjectIntoSDKJSONFieldName}}"] = resolved{{.GoResolverName}}[0]
+}
+{{- end}}
+{{- end}}
 {{- template "sdkOpsRefInjections" $}}
 	return spec.{{.FromPayloadMethodName}}(payload)
 {{- else}}
@@ -2278,7 +2486,7 @@ const opsControllerTestTemplate = sharedGeneratedFilePreamble + `
 package ops
 
 import (
-{{- if .AssertsInjectInto}}
+{{- if .NeedsJSON}}
 	"encoding/json"
 {{- end}}
 	"errors"
@@ -2361,7 +2569,14 @@ func TestCreate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 	expectedRequest, err := obj.Spec.APISpec.{{.Create.CreateReqMethod}}()
 {{- end}}
 	require.NoError(t, err)
+{{- if and .RootUnion .RootUnion.ExpectedPayloadCheck}}
+{{.RootUnion.ExpectedPayloadCheck}}
+{{- end}}
 {{- $reqBody := "expectedRequest"}}{{if and .Create.CreateFullyWrapped .Create.CreateBodyField}}{{$reqBody = printf "expectedRequest.%s" .Create.CreateBodyField}}{{end}}
+{{- if .Create.TrackCreateInputs}}
+	expectedCreateInputsHash, err := obj.CalculateCreateInputsHash(ctx, cl)
+	require.NoError(t, err)
+{{- end}}
 {{- if .AssertsInjectInto}}
 	{
 		// Additive references are resolved to the referenced object's Konnect
@@ -2445,6 +2660,9 @@ func TestCreate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 {{- if not .Create.SingletonNoID}}
 	require.Equal(t, expectedID, obj.GetKonnectID())
 {{- end}}
+{{- if .Create.TrackCreateInputs}}
+	require.Equal(t, expectedCreateInputsHash, obj.GetCreateInputsHash())
+{{- end}}
 }
 
 func TestCreate{{.Entity}}_PropagatesSDKError(t *testing.T) {
@@ -2514,6 +2732,9 @@ func TestCreate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 
 	err = create{{.Entity}}(ctx, {{if .Create.NeedsClient}}cl, {{end}}sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
+{{- if .Create.TrackCreateInputs}}
+	require.Empty(t, obj.GetCreateInputsHash())
+{{- end}}
 }
 {{- if $.SupportsMirror}}
 
@@ -3115,7 +3336,9 @@ func create{{.Entity}}(
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.EntityName}}", Op: CreateOp}
 	}
 {{- end}}
-	{{- if .NeedsClient}}
+	{{- if .TrackCreateInputs}}
+	req, createInputsHash, err := obj.ToCreateRequestWithInputsHash(ctx, cl)
+	{{- else if .NeedsClient}}
 	req, err := obj.{{.CreateReqMethod}}(ctx, cl)
 	{{- else if .HasReferences}}
 	req, err := obj.{{.CreateReqMethod}}()
@@ -3209,6 +3432,10 @@ func create{{.Entity}}(
 	}
 
 	obj.SetKonnectID(resp.{{.RespField}}.ID)
+{{- end}}
+{{- if .TrackCreateInputs}}
+	obj.SetCreateInputsHash(createInputsHash)
+	SetKonnectEntityCreateInputsAppliedConditionTrue(obj)
 {{- end}}
 {{- if .HasNestedResponseStatusFields}}
 	const (
@@ -4346,6 +4573,11 @@ type ReferenceBeingDeletedError = commonv1alpha1.ReferenceBeingDeletedError
 // namespace. Cross-namespace references are rejected until explicit
 // cross-namespace support and authorization checks are implemented.
 type ReferenceCrossNamespaceError = commonv1alpha1.ReferenceCrossNamespaceError
+
+// ReferenceNotKonnectManagedError is returned when a reference points to a CR
+// the Konnect reconciler does not manage, e.g. one attached to an on-prem
+// gateway.
+type ReferenceNotKonnectManagedError = commonv1alpha1.ReferenceNotKonnectManagedError
 
 // ReferenceDifferentGatewayError is returned when a reference points to a CR
 // programmed under a different AIGatewayControlPlane. References must stay

@@ -45,6 +45,10 @@ const (
 	webhookReadinessTimeout = 2 * time.Minute
 	webhookReadinessTick    = 2 * time.Second
 	waitTime                = 3 * time.Minute
+	// konnectWaitTime is the budget for assertions that wait on the Konnect API.
+	// CI shares the Konnect environment with the chainsaw e2e matrix, which rate
+	// limits under load and makes control planes take minutes to become programmed.
+	konnectWaitTime = 5 * time.Minute
 )
 
 // -----------------------------------------------------------------------------

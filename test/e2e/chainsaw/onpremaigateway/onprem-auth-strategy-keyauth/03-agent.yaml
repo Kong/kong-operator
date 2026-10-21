@@ -1,0 +1,33 @@
+# An HTTP AIGatewayAgent routing /http-agent to the go-echo backend, with the
+# key-auth auth strategy required on the route (via access.authStrategies).
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayAgent
+metadata:
+  name: ($http_agent_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    name: ($http_agent_name)
+    displayName: ($http_agent_name)
+    type: http
+    enabled: Enabled
+    config:
+      url: (join('', ['http://', ($echo_deployment_name), '.', ($namespace), '.svc.cluster.local:1027']))
+      route:
+        paths:
+          - ($http_agent_route_path)
+        methods:
+          - GET
+          - POST
+        protocols:
+          - http
+          - https
+        stripPath: Enabled
+    access:
+      authStrategies:
+        - name: ($keyauth_auth_strategy_name)

@@ -205,7 +205,6 @@ var testConfig = Config[
 			}
 			return aigwdp.Spec.Deployment.Annotations
 		},
-		Replicas:       testReplicas,
 		BuildContainer: buildTestContainer,
 		LabelManaged:   k8sresources.LabelObjectAsAIGatewayDataPlaneManaged,
 	},
@@ -221,32 +220,7 @@ var testConfig = Config[
 		SetStatusAddresses: testSetStatusAddresses,
 	},
 
-	HorizontalScaling: testHorizontalScaling,
 	SetStatusReplicas: testSetStatusReplicas,
-}
-
-func testReplicas(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *int32 {
-	if aigwdp.Spec.Deployment == nil {
-		return nil
-	}
-	var hs *aigatewayv1alpha1.HorizontalScaling
-	if aigwdp.Spec.Deployment.Scaling != nil {
-		hs = aigwdp.Spec.Deployment.Scaling.HorizontalScaling
-	}
-	switch {
-	case hs == nil:
-		return aigwdp.Spec.Deployment.Replicas
-	case hs.MinReplicas != nil:
-		return hs.MinReplicas
-	}
-	return nil
-}
-
-func testHorizontalScaling(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *commonv1alpha1.HorizontalScaling {
-	if aigwdp.Spec.Deployment == nil || aigwdp.Spec.Deployment.Scaling == nil {
-		return nil
-	}
-	return aigwdp.Spec.Deployment.Scaling.HorizontalScaling
 }
 
 func testSetStatusReplicas(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane, replicas, readyReplicas int32) {

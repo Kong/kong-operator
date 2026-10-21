@@ -13,6 +13,7 @@ Package v1alpha1 contains API Schema definitions for the gateway-operator.konghq
 - [AIGateway](#gateway-operator-konghq-com-v1alpha1-aigateway)
 - [DBBackedHybridControlPlane](#gateway-operator-konghq-com-v1alpha1-dbbackedhybridcontrolplane)
 - [DataPlaneMetricsExtension](#gateway-operator-konghq-com-v1alpha1-dataplanemetricsextension)
+- [GWAdmin](#gateway-operator-konghq-com-v1alpha1-gwadmin)
 - [KongPluginInstallation](#gateway-operator-konghq-com-v1alpha1-kongplugininstallation)
 - [WatchNamespaceGrant](#gateway-operator-konghq-com-v1alpha1-watchnamespacegrant)
 
@@ -89,6 +90,60 @@ enriched with metadata required for in-cluster Kubernetes autoscaling.
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[DataPlaneMetricsExtensionSpec](#gateway-operator-konghq-com-v1alpha1-types-dataplanemetricsextensionspec)_ |  |
 | `status` _[DataPlaneMetricsExtensionStatus](#gateway-operator-konghq-com-v1alpha1-types-dataplanemetricsextensionstatus)_ |  |
+
+### GWAdmin
+
+
+GWAdmin is the Schema for the GWAdmin API. It deploys gw-admin, the
+on-prem control plane of the next-generation Kong data planes, such as the
+Kong Event Gateway, when they run without Konnect. Kong Gateway 3.x data
+planes are not supported. Kong Operator pushes the configuration to gw-admin on its
+API listener, and the data planes pull it from its control plane (cp)
+listener. Both listeners use mutual TLS: Kong Operator provisions and
+rotates every certificate they need, from three certificate authorities:<br /><br />  - the API CA: the API listener and Kong Operator authenticate each other
+    with it. Kong Operator creates it and keeps its key in its own
+    namespace.
+  - the cp server CA: the data planes verify the cp listener with it.
+    Kong Operator creates it and keeps its key in its own namespace, so
+    that nothing else can issue a certificate the data planes trust.
+  - the cp client CA: the cp listener verifies the data plane client
+    certificates with it. Automatic or the user's, Kong Operator copies it,
+    with its key, into its own namespace, where it issues the certificates
+    of the data planes it manages from it.<br /><br />The certificate authorities live and die with the GWAdmin object: deleting
+it, or restoring it under a new UID, creates new ones, and the data plane
+certificates must be issued again. gw-admin doesn't reload certificates:
+every change of the mounted ones rolls its pods.<br /><br />The server certificates of the listeners are mounted into the gw-admin
+pods, so they live in the namespace of the GWAdmin: whoever can read its
+Secrets can impersonate gw-admin with them, until they are renewed.<br /><br />Only data planes Kong Operator manages are supported. Their Deployments
+carry the gateway-operator.konghq.com/gwadmin-namespace and
+gateway-operator.konghq.com/gwadmin-name labels naming the GWAdmin, and
+their Pod template records what its pods mount: the SHA-256 of the ca.crt
+of status.tls.cpServerCABundleSecretName in the
+konghq.com/gw-admin-cp-server-bundle-checksum annotation, and the SHA-256
+fingerprint of the CA that issued their client certificate in the
+konghq.com/gw-admin-cp-client-ca annotation. They count when they run in
+the namespace of the GWAdmin, or in a namespace a KongReferenceGrant in the
+namespace of the GWAdmin grants, from OnPremEventGateway to GWAdmin. A
+rotation waits for them to roll out: the cp server certificate moves to a
+new issuer once every data plane runs a server bundle trusting it, and the
+previous cp client CA is dropped once every data plane runs a client
+certificate from the new one. The
+gateway-operator.konghq.com/rotation-skip-data-planes annotation set to
+"true" stops the rotations from waiting for them, e.g. to stop trusting a
+compromised certificate authority right away.<br /><br />The gw-admin pods only report Ready once Kong Operator has provisioned
+them through the API listener, so the Ready condition of the GWAdmin does
+not wait for the pods to be Ready: it reports whether the certificates, the
+Services and the Deployment are in place.
+
+<!-- gw_admin description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway-operator.konghq.com/v1alpha1`
+| `kind` _string_ | `GWAdmin`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[GWAdminSpec](#gateway-operator-konghq-com-v1alpha1-types-gwadminspec)_ | Spec defines the desired state of GWAdmin. |
+| `status` _[GWAdminStatus](#gateway-operator-konghq-com-v1alpha1-types-gwadminstatus)_ | Status defines the observed state of GWAdmin. |
 
 ### KongPluginInstallation
 
@@ -352,6 +407,262 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `internet-accessible` | NetworkInternetAccessible indicates that the endpoint is accessible from<br />the public internet.<br /> |
+
+#### GWAdminAPIStatus
+
+
+GWAdminAPIStatus describes the Service Kong Operator pushes the
+configuration through.
+
+
+
+| Field | Description |
+| --- | --- |
+| `serviceName` _string_ | ServiceName is the name of the Service. |
+| `portName` _string_ | PortName is the name of the Service port. |
+| `port` _int32_ | Port is the Service port. |
+
+_Appears in:_
+
+- [GWAdminStatus](#gateway-operator-konghq-com-v1alpha1-types-gwadminstatus)
+
+#### GWAdminCPStatus
+
+
+GWAdminCPStatus describes the endpoint the data planes pull the
+configuration from.
+
+
+
+| Field | Description |
+| --- | --- |
+| `serverURL` _string_ | ServerURL is the in-cluster URL of the cp listener. |
+
+_Appears in:_
+
+- [GWAdminStatus](#gateway-operator-konghq-com-v1alpha1-types-gwadminstatus)
+
+#### GWAdminCertificateProvisioning
+
+_Underlying type:_ `string`
+
+GWAdminCertificateProvisioning is the method used to provision a certificate.
+
+
+
+
+_Appears in:_
+
+- [GWAdminCertificateSecret](#gateway-operator-konghq-com-v1alpha1-types-gwadmincertificatesecret)
+- [GWAdminServerCertificate](#gateway-operator-konghq-com-v1alpha1-types-gwadminservercertificate)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `Manual` | GWAdminCertificateProvisioningManual indicates the certificate is<br />supplied by the user through a Secret.<br /> |
+| `Automatic` | GWAdminCertificateProvisioningAutomatic indicates the certificate is<br />generated and managed by the operator.<br /> |
+
+#### GWAdminCertificateSecret
+
+
+GWAdminCertificateSecret configures how a certificate is provisioned.
+
+
+
+| Field | Description |
+| --- | --- |
+| `provisioning` _[GWAdminCertificateProvisioning](#gateway-operator-konghq-com-v1alpha1-types-gwadmincertificateprovisioning)_ | Provisioning is the method used to provision the certificate. |
+| `secretRef` _[GWAdminSecretRef](#gateway-operator-konghq-com-v1alpha1-types-gwadminsecretref)_ | SecretRef references the Secret holding the certificate. Only used, and required, when Provisioning is Manual. The Secret must carry the operator's secret label selector (default "konghq.com/secret: \"true\"") or the operator cannot see it; with cert-manager set it through spec.secretTemplate.labels of the Certificate. |
+
+_Appears in:_
+
+- [GWAdminTLS](#gateway-operator-konghq-com-v1alpha1-types-gwadmintls)
+
+#### GWAdminDeploymentOptions
+
+
+GWAdminDeploymentOptions specifies options for the gw-admin Deployment.
+
+
+
+| Field | Description |
+| --- | --- |
+| `replicas` _*int32_ | Replicas describes the number of desired pods. This field and the scaling field are mutually exclusive. |
+| `scaling` _[GWAdminScaling](#gateway-operator-konghq-com-v1alpha1-types-gwadminscaling)_ | Scaling defines the scaling options for the Deployment. |
+| `annotations` _map[string]string_ | Annotations are custom annotations that are propagated to the gw-admin Deployment metadata by the operator. |
+| `labels` _map[string]string_ | Labels are custom labels that are propagated to the gw-admin Deployment metadata by the operator. |
+| `podTemplateSpec` _[PodTemplateSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podtemplatespec-v1-core)_ | PodTemplateSpec defines PodTemplateSpec for Deployment's pods. It's being applied on top of the generated Deployment using [StrategicMergePatch](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/strategicpatch#StrategicMergePatch). The gw-admin container is named "gw-admin": set its image here to override the default one. |
+
+_Appears in:_
+
+- [GWAdminSpec](#gateway-operator-konghq-com-v1alpha1-types-gwadminspec)
+
+#### GWAdminNetworkOptions
+
+
+GWAdminNetworkOptions defines the network options of gw-admin.
+
+
+
+| Field | Description |
+| --- | --- |
+| `cp` _[GWAdminServiceOptions](#gateway-operator-konghq-com-v1alpha1-types-gwadminserviceoptions)_ | CP configures the Service the data planes pull the configuration from. It is always a ClusterIP Service: the data planes run in the cluster. The Service Kong Operator pushes the configuration through is not configurable. |
+
+_Appears in:_
+
+- [GWAdminSpec](#gateway-operator-konghq-com-v1alpha1-types-gwadminspec)
+
+#### GWAdminScaling
+
+
+GWAdminScaling defines the scaling options for the gw-admin Deployment.
+
+
+
+| Field | Description |
+| --- | --- |
+| `horizontal` _[HorizontalScaling](#common-konghq-com-v1alpha1-types-horizontalscaling)_ | HorizontalScaling defines horizontal scaling options for the Deployment. |
+
+_Appears in:_
+
+- [GWAdminDeploymentOptions](#gateway-operator-konghq-com-v1alpha1-types-gwadmindeploymentoptions)
+
+#### GWAdminSecretRef
+
+
+GWAdminSecretRef references a Secret in the namespace of the GWAdmin.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the name of the referenced Secret. |
+
+_Appears in:_
+
+- [GWAdminCertificateSecret](#gateway-operator-konghq-com-v1alpha1-types-gwadmincertificatesecret)
+- [GWAdminServerCertificate](#gateway-operator-konghq-com-v1alpha1-types-gwadminservercertificate)
+
+#### GWAdminServerCertificate
+
+
+GWAdminServerCertificate configures the server certificate of a listener.
+
+
+
+| Field | Description |
+| --- | --- |
+| `provisioning` _[GWAdminCertificateProvisioning](#gateway-operator-konghq-com-v1alpha1-types-gwadmincertificateprovisioning)_ | Provisioning is the method used to provision the certificate.<br /><br />With Automatic provisioning (the default) Kong Operator issues the certificate from the cp server CA, for the in-cluster names of the Service.<br /><br />With Manual provisioning the referenced Secret holds the certificate in tls.crt and its key in tls.key, e.g. the Secret of a cert-manager Certificate. The issuers the data planes verify it with are taken from the chain in tls.crt and from ca.crt, and added to status.tls.cpServerCABundleSecretName: the Secret must carry at least one of them. Kong Operator copies the certificate into a Secret it owns once every data plane rolled out with a bundle trusting one of its issuers, so a renewal from the same issuer is copied right away, and warns when less than a sixth of its validity is left. |
+| `secretRef` _[GWAdminSecretRef](#gateway-operator-konghq-com-v1alpha1-types-gwadminsecretref)_ | SecretRef references the Secret holding the certificate. Only used, and required, when Provisioning is Manual. The Secret must carry the operator's secret label selector (default "konghq.com/secret: \"true\"") or the operator cannot see it. |
+
+_Appears in:_
+
+- [GWAdminTLS](#gateway-operator-konghq-com-v1alpha1-types-gwadmintls)
+
+#### GWAdminServiceOptions
+
+
+GWAdminServiceOptions contains Service configuration for gw-admin.
+
+
+
+| Field | Description |
+| --- | --- |
+| `annotations` _map[string]string_ | Annotations is an unstructured key value map stored with the Service resource. |
+| `labels` _map[string]string_ | Labels are propagated to the Service. |
+| `trafficDistribution` _*string_ | TrafficDistribution offers a way to express preferences for how traffic is distributed to Service endpoints.<br /><br />More info: https://kubernetes.io/docs/concepts/services-networking/service/#traffic-distribution |
+| `internalTrafficPolicy` _[ServiceInternalTrafficPolicy](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#serviceinternaltrafficpolicy-v1-core)_ | InternalTrafficPolicy describes how nodes distribute service traffic they receive on the ClusterIP.<br /><br />More info: https://kubernetes.io/docs/concepts/services-networking/service/#internal-traffic-policy |
+| `ports` _[][GWAdminServicePort](#gateway-operator-konghq-com-v1alpha1-types-gwadminserviceport)_ | Ports defines the list of ports that are exposed by the Service. |
+
+_Appears in:_
+
+- [GWAdminNetworkOptions](#gateway-operator-konghq-com-v1alpha1-types-gwadminnetworkoptions)
+
+#### GWAdminServicePort
+
+
+GWAdminServicePort contains information on a Service port.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _*string_ | The name of this port within the Service. It must be a DNS-1123 label. The port named "cp" replaces the default cp port. Required: every port must be named. |
+| `port` _int32_ | The port that will be exposed by this Service. |
+| `targetPort` _*k8s.io/apimachinery/pkg/util/intstr.IntOrString_ | Number or name of the port to access on the pods targeted by the Service. Defaults to the cp listener of gw-admin. |
+
+_Appears in:_
+
+- [GWAdminServiceOptions](#gateway-operator-konghq-com-v1alpha1-types-gwadminserviceoptions)
+
+#### GWAdminSpec
+
+
+GWAdminSpec defines the desired state of GWAdmin.
+
+
+
+| Field | Description |
+| --- | --- |
+| `deployment` _[GWAdminDeploymentOptions](#gateway-operator-konghq-com-v1alpha1-types-gwadmindeploymentoptions)_ | Deployment configures the gw-admin Deployment. |
+| `network` _[GWAdminNetworkOptions](#gateway-operator-konghq-com-v1alpha1-types-gwadminnetworkoptions)_ | Network configures the Services in front of gw-admin. |
+| `tls` _[GWAdminTLS](#gateway-operator-konghq-com-v1alpha1-types-gwadmintls)_ | TLS configures the certificates of gw-admin. By default Kong Operator creates a certificate authority for this GWAdmin and issues and rotates every certificate from it, so nothing has to be configured. |
+
+_Appears in:_
+
+- [GWAdmin](#gateway-operator-konghq-com-v1alpha1-gwadmin)
+
+#### GWAdminStatus
+
+
+GWAdminStatus defines the observed state of GWAdmin.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the GWAdmin. |
+| `api` _[GWAdminAPIStatus](#gateway-operator-konghq-com-v1alpha1-types-gwadminapistatus)_ | API describes the Service Kong Operator pushes the configuration through. |
+| `cp` _[GWAdminCPStatus](#gateway-operator-konghq-com-v1alpha1-types-gwadmincpstatus)_ | CP describes the endpoint the data planes pull the configuration from. |
+| `tls` _[GWAdminTLSStatus](#gateway-operator-konghq-com-v1alpha1-types-gwadmintlsstatus)_ | TLS lists the Secrets holding the trust material of gw-admin. |
+
+_Appears in:_
+
+- [GWAdmin](#gateway-operator-konghq-com-v1alpha1-gwadmin)
+
+#### GWAdminTLS
+
+
+GWAdminTLS configures the certificates of gw-admin.
+
+
+
+| Field | Description |
+| --- | --- |
+| `clientCA` _[GWAdminCertificateSecret](#gateway-operator-konghq-com-v1alpha1-types-gwadmincertificatesecret)_ | ClientCA is the certificate authority the cp listener verifies the data plane client certificates with. Only data plane client certificates are issued from it: the server certificate of the cp listener comes from a certificate authority of its own, so that whoever issues data plane certificates can't impersonate gw-admin.<br /><br />With Automatic provisioning (the default) Kong Operator creates a certificate authority for this GWAdmin, valid for a year, and renews it once two thirds of that have elapsed.<br /><br />With Manual provisioning the referenced Secret holds the certificate authority in tls.crt and its key in tls.key, e.g. the Secret of a cert-manager Certificate with isCA set to true. When tls.crt holds a chain, the first certificate is the signer, and it is the one gw-admin trusts, even when it is an intermediate. Kong Operator never modifies that Secret, and warns when less than a sixth of its validity is left.<br /><br />Either way, Kong Operator publishes the certificate authority, with its key, in a Secret of its own namespace once the gw-admin pods trust it, and issues the data plane certificates from that copy, never from the user's Secret, so that they never come from a certificate authority the pods don't trust yet. Its key never lands in the namespace of the GWAdmin. The previous one stays trusted until every data plane rolled out with a certificate from the new one.<br /><br />A rotation waits for the gw-admin Deployment to roll out, which needs the new pods to turn Ready, i.e. to be provisioned by Kong Operator, and for the data plane Deployments to roll out: it stalls, safely, while they don't. |
+| `cp` _[GWAdminServerCertificate](#gateway-operator-konghq-com-v1alpha1-types-gwadminservercertificate)_ | CP configures the server certificate of the listener the data planes connect to. |
+
+_Appears in:_
+
+- [GWAdminSpec](#gateway-operator-konghq-com-v1alpha1-types-gwadminspec)
+
+#### GWAdminTLSStatus
+
+
+GWAdminTLSStatus lists the Secrets holding the trust material of gw-admin
+that its peers need.
+
+
+
+| Field | Description |
+| --- | --- |
+| `cpServerCABundleSecretName` _string_ | CPServerCABundleSecretName is the name of the Secret whose ca.crt holds the certificate authorities the data planes verify the cp listener with. It holds more than one certificate while the cp server certificate moves to a new issuer, which waits for every data plane to roll out with it. |
+| `apiCABundleSecretName` _string_ | APICABundleSecretName is the name of the Secret whose ca.crt holds the certificate authorities of the API listener: Kong Operator verifies the API listener with it, and the API listener verifies the client certificate of Kong Operator with it. It holds more than one certificate while a certificate authority rotation is in progress. |
+
+_Appears in:_
+
+- [GWAdminStatus](#gateway-operator-konghq-com-v1alpha1-types-gwadminstatus)
 
 
 

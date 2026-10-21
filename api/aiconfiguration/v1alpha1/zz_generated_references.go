@@ -56,6 +56,11 @@ type ReferenceBeingDeletedError = commonv1alpha1.ReferenceBeingDeletedError
 // cross-namespace support and authorization checks are implemented.
 type ReferenceCrossNamespaceError = commonv1alpha1.ReferenceCrossNamespaceError
 
+// ReferenceNotKonnectManagedError is returned when a reference points to a CR
+// the Konnect reconciler does not manage, e.g. one attached to an on-prem
+// gateway.
+type ReferenceNotKonnectManagedError = commonv1alpha1.ReferenceNotKonnectManagedError
+
 // ReferenceDifferentGatewayError is returned when a reference points to a CR
 // programmed under a different AIGatewayControlPlane. References must stay
 // within the same Konnect Gateway because Konnect only accepts policy and ACL

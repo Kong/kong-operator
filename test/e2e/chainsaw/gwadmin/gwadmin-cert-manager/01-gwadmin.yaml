@@ -1,0 +1,14 @@
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: GWAdmin
+metadata:
+  name: ($gwadmin_name)
+spec:
+  tls:
+    clientCA:
+      provisioning: Manual
+      secretRef:
+        name: gw-cm-user-ca
+    cp:
+      provisioning: Manual
+      secretRef:
+        name: cp-cert

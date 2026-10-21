@@ -88,6 +88,8 @@ func TestGenerate_GatewayRef(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Contains(t, content, "if ref := obj.Spec.ParentRef; ref != nil {\n\t\treturn ref.ToObjectRef()\n\t}\n\treturn obj.Spec.GatewayRef")
+		// SetParentRef keeps parentRef, and the kind of the gateway, when it is set.
+		assert.Contains(t, content, "if parentRef := obj.Spec.ParentRef; parentRef != nil && ref.NamespacedRef != nil {\n\t\tparentRef.Name = ref.NamespacedRef.Name\n\t\tparentRef.Namespace = ref.NamespacedRef.DeepCopy().Namespace\n\t\treturn\n\t}")
 		assert.Contains(t, content, "obj.Spec.ParentRef = nil\n\tobj.Spec.GatewayRef = ref")
 		assert.Contains(t, content, "func (obj *EventGatewayListener) SkipKonnectReconciliation() bool {")
 		assert.Contains(t, content, `!ref.IsGroupKind("konnect.konghq.com", "KonnectEventGateway")`)
