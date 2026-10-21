@@ -43,7 +43,9 @@ spec:
           - name: EXPECTED_URL_SUFFIX
             value: ($expected_url_suffix)
           - name: PROXY_PORT
-            value: ($listener_http_port)
+            # The global listener_http_port binding is an integer, but chainsaw script env
+            # values must be strings - convert explicitly (same as verify-header-match-routing).
+            value: (to_string($listener_http_port))
           - name: HOST
             value: ($host_header)
         content: |
