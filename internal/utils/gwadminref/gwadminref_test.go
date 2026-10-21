@@ -17,6 +17,7 @@ import (
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
+	"github.com/kong/kong-operator/v2/internal/utils/gwadminref/gwadminreftest"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
@@ -37,24 +38,7 @@ func gateway(namespace, name, gwAdminNamespace, gwAdminName string) *eventgatewa
 // OnPremEventGateways of from to reference the GWAdmin toName, or any GWAdmin
 // when toName is empty.
 func grant(namespace, from, toName string) *configurationv1alpha1.KongReferenceGrant {
-	to := configurationv1alpha1.ReferenceGrantTo{
-		Group: configurationv1alpha1.Group(operatorv1alpha1.SchemeGroupVersion.Group),
-		Kind:  configurationv1alpha1.Kind(operatorv1alpha1.GWAdminKind),
-	}
-	if toName != "" {
-		to.Name = new(configurationv1alpha1.ObjectName(toName))
-	}
-	return &configurationv1alpha1.KongReferenceGrant{
-		Namespace: namespace, Name: "grant-" + from,
-		Spec: configurationv1alpha1.KongReferenceGrantSpec{
-			From: []configurationv1alpha1.ReferenceGrantFrom{{
-				Group:     configurationv1alpha1.Group(eventgatewayv1alpha1.SchemeGroupVersion.Group),
-				Kind:      configurationv1alpha1.Kind(eventgatewayv1alpha1.OnPremEventGatewayKind),
-				Namespace: configurationv1alpha1.Namespace(from),
-			}},
-			To: []configurationv1alpha1.ReferenceGrantTo{to},
-		},
-	}
+	return gwadminreftest.Grant(namespace, "grant-"+from, from, toName)
 }
 
 func newClient(t *testing.T, funcs *interceptor.Funcs, objs ...client.Object) client.Client {
@@ -250,42 +234,32 @@ func TestNotAllowed(t *testing.T) {
 	}
 }
 
-func TestGatewaysAllowedToUse(t *testing.T) {
+func TestNamespacesGrantedBy(t *testing.T) {
 	t.Parallel()
 
-	gwAdmin := types.NamespacedName{Namespace: "admin-ns", Name: "admin"}
-	gateways := []eventgatewayv1alpha1.OnPremEventGateway{
-		*gateway("admin-ns", "local", "", "admin"),
-		*gateway("granted", "remote", "admin-ns", "admin"),
-		*gateway("not-granted", "remote", "admin-ns", "admin"),
-		*gateway("granted-other", "remote", "admin-ns", "admin"),
+	otherKind := grant("admin-ns", "a", "")
+	otherKind.Spec.To[0].Kind = "Service"
+	otherFrom := grant("admin-ns", "a", "")
+	otherFrom.Spec.From[0].Kind = "DataPlane"
+	several := grant("admin-ns", "a", "")
+	several.Spec.From = append(several.Spec.From, several.Spec.From[0], grant("admin-ns", "b", "").Spec.From[0], grant("admin-ns", "admin-ns", "").Spec.From[0])
+
+	testCases := []struct {
+		name     string
+		grant    *configurationv1alpha1.KongReferenceGrant
+		expected []string
+	}{
+		{name: "the namespace of the gateways", grant: grant("admin-ns", "a", "admin"), expected: []string{"a"}},
+		{name: "not to a GWAdmin", grant: otherKind},
+		{name: "not from an OnPremEventGateway", grant: otherFrom},
+		{name: "each namespace once, not its own", grant: several, expected: []string{"a", "b"}},
 	}
-
-	t.Run("keeps the gateways of the namespace of the GWAdmin and of the granted namespaces", func(t *testing.T) {
-		t.Parallel()
-		cl := newClient(t, nil,
-			grant("admin-ns", "granted", "admin"),
-			grant("admin-ns", "granted-other", "another"),
-			// A grant outside the namespace of the GWAdmin is ignored.
-			grant("not-granted", "not-granted", "admin"),
-		)
-		allowed, err := gwadminref.GatewaysAllowedToUse(t.Context(), cl, gwAdmin, gateways)
-		require.NoError(t, err)
-		assert.Equal(t, []string{"admin-ns/local", "granted/remote"}, names(allowed))
-	})
-
-	t.Run("no gateways", func(t *testing.T) {
-		t.Parallel()
-		allowed, err := gwadminref.GatewaysAllowedToUse(t.Context(), newClient(t, nil), gwAdmin, nil)
-		require.NoError(t, err)
-		assert.Empty(t, allowed)
-	})
-
-	t.Run("a List error is returned", func(t *testing.T) {
-		t.Parallel()
-		_, err := gwadminref.GatewaysAllowedToUse(t.Context(), newClient(t, failingList()), gwAdmin, gateways)
-		require.ErrorIs(t, err, errList)
-	})
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tc.expected, gwadminref.NamespacesGrantedBy(tc.grant))
+		})
+	}
 }
 
 func TestOfGrant(t *testing.T) {

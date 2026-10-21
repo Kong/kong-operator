@@ -199,4 +199,33 @@ const (
 	// OnPremEventGatewayPendingMessage is the message of the Programmed
 	// condition while the configuration has not been pushed to gw-admin.
 	OnPremEventGatewayPendingMessage = "The configuration has not been pushed to gw-admin yet"
+	// OnPremEventGatewayGWAdminNotResolvedMessage is the message of the
+	// Programmed condition while the GWAdminResolved condition is not True.
+	OnPremEventGatewayGWAdminNotResolvedMessage = "The GWAdmin of the gateway is not resolved"
+)
+
+// -----------------------------------------------------------------------------
+// OnPremEventGateway - GWAdminResolved Condition Constants
+// -----------------------------------------------------------------------------
+
+const (
+	// OnPremEventGatewayGWAdminResolvedType indicates whether the GWAdmin of
+	// the OnPremEventGateway can serve it: the gateway may use it, and it has
+	// gw-admin pods.
+	OnPremEventGatewayGWAdminResolvedType consts.ConditionType = "GWAdminResolved"
+
+	// OnPremEventGatewayGWAdminResolvedReason indicates the GWAdmin can serve
+	// the OnPremEventGateway.
+	OnPremEventGatewayGWAdminResolvedReason consts.ConditionReason = "Resolved"
+	// OnPremEventGatewayGWAdminNotFoundReason indicates the referenced GWAdmin
+	// doesn't exist.
+	OnPremEventGatewayGWAdminNotFoundReason consts.ConditionReason = "NotFound"
+	// OnPremEventGatewayGWAdminRefNotPermittedReason indicates the referenced
+	// GWAdmin is in another namespace and no KongReferenceGrant allows the
+	// OnPremEventGateway to use it.
+	OnPremEventGatewayGWAdminRefNotPermittedReason consts.ConditionReason = "RefNotPermitted"
+	// OnPremEventGatewayGWAdminNotReadyReason indicates the referenced GWAdmin
+	// can't serve the OnPremEventGateway yet: it is being deleted, it hasn't
+	// published its API, or it has no gw-admin pod.
+	OnPremEventGatewayGWAdminNotReadyReason consts.ConditionReason = "NotReady"
 )

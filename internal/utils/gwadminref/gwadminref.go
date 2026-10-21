@@ -22,6 +22,7 @@ package gwadminref
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -96,26 +97,29 @@ func NotAllowed(ctx context.Context, cl client.Client, gateway *eventgatewayv1al
 	return "", err
 }
 
-// GatewaysAllowedToUse returns the gateways of the list allowed to use the
-// GWAdmin: those of its namespace, and those of the namespaces a
-// KongReferenceGrant in its namespace allows.
-func GatewaysAllowedToUse(ctx context.Context, cl client.Client, gwAdmin types.NamespacedName, gateways []eventgatewayv1alpha1.OnPremEventGateway) ([]eventgatewayv1alpha1.OnPremEventGateway, error) {
-	var grants configurationv1alpha1.KongReferenceGrantList
-	if err := cl.List(ctx, &grants, client.InNamespace(gwAdmin.Namespace)); err != nil {
-		return nil, fmt.Errorf("failed to list the KongReferenceGrants of namespace %s: %w", gwAdmin.Namespace, err)
+// NamespacesGrantedBy returns the namespaces whose OnPremEventGateways the
+// KongReferenceGrant allows to reference GWAdmins of its namespace, some or
+// all of them, other than its own namespace.
+func NamespacesGrantedBy(grant *configurationv1alpha1.KongReferenceGrant) []string {
+	if !slices.ContainsFunc(grant.Spec.To, func(to configurationv1alpha1.ReferenceGrantTo) bool {
+		return string(to.Group) == gwAdminGroupVersionKind.Group && string(to.Kind) == gwAdminGroupVersionKind.Kind
+	}) {
+		return nil
 	}
-	allowed := make([]eventgatewayv1alpha1.OnPremEventGateway, 0, len(gateways))
-	for _, g := range gateways {
-		if g.Namespace == gwAdmin.Namespace ||
-			crossnamespace.ReferenceGrantsAllow(grants.Items, g.Namespace, gwAdmin.Name, onPremEventGatewayGroupVersionKind, gwAdminGroupVersionKind) {
-			allowed = append(allowed, g)
+	var namespaces []string
+	for _, from := range grant.Spec.From {
+		ns := string(from.Namespace)
+		if string(from.Group) == onPremEventGatewayGroupVersionKind.Group &&
+			string(from.Kind) == onPremEventGatewayGroupVersionKind.Kind &&
+			ns != grant.Namespace && !slices.Contains(namespaces, ns) {
+			namespaces = append(namespaces, ns)
 		}
 	}
-	return allowed, nil
+	return namespaces
 }
 
-// OfGrant returns the GWAdmins a KongReferenceGrant may allow the
-// OnPremEventGateways of other namespaces to use: those of its namespace.
+// OfGrant returns the GWAdmins a KongReferenceGrant may allow objects of
+// other namespaces to reference: those of its namespace.
 func OfGrant(ctx context.Context, cl client.Client, grant client.Object) []types.NamespacedName {
 	var gwAdmins operatorv1alpha1.GWAdminList
 	if err := cl.List(ctx, &gwAdmins, client.InNamespace(grant.GetNamespace())); err != nil {
