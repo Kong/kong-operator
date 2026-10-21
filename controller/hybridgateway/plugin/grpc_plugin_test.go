@@ -76,6 +76,59 @@ func TestGRPCPluginsForRule(t *testing.T) {
 	assert.Empty(t, plugin.Annotations[pkgmetadata.AnnotationKeyTags])
 }
 
+// TestGRPCPluginsForRule_IdenticalFiltersDifferentRules asserts the GRPCRoute sharing invariant:
+// GRPC filter translations depend only on the filter contents (translateGRPCFromFilter handles
+// header modifiers only), so two rules with identical filters produce identical configs and
+// safely share one KongPlugin whose name is derived from the filters alone. If a future GRPC
+// filter translation starts depending on the rule's matches, its plugin naming must hash the
+// matches in (mirroring plugin.filterDependsOnRuleMatches / namegen.NewKongPluginNameForFiltersAndMatches
+// on the HTTPRoute side), or two rules would collide on one shared KongPlugin whose config flips
+// between the two translations.
+func TestGRPCPluginsForRule_IdenticalFiltersDifferentRules(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	grpcRoute := &gwtypes.GRPCRoute{
+		TypeMeta:  grpcRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
+	}
+	parentRef := &gwtypes.ParentReference{Name: "test-gateway"}
+
+	filter := gatewayv1.GRPCRouteFilter{
+		Type: gatewayv1.GRPCRouteFilterRequestHeaderModifier,
+		RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+			Set: []gatewayv1.HTTPHeader{
+				{Name: "X-Custom-Header", Value: "custom-value"},
+			},
+		},
+	}
+	ruleWithService := func(service string) gwtypes.GRPCRouteRule {
+		return gwtypes.GRPCRouteRule{
+			Matches: []gatewayv1.GRPCRouteMatch{
+				{Method: &gatewayv1.GRPCMethodMatch{Service: new(service)}},
+			},
+			Filters: []gatewayv1.GRPCRouteFilter{filter},
+		}
+	}
+
+	fakeClient := fakectrlruntimeclient.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		Build()
+
+	pluginsA, err := GRPCPluginsForRule(ctx, logger, fakeClient, grpcRoute, ruleWithService("a.Service"), parentRef)
+	require.NoError(t, err)
+	require.Len(t, pluginsA, 1)
+
+	pluginsB, err := GRPCPluginsForRule(ctx, logger, fakeClient, grpcRoute, ruleWithService("b.Service"), parentRef)
+	require.NoError(t, err)
+	require.Len(t, pluginsB, 1)
+
+	assert.Equal(t, pluginsA[0].Name, pluginsB[0].Name, "identical filters under different rules must share one KongPlugin")
+	assert.Equal(t, pluginsA[0].Config.Raw, pluginsB[0].Config.Raw, "identical filters must produce identical configs")
+}
+
 func TestGRPCPluginsForRule_UnsupportedFilterErrors(t *testing.T) {
 	ctx := context.Background()
 	logger := logr.Discard()
