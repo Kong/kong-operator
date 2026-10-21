@@ -86,6 +86,15 @@
   `KonnectExtensionApplied=False` condition on the resource, where the
   condition was previously not written.
   [#6104](https://github.com/Kong/kong-operator/issues/6104)
+- A rate limited response from Konnect no longer marks a
+  `KonnectAPIAuthConfiguration` as invalid. The credentials are unchanged by a
+  429, so the last known status is kept and the controller retries after the
+  `Retry-After` delay Konnect asks for. Before, a single 429 flipped
+  `APIAuthValid` to `False` on the auth configuration, which cascaded to every
+  resource that uses it (`KonnectGatewayControlPlane`, `KonnectExtension`, the
+  `DataPlane` and finally the `Gateway`), leaving them unprogrammed while the
+  controller retried every 3 seconds and kept the organization rate limited.
+  [#6217](https://github.com/Kong/kong-operator/issues/6217)
 - HybridGateway root-object controllers (e.g. HTTPRoute) no longer spend several
   seconds per reconcile scanning every managed Kong resource during orphan
   cleanup and status computation. Ownership of child resources is now resolved
