@@ -17,11 +17,8 @@ func validOnPremEventGateway(ns string) *eventgatewayv1alpha1.OnPremEventGateway
 	return &eventgatewayv1alpha1.OnPremEventGateway{
 		ObjectMeta: common.CommonObjectMeta(ns),
 		Spec: eventgatewayv1alpha1.OnPremEventGatewaySpec{
-			GWAdmin: eventgatewayv1alpha1.GWAdmin{
-				Service: eventgatewayv1alpha1.GWAdminService{
-					Name:     "gw-admin",
-					PortName: "admin",
-				},
+			GWAdminRef: eventgatewayv1alpha1.GWAdminRef{
+				Name: "gw-admin",
 			},
 		},
 	}
@@ -40,25 +37,21 @@ func TestOnPremEventGateway(t *testing.T) {
 	scheme := scheme.Get()
 	cfg, ns := envtest.Setup(t, ctx, scheme)
 
-	withServiceName := func(name string) *eventgatewayv1alpha1.OnPremEventGateway {
+	withGWAdmin := func(name string) *eventgatewayv1alpha1.OnPremEventGateway {
 		return onPremEventGatewayWith(ns.Name, func(obj *eventgatewayv1alpha1.OnPremEventGateway) {
-			obj.Spec.GWAdmin.Service.Name = name
-		})
-	}
-	withPortName := func(name string) *eventgatewayv1alpha1.OnPremEventGateway {
-		return onPremEventGatewayWith(ns.Name, func(obj *eventgatewayv1alpha1.OnPremEventGateway) {
-			obj.Spec.GWAdmin.Service.PortName = name
+			obj.Spec.GWAdminRef.Name = name
 		})
 	}
 
 	t.Run("spec", func(t *testing.T) {
 		common.TestCasesGroup[*eventgatewayv1alpha1.OnPremEventGateway]{
 			{
-				Name:       "service name and port name - valid",
+				Name:       "gwAdminRef - valid",
 				TestObject: validOnPremEventGateway(ns.Name),
 			},
 			{
-				// An empty gwAdmin is omitted, so the whole spec is.
+				// An empty gwAdminRef, e.g. without a name, is omitted, so the
+				// whole spec is.
 				Name: "missing spec - invalid",
 				TestObject: &eventgatewayv1alpha1.OnPremEventGateway{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
@@ -66,43 +59,56 @@ func TestOnPremEventGateway(t *testing.T) {
 				ExpectedErrorMessage: new("spec: Required value"),
 			},
 			{
-				Name:                 "missing service name - invalid",
-				TestObject:           withServiceName(""),
-				ExpectedErrorMessage: new("spec.gwAdmin.service.name: Required value"),
+				Name:                 "254 characters GWAdmin name - invalid",
+				TestObject:           withGWAdmin(strings.Repeat("a", 254)),
+				ExpectedErrorMessage: new("Too long: may not be"),
 			},
 			{
-				Name:                 "missing port name - invalid",
-				TestObject:           withPortName(""),
-				ExpectedErrorMessage: new("spec.gwAdmin.service.portName: Required value"),
+				// An update of something else evaluates the rule with the same
+				// gwAdminRef.
+				Name:       "unchanged gwAdminRef - valid",
+				TestObject: validOnPremEventGateway(ns.Name),
+				Update: func(obj *eventgatewayv1alpha1.OnPremEventGateway) {
+					if obj.Labels == nil {
+						obj.Labels = map[string]string{}
+					}
+					obj.Labels["changed"] = "true"
+				},
 			},
-		}.RunWithConfig(t, cfg, scheme)
-	})
-
-	t.Run("service name", func(t *testing.T) {
-		const msg = "name must be a valid DNS-1035 label"
-		common.TestCasesGroup[*eventgatewayv1alpha1.OnPremEventGateway]{
-			{Name: "single letter - valid", TestObject: withServiceName("a")},
-			{Name: "63 characters - valid", TestObject: withServiceName("a" + strings.Repeat("0", 62))},
-			{Name: "64 characters - invalid", TestObject: withServiceName("a" + strings.Repeat("0", 63)), ExpectedErrorMessage: new("Too long: may not be")},
-			{Name: "starts with a digit - invalid", TestObject: withServiceName("1gw-admin"), ExpectedErrorMessage: new(msg)},
-			{Name: "uppercase - invalid", TestObject: withServiceName("GW-admin"), ExpectedErrorMessage: new(msg)},
-			{Name: "ends with a dash - invalid", TestObject: withServiceName("gw-admin-"), ExpectedErrorMessage: new(msg)},
-			{Name: "contains a dot - invalid", TestObject: withServiceName("gw.admin"), ExpectedErrorMessage: new(msg)},
-		}.RunWithConfig(t, cfg, scheme)
-	})
-
-	t.Run("port name", func(t *testing.T) {
-		const msg = "portName must be a valid DNS-1123 label"
-		common.TestCasesGroup[*eventgatewayv1alpha1.OnPremEventGateway]{
-			{Name: "starts with a digit - valid", TestObject: withPortName("8443-admin")},
-			{Name: "digits only - valid", TestObject: withPortName("8443")},
-			{Name: "consecutive dashes - valid", TestObject: withPortName("gw--admin")},
-			{Name: "63 characters - valid", TestObject: withPortName(strings.Repeat("a", 63))},
-			{Name: "64 characters - invalid", TestObject: withPortName(strings.Repeat("a", 64)), ExpectedErrorMessage: new("Too long: may not be")},
-			{Name: "uppercase - invalid", TestObject: withPortName("Admin"), ExpectedErrorMessage: new(msg)},
-			{Name: "starts with a dash - invalid", TestObject: withPortName("-admin"), ExpectedErrorMessage: new(msg)},
-			{Name: "ends with a dash - invalid", TestObject: withPortName("admin-"), ExpectedErrorMessage: new(msg)},
-			{Name: "contains a dot - invalid", TestObject: withPortName("gw.admin"), ExpectedErrorMessage: new(msg)},
+			{
+				Name:                 "GWAdmin name that is not a DNS subdomain - invalid",
+				TestObject:           withGWAdmin("GW_Admin"),
+				ExpectedErrorMessage: new("spec.gwAdminRef.name in body should match"),
+			},
+			{
+				Name: "GWAdmin namespace that is not a DNS label - invalid",
+				TestObject: onPremEventGatewayWith(ns.Name, func(obj *eventgatewayv1alpha1.OnPremEventGateway) {
+					obj.Spec.GWAdminRef.Namespace = new("kong.system")
+				}),
+				ExpectedErrorMessage: new("spec.gwAdminRef.namespace in body should match"),
+			},
+			{
+				Name: "gwAdminRef with a namespace - valid",
+				TestObject: onPremEventGatewayWith(ns.Name, func(obj *eventgatewayv1alpha1.OnPremEventGateway) {
+					obj.Spec.GWAdminRef.Namespace = new("kong")
+				}),
+			},
+			{
+				Name:       "changing the namespace of gwAdminRef - invalid",
+				TestObject: validOnPremEventGateway(ns.Name),
+				Update: func(obj *eventgatewayv1alpha1.OnPremEventGateway) {
+					obj.Spec.GWAdminRef.Namespace = new("kong")
+				},
+				ExpectedUpdateErrorMessage: new("gwAdminRef is immutable"),
+			},
+			{
+				Name:       "changing gwAdminRef - invalid",
+				TestObject: validOnPremEventGateway(ns.Name),
+				Update: func(obj *eventgatewayv1alpha1.OnPremEventGateway) {
+					obj.Spec.GWAdminRef.Name = "other-gw-admin"
+				},
+				ExpectedUpdateErrorMessage: new("gwAdminRef is immutable"),
+			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
 

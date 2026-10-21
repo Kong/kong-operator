@@ -9,7 +9,5 @@ metadata:
   name: event-gateway-onprem-1
   namespace: default
 spec:
-  gwAdmin:
-    service:
-      name: gw-admin
-      portName: admin
+  gwAdminRef:
+    name: gw-admin
