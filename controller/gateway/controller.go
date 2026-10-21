@@ -40,6 +40,7 @@ import (
 	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	hybridgatewaywatch "github.com/kong/kong-operator/v2/controller/hybridgateway/watch"
 	"github.com/kong/kong-operator/v2/controller/pkg/extensions"
 	extensionserrors "github.com/kong/kong-operator/v2/controller/pkg/extensions/errors"
 	extensionskonnect "github.com/kong/kong-operator/v2/controller/pkg/extensions/konnect"
@@ -151,6 +152,10 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 			handler.EnqueueRequestsFromMapFunc(r.listManagedGatewaysInNamespace))
 
 	if r.KonnectEnabled {
+		blder.Watches(
+			&configurationv1alpha1.KongCertificate{},
+			handler.EnqueueRequestsFromMapFunc(hybridgatewaywatch.MapGatewayForKongCertificate(r.Client)),
+		).Owns(&configurationv1alpha1.KongSNI{})
 		// Watch for changes in KonnectExtension objects that are referenced by GatewayConfigurations used by Gateways objects.
 		// They may trigger reconciliation of DataPlane resources.
 		blder.WatchesRawSource(
@@ -595,6 +600,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 	// This solves the problem of intermittent failures due to incomplete configuration
 	// being sent to DataPlane.
 	gwConditionAware.setListenersStatus(metav1.ConditionTrue)
+	if isHybridGateway {
+		if err := gwConditionAware.setKongCertificateListenersStatus(ctx, r.Client); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
 	_, err = patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, gateway, oldGateway)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -657,6 +667,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 	}
 
 	gwConditionAware.setProgrammed(metav1.ConditionTrue)
+	if isHybridGateway {
+		if err := gwConditionAware.setKongCertificateListenersStatus(ctx, r.Client); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
 	_, err = patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, gateway, oldGateway)
 	if err != nil {
 		return ctrl.Result{}, err

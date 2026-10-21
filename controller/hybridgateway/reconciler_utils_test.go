@@ -77,6 +77,7 @@ var hybridGatewayTestCRDManifests = []string{
 	"configuration.konghq.com_kongpluginbindings.yaml",
 	"configuration.konghq.com_kongservices.yaml",
 	"configuration.konghq.com_kongupstreams.yaml",
+	"configuration.konghq.com_kongsnis.yaml",
 }
 
 // newTestTypeConverter is memoized (via [sync.OnceValue]) since it is expensive
@@ -538,6 +539,48 @@ func TestEnforceState_CoreAndErrorPaths(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantApplied, applied)
 			assert.Equal(t, tt.wantWaiting, waiting)
+		})
+	}
+}
+
+func TestEnforceState_ReplacesListenerCertificateBinding(t *testing.T) {
+	for _, namespace := range []string{"default", "certificates"} {
+		t.Run(namespace, func(t *testing.T) {
+			existing := &configurationv1alpha1.KongSNI{
+				APIVersion: configurationv1alpha1.GroupVersion.String(), Kind: "KongSNI",
+				Name: "listener", Namespace: "default", UID: "old-sni",
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion: gatewayv1.GroupVersion.String(), Kind: "Gateway",
+					Name: "gateway", UID: "gateway-uid", Controller: new(true),
+				}},
+				Spec: configurationv1alpha1.KongSNISpec{
+					Name: "api.example.test", CertificateRef: commonv1alpha1.NamespacedRef{Name: "old-certificate"},
+				},
+			}
+			desired := existing.DeepCopy()
+			desired.UID = ""
+			desired.Spec.CertificateRef = commonv1alpha1.NamespacedRef{Name: "vault-certificate"}
+			if namespace != desired.Namespace {
+				desired.Spec.CertificateRef.Namespace = new(namespace)
+			}
+			object, err := runtime.DefaultUnstructuredConverter.ToUnstructured(desired)
+			require.NoError(t, err)
+			conv := &fakeHTTPRouteConverter{desired: []unstructured.Unstructured{{Object: object}}}
+			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithReturnManagedFields().WithObjects(existing).Build()
+
+			applied, waiting, err := enforceState(t.Context(), cl, newTestTypeConverter(), logr.Discard(), conv)
+			require.NoError(t, err)
+			require.False(t, applied)
+			require.True(t, waiting)
+			require.True(t, apierrors.IsNotFound(cl.Get(t.Context(), client.ObjectKeyFromObject(existing), &configurationv1alpha1.KongSNI{})))
+
+			applied, waiting, err = enforceState(t.Context(), cl, newTestTypeConverter(), logr.Discard(), conv)
+			require.NoError(t, err)
+			require.True(t, applied)
+			require.False(t, waiting)
+			var replacement configurationv1alpha1.KongSNI
+			require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(existing), &replacement))
+			require.Equal(t, desired.Spec.CertificateRef, replacement.Spec.CertificateRef)
 		})
 	}
 }

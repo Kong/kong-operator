@@ -317,6 +317,14 @@ func Watches(obj client.Object, cl client.Client, referenceGrantVersion schema.G
 	case *gwtypes.Gateway:
 		return []Watcher{
 			{
+				MapGatewayForKongCertificate(cl),
+				&configurationv1alpha1.KongCertificate{},
+			},
+			{
+				MapGatewayForKongReferenceGrant(cl),
+				&configurationv1alpha1.KongReferenceGrant{},
+			},
+			{
 				MapGatewayForTLSSecret(cl),
 				&corev1.Secret{},
 			},
