@@ -45,7 +45,7 @@ jobs:
       # NOTE: other places use .github/actions/setup-mise but this workflow
       # can be run to generate reports for refs which do not have that action yet.
       # This will be able to be updated when we stop producing reports for older versions.
-      - uses: jdx/mise-action@9b200bcecbfd6303e69a4a261b2e09e3757440a7 # v5.2.0
+      - uses: jdx/mise-action@fc42bcc7ddbf51124c30f95a877a0c5168a3bfde # v5.2.1
         with:
           # renovate: datasource=github-tags depName=jdx/mise-action extractVersion=^v(?<version>.+)$
           version: 2026.10.17
