@@ -171,6 +171,13 @@ spec:
               kind: AIGatewayConsumerCredential
               name: ($credential_name)
               namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumerCredential
+              metadata:
+                name: ($credential_name)
+                namespace: ($namespace)
     - name: Reject-request-after-credential-revoked
       use:
         template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
