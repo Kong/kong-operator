@@ -70,8 +70,8 @@ func PluginsForRule(
 	for i := range pluginConfs {
 		pConf := &pluginConfs[i]
 		var pluginName string
-		if pConf.dependsOnRuleMatches {
-			pluginName = namegen.NewKongPluginNameForFiltersAndMatches(pConf.filters, httpRoute.Namespace, pConf.name, rule.Matches)
+		if pConf.dependsOnRuleMatchPaths {
+			pluginName = namegen.NewKongPluginNameForFiltersAndMatchPaths(pConf.filters, httpRoute.Namespace, pConf.name, rule.Matches)
 		} else {
 			pluginName = namegen.NewKongPluginNameForFilters(pConf.filters, httpRoute.Namespace, pConf.name)
 		}

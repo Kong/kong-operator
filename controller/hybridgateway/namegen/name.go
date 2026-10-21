@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/samber/lo"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -440,18 +441,19 @@ func NewKongPluginNameForFilters(filters []gatewayv1.HTTPRouteFilter, namespace 
 	return newName(namespace, pluginName, utils.Hash32(filters))
 }
 
-// NewKongPluginNameForFiltersAndMatches generates a KongPlugin name for a plugin produced by
-// filters whose configuration depends on the rule's matches (see
-// plugin.filterDependsOnRuleMatches). Hashing both the filters and the matches guarantees that
+// NewKongPluginNameForFiltersAndMatchPaths generates a KongPlugin name for a plugin produced by
+// filters whose configuration depends on the rule's paths in matches (see
+// plugin.filterDependsOnRuleMatches). Hashing both the filters and the paths in matches guarantees that
 // any two rules producing the same name produce the same config, so the plugin can still be
 // shared across routes with identical rules.
-func NewKongPluginNameForFiltersAndMatches(
+func NewKongPluginNameForFiltersAndMatchPaths(
 	filters []gatewayv1.HTTPRouteFilter,
 	namespace string,
 	pluginName string,
 	matches []gatewayv1.HTTPRouteMatch,
 ) string {
-	return newName(namespace, pluginName, utils.Hash32(filters), utils.Hash32(matches))
+	paths := lo.Map(matches, func(m gatewayv1.HTTPRouteMatch, _ int) *gatewayv1.HTTPPathMatch { return m.Path })
+	return newName(namespace, pluginName, utils.Hash32(filters), utils.Hash32(paths))
 }
 
 // NewKongPluginNameForGRPCRouteFilter generates a KongPlugin name based on the GRPCRouteFilter.

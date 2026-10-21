@@ -971,8 +971,8 @@ func TestNewKongPluginNameForFiltersAndMatches(t *testing.T) {
 		rootMatches := []gatewayv1.HTTPRouteMatch{matchWithPrefix("/")}
 		apiMatches := []gatewayv1.HTTPRouteMatch{matchWithPrefix("/api")}
 
-		rootName := NewKongPluginNameForFiltersAndMatches([]gatewayv1.HTTPRouteFilter{urlRewrite}, ns, pluginName, rootMatches)
-		apiName := NewKongPluginNameForFiltersAndMatches([]gatewayv1.HTTPRouteFilter{urlRewrite}, ns, pluginName, apiMatches)
+		rootName := NewKongPluginNameForFiltersAndMatchPaths([]gatewayv1.HTTPRouteFilter{urlRewrite}, ns, pluginName, rootMatches)
+		apiName := NewKongPluginNameForFiltersAndMatchPaths([]gatewayv1.HTTPRouteFilter{urlRewrite}, ns, pluginName, apiMatches)
 
 		// Regression: two rules with identical filters but different match paths used to collide
 		// on one shared KongPlugin whose config.uri flipped between the two translations
@@ -987,18 +987,28 @@ func TestNewKongPluginNameForFiltersAndMatches(t *testing.T) {
 
 		// The route is deliberately not part of the name: two rules with identical filters and
 		// matches produce identical configs, so they can safely share one KongPlugin.
-		first := NewKongPluginNameForFiltersAndMatches([]gatewayv1.HTTPRouteFilter{urlRewrite}, ns, pluginName, matches)
-		second := NewKongPluginNameForFiltersAndMatches([]gatewayv1.HTTPRouteFilter{urlRewrite}, ns, pluginName, matches)
+		first := NewKongPluginNameForFiltersAndMatchPaths([]gatewayv1.HTTPRouteFilter{urlRewrite}, ns, pluginName, matches)
+		second := NewKongPluginNameForFiltersAndMatchPaths([]gatewayv1.HTTPRouteFilter{urlRewrite}, ns, pluginName, matches)
 
 		assert.Equal(t, first, second)
 	})
 
+	t.Run("identical filters with identical paths in matches produce the same name", func(t *testing.T) {
+		match := matchWithPrefix("/api")
+		matchWithHeader := match.DeepCopy()
+		matchWithHeader.Headers = []gatewayv1.HTTPHeaderMatch{{Name: "X-Test", Value: "test-value"}}
+
+		assert.Equal(t,
+			NewKongPluginNameForFiltersAndMatchPaths([]gatewayv1.HTTPRouteFilter{urlRewrite}, ns, pluginName, []gatewayv1.HTTPRouteMatch{match}),
+			NewKongPluginNameForFiltersAndMatchPaths([]gatewayv1.HTTPRouteFilter{urlRewrite}, ns, pluginName, []gatewayv1.HTTPRouteMatch{*matchWithHeader}),
+		)
+	})
+
 	t.Run("different filters produce different names", func(t *testing.T) {
 		matches := []gatewayv1.HTTPRouteMatch{matchWithPrefix("/api")}
-
 		assert.NotEqual(t,
-			NewKongPluginNameForFiltersAndMatches([]gatewayv1.HTTPRouteFilter{urlRewrite}, ns, pluginName, matches),
-			NewKongPluginNameForFiltersAndMatches([]gatewayv1.HTTPRouteFilter{headerModifier}, ns, pluginName, matches),
+			NewKongPluginNameForFiltersAndMatchPaths([]gatewayv1.HTTPRouteFilter{urlRewrite}, ns, pluginName, matches),
+			NewKongPluginNameForFiltersAndMatchPaths([]gatewayv1.HTTPRouteFilter{headerModifier}, ns, pluginName, matches),
 		)
 	})
 }
