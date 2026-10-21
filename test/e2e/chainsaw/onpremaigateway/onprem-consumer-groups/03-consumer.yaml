@@ -1,0 +1,19 @@
+# An AIGatewayConsumer enrolled in the consumer group. No credential: the
+# group's policies ride on the consumer through its group membership.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayConsumer
+metadata:
+  name: ($consumer_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  consumerGroups:
+    - name: ($consumer_group_name)
+  apiSpec:
+    name: ($consumer_name)
+    displayName: ($consumer_name)
+    type: api-key

@@ -1,0 +1,31 @@
+# An AIGatewayPolicy with inline config that adds a custom response header.
+# Parametrized so the same manifest creates both policies of the test.
+#
+# Required bindings:
+#   - namespace: The namespace where the AIGatewayPolicy will be created.
+#   - aigw_cp_name: The name of the OnPremAIGateway to attach the policy to.
+#   - aigw_policy_name: The name of the AIGatewayPolicy to create.
+#   - response_header: The "Name:value" response header this policy adds.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayPolicy
+metadata:
+  name: ($aigw_policy_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: response-transformer
+    displayName: ($aigw_policy_name)
+    enabled: "Enabled"
+    global: "Disabled"
+    name: ($aigw_policy_name)
+    config:
+      type: inline
+      value:
+        add:
+          headers:
+            - ($response_header)
