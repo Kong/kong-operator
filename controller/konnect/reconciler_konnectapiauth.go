@@ -199,7 +199,18 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 	}
 	sdk, err := r.sdkFactory.NewKonnectSDK(server, sdkops.SDKToken(token))
 	if err != nil {
-		return ctrl.Result{}, err
+		// The host is not one the operator may call. Retrying cannot help:
+		// serverURL is immutable, so the object has to be replaced to change it.
+		if res, errStatus := patch.StatusWithCondition(
+			ctx, r.client, apiAuth,
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
+			metav1.ConditionFalse,
+			konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonInvalid,
+			err.Error(),
+		); errStatus != nil || !res.IsZero() {
+			return res, errStatus
+		}
+		return ctrl.Result{}, nil
 	}
 
 	// TODO(pmalek): check if api auth config has a valid status condition
