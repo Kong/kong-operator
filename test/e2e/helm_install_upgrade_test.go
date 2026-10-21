@@ -86,6 +86,9 @@ func TestHelmUpgrade(t *testing.T) {
 				Objects                []client.Object
 				AssertionsAfterInstall []assertion
 				AssertionsAfterUpgrade []assertion
+				// AssertTimeout overrides waitTime for this suite's assertions.
+				// Suites that wait on the Konnect API need a bigger budget.
+				AssertTimeout time.Duration
 			}
 
 			// This is the place to add steps that should be performed before the upgrade.
@@ -170,19 +173,23 @@ func TestHelmUpgrade(t *testing.T) {
 			if testenv.KonnectAccessToken() != "" && testenv.KonnectServerURL() != "" {
 				hybridObjects, hybridGatewayLabelSelector := objectsToDeployForMode(t, e, gatewayModeHybrid)
 				suitesToRun = append(suitesToRun, suite{
-					Name:    "hybrid",
-					Objects: hybridObjects,
+					Name:          "hybrid",
+					Objects:       hybridObjects,
+					AssertTimeout: konnectWaitTime,
+					// Assert the Konnect upstream before the Gateway: the Gateway's
+					// Programmed condition depends on the control plane being programmed,
+					// so asserting it first charges the Konnect wait to the wrong check.
 					AssertionsAfterInstall: []assertion{
-						{
-							Name: "Gateway is programmed",
-							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-								gatewayAndItsListenersAreProgrammedAssertion(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
-							},
-						},
 						{
 							Name: "KonnectGatewayControlPlane is programmed",
 							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
 								konnectGatewayControlPlaneOwnedByGatewayProgrammed(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
+							},
+						},
+						{
+							Name: "Gateway is programmed",
+							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+								gatewayAndItsListenersAreProgrammedAssertion(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
 							},
 						},
 						{
@@ -206,15 +213,15 @@ func TestHelmUpgrade(t *testing.T) {
 					},
 					AssertionsAfterUpgrade: []assertion{
 						{
-							Name: "Gateway is programmed",
-							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-								gatewayAndItsListenersAreProgrammedAssertion(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
-							},
-						},
-						{
 							Name: "KonnectGatewayControlPlane is programmed",
 							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
 								konnectGatewayControlPlaneOwnedByGatewayProgrammed(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
+							},
+						},
+						{
+							Name: "Gateway is programmed",
+							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+								gatewayAndItsListenersAreProgrammedAssertion(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
 							},
 						},
 						{
@@ -321,7 +328,7 @@ func TestHelmUpgrade(t *testing.T) {
 					t.Run(suite.Name+"/after_install/"+assertion.Name, func(t *testing.T) {
 						require.EventuallyWithT(t, func(c *assert.CollectT) {
 							assertion.Func(c, e.Clients)
-						}, waitTime, 500*time.Millisecond)
+						}, lo.Ternary(suite.AssertTimeout > 0, suite.AssertTimeout, waitTime), 500*time.Millisecond)
 					})
 				}
 			}
@@ -354,7 +361,7 @@ func TestHelmUpgrade(t *testing.T) {
 					t.Run(suite.Name+"/after_upgrade/"+assertion.Name, func(t *testing.T) {
 						require.EventuallyWithT(t, func(c *assert.CollectT) {
 							assertion.Func(c, e.Clients)
-						}, waitTime, 500*time.Millisecond)
+						}, lo.Ternary(suite.AssertTimeout > 0, suite.AssertTimeout, waitTime), 500*time.Millisecond)
 					})
 				}
 			}
@@ -695,6 +702,6 @@ func dataPlaneOwnedByGatewayReady(gatewayLabelSelector string) func(ctx context.
 		ready := lo.ContainsBy(dp.Status.Conditions, func(condition metav1.Condition) bool {
 			return condition.Type == "Ready" && condition.Status == metav1.ConditionTrue
 		})
-		require.True(c, ready, "DataPlane is not ready")
+		require.True(c, ready, "DataPlane %q is not ready: %s", client.ObjectKeyFromObject(&dp), pretty.Sprint(dp))
 	}
 }
