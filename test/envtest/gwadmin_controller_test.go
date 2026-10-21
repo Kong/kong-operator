@@ -457,13 +457,16 @@ func TestGWAdminReconciler(t *testing.T) {
 		t.Parallel()
 
 		// Invisible to the operator's Secret cache: only the Create of the
-		// operator's own Secret runs into it.
+		// operator's own Secret runs into it. Both writes opt out of
+		// read-your-own-writes consistency: the cache never observes this
+		// Secret, so the resource version they would record would make every
+		// later read of that name wait for an event that never comes.
 		foreign := &corev1.Secret{
 			Name:       "gw-conflict-unlabeled-api-tls",
 			Namespace:  namespace,
 			StringData: map[string]string{"owner": "someone-else"},
 		}
-		require.NoError(t, cl.Create(ctx, foreign))
+		require.NoError(t, cl.Create(ctx, foreign, client.DisableReadYourWritesConsistency))
 		gw := &operatorv1alpha1.GWAdmin{Name: "gw-conflict-unlabeled", Namespace: namespace}
 		require.NoError(t, cl.Create(ctx, gw))
 
@@ -476,7 +479,7 @@ func TestGWAdminReconciler(t *testing.T) {
 		assert.Empty(t, foreign.Labels, "the foreign Secret is left alone")
 		assert.Equal(t, "someone-else", string(foreign.Data["owner"]), "the foreign Secret is left alone")
 
-		require.NoError(t, cl.Delete(ctx, foreign))
+		require.NoError(t, cl.Delete(ctx, foreign, client.DisableReadYourWritesConsistency))
 		requireCondition(t, gw, operatorv1alpha1.GWAdminConditionTypeCertificateProvisioned,
 			metav1.ConditionTrue, operatorv1alpha1.GWAdminReasonCertificateProvisioned, gwAdminRecoverWait)
 		s := getSecret(t, ctx, cl, namespace, foreign.Name)
