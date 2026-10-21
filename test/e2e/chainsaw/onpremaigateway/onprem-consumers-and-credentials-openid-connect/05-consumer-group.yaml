@@ -1,0 +1,16 @@
+# An AIGatewayConsumerGroup on the OnPremAIGateway (no attached policies):
+# the ACL group that gates the allow-listed agent route.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayConsumerGroup
+metadata:
+  name: ($consumer_group_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    name: ($consumer_group_name)
+    displayName: ($consumer_group_name)
