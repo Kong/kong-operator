@@ -50,24 +50,43 @@ func TestKonnectAPIAuthConfigurationServerURLDomains(t *testing.T) {
 	require.NoError(t, err)
 	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 
-	t.Run("gets APIAuthValid=false naming the allowed domains for a host outside the list", func(t *testing.T) {
-		w := envtest.SetupWatch[konnectv1alpha1.KonnectAPIAuthConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
-		apiAuth := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced, func(obj client.Object) {
-			obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration).Spec.ServerURL = "https://us.attacker.example"
+	for _, tc := range []struct {
+		name           string
+		serverURL      string
+		wantMessage    string
+		wantParseError bool
+	}{
+		{
+			name:        "host outside the allowed domains",
+			serverURL:   "https://us.attacker.example",
+			wantMessage: "konghq.com",
+		},
+		{
+			name:           "host whose region does not parse",
+			serverURL:      "fooo.api.konghq.com",
+			wantMessage:    "failed to parse server URL",
+			wantParseError: true,
+		},
+	} {
+		t.Run("gets APIAuthValid=false "+tc.name, func(t *testing.T) {
+			w := envtest.SetupWatch[konnectv1alpha1.KonnectAPIAuthConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
+			apiAuth := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced, func(obj client.Object) {
+				obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration).Spec.ServerURL = tc.serverURL
+			})
+			t.Cleanup(func() { require.NoError(t, cl.Delete(ctx, apiAuth)) })
+
+			envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
+				if client.ObjectKeyFromObject(r) != client.ObjectKeyFromObject(apiAuth) {
+					return false
+				}
+				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, r)
+				return ok &&
+					cond.Status == metav1.ConditionFalse &&
+					cond.Reason == konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonInvalid &&
+					strings.Contains(cond.Message, tc.wantMessage)
+			}, "KonnectAPIAuthConfiguration didn't get APIAuthValid=false with a message naming the reason")
+
+			require.Empty(t, apiAuth.Status.OrganizationID)
 		})
-		t.Cleanup(func() { require.NoError(t, cl.Delete(ctx, apiAuth)) })
-
-		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
-			if client.ObjectKeyFromObject(r) != client.ObjectKeyFromObject(apiAuth) {
-				return false
-			}
-			cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, r)
-			return ok &&
-				cond.Status == metav1.ConditionFalse &&
-				cond.Reason == konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonInvalid &&
-				strings.Contains(cond.Message, "konghq.com")
-		}, "KonnectAPIAuthConfiguration didn't get APIAuthValid=false naming the allowed domains")
-
-		require.Empty(t, apiAuth.Status.OrganizationID)
-	})
+	}
 }
