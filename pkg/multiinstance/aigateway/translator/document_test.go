@@ -291,6 +291,10 @@ func aiGatewayAgentFixture(name string) *aiconfigurationv1alpha1.AIGatewayAgent 
 				Type:        "http",
 				Config: aiconfigurationv1alpha1.AIGatewayAgentConfig{
 					URL: "http://upstream:8080",
+					// A route with no matcher matches every request, and the
+					// converter warns about it (ROUTING_CONFLICT), which would
+					// break the pristine-render no-warnings assertion below.
+					Route: aiconfigurationv1alpha1.AIGatewayRouteConfig{Paths: []string{"/agent/" + name}},
 				},
 				// Resolves to the referenced entities' names (their spec names equal their
 				// k8s names in the fixtures).
