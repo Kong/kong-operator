@@ -12,6 +12,7 @@ import (
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	hybridgatewayrefs "github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/controller/pkg/controlplane"
 	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
@@ -69,6 +70,22 @@ func GetAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 	cl client.Client,
 	ent TEnt,
 ) (types.NamespacedName, error) {
+	// Cleanup belongs to the Gateway's ControlPlane even if the external
+	// certificate was removed, moved, or is no longer permitted.
+	if sni, ok := any(ent).(*configurationv1alpha1.KongSNI); ok && !sni.DeletionTimestamp.IsZero() {
+		gateway, err := getGatewayForSNI(ctx, cl, sni)
+		if err != nil {
+			return types.NamespacedName{}, err
+		}
+		if gateway != nil {
+			cpRef, err := hybridgatewayrefs.GetControlPlaneRefByGateway(ctx, cl, gateway)
+			if err != nil {
+				return types.NamespacedName{}, err
+			}
+			return getCPAuthRefForRef(ctx, cl, *cpRef, gateway.Namespace)
+		}
+	}
+
 	// If the entity has a KonnectAPIAuthConfigurationRef, return it.
 	if ref, ok := any(ent).(constraints.EntityWithKonnectAPIAuthConfigurationRef); ok {
 		authRef := ref.GetKonnectAPIAuthConfigurationRef()
