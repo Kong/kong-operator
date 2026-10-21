@@ -59,7 +59,13 @@ func grant(namespace, from, toName string) *configurationv1alpha1.KongReferenceG
 
 func newClient(t *testing.T, funcs *interceptor.Funcs, objs ...client.Object) client.Client {
 	t.Helper()
-	b := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objs...)
+	// Build sets the ResourceVersion of the objects: the parallel subtests
+	// sharing them each get copies.
+	copies := make([]client.Object, 0, len(objs))
+	for _, o := range objs {
+		copies = append(copies, o.DeepCopyObject().(client.Object))
+	}
+	b := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(copies...)
 	for _, o := range gwadminref.IndexOptions() {
 		b = b.WithIndex(o.Object, o.Field, o.ExtractValueFn)
 	}
