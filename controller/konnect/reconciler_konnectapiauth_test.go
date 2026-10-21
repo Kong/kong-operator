@@ -2,8 +2,12 @@ package konnect
 
 import (
 	"context"
+	"io"
+	"net/http"
 	"slices"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,6 +19,8 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
+	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
@@ -671,4 +677,102 @@ func TestReconcileSecretRefResolvedRefs(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestReconcileKonnectAPIAuthConfigurationRateLimited asserts that a rate limited
+// response from Konnect does not invalidate the credentials: the last known good
+// status must be preserved, so that resources depending on this configuration
+// (KonnectGatewayControlPlane, KonnectExtension, DataPlane, Gateway) are not left
+// unprogrammed while Konnect is throttling the organization.
+func TestReconcileKonnectAPIAuthConfigurationRateLimited(t *testing.T) {
+	const existingOrganizationID = "org-id-from-previous-reconcile"
+
+	s := scheme.Get()
+	apiAuth := &konnectv1alpha1.KonnectAPIAuthConfiguration{
+		Name:      "auth",
+		Namespace: "default",
+		Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
+			Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
+			Token:     "token",
+			ServerURL: "us.api.konghq.tech",
+		},
+		Status: konnectv1alpha1.KonnectAPIAuthConfigurationStatus{
+			OrganizationID: existingOrganizationID,
+			ServerURL:      "https://us.api.konghq.tech",
+			Conditions: []metav1.Condition{
+				{
+					Type:               konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
+					Status:             metav1.ConditionTrue,
+					Reason:             konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid,
+					Message:            "Token is valid",
+					ObservedGeneration: 1,
+				},
+			},
+		},
+	}
+
+	cl := withAPIAuthRefIndexes(
+		fake.NewClientBuilder().
+			WithScheme(s).
+			WithObjects(apiAuth),
+	).WithStatusSubresource(apiAuth).Build()
+
+	r := &KonnectAPIAuthConfigurationReconciler{
+		client: cl,
+		sdkFactory: sdkops.NewSDKFactory(sdkops.WithHTTPClient(&http.Client{
+			Transport: roundTripperFunc(func(*http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusTooManyRequests,
+					Header:     http.Header{"Retry-After": []string{"30"}},
+					Body:       io.NopCloser(strings.NewReader(`{"message":"API rate limit exceeded"}`)),
+				}, nil
+			}),
+		})),
+	}
+
+	result, err := r.Reconcile(t.Context(), apiAuth)
+	require.NoError(t, err)
+	require.Equal(t, 30*time.Second, result.RequeueAfter)
+
+	var updated konnectv1alpha1.KonnectAPIAuthConfiguration
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(apiAuth), &updated))
+
+	cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, &updated)
+	require.True(t, ok, "APIAuthValid condition was removed")
+	assert.Equal(t, metav1.ConditionTrue, cond.Status)
+	assert.Equal(t, konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid, cond.Reason)
+	assert.Equal(t, existingOrganizationID, updated.Status.OrganizationID)
+}
+
+type roundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) { return f(req) }
+
+// withAPIAuthRefIndexes registers the indexes that EnsureFinalizerOnKonnectAPIAuthConfiguration
+// needs to list the resources referencing a KonnectAPIAuthConfiguration with a fake client.
+func withAPIAuthRefIndexes(b *fake.ClientBuilder) *fake.ClientBuilder {
+	b = withAPIAuthRefIndex[konnectv1alpha2.KonnectGatewayControlPlane](b, index.IndexFieldKonnectGatewayControlPlaneOnAPIAuthConfiguration)
+	b = withAPIAuthRefIndex[konnectv1alpha1.KonnectCloudGatewayNetwork](b, index.IndexFieldKonnectCloudGatewayNetworkOnAPIAuthConfiguration)
+	b = withAPIAuthRefIndex[konnectv1alpha2.KonnectExtension](b, index.IndexFieldKonnectExtensionOnAPIAuthConfiguration)
+	b = withAPIAuthRefIndex[konnectv1alpha1.KonnectAIGateway](b, index.IndexFieldKonnectAIGatewayOnAPIAuthConfiguration)
+	b = withAPIAuthRefIndex[konnectv1alpha1.KonnectEventGateway](b, index.IndexFieldKonnectEventGatewayOnAPIAuthConfiguration)
+	return withAPIAuthRefIndex[konnectv1alpha1.Portal](b, index.IndexFieldPortalOnAPIAuthConfiguration)
+}
+
+func withAPIAuthRefIndex[T any, TPtr interface {
+	*T
+	constraints.EntityWithKonnectAPIAuthConfigurationRef
+}](b *fake.ClientBuilder, field string) *fake.ClientBuilder {
+	obj := TPtr(new(T))
+	return b.WithIndex(obj, field, func(o client.Object) []string {
+		authRef := o.(TPtr).GetKonnectAPIAuthConfigurationRef()
+		ns := o.GetNamespace()
+		if authRef.Namespace != nil && *authRef.Namespace != "" {
+			ns = *authRef.Namespace
+		}
+		if authRef.Name == "" {
+			return nil
+		}
+		return []string{ns + "/" + authRef.Name}
+	})
 }
