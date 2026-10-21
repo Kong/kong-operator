@@ -1,12 +1,13 @@
 ---
-# Assert the HTTPRoute with two rules sharing an identical URLRewrite filter is accepted and
-# fully programmed, including KongPluginBindingProgrammed=True for BOTH per-rule
-# request-transformer plugins.
+# Assert that BOTH HTTPRoutes carrying the identical URLRewrite filter with different match
+# paths are accepted and fully programmed, including KongPluginBindingProgrammed=True for each
+# route's own request-transformer plugin.
 #
 # Required bindings:
 #   - test_name: The test name label to match (used for labels)
-#   - http_route_name: Name of the HTTPRoute resource
-#   - http_route_namespace: Namespace of the HTTPRoute resource
+#   - http_route_urlrewrite_multirule_get_name: Name of the HTTPRoute matching /get
+#   - http_route_urlrewrite_multirule_root_name: Name of the HTTPRoute matching /
+#   - http_route_urlrewrite_multirule_namespace: Namespace of both HTTPRoute resources
 #   - gateway_name: Name of the Gateway parent resource
 #   - httpbin_deployment_name: Name of the httpbin backend service
 #   - httpbin_deployment_namespace: Namespace of the httpbin backend service
@@ -15,8 +16,8 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   (labels."chainsaw/test" == ($test_name)): true
-  name: ($http_route_name)
-  namespace: ($http_route_namespace)
+  name: ($http_route_urlrewrite_multirule_get_name)
+  namespace: ($http_route_urlrewrite_multirule_namespace)
 spec:
   parentRefs:
     - group: gateway.networking.k8s.io
@@ -36,7 +37,48 @@ spec:
           urlRewrite:
             path:
               type: ReplacePrefixMatch
-              replacePrefixMatch: /
+              replacePrefixMatch: /anything/
+status:
+  parents:
+    - parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: ($gateway_name)
+      (conditions[?type == 'Accepted']):
+        - status: "True"
+          reason: Accepted
+      (conditions[?type == 'ResolvedRefs']):
+        - status: "True"
+          reason: ResolvedRefs
+      (conditions[?type == 'KongRouteProgrammed']):
+        - status: "True"
+          reason: KongRouteProgrammed
+      (conditions[?type == 'KongServiceProgrammed']):
+        - status: "True"
+          reason: KongServiceProgrammed
+      (conditions[?type == 'KongUpstreamProgrammed']):
+        - status: "True"
+          reason: KongUpstreamProgrammed
+      (conditions[?type == 'KongTargetProgrammed']):
+        - status: "True"
+          reason: KongTargetProgrammed
+      (conditions[?type == 'KongPluginBindingProgrammed']):
+        - status: "True"
+          reason: KongPluginBindingProgrammed
+
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  (labels."chainsaw/test" == ($test_name)): true
+  name: ($http_route_urlrewrite_multirule_root_name)
+  namespace: ($http_route_urlrewrite_multirule_namespace)
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ($gateway_name)
+  rules:
     - backendRefs:
         - name: ($httpbin_deployment_name)
           namespace: ($httpbin_deployment_namespace)
@@ -50,7 +92,7 @@ spec:
           urlRewrite:
             path:
               type: ReplacePrefixMatch
-              replacePrefixMatch: /
+              replacePrefixMatch: /anything/
 status:
   parents:
     - parentRef:

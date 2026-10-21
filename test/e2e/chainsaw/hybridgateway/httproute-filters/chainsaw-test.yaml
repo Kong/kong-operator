@@ -14,11 +14,12 @@ spec:
     KongPlugin/KongPluginBinding, instead of producing two plugins of the same
     type on the same route (which Konnect rejects with a
     `unique-plugin-per-entity` constraint error).
-    Finally, it validates that two rules carrying the IDENTICAL `URLRewrite`
-    filter but different match paths each get their own KongPlugin whose
-    `replace.uri` is derived from that rule's match path (a shared plugin
-    would flip its `config.uri` between the two translations on every
-    reconcile).
+    Finally, it validates that two HTTPRoutes carrying the IDENTICAL
+    `URLRewrite` filter but different match paths each get their own KongPlugin
+    attached to them, whose `replace.uri` is derived from that route's match
+    path (a shared plugin would flip its `config.uri` between the two
+    translations on every reconcile), and that the rewritten URL actually
+    reaches the backend.
 
   bindings:
     # Common bindings.
@@ -78,12 +79,16 @@ spec:
       value: (join('-', [($test_name), 'httpbin-merged-filters']))
     - name: http_route_merged_filters_namespace
       value: ($namespace)
-    # HTTPRoute whose two rules carry the identical URLRewrite filter (ReplacePrefixMatch "/")
-    # but different match paths (/get and /); one request-transformer KongPlugin per rule.
-    - name: urlrewrite_multirule_fqdn
-      value: (join('.', ['httpbin-multirule', ($test_name), 'example.com']))
-    - name: http_route_urlrewrite_multirule_name
-      value: (join('-', [($test_name), 'httpbin-urlrewrite-multirule']))
+    # Two HTTPRoutes carrying the identical URLRewrite filter (ReplacePrefixMatch "/anything/")
+    # with different match paths (/get and /); one request-transformer KongPlugin per route.
+    - name: urlrewrite_multirule_get_fqdn
+      value: (join('.', ['httpbin-multirule-get', ($test_name), 'example.com']))
+    - name: http_route_urlrewrite_multirule_get_name
+      value: (join('-', [($test_name), 'httpbin-urlrewrite-multirule-get']))
+    - name: urlrewrite_multirule_root_fqdn
+      value: (join('.', ['httpbin-multirule-root', ($test_name), 'example.com']))
+    - name: http_route_urlrewrite_multirule_root_name
+      value: (join('-', [($test_name), 'httpbin-urlrewrite-multirule-root']))
     - name: http_route_urlrewrite_multirule_namespace
       value: ($namespace)
     - name: httpbin_deployment_name
@@ -1280,37 +1285,38 @@ spec:
         - name: host_header
           value: ($config_patches_fqdn)
 
-    # Step 68: Create an HTTPRoute whose two rules carry the IDENTICAL URLRewrite filter
-    # (ReplacePrefixMatch "/") but different match paths (/get and /). Each rule must be
-    # translated to its OWN request-transformer KongPlugin with the replace.uri derived from
-    # that rule's match path. Under the pre-fix shared-plugin name collision, both rules
-    # collided on a single KongPlugin whose config.uri flipped between the two translations on
-    # every reconcile even though nothing changed in the cluster.
-    - name: Create-httproute-with-urlrewrite-multirule
-      description: Create HTTPRoute with two rules sharing an identical URLRewrite filter but different match paths.
+    # Step 68: Create two HTTPRoutes, each with one rule carrying the IDENTICAL URLRewrite
+    # filter (ReplacePrefixMatch "/anything/") but a different match path (/get and /). Each
+    # route must be translated to its OWN request-transformer KongPlugin with the replace.uri
+    # derived from that rule's match path. Under the pre-fix shared-plugin name collision, both
+    # routes collided on a single KongPlugin whose config.uri flipped between the two
+    # translations on every reconcile even though nothing changed in the cluster.
+    - name: Create-httproutes-with-urlrewrite-multirule
+      description: Create two HTTPRoutes sharing an identical URLRewrite filter with different match paths.
       try:
         - apply:
             file: 14-httproute-filter-urlrewrite-multirule.yaml
         - assert:
             file: 15-httproute-filter-urlrewrite-multirule-assert.yaml
       bindings:
-        - name: http_route_name
-          value: ($http_route_urlrewrite_multirule_name)
-        - name: http_route_namespace
-          value: ($http_route_urlrewrite_multirule_namespace)
-        - name: route_hosts
+        - name: urlrewrite_multirule_get_hosts
           value:
-            - ($urlrewrite_multirule_fqdn)
+            - ($urlrewrite_multirule_get_fqdn)
+        - name: urlrewrite_multirule_root_hosts
+          value:
+            - ($urlrewrite_multirule_root_fqdn)
 
-    # Step 69: Assert the request-transformer plugin for rule 1 (match /get, non-root). Its
-    # replace.uri is the Lua ternary WITHOUT a leading slash prepended to the capture group.
+    # Step 69: Assert the request-transformer plugin for the route matching /get (non-root).
+    # Its replace.uri appends the capture group (which includes the leading slash) directly to
+    # the replacement prefix, and the hybrid-routes annotation check proves the plugin is
+    # attached to THIS route.
     - name: Assert-request-transformer-plugin-for-urlrewrite-multirule-get
-      description: Assert the request-transformer plugin for the rule matching /get.
+      description: Assert the request-transformer plugin attached to the /get route.
       use:
         template: ../../common/_step_templates/assert-kongPlugin.yaml
       bindings:
         - name: http_route_name
-          value: ($http_route_urlrewrite_multirule_name)
+          value: ($http_route_urlrewrite_multirule_get_name)
         - name: http_route_namespace
           value: ($http_route_urlrewrite_multirule_namespace)
         - name: namespace
@@ -1320,20 +1326,21 @@ spec:
         - name: plugin_type
           value: request-transformer
         - name: plugin_config
-          value: '{"replace":{"uri":"$(uri_captures[1] == nil and \"/\" or uri_captures[1])"}}'
+          value: '{"replace":{"uri":"/anything$(uri_captures[1])"}}'
 
-    # Step 70: Assert the request-transformer plugin for rule 2 (match /, root). Its replace.uri
-    # is the Lua ternary WITH a leading slash prepended to the capture group. Together with the
-    # previous step this proves each rule got its own KongPlugin: before the fix both rules
-    # collided on a single shared plugin carrying one of the two configs, so one of these two
-    # asserts always failed (flipping between runs).
+    # Step 70: Assert the request-transformer plugin for the route matching / (root). Its
+    # replace.uri is the Lua ternary prepending a slash to the capture group (the capture group
+    # of a root-prefix route excludes the leading slash). Together with the previous step this
+    # proves each route got its own KongPlugin: before the fix both routes collided on a single
+    # shared plugin carrying one of the two configs, so one of these two asserts always failed
+    # (flipping between runs).
     - name: Assert-request-transformer-plugin-for-urlrewrite-multirule-root
-      description: Assert the request-transformer plugin for the rule matching /.
+      description: Assert the request-transformer plugin attached to the / route.
       use:
         template: ../../common/_step_templates/assert-kongPlugin.yaml
       bindings:
         - name: http_route_name
-          value: ($http_route_urlrewrite_multirule_name)
+          value: ($http_route_urlrewrite_multirule_root_name)
         - name: http_route_namespace
           value: ($http_route_urlrewrite_multirule_namespace)
         - name: namespace
@@ -1343,47 +1350,39 @@ spec:
         - name: plugin_type
           value: request-transformer
         - name: plugin_config
-          value: '{"replace":{"uri":"$(uri_captures[1] == nil and \"/\" or \"/\" .. uri_captures[1])"}}'
+          value: '{"replace":{"uri":"/anything$(uri_captures[1] == nil and \"\" or \"/\" .. uri_captures[1])"}}'
 
-    # Step 71: Sanity-check traffic for both rules. Both rewrites resolve to a valid httpbin
-    # path under either Kong route precedence: GET /get rewrites to "/" (variant B, capture nil)
-    # or "/get" (variant A concat); GET /anything only matches the root-match rule's route and
-    # rewrites to "/anything".
-    - name: Verify-GET-traffic-from-host-urlrewrite-multirule-get
-      description: Verify that GET /get works from the host (urlrewrite multirule).
+    # Step 71: Verify the rewritten URL actually reached the backend. go-httpbin's /anything
+    # endpoint echoes the request it received, including the final "url". Each route has its
+    # own hostname, so the Kong routes cannot overlap and the rewrites are deterministic: the
+    # /get route rewrites /get/a to /anything/a (capture includes the leading slash), and the
+    # / route rewrites /a to /anything/a (capture excludes the leading slash, so the plugin
+    # prepends one).
+    - name: Verify-url-rewrite-multirule-get
+      description: Verify GET /get/a is rewritten to /anything/a (route matching /get).
       use:
-        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-url-rewrite.yaml
       bindings:
-        - name: http_route_name
-          value: ($http_route_urlrewrite_multirule_name)
-        - name: http_route_namespace
-          value: ($http_route_urlrewrite_multirule_namespace)
         - name: route_path
-          value: "/get"
-        - name: http_method
-          value: "GET"
+          value: "/get/a"
+        - name: expected_url_suffix
+          value: "/anything/a"
+        - name: host_header
+          value: ($urlrewrite_multirule_get_fqdn)
         - name: listener_http_port
           value: "80"
-        - name: host_header
-          value: ($urlrewrite_multirule_fqdn)
 
-    - name: Verify-GET-traffic-from-host-urlrewrite-multirule-anything
-      description: Verify that GET /anything works from the host (urlrewrite multirule).
+    - name: Verify-url-rewrite-multirule-root
+      description: Verify GET /a is rewritten to /anything/a (route matching /).
       use:
-        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
+        template: ../../common/_step_templates/verify-url-rewrite.yaml
       bindings:
-        - name: http_route_name
-          value: ($http_route_urlrewrite_multirule_name)
-        - name: http_route_namespace
-          value: ($http_route_urlrewrite_multirule_namespace)
         - name: route_path
-          value: "/anything"
-        - name: http_method
-          value: "GET"
-        - name: listener_http_port
-          value: "80"
+          value: "/a"
+        - name: expected_url_suffix
+          value: "/anything/a"
         - name: host_header
-          value: ($urlrewrite_multirule_fqdn)
+          value: ($urlrewrite_multirule_root_fqdn)
 
   catch:
     # Capture debug snapshot on test failure for CI debugging.
