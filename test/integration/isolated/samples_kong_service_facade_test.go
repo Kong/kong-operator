@@ -4,15 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/samber/lo"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
@@ -26,42 +23,24 @@ func TestKongServiceFacadeExample(t *testing.T) {
 		WithLabel(testlabels.Example, testlabels.ExampleTrue).
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyIngress).
 		WithLabel(testlabels.Kind, testlabels.KindKongServiceFacade).
-		WithSetup("deploy kong addon into cluster", featureSetup(
-			withControllerManagerOpts(helpers.ControllerManagerOptAdditionalWatchNamespace("default")),
-		)).
+		WithSetup("create test namespace", featureSetup(withoutGateway())).
 		WithSetup("deploy example manifest", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-			manifestPath := examplesManifestPath("kong-service-facade.yaml")
-
-			b, err := os.ReadFile(manifestPath)
-			require.NoError(t, err)
-			manifest := string(b)
-
+			// The sample brings its own IngressClass and a standalone DataPlane and ControlPlane, with the
+			// KongServiceFacade feature gate enabled. Use the test's ingress class instead of the cluster-scoped
+			// `kong` one.
 			ingressClass := GetIngressClassFromCtx(ctx)
-
 			t.Logf("replacing kong ingress class in yaml manifest to %s", ingressClass)
-			manifest = strings.ReplaceAll(
-				manifest,
-				"kubernetes.io/ingress.class: kong",
-				fmt.Sprintf("kubernetes.io/ingress.class: %s", ingressClass),
-			)
-			manifest = strings.ReplaceAll(
-				manifest,
-				"ingressClassName: kong",
-				fmt.Sprintf("ingressClassName: %s", ingressClass),
+			applyManifest(ctx, t, samplesManifestPath("feature-gated/kong-service-facade.yaml"),
+				"kubernetes.io/ingress.class: kong", "kubernetes.io/ingress.class: "+ingressClass,
+				"ingressClassName: kong", "ingressClassName: "+ingressClass,
+				"ingressClass: kong", "ingressClass: "+ingressClass,
+				"name: kong\nspec:\n  controller:", "name: "+ingressClass+"-sample\nspec:\n  controller:",
 			)
 
-			t.Logf("applying yaml manifest %s", manifestPath)
-			cluster := GetClusterFromCtx(ctx)
-			require.NoError(t, clusters.ApplyManifestByYAML(ctx, cluster, manifest))
-
-			t.Cleanup(func() {
-				t.Logf("deleting yaml manifest %s", manifestPath)
-				assert.NoError(t, clusters.DeleteManifestByYAML(ctx, cluster, manifest))
-			})
-
+			namespace := GetNamespaceForT(ctx, t)
 			t.Log("waiting for httpbin deployment to be ready")
-			helpers.WaitForDeploymentRollout(ctx, t, cluster, "default", "httpbin-deployment")
-			return ctx
+			helpers.WaitForDeploymentRollout(ctx, t, GetClusterFromCtx(ctx), namespace, "httpbin-deployment")
+			return waitForDataPlane(ctx, t, k8stypes.NamespacedName{Namespace: namespace, Name: "dataplane-service-facade"})
 		}).
 		Assess("basic-auth and key-auth plugins are applied to KongServiceFacades as expected", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			var (
