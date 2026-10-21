@@ -1,0 +1,40 @@
+# A second HTTP AIGatewayAgent on /http-agent-deny with a deny-type ACL listing
+# the consumer group: consumers enrolled in the group are blocked on this route,
+# while consumers outside it (the outsider) pass through.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayAgent
+metadata:
+  name: ($http_agent_deny_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    name: ($http_agent_deny_name)
+    displayName: ($http_agent_deny_name)
+    type: http
+    enabled: Enabled
+    config:
+      url: (join('', ['http://', ($echo_deployment_name), '.', ($namespace), '.svc.cluster.local:1027']))
+      route:
+        paths:
+          - ($http_agent_deny_route_path)
+        methods:
+          - GET
+          - POST
+        protocols:
+          - http
+          - https
+        stripPath: Enabled
+    access:
+      authStrategies:
+        - name: ($keyauth_auth_strategy_name)
+      acls:
+        type: deny
+        deny:
+          deny:
+            - kind: AIGatewayConsumerGroup
+              name: ($consumer_group_name)
