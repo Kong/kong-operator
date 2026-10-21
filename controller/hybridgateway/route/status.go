@@ -439,54 +439,10 @@ func parentRefKey(pRef gwtypes.ParentReference) string {
 }
 
 // isParentRefEqual compares two ParentReference objects for equality.
+// The comparison lives in the utils package because the tag resolver needs it too, and utils
+// cannot import this package.
 func isParentRefEqual(a, b gwtypes.ParentReference) bool {
-	// Compare Group
-	if (a.Group == nil) != (b.Group == nil) {
-		return false
-	}
-
-	if a.Group != nil && b.Group != nil && *a.Group != *b.Group {
-		return false
-	}
-
-	// Compare Kind
-	if (a.Kind == nil) != (b.Kind == nil) {
-		return false
-	}
-	if a.Kind != nil && b.Kind != nil && *a.Kind != *b.Kind {
-		return false
-	}
-
-	// Compare Name
-	if a.Name != b.Name {
-		return false
-	}
-
-	// Compare Namespace
-	if (a.Namespace == nil) != (b.Namespace == nil) {
-		return false
-	}
-	if a.Namespace != nil && b.Namespace != nil && *a.Namespace != *b.Namespace {
-		return false
-	}
-
-	// Compare SectionName
-	if (a.SectionName == nil) != (b.SectionName == nil) {
-		return false
-	}
-	if a.SectionName != nil && b.SectionName != nil && *a.SectionName != *b.SectionName {
-		return false
-	}
-
-	// Compare Port
-	if (a.Port == nil) != (b.Port == nil) {
-		return false
-	}
-	if a.Port != nil && b.Port != nil && *a.Port != *b.Port {
-		return false
-	}
-
-	return true
+	return utils.ParentRefEqual(a, b)
 }
 
 // isConditionEqual compares two conditions to see if they are functionally equivalent

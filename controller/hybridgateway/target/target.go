@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/builder"
@@ -581,8 +582,6 @@ func createTargetsFromValidBackendRefs[
 			logger := logger.WithValues("kongtarget", targetName)
 			log.Debug(logger, "Creating KongTarget for BackendRef")
 
-			tags := pkgmetadata.ExtractTags(vbRef.service)
-
 			target, err := builder.NewKongTarget().
 				WithName(targetName).
 				WithNamespace(metadata.NamespaceFromParentRef(parentRoute, pRef)).
@@ -591,7 +590,6 @@ func createTargetsFromValidBackendRefs[
 				WithUpstreamRef(upstreamName).
 				WithTarget(endpoint, port).
 				WithWeight(&weight).
-				WithSpecTags(tags).
 				Build()
 			if err != nil {
 				log.Error(logger, err, "Failed to build KongTarget resource")
@@ -601,6 +599,14 @@ func createTargetsFromValidBackendRefs[
 			_, err = translator.VerifyAndUpdate(ctx, logger, cl, &target, parentRoute, false)
 			if err != nil {
 				return nil, err
+			}
+
+			// Tags are set after VerifyAndUpdate, once the KongTarget identity is final: a
+			// KongTarget is shared by every route that shares its KongUpstream, so the inherited
+			// tags must be resolved from all of its attached routes rather than from this one.
+			if tags := utils.MergeTags(logger, pkgmetadata.ExtractTags(vbRef.service),
+				utils.InheritedTagsForKongObject(ctx, logger, cl, parentRoute, &target)); len(tags) > 0 {
+				target.Spec.Tags = commonv1alpha1.Tags(tags)
 			}
 
 			seenIdx[targetAddr] = len(targets)
