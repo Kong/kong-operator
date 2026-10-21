@@ -15,6 +15,7 @@ import (
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/controller/konnect/ops"
@@ -43,6 +44,9 @@ func handleTypeSpecific[
 	)
 
 	if resolver, ok := any(ent).(konnectReferenceResolver); ok {
+		if chain, ok := any(ent).(*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain); ok {
+			resolver = policyChainReferenceResolver{chain}
+		}
 		refUpdated, refProblem, refRes, err := handleKonnectReferences(ctx, cl, ent, resolver)
 		if err != nil {
 			return false, ctrl.Result{}, err
@@ -56,6 +60,13 @@ func handleTypeSpecific[
 	}
 
 	switch e := any(ent).(type) {
+	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain:
+		if !isProblem {
+			owned, res, err := claimPolicyChain(ctx, cl, e)
+			if err != nil || !res.IsZero() || !owned {
+				return true, res, err
+			}
+		}
 	case *configurationv1.KongConsumer:
 		u, p := handleKongConsumerSpecific(ctx, cl, e)
 		updated = updated || u
@@ -146,6 +157,18 @@ func handleKongConsumerSpecific(
 // that declare CR references on their spec (see crd-from-oas `references` config).
 type konnectReferenceResolver interface {
 	ResolveKonnectReferences(ctx context.Context, cl client.Client) error
+}
+
+type policyChainReferenceResolver struct {
+	*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain
+}
+
+// ResolveKonnectReferences validates chain membership before resolving ordered IDs.
+func (r policyChainReferenceResolver) ResolveKonnectReferences(ctx context.Context, cl client.Client) error {
+	if err := r.ValidatePolicyReferences(ctx, cl); err != nil {
+		return err
+	}
+	return r.EventGatewayVirtualClusterPolicyChain.ResolveKonnectReferences(ctx, cl)
 }
 
 // crossNamespaceSiblingReferences returns every cross-namespace sibling
@@ -335,6 +358,9 @@ func isExpectedKonnectReferenceResolutionError(err error) bool {
 		}
 		return true
 	}
+	if _, ok := errors.AsType[configurationv1alpha1.PolicyChainInvalidError](err); ok {
+		return true
+	}
 	if _, ok := errors.AsType[commonv1alpha1.ReferenceNotFoundError](err); ok {
 		return true
 	}
@@ -366,6 +392,9 @@ func isExpectedKonnectReferenceResolutionError(err error) bool {
 }
 
 func hasInvalidKonnectReferenceResolutionError(err error) bool {
+	if _, ok := errors.AsType[configurationv1alpha1.PolicyChainInvalidError](err); ok {
+		return true
+	}
 	if _, ok := errors.AsType[commonv1alpha1.ReferenceCrossNamespaceError](err); ok {
 		return true
 	}

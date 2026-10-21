@@ -3528,7 +3528,9 @@ func update{{.Entity}}(
 {{- range .Parents}}
 	req.{{.SDKFieldName}} = {{.VarName}}
 {{- end}}
+{{- if not .UpdateOmitsEntityID}}
 	req.{{.EntityIDField}} = id
+{{- end}}
 
 	{{if .ResponseStatusFields}}resp, err :={{else}}_, err ={{end}} sdk.{{.UpdateSDKMethod}}(ctx, *req)
 {{- else if .UpdateWrapped}}

@@ -72,6 +72,7 @@ func startEventGatewayReconcilers(t *testing.T, ctx context.Context) (client.Cli
 		newKonnectEntityReconciler[configurationv1alpha1.EventGatewayStaticKey](factory, mgr),
 		newKonnectEntityReconciler[configurationv1alpha1.EventGatewayTLSTrustBundle](factory, mgr),
 		newKonnectEntityReconciler[configurationv1alpha1.EventGatewayVirtualCluster](factory, mgr),
+		newKonnectEntityReconciler[configurationv1alpha1.EventGatewayVirtualClusterPolicyChain](factory, mgr),
 		newKonnectEntityReconciler[configurationv1alpha1.EventGatewayVirtualClusterProducePolicy](factory, mgr),
 		newKonnectEntityReconciler[configurationv1alpha1.EventGatewayListenerPolicy](factory, mgr),
 	)
@@ -261,8 +262,15 @@ spec:
 	createVisible(t, ctx, cl, vc, crossNamespaceVirtualCluster, listenerPolicy)
 	policy := producePolicy(t, ns.Name, "produce-policy", vc.Name)
 	createVisible(t, ctx, cl, policy)
+	chain := objectFromYAML[configurationv1alpha1.EventGatewayVirtualClusterPolicyChain](t, ns.Name, `
+metadata: {name: cluster-policy-chain}
+spec:
+  eventGatewayVirtualClusterRef: {type: namespacedRef, namespacedRef: {name: virtual-cluster}}
+  apiSpec: {policies: []}
+`)
+	createVisible(t, ctx, cl, chain)
 
-	objects := slices.Concat(roots, []client.Object{vc, crossNamespaceVirtualCluster, listenerPolicy, policy})
+	objects := slices.Concat(roots, []client.Object{vc, crossNamespaceVirtualCluster, listenerPolicy, policy, chain})
 	requireNoKonnectStatus(t, ctx, cl, 5*time.Second, objects...)
 }
 

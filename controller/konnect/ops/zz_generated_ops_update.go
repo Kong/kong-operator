@@ -78,6 +78,8 @@ func UpdateGeneratedOps[
 		return updateEventGatewayVirtualClusterConsumePolicy(ctx, cl, sdk.GetEventGatewayVirtualClusterConsumePoliciesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualClusterPolicy:
 		return updateEventGatewayVirtualClusterPolicy(ctx, sdk.GetEventGatewayVirtualClusterPoliciesSDK(), ent)
+	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain:
+		return updateEventGatewayVirtualClusterPolicyChain(ctx, cl, sdk.GetEventGatewayVirtualClusterPoliciesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy:
 		return updateEventGatewayVirtualClusterProducePolicy(ctx, cl, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), ent)
 	case *konnectv1alpha1.KonnectAIGateway:

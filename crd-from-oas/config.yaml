@@ -1235,6 +1235,22 @@ apiGroupVersions:
                   list to match the complete remote set.
                 _validations:
                   - "+listType=atomic"
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterPoliciesSDK
+            fieldName: EventGatewayVirtualClusterPolicies
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayVirtualClusterClusterLevelPolicyChainRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayVirtualClusterClusterLevelPolicyChainRequest
+        reconciler:
+          parentEntityGVK:
+            kind: EventGatewayVirtualCluster
+          ancestorEntityGVKs:
+            - kind: KonnectEventGateway
+              group: konnect.konghq.com
+          parentRef:
+            fieldName: eventGatewayVirtualClusterRef
 
   konnect.konghq.com/v1alpha1:
     categories:

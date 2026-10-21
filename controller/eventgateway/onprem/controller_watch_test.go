@@ -302,11 +302,6 @@ func TestEntityTypesCoverEveryOnPremCapableKind(t *testing.T) {
 	for gvk := range s.AllKnownTypes() {
 		obj, err := s.New(gvk)
 		require.NoError(t, err)
-		// TODO(#6158): Include policy chains when controller support is implemented.
-		if _, apiOnly := obj.(*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain); apiOnly {
-			require.NotContains(t, entityGroupKinds, gvk.GroupKind())
-			continue
-		}
 		entity, ok := obj.(entityWithParent)
 		if !ok {
 			continue

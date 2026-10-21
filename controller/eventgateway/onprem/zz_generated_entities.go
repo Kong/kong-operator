@@ -13,7 +13,7 @@ import (
 )
 
 // The entities that can belong to an OnPremEventGateway.
-// +kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaybackendclusters;eventgatewaydataplanecertificates;eventgatewaylistenerpolicies;eventgatewaylisteners;eventgatewayschemaregistries;eventgatewaystatickeys;eventgatewaytlstrustbundles;eventgatewayvirtualclusterconsumepolicies;eventgatewayvirtualclusterpolicies;eventgatewayvirtualclusterproducepolicies;eventgatewayvirtualclusters,verbs=get;list;watch
+// +kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaybackendclusters;eventgatewaydataplanecertificates;eventgatewaylistenerpolicies;eventgatewaylisteners;eventgatewayschemaregistries;eventgatewaystatickeys;eventgatewaytlstrustbundles;eventgatewayvirtualclusterconsumepolicies;eventgatewayvirtualclusterpolicies;eventgatewayvirtualclusterpolicychains;eventgatewayvirtualclusterproducepolicies;eventgatewayvirtualclusters,verbs=get;list;watch
 
 // entityTypes returns an object of each entity kind that can belong to an
 // OnPremEventGateway: the entities whose gatewayRef accepts it and,
@@ -30,6 +30,7 @@ func entityTypes() []client.Object {
 		&configurationv1alpha1.EventGatewayVirtualCluster{},
 		&configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{},
 		&configurationv1alpha1.EventGatewayVirtualClusterPolicy{},
+		&configurationv1alpha1.EventGatewayVirtualClusterPolicyChain{},
 		&configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{},
 	}
 }
@@ -46,6 +47,7 @@ var entityGroupKinds = map[schema.GroupKind]struct{}{
 	{Group: "configuration.konghq.com", Kind: "EventGatewayVirtualCluster"}:              {},
 	{Group: "configuration.konghq.com", Kind: "EventGatewayVirtualClusterConsumePolicy"}: {},
 	{Group: "configuration.konghq.com", Kind: "EventGatewayVirtualClusterPolicy"}:        {},
+	{Group: "configuration.konghq.com", Kind: "EventGatewayVirtualClusterPolicyChain"}:   {},
 	{Group: "configuration.konghq.com", Kind: "EventGatewayVirtualClusterProducePolicy"}: {},
 }
 
@@ -81,6 +83,7 @@ func EntityGroupVersionResources() []schema.GroupVersionResource {
 		configurationv1alpha1.GroupVersion.WithResource("eventgatewayvirtualclusters"),
 		configurationv1alpha1.GroupVersion.WithResource("eventgatewayvirtualclusterconsumepolicies"),
 		configurationv1alpha1.GroupVersion.WithResource("eventgatewayvirtualclusterpolicies"),
+		configurationv1alpha1.GroupVersion.WithResource("eventgatewayvirtualclusterpolicychains"),
 		configurationv1alpha1.GroupVersion.WithResource("eventgatewayvirtualclusterproducepolicies"),
 	}
 }
