@@ -984,7 +984,10 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 
 	// Konnect controllers
 	if c.KonnectControllersEnabled {
-		sdkFactory := sdkops.NewSDKFactory(sdkops.WithHTTPClient(httpClientForKonnect(c)))
+		sdkFactory := sdkops.NewSDKFactory(
+			sdkops.WithHTTPClient(httpClientForKonnect(c)),
+			sdkops.WithAllowedServerURLDomains(c.KonnectServerURLDomains),
+		)
 		ctrlOpts := controllerOptions(ctrlOpts, withMaxConcurrentReconciles(int(c.MaxConcurrentReconcilesKonnect)))
 
 		controllerFactory := konnectControllerFactory{
@@ -1227,8 +1230,8 @@ func newMCPServerControllers(
 	var (
 		reconcileEventCh     = make(chan event.GenericEvent, mcpserver.TriggerChannelBufSize)
 		sm                   = mcpserver.NewSignalManager(c.LoggingMode, mgr.GetClient(), mgr.GetScheme(), reconcileEventCh)
-		sdkFactory           = sdkops.NewSDKFactory(sdkops.WithHTTPClient(httpClientForKonnect(c)))
-		sdkFactoryForPolling = sdkops.NewSDKFactory(sdkops.WithHTTPClient(httpClientForKonnectLongPolling()))
+		sdkFactory           = sdkops.NewSDKFactory(sdkops.WithHTTPClient(httpClientForKonnect(c)), sdkops.WithAllowedServerURLDomains(c.KonnectServerURLDomains))
+		sdkFactoryForPolling = sdkops.NewSDKFactory(sdkops.WithHTTPClient(httpClientForKonnectLongPolling()), sdkops.WithAllowedServerURLDomains(c.KonnectServerURLDomains))
 		controllerFactory    = konnectControllerFactory{
 			sdkFactory:        sdkFactory,
 			metricRecorder:    metricsRecorder,

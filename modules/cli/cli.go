@@ -10,6 +10,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	konnectserver "github.com/kong/kong-operator/v2/controller/konnect/server"
 	ingressmgrconfig "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/v2/modules/manager"
 	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
@@ -97,6 +98,7 @@ func New(m metadata.Info) *CLI {
 	flagSet.DurationVar(&cfg.KonnectSyncPeriod, "konnect-sync-period", consts.DefaultKonnectSyncPeriod, "Sync period for Konnect entities. Must be greater than 0. After a successful reconciliation of Konnect entities the controller will wait this duration before enforcing configuration on Konnect once again.")
 	flagSet.DurationVar(&cfg.KonnectRequestTimeout, "konnect-request-timeout", consts.DefaultKonnectRequestTimeout, "Timeout for Konnect API requests.")
 	flagSet.Int64Var(&cfg.KonnectListPageSize, "konnect-list-page-size", consts.DefaultKonnectListPageSize, fmt.Sprintf("Page size requested when listing Konnect entities to find the Konnect entity of an object, e.g. one whose Konnect ID was lost or that is deleted without one. Must be between 1 and %d. Only lower it if Konnect rejects the default: a lower value means more requests.", consts.MaxKonnectListPageSize))
+	flagSet.Var(newValidatedValue(&cfg.KonnectServerURLDomains, konnectserver.NewDomains, withDefault(konnectserver.DefaultDomains)), "konnect-server-url-domains", "Comma-separated list of domains a KonnectAPIAuthConfiguration serverURL host must belong to. A host outside the list is refused and reported with an APIAuthValid=False condition. Must not be empty: a deployment that needs another domain adds it here. Default: konghq.com,konghq.tech.")
 	flagSet.UintVar(&cfg.KonnectControllerMaxConcurrentReconciles, "konnect-controller-max-concurrent-reconciles", consts.DefaultMaxConcurrentReconcilesKonnect, "Deprecated: Please use '--max-concurrent-reconciles-konnect-controller' instead.")
 	flagSet.UintVar(&cfg.MaxConcurrentReconcilesKonnect, "max-concurrent-reconciles-konnect-controller", consts.DefaultMaxConcurrentReconcilesKonnect, "Maximum number of concurrent reconciles for Konnect controllers.")
 	flagSet.UintVar(&cfg.MaxConcurrentReconcilesDataPlane, "max-concurrent-reconciles-dataplane-controller", consts.DefaultMaxConcurrentReconcilesDataPlane, "Maximum number of concurrent reconciles for DataPlane controllers.")
