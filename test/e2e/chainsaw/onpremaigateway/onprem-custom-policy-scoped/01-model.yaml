@@ -70,13 +70,10 @@ spec:
         model:
           nameHeader: Enabled
         route:
-          # No model-selector header (config.route.model): two models sharing
-          # the same selector alias would render two ai_models entities with
-          # the same name, which the dbless document rejects as a uniqueness
-          # violation (Konnect accepts the same CR set). The route paths
-          # disambiguate the models instead, and the rendered ai_model names
-          # fall back to the CR names (plain-model / scoped-model), keeping
-          # them unique.
+          model:
+            headerParam: X-Kong-LLM-Model
+            values:
+              - qwen2.5:0.5b
           paths:
             - ($model_route_path)
       access:
