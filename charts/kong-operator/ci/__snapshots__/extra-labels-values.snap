@@ -189,6 +189,15 @@ spec:
                             required:
                             - allow
                             type: object
+                          allowWhen:
+                            properties:
+                              allowWhen:
+                                items:
+                                  type: string
+                                type: array
+                            required:
+                            - allowWhen
+                            type: object
                           deny:
                             properties:
                               deny:
@@ -211,10 +220,21 @@ spec:
                             required:
                             - deny
                             type: object
+                          denyWhen:
+                            properties:
+                              denyWhen:
+                                items:
+                                  type: string
+                                type: array
+                            required:
+                            - denyWhen
+                            type: object
                           type:
                             enum:
                             - allow
                             - deny
+                            - allowWhen
+                            - denyWhen
                             minLength: 1
                             type: string
                         required:
@@ -10677,6 +10697,15 @@ spec:
                                 required:
                                 - allow
                                 type: object
+                              allowWhen:
+                                properties:
+                                  allowWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - allowWhen
+                                type: object
                               deny:
                                 properties:
                                   deny:
@@ -10699,10 +10728,21 @@ spec:
                                 required:
                                 - deny
                                 type: object
+                              denyWhen:
+                                properties:
+                                  denyWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - denyWhen
+                                type: object
                               type:
                                 enum:
                                 - allow
                                 - deny
+                                - allowWhen
+                                - denyWhen
                                 minLength: 1
                                 type: string
                             required:
@@ -14721,6 +14761,15 @@ spec:
                                 required:
                                 - allow
                                 type: object
+                              allowWhen:
+                                properties:
+                                  allowWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - allowWhen
+                                type: object
                               deny:
                                 properties:
                                   deny:
@@ -14743,10 +14792,21 @@ spec:
                                 required:
                                 - deny
                                 type: object
+                              denyWhen:
+                                properties:
+                                  denyWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - denyWhen
+                                type: object
                               type:
                                 enum:
                                 - allow
                                 - deny
+                                - allowWhen
+                                - denyWhen
                                 minLength: 1
                                 type: string
                             required:
@@ -52985,6 +53045,13 @@ spec:
                         enum:
                         - Enabled
                         - Disabled
+                        type: string
+                      tryItUiAudience:
+                        enum:
+                        - all
+                        - authenticated
+                        - registered
+                        maxLength: 253
                         type: string
                     type: object
                   theme:
