@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Kong/ai-deck-converter/aigw"
 	"github.com/Kong/ai-deck-converter/convert"
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
@@ -28,6 +29,7 @@ import (
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/translator"
 	"github.com/kong/kong-operator/v2/test"
+	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 	rtcontainers "github.com/kong/kong-operator/v2/test/runtimeintegration/aigateway/containers"
 )
 
@@ -92,6 +94,81 @@ func TestConverterDBLessPayloadAcceptedByAIGatewayAdminAPI(t *testing.T) {
 	}, 60*time.Second, 250*time.Millisecond)
 
 	assertAIModelsApplied(ctx, t, aigwC.AdminURL(ctx, t))
+}
+
+// TestEmptyDBLessPayloadKeepsAIGatewayReady pins the reason the translator stubs an
+// empty configuration (translator.ensureNonEmptyConfig): the AI Gateway serves 200 on
+// GET /status/ready — the endpoint the operator's data plane readiness probe hits —
+// only once it has applied a configuration that carries at least one entity. Pushing
+// the bare empty payload leaves it not-ready, and pushing the payload the translator
+// renders for a gateway with no entities brings it ready.
+func TestEmptyDBLessPayloadKeepsAIGatewayReady(t *testing.T) {
+	if test.KongLicenseData() == "" {
+		t.Skip("KONG_LICENSE_DATA is not set, skipping the AI Gateway contract test")
+	}
+	t.Parallel()
+	ctx := t.Context()
+
+	aigwC := rtcontainers.NewAIGateway(ctx, t)
+	adminURL := aigwC.AdminURL(ctx, t)
+	statusURL := aigwC.StatusURL(ctx, t)
+	aigwClient, err := kong.NewClient(&adminURL, http.DefaultClient)
+	require.NoError(t, err)
+
+	push := func(payload string) {
+		t.Helper()
+
+		cfg := map[string]any{}
+		require.NoError(t, yaml.Unmarshal([]byte(payload), &cfg))
+		cfgAsJSON, err := json.Marshal(cfg)
+		require.NoError(t, err)
+
+		reqCtx, cancel := context.WithTimeout(ctx, requestTimeout)
+		defer cancel()
+		require.NoError(t, aigwClient.ReloadDeclarativeRawConfig(reqCtx, bytes.NewReader(cfgAsJSON), true, true))
+	}
+
+	// The bare db-less payload: exactly what the converter emits for a document
+	// with no entities, without the translator's stub.
+	push(`{"_format_version": "3.0", "_transform": false}`)
+	asserts.Never(t, func(ctx context.Context) bool {
+		return statusReady(ctx, t, statusURL)
+	}, 5*time.Second, 250*time.Millisecond,
+		"an empty configuration must leave the AI Gateway not-ready, or the stub entity is unnecessary")
+
+	// The payload the translator renders for a gateway with no entities.
+	payload, issues, err := translator.RenderDBLessYAML(&aigw.Document{}, convert.Options{})
+	require.NoError(t, err)
+	require.Empty(t, issues)
+	push(string(payload))
+	require.Eventually(t, func() bool {
+		return statusReady(ctx, t, statusURL)
+	}, 30*time.Second, 250*time.Millisecond,
+		"the stub upstream must make the AI Gateway report ready")
+}
+
+// statusReady reports whether GET /status/ready answers 200.
+func statusReady(ctx context.Context, t *testing.T, statusURL string) bool {
+	t.Helper()
+
+	reqCtx, cancel := context.WithTimeout(ctx, requestTimeout)
+	defer cancel()
+
+	// Return false rather than failing the test: a transient transport error must
+	// count as "not ready" for the pollers, and require's FailNow is invalid here
+	// because require.Eventually runs the condition in another goroutine.
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, statusURL+"/status/ready", nil)
+	if err != nil {
+		return false
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, resp.Body)
+
+	return resp.StatusCode == http.StatusOK
 }
 
 // assertAIModelsApplied checks the Admin API's view of the applied
