@@ -222,36 +222,21 @@ _Appears in:_
 
 - [KegDataPlaneSpec](#eventgateway-konghq-com-v1alpha1-types-kegdataplanespec)
 
-#### GWAdmin
+#### GWAdminRef
 
 
-GWAdmin configures how Kong Operator reaches gw-admin.
+GWAdminRef references a GWAdmin.
 
 
 
 | Field | Description |
 | --- | --- |
-| `service` _[GWAdminService](#eventgateway-konghq-com-v1alpha1-types-gwadminservice)_ | Service is the Service in front of the gw-admin pods, in the namespace of the OnPremEventGateway. Kong Operator pushes the configuration to each pod of this Service. |
+| `name` _string_ | Name is the name of the GWAdmin. |
+| `namespace` _*string_ | Namespace is the namespace of the GWAdmin. It defaults to the namespace of the referencing object. |
 
 _Appears in:_
 
 - [OnPremEventGatewaySpec](#eventgateway-konghq-com-v1alpha1-types-onpremeventgatewayspec)
-
-#### GWAdminService
-
-
-GWAdminService identifies the gw-admin Service and its port.
-
-
-
-| Field | Description |
-| --- | --- |
-| `name` _string_ | Name is the name of the Service. |
-| `portName` _string_ | PortName is the name of the Service port gw-admin serves its API on. Service port names are DNS-1123 labels. |
-
-_Appears in:_
-
-- [GWAdmin](#eventgateway-konghq-com-v1alpha1-types-gwadmin)
 
 
 
@@ -413,7 +398,7 @@ OnPremEventGatewaySpec defines the desired state of OnPremEventGateway.
 
 | Field | Description |
 | --- | --- |
-| `gwAdmin` _[GWAdmin](#eventgateway-konghq-com-v1alpha1-types-gwadmin)_ | GWAdmin configures how Kong Operator reaches the gw-admin of this gateway. |
+| `gwAdminRef` _[GWAdminRef](#eventgateway-konghq-com-v1alpha1-types-gwadminref)_ | GWAdminRef references the GWAdmin that serves this gateway. Kong Operator pushes the configuration of the gateway to every gw-admin pod of it, and the data planes of the gateway pull it from there. A GWAdmin in another namespace is used only when a KongReferenceGrant in its namespace allows OnPremEventGateways of the namespace of the gateway to reference it. It can't be changed. |
 
 _Appears in:_
 
@@ -429,7 +414,7 @@ OnPremEventGatewayStatus defines the observed state of OnPremEventGateway.
 | Field | Description |
 | --- | --- |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the OnPremEventGateway. |
-| `serverURL` _string_ | ServerURL is the address the data planes of this gateway use to reach gw-admin. |
+| `serverURL` _string_ | ServerURL is the address the data planes of this gateway use to reach gw-admin: the cp endpoint of its GWAdmin. |
 | `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed. |
 
 _Appears in:_

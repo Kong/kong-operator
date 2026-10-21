@@ -235,10 +235,14 @@
   is not affected.
   [#6097](https://github.com/Kong/kong-operator/pull/6097)
 - Added `OnPremEventGateway` CRD: an Event Gateway whose control plane is
-  gw-admin, running in the cluster, instead of Konnect. `spec.gwAdmin` names
-  the Service and port of the gw-admin pods Kong Operator pushes the
-  configuration to. This change only adds the CRD; it is not reconciled yet.
+  gw-admin, running in the cluster, instead of Konnect. `spec.gwAdminRef`
+  references the `GWAdmin` that serves the gateway, and can't be changed. A
+  `GWAdmin` in another namespace is used only when a `KongReferenceGrant` in
+  its namespace allows the `OnPremEventGateway`s of the namespace of the
+  gateway to reference it. This change only adds the CRD; it is not reconciled
+  yet.
   [#6114](https://github.com/Kong/kong-operator/pull/6114)
+  [#6213](https://github.com/Kong/kong-operator/pull/6213)
 - Event Gateway: `spec.parentRef` of `EventGatewayBackendCluster`,
   `EventGatewayDataPlaneCertificate`, `EventGatewayListener`,
   `EventGatewaySchemaRegistry`, `EventGatewayStaticKey` and

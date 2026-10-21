@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // OnPremEventGateway is the Schema for the on-prem Event Gateway control planes API.
@@ -32,7 +33,7 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=onpremegw,categories=kong
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
-// +kubebuilder:printcolumn:name="Service",description="The gw-admin Service",type=string,JSONPath=`.spec.gwAdmin.service.name`
+// +kubebuilder:printcolumn:name="GWAdmin",description="The GWAdmin serving the gateway",type=string,JSONPath=`.spec.gwAdminRef.name`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 // +kong:channels=kong-operator
 type OnPremEventGateway struct {
@@ -62,44 +63,49 @@ type OnPremEventGatewayList struct {
 
 // OnPremEventGatewaySpec defines the desired state of OnPremEventGateway.
 type OnPremEventGatewaySpec struct {
-	// GWAdmin configures how Kong Operator reaches the gw-admin of this gateway.
-	//
+	// GWAdminRef references the GWAdmin that serves this gateway. Kong
+	// Operator pushes the configuration of the gateway to every gw-admin pod of
+	// it, and the data planes of the gateway pull it from there. A GWAdmin in
+	// another namespace is used only when a KongReferenceGrant in its
+	// namespace allows OnPremEventGateways of the namespace of the gateway to
+	// reference it. It can't be changed.
 	// +required
-	GWAdmin GWAdmin `json:"gwAdmin,omitzero"`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="gwAdminRef is immutable"
+	GWAdminRef GWAdminRef `json:"gwAdminRef,omitzero"`
 
-	// TODO: the spec is not final. Fields, such as the TLS settings of the
-	// connection to gw-admin, are added as the implementation of the on-prem
-	// Event Gateway goes on.
+	// TODO: the spec is not final. Fields are added as the implementation of
+	// the on-prem Event Gateway goes on.
 }
 
-// GWAdmin configures how Kong Operator reaches gw-admin.
-type GWAdmin struct {
-	// Service is the Service in front of the gw-admin pods, in the namespace
-	// of the OnPremEventGateway. Kong Operator pushes the configuration to
-	// each pod of this Service.
-	//
-	// +required
-	Service GWAdminService `json:"service,omitzero"`
-}
-
-// GWAdminService identifies the gw-admin Service and its port.
-type GWAdminService struct {
-	// Name is the name of the Service.
-	//
+// GWAdminRef references a GWAdmin.
+type GWAdminRef struct {
+	// Name is the name of the GWAdmin.
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=63
-	// +kubebuilder:validation:XValidation:rule="self.matches('^[a-z]([-a-z0-9]*[a-z0-9])?$')",message="name must be a valid DNS-1035 label: lowercase alphanumeric characters or '-', starting with a letter and ending with an alphanumeric character"
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	Name string `json:"name,omitempty"`
 
-	// PortName is the name of the Service port gw-admin serves its API on.
-	// Service port names are DNS-1123 labels.
-	//
-	// +required
+	// Namespace is the namespace of the GWAdmin. It defaults to the namespace
+	// of the referencing object.
+	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=63
-	// +kubebuilder:validation:XValidation:rule="self.matches('^[a-z0-9]([-a-z0-9]*[a-z0-9])?$')",message="portName must be a valid DNS-1123 label: lowercase alphanumeric characters or '-', starting and ending with an alphanumeric character"
-	PortName string `json:"portName,omitempty"`
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+	Namespace *string `json:"namespace,omitempty"`
+}
+
+// OnPremEventGatewayKind is the kind of OnPremEventGateway.
+const OnPremEventGatewayKind = "OnPremEventGateway"
+
+// GWAdminKey returns the namespace and name of the GWAdmin the gateway
+// references.
+func (g *OnPremEventGateway) GWAdminKey() types.NamespacedName {
+	key := types.NamespacedName{Namespace: g.Namespace, Name: g.Spec.GWAdminRef.Name}
+	if ns := g.Spec.GWAdminRef.Namespace; ns != nil && *ns != "" {
+		key.Namespace = *ns
+	}
+	return key
 }
 
 // OnPremEventGatewayStatus defines the observed state of OnPremEventGateway.
@@ -115,7 +121,7 @@ type OnPremEventGatewayStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 
 	// ServerURL is the address the data planes of this gateway use to reach
-	// gw-admin.
+	// gw-admin: the cp endpoint of its GWAdmin.
 	//
 	// +optional
 	// +kubebuilder:validation:MinLength=1
