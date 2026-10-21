@@ -125,8 +125,10 @@ runs:
 
         # Prove DNS64 works before pointing CoreDNS at it, and resolve the
         # TCP probe target below.
+        TARGET_V6=""
         for i in $(seq 1 30); do
-          if dig +time=2 +tries=1 @"${GW}" example.com AAAA +short | grep -q '^64:ff9b::'; then
+          TARGET_V6=$(dig +time=2 +tries=1 @"${GW}" example.com AAAA +short | grep '^64:ff9b::' | head -1) || true
+          if [ -n "$TARGET_V6" ]; then
             echo "DNS64 synthesis OK"
             break
           fi
@@ -136,7 +138,6 @@ runs:
           fi
           sleep 2
         done
-        TARGET_V6=$(dig +time=2 +tries=1 @"${GW}" example.com AAAA +short | head -1)
 
         # Prove the NAT64 path end-to-end with a TCP connection to the
         # DNS64-resolved target - the same path the tests use. Bind the probe
@@ -147,7 +148,7 @@ runs:
         sudo ip addr add "${PROBE_ADDR}/128" dev lo || true
         for i in $(seq 1 5); do
           rc=0
-          curl --connect-timeout 8 --interface "${PROBE_ADDR}" -sS -o /dev/null "https://[${TARGET_V6:-64:ff9b::1.1.1.1}]/" 2>/dev/null || rc=$?
+          curl --connect-timeout 8 --interface "${PROBE_ADDR}" -sS -o /dev/null "https://[${TARGET_V6}]/" 2>/dev/null || rc=$?
           # Any exit other than connection-level failure (7 refused,
           # 28 timeout) proves the flow traversed NAT64 in both directions;
           # TLS/app-layer errors are still successful connections.
@@ -156,7 +157,7 @@ runs:
             break
           fi
           if [ "$i" = 5 ]; then
-            echo "NAT64 path never came up (tcp via ${PROBE_ADDR} to ${TARGET_V6:-64:ff9b::1.1.1.1})" >&2
+            echo "NAT64 path never came up (tcp via ${PROBE_ADDR} to ${TARGET_V6})" >&2
             exit 1
           fi
           sleep 2
