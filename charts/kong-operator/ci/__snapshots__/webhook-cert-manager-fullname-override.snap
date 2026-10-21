@@ -22881,15 +22881,19 @@ spec:
                             items:
                               properties:
                                 name:
+                                  minLength: 1
                                   type: string
                                 priority:
                                   format: int32
+                                  maximum: 100000
+                                  minimum: 0
                                   type: integer
                               required:
                               - name
                               - priority
                               type: object
                               x-kubernetes-map-type: atomic
+                            maxItems: 10
                             type: array
                             x-kubernetes-list-map-keys:
                             - name
@@ -37877,15 +37881,19 @@ spec:
                             items:
                               properties:
                                 name:
+                                  minLength: 1
                                   type: string
                                 priority:
                                   format: int32
+                                  maximum: 100000
+                                  minimum: 0
                                   type: integer
                               required:
                               - name
                               - priority
                               type: object
                               x-kubernetes-map-type: atomic
+                            maxItems: 10
                             type: array
                             x-kubernetes-list-map-keys:
                             - name
@@ -42892,15 +42900,19 @@ spec:
                             items:
                               properties:
                                 name:
+                                  minLength: 1
                                   type: string
                                 priority:
                                   format: int32
+                                  maximum: 100000
+                                  minimum: 0
                                   type: integer
                               required:
                               - name
                               - priority
                               type: object
                               x-kubernetes-map-type: atomic
+                            maxItems: 10
                             type: array
                             x-kubernetes-list-map-keys:
                             - name
@@ -47749,15 +47761,19 @@ spec:
                             items:
                               properties:
                                 name:
+                                  minLength: 1
                                   type: string
                                 priority:
                                   format: int32
+                                  maximum: 100000
+                                  minimum: 0
                                   type: integer
                               required:
                               - name
                               - priority
                               type: object
                               x-kubernetes-map-type: atomic
+                            maxItems: 10
                             type: array
                             x-kubernetes-list-map-keys:
                             - name
@@ -56894,15 +56910,19 @@ spec:
                             items:
                               properties:
                                 name:
+                                  minLength: 1
                                   type: string
                                 priority:
                                   format: int32
+                                  maximum: 100000
+                                  minimum: 0
                                   type: integer
                               required:
                               - name
                               - priority
                               type: object
                               x-kubernetes-map-type: atomic
+                            maxItems: 10
                             type: array
                             x-kubernetes-list-map-keys:
                             - name
@@ -61405,15 +61425,19 @@ spec:
                                 items:
                                   properties:
                                     name:
+                                      minLength: 1
                                       type: string
                                     priority:
                                       format: int32
+                                      maximum: 100000
+                                      minimum: 0
                                       type: integer
                                   required:
                                   - name
                                   - priority
                                   type: object
                                   x-kubernetes-map-type: atomic
+                                maxItems: 10
                                 type: array
                                 x-kubernetes-list-map-keys:
                                 - name
@@ -65421,15 +65445,19 @@ spec:
                                 items:
                                   properties:
                                     name:
+                                      minLength: 1
                                       type: string
                                     priority:
                                       format: int32
+                                      maximum: 100000
+                                      minimum: 0
                                       type: integer
                                   required:
                                   - name
                                   - priority
                                   type: object
                                   x-kubernetes-map-type: atomic
+                                maxItems: 10
                                 type: array
                                 x-kubernetes-list-map-keys:
                                 - name
@@ -70245,15 +70273,19 @@ spec:
                                 items:
                                   properties:
                                     name:
+                                      minLength: 1
                                       type: string
                                     priority:
                                       format: int32
+                                      maximum: 100000
+                                      minimum: 0
                                       type: integer
                                   required:
                                   - name
                                   - priority
                                   type: object
                                   x-kubernetes-map-type: atomic
+                                maxItems: 10
                                 type: array
                                 x-kubernetes-list-map-keys:
                                 - name
