@@ -41,14 +41,10 @@ spec:
                 - Name: aigateway-api
                   Scopes:
                     - aigateway-scope
-            # Two client_credentials clients used by this suite to obtain real, signed
-            # access tokens:
-            #   - aigateway-oidc-client: the "primary" client, mapped (via its client_id
-            #     claim) to the suite's main AIGatewayConsumer. It has two valid secrets so
-            #     the suite can exercise secret rotation (both work, then one is revoked).
-            #   - aigateway-oidc-client-outsider: a second client mapped to an
-            #     AIGatewayConsumer that's deliberately left out of the allowed
-            #     AIGatewayConsumerGroup, for the "outsider consumer" ACL scenario.
+            # Two client_credentials clients. This suite only exercises the primary
+            # client's first secret; the second secret and the outsider client are
+            # unused here (no second-secret rotation and no consumer-group ACL
+            # scenario; see the Konnect suites for that coverage).
             - name: CLIENTS_CONFIGURATION_INLINE
               value: |
                 [
