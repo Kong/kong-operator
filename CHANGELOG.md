@@ -73,6 +73,19 @@
 
 ### Fixed
 
+- Konnect: a DataPlane attached to a `KonnectExtension` now renders control
+  plane and telemetry endpoints that carry a path, as Konnect returns them
+  over PrivateLink, in the form Kong Gateway accepts: the port no longer lands
+  inside the path. Endpoints that name a DNS host without a port and without a
+  path render exactly as before; a value that carried a port previously had a
+  second port appended, which is fixed. An endpoint value that cannot be used
+  now reports `KonnectExtensionApplied=False` with reason `InvalidEndpoint`
+  instead of receiving a rendered value. The other Konnect extension failures
+  (`RefNotPermitted`, `InvalidExtension`, `InvalidSecret`,
+  `KonnectExtensionNotReady`) now also surface their
+  `KonnectExtensionApplied=False` condition on the resource, where the
+  condition was previously not written.
+  [#6104](https://github.com/Kong/kong-operator/issues/6104)
 - HybridGateway root-object controllers (e.g. HTTPRoute) no longer spend several
   seconds per reconcile scanning every managed Kong resource during orphan
   cleanup and status computation. Ownership of child resources is now resolved

@@ -561,7 +561,7 @@ func (r *BlueGreenReconciler) ensureDeploymentForDataPlane(
 		consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValuePreview,
 	}
 	// if the dataplane is configured with Konnect, the status/ready endpoint should be set as the readiness probe.
-	if _, konnectApplied := k8sutils.GetCondition(kcfgkonnect.KonnectExtensionAppliedType, dataplane); konnectApplied {
+	if k8sutils.HasConditionTrue(kcfgkonnect.KonnectExtensionAppliedType, dataplane) {
 		deploymentOpts = append(deploymentOpts, statusReadyEndpointDeploymentOpt(dataplane))
 	}
 
