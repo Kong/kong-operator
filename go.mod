@@ -49,9 +49,9 @@ require (
 	github.com/tonglil/buflogr v1.1.1
 	go.uber.org/goleak v1.3.0
 	go.uber.org/zap v1.28.0
-	golang.org/x/mod v0.41.0
+	golang.org/x/mod v0.42.0
 	golang.org/x/sync v0.24.0
-	golang.org/x/tools v0.49.0
+	golang.org/x/tools v0.51.0
 	google.golang.org/api v0.298.0
 	google.golang.org/grpc v1.83.2
 	gopkg.in/yaml.v3 v3.0.1
