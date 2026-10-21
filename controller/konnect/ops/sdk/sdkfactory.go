@@ -1,6 +1,7 @@
 package sdk
 
 import (
+	"fmt"
 	"net/http"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
@@ -191,11 +192,12 @@ type SDKToken string
 
 // SDKFactory is a factory for creating Konnect SDKs.
 type SDKFactory interface {
-	NewKonnectSDK(server server.Server, token SDKToken) SDKWrapper
+	NewKonnectSDK(server server.Server, token SDKToken) (SDKWrapper, error)
 }
 
 type sdkFactory struct {
-	httpClient *http.Client
+	httpClient              *http.Client
+	allowedServerURLDomains server.Domains
 }
 
 // SDKFactoryOpt is a functional option for configuring the SDKFactory.
@@ -209,24 +211,44 @@ func WithHTTPClient(client *http.Client) SDKFactoryOpt {
 	}
 }
 
+// WithAllowedServerURLDomains replaces the domains a Konnect server URL host
+// must belong to. It defaults to server.DefaultDomains: the check cannot be
+// switched off by leaving the list empty.
+func WithAllowedServerURLDomains(domains server.Domains) SDKFactoryOpt {
+	return func(f *sdkFactory) {
+		f.allowedServerURLDomains = domains
+	}
+}
+
 // NewSDKFactory creates a new SDKFactory.
 func NewSDKFactory(opts ...SDKFactoryOpt) SDKFactory {
-	factory := &sdkFactory{}
+	factory := &sdkFactory{
+		allowedServerURLDomains: server.DefaultDomains,
+	}
 	for _, opt := range opts {
 		opt(factory)
 	}
 	return factory
 }
 
-// NewKonnectSDK creates a new Konnect SDK.
-func (f sdkFactory) NewKonnectSDK(server server.Server, token SDKToken) SDKWrapper {
+// NewKonnectSDK creates a new Konnect SDK. It refuses a host outside the allowed
+// domains: the server URL comes from a KonnectAPIAuthConfiguration, so an
+// unlisted host would make the operator call an address a tenant picked.
+func (f sdkFactory) NewKonnectSDK(srv server.Server, token SDKToken) (SDKWrapper, error) {
+	if !f.allowedServerURLDomains.Allowed(srv.Host()) {
+		return nil, fmt.Errorf(
+			"server URL host %q is not under the allowed Konnect domains (%s); use --konnect-server-url-domains to allow another domain",
+			srv.Host(), f.allowedServerURLDomains,
+		)
+	}
+
 	opts := []sdkkonnectgo.SDKOption{
 		sdkkonnectgo.WithSecurity(
 			sdkkonnectcomp.Security{
 				PersonalAccessToken: new(string(token)),
 			},
 		),
-		sdkkonnectgo.WithServerURL(server.URL()),
+		sdkkonnectgo.WithServerURL(srv.URL()),
 	}
 
 	if f.httpClient != nil {
@@ -234,7 +256,7 @@ func (f sdkFactory) NewKonnectSDK(server server.Server, token SDKToken) SDKWrapp
 	}
 
 	return sdkWrapper{
-		server: server,
+		server: srv,
 		sdk:    sdkkonnectgo.New(opts...),
-	}
+	}, nil
 }

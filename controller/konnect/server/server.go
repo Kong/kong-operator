@@ -71,6 +71,13 @@ func (s Server) Region() Region {
 	return s.region
 }
 
+// Host returns the full host the server URL points at, region label included.
+// Both a port and a path, when the configured URL carries one, stay attached to
+// the last label, as in URL().
+func (s Server) Host() string {
+	return s.region.String() + "." + s.hostnameWithoutRegion
+}
+
 // Domain returns the registrable domain of the server URL, i.e. the last two
 // DNS labels of the hostname (e.g. "konghq.com" from "us.api.konghq.com").
 // If the hostname has fewer than two labels it returns the full hostname.

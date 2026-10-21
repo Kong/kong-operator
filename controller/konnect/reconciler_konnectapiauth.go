@@ -197,7 +197,10 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to parse server URL: %w", err)
 	}
-	sdk := r.sdkFactory.NewKonnectSDK(server, sdkops.SDKToken(token))
+	sdk, err := r.sdkFactory.NewKonnectSDK(server, sdkops.SDKToken(token))
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	// TODO(pmalek): check if api auth config has a valid status condition
 	// If not then return an error.

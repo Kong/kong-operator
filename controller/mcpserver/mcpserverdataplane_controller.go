@@ -304,5 +304,9 @@ func (r *MCPServerDataPlaneReconciler) buildSDK(
 			apiAuth.Namespace, apiAuth.Name, err)
 	}
 
-	return r.SdkFactory.NewKonnectSDK(srv, sdkops.SDKToken(token)), nil
+	sdk, err := r.SdkFactory.NewKonnectSDK(srv, sdkops.SDKToken(token))
+	if err != nil {
+		return nil, fmt.Errorf("failed to build Konnect SDK: %w", err)
+	}
+	return sdk, nil
 }
