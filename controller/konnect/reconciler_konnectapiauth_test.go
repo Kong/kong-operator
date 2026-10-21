@@ -717,18 +717,7 @@ func TestReconcileKonnectAPIAuthConfigurationRateLimited(t *testing.T) {
 			WithObjects(apiAuth),
 	).WithStatusSubresource(apiAuth).Build()
 
-	r := &KonnectAPIAuthConfigurationReconciler{
-		client: cl,
-		sdkFactory: sdkops.NewSDKFactory(sdkops.WithHTTPClient(&http.Client{
-			Transport: roundTripperFunc(func(*http.Request) (*http.Response, error) {
-				return &http.Response{
-					StatusCode: http.StatusTooManyRequests,
-					Header:     http.Header{"Retry-After": []string{"30"}},
-					Body:       io.NopCloser(strings.NewReader(`{"message":"API rate limit exceeded"}`)),
-				}, nil
-			}),
-		})),
-	}
+	r := rateLimitedAPIAuthReconciler(cl)
 
 	result, err := r.Reconcile(t.Context(), apiAuth)
 	require.NoError(t, err)
@@ -742,6 +731,71 @@ func TestReconcileKonnectAPIAuthConfigurationRateLimited(t *testing.T) {
 	assert.Equal(t, metav1.ConditionTrue, cond.Status)
 	assert.Equal(t, konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid, cond.Reason)
 	assert.Equal(t, existingOrganizationID, updated.Status.OrganizationID)
+}
+
+// TestReconcileKonnectAPIAuthConfigurationRateLimitedServerURLChanged asserts that
+// a status kept from an earlier reconcile is not reused when spec.serverURL points
+// at another server: dependents build their SDK clients from Status.ServerURL, so
+// the stale value must be replaced even while Konnect is throttling.
+func TestReconcileKonnectAPIAuthConfigurationRateLimitedServerURLChanged(t *testing.T) {
+	s := scheme.Get()
+	apiAuth := &konnectv1alpha1.KonnectAPIAuthConfiguration{
+		Name:      "auth",
+		Namespace: "default",
+		Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
+			Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
+			Token:     "token",
+			ServerURL: "us.api.konghq.tech",
+		},
+		Status: konnectv1alpha1.KonnectAPIAuthConfigurationStatus{
+			OrganizationID: "org-id-of-the-previous-server",
+			ServerURL:      "https://eu.api.konghq.tech",
+			Conditions: []metav1.Condition{
+				{
+					Type:               konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
+					Status:             metav1.ConditionTrue,
+					Reason:             konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid,
+					ObservedGeneration: 1,
+				},
+			},
+		},
+	}
+
+	cl := withAPIAuthRefIndexes(
+		fake.NewClientBuilder().
+			WithScheme(s).
+			WithObjects(apiAuth),
+	).WithStatusSubresource(apiAuth).Build()
+
+	_, err := rateLimitedAPIAuthReconciler(cl).Reconcile(t.Context(), apiAuth)
+	require.NoError(t, err)
+
+	var updated konnectv1alpha1.KonnectAPIAuthConfiguration
+	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(apiAuth), &updated))
+
+	assert.Equal(t, "https://us.api.konghq.tech", updated.Status.ServerURL)
+	assert.Empty(t, updated.Status.OrganizationID)
+	cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, &updated)
+	require.True(t, ok)
+	assert.Equal(t, metav1.ConditionFalse, cond.Status)
+	assert.Equal(t, konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonInvalid, cond.Reason)
+}
+
+// rateLimitedAPIAuthReconciler returns a reconciler whose every Konnect call answers
+// 429 with a Retry-After of 30s.
+func rateLimitedAPIAuthReconciler(cl client.Client) *KonnectAPIAuthConfigurationReconciler {
+	return &KonnectAPIAuthConfigurationReconciler{
+		client: cl,
+		sdkFactory: sdkops.NewSDKFactory(sdkops.WithHTTPClient(&http.Client{
+			Transport: roundTripperFunc(func(*http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusTooManyRequests,
+					Header:     http.Header{"Retry-After": []string{"30"}},
+					Body:       io.NopCloser(strings.NewReader(`{"message":"API rate limit exceeded"}`)),
+				}, nil
+			}),
+		})),
+	}
 }
 
 type roundTripperFunc func(*http.Request) (*http.Response, error)

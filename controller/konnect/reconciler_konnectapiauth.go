@@ -221,7 +221,12 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 		// KonnectExtension, DataPlane, Gateway) and leave them unprogrammed
 		// until the rate limit clears. Wait for as long as Konnect asked for
 		// before retrying instead of hammering the API every 3s.
-		if retryAfter, rateLimited := ops.GetRetryAfterFromRateLimitError(err); rateLimited {
+		//
+		// Only when the kept status describes the server we just called: after a
+		// spec.serverURL change the old status is stale, and dependents build SDK
+		// clients from Status.ServerURL, so they must be pointed at the new server.
+		if retryAfter, rateLimited := ops.GetRetryAfterFromRateLimitError(err); rateLimited &&
+			apiAuth.Status.ServerURL == server.URL() {
 			logger.Info("rate limited by Konnect API, keeping the last known APIAuth status", "retry_after", retryAfter.String())
 			return ctrl.Result{RequeueAfter: retryAfter}, nil
 		}
