@@ -2,6 +2,7 @@ package manager
 
 import (
 	"fmt"
+	"maps"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -42,9 +43,11 @@ func createCacheOptions(l logr.Logger, cfg Config) (cache.Options, error) {
 func createCacheByObject(cfg Config) (map[client.Object]cache.ByObject, error) {
 	byObject := map[client.Object]cache.ByObject{}
 	if cfg.SecretLabelSelector != "" {
-		if err := setByObjectFor[corev1.Secret](cfg.SecretLabelSelector, byObject); err != nil {
+		secrets, err := SecretCacheByObject(cfg.SecretLabelSelector)
+		if err != nil {
 			return nil, fmt.Errorf("failed to set byObject for Secrets: %w", err)
 		}
+		maps.Copy(byObject, secrets)
 	}
 	if cfg.ConfigMapLabelSelector != "" {
 		if err := setByObjectFor[corev1.ConfigMap](cfg.ConfigMapLabelSelector, byObject); err != nil {

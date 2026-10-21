@@ -32,6 +32,7 @@ func defaultConfigWithDisabledControllers() Config {
 	c.ControlPlaneExtensionsControllerEnabled = false
 	c.KonnectControllersEnabled = false
 	c.KEGDataPlaneControllerEnabled = false
+	c.GWAdminControllerEnabled = false
 	return c
 }
 
@@ -147,6 +148,20 @@ func TestEnsureRequiredCRDsChecksOnPremEventGatewayController(t *testing.T) {
 			require.ErrorContains(t, err, missingGVR.String())
 		})
 	}
+}
+
+func TestEnsureRequiredCRDsChecksGWAdminForGWAdminController(t *testing.T) {
+	t.Parallel()
+
+	cfg := defaultConfigWithDisabledControllers()
+	cfg.GWAdminControllerEnabled = true
+
+	missingGVR := operatorv1alpha1.GWAdminGVR()
+	checker := crdCheckerMissing(missingGVR)
+
+	err := ensureRequiredCRDs(&cfg, checker)
+	require.Error(t, err)
+	require.ErrorContains(t, err, missingGVR.String())
 }
 
 func TestEnsureRequiredCRDsSkipsDisabledControllerChecks(t *testing.T) {

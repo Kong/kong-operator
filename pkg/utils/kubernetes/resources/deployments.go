@@ -154,6 +154,9 @@ const (
 	DataPlaneTypeKeg
 	// DataPlaneTypeMcpServer represents a Kong MCP Server data plane or its init container.
 	DataPlaneTypeMcpServer
+	// DataPlaneTypeGWAdmin represents gw-admin, the on-prem control plane of
+	// the data planes that do not use Konnect.
+	DataPlaneTypeGWAdmin
 )
 
 // HardenContainerWithSecurityContext hardens a container with a security context and returns
@@ -204,7 +207,7 @@ func HardenContainerWithSecurityContext(container corev1.Container, dpType DataP
 
 	// For standard Kong Gateway runtime it is required to have
 	// additional writable path.
-	if dpType != DataPlaneTypeKeg {
+	if dpType != DataPlaneTypeKeg && dpType != DataPlaneTypeGWAdmin {
 		const (
 			volumeVarKong          = "var-kong"
 			volumeVarKongMountPath = "/var/kong"

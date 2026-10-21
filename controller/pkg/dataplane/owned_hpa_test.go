@@ -47,7 +47,7 @@ func TestGenerateBaseDeployment_ReplicaGuard(t *testing.T) {
 		aigwdp := newReconcileAIGWDP()
 		aigwdp.Spec.Deployment = &aigatewayv1alpha1.DeploymentOptions{Replicas: &replicas}
 
-		d, err := GenerateBaseDeployment(logr.Discard(), aigwdp, resolvedTestCP(aigatewaycp), "kong/aigw:latest", "cert-secret", "", "", testConfig)
+		d, err := GenerateBaseDeployment(logr.Discard(), aigwdp, resolvedTestCP(aigatewaycp), "kong/aigw:latest", "cert-secret", "", "", testConfig.Deployment, testConfig.Certificate.ChecksumAnnotation)
 		require.NoError(t, err)
 		require.NotNil(t, d.Spec.Replicas)
 		assert.Equal(t, replicas, *d.Spec.Replicas)
@@ -57,7 +57,7 @@ func TestGenerateBaseDeployment_ReplicaGuard(t *testing.T) {
 		aigwdp := newHPAAIGWDP()
 		aigwdp.Spec.Deployment.Replicas = new(int32(3))
 
-		d, err := GenerateBaseDeployment(logr.Discard(), aigwdp, resolvedTestCP(aigatewaycp), "kong/aigw:latest", "cert-secret", "", "", testConfig)
+		d, err := GenerateBaseDeployment(logr.Discard(), aigwdp, resolvedTestCP(aigatewaycp), "kong/aigw:latest", "cert-secret", "", "", testConfig.Deployment, testConfig.Certificate.ChecksumAnnotation)
 		require.NoError(t, err)
 		require.NotNil(t, d.Spec.Replicas)
 		assert.Equal(t, int32(1), *d.Spec.Replicas)
@@ -67,7 +67,7 @@ func TestGenerateBaseDeployment_ReplicaGuard(t *testing.T) {
 		aigwdp := newHPAAIGWDP()
 		aigwdp.Spec.Deployment.Scaling.HorizontalScaling.MinReplicas = new(int32(2))
 
-		d, err := GenerateBaseDeployment(logr.Discard(), aigwdp, resolvedTestCP(aigatewaycp), "kong/aigw:latest", "cert-secret", "", "", testConfig)
+		d, err := GenerateBaseDeployment(logr.Discard(), aigwdp, resolvedTestCP(aigatewaycp), "kong/aigw:latest", "cert-secret", "", "", testConfig.Deployment, testConfig.Certificate.ChecksumAnnotation)
 		require.NoError(t, err)
 		require.NotNil(t, d.Spec.Replicas)
 		assert.Equal(t, int32(2), *d.Spec.Replicas)
