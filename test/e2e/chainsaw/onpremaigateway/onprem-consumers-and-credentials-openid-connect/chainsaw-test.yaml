@@ -13,7 +13,7 @@ spec:
     only: the oidc-mock's cluster-internal Service DNS isn't reachable from the
     test-runner host), but for OAuth-mapped (not key-auth) consumers:
     config.consumerClaims maps the token's client_id claim to an AIGatewayConsumer's
-    apiSpec.customID. See onprem-auth-strategy-openid-connect for a minimal, bare (no
+    apiSpec.customID. See aigateway/auth-strategy-openid-connect for a minimal, bare (no
     ACL/consumer group) counterpart. Requests with no bearer token, or an invalid one,
     fall through openid-connect as an anonymous consumer, which the ACL then denies with
     403 (rather than openid-connect itself rejecting with 401). Scenarios covered:
@@ -293,6 +293,16 @@ spec:
       try:
         - apply:
             file: 10-outsider-consumer.yaml
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumer
+              metadata:
+                name: ($outsider_consumer_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
     - name: Reject-request-outsider-consumer-not-in-allowed-group
       use:
         template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
