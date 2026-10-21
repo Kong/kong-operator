@@ -90,8 +90,6 @@ func getForUID[
 		return getEventGatewayVirtualClusterConsumePolicyForUID(ctx, sdk.GetEventGatewayVirtualClusterConsumePoliciesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualClusterPolicy:
 		return getEventGatewayVirtualClusterPolicyForUID(ctx, sdk.GetEventGatewayVirtualClusterPoliciesSDK(), ent)
-	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain:
-		return getEventGatewayVirtualClusterPolicyChainForUID(ctx, sdk.GetEventGatewayVirtualClusterPoliciesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy:
 		return getEventGatewayVirtualClusterProducePolicyForUID(ctx, sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), ent)
 	case *konnectv1alpha1.KonnectAIGateway:

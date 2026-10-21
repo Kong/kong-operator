@@ -150,6 +150,12 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 	}
 	ctx = ctrllog.IntoContext(ctx, logger)
 
+	// Retaining a cluster policy chain must not depend on live authentication,
+	// parent readiness, or policy references.
+	if chain, ok := any(ent).(*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain); ok && !chain.DeletionTimestamp.IsZero() {
+		return finalizePolicyChain(ctx, r.Client, chain)
+	}
+
 	// Entities referencing a gateway the Konnect reconciler does not manage,
 	// e.g. an OnPremEventGateway, are kept out of its work queue by the watch
 	// predicates and map functions. This covers any other way they could be

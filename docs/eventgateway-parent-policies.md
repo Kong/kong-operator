@@ -180,9 +180,39 @@ Konnect interfaces, but `status.id` must remain unset: there is no independent
 chain ID. Conditions, organization/server information, and parent IDs describe
 the observed state instead.
 
-Controller integration is a separate layer. It must resolve and validate
-references, reject duplicates and cross-namespace references, enforce one active
-chain owner per virtual cluster, and report conflicts rather than let competing
-CRs overwrite each other. Deleting a chain CR must release ownership and stop
-management while retaining the remote chain and all policy entities; it must not
-PUT an empty list or delete policies.
+### Konnect reconciliation
+
+Each reference must identify a distinct, programmed cluster-level policy in
+the same namespace and virtual cluster. The declared order is preserved.
+Missing, deleting, unready, wrong-kind, wrong-parent, cross-namespace, or
+duplicate references prevent programming; the controller never skips an
+invalid reference to apply a shortened chain. The parent reference is immutable.
+
+The controller deliberately supports **complete-set reordering only**. Before
+each apply, it GETs the remote chain and requires the desired IDs to be a complete
+permutation of that set, then checks that the PUT response matches the requested
+order. It cannot reorder a chain containing policies that cannot be resolved
+from its Kubernetes references.
+These conservative controller restrictions match the development backend
+observations above; they do not depend on every backend version enforcing them.
+GET and PUT are not an atomic transaction: avoid concurrent out-of-band changes
+to the policy set.
+
+The first chain to claim the parent owns it, recorded in the parent annotation
+`gateway-operator.konghq.com/cluster-policy-chain-owner`. A competing chain reports
+`PolicyChainOwnerValid=False` with reason `ConflictingChain`; it does not write
+the remote chain. Delete the owning chain before replacing it.
+
+Reconciliation runs periodically to correct ordering drift. Policy changes and
+recreation enqueue referencing chains and invalidate unready references; a
+successful chain applies the latest policy IDs on its next configured sync.
+If the remote set and declared references differ, `Programmed=False` explains
+the complete-set restriction until they match.
+
+Deleting the chain CR releases ownership and stops management. It preserves the
+remote chain and all policy objects, even if authentication or referenced policies
+are no longer available; it does not PUT an empty list or delete policies.
+
+This controller applies ordering through Konnect only. On-prem entity watches
+are registered, but the on-prem controller does not yet build or apply a complete
+gw-admin configuration; on-prem policy ordering is not implemented by this layer.

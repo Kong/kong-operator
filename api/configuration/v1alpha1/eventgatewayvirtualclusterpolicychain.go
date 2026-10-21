@@ -25,17 +25,25 @@ func (e PolicyChainInvalidError) Error() string { return e.Message }
 // ValidatePolicyReferences checks the chain before resolving its ordered IDs.
 // A persisted ID alone does not mean a policy's current generation is ready.
 func (obj *EventGatewayVirtualClusterPolicyChain) ValidatePolicyReferences(ctx context.Context, cl client.Client) error {
+	_, err := obj.ResolveValidatedPolicyIDs(ctx, cl)
+	return err
+}
+
+// ResolveValidatedPolicyIDs validates policy references and resolves IDs from the
+// same snapshots, preserving their declared order.
+func (obj *EventGatewayVirtualClusterPolicyChain) ResolveValidatedPolicyIDs(ctx context.Context, cl client.Client) ([]string, error) {
 	if obj.Spec.APISpec.Policies == nil {
-		return PolicyChainInvalidError{Message: "spec.apiSpec.policies must be supplied explicitly"}
+		return nil, PolicyChainInvalidError{Message: "spec.apiSpec.policies must be supplied explicitly"}
 	}
 	parent := obj.Spec.EventGatewayVirtualClusterRef
 	if parent.Type != commonv1alpha1.ObjectRefTypeNamespacedRef || parent.NamespacedRef == nil ||
 		parent.NamespacedRef.Name == "" ||
 		(parent.NamespacedRef.Namespace != nil && *parent.NamespacedRef.Namespace != "" && *parent.NamespacedRef.Namespace != obj.Namespace) {
-		return PolicyChainInvalidError{Message: "spec.eventGatewayVirtualClusterRef must reference an EventGatewayVirtualCluster in the same namespace"}
+		return nil, PolicyChainInvalidError{Message: "spec.eventGatewayVirtualClusterRef must reference an EventGatewayVirtualCluster in the same namespace"}
 	}
 
 	var errs []error
+	ids := make([]string, 0, len(obj.Spec.APISpec.Policies))
 	seen := make(map[string]struct{}, len(obj.Spec.APISpec.Policies))
 	for i, ref := range obj.Spec.APISpec.Policies {
 		const kind = "EventGatewayVirtualClusterPolicy"
@@ -70,6 +78,13 @@ func (obj *EventGatewayVirtualClusterPolicyChain) ValidatePolicyReferences(ctx c
 			errs = append(errs, commonv1alpha1.ReferenceDifferentParentError{Kind: kind, Namespace: ns, Name: ref.Name, ParentKind: "EventGatewayVirtualCluster"})
 			continue
 		}
+		if obj.GetGatewayID() != "" && policy.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, commonv1alpha1.ReferenceDifferentGatewayError{
+				Kind: kind, Namespace: ns, Name: ref.Name,
+				ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: policy.GetGatewayID(),
+			})
+			continue
+		}
 		if !policy.DeletionTimestamp.IsZero() {
 			errs = append(errs, commonv1alpha1.ReferenceBeingDeletedError{Kind: kind, Namespace: ns, Name: ref.Name})
 			continue
@@ -78,7 +93,12 @@ func (obj *EventGatewayVirtualClusterPolicyChain) ValidatePolicyReferences(ctx c
 		if policy.GetKonnectID() == "" || programmed == nil || programmed.Status != metav1.ConditionTrue ||
 			programmed.ObservedGeneration != policy.Generation {
 			errs = append(errs, commonv1alpha1.ReferenceNotProgrammedError{Kind: kind, Namespace: ns, Name: ref.Name})
+			continue
 		}
+		ids = append(ids, policy.GetKonnectID())
 	}
-	return errors.Join(errs...)
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return ids, nil
 }

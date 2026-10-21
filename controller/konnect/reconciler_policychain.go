@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	apiconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -17,6 +19,45 @@ import (
 )
 
 const policyChainOwnerAnnotation = "gateway-operator.konghq.com/cluster-policy-chain-owner"
+
+func finalizePolicyChain(ctx context.Context, cl client.Client, chain *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain) (ctrl.Result, error) {
+	if chain.DeletionTimestamp.After(time.Now()) {
+		return ctrl.Result{RequeueAfter: time.Until(chain.DeletionTimestamp.Time)}, nil
+	}
+	ref := chain.Spec.EventGatewayVirtualClusterRef.NamespacedRef
+	if ref == nil || ref.Name == "" || (ref.Namespace != nil && *ref.Namespace != "" && *ref.Namespace != chain.Namespace) {
+		return ctrl.Result{}, configurationv1alpha1.PolicyChainInvalidError{Message: "cannot release ownership without a same-namespace virtual cluster reference"}
+	}
+	var parent configurationv1alpha1.EventGatewayVirtualCluster
+	if err := cl.Get(ctx, client.ObjectKey{Namespace: chain.Namespace, Name: ref.Name}, &parent); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return ctrl.Result{}, fmt.Errorf("getting virtual cluster to release policy chain ownership: %w", err)
+		}
+	} else if parent.Annotations[policyChainOwnerAnnotation] == chain.Name+"/"+string(chain.UID) {
+		old := parent.DeepCopy()
+		delete(parent.Annotations, policyChainOwnerAnnotation)
+		if err := cl.Patch(ctx, &parent, client.MergeFromWithOptions(old, client.MergeFromWithOptimisticLock{})); err != nil {
+			if apierrors.IsConflict(err) {
+				return ctrl.Result{Requeue: true}, nil
+			}
+			if !apierrors.IsNotFound(err) {
+				return ctrl.Result{}, fmt.Errorf("releasing policy chain ownership: %w", err)
+			}
+		}
+	}
+	old := chain.DeepCopy()
+	if controllerutil.RemoveFinalizer(chain, KonnectCleanupFinalizer) {
+		if err := cl.Patch(ctx, chain, client.MergeFromWithOptions(old, client.MergeFromWithOptimisticLock{})); err != nil {
+			if apierrors.IsConflict(err) {
+				return ctrl.Result{Requeue: true}, nil
+			}
+			if !apierrors.IsNotFound(err) {
+				return ctrl.Result{}, fmt.Errorf("removing retained policy chain finalizer: %w", err)
+			}
+		}
+	}
+	return ctrl.Result{}, nil
+}
 
 // claimPolicyChain serializes ownership on the parent with an optimistic-lock
 // patch. A cached list of chains alone cannot prevent simultaneous claimants.
