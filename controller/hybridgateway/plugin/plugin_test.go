@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -22,6 +23,7 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	pkgmetadata "github.com/kong/kong-operator/v2/pkg/metadata"
+	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
 var (
@@ -176,7 +178,7 @@ func TestPluginForFilter(t *testing.T) {
 			},
 		},
 		{
-			name: "route tags are not merged into the tags annotation",
+			name: "route tags are not merged into the tags annotation of a generated plugin",
 			filter: gwtypes.HTTPRouteFilter{
 				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
 				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
@@ -245,6 +247,117 @@ func TestPluginForFilter(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestPluginsForRule_IdenticalFiltersDifferentMatches is a regression test for the shared-plugin
+// config flip: two rules with identical URLRewrite filters but different prefix match paths must
+// produce distinct KongPlugins, each carrying the config.uri derived from its own rule's match
+// path. When the plugin name was derived from the filters alone, both rules collided on a single
+// shared KongPlugin whose config.uri flipped between the two translations depending on which
+// reconcile applied last, even though nothing changed in the cluster.
+func TestPluginsForRule_IdenticalFiltersDifferentMatches(t *testing.T) {
+	logger := logr.Discard()
+	ctx := context.Background()
+
+	urlRewriteFilter := gwtypes.HTTPRouteFilter{
+		Type: gatewayv1.HTTPRouteFilterURLRewrite,
+		URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+			Path: &gatewayv1.HTTPPathModifier{
+				Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+				ReplacePrefixMatch: new("/"),
+			},
+		},
+	}
+	ruleWithMatch := func(path string) gwtypes.HTTPRouteRule {
+		return gwtypes.HTTPRouteRule{
+			Matches: []gatewayv1.HTTPRouteMatch{
+				{Path: &gatewayv1.HTTPPathMatch{Type: new(gatewayv1.PathMatchPathPrefix), Value: new(path)}},
+			},
+			Filters: []gwtypes.HTTPRouteFilter{urlRewriteFilter},
+		}
+	}
+
+	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
+	}
+	parentRef := &gwtypes.ParentReference{Name: "test-gateway"}
+
+	extractReplaceURI := func(t *testing.T, p configurationv1.KongPlugin) string {
+		var cfg struct {
+			Replace struct {
+				URI string `json:"uri"`
+			} `json:"replace"`
+		}
+		require.NoError(t, json.Unmarshal(p.Config.Raw, &cfg))
+		return cfg.Replace.URI
+	}
+
+	fakeClient := fakectrlruntimeclient.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		Build()
+
+	rootPlugins, err := PluginsForRule(ctx, logger, fakeClient, httpRoute, ruleWithMatch("/"), parentRef)
+	require.NoError(t, err)
+	require.Len(t, rootPlugins, 1)
+
+	apiPlugins, err := PluginsForRule(ctx, logger, fakeClient, httpRoute, ruleWithMatch("/api"), parentRef)
+	require.NoError(t, err)
+	require.Len(t, apiPlugins, 1)
+
+	assert.NotEqual(t, rootPlugins[0].Name, apiPlugins[0].Name, "identical filters with different match paths must not share one KongPlugin")
+	assert.Equal(t, `$(uri_captures[1] == nil and "/" or "/" .. uri_captures[1])`, extractReplaceURI(t, rootPlugins[0]))
+	assert.Equal(t, `$(uri_captures[1] == nil and "/" or uri_captures[1])`, extractReplaceURI(t, apiPlugins[0]))
+}
+
+// TestPluginsForRule_NonDependentFiltersSharePluginAcrossRules asserts that rules whose filters
+// do not depend on the rule's matches (e.g. RequestHeaderModifier, whose config is fully
+// determined by the filter contents) keep sharing one KongPlugin across rules with identical
+// filters: the name stays derived from the filters alone, preserving the pre-existing
+// cross-rule/cross-route plugin sharing and avoiding plugin renames on upgrade.
+func TestPluginsForRule_NonDependentFiltersSharePluginAcrossRules(t *testing.T) {
+	logger := logr.Discard()
+	ctx := context.Background()
+
+	headerModifier := gwtypes.HTTPRouteFilter{
+		Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
+		RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+			Set: []gatewayv1.HTTPHeader{{Name: "X-Shared", Value: "foo"}},
+		},
+	}
+	ruleWithMatch := func(path string) gwtypes.HTTPRouteRule {
+		return gwtypes.HTTPRouteRule{
+			Matches: []gatewayv1.HTTPRouteMatch{
+				{Path: &gatewayv1.HTTPPathMatch{Type: new(gatewayv1.PathMatchPathPrefix), Value: new(path)}},
+			},
+			Filters: []gwtypes.HTTPRouteFilter{headerModifier},
+		}
+	}
+
+	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
+	}
+	parentRef := &gwtypes.ParentReference{Name: "test-gateway"}
+
+	fakeClient := fakectrlruntimeclient.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		Build()
+
+	rootPlugins, err := PluginsForRule(ctx, logger, fakeClient, httpRoute, ruleWithMatch("/"), parentRef)
+	require.NoError(t, err)
+	require.Len(t, rootPlugins, 1)
+
+	apiPlugins, err := PluginsForRule(ctx, logger, fakeClient, httpRoute, ruleWithMatch("/api"), parentRef)
+	require.NoError(t, err)
+	require.Len(t, apiPlugins, 1)
+
+	assert.Equal(t, rootPlugins[0].Name, apiPlugins[0].Name, "non-match-dependent filters must keep sharing one KongPlugin across rules")
+	assert.Equal(t, rootPlugins[0].Config.Raw, apiPlugins[0].Config.Raw)
 }
 
 func TestGetReferencedKongPlugin(t *testing.T) {
@@ -437,6 +550,95 @@ func TestPluginsForRule_ExtensionRef_TagsAnnotation(t *testing.T) {
 	require.Len(t, plugins, 1)
 
 	assert.Equal(t, "plugin-tag,route-tag", plugins[0].Annotations[pkgmetadata.AnnotationKeyTags])
+}
+
+// TestPluginsForRule_InheritedTagsAnnotation pins that a generated KongPlugin and a mirrored
+// ExtensionRef KongPlugin both inherit the parent Gateway's and GatewayClass's tags through the
+// konghq.com/tags annotation, which is where the Konnect ops layer reads a plugin's tags from.
+func TestPluginsForRule_InheritedTagsAnnotation(t *testing.T) {
+	logger := logr.Discard()
+	ctx := context.Background()
+
+	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
+		Annotations: map[string]string{
+			pkgmetadata.AnnotationKeyTags: "route-tag",
+		},
+		Spec: gwtypes.HTTPRouteSpec{
+			CommonRouteSpec: gwtypes.CommonRouteSpec{
+				ParentRefs: []gwtypes.ParentReference{{Name: "test-gateway"}},
+			},
+		},
+	}
+	// Translation only ever runs on a route whose status is already settled (Reconcile
+	// updates it first and requeues), so the fixture carries the accepted-parent entry
+	// that marks the parentRef as one this controller reconciles.
+	httpRoute.Status.Parents = []gwtypes.RouteParentStatus{{
+		ParentRef:      gwtypes.ParentReference{Name: "test-gateway"},
+		ControllerName: gwtypes.GatewayController(vars.ControllerName()),
+	}}
+	parentRef := &gwtypes.ParentReference{Name: "test-gateway"}
+	gateway := &gwtypes.Gateway{
+		Name:        "test-gateway",
+		Namespace:   "test-namespace",
+		Annotations: map[string]string{pkgmetadata.AnnotationKeyTags: "gw-tag"},
+		Spec:        gwtypes.GatewaySpec{GatewayClassName: "test-class"},
+	}
+	gatewayClass := &gwtypes.GatewayClass{
+		Name:        "test-class",
+		Annotations: map[string]string{pkgmetadata.AnnotationKeyTags: "class-tag"},
+	}
+
+	t.Run("generated plugin", func(t *testing.T) {
+		rule := gwtypes.HTTPRouteRule{
+			Filters: []gwtypes.HTTPRouteFilter{{
+				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
+				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+					Set: []gatewayv1.HTTPHeader{{Name: "X-Custom-Header", Value: "custom-value"}},
+				},
+			}},
+		}
+		fakeClient := fakectrlruntimeclient.NewClientBuilder().
+			WithScheme(scheme.Get()).WithObjects(gateway, gatewayClass).Build()
+
+		plugins, err := PluginsForRule(ctx, logger, fakeClient, httpRoute, rule, parentRef)
+		require.NoError(t, err)
+		require.Len(t, plugins, 1)
+		// The route's own tags are deliberately left out of a shared generated plugin; only the
+		// inherited ones are added.
+		assert.Equal(t, "gw-tag,class-tag", plugins[0].Annotations[pkgmetadata.AnnotationKeyTags])
+	})
+
+	t.Run("mirrored ExtensionRef plugin keeps its own tags first", func(t *testing.T) {
+		referencedPlugin := &configurationv1.KongPlugin{
+			Name:      "referenced-plugin",
+			Namespace: "test-namespace",
+			Annotations: map[string]string{
+				pkgmetadata.AnnotationKeyTags: "plugin-tag",
+			},
+			PluginName: "rate-limiting",
+		}
+		rule := gwtypes.HTTPRouteRule{
+			Filters: []gwtypes.HTTPRouteFilter{{
+				Type: gatewayv1.HTTPRouteFilterExtensionRef,
+				ExtensionRef: &gatewayv1.LocalObjectReference{
+					Group: gatewayv1.Group(configurationv1.GroupVersion.Group),
+					Kind:  "KongPlugin",
+					Name:  "referenced-plugin",
+				},
+			}},
+		}
+		fakeClient := fakectrlruntimeclient.NewClientBuilder().
+			WithScheme(scheme.Get()).WithObjects(referencedPlugin, gateway, gatewayClass).Build()
+
+		plugins, err := PluginsForRule(ctx, logger, fakeClient, httpRoute, rule, parentRef)
+		require.NoError(t, err)
+		require.Len(t, plugins, 1)
+		assert.Equal(t, "plugin-tag,gw-tag,class-tag", plugins[0].Annotations[pkgmetadata.AnnotationKeyTags])
+	})
 }
 
 func TestPluginsForRule_ExtensionRef_Tags(t *testing.T) {

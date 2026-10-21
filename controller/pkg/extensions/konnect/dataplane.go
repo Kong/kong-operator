@@ -10,6 +10,7 @@ import (
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	extensionserrors "github.com/kong/kong-operator/v2/controller/pkg/extensions/errors"
 	"github.com/kong/kong-operator/v2/controller/pkg/extensions/processor"
 	"github.com/kong/kong-operator/v2/internal/utils/config"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -82,7 +83,10 @@ func (p *DataPlaneKonnectExtensionProcessor) Process(ctx context.Context, cl cli
 	if konnectExtension.Spec.Konnect.DataPlane != nil {
 		dataplaneLabels = konnectExtension.Spec.Konnect.DataPlane.Labels
 	}
-	envSet := config.KongInKonnectDefaults(dataplaneLabels, konnectExtension.Status)
+	envSet, err := config.KongInKonnectDefaults(dataplaneLabels, konnectExtension.Status)
+	if err != nil {
+		return false, fmt.Errorf("%w: %w", extensionserrors.ErrInvalidEndpoint, err)
+	}
 
 	config.FillContainerEnvs(nil, &d.Spec.Template, consts.DataPlaneProxyContainerName, config.EnvVarMapToSlice(envSet))
 	dataPlane.Spec.Deployment.PodTemplateSpec = &d.Spec.Template

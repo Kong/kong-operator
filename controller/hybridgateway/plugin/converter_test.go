@@ -1202,3 +1202,104 @@ func TestMergePluginConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestFilterDependsOnRuleMatches(t *testing.T) {
+	tests := []struct {
+		name   string
+		filter gwtypes.HTTPRouteFilter
+		want   bool
+	}{
+		{
+			// translateURLRewrite computes the replacement URI from the rule's first prefix
+			// match (root-vs-non-root branch in translatePathReplacePrefixMatch).
+			name: "URLRewrite with ReplacePrefixMatch depends on the rule's matches",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterURLRewrite,
+				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+					Path: &gatewayv1.HTTPPathModifier{
+						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+						ReplacePrefixMatch: new("/echo"),
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			// ReplaceFullPath rewrites to a fixed path: no match dependency.
+			name: "URLRewrite with ReplaceFullPath does not depend on the rule's matches",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterURLRewrite,
+				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+					Path: &gatewayv1.HTTPPathModifier{
+						Type:            gatewayv1.FullPathHTTPPathModifier,
+						ReplaceFullPath: new("/fixed"),
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			// Hostname-only rewrite produces a host header replacement: no match dependency.
+			name: "URLRewrite with hostname only does not depend on the rule's matches",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterURLRewrite,
+				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+					Hostname: new(gatewayv1.PreciseHostname("example.com")),
+				},
+			},
+			want: false,
+		},
+		{
+			// translateRequestRedirectPreFunction embeds the rule's first prefix match in the
+			// generated pre-function body.
+			name: "RequestRedirect with ReplacePrefixMatch depends on the rule's matches",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
+				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+					Path: &gatewayv1.HTTPPathModifier{
+						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+						ReplacePrefixMatch: new("/redirected"),
+					},
+				},
+			},
+			want: true,
+		},
+		{
+			// The plain redirect plugin (translateRequestRedirect) ignores the rule.
+			name: "RequestRedirect without a path modifier does not depend on the rule's matches",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterRequestRedirect,
+				RequestRedirect: &gatewayv1.HTTPRequestRedirectFilter{
+					Hostname: new(gatewayv1.PreciseHostname("example.com")),
+				},
+			},
+			want: false,
+		},
+		{
+			name: "RequestHeaderModifier does not depend on the rule's matches",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
+				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+					Set: []gatewayv1.HTTPHeader{{Name: "X-Test", Value: "test-value"}},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "ResponseHeaderModifier does not depend on the rule's matches",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterResponseHeaderModifier,
+				ResponseHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+					Add: []gatewayv1.HTTPHeader{{Name: "X-Test", Value: "test-value"}},
+				},
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, filterDependsOnRuleMatchPaths(tt.filter))
+		})
+	}
+}

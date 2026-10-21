@@ -19,6 +19,7 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	pkgmetadata "github.com/kong/kong-operator/v2/pkg/metadata"
+	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
 var grpcRouteTypeMeta = metav1.TypeMeta{
@@ -70,7 +71,62 @@ func TestGRPCPluginsForRule(t *testing.T) {
 	assert.Contains(t, plugin.Annotations, consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation)
 	assert.Equal(t, "test-namespace/test-route", plugin.Annotations[consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation])
 	// tags in GRPCRoute should not be merged into the tags annotation of the KongPlugin, since plugins are shared across multiple routes.
+	// The Gateway's and GatewayClass's tags are inherited instead; this route has no parent in the
+	// fake client, so nothing is added here. See TestGRPCPluginsForRule_InheritedTagsAnnotation.
 	assert.Empty(t, plugin.Annotations[pkgmetadata.AnnotationKeyTags])
+}
+
+// TestGRPCPluginsForRule_IdenticalFiltersDifferentRules asserts the GRPCRoute sharing invariant:
+// GRPC filter translations depend only on the filter contents (translateGRPCFromFilter handles
+// header modifiers only), so two rules with identical filters produce identical configs and
+// safely share one KongPlugin whose name is derived from the filters alone. If a future GRPC
+// filter translation starts depending on the rule's matches, its plugin naming must hash the
+// matches in (mirroring plugin.filterDependsOnRuleMatches / namegen.NewKongPluginNameForFiltersAndMatches
+// on the HTTPRoute side), or two rules would collide on one shared KongPlugin whose config flips
+// between the two translations.
+func TestGRPCPluginsForRule_IdenticalFiltersDifferentRules(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	grpcRoute := &gwtypes.GRPCRoute{
+		TypeMeta:  grpcRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
+	}
+	parentRef := &gwtypes.ParentReference{Name: "test-gateway"}
+
+	filter := gatewayv1.GRPCRouteFilter{
+		Type: gatewayv1.GRPCRouteFilterRequestHeaderModifier,
+		RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+			Set: []gatewayv1.HTTPHeader{
+				{Name: "X-Custom-Header", Value: "custom-value"},
+			},
+		},
+	}
+	ruleWithService := func(service string) gwtypes.GRPCRouteRule {
+		return gwtypes.GRPCRouteRule{
+			Matches: []gatewayv1.GRPCRouteMatch{
+				{Method: &gatewayv1.GRPCMethodMatch{Service: new(service)}},
+			},
+			Filters: []gatewayv1.GRPCRouteFilter{filter},
+		}
+	}
+
+	fakeClient := fakectrlruntimeclient.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		Build()
+
+	pluginsA, err := GRPCPluginsForRule(ctx, logger, fakeClient, grpcRoute, ruleWithService("a.Service"), parentRef)
+	require.NoError(t, err)
+	require.Len(t, pluginsA, 1)
+
+	pluginsB, err := GRPCPluginsForRule(ctx, logger, fakeClient, grpcRoute, ruleWithService("b.Service"), parentRef)
+	require.NoError(t, err)
+	require.Len(t, pluginsB, 1)
+
+	assert.Equal(t, pluginsA[0].Name, pluginsB[0].Name, "identical filters under different rules must share one KongPlugin")
+	assert.Equal(t, pluginsA[0].Config.Raw, pluginsB[0].Config.Raw, "identical filters must produce identical configs")
 }
 
 func TestGRPCPluginsForRule_UnsupportedFilterErrors(t *testing.T) {
@@ -230,6 +286,62 @@ func TestGetReferencedKongPluginForGRPCFilter(t *testing.T) {
 			assert.Equal(t, tt.expectedPlugin.Config.Raw, plugin.Config.Raw)
 		})
 	}
+}
+
+// TestGRPCPluginsForRule_InheritedTagsAnnotation is the GRPCRoute counterpart of
+// TestPluginsForRule_InheritedTagsAnnotation.
+func TestGRPCPluginsForRule_InheritedTagsAnnotation(t *testing.T) {
+	logger := logr.Discard()
+	ctx := context.Background()
+
+	grpcRoute := &gwtypes.GRPCRoute{
+		TypeMeta:  grpcRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		Annotations: map[string]string{
+			pkgmetadata.AnnotationKeyTags: "route-tag",
+		},
+		Spec: gwtypes.GRPCRouteSpec{
+			CommonRouteSpec: gwtypes.CommonRouteSpec{
+				ParentRefs: []gwtypes.ParentReference{{Name: "test-gateway"}},
+			},
+		},
+	}
+	// Translation only ever runs on a route whose status is already settled (Reconcile
+	// updates it first and requeues), so the fixture carries the accepted-parent entry
+	// that marks the parentRef as one this controller reconciles.
+	grpcRoute.Status.Parents = []gwtypes.RouteParentStatus{{
+		ParentRef:      gwtypes.ParentReference{Name: "test-gateway"},
+		ControllerName: gwtypes.GatewayController(vars.ControllerName()),
+	}}
+	parentRef := &gwtypes.ParentReference{Name: "test-gateway"}
+	fakeClient := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(
+		&gwtypes.Gateway{
+			Name:        "test-gateway",
+			Namespace:   "test-namespace",
+			Annotations: map[string]string{pkgmetadata.AnnotationKeyTags: "gw-tag"},
+			Spec:        gwtypes.GatewaySpec{GatewayClassName: "test-class"},
+		},
+		&gwtypes.GatewayClass{
+			Name:        "test-class",
+			Annotations: map[string]string{pkgmetadata.AnnotationKeyTags: "class-tag"},
+		},
+	).Build()
+
+	rule := gwtypes.GRPCRouteRule{
+		Filters: []gatewayv1.GRPCRouteFilter{{
+			Type: gatewayv1.GRPCRouteFilterRequestHeaderModifier,
+			RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+				Set: []gatewayv1.HTTPHeader{{Name: "X-Custom-Header", Value: "custom-value"}},
+			},
+		}},
+	}
+
+	plugins, err := GRPCPluginsForRule(ctx, logger, fakeClient, grpcRoute, rule, parentRef)
+	require.NoError(t, err)
+	require.Len(t, plugins, 1)
+	// The route's own tags stay out of a shared generated plugin; only the inherited ones land.
+	assert.Equal(t, "gw-tag,class-tag", plugins[0].Annotations[pkgmetadata.AnnotationKeyTags])
 }
 
 func TestGRPCPluginsForRule_ExtensionRef_TagsAnnotation(t *testing.T) {

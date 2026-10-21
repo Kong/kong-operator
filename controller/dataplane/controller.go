@@ -234,7 +234,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, dataplane *operatorv1beta1.D
 	}
 
 	// if the dataplane is configured with Konnect, the status/ready endpoint should be set as the readiness probe.
-	if _, konnectApplied := k8sutils.GetCondition(kcfgkonnect.KonnectExtensionAppliedType, dataplane); konnectApplied {
+	if k8sutils.HasConditionTrue(kcfgkonnect.KonnectExtensionAppliedType, dataplane) {
 		deploymentOpts = append(deploymentOpts, statusReadyEndpointDeploymentOpt(dataplane))
 	}
 
