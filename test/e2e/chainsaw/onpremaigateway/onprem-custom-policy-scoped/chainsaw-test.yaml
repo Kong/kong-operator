@@ -34,20 +34,10 @@ spec:
     a model-scoped plugin evaluated before a model is selected. Hence the
     handler's PRIORITY of 900.
 
-    On-prem differences from the Konnect suite's `custom-policy-scoped` test,
-    both forced by the dbless document's constraints:
-
-    - The models declare no model-selector header (config.route.model): two
-      models sharing the same selector alias would render two ai_models
-      entities with the same name, which the dbless document rejects as a
-      uniqueness violation (Konnect accepts the same CR set). The route paths
-      disambiguate the models instead, and the rendered ai_model names fall
-      back to the CR names.
-    - The model traffic steps use the aigw_chat_completion.sh script inline
-      with INCLUDE_HEADER=false and MODEL_ALIAS set to the model CR's name,
-      the shape proven by onprem-custom-policy-dataplane; the shared
-      verify-aigw-chat-completion-from-cluster template does not carry the
-      INCLUDE_HEADER binding.
+    Mirrors the Konnect suite's `custom-policy-scoped` test scenario-for-scenario
+    against an on-prem render+push pipeline (the data plane is the same
+    kong-ai-gateway image; the pushed dbless document carries the same
+    model-scoped instance shape).
   bindings:
     - name: test_name
       value: ($namespace)
@@ -749,78 +739,55 @@ spec:
                 (conditions[?type == 'Programmed']):
                   - status: 'True'
     # --- The plain model (no policy of its own): consumer and consumer group
-    # instances win over the global one, in that order. The models declare no
-    # model-selector header, so the requests carry none (INCLUDE_HEADER=false)
-    # and the alias is the model CR's name; see the description.
+    # instances win over the global one, in that order.
     - name: Verify-plain-model-consumer-a-gets-consumer-policy
       description: Consumer A's own policy wins over its group's and the global one.
-      try:
-        - script:
-            env:
-              - name: NAMESPACE
-                value: ($namespace)
-              - name: ADDRESS
-                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
-              - name: ROUTE_PATH
-                value: ($plain_model_route_path)
-              - name: MODEL_ALIAS
-                value: ($plain_model_name)
-              - name: INCLUDE_HEADER
-                value: "false"
-              - name: REQUEST_HEADERS
-                value: (join('', ['apikey:', ($consumer_a_api_key)]))
-              - name: EXPECT_HEADER
-                value: ($scope_header)
-              - name: EXPECT_HEADER_VALUE
-                value: consumer
-            content: |
-              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+      use:
+        template: ../../common/_step_templates/verify-aigw-chat-completion-from-cluster.yaml
+        with:
+          bindings:
+            - name: route_path
+              value: ($plain_model_route_path)
+            - name: model_alias
+              value: qwen2.5:0.5b
+            - name: request_headers
+              value: (join('', ['apikey:', $consumer_a_api_key]))
+            - name: expect_header
+              value: ($scope_header)
+            - name: expect_header_value
+              value: consumer
     - name: Verify-plain-model-consumer-b-gets-consumer-group-policy
       description: Consumer B has no policy of its own, so its group's wins over the global one.
-      try:
-        - script:
-            env:
-              - name: NAMESPACE
-                value: ($namespace)
-              - name: ADDRESS
-                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
-              - name: ROUTE_PATH
-                value: ($plain_model_route_path)
-              - name: MODEL_ALIAS
-                value: ($plain_model_name)
-              - name: INCLUDE_HEADER
-                value: "false"
-              - name: REQUEST_HEADERS
-                value: (join('', ['apikey:', ($consumer_b_api_key)]))
-              - name: EXPECT_HEADER
-                value: ($scope_header)
-              - name: EXPECT_HEADER_VALUE
-                value: consumer-group
-            content: |
-              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+      use:
+        template: ../../common/_step_templates/verify-aigw-chat-completion-from-cluster.yaml
+        with:
+          bindings:
+            - name: route_path
+              value: ($plain_model_route_path)
+            - name: model_alias
+              value: qwen2.5:0.5b
+            - name: request_headers
+              value: (join('', ['apikey:', $consumer_b_api_key]))
+            - name: expect_header
+              value: ($scope_header)
+            - name: expect_header_value
+              value: consumer-group
     - name: Verify-plain-model-consumer-c-gets-global-policy
       description: Consumer C matches nothing more specific than the global policy.
-      try:
-        - script:
-            env:
-              - name: NAMESPACE
-                value: ($namespace)
-              - name: ADDRESS
-                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
-              - name: ROUTE_PATH
-                value: ($plain_model_route_path)
-              - name: MODEL_ALIAS
-                value: ($plain_model_name)
-              - name: INCLUDE_HEADER
-                value: "false"
-              - name: REQUEST_HEADERS
-                value: (join('', ['apikey:', ($consumer_c_api_key)]))
-              - name: EXPECT_HEADER
-                value: ($scope_header)
-              - name: EXPECT_HEADER_VALUE
-                value: global
-            content: |
-              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+      use:
+        template: ../../common/_step_templates/verify-aigw-chat-completion-from-cluster.yaml
+        with:
+          bindings:
+            - name: route_path
+              value: ($plain_model_route_path)
+            - name: model_alias
+              value: qwen2.5:0.5b
+            - name: request_headers
+              value: (join('', ['apikey:', $consumer_c_api_key]))
+            - name: expect_header
+              value: ($scope_header)
+            - name: expect_header_value
+              value: global
     # --- The scoped model (with its own policy): consumer and consumer group
     # instances still win; the model instance beats the global one.
     - name: Verify-scoped-model-consumer-a-gets-consumer-policy
@@ -828,78 +795,57 @@ spec:
         A consumer policy still wins on a model with its own policy (Consumer
         ranks above Route + Model). This alone does not prove model scope: the
         same value comes back if the model's instance is not applied at all.
-      try:
-        - script:
-            env:
-              - name: NAMESPACE
-                value: ($namespace)
-              - name: ADDRESS
-                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
-              - name: ROUTE_PATH
-                value: ($scoped_model_route_path)
-              - name: MODEL_ALIAS
-                value: ($scoped_model_name)
-              - name: INCLUDE_HEADER
-                value: "false"
-              - name: REQUEST_HEADERS
-                value: (join('', ['apikey:', ($consumer_a_api_key)]))
-              - name: EXPECT_HEADER
-                value: ($scope_header)
-              - name: EXPECT_HEADER_VALUE
-                value: consumer
-            content: |
-              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+      use:
+        template: ../../common/_step_templates/verify-aigw-chat-completion-from-cluster.yaml
+        with:
+          bindings:
+            - name: route_path
+              value: ($scoped_model_route_path)
+            - name: model_alias
+              value: qwen2.5:0.5b
+            - name: request_headers
+              value: (join('', ['apikey:', $consumer_a_api_key]))
+            - name: expect_header
+              value: ($scope_header)
+            - name: expect_header_value
+              value: consumer
     - name: Verify-scoped-model-consumer-b-gets-consumer-group-policy
       description: >-
         A consumer group policy still wins on a model with its own policy
         (Consumer Group ranks above Route + Model). Like the previous check,
         this alone does not prove model scope.
-      try:
-        - script:
-            env:
-              - name: NAMESPACE
-                value: ($namespace)
-              - name: ADDRESS
-                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
-              - name: ROUTE_PATH
-                value: ($scoped_model_route_path)
-              - name: MODEL_ALIAS
-                value: ($scoped_model_name)
-              - name: INCLUDE_HEADER
-                value: "false"
-              - name: REQUEST_HEADERS
-                value: (join('', ['apikey:', ($consumer_b_api_key)]))
-              - name: EXPECT_HEADER
-                value: ($scope_header)
-              - name: EXPECT_HEADER_VALUE
-                value: consumer-group
-            content: |
-              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+      use:
+        template: ../../common/_step_templates/verify-aigw-chat-completion-from-cluster.yaml
+        with:
+          bindings:
+            - name: route_path
+              value: ($scoped_model_route_path)
+            - name: model_alias
+              value: qwen2.5:0.5b
+            - name: request_headers
+              value: (join('', ['apikey:', $consumer_b_api_key]))
+            - name: expect_header
+              value: ($scope_header)
+            - name: expect_header_value
+              value: consumer-group
     - name: Verify-scoped-model-consumer-c-gets-model-policy
       description: >-
         The model's policy wins over the global one: the check proving that
         model scope works.
-      try:
-        - script:
-            env:
-              - name: NAMESPACE
-                value: ($namespace)
-              - name: ADDRESS
-                value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
-              - name: ROUTE_PATH
-                value: ($scoped_model_route_path)
-              - name: MODEL_ALIAS
-                value: ($scoped_model_name)
-              - name: INCLUDE_HEADER
-                value: "false"
-              - name: REQUEST_HEADERS
-                value: (join('', ['apikey:', ($consumer_c_api_key)]))
-              - name: EXPECT_HEADER
-                value: ($scope_header)
-              - name: EXPECT_HEADER_VALUE
-                value: model
-            content: |
-              bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_chat_completion.sh
+      use:
+        template: ../../common/_step_templates/verify-aigw-chat-completion-from-cluster.yaml
+        with:
+          bindings:
+            - name: route_path
+              value: ($scoped_model_route_path)
+            - name: model_alias
+              value: qwen2.5:0.5b
+            - name: request_headers
+              value: (join('', ['apikey:', $consumer_c_api_key]))
+            - name: expect_header
+              value: ($scope_header)
+            - name: expect_header_value
+              value: model
     # --- Agent and MCP server get their own values on their own routes.
     - name: Verify-agent-gets-agent-policy
       use:
