@@ -90,6 +90,12 @@ func TestHelmUpgrade(t *testing.T) {
 				// Suites that wait on the Konnect API need a bigger budget.
 				AssertTimeout time.Duration
 			}
+			// timeout is the budget for this suite's assertions and for deleting its
+			// objects: deleting a hybrid Gateway waits for the Konnect control plane
+			// it owns to be deleted too, which is rate limited like the assertions.
+			timeout := func(s suite) time.Duration {
+				return lo.Ternary(s.AssertTimeout > 0, s.AssertTimeout, waitTime)
+			}
 
 			// This is the place to add steps that should be performed before the upgrade.
 			// For instance change in CRDs requires manual installation of new CRDs before the upgrade,
@@ -308,16 +314,17 @@ func TestHelmUpgrade(t *testing.T) {
 			cl := client.NewNamespacedClient(e.Clients.MgrClient, e.Namespace.Name)
 			for _, suite := range suitesToRun {
 				t.Logf("Deploying objects for suite %q...", suite.Name)
+				budget := timeout(suite)
 				for _, obj := range suite.Objects {
 					obj := obj.DeepCopyObject().(client.Object)
 					require.NoError(t, cl.Create(ctx, obj))
 					t.Cleanup(func() {
 						// Ensure that every object is properly deleted (the finalizer must
 						// be executed, it requires some time) before the Helm chart is uninstalled.
-						ctx, cancel := context.WithTimeout(context.Background(), waitTime)
+						ctx, cancel := context.WithTimeout(context.Background(), budget)
 						defer cancel()
 						require.NoError(t, client.IgnoreNotFound(cl.Delete(ctx, obj)))
-						eventually.WaitForObjectToNotExist(t, ctx, cl, obj, waitTime, time.Second)
+						eventually.WaitForObjectToNotExist(t, ctx, cl, obj, budget, time.Second)
 					})
 				}
 			}
@@ -328,7 +335,7 @@ func TestHelmUpgrade(t *testing.T) {
 					t.Run(suite.Name+"/after_install/"+assertion.Name, func(t *testing.T) {
 						require.EventuallyWithT(t, func(c *assert.CollectT) {
 							assertion.Func(c, e.Clients)
-						}, lo.Ternary(suite.AssertTimeout > 0, suite.AssertTimeout, waitTime), 500*time.Millisecond)
+						}, timeout(suite), 500*time.Millisecond)
 					})
 				}
 			}
@@ -361,7 +368,7 @@ func TestHelmUpgrade(t *testing.T) {
 					t.Run(suite.Name+"/after_upgrade/"+assertion.Name, func(t *testing.T) {
 						require.EventuallyWithT(t, func(c *assert.CollectT) {
 							assertion.Func(c, e.Clients)
-						}, lo.Ternary(suite.AssertTimeout > 0, suite.AssertTimeout, waitTime), 500*time.Millisecond)
+						}, timeout(suite), 500*time.Millisecond)
 					})
 				}
 			}
