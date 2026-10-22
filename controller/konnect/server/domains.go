@@ -27,7 +27,7 @@ func NewDomains(flagValue string) (Domains, error) {
 		if domain == "" {
 			return nil, errors.New("the list of server URL domains cannot contain an empty entry")
 		}
-		if strings.ContainsAny(domain, "/:*@") {
+		if strings.ContainsAny(domain, "/:*@") || strings.HasPrefix(domain, ".") || strings.HasSuffix(domain, ".") {
 			return nil, fmt.Errorf("invalid server URL domain %q: expected a bare domain, e.g. konghq.com", domain)
 		}
 		domains = append(domains, domain)
@@ -45,6 +45,12 @@ func (d Domains) String() string {
 // path are dropped: NewServer keeps a path attached to the last label.
 func (d Domains) Allowed(host string) bool {
 	host = strings.ToLower(host)
+	// A userinfo part makes the dialed host the part after "@":
+	// "us.api.konghq.com:443@evil.example" is a URL whose host is evil.example.
+	// A hostname never carries one, so anything with "@" is refused.
+	if strings.Contains(host, "@") {
+		return false
+	}
 	if i := strings.IndexAny(host, "/:"); i >= 0 {
 		host = host[:i]
 	}

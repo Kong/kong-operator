@@ -21,6 +21,8 @@ func TestDomainsAllowed(t *testing.T) {
 		{name: "dev private host", host: "global.svc.konghq.tech", allowed: true},
 		{name: "lookalike suffix", host: "notkonghq.com", allowed: false},
 		{name: "allowed domain as prefix", host: "konghq.com.attacker.example", allowed: false},
+		{name: "userinfo behind an allowed host and port", host: "us.api.konghq.com:443@evil.example", allowed: false},
+		{name: "userinfo behind an allowed host", host: "us.api.konghq.com@evil.example", allowed: false},
 		{name: "attacker host", host: "us.attacker.example", allowed: false},
 		{name: "internal host", host: "us.10-0-0-1.internal", allowed: false},
 		{name: "empty", host: "", allowed: false},
@@ -47,6 +49,8 @@ func TestNewDomains(t *testing.T) {
 		"konghq.com/api",
 		"konghq.com:443",
 		"*.konghq.com",
+		"konghq.com.",
+		".konghq.com",
 	} {
 		_, err := NewDomains(invalid)
 		require.Error(t, err, invalid)
