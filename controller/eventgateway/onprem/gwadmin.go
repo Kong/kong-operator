@@ -189,19 +189,28 @@ func getEntities(ctx context.Context, gwAdmin gwadminapi.ClientInterface, gatewa
 
 // sameEntities reports whether gw-admin holds the entities pushed, by their
 // JSON encoding, as gw-admin receives them: the entities hold times, on whose
-// unexported fields equality.Semantic.DeepEqual panics. An empty list and a
-// missing one are the same, and so are a field left out and the default
-// gw-admin sets on it (see withGWAdminDefaults).
+// unexported fields equality.Semantic.DeepEqual panics. The order of a list
+// doesn't matter, an empty list and a missing one are the same, and so are a
+// field left out and the default gw-admin sets on it (see
+// withGWAdminDefaults).
 func sameEntities(held, pushed gwadminapi.GatewayEntities) (bool, error) {
-	a, err := json.Marshal(withEmptyLists(held))
+	a, err := json.Marshal(sortedByID(withEmptyLists(held)))
 	if err != nil {
 		return false, fmt.Errorf("failed to encode the entities gw-admin holds: %w", err)
 	}
-	b, err := json.Marshal(withGWAdminDefaults(withEmptyLists(pushed)))
+	b, err := json.Marshal(sortedByID(withGWAdminDefaults(withEmptyLists(pushed))))
 	if err != nil {
 		return false, fmt.Errorf("failed to encode the entities of the gateway: %w", err)
 	}
 	return bytes.Equal(a, b), nil
+}
+
+// sortedByID returns the entities with each list sorted by id.
+func sortedByID(e gwadminapi.GatewayEntities) gwadminapi.GatewayEntities {
+	e.BackendClusters = slices.SortedFunc(slices.Values(e.BackendClusters), func(a, b gwadminapi.EventGatewayBackendClusterOnPrem) int {
+		return bytes.Compare(a.Id[:], b.Id[:])
+	})
+	return e
 }
 
 // withGWAdminDefaults returns the entities with the value gw-admin sets on

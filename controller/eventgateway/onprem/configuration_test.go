@@ -374,4 +374,12 @@ func TestSameEntities(t *testing.T) {
 	held.BackendClusters[0].CreatedAt = created.Add(time.Second)
 	assert.False(t, same(held, pushed))
 	assert.False(t, same(noEntities(), pushed))
+
+	other := gwadminapi.EventGatewayBackendClusterOnPrem{Id: uuid.New(), Name: "other", CreatedAt: created}
+	pushed.BackendClusters = []gwadminapi.EventGatewayBackendClusterOnPrem{bc, other}
+	heldOther := other
+	heldOther.Tls.TlsVersions = heldBC.Tls.TlsVersions
+	held.BackendClusters = []gwadminapi.EventGatewayBackendClusterOnPrem{heldOther, heldBC}
+	assert.True(t, same(held, pushed), "in another order")
+	assert.Equal(t, []gwadminapi.EventGatewayBackendClusterOnPrem{bc, other}, pushed.BackendClusters, "the entities pushed are left as they are")
 }
