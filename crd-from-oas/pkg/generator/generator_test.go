@@ -7479,6 +7479,24 @@ func TestGenerateSchemaTypes_AllOfCompositeEmitsPlainStruct(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestGenerateSchemaTypes_FreeformObjectEmitsJSONAlias(t *testing.T) {
+	// A named free-form object schema (additionalProperties: true, no declared
+	// properties) must alias apiextensionsv1.JSON: a defined type does not
+	// inherit its Marshal/UnmarshalJSON and would marshal as {}.
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+
+	content := g.generateSchemaTypes(map[string]bool{"Freeform": true}, &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"Freeform": {Name: "Freeform", Type: "object"},
+		},
+	}, nil)
+
+	assert.Contains(t, content, "type Freeform = apiextensionsv1.JSON")
+
+	_, err := format.Source([]byte(content))
+	require.NoError(t, err)
+}
+
 func TestGenerateSDKOps_AllOfCompositeRefCollectsBoolAndFreeformFields(t *testing.T) {
 	// Bools and free-form maps nested behind $ref chains (here: listener
 	// variant -> config -> route, where route was flattened from a composite

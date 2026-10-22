@@ -2288,7 +2288,14 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 				// Generate based on the schema's actual type
 				body.WriteString(comment)
 				goType := schemaToGoType(schema)
-				fmt.Fprintf(&body, "type %s %s\n\n", goName, goType)
+				if goType == "apiextensionsv1.JSON" {
+					// Alias, not a named type: a defined type does not inherit
+					// apiextensionsv1.JSON's Marshal/UnmarshalJSON and would silently
+					// serialize as an empty object.
+					fmt.Fprintf(&body, "type %s = %s\n\n", goName, goType)
+				} else {
+					fmt.Fprintf(&body, "type %s %s\n\n", goName, goType)
+				}
 			}
 		} else {
 			panic("Schema not found for reference: " + refName)
@@ -2615,8 +2622,11 @@ func schemaToGoType(schema *parser.Schema) string {
 			}
 		}
 		return "[]any"
+	case "object":
+		// A free-form object (additionalProperties: true, no declared properties) must
+		// accept arbitrary JSON, matching goType's fallback for such properties.
+		return "apiextensionsv1.JSON"
 	default:
-		// For object types without properties or unknown types, default to map[string]string
 		return "map[string]string"
 	}
 }

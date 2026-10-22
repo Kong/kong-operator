@@ -835,9 +835,7 @@ spec:
                               minLength: 1
                               type: string
                             headers:
-                              additionalProperties:
-                                type: string
-                              type: object
+                              x-kubernetes-preserve-unknown-fields: true
                             host:
                               maxLength: 253
                               type: string
@@ -891,17 +889,11 @@ spec:
                               maxLength: 253
                               type: string
                             query:
-                              additionalProperties:
-                                type: string
-                              type: object
+                              x-kubernetes-preserve-unknown-fields: true
                             requestBody:
-                              additionalProperties:
-                                type: string
-                              type: object
+                              x-kubernetes-preserve-unknown-fields: true
                             responses:
-                              additionalProperties:
-                                type: string
-                              type: object
+                              x-kubernetes-preserve-unknown-fields: true
                             scheme:
                               enum:
                               - http
@@ -1157,9 +1149,7 @@ spec:
                               minLength: 1
                               type: string
                             headers:
-                              additionalProperties:
-                                type: string
-                              type: object
+                              x-kubernetes-preserve-unknown-fields: true
                             host:
                               maxLength: 253
                               type: string
@@ -1213,17 +1203,11 @@ spec:
                               maxLength: 253
                               type: string
                             query:
-                              additionalProperties:
-                                type: string
-                              type: object
+                              x-kubernetes-preserve-unknown-fields: true
                             requestBody:
-                              additionalProperties:
-                                type: string
-                              type: object
+                              x-kubernetes-preserve-unknown-fields: true
                             responses:
-                              additionalProperties:
-                                type: string
-                              type: object
+                              x-kubernetes-preserve-unknown-fields: true
                             scheme:
                               enum:
                               - http

@@ -73,6 +73,12 @@
 
 ### Fixed
 
+- An `AIGatewayMCPServer` tool now accepts the OpenAPI `requestBody` and
+  `responses` objects, with `content` keyed by media type. The CRD typed these
+  fields as `map[string]string`, so a nested object was rejected at apply time
+  and the JSON string workaround was rejected by Konnect. A `POST` tool can now
+  send a JSON body.
+  [#6252](https://github.com/Kong/kong-operator/issues/6252)
 - A `KonnectAPIAuthConfiguration` with a private `serverURL` that carries a path
   (for example `https://us.svc.konghq.tech/api`) now authenticates. The identity
   request behind `APIAuthValid` keeps the configured host instead of being sent

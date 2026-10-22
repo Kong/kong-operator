@@ -5017,7 +5017,7 @@ type AIGatewayMCPToolAnnotations struct {
 // AIGatewayMCPToolHeaders The headers of the exported API.
 // By default, Kong will extract the headers from API configuration.
 // If the configured headers are not exactly matched, this field is required.
-type AIGatewayMCPToolHeaders map[string]string
+type AIGatewayMCPToolHeaders = apiextensionsv1.JSON
 
 // AIGatewayMCPToolParameter An API parameter specification defined in OpenAPI
 // JSON format.
@@ -5062,7 +5062,7 @@ type AIGatewayMCPToolParameter struct {
 // AIGatewayMCPToolQuery The query arguments of the exported API.
 // If the generated query arguments are not exactly matched, this field is
 // required.
-type AIGatewayMCPToolQuery map[string]string
+type AIGatewayMCPToolQuery = apiextensionsv1.JSON
 
 // AIGatewayMCPToolRequestBody The API requestBody specification defined in
 // OpenAPI JSON format.
@@ -5072,7 +5072,7 @@ type AIGatewayMCPToolQuery map[string]string
 // https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/
 // for more details.
 // Note that `$ref` is not supported.
-type AIGatewayMCPToolRequestBody map[string]string
+type AIGatewayMCPToolRequestBody = apiextensionsv1.JSON
 
 // AIGatewayMCPToolResponses The API responses specification defined in OpenAPI
 // JSON format.
@@ -5084,7 +5084,7 @@ type AIGatewayMCPToolRequestBody map[string]string
 // details.
 // Only one non-error (status code < 400) response is supported.
 // Note that `$ref` is not supported.
-type AIGatewayMCPToolResponses map[string]string
+type AIGatewayMCPToolResponses = apiextensionsv1.JSON
 
 // AIGatewayMCPUpstreamTool A tool exposed by an MCP Server in `upstream-server`
 // mode.
