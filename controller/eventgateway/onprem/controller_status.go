@@ -180,7 +180,7 @@ func pushConditions(gateway *eventgatewayv1alpha1.OnPremEventGateway, result pus
 	pushed := len(result.target.Pods) - len(result.pending)
 	if pushed == 0 {
 		// Every pod is pending: none serves the gateway yet.
-		message := "Waiting for the gw-admin pods not serving yet: " + podNames(result.pending)
+		message := k8sutils.TruncateMessage("Waiting for the gw-admin pods not serving yet: "+podNames(result.pending), maxConditionMessageLength)
 		return append(conditions,
 			k8sutils.NewConditionWithGeneration(eventgatewayv1alpha1.OnPremEventGatewayConfigurationPushedType,
 				metav1.ConditionFalse, eventgatewayv1alpha1.DependenciesNotReadyReason, message, gateway.GetGeneration()),
@@ -191,7 +191,7 @@ func pushConditions(gateway *eventgatewayv1alpha1.OnPremEventGateway, result pus
 	message := pushedMessage(pushed)
 	programmedMessage := "The configuration has been pushed to every gw-admin pod"
 	if len(result.pending) > 0 {
-		message += "; waiting for the gw-admin pods not serving yet: " + podNames(result.pending)
+		message = k8sutils.TruncateMessage(message+"; waiting for the gw-admin pods not serving yet: "+podNames(result.pending), maxConditionMessageLength)
 		programmedMessage = message
 	}
 	return append(conditions,

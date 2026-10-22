@@ -19,6 +19,7 @@ package onprem
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -758,6 +759,19 @@ func TestPushConditions(t *testing.T) {
 		assert.Equal(t, metav1.ConditionFalse, allStarting[conditionType].Status, "no pod serves the gateway yet")
 		assert.Equal(t, "DependenciesNotReady", allStarting[conditionType].Reason)
 		assert.Equal(t, "Waiting for the gw-admin pods not serving yet: gw-admin-0, gw-admin-1", allStarting[conditionType].Message)
+	}
+
+	// The names of the pods pending, e.g. of a GWAdmin scaled out, are
+	// bounded like any message.
+	many := make([]gwadminsync.Pod, 0, 200)
+	for i := range cap(many) {
+		many = append(many, gwadminsync.Pod{Name: fmt.Sprintf("gw-admin-%s-%d", strings.Repeat("x", 40), i)})
+	}
+	manyTarget := &gwadminsync.Target{GWAdmin: target.GWAdmin, Pods: append([]gwadminsync.Pod{pod0}, many...)}
+	for name, pending := range map[string][]gwadminsync.Pod{"some": many, "all": manyTarget.Pods} {
+		for conditionType, cond := range byType(pushConditions(gateway, pushResult{done: true, target: manyTarget, pending: pending}, nil)) {
+			assert.LessOrEqual(t, len(cond.Message), maxConditionMessageLength, "%s pending: %s", name, conditionType)
+		}
 	}
 
 	failed := byType(pushConditions(gateway, pushResult{done: true, target: &gwadminsync.Target{GWAdmin: newGWAdminFixture(t).GWAdmin}}, errors.New("pod down")))
