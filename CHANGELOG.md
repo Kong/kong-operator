@@ -73,6 +73,14 @@
 
 ### Fixed
 
+- A `KonnectAPIAuthConfiguration` with a private `serverURL` that carries a path
+  (for example `https://us.svc.konghq.tech/api`) now authenticates. The identity
+  request behind `APIAuthValid` keeps the configured host instead of being sent
+  to the public global one, which answered 404 for a private entry point and left
+  every resource that depends on the credentials unprogrammed. A `serverURL`
+  without a path keeps the previous behaviour, and a development host with an
+  explicit port no longer lands on the production global host.
+  [#6108](https://github.com/Kong/kong-operator/issues/6108)
 - Konnect: a DataPlane attached to a `KonnectExtension` now renders control
   plane and telemetry endpoints that carry a path, as Konnect returns them
   over PrivateLink, in the form Kong Gateway accepts: the port no longer lands
