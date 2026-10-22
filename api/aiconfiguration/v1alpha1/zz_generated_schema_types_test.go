@@ -59,6 +59,19 @@ func TestAIGatewayAllowACL_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestAIGatewayAllowWhenACL_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayAllowWhenACL
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestAIGatewayAuthStrategyKeyAuth_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -141,6 +154,19 @@ func TestAIGatewayDenyACL_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
 	var spec AIGatewayDenyACL
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayDenyWhenACL_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayDenyWhenACL
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -1771,6 +1797,8 @@ func TestAIGatewayAgentAccessAclsUnmarshalJSON_NilReceiver(t *testing.T) {
 	}{
 		{name: "Allow", payload: []byte("{\"type\":\"allow\",\"allow\":{}}")},
 		{name: "Deny", payload: []byte("{\"type\":\"deny\",\"deny\":{}}")},
+		{name: "AllowWhen", payload: []byte("{\"type\":\"allowWhen\",\"allowWhen\":{}}")},
+		{name: "DenyWhen", payload: []byte("{\"type\":\"denyWhen\",\"denyWhen\":{}}")},
 	}
 
 	for _, tt := range tests {
@@ -2005,6 +2033,8 @@ func TestAIGatewayModelAccessAclsUnmarshalJSON_NilReceiver(t *testing.T) {
 	}{
 		{name: "Allow", payload: []byte("{\"type\":\"allow\",\"allow\":{}}")},
 		{name: "Deny", payload: []byte("{\"type\":\"deny\",\"deny\":{}}")},
+		{name: "AllowWhen", payload: []byte("{\"type\":\"allowWhen\",\"allowWhen\":{}}")},
+		{name: "DenyWhen", payload: []byte("{\"type\":\"denyWhen\",\"denyWhen\":{}}")},
 	}
 
 	for _, tt := range tests {
@@ -2463,6 +2493,38 @@ func TestAIGatewayAgentAccessUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 				}
 			},
 		},
+		{
+			name:    "Acls/AllowWhen",
+			payload: []byte("{\"acls\":{\"type\":\"allowWhen\",\"allowWhen\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayAgentAccess) {
+				t.Helper()
+				if target.Acls == nil {
+					t.Fatalf("Acls should be allocated")
+				}
+				if got, want := target.Acls.Type, AIGatewayAgentAccessAclsTypeAllowWhen; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Acls.AllowWhen == nil {
+					t.Fatalf("Acls.AllowWhen should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Acls/DenyWhen",
+			payload: []byte("{\"acls\":{\"type\":\"denyWhen\",\"denyWhen\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayAgentAccess) {
+				t.Helper()
+				if target.Acls == nil {
+					t.Fatalf("Acls should be allocated")
+				}
+				if got, want := target.Acls.Type, AIGatewayAgentAccessAclsTypeDenyWhen; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Acls.DenyWhen == nil {
+					t.Fatalf("Acls.DenyWhen should be allocated")
+				}
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -2876,6 +2938,38 @@ func TestAIGatewayModelAccessUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 				}
 				if target.Acls.Deny == nil {
 					t.Fatalf("Acls.Deny should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Acls/AllowWhen",
+			payload: []byte("{\"acls\":{\"type\":\"allowWhen\",\"allowWhen\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayModelAccess) {
+				t.Helper()
+				if target.Acls == nil {
+					t.Fatalf("Acls should be allocated")
+				}
+				if got, want := target.Acls.Type, AIGatewayModelAccessAclsTypeAllowWhen; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Acls.AllowWhen == nil {
+					t.Fatalf("Acls.AllowWhen should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Acls/DenyWhen",
+			payload: []byte("{\"acls\":{\"type\":\"denyWhen\",\"denyWhen\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayModelAccess) {
+				t.Helper()
+				if target.Acls == nil {
+					t.Fatalf("Acls should be allocated")
+				}
+				if got, want := target.Acls.Type, AIGatewayModelAccessAclsTypeDenyWhen; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Acls.DenyWhen == nil {
+					t.Fatalf("Acls.DenyWhen should be allocated")
 				}
 			},
 		},

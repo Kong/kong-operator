@@ -1,6 +1,7 @@
 package ops
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -266,4 +267,67 @@ func TestToCreateAIGatewayModelRequest_PreservesAuthStrategiesSibling(t *testing
 	// The auth_strategies sibling survived the union rebuild, resolved to
 	// the referenced AIGatewayAuthStrategy's Konnect name.
 	assert.Equal(t, []string{"konnect-auth-strategy-name"}, req.AIGatewayModelAPI.Access.AuthStrategies)
+}
+
+// TestToCreateAIGatewayAgentRequest_PassesThroughAllowWhen pins the allowWhen arm of the
+// ACL union: it carries CEL expressions, needs no reference resolution, and reaches the
+// SDK request under the snake_case key the Konnect API expects.
+func TestToCreateAIGatewayAgentRequest_PassesThroughAllowWhen(t *testing.T) {
+	t.Parallel()
+
+	agent := &aiconfigurationv1alpha1.AIGatewayAgent{
+		Name: "agent", Namespace: "default",
+		Spec: aiconfigurationv1alpha1.AIGatewayAgentSpec{
+			APISpec: aiconfigurationv1alpha1.AIGatewayAgentAPISpec{
+				Name: aiconfigurationv1alpha1.AIGatewayEntityIdentifier("agent-name"),
+				Access: aiconfigurationv1alpha1.AIGatewayAgentAccess{
+					Acls: &aiconfigurationv1alpha1.AIGatewayAgentAccessAcls{
+						Type:      aiconfigurationv1alpha1.AIGatewayAgentAccessAclsTypeAllowWhen,
+						AllowWhen: &aiconfigurationv1alpha1.AIGatewayAllowWhenACL{AllowWhen: []string{"http.path == '/allowed'"}},
+					},
+				},
+			},
+		},
+	}
+
+	cl := fake.NewClientBuilder().WithScheme(aclReferencesScheme(t)).Build()
+
+	req, err := agent.ToCreateAIGatewayAgentRequest(t.Context(), cl)
+	require.NoError(t, err)
+	require.NotNil(t, req.Access)
+	require.NotNil(t, req.Access.Acls)
+	require.NotNil(t, req.Access.Acls.AIGatewayAllowWhenACL, "the allowWhen union arm must be selected")
+	assert.Equal(t, []string{"http.path == '/allowed'"}, req.Access.Acls.AIGatewayAllowWhenACL.AllowWhen)
+	assert.Nil(t, req.Access.Acls.AIGatewayAllowACL, "the allow union arm must not be set")
+
+	raw, err := json.Marshal(req)
+	require.NoError(t, err)
+	assert.Contains(t, string(raw), `"allow_when":["http.path == '/allowed'"]`)
+}
+
+// TestToCreateAIGatewayModelRequest_PassesThroughDenyWhen is the model twin of the
+// allowWhen test above, for the denyWhen arm.
+func TestToCreateAIGatewayModelRequest_PassesThroughDenyWhen(t *testing.T) {
+	t.Parallel()
+
+	// testGeneratedAIGatewayModelForSDKOps's fixture targets a provider named
+	// "provider-1" in the model's own ("default") namespace.
+	provider := programmedModelProvider("provider-1", "default", "kid-provider-1")
+
+	model := testGeneratedAIGatewayModelForSDKOps()
+	model.Spec.APISpec.API.Access = aiconfigurationv1alpha1.AIGatewayModelAccess{
+		Acls: &aiconfigurationv1alpha1.AIGatewayModelAccessAcls{
+			Type:     aiconfigurationv1alpha1.AIGatewayModelAccessAclsTypeDenyWhen,
+			DenyWhen: &aiconfigurationv1alpha1.AIGatewayDenyWhenACL{DenyWhen: []string{"http.path == '/blocked'"}},
+		},
+	}
+
+	cl := fake.NewClientBuilder().WithScheme(aclReferencesScheme(t)).WithObjects(provider).Build()
+
+	req, err := model.ToCreateAIGatewayModelRequest(t.Context(), cl)
+	require.NoError(t, err)
+	require.NotNil(t, req.AIGatewayModelAPI, "the api union arm must be selected")
+	require.NotNil(t, req.AIGatewayModelAPI.Access.Acls)
+	require.NotNil(t, req.AIGatewayModelAPI.Access.Acls.AIGatewayDenyWhenACL, "the denyWhen union arm must be selected")
+	assert.Equal(t, []string{"http.path == '/blocked'"}, req.AIGatewayModelAPI.Access.Acls.AIGatewayDenyWhenACL.DenyWhen)
 }

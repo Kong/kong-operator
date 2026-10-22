@@ -1004,7 +1004,7 @@ AIGatewayAgentAccess Access control configuration for an agent.
 
 | Field | Description |
 | --- | --- |
-| `acls` _[AIGatewayAgentAccessAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentaccessacls)_ | Access control rules. Configure exactly one of `allow` or `deny`. |
+| `acls` _[AIGatewayAgentAccessAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentaccessacls)_ | Access control rules. Configure exactly one of `allow`, `deny`, `allow_when`, or `deny_when`. |
 | `authStrategies` _[][AIGatewayAuthStrategyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyref)_ | List of auth strategies for granting access to the agent. At most 1 auth strategy of each auth strategy type can be referenced. |
 | `identityProviders` _[][AIGatewayIdentityProviderReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the agent. At most 1 identity provider of each identity provider type can be referenced.<br /><br />Deprecated: use `auth_strategies` instead. The two are mutually exclusive. |
 
@@ -1025,6 +1025,8 @@ Only one of the fields should be set based on the Type.
 | `type` _[AIGatewayAgentAccessAclsType](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentaccessaclstype)_ | Type designates the type of configuration. |
 | `allow` _[AIGatewayAllowACL](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayallowacl)_ | Allow configuration. |
 | `deny` _[AIGatewayDenyACL](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydenyacl)_ | Deny configuration. |
+| `allowWhen` _[AIGatewayAllowWhenACL](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayallowwhenacl)_ | AllowWhen configuration. |
+| `denyWhen` _[AIGatewayDenyWhenACL](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydenywhenacl)_ | DenyWhen configuration. |
 
 _Appears in:_
 
@@ -1049,6 +1051,8 @@ Allowed values:
 | --- | --- |
 | `allow` |  |
 | `deny` |  |
+| `allowWhen` |  |
+| `denyWhen` |  |
 
 #### AIGatewayAgentConfig
 
@@ -1132,6 +1136,22 @@ AIGatewayAllowACL is a type alias.
 | Field | Description |
 | --- | --- |
 | `allow` _[][AIGatewayACLRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayaclref)_ | List of Consumer Groups Names, or Authenticated Groups Names that are permitted access. |
+
+_Appears in:_
+
+- [AIGatewayAgentAccessAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentaccessacls)
+- [AIGatewayModelAccessAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelaccessacls)
+
+#### AIGatewayAllowWhenACL
+
+
+AIGatewayAllowWhenACL is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `allowWhen` _[]string_ | Allow the request if it matches any of these CEL boolean expressions evaluated against the request context (consumer, principal, HTTP attributes, consumer groups, etc.). Exactly one of `allow`, `deny`, `allow_when`, or `deny_when` must be specified.<br /><br />**Requires a minimum runtime version of `2.2`**. |
 
 _Appears in:_
 
@@ -1861,6 +1881,22 @@ AIGatewayDenyACL is a type alias.
 | Field | Description |
 | --- | --- |
 | `deny` _[][AIGatewayACLRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayaclref)_ | List of Consumer Groups Names, or Authenticated Groups Names that are denied access. |
+
+_Appears in:_
+
+- [AIGatewayAgentAccessAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentaccessacls)
+- [AIGatewayModelAccessAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelaccessacls)
+
+#### AIGatewayDenyWhenACL
+
+
+AIGatewayDenyWhenACL is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `denyWhen` _[]string_ | Deny the request if it matches any of these CEL boolean expressions evaluated against the request context (consumer, principal, HTTP attributes, consumer groups, etc.). Exactly one of `allow`, `deny`, `allow_when`, or `deny_when` must be specified.<br /><br />**Requires a minimum runtime version of `2.2`**. |
 
 _Appears in:_
 
@@ -3369,7 +3405,7 @@ AIGatewayModelAccess Access control configuration for a model.
 
 | Field | Description |
 | --- | --- |
-| `acls` _[AIGatewayModelAccessAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelaccessacls)_ | Access control rules. Configure exactly one of `allow` or `deny`. |
+| `acls` _[AIGatewayModelAccessAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelaccessacls)_ | Access control rules. Configure exactly one of `allow`, `deny`, `allow_when`, or `deny_when`. |
 | `authStrategies` _[][AIGatewayAuthStrategyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyref)_ | List of auth strategies for granting access to the model. At most 1 auth strategy of each auth strategy type can be referenced. |
 | `identityProviders` _[][AIGatewayIdentityProviderReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the model. At most 1 identity provider of each identity provider type can be referenced.<br /><br />Deprecated: use `auth_strategies` instead. The two are mutually exclusive. |
 
@@ -3391,6 +3427,8 @@ Only one of the fields should be set based on the Type.
 | `type` _[AIGatewayModelAccessAclsType](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelaccessaclstype)_ | Type designates the type of configuration. |
 | `allow` _[AIGatewayAllowACL](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayallowacl)_ | Allow configuration. |
 | `deny` _[AIGatewayDenyACL](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydenyacl)_ | Deny configuration. |
+| `allowWhen` _[AIGatewayAllowWhenACL](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayallowwhenacl)_ | AllowWhen configuration. |
+| `denyWhen` _[AIGatewayDenyWhenACL](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydenywhenacl)_ | DenyWhen configuration. |
 
 _Appears in:_
 
@@ -3415,6 +3453,8 @@ Allowed values:
 | --- | --- |
 | `allow` |  |
 | `deny` |  |
+| `allowWhen` |  |
+| `denyWhen` |  |
 
 
 

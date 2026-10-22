@@ -135,8 +135,9 @@ spec:
                     description: Access control configuration for an agent.
                     properties:
                       acls:
-                        description: Access control rules. Configure exactly one of
-                          `allow` or `deny`.
+                        description: |-
+                          Access control rules.
+                          Configure exactly one of `allow`, `deny`, `allow_when`, or `deny_when`.
                         properties:
                           allow:
                             description: Allow configuration.
@@ -174,6 +175,24 @@ spec:
                             required:
                             - allow
                             type: object
+                          allowWhen:
+                            description: AllowWhen configuration.
+                            properties:
+                              allowWhen:
+                                description: |-
+                                  Allow the request if it matches any of these CEL boolean expressions
+                                  evaluated against the request context (consumer, principal, HTTP attributes,
+                                  consumer groups, etc.).
+                                  Exactly one of `allow`, `deny`, `allow_when`, or `deny_when` must be
+                                  specified.
+
+                                  **Requires a minimum runtime version of `2.2`**.
+                                items:
+                                  type: string
+                                type: array
+                            required:
+                            - allowWhen
+                            type: object
                           deny:
                             description: Deny configuration.
                             properties:
@@ -210,11 +229,31 @@ spec:
                             required:
                             - deny
                             type: object
+                          denyWhen:
+                            description: DenyWhen configuration.
+                            properties:
+                              denyWhen:
+                                description: |-
+                                  Deny the request if it matches any of these CEL boolean expressions
+                                  evaluated against the request context (consumer, principal, HTTP attributes,
+                                  consumer groups, etc.).
+                                  Exactly one of `allow`, `deny`, `allow_when`, or `deny_when` must be
+                                  specified.
+
+                                  **Requires a minimum runtime version of `2.2`**.
+                                items:
+                                  type: string
+                                type: array
+                            required:
+                            - denyWhen
+                            type: object
                           type:
                             description: Type designates the type of configuration.
                             enum:
                             - allow
                             - deny
+                            - allowWhen
+                            - denyWhen
                             minLength: 1
                             type: string
                         required:

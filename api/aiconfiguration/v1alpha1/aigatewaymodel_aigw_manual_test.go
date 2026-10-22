@@ -361,3 +361,62 @@ func TestAIGatewayModel_ToAIGWModel_StrictRoundTrip(t *testing.T) {
 	// capture-group name.
 	require.Equal(t, "model", model.Config.Route.Model.Path.PathParam)
 }
+
+// TestAIGatewayModel_ToAIGWModel_ACLWhen covers the allowWhen and denyWhen ACL variants.
+// They carry CEL expressions rather than consumer group references, so they need no
+// resolution and reach the aigw document as they are.
+func TestAIGatewayModel_ToAIGWModel_ACLWhen(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, AddToScheme(scheme))
+
+	testCases := []struct {
+		name string
+		acls *AIGatewayModelAccessAcls
+		want aigw.ACLs
+	}{
+		{
+			name: "allowWhen",
+			acls: &AIGatewayModelAccessAcls{
+				Type:      AIGatewayModelAccessAclsTypeAllowWhen,
+				AllowWhen: &AIGatewayAllowWhenACL{AllowWhen: []string{"http.path == '/allowed'"}},
+			},
+			want: aigw.ACLs{AllowWhen: []string{"http.path == '/allowed'"}},
+		},
+		{
+			name: "denyWhen",
+			acls: &AIGatewayModelAccessAcls{
+				Type:     AIGatewayModelAccessAclsTypeDenyWhen,
+				DenyWhen: &AIGatewayDenyWhenACL{DenyWhen: []string{"http.path == '/blocked'"}},
+			},
+			want: aigw.ACLs{DenyWhen: []string{"http.path == '/blocked'"}},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			obj := &AIGatewayModel{
+				Name: "sample-ai-gw-model-when", Namespace: "default",
+				Spec: AIGatewayModelSpec{
+					APISpec: AIGatewayModelAPISpec{
+						AIGatewayModelConfig: &AIGatewayModelConfig{
+							Type: AIGatewayModelConfigTypeModel,
+							Model: &AIGatewayModelModel{
+								Name:   "model-when",
+								Access: AIGatewayModelAccess{Acls: tc.acls},
+							},
+						},
+					},
+				},
+			}
+
+			cl := fake.NewClientBuilder().WithScheme(scheme).Build()
+			got, err := obj.ToAIGWModel(t.Context(), cl)
+			require.NoError(t, err)
+			require.Equal(t, tc.want, got.Access.ACLs)
+		})
+	}
+}
