@@ -242,6 +242,10 @@ spec:
                 value: ($hostname)
               - name: TEST_LABEL
                 value: ($test_name)
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_SERVER_URL
+                value: ($konnect_url)
             content: |
               python3 ../../common/scripts/verify_gateway_vault_certificate.py
             outputs:
@@ -273,6 +277,10 @@ spec:
                 value: ($hostname)
               - name: TEST_LABEL
                 value: ($test_name)
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_SERVER_URL
+                value: ($konnect_url)
             content: |
               python3 ../../common/scripts/verify_gateway_vault_certificate.py
     - name: switch-to-legacy-secret-reference
