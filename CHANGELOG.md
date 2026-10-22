@@ -261,8 +261,8 @@
   references the `GWAdmin` that serves the gateway, and can't be changed. A
   `GWAdmin` in another namespace is used only when a `KongReferenceGrant` in
   its namespace allows the `OnPremEventGateway`s of the namespace of the
-  gateway to reference it. This change only adds the CRD; it is not reconciled
-  yet.
+  gateway to reference it. Its controller is opt in
+  (`--enable-controller-onpremeventgateway`).
   [#6114](https://github.com/Kong/kong-operator/pull/6114)
   [#6213](https://github.com/Kong/kong-operator/pull/6213)
 - Event Gateway: `spec.parentRef` of `EventGatewayBackendCluster`,
@@ -319,10 +319,24 @@
   `OnPremEventGateway` controller. The `GWAdminResolved` condition tells
   whether the gateway's `GWAdmin` can serve it: reason `NotFound`,
   `RefNotPermitted` (no `KongReferenceGrant` allows the cross-namespace
-  reference) or `NotReady` (being deleted, API not published, or no gw-admin
-  pod). No configuration is pushed to gw-admin yet: `Programmed` stays `False`.
+  reference) or `NotReady` (being deleted, API or TLS material not published,
+  or no gw-admin pod). While it is `False`, `Programmed` is `False` with
+  reason `DependenciesNotReady`.
   [#6132](https://github.com/Kong/kong-operator/pull/6132)
   [#6218](https://github.com/Kong/kong-operator/pull/6218)
+- The `OnPremEventGateway` controller pushes each gateway to every gw-admin
+  pod of its `GWAdmin` over mTLS, writing only what changed; a new or
+  restarted pod gets the full configuration. Entities are not pushed yet.
+  `status.configRevision` and `status.configHash` number the configuration;
+  the revision never decreases. Failures are retried with backoff and
+  reported in the `ConfigurationPushed` and `Programmed` conditions, with a
+  `Warning` event when a pushed gateway stops being pushed.
+  `status.serverURL` publishes the cp endpoint of the `GWAdmin`. The
+  `gateway-operator.konghq.com/onprem-eventgateway-gw-admin-cleanup`
+  finalizer removes a deleted gateway from gw-admin, giving up after 5
+  minutes with a `GWAdminCleanupTimedOut` event; a gateway no longer allowed
+  to use its `GWAdmin` is removed too.
+  [#6064](https://github.com/Kong/kong-operator/issues/6064)
 - `--konnect-list-page-size` flag (default and maximum `100`): the page size
   the operator requests when listing Konnect entities to find the Konnect
   entity of an object, e.g. one whose Konnect ID was lost. It is a fallback in

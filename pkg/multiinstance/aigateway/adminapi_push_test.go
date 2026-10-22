@@ -12,7 +12,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"unicode/utf8"
 
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/require"
@@ -518,23 +517,11 @@ func TestReportTranslationStatus(t *testing.T) {
 }
 
 func TestTruncateMessage(t *testing.T) {
+	// k8sutils.TruncateMessage is tested for its edge cases in
+	// pkg/utils/kubernetes: only the length limit truncateMessage applies is
+	// tested here.
 	require.Equal(t, "short", truncateMessage("short"))
-
-	// ASCII input is cut at the length limit minus the ellipsis.
-	long := strings.Repeat("a", maxConditionMessageLength+10)
-	truncated := truncateMessage(long)
+	truncated := truncateMessage(strings.Repeat("a", maxConditionMessageLength+10))
 	require.Len(t, truncated, maxConditionMessageLength)
 	require.True(t, strings.HasSuffix(truncated, "..."))
-
-	// Multi-byte input cut at a rune boundary stays valid UTF-8: the boundary
-	// lands inside a multi-byte rune, which must not be split.
-	multibyte := strings.Repeat("ą", maxConditionMessageLength) // 'ą' is 2 bytes
-	truncated = truncateMessage(multibyte)
-	require.LessOrEqual(t, len(truncated), maxConditionMessageLength)
-	require.True(t, utf8.ValidString(truncated))
-
-	// Malformed input (a long run of continuation bytes) must not underflow
-	// the rune-boundary walk.
-	malformed := strings.Repeat("\x80", maxConditionMessageLength+10)
-	require.True(t, utf8.ValidString(truncateMessage(malformed)))
 }

@@ -88,7 +88,7 @@ func New(m metadata.Info) *CLI {
 
 	// controllers for Event Gateway APIs
 	flagSet.BoolVar(&cfg.KEGDataPlaneControllerEnabled, "enable-controller-kegdataplane", false, "Enable the KEG (Kong Event Gateway) DataPlane controller.")
-	flagSet.BoolVar(&cfg.OnPremEventGatewayControllerEnabled, "enable-controller-onpremeventgateway", false, "Enable the on-prem Event Gateway controller (alpha, no configuration is pushed to gw-admin yet).")
+	flagSet.BoolVar(&cfg.OnPremEventGatewayControllerEnabled, "enable-controller-onpremeventgateway", false, "Enable the on-prem Event Gateway controller (alpha), pushing the OnPremEventGateways to gw-admin.")
 
 	// controller for gw-admin, the on-prem control plane of the data planes that do not use Konnect
 	flagSet.BoolVar(&cfg.GWAdminControllerEnabled, "enable-controller-gwadmin", false, "Enable the GWAdmin controller, deploying gw-admin and managing its certificates.")

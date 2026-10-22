@@ -36,6 +36,7 @@ import (
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/gwadmin"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
+	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
 	kgomanager "github.com/kong/kong-operator/v2/modules/manager"
 	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -139,7 +140,7 @@ func TestGWAdminReconciler(t *testing.T) {
 		// Three certificate authorities, all in the operator namespace: the
 		// published cp client CA, the API CA and the cp server CA.
 		apiCA, cpServerCA := gwadmin.APICASecretName(gw), gwadmin.CPServerCASecretName(gw)
-		operatorClient := gwadmin.OperatorClientTLSSecretName(gw)
+		operatorClient := gwadminref.OperatorClientTLSSecretName(gw)
 		clientCA := gwadmin.CPClientCASecretName(gw)
 		signers := map[string]*x509.Certificate{
 			clientCA:   firstCertificate(t, getSecret(t, ctx, cl, operatorNamespace, clientCA).Data[corev1.TLSCertKey]),

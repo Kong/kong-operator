@@ -19,6 +19,7 @@ import (
 	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
 	"github.com/kong/kong-operator/v2/internal/utils/gwadminref/gwadminreftest"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 func gateway(namespace, name, gwAdminNamespace, gwAdminName string) *eventgatewayv1alpha1.OnPremEventGateway {
@@ -262,6 +263,74 @@ func TestNamespacesGrantedBy(t *testing.T) {
 	}
 }
 
+func TestOfSecret(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name     string
+		labels   map[string]string
+		expected types.NamespacedName
+		ok       bool
+	}{
+		{
+			name: "no labels",
+		},
+		{
+			name:   "without the UID label",
+			labels: map[string]string{consts.GatewayOperatorManagedByNameLabel: "admin"},
+		},
+		{
+			name:   "without the name label",
+			labels: map[string]string{consts.GWAdminUIDLabel: "uid"},
+		},
+		{
+			name: "with an empty name label",
+			labels: map[string]string{
+				consts.GWAdminUIDLabel:                   "uid",
+				consts.GatewayOperatorManagedByNameLabel: "",
+			},
+		},
+		{
+			name: "the namespace label names the namespace of the GWAdmin",
+			labels: map[string]string{
+				consts.GWAdminUIDLabel:                        "uid",
+				consts.GatewayOperatorManagedByNameLabel:      "admin",
+				consts.GatewayOperatorManagedByNamespaceLabel: "admin-ns",
+			},
+			expected: types.NamespacedName{Namespace: "admin-ns", Name: "admin"},
+			ok:       true,
+		},
+		{
+			name: "without the namespace label, the GWAdmin is in the namespace of the Secret",
+			labels: map[string]string{
+				consts.GWAdminUIDLabel:                   "uid",
+				consts.GatewayOperatorManagedByNameLabel: "admin",
+			},
+			expected: types.NamespacedName{Namespace: "secret-ns", Name: "admin"},
+			ok:       true,
+		},
+		{
+			name: "an empty namespace label falls back to the namespace of the Secret",
+			labels: map[string]string{
+				consts.GWAdminUIDLabel:                        "uid",
+				consts.GatewayOperatorManagedByNameLabel:      "admin",
+				consts.GatewayOperatorManagedByNamespaceLabel: "",
+			},
+			expected: types.NamespacedName{Namespace: "secret-ns", Name: "admin"},
+			ok:       true,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			secret := &corev1.Secret{Namespace: "secret-ns", Name: "s", Labels: tc.labels}
+			key, ok := gwadminref.OfSecret(secret)
+			assert.Equal(t, tc.ok, ok)
+			assert.Equal(t, tc.expected, key)
+		})
+	}
+}
+
 func TestOfGrant(t *testing.T) {
 	t.Parallel()
 
@@ -274,7 +343,8 @@ func TestOfGrant(t *testing.T) {
 
 	t.Run("returns the GWAdmins of the namespace of the grant", func(t *testing.T) {
 		t.Parallel()
-		keys := gwadminref.OfGrant(t.Context(), newClient(t, nil, gwAdmins...), g)
+		keys, err := gwadminref.OfGrant(t.Context(), newClient(t, nil, gwAdmins...), g)
+		require.NoError(t, err)
 		assert.ElementsMatch(t, []types.NamespacedName{
 			{Namespace: "admin-ns", Name: "a"},
 			{Namespace: "admin-ns", Name: "b"},
@@ -283,13 +353,33 @@ func TestOfGrant(t *testing.T) {
 
 	t.Run("a namespace without GWAdmins has none", func(t *testing.T) {
 		t.Parallel()
-		keys := gwadminref.OfGrant(t.Context(), newClient(t, nil, gwAdmins...), grant("empty", "ns", ""))
+		keys, err := gwadminref.OfGrant(t.Context(), newClient(t, nil, gwAdmins...), grant("empty", "ns", ""))
+		require.NoError(t, err)
 		assert.NotNil(t, keys)
 		assert.Empty(t, keys)
 	})
 
-	t.Run("a List error returns nil", func(t *testing.T) {
+	t.Run("a List error is returned", func(t *testing.T) {
 		t.Parallel()
-		assert.Nil(t, gwadminref.OfGrant(t.Context(), newClient(t, failingList(), gwAdmins...), g))
+		_, err := gwadminref.OfGrant(t.Context(), newClient(t, failingList(), gwAdmins...), g)
+		require.ErrorContains(t, err, "failed to list the GWAdmins of namespace admin-ns")
 	})
+}
+
+func TestGatewaysAllowedToUse(t *testing.T) {
+	t.Parallel()
+
+	gwAdmin := types.NamespacedName{Namespace: "admins", Name: "admin"}
+	local := gateway("admins", "local", "", "admin")
+	granted := gateway("team", "granted", "admins", "admin")
+	notGranted := gateway("other", "not-granted", "admins", "admin")
+	gateways := []eventgatewayv1alpha1.OnPremEventGateway{*local, *granted, *notGranted}
+
+	allowed, err := gwadminref.GatewaysAllowedToUse(t.Context(), newClient(t, nil, grant("admins", "team", "admin")), gwAdmin, gateways)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"admins/local", "team/granted"}, names(allowed),
+		"those of the namespace of the GWAdmin, and those a KongReferenceGrant allows")
+
+	_, err = gwadminref.GatewaysAllowedToUse(t.Context(), newClient(t, failingList()), gwAdmin, gateways)
+	require.ErrorContains(t, err, "failed to list the KongReferenceGrants of namespace admins")
 }

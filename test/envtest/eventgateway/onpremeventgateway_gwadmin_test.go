@@ -1,6 +1,7 @@
 package eventgateway
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,11 +14,10 @@ import (
 
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
-	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
-	egonprem "github.com/kong/kong-operator/v2/controller/eventgateway/onprem"
-	"github.com/kong/kong-operator/v2/internal/gwadmin/published"
+	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
 	"github.com/kong/kong-operator/v2/internal/utils/gwadminref/gwadminreftest"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/test/envtest"
 )
 
@@ -26,30 +26,28 @@ import (
 // the GWAdmin, of its pods or of a KongReferenceGrant updates the gateways
 // that reference it, and that a GWAdmin in another namespace is used only
 // with a KongReferenceGrant. The GWAdmin controller doesn't run: the test
-// publishes the API of the GWAdmin, and the EndpointSlice of its API Service,
-// itself.
+// publishes the API of the GWAdmin, its TLS material, and the EndpointSlice
+// of its API Service, itself.
 func TestOnPremEventGatewayGWAdmin(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
 	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
-	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
-	envtest.StartReconcilers(ctx, t, mgr, logs, &egonprem.Reconciler{Client: mgr.GetClient()})
+	// A resync would update the gateways without the watches this tests.
+	mgr, logs := newManagerWithoutResync(t, ctx, cfg)
 	cl := mgr.GetClient()
+	gwAdmin := newTestGWAdmin(t, cl, ns.Name)
+	envtest.StartReconcilersWithConfig(ctx, t, mgr, logs, onPremControllerConfig, gwAdmin.reconciler(ctx, mgr))
 
-	const (
-		gwAdminName    = "gw-admin"
-		apiServiceName = "gw-admin-api"
-	)
-	// reports checks the GWAdminResolved condition of the gateway, and that
-	// it is not Programmed: Pending once its GWAdmin is resolved, waiting for
-	// it otherwise.
+	// reports checks the GWAdminResolved condition of the gateway, and its
+	// Programmed condition: True once its GWAdmin is resolved and the
+	// configuration pushed, waiting for the GWAdmin otherwise.
 	reports := func(t *testing.T, gateway *eventgatewayv1alpha1.OnPremEventGateway, reason kcfgconsts.ConditionReason, message string) {
 		t.Helper()
 		resolved := reason == eventgatewayv1alpha1.OnPremEventGatewayGWAdminResolvedReason
 		wantStatus, wantProgrammedReason := metav1.ConditionFalse, eventgatewayv1alpha1.DependenciesNotReadyReason
 		if resolved {
-			wantStatus, wantProgrammedReason = metav1.ConditionTrue, eventgatewayv1alpha1.OnPremEventGatewayPendingReason
+			wantStatus, wantProgrammedReason = metav1.ConditionTrue, eventgatewayv1alpha1.OnPremEventGatewayProgrammedReason
 		}
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
 			var got eventgatewayv1alpha1.OnPremEventGateway
@@ -64,7 +62,7 @@ func TestOnPremEventGatewayGWAdmin(t *testing.T) {
 			}
 			programmed := apimeta.FindStatusCondition(got.Status.Conditions, string(eventgatewayv1alpha1.OnPremEventGatewayProgrammedType))
 			if assert.NotNil(ct, programmed) {
-				assert.Equal(ct, metav1.ConditionFalse, programmed.Status)
+				assert.Equal(ct, wantStatus, programmed.Status)
 				assert.Equal(ct, string(wantProgrammedReason), programmed.Reason)
 			}
 		}, waitTime, tickTime)
@@ -73,71 +71,93 @@ func TestOnPremEventGatewayGWAdmin(t *testing.T) {
 	notPermitted := eventgatewayv1alpha1.OnPremEventGatewayGWAdminRefNotPermittedReason
 	notReady := eventgatewayv1alpha1.OnPremEventGatewayGWAdminNotReadyReason
 	resolved := eventgatewayv1alpha1.OnPremEventGatewayGWAdminResolvedReason
-	servedBy := func(gwAdminNamespace string) string {
-		return "The GWAdmin " + gwAdminNamespace + "/gw-admin serves the gateway"
-	}
+	gwAdminKey := ns.Name + "/" + testGWAdminName
+	servedBy := "The GWAdmin " + gwAdminKey + " serves the gateway"
 
 	gateway := &eventgatewayv1alpha1.OnPremEventGateway{
 		Name: "gateway", Namespace: ns.Name,
-		Spec: eventgatewayv1alpha1.OnPremEventGatewaySpec{GWAdminRef: eventgatewayv1alpha1.GWAdminRef{Name: gwAdminName}},
+		Spec: eventgatewayv1alpha1.OnPremEventGatewaySpec{GWAdminRef: eventgatewayv1alpha1.GWAdminRef{Name: testGWAdminName}},
 	}
 	require.NoError(t, cl.Create(ctx, gateway))
-	reports(t, gateway, notFound, "The GWAdmin "+ns.Name+"/gw-admin does not exist")
+	reports(t, gateway, notFound, "The GWAdmin "+gwAdminKey+" does not exist")
 
-	gwAdmin := &operatorv1alpha1.GWAdmin{Name: gwAdminName, Namespace: ns.Name}
-	require.NoError(t, cl.Create(ctx, gwAdmin))
-	reports(t, gateway, notReady, "The GWAdmin "+ns.Name+"/gw-admin hasn't published its API yet")
+	gwAdmin.createGWAdmin(ctx)
+	reports(t, gateway, notReady, "The GWAdmin "+gwAdminKey+" hasn't published its API yet")
 
-	gwAdmin.Status.API = &operatorv1alpha1.GWAdminAPIStatus{ServiceName: apiServiceName, PortName: "api", Port: 8443}
-	require.NoError(t, cl.Status().Update(ctx, gwAdmin))
-	reports(t, gateway, notReady, "The GWAdmin "+ns.Name+"/gw-admin has no gw-admin pod")
+	gwAdmin.publishAPI(ctx)
+	reports(t, gateway, notReady, "The operator client certificate Secret "+ns.Name+"/"+gwadminref.OperatorClientTLSSecretName(gwAdmin.gwAdmin)+
+		" of the GWAdmin does not exist")
 
-	// Labelled like the EndpointSlice controller labels the EndpointSlices of
-	// the API Service.
-	labels := published.APIServiceLabels(gwAdminName)
-	labels[discoveryv1.LabelServiceName] = apiServiceName
-	labels[discoveryv1.LabelManagedBy] = "endpointslice-controller.k8s.io"
-	slice := &discoveryv1.EndpointSlice{
-		Name: apiServiceName + "-abcde", Namespace: ns.Name,
-		Labels:      labels,
-		AddressType: discoveryv1.AddressTypeIPv4,
-		Ports:       []discoveryv1.EndpointPort{{Name: new("api"), Port: new(int32(8443))}},
-		Endpoints: []discoveryv1.Endpoint{{
-			Addresses:  []string{"10.0.0.1"},
-			TargetRef:  &corev1.ObjectReference{Kind: "Pod", Name: "gw-admin-0"},
-			Conditions: discoveryv1.EndpointConditions{Terminating: new(false)},
-		}},
+	// A Secret under that name, not issued for the GWAdmin, is not used.
+	foreign := &corev1.Secret{
+		Name: gwadminref.OperatorClientTLSSecretName(gwAdmin.gwAdmin), Namespace: ns.Name,
+		Labels: map[string]string{
+			consts.GWAdminUIDLabel:                        "another-uid",
+			consts.GatewayOperatorManagedByNameLabel:      testGWAdminName,
+			consts.GatewayOperatorManagedByNamespaceLabel: ns.Name,
+		},
 	}
-	require.NoError(t, cl.Create(ctx, slice))
-	reports(t, gateway, resolved, servedBy(ns.Name))
+	require.NoError(t, cl.Create(ctx, foreign))
+	reports(t, gateway, notReady, "The operator client certificate Secret "+ns.Name+"/"+gwadminref.OperatorClientTLSSecretName(gwAdmin.gwAdmin)+
+		" doesn't belong to the GWAdmin "+gwAdminKey)
+	require.NoError(t, cl.Delete(ctx, foreign))
+
+	gwAdmin.issueOperatorClientCertificate(ctx)
+	reports(t, gateway, notReady, "The GWAdmin "+gwAdminKey+" has no gw-admin pod")
+
+	pod := gwAdmin.startPod(ctx, "gw-admin-0", "10.0.0.1")
+	reports(t, gateway, resolved, servedBy)
 
 	t.Run("a gateway of another namespace needs a KongReferenceGrant", func(t *testing.T) {
 		other := envtest.CreateNamespace(ctx, t, cl)
 		crossNamespace := &eventgatewayv1alpha1.OnPremEventGateway{
 			Name: "gateway", Namespace: other.Name,
-			Spec: eventgatewayv1alpha1.OnPremEventGatewaySpec{GWAdminRef: eventgatewayv1alpha1.GWAdminRef{Name: gwAdminName, Namespace: new(ns.Name)}},
+			Spec: eventgatewayv1alpha1.OnPremEventGatewaySpec{GWAdminRef: eventgatewayv1alpha1.GWAdminRef{Name: testGWAdminName, Namespace: new(ns.Name)}},
 		}
 		require.NoError(t, cl.Create(ctx, crossNamespace))
-		reports(t, crossNamespace, notPermitted, "The gateway may not use its GWAdmin: no KongReferenceGrant in namespace "+ns.Name+
-			" allows the OnPremEventGateways of namespace "+other.Name+" to reference the GWAdmin "+ns.Name+"/gw-admin")
+		notGranted := "The gateway may not use its GWAdmin: no KongReferenceGrant in namespace " + ns.Name +
+			" allows the OnPremEventGateways of namespace " + other.Name + " to reference the GWAdmin " + gwAdminKey
+		reports(t, crossNamespace, notPermitted, notGranted)
+
+		// served tells whether the gw-admin pod serves the gateway of the
+		// other namespace.
+		served := func(t *testing.T, want bool) {
+			t.Helper()
+			require.EventuallyWithT(t, func(ct *assert.CollectT) {
+				_, ok, expected := pod.state(gatewayID(ct, crossNamespace))
+				assert.Equal(ct, want, ok)
+				assert.Equal(ct, want, slices.Contains(expected, gatewayID(ct, crossNamespace)))
+			}, waitTime, tickTime)
+		}
 
 		grant := gwadminreftest.Grant(ns.Name, "gateways-of-"+other.Name, other.Name, "")
 		require.NoError(t, cl.Create(ctx, grant))
-		reports(t, crossNamespace, resolved, servedBy(ns.Name))
+		reports(t, crossNamespace, resolved, servedBy)
+		served(t, true)
 
 		require.NoError(t, cl.Delete(ctx, grant))
-		reports(t, crossNamespace, notPermitted, "The gateway may not use its GWAdmin: no KongReferenceGrant in namespace "+ns.Name+
-			" allows the OnPremEventGateways of namespace "+other.Name+" to reference the GWAdmin "+ns.Name+"/gw-admin")
+		reports(t, crossNamespace, notPermitted, notGranted)
+		served(t, false)
+		_, ok, expected := pod.state(gatewayID(t, gateway))
+		require.True(t, ok, "the gateway of the namespace of the GWAdmin is still served")
+		require.Contains(t, expected, gatewayID(t, gateway))
 	})
 
 	t.Run("a pod that goes away is noticed", func(t *testing.T) {
-		slice.Endpoints[0].Conditions.Terminating = new(true)
-		require.NoError(t, cl.Update(ctx, slice))
-		reports(t, gateway, notReady, "The GWAdmin "+ns.Name+"/gw-admin has no gw-admin pod")
+		gwAdmin.updateEndpoints(ctx, func(endpoints []discoveryv1.Endpoint) []discoveryv1.Endpoint {
+			endpoints[0].Conditions.Terminating = new(true)
+			endpoints[0].Conditions.Serving = new(false)
+			return endpoints
+		})
+		reports(t, gateway, notReady, "The GWAdmin "+gwAdminKey+" has no gw-admin pod")
 	})
 
 	t.Run("a GWAdmin that goes away is noticed", func(t *testing.T) {
-		require.NoError(t, cl.Delete(ctx, gwAdmin))
-		reports(t, gateway, notFound, "The GWAdmin "+ns.Name+"/gw-admin does not exist")
+		require.NoError(t, cl.Delete(ctx, gwAdmin.gwAdmin))
+		// The pods of a deleted GWAdmin are collected after it.
+		reports(t, gateway, notFound, "The GWAdmin "+gwAdminKey+" does not exist, but its gw-admin pods are still running")
+
+		gwAdmin.stopPod(ctx, "10.0.0.1")
+		reports(t, gateway, notFound, "The GWAdmin "+gwAdminKey+" does not exist")
 	})
 }

@@ -20,24 +20,22 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 
-	"k8s.io/apimachinery/pkg/api/equality"
+	"github.com/google/uuid"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
-	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
-	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 // onPremEventGatewayGVK is the GroupVersionKind of OnPremEventGateway.
@@ -165,28 +163,6 @@ func onPremEventGatewaysIn(ctx context.Context, cl client.Client, namespaces ...
 	return requests
 }
 
-// gwAdminServingChanged lets through the changes of a GWAdmin its gateways
-// read: whether it is being deleted, and the API it publishes.
-func gwAdminServingChanged() predicate.Funcs {
-	return predicate.Funcs{UpdateFunc: func(e event.UpdateEvent) bool {
-		oldGW, okOld := e.ObjectOld.(*operatorv1alpha1.GWAdmin)
-		newGW, okNew := e.ObjectNew.(*operatorv1alpha1.GWAdmin)
-		if !okOld || !okNew {
-			return true
-		}
-		return oldGW.DeletionTimestamp.IsZero() != newGW.DeletionTimestamp.IsZero() ||
-			!equality.Semantic.DeepEqual(oldGW.Status.API, newGW.Status.API)
-	}}
-}
-
-// mapGWAdminToOnPremEventGateways returns a MapFunc that enqueues the
-// OnPremEventGateways that reference the GWAdmin.
-func mapGWAdminToOnPremEventGateways(cl client.Client) handler.MapFunc {
-	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		return requestsForGWAdmin(ctx, cl, client.ObjectKeyFromObject(obj))
-	}
-}
-
 // mapKongReferenceGrantToOnPremEventGateways returns a MapFunc that enqueues
 // the OnPremEventGateways the KongReferenceGrant may allow to use their
 // GWAdmin: those of the namespaces it grants that reference a GWAdmin of its
@@ -214,34 +190,16 @@ func mapKongReferenceGrantToOnPremEventGateways(cl client.Client) handler.MapFun
 	}
 }
 
-// mapEndpointSliceToOnPremEventGateways returns a MapFunc that enqueues the
-// OnPremEventGateways that reference the GWAdmin whose API Service the
-// EndpointSlice belongs to.
-func mapEndpointSliceToOnPremEventGateways(cl client.Client) handler.MapFunc {
+// mapGatewayToGatewaysOfItsGWAdmin returns a MapFunc that enqueues the
+// OnPremEventGateways that reference the GWAdmin of the gateway.
+func mapGatewayToGatewaysOfItsGWAdmin(cl client.Client) handler.MapFunc {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		gwAdmin, ok := gwAdminOfEndpointSlice(obj)
+		gateway, ok := obj.(*eventgatewayv1alpha1.OnPremEventGateway)
 		if !ok {
 			return nil
 		}
-		return requestsForGWAdmin(ctx, cl, gwAdmin)
+		return requestsForGWAdmin(ctx, cl, gateway.GWAdminKey())
 	}
-}
-
-// gwAdminOfEndpointSlice returns the GWAdmin whose API Service the
-// EndpointSlice belongs to, by its labels, and false when it belongs to no
-// API Service of a GWAdmin.
-func gwAdminOfEndpointSlice(obj client.Object) (client.ObjectKey, bool) {
-	labels := obj.GetLabels()
-	name := labels[consts.GatewayOperatorManagedByNameLabel]
-	if name == "" {
-		return client.ObjectKey{}, false
-	}
-	for k, v := range apiEndpointSliceLabels(name) {
-		if labels[k] != v {
-			return client.ObjectKey{}, false
-		}
-	}
-	return client.ObjectKey{Namespace: obj.GetNamespace(), Name: name}, true
 }
 
 // requestsForGWAdmin returns a request for each OnPremEventGateway that
@@ -257,4 +215,33 @@ func requestsForGWAdmin(ctx context.Context, cl client.Client, gwAdmin client.Ob
 		requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(&gateways[i])})
 	}
 	return requests
+}
+
+// expectedGateways returns the ids of the gateways the gw-admin of the gateway
+// must serve: every OnPremEventGateway allowed to use the GWAdmin, in any
+// namespace, not being deleted, and whose UID is a version 4 UUID. gw-admin
+// replaces the whole set on every call.
+func expectedGateways(ctx context.Context, cl client.Client, gateway *eventgatewayv1alpha1.OnPremEventGateway) ([]uuid.UUID, error) {
+	gateways, err := gwadminref.GatewaysOf(ctx, cl, gateway.GWAdminKey())
+	if err != nil {
+		return nil, err
+	}
+	gateways, err = gwadminref.GatewaysAllowedToUse(ctx, cl, gateway.GWAdminKey(), gateways)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]uuid.UUID, 0, len(gateways))
+	for i := range gateways {
+		g := &gateways[i]
+		if !g.DeletionTimestamp.IsZero() {
+			continue
+		}
+		id, ok := uidV4(g)
+		if !ok {
+			continue
+		}
+		ids = append(ids, id)
+	}
+	slices.SortFunc(ids, func(a, b uuid.UUID) int { return strings.Compare(a.String(), b.String()) })
+	return ids, nil
 }

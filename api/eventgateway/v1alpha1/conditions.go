@@ -193,12 +193,22 @@ const (
 	// configuration reached every discovered gw-admin pod.
 	OnPremEventGatewayConfigurationPushedType consts.ConditionType = "ConfigurationPushed"
 
-	// OnPremEventGatewayPendingReason indicates the configuration of the
-	// OnPremEventGateway has not been pushed to gw-admin yet.
-	OnPremEventGatewayPendingReason consts.ConditionReason = "Pending"
-	// OnPremEventGatewayPendingMessage is the message of the Programmed
-	// condition while the configuration has not been pushed to gw-admin.
-	OnPremEventGatewayPendingMessage = "The configuration has not been pushed to gw-admin yet"
+	// OnPremEventGatewayProgrammedReason indicates the configuration of the
+	// OnPremEventGateway has been pushed to every gw-admin pod serving: those
+	// not serving yet get it later.
+	OnPremEventGatewayProgrammedReason consts.ConditionReason = "Programmed"
+	// OnPremEventGatewayConfigurationPushedReason indicates the configuration
+	// of the OnPremEventGateway reached every gw-admin pod serving: those not
+	// serving yet get it later.
+	OnPremEventGatewayConfigurationPushedReason consts.ConditionReason = "ConfigurationPushed"
+	// OnPremEventGatewayInvalidUIDReason indicates the UID of the
+	// OnPremEventGateway is not a version 4 UUID, which gw-admin requires as
+	// the id of a gateway: it can't be pushed.
+	OnPremEventGatewayInvalidUIDReason consts.ConditionReason = "InvalidUID"
+	// OnPremEventGatewayConfigurationPushFailedReason indicates a gw-admin pod
+	// could not be reached or rejected the configuration of the
+	// OnPremEventGateway.
+	OnPremEventGatewayConfigurationPushFailedReason consts.ConditionReason = "ConfigurationPushFailed"
 	// OnPremEventGatewayGWAdminNotResolvedMessage is the message of the
 	// Programmed condition while the GWAdminResolved condition is not True.
 	OnPremEventGatewayGWAdminNotResolvedMessage = "The GWAdmin of the gateway is not resolved"
@@ -226,6 +236,6 @@ const (
 	OnPremEventGatewayGWAdminRefNotPermittedReason consts.ConditionReason = "RefNotPermitted"
 	// OnPremEventGatewayGWAdminNotReadyReason indicates the referenced GWAdmin
 	// can't serve the OnPremEventGateway yet: it is being deleted, it hasn't
-	// published its API, or it has no gw-admin pod.
+	// published its API or its TLS material, or it has no gw-admin pod.
 	OnPremEventGatewayGWAdminNotReadyReason consts.ConditionReason = "NotReady"
 )

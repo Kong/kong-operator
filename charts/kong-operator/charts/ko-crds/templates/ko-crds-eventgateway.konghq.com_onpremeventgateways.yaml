@@ -110,6 +110,14 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              configHash:
+                maxLength: 128
+                minLength: 1
+                type: string
+              configRevision:
+                format: int64
+                minimum: 1
+                type: integer
               observedGeneration:
                 format: int64
                 minimum: 0
@@ -123,6 +131,14 @@ spec:
                   rule: isURL(self) && url(self).getScheme() == 'https' && url(self).getHostname()
                     != ''
             type: object
+            x-kubernetes-validations:
+            - message: configRevision may not decrease
+              rule: '!has(oldSelf.configRevision) || (has(self.configRevision) &&
+                self.configRevision >= oldSelf.configRevision)'
+            - message: configHash may only change along with a new configRevision
+              rule: '!has(oldSelf.configHash) || (has(self.configHash) && (self.configHash
+                == oldSelf.configHash || (has(self.configRevision) && has(oldSelf.configRevision)
+                && self.configRevision > oldSelf.configRevision)))'
         required:
         - spec
         type: object

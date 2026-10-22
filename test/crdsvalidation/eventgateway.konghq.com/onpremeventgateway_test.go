@@ -1,11 +1,14 @@
 package crdsvalidation_test
 
 import (
+	"context"
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -158,6 +161,69 @@ func TestOnPremEventGateway(t *testing.T) {
 				},
 				ExpectedStatusUpdateErrorMessage: new("serverURL must be an https URL with a host"),
 			},
+			{
+				Name:       "configRevision and configHash - valid",
+				TestObject: validOnPremEventGateway(ns.Name),
+				StatusUpdate: func(obj *eventgatewayv1alpha1.OnPremEventGateway) {
+					obj.Status.ConfigRevision = 1
+					obj.Status.ConfigHash = "sha256:a"
+				},
+			},
+			{
+				Name:       "configHash too long - invalid",
+				TestObject: validOnPremEventGateway(ns.Name),
+				StatusUpdate: func(obj *eventgatewayv1alpha1.OnPremEventGateway) {
+					obj.Status.ConfigRevision = 1
+					obj.Status.ConfigHash = strings.Repeat("a", 129)
+				},
+				ExpectedStatusUpdateErrorMessage: new("Too long: may not be"),
+			},
 		}.RunWithConfig(t, cfg, scheme)
+	})
+
+	// The rules on configRevision and configHash compare a status with the
+	// one it replaces: each case writes the status twice.
+	t.Run("status revision transitions", func(t *testing.T) {
+		cl, err := client.New(cfg, client.Options{Scheme: scheme})
+		require.NoError(t, err)
+		type revision struct {
+			revision int64
+			hash     string
+		}
+		tests := []struct {
+			name    string
+			from    revision
+			to      revision
+			wantErr string
+		}{
+			{name: "the same revision - valid", from: revision{3, "sha256:a"}, to: revision{3, "sha256:a"}},
+			{name: "a new revision with a new hash - valid", from: revision{3, "sha256:a"}, to: revision{4, "sha256:b"}},
+			{name: "a new revision with the same hash - valid", from: revision{3, "sha256:a"}, to: revision{4, "sha256:a"}},
+			{name: "a revision that decreases - invalid", from: revision{3, "sha256:a"}, to: revision{2, "sha256:a"},
+				wantErr: "configRevision may not decrease"},
+			{name: "a revision removed - invalid", from: revision{3, "sha256:a"}, to: revision{0, "sha256:a"},
+				wantErr: "configRevision may not decrease"},
+			{name: "a hash changed without a new revision - invalid", from: revision{3, "sha256:a"}, to: revision{3, "sha256:b"},
+				wantErr: "configHash may only change along with a new configRevision"},
+			{name: "a hash removed - invalid", from: revision{3, "sha256:a"}, to: revision{4, ""},
+				wantErr: "configHash may only change along with a new configRevision"},
+		}
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				obj := validOnPremEventGateway(ns.Name)
+				require.NoError(t, cl.Create(t.Context(), obj))
+				t.Cleanup(func() { _ = cl.Delete(context.Background(), obj) })
+				obj.Status.ConfigRevision, obj.Status.ConfigHash = tc.from.revision, tc.from.hash
+				require.NoError(t, cl.Status().Update(t.Context(), obj))
+
+				obj.Status.ConfigRevision, obj.Status.ConfigHash = tc.to.revision, tc.to.hash
+				err := cl.Status().Update(t.Context(), obj)
+				if tc.wantErr == "" {
+					require.NoError(t, err)
+					return
+				}
+				require.ErrorContains(t, err, tc.wantErr)
+			})
+		}
 	})
 }

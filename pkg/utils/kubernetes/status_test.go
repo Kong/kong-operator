@@ -1,9 +1,12 @@
 package kubernetes
 
 import (
+	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
@@ -905,4 +908,20 @@ func TestUpdatedConditionPreservingLastTransitionTime(t *testing.T) {
 			assert.Equal(t, tc.expectedChanged, changed)
 		})
 	}
+}
+
+func TestTruncateMessage(t *testing.T) {
+	require.Equal(t, "short", TruncateMessage("short", 10))
+	require.Equal(t, "abcdefg...", TruncateMessage(strings.Repeat("abcdefg", 3), 10))
+	truncated := TruncateMessage(strings.Repeat("ą", 10), 10) // 'ą' is 2 bytes
+	require.LessOrEqual(t, len(truncated), 10)
+	require.True(t, utf8.ValidString(truncated))
+	require.True(t, utf8.ValidString(TruncateMessage(strings.Repeat("\x80", 20), 10)))
+	// Too short for an ellipsis: truncated without it, never past maxLen.
+	require.Equal(t, "abc", TruncateMessage("abcdef", 3))
+	require.Equal(t, "a", TruncateMessage("abcdef", 1))
+	require.Empty(t, TruncateMessage("abcdef", 0))
+	require.Empty(t, TruncateMessage("abcdef", -1))
+	require.Equal(t, "a...", TruncateMessage("abcdef", 4))
+	require.Empty(t, TruncateMessage("ąą", 1), "a rune is never cut")
 }

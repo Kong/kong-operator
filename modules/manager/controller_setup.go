@@ -57,6 +57,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/specialized"
 	kiccontrollers "github.com/kong/kong-operator/v2/ingress-controller/pkg/controllers"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstance"
+	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminsync"
 	"github.com/kong/kong-operator/v2/internal/metrics"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
@@ -965,6 +966,14 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			Controller: &egonprem.Reconciler{
 				Client:      mgr.GetClient(),
 				LoggingMode: c.LoggingMode,
+				GWAdminSync: &gwadminsync.Syncer{
+					Client: mgr.GetClient(),
+					// Where the GWAdmin controller keeps the operator client
+					// certificates.
+					OperatorNamespace:   c.ControllerNamespace,
+					SecretLabelSelector: c.SecretLabelSelector,
+				},
+				TypeConverter: ssaProvider,
 			},
 		},
 		// GWAdmin controller

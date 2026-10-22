@@ -17,6 +17,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
+	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
@@ -147,7 +148,7 @@ func TestEnsureTLS_MissingClientCertificateDuringAPIRotation(t *testing.T) {
 	require.False(t, newAPI.Equal(oldAPI))
 	requireSignedBy(t, oldAPI, m.client)
 
-	require.NoError(t, r.Delete(t.Context(), getPrivateSecret(t, r, OperatorClientTLSSecretName(gw))))
+	require.NoError(t, r.Delete(t.Context(), getPrivateSecret(t, r, gwadminref.OperatorClientTLSSecretName(gw))))
 	stalled := rollingDeployment(m)
 	m = ensure(t, r, gw, stalled)
 	require.NotNil(t, m.client)

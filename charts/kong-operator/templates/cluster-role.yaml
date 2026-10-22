@@ -412,7 +412,14 @@ rules:
     verbs:
       - get
       - list
+      - patch
       - watch
+  - apiGroups:
+      - eventgateway.konghq.com
+    resources:
+      - onpremeventgateways/finalizers
+    verbs:
+      - update
   - apiGroups:
       - gateway-operator.konghq.com
     resources:

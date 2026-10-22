@@ -93,6 +93,7 @@ import (
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
@@ -194,28 +195,20 @@ func ownedSecretNames(gw *operatorv1alpha1.GWAdmin) []string {
 // The Secrets only Kong Operator uses live in the operator namespace, named
 // after the UID of the GWAdmin.
 
-func operatorSecretPrefix(gw *operatorv1alpha1.GWAdmin) string { return "gwadmin-" + string(gw.UID) }
-
 // APICASecretName returns the name of the Secret, in the operator namespace,
 // holding the API CA of the GWAdmin.
 func APICASecretName(gw *operatorv1alpha1.GWAdmin) string {
-	return operatorSecretPrefix(gw) + "-api-ca"
+	return gwadminref.OperatorSecretPrefix(gw) + "-api-ca"
 }
 
 // CPServerCASecretName returns the name of the Secret, in the operator
 // namespace, holding the cp server CA of the GWAdmin.
 func CPServerCASecretName(gw *operatorv1alpha1.GWAdmin) string {
-	return operatorSecretPrefix(gw) + "-cp-server-ca"
+	return gwadminref.OperatorSecretPrefix(gw) + "-cp-server-ca"
 }
 
-// OperatorClientTLSSecretName returns the name of the Secret, in the operator
-// namespace, holding the client certificate Kong Operator authenticates to
-// the API listener of the GWAdmin with.
-func OperatorClientTLSSecretName(gw *operatorv1alpha1.GWAdmin) string {
-	return operatorSecretPrefix(gw) + "-operator-client-tls"
-}
 func cpClientCANextSecretName(gw *operatorv1alpha1.GWAdmin) string {
-	return operatorSecretPrefix(gw) + "-cp-client-ca-next"
+	return gwadminref.OperatorSecretPrefix(gw) + "-cp-client-ca-next"
 }
 
 // CPClientCASecretName returns the name of the Secret, in the operator
@@ -224,14 +217,14 @@ func cpClientCANextSecretName(gw *operatorv1alpha1.GWAdmin) string {
 // planes issues their client certificates from. It only ever holds one the
 // gw-admin pods trust.
 func CPClientCASecretName(gw *operatorv1alpha1.GWAdmin) string {
-	return operatorSecretPrefix(gw) + "-cp-client-ca"
+	return gwadminref.OperatorSecretPrefix(gw) + "-cp-client-ca"
 }
 
 // privateSecretNames returns the names of the Secrets the GWAdmin keeps in
 // the operator namespace.
 func privateSecretNames(gw *operatorv1alpha1.GWAdmin) []string {
 	return []string{
-		APICASecretName(gw), CPServerCASecretName(gw), OperatorClientTLSSecretName(gw),
+		APICASecretName(gw), CPServerCASecretName(gw), gwadminref.OperatorClientTLSSecretName(gw),
 		CPClientCASecretName(gw), cpClientCANextSecretName(gw),
 	}
 }
@@ -712,7 +705,7 @@ func (r *Reconciler) ensureTLS(
 		{r.local(gw, cpTLSSecretName(gw)), &m.cp},
 		{r.local(gw, cpClientCABundleSecretName(gw)), &m.clientBundle},
 		{r.local(gw, cpServerCABundleSecretName(gw)), &m.serverBundle},
-		{r.private(OperatorClientTLSSecretName(gw)), &m.client},
+		{r.private(gwadminref.OperatorClientTLSSecretName(gw)), &m.client},
 	} {
 		secret, err := r.getOwnedSecret(ctx, gw, s.ref)
 		if err != nil {
@@ -855,7 +848,7 @@ func (r *Reconciler) ensureAPIDomain(ctx context.Context, gw *operatorv1alpha1.G
 		ca: ca,
 		leaves: []leafTarget{
 			{&m.api, r.local(gw, apiTLSSecretName(gw)), serverLeafSpec(apiServiceName(gw), gw.Namespace, r.ClusterDomain)},
-			{&m.client, r.private(OperatorClientTLSSecretName(gw)), operatorClientLeafSpec()},
+			{&m.client, r.private(gwadminref.OperatorClientTLSSecretName(gw)), operatorClientLeafSpec()},
 		},
 	}
 	m.due = append(m.due, renewalTime(ca.cert))
