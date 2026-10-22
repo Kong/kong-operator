@@ -1242,7 +1242,7 @@ func TestGWAdminReconcilerCARotationBlocked(t *testing.T) {
 // them: the data planes of dpNamespace count for their rotations.
 func grantDataPlanes(ctx context.Context, t *testing.T, cl client.Client, gwNamespace, dpNamespace string) {
 	t.Helper()
-	require.NoError(t, cl.Create(ctx, &configurationv1alpha1.KongReferenceGrant{
+	grant := &configurationv1alpha1.KongReferenceGrant{
 		GenerateName: "gwadmin-data-planes-", Namespace: gwNamespace,
 		Spec: configurationv1alpha1.KongReferenceGrantSpec{
 			From: []configurationv1alpha1.ReferenceGrantFrom{{
@@ -1253,7 +1253,14 @@ func grantDataPlanes(ctx context.Context, t *testing.T, cl client.Client, gwName
 				Group: configurationv1alpha1.Group(operatorv1alpha1.SchemeGroupVersion.Group), Kind: operatorv1alpha1.GWAdminKind,
 			}},
 		},
-	}))
+	}
+	require.NoError(t, cl.Create(ctx, grant))
+	// The reconciler lists the grants from the manager cache, which cl reads
+	// too: wait for it to hold this one, or a reconcile racing the cache
+	// doesn't count the data planes in dpNamespace.
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(grant), &configurationv1alpha1.KongReferenceGrant{}))
+	}, waitTime, tickTime)
 }
 
 // requireGWAdminConditionMessage waits for the CertificateProvisioned
