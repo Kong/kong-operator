@@ -145,12 +145,21 @@ func translateKind[
 // carries no document entity of its own: a credential whose own translation failed is
 // reported on the credential (its Err) instead of failing the consumer, and the consumer
 // keeps rendering its healthy credentials.
-func credentialEntityStatuses(translations []aiconfigurationv1alpha1.CredentialTranslation) []EntityStatus {
+//
+// consumerErr is the failure of the consumer the credentials belong to, nil when it made it
+// into the document: credentials are rendered through their consumer, so a consumer left out
+// leaves them out of the pushed configuration too. Reporting them failed is what keeps their
+// status fresh - the reporter only notifies the entities of the current sync, so a credential
+// dropped from the status set keeps whatever condition it had (often Programmed=True).
+func credentialEntityStatuses(
+	translations []aiconfigurationv1alpha1.CredentialTranslation,
+	consumerErr error,
+) []EntityStatus {
 	statuses := make([]EntityStatus, 0, len(translations))
 	for _, t := range translations {
 		status := EntityStatus{Obj: t.Obj}
-		if t.Err != nil {
-			status.Err = fmt.Errorf("converting %T %s: %w", t.Obj, client.ObjectKeyFromObject(t.Obj), t.Err)
+		if err := cmp.Or(t.Err, consumerErr); err != nil {
+			status.Err = fmt.Errorf("converting %T %s: %w", t.Obj, client.ObjectKeyFromObject(t.Obj), err)
 		}
 		statuses = append(statuses, status)
 	}
@@ -349,20 +358,19 @@ func BuildDocument(
 			// because the api package cannot import internal/utils/index without a cycle.
 			func(c *aiconfigurationv1alpha1.AIGatewayConsumer, ctx context.Context, cl client.Client) (*aigw.Consumer, error) {
 				consumer, credentialTranslations, err := c.ToAIGWConsumer(ctx, cl, index.IndexFieldAIGatewayConsumerCredentialOnAIGatewayConsumerRef)
+				if err == nil {
+					err = cmp.Or(
+						checkTranslatedRefs(translatedPolicies, "AIGatewayPolicy", consumer.Policies),
+						checkTranslatedRefs(translatedConsumerGroups, "AIGatewayConsumerGroup", consumer.ConsumerGroups),
+					)
+				}
+				// Reported before the early return below: credentials are rendered through
+				// their consumer, so one that fails or is excluded leaves them out of the
+				// pushed configuration as well and they must be reported failed.
+				credentialStatuses = append(credentialStatuses, credentialEntityStatuses(credentialTranslations, err)...)
 				if err != nil {
 					return nil, err
 				}
-				if err := cmp.Or(
-					checkTranslatedRefs(translatedPolicies, "AIGatewayPolicy", consumer.Policies),
-					checkTranslatedRefs(translatedConsumerGroups, "AIGatewayConsumerGroup", consumer.ConsumerGroups),
-				); err != nil {
-					return nil, err
-				}
-				// Reported last: nothing of a credential is in the document while its
-				// consumer is excluded, so the credentials of a consumer failing anywhere
-				// above stay unreported (Unknown, i.e. Pending) rather than claiming a
-				// state the pushed configuration does not have.
-				credentialStatuses = append(credentialStatuses, credentialEntityStatuses(credentialTranslations)...)
 				return consumer, nil
 			},
 			&doc.Consumers),

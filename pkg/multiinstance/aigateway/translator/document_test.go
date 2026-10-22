@@ -1408,8 +1408,10 @@ func TestBuildDocument_ConsumerFailsWhenReferencedPolicyFails(t *testing.T) {
 	consumerHealthy := aiGatewayConsumerFixture("consumer-healthy")
 	consumerHealthy.Spec.APISpec.Policies = []aiconfigurationv1alpha1.AIGatewayPolicyRef{{Name: "policy-healthy"}}
 
-	// A healthy credential of the consumer that fails: it is not reported either, because
-	// nothing of a credential is in the document while its consumer is excluded from it.
+	// A healthy credential of the consumer that fails. The credential itself is fine, but its
+	// consumer being excluded from the document keeps it out of the pushed configuration, so
+	// it must be reported failed: a credential left out of the status set keeps its previous
+	// condition, and the reporter only notifies the entities of the current sync.
 	credentialOfBrokenConsumer := &aiconfigurationv1alpha1.AIGatewayConsumerCredential{
 		Name: "cred-of-broken-consumer", Namespace: "default",
 		Spec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialSpec{
@@ -1441,15 +1443,17 @@ func TestBuildDocument_ConsumerFailsWhenReferencedPolicyFails(t *testing.T) {
 	require.Equal(t, []string{"policy-healthy"}, doc.Consumers[0].Policies)
 	require.Empty(t, doc.Consumers[0].Credentials)
 
-	require.Len(t, statuses, 4)
+	require.Len(t, statuses, 5)
 	require.Contains(t, findStatusByName(t, statuses, "policy-broken").Err.Error(), "cross-namespace secretRef")
 	require.Contains(t, findStatusByName(t, statuses, "consumer-broken").Err.Error(),
 		`referenced AIGatewayPolicy "policy-broken" was excluded from the document`)
 	require.NoError(t, findStatusByName(t, statuses, "consumer-healthy").Err)
-	for _, status := range statuses {
-		require.NotEqual(t, credentialOfBrokenConsumer.Name, status.Obj.GetName(),
-			"a credential of an excluded consumer must not be reported as part of the configuration")
-	}
+
+	credentialStatus := findStatusByName(t, statuses, credentialOfBrokenConsumer.Name)
+	require.ErrorContains(t, credentialStatus.Err, credentialOfBrokenConsumer.Name)
+	require.ErrorContains(t, credentialStatus.Err,
+		`referenced AIGatewayPolicy "policy-broken" was excluded from the document`,
+		"the credential reports why its consumer was excluded")
 }
 
 // TestBuildDocument_ConsumerGroupFailsWhenReferencedPolicyFails pins the translated-reference

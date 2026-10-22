@@ -40,6 +40,11 @@ type CredentialTranslation struct {
 // on the credential itself: a credential whose translation fails is left out of the
 // consumer, and the consumer still carries its healthy credentials.
 //
+// On error the credential outcomes gathered so far are returned too (their Err unset, since
+// nothing of theirs is at fault): the caller reports them against the credential, which
+// otherwise holds a stale Programmed condition - its consumer's failure keeps it out of the
+// pushed configuration, and the status reporter only notifies the entities of a sync.
+//
 // credIndexField is the field name of the AIGatewayConsumerCredential ->
 // AIGatewayConsumer index (internal/utils/index's
 // IndexFieldAIGatewayConsumerCredentialOnAIGatewayConsumerRef). It is passed in by the
@@ -60,17 +65,20 @@ func (obj *AIGatewayConsumer) ToAIGWConsumer(
 		return nil, nil, fmt.Errorf("decoding AIGatewayConsumer %s/%s as aigw.Consumer: %w", obj.Namespace, obj.Name, err)
 	}
 
-	if consumer.Policies, err = resolveEntityNames[AIGatewayPolicy](ctx, cl, obj.Namespace, policyRefs(obj.Spec.APISpec.Policies)); err != nil {
-		return nil, nil, fmt.Errorf("resolving AIGatewayConsumer %s/%s policies: %w", obj.Namespace, obj.Name, err)
-	}
-	if consumer.ConsumerGroups, err = resolveEntityNames[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, consumerGroupNamespacedRefs(obj.Spec.ConsumerGroups)); err != nil {
-		return nil, nil, fmt.Errorf("resolving AIGatewayConsumer %s/%s consumer groups: %w", obj.Namespace, obj.Name, err)
-	}
+	// Translated before the references below, so that their failure returns the credentials
+	// already gathered (see the doc comment).
 	credentials, credentialTranslations, err := obj.aigwCredentials(ctx, cl, credIndexField)
 	if err != nil {
 		return nil, nil, fmt.Errorf("resolving AIGatewayConsumer %s/%s credentials: %w", obj.Namespace, obj.Name, err)
 	}
 	consumer.Credentials = credentials
+
+	if consumer.Policies, err = resolveEntityNames[AIGatewayPolicy](ctx, cl, obj.Namespace, policyRefs(obj.Spec.APISpec.Policies)); err != nil {
+		return nil, credentialTranslations, fmt.Errorf("resolving AIGatewayConsumer %s/%s policies: %w", obj.Namespace, obj.Name, err)
+	}
+	if consumer.ConsumerGroups, err = resolveEntityNames[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, consumerGroupNamespacedRefs(obj.Spec.ConsumerGroups)); err != nil {
+		return nil, credentialTranslations, fmt.Errorf("resolving AIGatewayConsumer %s/%s consumer groups: %w", obj.Namespace, obj.Name, err)
+	}
 	return &consumer, credentialTranslations, nil
 }
 

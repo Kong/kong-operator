@@ -43,7 +43,8 @@ func testCredIndexExtractor(object client.Object) []string {
 // the on-prem translation uses the name-only resolver, unlike the generated Konnect resolver —
 // plus the managed_by drop, the credential embedding with secret-resolved api keys, and the
 // per-credential reporting that leaves a broken credential out of the consumer instead of
-// failing the consumer.
+// failing the consumer — also on the consumer's own error paths, where the outcomes gathered
+// so far come back with the error.
 func TestAIGatewayConsumer_ToAIGWConsumer(t *testing.T) {
 	t.Parallel()
 
@@ -199,7 +200,15 @@ func TestAIGatewayConsumer_ToAIGWConsumer(t *testing.T) {
 					},
 				},
 			},
+			objects: []runtime.Object{newReferencedSecret(), newConsumerCredential(func(c *AIGatewayConsumerCredential) {
+				c.Spec.AIGatewayConsumerRef.NamespacedRef.Name = "sample-ai-gw-consumer-dangling"
+			})},
 			wantErr: "policies",
+			// The credential translated before the policy reference failed, so its outcome
+			// comes back with the error: the consumer is out of the pushed configuration,
+			// and reporting the credential is what keeps its condition from going stale.
+			// The consumer's error itself is the caller's to attach.
+			wantCreds: map[string]string{"cred-a": ""},
 		},
 		{
 			name: "dangling consumer group reference",
@@ -357,6 +366,19 @@ func TestAIGatewayConsumer_ToAIGWConsumer(t *testing.T) {
 			got, gotCreds, err := tt.obj.ToAIGWConsumer(t.Context(), cl, testCredIndexField)
 			if tt.wantErr != "" {
 				require.ErrorContains(t, err, tt.wantErr)
+				// The outcomes gathered before the failure come back with it, so that the
+				// caller can report them against the credential: here they are the ones of a
+				// credential whose own translation succeeded.
+				reportedErr := make(map[string]error, len(gotCreds))
+				for _, cred := range gotCreds {
+					reportedErr[cred.Obj.Name] = cred.Err
+				}
+				require.Len(t, reportedErr, len(tt.wantCreds))
+				for name := range tt.wantCreds {
+					credErr, ok := reportedErr[name]
+					require.Truef(t, ok, "credential %q was not reported; got %v", name, reportedErr)
+					require.NoErrorf(t, credErr, "credential %q must come back without an error of its own", name)
+				}
 				return
 			}
 			require.NoError(t, err)
