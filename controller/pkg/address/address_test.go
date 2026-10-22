@@ -16,6 +16,16 @@ func Test_AddressesFromService(t *testing.T) {
 		want    []operatorv1beta1.Address
 	}{
 		{
+			name: "headless Service has no addresses",
+			service: &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					ClusterIP:  corev1.ClusterIPNone,
+					ClusterIPs: []string{corev1.ClusterIPNone},
+				},
+			},
+			want: []operatorv1beta1.Address{},
+		},
+		{
 			name: "1 load balancer IP address",
 			service: &corev1.Service{
 				Status: corev1.ServiceStatus{

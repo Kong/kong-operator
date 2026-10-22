@@ -426,6 +426,7 @@ func gatewayConfigDataPlaneOptionsToDataPlaneOptions(
 					Name:                  opts.Network.Services.Ingress.Name,
 					IPFamilies:            opts.Network.Services.Ingress.IPFamilies,
 					IPFamilyPolicy:        opts.Network.Services.Ingress.IPFamilyPolicy,
+					ClusterIP:             opts.Network.Services.Ingress.ClusterIP,
 				},
 			},
 		}
@@ -564,6 +565,10 @@ func gatewayAddressesFromService(svc corev1.Service) ([]gwtypes.GatewayStatusAdd
 		// will always be empty, so we use its internal IP instead
 		if svc.Spec.ClusterIP == "" {
 			return addresses, fmt.Errorf("service %s doesn't have a ClusterIP yet, not ready", svc.Name)
+		}
+		// A headless Service has no cluster IP to advertise.
+		if svc.Spec.ClusterIP == corev1.ClusterIPNone {
+			return addresses, nil
 		}
 		addresses = append(addresses, gwtypes.GatewayStatusAddress{
 			Value: svc.Spec.ClusterIP,

@@ -4448,6 +4448,10 @@ spec:
                             additionalProperties:
                               type: string
                             type: object
+                          clusterIP:
+                            enum:
+                            - None
+                            type: string
                           externalTrafficPolicy:
                             enum:
                             - Cluster
@@ -4533,6 +4537,10 @@ spec:
                             service.
                           rule: 'has(self.type) && self.type == ''ClusterIP'' ? !has(self.externalTrafficPolicy)
                             : true'
+                        - message: ClusterIP can only be set to None when type is
+                            ClusterIP.
+                          rule: 'has(self.clusterIP) ? has(self.type) && self.type
+                            == ''ClusterIP'' : true'
                     type: object
                 type: object
               pluginsToInstall:
