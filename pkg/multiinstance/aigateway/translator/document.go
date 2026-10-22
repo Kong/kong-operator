@@ -140,6 +140,23 @@ func translateKind[
 	}
 }
 
+// credentialEntityStatuses turns the per-credential outcome of a consumer's translation into
+// document entity statuses. Credentials are nested in their parent consumer, so their status
+// carries no document entity of its own: a credential whose own translation failed is
+// reported on the credential (its Err) instead of failing the consumer, and the consumer
+// keeps rendering its healthy credentials.
+func credentialEntityStatuses(translations []aiconfigurationv1alpha1.CredentialTranslation) []EntityStatus {
+	statuses := make([]EntityStatus, 0, len(translations))
+	for _, t := range translations {
+		status := EntityStatus{Obj: t.Obj}
+		if t.Err != nil {
+			status.Err = fmt.Errorf("converting %T %s: %w", t.Obj, client.ObjectKeyFromObject(t.Obj), t.Err)
+		}
+		statuses = append(statuses, status)
+	}
+	return statuses
+}
+
 // checkTranslatedRefs fails the referencing entity when any referenced name is missing from
 // the set of entities of that kind that translated successfully: resolveEntityNames only
 // checks the referenced entity's existence, so without this a referenced entity excluded for
@@ -170,6 +187,10 @@ func checkTranslatedACLs(translated map[string]struct{}, acls aigw.ACLs) error {
 // aiconfiguration entity kind pointing at it. Alongside the document it returns the per-entity
 // translation status (see EntityStatus), so that the caller can report each entity's outcome on
 // the entity's status.
+//
+// The statuses cover the AIGatewayConsumerCredentials embedded in the translated consumers as
+// well: they have no document entity of their own (aigw.Consumer nests them), so the consumer's
+// own translation reports them, and one broken credential does not fail its consumer.
 //
 // Entity kinds join here as they gain their own ToAIGW* conversion; until then the rendered
 // Document (and the dbless payload built from it) has dangling references, which
@@ -207,6 +228,11 @@ func BuildDocument(
 	// whose EntityStatus already reported success (the maps store the same pointers
 	// translateKind put into the statuses).
 	translatedMCPCRByName := make(map[string]client.Object)
+
+	// credentialStatuses holds the per-credential outcome collected while translating the
+	// consumers: credentials are not a document kind of their own (they are nested in their
+	// parent consumer), so no translateKind call reports them.
+	credentialStatuses := []EntityStatus{}
 
 	// CA cert PEMs already claimed by a translated AIGatewayCACertificate, mapped to the
 	// claiming CR's name: ai-deck-converter derives the rendered entity ID from the cert
@@ -322,7 +348,7 @@ func BuildDocument(
 			// AIGatewayConsumerCredential -> AIGatewayConsumer: the field name is passed in
 			// because the api package cannot import internal/utils/index without a cycle.
 			func(c *aiconfigurationv1alpha1.AIGatewayConsumer, ctx context.Context, cl client.Client) (*aigw.Consumer, error) {
-				consumer, err := c.ToAIGWConsumer(ctx, cl, index.IndexFieldAIGatewayConsumerCredentialOnAIGatewayConsumerRef)
+				consumer, credentialTranslations, err := c.ToAIGWConsumer(ctx, cl, index.IndexFieldAIGatewayConsumerCredentialOnAIGatewayConsumerRef)
 				if err != nil {
 					return nil, err
 				}
@@ -332,6 +358,11 @@ func BuildDocument(
 				); err != nil {
 					return nil, err
 				}
+				// Reported last: nothing of a credential is in the document while its
+				// consumer is excluded, so the credentials of a consumer failing anywhere
+				// above stay unreported (Unknown, i.e. Pending) rather than claiming a
+				// state the pushed configuration does not have.
+				credentialStatuses = append(credentialStatuses, credentialEntityStatuses(credentialTranslations)...)
 				return consumer, nil
 			},
 			&doc.Consumers),
@@ -456,6 +487,7 @@ func BuildDocument(
 		}
 		statuses = append(statuses, s...)
 	}
+	statuses = append(statuses, credentialStatuses...)
 
 	// MCPServer sources reference the same kind, so a translate-time check would wrongly
 	// reject a listener whose source is sorted later in the kind (its own translation may

@@ -3,6 +3,9 @@ processor:
   ignoreTypes:
     - "List$"
     - "Error$"
+    # A translation result, not a resource type: it is returned by the on-prem
+    # translation methods and never stored in an API object.
+    - "CredentialTranslation$"
   # RE2 regular expressions describing type fields that should be excluded from the generated documentation.
   ignoreFields:
     - "TypeMeta$"

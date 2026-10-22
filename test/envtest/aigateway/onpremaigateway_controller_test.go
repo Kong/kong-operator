@@ -18,6 +18,7 @@ import (
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	aigwonprem "github.com/kong/kong-operator/v2/controller/aigateway/onprem"
 	"github.com/kong/kong-operator/v2/controller/crdschema"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
@@ -377,6 +378,23 @@ func TestOnPremAIGatewayReconciler_ConfigTracksEntities(t *testing.T) {
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
 		assert.Greater(ct, countConsumerNotifications(), settled)
 		assert.Zero(ct, countSendFailures())
+	}, waitTime, tickTime)
+
+	// The credential reports its own configuration status: its outcome is reported by the
+	// consumer's translation and written onto the credential by its own reconciler, so it is
+	// no longer only visible on the consumer. This gateway has no data plane, so the push is
+	// skipped and the credential is reported as failed, like every other entity here.
+	t.Log("Expecting the credential's own Programmed condition to be reported")
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(credential), credential)) {
+			return
+		}
+		cond := apimeta.FindStatusCondition(credential.Status.Conditions, string(configurationv1.ConditionProgrammed))
+		if !assert.NotNil(ct, cond) {
+			return
+		}
+		assert.Equal(ct, metav1.ConditionFalse, cond.Status)
+		assert.Equal(ct, credential.Generation, cond.ObservedGeneration)
 	}, waitTime, tickTime)
 }
 

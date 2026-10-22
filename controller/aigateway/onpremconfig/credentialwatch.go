@@ -27,9 +27,8 @@ import (
 )
 
 // mapCredentialToConsumer maps an AIGatewayConsumerCredential to the AIGatewayConsumer whose
-// document embeds it. The credential has no aiGatewayRef and no reconciler of its own, so the
-// consumer is what must re-render when a credential appears, changes, is repointed or is
-// deleted.
+// document embeds it. The credential has no aiGatewayRef, so the consumer is what must
+// re-render when a credential appears, changes, is repointed or is deleted.
 //
 // The request is derived from obj alone, never from state kept elsewhere: controller-runtime
 // maps an update event for both the old and the new object, so a credential repointed at
@@ -42,8 +41,30 @@ func (r *AIGatewayConsumerReconciler) mapCredentialToConsumer(
 	if !ok {
 		return nil
 	}
+	consumer := credentialConsumer(ctx, r.Client, cred)
+	if consumer == nil {
+		return nil
+	}
+	// Konnect-targeted consumers are owned by the Konnect reconciler. The For predicate does
+	// not apply to a Watches source, so it is enforced here: reconciling one would report an
+	// on-prem configuration status on a consumer this controller does not own.
+	if !consumerTargetsOnPremAIGateway(consumer) {
+		return nil
+	}
+	return []reconcile.Request{{NamespacedName: client.ObjectKeyFromObject(consumer)}}
+}
+
+// credentialConsumer returns the AIGatewayConsumer a credential references, or nil when the
+// reference cannot be resolved: an unresolvable one either points at another namespace (the
+// translation only renders credentials living in the consumer's namespace), carries no
+// namespacedRef (the CRD also admits type: konnectID), or names a consumer that is gone, or
+// that the cache does not serve yet.
+func credentialConsumer(
+	ctx context.Context,
+	cl client.Client,
+	cred *aiconfigurationv1alpha1.AIGatewayConsumerCredential,
+) *aiconfigurationv1alpha1.AIGatewayConsumer {
 	ref := cred.GetAIGatewayConsumerRef().NamespacedRef
-	// The CRD also admits type: konnectID, which carries no namespacedRef.
 	if ref == nil {
 		return nil
 	}
@@ -51,22 +72,32 @@ func (r *AIGatewayConsumerReconciler) mapCredentialToConsumer(
 	if ref.Namespace != nil && *ref.Namespace != "" {
 		consumerNN.Namespace = *ref.Namespace
 	}
-	// The translation only renders credentials living in the consumer's namespace.
 	if consumerNN.Namespace != cred.GetNamespace() {
 		return nil
 	}
 
 	var consumer aiconfigurationv1alpha1.AIGatewayConsumer
-	if err := r.Get(ctx, consumerNN, &consumer); err != nil {
-		// The consumer is gone, or the cache does not serve it yet: nothing to re-render.
+	if err := cl.Get(ctx, consumerNN, &consumer); err != nil {
 		return nil
 	}
-	// Konnect-targeted consumers are owned by the Konnect reconciler. The For predicate does
-	// not apply to a Watches source, so it is enforced here: reconciling one would report an
-	// on-prem configuration status on a consumer this controller does not own.
+	return &consumer
+}
+
+// consumerTargetsOnPremAIGateway reports whether the consumer's aiGatewayRef resolves to an
+// OnPremAIGateway. CRD validation requires the namespacedRef, but a cached copy can predate a
+// default, so it is checked here too.
+func consumerTargetsOnPremAIGateway(consumer *aiconfigurationv1alpha1.AIGatewayConsumer) bool {
 	gwRef := consumer.GetAIGatewayRef()
-	if gwRef.NamespacedRef == nil || !gwRef.TargetsOnPremAIGateway() {
-		return nil
-	}
-	return []reconcile.Request{{NamespacedName: consumerNN}}
+	return gwRef.NamespacedRef != nil && gwRef.TargetsOnPremAIGateway()
+}
+
+// credentialOnPremManaged reports whether the credential is rendered by a consumer targeting
+// an OnPremAIGateway, i.e. whether the on-prem machinery owns its configuration status.
+func credentialOnPremManaged(
+	ctx context.Context,
+	cl client.Client,
+	cred *aiconfigurationv1alpha1.AIGatewayConsumerCredential,
+) bool {
+	consumer := credentialConsumer(ctx, cl, cred)
+	return consumer != nil && consumerTargetsOnPremAIGateway(consumer)
 }

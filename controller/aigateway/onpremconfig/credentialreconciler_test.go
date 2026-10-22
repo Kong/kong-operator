@@ -1,0 +1,157 @@
+package onpremconfig
+
+import (
+	"testing"
+
+	"github.com/go-logr/logr"
+	"github.com/stretchr/testify/require"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
+	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/status"
+)
+
+func newCredentialReconcilerClient(t *testing.T, objs ...client.Object) client.Client {
+	t.Helper()
+	scheme := runtime.NewScheme()
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	return fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(objs...).
+		WithStatusSubresource(&aiconfigurationv1alpha1.AIGatewayConsumerCredential{}).
+		Build()
+}
+
+// credentialProgrammedCondition returns the credential's Programmed condition, or nil when
+// the reconciler wrote none.
+func credentialProgrammedCondition(t *testing.T, cl client.Client, nn client.ObjectKey) *metav1.Condition {
+	t.Helper()
+	cred := &aiconfigurationv1alpha1.AIGatewayConsumerCredential{}
+	require.NoError(t, cl.Get(t.Context(), nn, cred))
+	return apimeta.FindStatusCondition(cred.Status.Conditions, string(configurationv1.ConditionProgrammed))
+}
+
+func TestCredentialReconcilerWritesProgrammedCondition(t *testing.T) {
+	t.Parallel()
+
+	cred := credentialReferencing("cred", "default", &commonv1alpha1.NamespacedRef{Name: "consumer"})
+	cl := newCredentialReconcilerClient(t, cred, consumerTargeting("consumer", "default", "gw", false))
+	rec := &AIGatewayConsumerCredentialReconciler{
+		Client:       cl,
+		Log:          logr.Discard(),
+		StatusClient: &stubStatusClient{configStatus: status.ConfigurationStatusSucceeded, enableState: true},
+	}
+
+	_, err := rec.Reconcile(t.Context(), ctrl.Request{NamespacedName: client.ObjectKeyFromObject(cred)})
+	require.NoError(t, err)
+
+	cond := credentialProgrammedCondition(t, cl, client.ObjectKeyFromObject(cred))
+	require.NotNil(t, cond)
+	require.Equal(t, metav1.ConditionTrue, cond.Status)
+	require.Equal(t, string(configurationv1.ReasonProgrammed), cond.Reason)
+}
+
+func TestCredentialReconcilerWritesFailedConditionWithMessage(t *testing.T) {
+	t.Parallel()
+
+	cred := credentialReferencing("cred", "default", &commonv1alpha1.NamespacedRef{Name: "consumer"})
+	cl := newCredentialReconcilerClient(t, cred, consumerTargeting("consumer", "default", "gw", false))
+	rec := &AIGatewayConsumerCredentialReconciler{
+		Client: cl,
+		Log:    logr.Discard(),
+		StatusClient: &stubStatusClient{
+			configStatus: status.ConfigurationStatusFailed,
+			message:      "converting *v1alpha1.AIGatewayConsumerCredential default/cred: Secret not found",
+			enableState:  true,
+		},
+	}
+
+	_, err := rec.Reconcile(t.Context(), ctrl.Request{NamespacedName: client.ObjectKeyFromObject(cred)})
+	require.NoError(t, err)
+
+	cond := credentialProgrammedCondition(t, cl, client.ObjectKeyFromObject(cred))
+	require.NotNil(t, cond)
+	require.Equal(t, metav1.ConditionFalse, cond.Status)
+	require.Equal(t, string(configurationv1.ReasonInvalid), cond.Reason)
+	require.Contains(t, cond.Message, "Secret not found")
+}
+
+// TestCredentialReconcilerSkipsKonnectManagedCredentials pins that a credential rendered by a
+// Konnect-targeted consumer never receives an on-prem Programmed condition: the Konnect
+// reconciler owns its status.
+func TestCredentialReconcilerSkipsKonnectManagedCredentials(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		ref  *commonv1alpha1.NamespacedRef
+		// objs are the consumers the credential may resolve to.
+		objs []client.Object
+	}{
+		{
+			name: "konnect-targeted consumer",
+			ref:  &commonv1alpha1.NamespacedRef{Name: "consumer"},
+			objs: []client.Object{consumerTargeting("consumer", "default", "gw", true)},
+		},
+		{
+			name: "missing consumer",
+			ref:  &commonv1alpha1.NamespacedRef{Name: "consumer"},
+		},
+		{
+			name: "cross-namespace consumer reference",
+			ref:  &commonv1alpha1.NamespacedRef{Name: "consumer", Namespace: new("other")},
+			objs: []client.Object{consumerTargeting("consumer", "other", "gw", false)},
+		},
+		{
+			name: "reference without a namespacedRef",
+			ref:  nil,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			cred := credentialReferencing("cred", "default", tc.ref)
+			objs := append([]client.Object{cred}, tc.objs...)
+			cl := newCredentialReconcilerClient(t, objs...)
+			rec := &AIGatewayConsumerCredentialReconciler{
+				Client:       cl,
+				Log:          logr.Discard(),
+				StatusClient: &stubStatusClient{configStatus: status.ConfigurationStatusSucceeded, enableState: true},
+			}
+
+			_, err := rec.Reconcile(t.Context(), ctrl.Request{NamespacedName: client.ObjectKeyFromObject(cred)})
+			require.NoError(t, err)
+
+			require.Nil(t, credentialProgrammedCondition(t, cl, client.ObjectKeyFromObject(cred)),
+				"no condition must be written on a credential the on-prem machinery does not own")
+		})
+	}
+}
+
+// TestCredentialReconcilerIgnoresDeletedCredentials pins that a delete event does not error.
+func TestCredentialReconcilerIgnoresDeletedCredentials(t *testing.T) {
+	t.Parallel()
+
+	cl := newCredentialReconcilerClient(t)
+	rec := &AIGatewayConsumerCredentialReconciler{
+		Client:       cl,
+		Log:          logr.Discard(),
+		StatusClient: &stubStatusClient{configStatus: status.ConfigurationStatusSucceeded, enableState: true},
+	}
+
+	_, err := rec.Reconcile(t.Context(), ctrl.Request{
+		NamespacedName: client.ObjectKey{Namespace: "default", Name: "gone"},
+	})
+	require.NoError(t, err)
+}

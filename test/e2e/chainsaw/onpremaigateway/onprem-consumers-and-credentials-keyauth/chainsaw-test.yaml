@@ -32,6 +32,10 @@ spec:
          consumer outside that group passes through.
       6. A consumer with two credentials keeps working on whichever key is
          still valid (rotation), and only loses access once both are revoked.
+      7. A credential whose Secret is missing reports Programmed=False on the
+         credential itself while its consumer and its healthy sibling stay
+         Programmed=True and authenticating; creating the Secret repairs it
+         (Programmed=True, key accepted).
   bindings:
     - name: test_name
       value: ($namespace)
@@ -69,6 +73,12 @@ spec:
       value: (join('-', [($test_name), 'outsider-credential-secret']))
     - name: outsider_api_key_value
       value: e2e-test-outsider-api-key-value
+    - name: broken_credential_name
+      value: (join('-', [($test_name), 'broken-credential']))
+    - name: broken_credential_secret_name
+      value: (join('-', [($test_name), 'broken-credential-secret']))
+    - name: broken_api_key_value
+      value: e2e-test-broken-api-key-value
     - name: http_agent_name
       value: (join('-', [($test_name), 'http-agent']))
     - name: http_agent_route_path
@@ -148,8 +158,8 @@ spec:
     # Entities report Programmed=False before the data plane exists (with no
     # Admin API endpoints discovered the push is skipped and the entities are
     # reported as failed), so assert here, after the data plane step. The
-    # credentials are deliberately not asserted: they have no on-prem
-    # reconciler of their own reporting a status for them.
+    # credentials are asserted too: each one reports its own outcome, the
+    # consumer's Programmed condition no longer standing for them.
     - name: Assert-entities-programmed
       try:
         - assert:
@@ -188,6 +198,16 @@ spec:
               kind: AIGatewayAgent
               metadata:
                 name: ($http_agent_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumerCredential
+              metadata:
+                name: ($credential_name)
                 namespace: ($namespace)
               status:
                 (conditions[?type == 'Programmed']):
@@ -361,6 +381,95 @@ spec:
               value: ($http_agent_route_path)
             - name: request_headers
               value: (join('', ['apikey:', ($api_key_value_2)]))
+            - name: expected_body
+              value: Running on Pod
+    # --- Per-credential status: a credential whose Secret does not exist is
+    # reported on the credential itself, and it does not take its consumer or
+    # the consumer's healthy credentials down with it.
+    - name: Create-credential-with-missing-secret
+      try:
+        - apply:
+            file: 09-broken-credential.yaml
+    - name: Assert-broken-credential-unprogrammed-and-consumer-unaffected
+      description: |
+        The broken credential reports Programmed=False/Invalid while the
+        consumer and its other credential stay Programmed=True: the failure is
+        attributed to the credential that carries it, not to the consumer.
+      try:
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumerCredential
+              metadata:
+                name: ($broken_credential_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+                    reason: Invalid
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumerCredential
+              metadata:
+                name: ($credential_name_2)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumer
+              metadata:
+                name: ($consumer_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+    - name: Accept-request-with-healthy-credential-while-sibling-broken
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+        with:
+          bindings:
+            - name: method
+              value: GET
+            - name: route_path
+              value: ($http_agent_route_path)
+            - name: request_headers
+              value: (join('', ['apikey:', ($api_key_value_2)]))
+            - name: expected_body
+              value: Running on Pod
+    # --- Repairing the credential: creating the missing Secret re-renders the
+    # consumer (the credential's own Secret watch) and the credential reports
+    # Programmed=True, with its key authenticating.
+    - name: Create-the-missing-credential-secret
+      try:
+        - apply:
+            file: 10-broken-credential-secret.yaml
+    - name: Assert-repaired-credential-programmed
+      try:
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumerCredential
+              metadata:
+                name: ($broken_credential_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+    - name: Accept-request-with-repaired-credential
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+        with:
+          bindings:
+            - name: method
+              value: GET
+            - name: route_path
+              value: ($http_agent_route_path)
+            - name: request_headers
+              value: (join('', ['apikey:', ($broken_api_key_value)]))
             - name: expected_body
               value: Running on Pod
     - name: Delete-second-credential-and-revoke-all-access

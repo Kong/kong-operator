@@ -41,7 +41,9 @@ func testCredIndexExtractor(object client.Object) []string {
 // TestAIGatewayConsumer_ToAIGWConsumer covers the policy and consumer group reference
 // resolution — deliberately without any SetKonnectID on the referenced entities, pinning that
 // the on-prem translation uses the name-only resolver, unlike the generated Konnect resolver —
-// plus the managed_by drop and the credential embedding with secret-resolved api keys.
+// plus the managed_by drop, the credential embedding with secret-resolved api keys, and the
+// per-credential reporting that leaves a broken credential out of the consumer instead of
+// failing the consumer.
 func TestAIGatewayConsumer_ToAIGWConsumer(t *testing.T) {
 	t.Parallel()
 
@@ -124,6 +126,10 @@ func TestAIGatewayConsumer_ToAIGWConsumer(t *testing.T) {
 		interceptor *interceptor.Funcs
 		want        *aigw.Consumer
 		wantErr     string
+		// wantCreds maps every credential the consumer's translation must report (by k8s
+		// name) to the substring its error must contain, or to "" when the credential was
+		// embedded in the consumer.
+		wantCreds map[string]string
 	}{
 		{
 			name: "policies and consumer groups resolved by name, labels kept, managed_by dropped, credentials embedded",
@@ -142,7 +148,8 @@ func TestAIGatewayConsumer_ToAIGWConsumer(t *testing.T) {
 					},
 				},
 			},
-			objects: []runtime.Object{newReferencedPolicy(), newReferencedConsumerGroup(), newReferencedSecret(), newConsumerCredential()},
+			objects:   []runtime.Object{newReferencedPolicy(), newReferencedConsumerGroup(), newReferencedSecret(), newConsumerCredential()},
+			wantCreds: map[string]string{"cred-a": ""},
 			want: &aigw.Consumer{
 				Name:           "sample-consumer",
 				DisplayName:    "Sample Consumer",
@@ -172,7 +179,8 @@ func TestAIGatewayConsumer_ToAIGWConsumer(t *testing.T) {
 					},
 				},
 			},
-			objects: []runtime.Object{},
+			objects:   []runtime.Object{},
+			wantCreds: map[string]string{},
 			want: &aigw.Consumer{
 				Name:        "empty-consumer",
 				DisplayName: "Empty Consumer",
@@ -222,13 +230,14 @@ func TestAIGatewayConsumer_ToAIGWConsumer(t *testing.T) {
 			wantErr: "cross-namespace reference",
 		},
 		{
-			name: "credential with cross-namespace secretRef rejected",
+			name: "credential with cross-namespace secretRef is left out and reported",
 			obj: &AIGatewayConsumer{
 				Name: "sample-ai-gw-consumer-cross-ns-secret", Namespace: "default",
 				Spec: AIGatewayConsumerSpec{
 					APISpec: AIGatewayConsumerAPISpec{
 						Name:        "cross-ns-secret-consumer",
 						DisplayName: "Cross NS Secret Consumer",
+						Type:        "api-key",
 					},
 				},
 			},
@@ -236,7 +245,10 @@ func TestAIGatewayConsumer_ToAIGWConsumer(t *testing.T) {
 				c.Spec.AIGatewayConsumerRef.NamespacedRef.Name = "sample-ai-gw-consumer-cross-ns-secret"
 				c.Spec.APISpec.APIKey.SecretRef.Namespace = new("other-namespace")
 			})},
-			wantErr: "cross-namespace secretRef",
+			// The consumer keeps rendering: the broken credential is reported instead of
+			// failing the whole consumer, which is what its own Programmed condition shows.
+			want:      &aigw.Consumer{Name: "cross-ns-secret-consumer", DisplayName: "Cross NS Secret Consumer", Type: "api-key"},
+			wantCreds: map[string]string{"cred-a": "cross-namespace secretRef"},
 		},
 		{
 			name: "credential referencing another consumer is not embedded",
@@ -251,12 +263,14 @@ func TestAIGatewayConsumer_ToAIGWConsumer(t *testing.T) {
 				},
 			},
 			// Refs "sample-ai-gw-consumer", not the consumer above: filtered out by
-			// the index before translation, so its secretRef's Secret is never needed.
-			objects: []runtime.Object{newConsumerCredential()},
-			want:    &aigw.Consumer{Name: "unrelated-consumer", DisplayName: "Unrelated Consumer", Type: "oauth"},
+			// the index before translation, so its secretRef's Secret is never needed
+			// and the credential is not reported against this consumer either.
+			objects:   []runtime.Object{newConsumerCredential()},
+			want:      &aigw.Consumer{Name: "unrelated-consumer", DisplayName: "Unrelated Consumer", Type: "oauth"},
+			wantCreds: map[string]string{},
 		},
 		{
-			name: "credential whose Secret is missing errors the consumer",
+			name: "credential whose Secret is missing is left out and reported",
 			obj: &AIGatewayConsumer{
 				Name: "sample-ai-gw-consumer", Namespace: "default",
 				Spec: AIGatewayConsumerSpec{
@@ -271,9 +285,10 @@ func TestAIGatewayConsumer_ToAIGWConsumer(t *testing.T) {
 			// but unlabelled Secret fails the same way through the operator's filtered
 			// cache, which is why the error carries the label-selector note.
 			objects: []runtime.Object{newConsumerCredential()},
+			want:    &aigw.Consumer{Name: "missing-secret-consumer", DisplayName: "Missing Secret Consumer", Type: "api-key"},
 			// Assert the label-selector note (added by noteSecretLabelRequirement), not
 			// the bare not-found: it's the part that tells an unlabelled-Secret user why.
-			wantErr: "note: the operator only reads Secrets carrying its Secret label selector",
+			wantCreds: map[string]string{"cred-a": "note: the operator only reads Secrets carrying its Secret label selector"},
 		},
 		{
 			name: "credential whose ref explicitly names the consumer's namespace is embedded",
@@ -290,6 +305,7 @@ func TestAIGatewayConsumer_ToAIGWConsumer(t *testing.T) {
 			objects: []runtime.Object{newReferencedSecret(), newConsumerCredential(func(c *AIGatewayConsumerCredential) {
 				c.Spec.AIGatewayConsumerRef.NamespacedRef.Namespace = new("default")
 			})},
+			wantCreds: map[string]string{"cred-a": ""},
 			want: &aigw.Consumer{
 				Name:        "explicit-ns-consumer",
 				DisplayName: "Explicit NS Consumer",
@@ -323,6 +339,8 @@ func TestAIGatewayConsumer_ToAIGWConsumer(t *testing.T) {
 					return nil
 				},
 			},
+			// A List failure is not a per-credential problem: the consumer cannot know
+			// which credentials it should carry, so the whole consumer fails.
 			wantErr: "listing AIGatewayConsumerCredentials: cache unavailable",
 		},
 	}
@@ -336,13 +354,32 @@ func TestAIGatewayConsumer_ToAIGWConsumer(t *testing.T) {
 				builder = builder.WithInterceptorFuncs(*tt.interceptor)
 			}
 			cl := builder.WithIndex(&AIGatewayConsumerCredential{}, testCredIndexField, testCredIndexExtractor).Build()
-			got, err := tt.obj.ToAIGWConsumer(t.Context(), cl, testCredIndexField)
+			got, gotCreds, err := tt.obj.ToAIGWConsumer(t.Context(), cl, testCredIndexField)
 			if tt.wantErr != "" {
 				require.ErrorContains(t, err, tt.wantErr)
 				return
 			}
 			require.NoError(t, err)
 			require.Equal(t, tt.want, got)
+
+			reported := make(map[string]string, len(gotCreds))
+			for _, cred := range gotCreds {
+				msg := ""
+				if cred.Err != nil {
+					msg = cred.Err.Error()
+				}
+				reported[cred.Obj.Name] = msg
+			}
+			require.Len(t, reported, len(tt.wantCreds))
+			for name, wantErr := range tt.wantCreds {
+				msg, ok := reported[name]
+				require.Truef(t, ok, "credential %q was not reported; got %v", name, reported)
+				if wantErr == "" {
+					require.Emptyf(t, msg, "credential %q must be reported as included", name)
+					continue
+				}
+				require.Containsf(t, msg, wantErr, "credential %q error", name)
+			}
 		})
 	}
 }

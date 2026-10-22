@@ -79,6 +79,14 @@
   and the JSON string workaround was rejected by Konnect. A `POST` tool can now
   send a JSON body.
   [#6252](https://github.com/Kong/kong-operator/issues/6252)
+- On-prem AI Gateway: an `AIGatewayConsumerCredential` that cannot be
+  translated (for example its `secretRef` points at a missing or unlabelled
+  Secret) now reports that failure on the credential itself, as
+  `Programmed=False` with reason `Invalid`. The failure used to be invisible on
+  the credential and to fail the whole `AIGatewayConsumer` instead, which was
+  excluded from the rendered configuration together with its healthy
+  credentials; the consumer now keeps rendering them.
+  [#5963](https://github.com/Kong/kong-operator/issues/5963)
 - A `KonnectAPIAuthConfiguration` with a private `serverURL` that carries a path
   (for example `https://us.svc.konghq.tech/api`) now authenticates. The identity
   request behind `APIAuthValid` keeps the configured host instead of being sent

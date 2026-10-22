@@ -16,37 +16,62 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// CredentialTranslation is the outcome of translating one of the credentials a consumer
+// embeds: Err is nil for the credential included in the returned aigw.Consumer, and the
+// translation error for the one left out of it.
+//
+// It is a translation result, never a field of an API type, so it needs no deepcopy.
+//
+// +kubebuilder:object:generate=false
+type CredentialTranslation struct {
+	// Obj is the credential the outcome belongs to.
+	Obj *AIGatewayConsumerCredential
+	// Err is the translation error, nil when the credential was embedded in the consumer.
+	Err error
+}
+
 // ToAIGWConsumer converts the AIGatewayConsumer into ai-deck-converter's aigw.Consumer,
 // resolving spec.apiSpec.policies and spec.consumerGroups references to the referenced
 // entities' names and embedding the credentials referencing it (each with its secretRef
 // apiKey resolved).
+//
+// The credentials are translated one by one and their outcome is returned alongside the
+// consumer (see CredentialTranslation), so that the caller can report a broken credential
+// on the credential itself: a credential whose translation fails is left out of the
+// consumer, and the consumer still carries its healthy credentials.
 //
 // credIndexField is the field name of the AIGatewayConsumerCredential ->
 // AIGatewayConsumer index (internal/utils/index's
 // IndexFieldAIGatewayConsumerCredentialOnAIGatewayConsumerRef). It is passed in by the
 // caller (the on-prem translator) because this api package cannot import that package
 // without a cycle.
-func (obj *AIGatewayConsumer) ToAIGWConsumer(ctx context.Context, cl client.Client, credIndexField string) (*aigw.Consumer, error) {
+func (obj *AIGatewayConsumer) ToAIGWConsumer(
+	ctx context.Context,
+	cl client.Client,
+	credIndexField string,
+) (*aigw.Consumer, []CredentialTranslation, error) {
 	data, err := obj.Spec.APISpec.marshalAIGWConsumerPayload()
 	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayConsumer %s/%s: %w", obj.Namespace, obj.Name, err)
+		return nil, nil, fmt.Errorf("marshaling AIGatewayConsumer %s/%s: %w", obj.Namespace, obj.Name, err)
 	}
 
 	var consumer aigw.Consumer
 	if err := yaml.Unmarshal(data, &consumer); err != nil {
-		return nil, fmt.Errorf("decoding AIGatewayConsumer %s/%s as aigw.Consumer: %w", obj.Namespace, obj.Name, err)
+		return nil, nil, fmt.Errorf("decoding AIGatewayConsumer %s/%s as aigw.Consumer: %w", obj.Namespace, obj.Name, err)
 	}
 
 	if consumer.Policies, err = resolveEntityNames[AIGatewayPolicy](ctx, cl, obj.Namespace, policyRefs(obj.Spec.APISpec.Policies)); err != nil {
-		return nil, fmt.Errorf("resolving AIGatewayConsumer %s/%s policies: %w", obj.Namespace, obj.Name, err)
+		return nil, nil, fmt.Errorf("resolving AIGatewayConsumer %s/%s policies: %w", obj.Namespace, obj.Name, err)
 	}
 	if consumer.ConsumerGroups, err = resolveEntityNames[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, consumerGroupNamespacedRefs(obj.Spec.ConsumerGroups)); err != nil {
-		return nil, fmt.Errorf("resolving AIGatewayConsumer %s/%s consumer groups: %w", obj.Namespace, obj.Name, err)
+		return nil, nil, fmt.Errorf("resolving AIGatewayConsumer %s/%s consumer groups: %w", obj.Namespace, obj.Name, err)
 	}
-	if consumer.Credentials, err = obj.aigwCredentials(ctx, cl, credIndexField); err != nil {
-		return nil, fmt.Errorf("resolving AIGatewayConsumer %s/%s credentials: %w", obj.Namespace, obj.Name, err)
+	credentials, credentialTranslations, err := obj.aigwCredentials(ctx, cl, credIndexField)
+	if err != nil {
+		return nil, nil, fmt.Errorf("resolving AIGatewayConsumer %s/%s credentials: %w", obj.Namespace, obj.Name, err)
 	}
-	return &consumer, nil
+	consumer.Credentials = credentials
+	return &consumer, credentialTranslations, nil
 }
 
 // marshalAIGWConsumerPayload builds the aigw.Consumer-shaped payload bytes. Shared by
@@ -87,33 +112,43 @@ func consumerGroupNamespacedRefs(refs []AIGatewayConsumerGroupRef) []namespacedR
 // ones referencing this consumer are read from the cache. The index value is
 // "<refNamespace>/<refName>", with refNamespace defaulting to the credential's namespace —
 // mirroring resolveEntityNames's same-namespace rule for entity references.
-func (obj *AIGatewayConsumer) aigwCredentials(ctx context.Context, cl client.Client, credIndexField string) ([]aigw.Credential, error) {
+//
+// A credential that fails to translate is left out of the returned credentials and reported
+// through its CredentialTranslation: the remaining credentials still render, mirroring KIC's
+// continue-on-error translation. Only failing to list the credentials is an error here: it
+// would silently drop all of the consumer's credentials.
+func (obj *AIGatewayConsumer) aigwCredentials(
+	ctx context.Context,
+	cl client.Client,
+	credIndexField string,
+) ([]aigw.Credential, []CredentialTranslation, error) {
 	var list AIGatewayConsumerCredentialList
 	if err := cl.List(ctx, &list,
 		client.InNamespace(obj.Namespace),
 		client.MatchingFields{credIndexField: obj.Namespace + "/" + obj.Name},
 	); err != nil {
-		return nil, fmt.Errorf("listing AIGatewayConsumerCredentials: %w", err)
+		return nil, nil, fmt.Errorf("listing AIGatewayConsumerCredentials: %w", err)
 	}
 
 	slices.SortFunc(list.Items, func(a, b AIGatewayConsumerCredential) int {
 		return strings.Compare(a.Name, b.Name)
 	})
 
-	var creds []aigw.Credential
+	var (
+		creds        []aigw.Credential
+		translations = make([]CredentialTranslation, 0, len(list.Items))
+	)
 	for i := range list.Items {
 		cred := &list.Items[i]
 		translated, err := cred.toAIGWCredential(ctx, cl)
 		if err != nil {
-			// A single broken credential intentionally fails the whole consumer: the
-			// translation's per-entity granularity is the consumer (the entity pointing at
-			// the gateway), so the consumer is excluded from the document with all its
-			// credentials and the error is reported on the consumer.
-			return nil, fmt.Errorf("translating AIGatewayConsumerCredential %s/%s: %w", cred.Namespace, cred.Name, err)
+			translations = append(translations, CredentialTranslation{Obj: cred, Err: err})
+			continue
 		}
 		creds = append(creds, *translated)
+		translations = append(translations, CredentialTranslation{Obj: cred})
 	}
-	return creds, nil
+	return creds, translations, nil
 }
 
 // toAIGWCredential converts a single AIGatewayConsumerCredential into ai-deck-converter's

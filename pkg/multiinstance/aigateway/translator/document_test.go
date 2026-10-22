@@ -1155,8 +1155,11 @@ func TestBuildDocument_CredentialChangeRerender(t *testing.T) {
 
 	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
 	require.NoError(t, err)
-	require.Len(t, statuses, 1)
-	require.NoError(t, statuses[0].Err)
+	// The consumer and the credential embedded in it: the credential has no document
+	// entity of its own, so the consumer's translation reports it.
+	require.Len(t, statuses, 2)
+	require.NoError(t, findStatusByName(t, statuses, "consumer-a").Err)
+	require.NoError(t, findStatusByName(t, statuses, "cred-a").Err)
 	require.Len(t, doc.Consumers, 1)
 	require.Len(t, doc.Consumers[0].Credentials, 1)
 	require.Equal(t, "s3cr3t", doc.Consumers[0].Credentials[0].APIKey)
@@ -1167,10 +1170,79 @@ func TestBuildDocument_CredentialChangeRerender(t *testing.T) {
 
 	doc, statuses, err = BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
 	require.NoError(t, err)
-	require.Len(t, statuses, 1)
-	require.NoError(t, statuses[0].Err)
+	require.Len(t, statuses, 2)
+	require.NoError(t, findStatusByName(t, statuses, "cred-a").Err)
 	require.Len(t, doc.Consumers, 1)
 	require.Equal(t, "n3w-s3cr3t", doc.Consumers[0].Credentials[0].APIKey)
+}
+
+// TestBuildDocument_ReportsBrokenCredentialOnTheCredential pins the per-credential outcome of
+// the consumer's translation: a credential that fails to translate (here its secretRef Secret
+// does not exist) is reported on the credential itself, and the consumer still renders with
+// its healthy credentials.
+func TestBuildDocument_ReportsBrokenCredentialOnTheCredential(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+
+	newCredential := func(name string, secretName string) *aiconfigurationv1alpha1.AIGatewayConsumerCredential {
+		return &aiconfigurationv1alpha1.AIGatewayConsumerCredential{
+			Name: name, Namespace: "default",
+			Spec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialSpec{
+				AIGatewayConsumerRef: commonv1alpha1.ObjectRef{
+					Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+					NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "consumer-a"},
+				},
+				APISpec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialAPISpec{
+					Name:        aiconfigurationv1alpha1.AIGatewayEntityIdentifier(name),
+					DisplayName: name,
+					Type:        "api-key",
+					APIKey: aiconfigurationv1alpha1.SensitiveDataSource{
+						Type: aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+						SecretRef: &aiconfigurationv1alpha1.SensitiveDataSecretRef{
+							Name: secretName,
+							Key:  "key",
+						},
+					},
+				},
+			},
+		}
+	}
+	healthySecret := &corev1.Secret{
+		Name: "healthy-api-key", Namespace: "default",
+		Data: map[string][]byte{"key": []byte("s3cr3t")},
+	}
+
+	cl := newTestBuilder(
+		scheme,
+		gw,
+		aiGatewayConsumerFixture("consumer-a"),
+		newCredential("cred-healthy", healthySecret.Name),
+		// No Secret: this credential's secretRef dangles.
+		newCredential("cred-broken", "missing-api-key"),
+		healthySecret,
+	).Build()
+
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	require.NoError(t, err)
+
+	// The consumer renders with the healthy credential only.
+	require.Len(t, doc.Consumers, 1)
+	require.Len(t, doc.Consumers[0].Credentials, 1)
+	require.Equal(t, "s3cr3t", doc.Consumers[0].Credentials[0].APIKey)
+
+	consumer := findStatusByName(t, statuses, "consumer-a")
+	require.NoError(t, consumer.Err, "a broken credential must not fail its consumer")
+	require.NoError(t, findStatusByName(t, statuses, "cred-healthy").Err)
+
+	broken := findStatusByName(t, statuses, "cred-broken")
+	require.ErrorContains(t, broken.Err, "default/cred-broken")
+	require.ErrorContains(t, broken.Err, "missing-api-key")
 }
 
 // newTestBuilder returns a fake client builder with every AI Gateway configuration entity
@@ -1336,7 +1408,28 @@ func TestBuildDocument_ConsumerFailsWhenReferencedPolicyFails(t *testing.T) {
 	consumerHealthy := aiGatewayConsumerFixture("consumer-healthy")
 	consumerHealthy.Spec.APISpec.Policies = []aiconfigurationv1alpha1.AIGatewayPolicyRef{{Name: "policy-healthy"}}
 
-	cl := newTestBuilder(scheme, gw, brokenPolicy, healthyPolicy, consumerBroken, consumerHealthy).Build()
+	// A healthy credential of the consumer that fails: it is not reported either, because
+	// nothing of a credential is in the document while its consumer is excluded from it.
+	credentialOfBrokenConsumer := &aiconfigurationv1alpha1.AIGatewayConsumerCredential{
+		Name: "cred-of-broken-consumer", Namespace: "default",
+		Spec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialSpec{
+			AIGatewayConsumerRef: commonv1alpha1.ObjectRef{
+				Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "consumer-broken"},
+			},
+			APISpec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialAPISpec{
+				Name:        "cred-of-broken-consumer",
+				DisplayName: "Cred Of Broken Consumer",
+				Type:        "api-key",
+				APIKey: aiconfigurationv1alpha1.SensitiveDataSource{
+					Type:  aiconfigurationv1alpha1.SensitiveDataSourceTypeInline,
+					Value: new("s3cr3t"),
+				},
+			},
+		},
+	}
+
+	cl := newTestBuilder(scheme, gw, brokenPolicy, healthyPolicy, consumerBroken, consumerHealthy, credentialOfBrokenConsumer).Build()
 
 	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
 	require.NoError(t, err)
@@ -1346,12 +1439,17 @@ func TestBuildDocument_ConsumerFailsWhenReferencedPolicyFails(t *testing.T) {
 	require.Len(t, doc.Consumers, 1)
 	require.Equal(t, "consumer-healthy", doc.Consumers[0].Name)
 	require.Equal(t, []string{"policy-healthy"}, doc.Consumers[0].Policies)
+	require.Empty(t, doc.Consumers[0].Credentials)
 
 	require.Len(t, statuses, 4)
 	require.Contains(t, findStatusByName(t, statuses, "policy-broken").Err.Error(), "cross-namespace secretRef")
 	require.Contains(t, findStatusByName(t, statuses, "consumer-broken").Err.Error(),
 		`referenced AIGatewayPolicy "policy-broken" was excluded from the document`)
 	require.NoError(t, findStatusByName(t, statuses, "consumer-healthy").Err)
+	for _, status := range statuses {
+		require.NotEqual(t, credentialOfBrokenConsumer.Name, status.Obj.GetName(),
+			"a credential of an excluded consumer must not be reported as part of the configuration")
+	}
 }
 
 // TestBuildDocument_ConsumerGroupFailsWhenReferencedPolicyFails pins the translated-reference
