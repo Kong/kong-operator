@@ -298,6 +298,110 @@ func TestAIGatewayModel_ToAIGWModel(t *testing.T) {
 	}
 }
 
+// TestAIGatewayModel_ToAIGWModel_SemanticBalancer pins the shape of a Model's semantic balancer
+// as it reaches ai-deck-converter, which is not config.route.model's shape (there the CRD is
+// flat and the document nests): here the CRD nests and the document is flat, so the two fixes
+// pull in opposite directions. Without them the converter passes the CRD's keys through into
+// the ai-proxy-advanced plugin config and the data plane rejects the whole pushed configuration
+// (https://github.com/Kong/kong-operator/issues/6231).
+func TestAIGatewayModel_ToAIGWModel_SemanticBalancer(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, AddToScheme(scheme))
+
+	obj := &AIGatewayModel{
+		Name: "sample-ai-gw-semantic-model", Namespace: "default",
+		Spec: AIGatewayModelSpec{
+			APISpec: AIGatewayModelAPISpec{
+				AIGatewayModelConfig: &AIGatewayModelConfig{
+					Type: AIGatewayModelConfigTypeModel,
+					Model: &AIGatewayModelModel{
+						Name:         "semantic-model",
+						DisplayName:  "Semantic Model",
+						Formats:      []AIGatewayModelFormat{{Type: "openai"}},
+						Capabilities: []string{"generate"},
+						Config: AIGatewayModelModelConfig{
+							Route: AIGatewayModelRouteConfig{Paths: []string{"/lcl/assistant"}},
+							Balancer: &AIGatewayModelModelConfigBalancer{
+								Algorithm: AIGatewayModelModelConfigBalancerTypeSemantic,
+								Semantic: &AIGatewayModelBalancerSemanticConfig{
+									Slots: 10000,
+									Embeddings: AIGatewayModelBalancerSemanticConfigEmbeddings{
+										AllowAuthOverride: "Enabled",
+										Name:              "text-embedding-3-small",
+										Provider:          "openai-provider",
+										Config: &AIGatewayModelBalancerSemanticConfigEmbeddingsConfig{
+											Type: AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeOpenai,
+										},
+									},
+									Vectordb: &AIGatewayModelBalancerSemanticConfigVectordb{
+										Type: AIGatewayModelBalancerSemanticConfigVectordbTypePgVector,
+										PgVector: &AIGatewayModelVectorDBConfigPgVector{
+											Database:       "semantic",
+											Dimensions:     1536,
+											DistanceMetric: "cosine",
+											Host:           "pgvector.aigw-backends.svc.cluster.local",
+											Password:       "{vault://env/lcl-pgvector-password}",
+											Port:           5432,
+											Threshold:      0.7,
+											SSL:            AIGatewayModelVectorDBConfigPgVectorSSL{Enabled: "Enabled"},
+										},
+									},
+								},
+							},
+						},
+						Targets: []AIGatewayTarget{
+							{
+								Name:     "gpt-4o",
+								Provider: AIGatewayModelProviderRef{Name: "ai-gw-provider-openai"},
+								Config: &AIGatewayTargetConfig{
+									Type:   AIGatewayTargetConfigTypeOpenai,
+									Openai: &AIGatewayTargetOpenaiConfig{UpstreamURL: "https://api.openai.com/v1/chat/completions"},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(aigwFixtureReferences()...).Build()
+	got, err := obj.ToAIGWModel(t.Context(), cl)
+	require.NoError(t, err)
+
+	require.NotNil(t, got.Config.Balancer)
+	require.Equal(t, "semantic", got.Config.Balancer.Algorithm)
+	balancer := got.Config.Balancer.Fields
+
+	// The CRD's vectordb discriminator `type` is the document's `strategy`; the
+	// selected pgvector member's settings are already flat next to it.
+	require.Equal(t, map[string]any{
+		"strategy":        "pgvector",
+		"database":        "semantic",
+		"dimensions":      1536,
+		"distance_metric": "cosine",
+		"host":            "pgvector.aigw-backends.svc.cluster.local",
+		"password":        "{vault://env/lcl-pgvector-password}",
+		"port":            5432,
+		"threshold":       0.7,
+		"ssl":             map[string]any{"enabled": true},
+	}, balancer["vectordb"])
+
+	// The embeddings model nests under `model`, `provider` stays at the embeddings
+	// level (the converter resolves the provider's auth from it), and the CRD's
+	// embeddings-level allow_auth_override becomes the plugin's auth.allow_override.
+	require.Equal(t, map[string]any{
+		"provider": "openai-provider",
+		"model": map[string]any{
+			"name":   "text-embedding-3-small",
+			"config": map[string]any{"type": "openai"},
+		},
+		"auth": map[string]any{"allow_override": true},
+	}, balancer["embeddings"])
+}
+
 // TestAIGatewayModel_ToAIGWModel_StrictRoundTrip guards against a dropped or renamed field: it
 // decodes marshalAIGWPayload's output with yaml.v3's KnownFields(true), which errors on any key
 // aigw.Model (and its non-custom-unmarshaled sub-types) doesn't recognize. It's this check that

@@ -272,7 +272,7 @@ func representativeDBLessPayload(t *testing.T) []byte {
 	}
 
 	// Every entity kind must contribute to the document.
-	require.Len(t, doc.Models, 1, "the document must carry the model")
+	require.Len(t, doc.Models, 2, "the document must carry both models")
 	require.Len(t, doc.ModelProviders, 1, "the document must carry the provider")
 	require.Len(t, doc.Policies, 2, "the document must carry both policies")
 	require.Len(t, doc.CustomPolicies, 1, "the document must carry the custom policy")

@@ -20,6 +20,7 @@ const (
 	providerName         = "openai-provider"
 	providerCredentials  = "openai-credentials"
 	modelName            = "mock-model"
+	semanticModelName    = "mock-semantic-model"
 	rateLimitPolicyName  = "mock-rate-limit-policy"
 	customPolicyName     = "mock-custom-policy"
 	customPolicyPolicy   = "mock-custom-policy-policy"
@@ -97,6 +98,7 @@ func namespacedName(name string) metav1.ObjectMeta {
 //
 //   - model -> provider (target), rate-limiting policy, custom-policy wrapper
 //     policy, key-auth auth strategy and consumer-group ACL
+//   - semantic model -> provider (target, embeddings), pgvector vector database
 //   - consumer -> credential (api-key), enrolled in the consumer group
 //   - SNI -> certificate; the certificate is signed by the CA certificate
 //   - agent and MCP server -> policy, auth strategy and consumer group
@@ -168,6 +170,75 @@ func representativeObjects(t *testing.T) []any {
 								Type: aiconfigurationv1alpha1.AIGatewayModelAccessAclsTypeAllow,
 								Allow: &aiconfigurationv1alpha1.AIGatewayAllowACL{
 									Allow: []aiconfigurationv1alpha1.AIGatewayACLRef{{Name: consumerGroupName}},
+								},
+							},
+						},
+						Targets: []aiconfigurationv1alpha1.AIGatewayTarget{
+							{
+								Name: "qwen2.5:0.5b",
+								Provider: aiconfigurationv1alpha1.AIGatewayModelProviderRef{
+									Name: providerName,
+								},
+								Config: &aiconfigurationv1alpha1.AIGatewayTargetConfig{
+									Type: "openai",
+									Openai: &aiconfigurationv1alpha1.AIGatewayTargetOpenaiConfig{
+										UpstreamURL: upstreamURL,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// The semantic model exists for the vector database and embeddings blocks
+	// alone: they are the two places where the CRD's shape (Konnect API) and
+	// ai-deck-converter's document shape differ, and converter passes unknown
+	// keys through, so a broken mapping only shows up as a 400 from the Admin
+	// API (https://github.com/Kong/kong-operator/issues/6231).
+	semanticModel := &aiconfigurationv1alpha1.AIGatewayModel{
+		ObjectMeta: namespacedName(semanticModelName),
+		Spec: aiconfigurationv1alpha1.AIGatewayModelSpec{
+			AIGatewayRef: onPremRef(),
+			APISpec: aiconfigurationv1alpha1.AIGatewayModelAPISpec{
+				AIGatewayModelConfig: &aiconfigurationv1alpha1.AIGatewayModelConfig{
+					Type: aiconfigurationv1alpha1.AIGatewayModelConfigTypeModel,
+					Model: &aiconfigurationv1alpha1.AIGatewayModelModel{
+						Name:         semanticModelName,
+						DisplayName:  "Mock semantic model",
+						Capabilities: []string{"generate"},
+						Formats:      []aiconfigurationv1alpha1.AIGatewayModelFormat{{Type: "openai"}},
+						Config: aiconfigurationv1alpha1.AIGatewayModelModelConfig{
+							Route: aiconfigurationv1alpha1.AIGatewayModelRouteConfig{
+								Paths: []string{"/semantic-chat"},
+							},
+							Balancer: &aiconfigurationv1alpha1.AIGatewayModelModelConfigBalancer{
+								Algorithm: aiconfigurationv1alpha1.AIGatewayModelModelConfigBalancerTypeSemantic,
+								Semantic: &aiconfigurationv1alpha1.AIGatewayModelBalancerSemanticConfig{
+									Slots: 10000,
+									Embeddings: aiconfigurationv1alpha1.AIGatewayModelBalancerSemanticConfigEmbeddings{
+										AllowAuthOverride: "Enabled",
+										Name:              "text-embedding-3-small",
+										Provider:          providerName,
+										Config: &aiconfigurationv1alpha1.AIGatewayModelBalancerSemanticConfigEmbeddingsConfig{
+											Type: aiconfigurationv1alpha1.AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeOpenai,
+										},
+									},
+									Vectordb: &aiconfigurationv1alpha1.AIGatewayModelBalancerSemanticConfigVectordb{
+										Type: aiconfigurationv1alpha1.AIGatewayModelBalancerSemanticConfigVectordbTypePgVector,
+										PgVector: &aiconfigurationv1alpha1.AIGatewayModelVectorDBConfigPgVector{
+											Database:       "kong-pgvector",
+											Dimensions:     1536,
+											DistanceMetric: "cosine",
+											Host:           "pgvector.example.com",
+											Password:       "pgvector-password",
+											Port:           5432,
+											Threshold:      0.7,
+											SSL:            aiconfigurationv1alpha1.AIGatewayModelVectorDBConfigPgVectorSSL{Enabled: "Enabled"},
+										},
+									},
 								},
 							},
 						},
@@ -448,7 +519,7 @@ func representativeObjects(t *testing.T) []any {
 	}
 
 	return []any{
-		provider, model,
+		provider, model, semanticModel,
 		rateLimitPolicy, customPolicyPolicyObj, customPolicy,
 		consumerGroup, consumer, credential, authStrategy,
 		caCertificate, certificate, sni,

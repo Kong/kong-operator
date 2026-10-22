@@ -86,6 +86,80 @@ func TestAIGatewayModel(t *testing.T) {
 		}.RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("apiSpec.config.balancer.semantic validation", func(t *testing.T) {
+		// The semantic balancer's vector database is a `type`-discriminated
+		// union whose selected member's settings are nested under it, and the
+		// embeddings model is flat. ai-deck-converter's document format differs
+		// on both counts (see lowerSemanticBalancer), so this pins the CRD side
+		// of the mapping that must survive every CRD regeneration.
+		semanticBalancer := func() *aiconfigurationv1alpha1.AIGatewayModelBalancerSemanticConfig {
+			return &aiconfigurationv1alpha1.AIGatewayModelBalancerSemanticConfig{
+				Slots: 10000,
+				Embeddings: aiconfigurationv1alpha1.AIGatewayModelBalancerSemanticConfigEmbeddings{
+					AllowAuthOverride: "Enabled",
+					Name:              "text-embedding-3-small",
+					Provider:          "modelprovider-1",
+					Config: &aiconfigurationv1alpha1.AIGatewayModelBalancerSemanticConfigEmbeddingsConfig{
+						Type: aiconfigurationv1alpha1.AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeOpenai,
+					},
+				},
+				Vectordb: &aiconfigurationv1alpha1.AIGatewayModelBalancerSemanticConfigVectordb{
+					Type: aiconfigurationv1alpha1.AIGatewayModelBalancerSemanticConfigVectordbTypePgVector,
+					PgVector: &aiconfigurationv1alpha1.AIGatewayModelVectorDBConfigPgVector{
+						Database:       "kong-pgvector",
+						Dimensions:     1536,
+						DistanceMetric: "cosine",
+						Host:           "pgvector.example.com",
+						Password:       "pgvector-password",
+						Port:           5432,
+						Threshold:      0.7,
+						SSL:            aiconfigurationv1alpha1.AIGatewayModelVectorDBConfigPgVectorSSL{Enabled: "Enabled"},
+					},
+				},
+			}
+		}
+
+		common.TestCasesGroup[*aiconfigurationv1alpha1.AIGatewayModel]{
+			{
+				Name: "pgvector vectordb and embeddings are valid",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayModel {
+					obj := validAIGatewayModel(ns.Name)
+					obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Balancer = &aiconfigurationv1alpha1.AIGatewayModelModelConfigBalancer{
+						Algorithm: aiconfigurationv1alpha1.AIGatewayModelModelConfigBalancerTypeSemantic,
+						Semantic:  semanticBalancer(),
+					}
+					return obj
+				}(),
+				Assert: func(t *testing.T, obj *aiconfigurationv1alpha1.AIGatewayModel) {
+					semantic := obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Balancer.Semantic
+					if semantic == nil || semantic.Vectordb == nil || semantic.Vectordb.PgVector == nil {
+						t.Fatal("the vectordb block did not survive the round trip to the API server")
+					}
+					if semantic.Vectordb.PgVector.Dimensions != 1536 {
+						t.Errorf("expected dimensions 1536, got %d", semantic.Vectordb.PgVector.Dimensions)
+					}
+					if semantic.Embeddings.Name != "text-embedding-3-small" {
+						t.Errorf("expected the flat embeddings name, got %q", semantic.Embeddings.Name)
+					}
+				},
+			},
+			{
+				Name: "semantic balancer without embeddings is invalid",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayModel {
+					obj := validAIGatewayModel(ns.Name)
+					semantic := semanticBalancer()
+					semantic.Embeddings = aiconfigurationv1alpha1.AIGatewayModelBalancerSemanticConfigEmbeddings{}
+					obj.Spec.APISpec.AIGatewayModelConfig.Model.Config.Balancer = &aiconfigurationv1alpha1.AIGatewayModelModelConfigBalancer{
+						Algorithm: aiconfigurationv1alpha1.AIGatewayModelModelConfigBalancerTypeSemantic,
+						Semantic:  semantic,
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("spec.apiSpec.model.config.balancer.semantic.embeddings: Required value"),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("target config bounds validation", func(t *testing.T) {
 		common.TestCasesGroup[*aiconfigurationv1alpha1.AIGatewayModel]{
 			{

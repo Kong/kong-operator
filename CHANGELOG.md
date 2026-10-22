@@ -81,6 +81,13 @@
   without a path keeps the previous behaviour, and a development host with an
   explicit port no longer lands on the production global host.
   [#6108](https://github.com/Kong/kong-operator/issues/6108)
+- On-prem AI Gateway: an `AIGatewayModel` with a semantic load balancer is now
+  rendered in the shape `ai-proxy-advanced` accepts, so the data plane no longer
+  rejects the whole pushed configuration with HTTP 400 and every entity on the
+  gateway no longer goes `Programmed=False`. The vector database strategy field
+  and the embeddings model block were passed through in the CRD's (Konnect API)
+  shape, which the data plane does not know.
+  [#6231](https://github.com/Kong/kong-operator/issues/6231)
 - Konnect: a DataPlane attached to a `KonnectExtension` now renders control
   plane and telemetry endpoints that carry a path, as Konnect returns them
   over PrivateLink, in the form Kong Gateway accepts: the port no longer lands

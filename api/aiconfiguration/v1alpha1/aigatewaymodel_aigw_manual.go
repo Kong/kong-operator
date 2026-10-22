@@ -24,7 +24,8 @@ package v1alpha1
 //     aigw.Parse. Eleven methods from one template edit.
 //   - What survives hand-written even after that: the name-only resolver below (until the
 //     generator grows an on-prem resolve mode that skips the Konnect-ID gate described on
-//     resolveEntityName), the "managed_by" drop, and the model-selector re-nesting.
+//     resolveEntityName), the "managed_by" drop, the model-selector re-nesting, and the
+//     semantic balancer lowering (see lowerSemanticBalancer).
 //   - Two generator bugs worth fixing while in there, filed separately rather than fixed here:
 //     the missing "model"-variant access.acls resolvers (only the "api" variant has
 //     RefsAtAIGatewayModelAPIAccessAcls*), and the Konnect-ID gate itself.
@@ -185,9 +186,82 @@ func (spec *AIGatewayModelAPISpec) marshalAIGWPayload() ([]byte, error) {
 	}
 
 	renestModelSelector(cfg)
+	lowerSemanticBalancer(cfg)
 
 	data, _, err := spec.selectedSDKOpsPayload(payload)
 	return data, err
+}
+
+// lowerSemanticBalancer reshapes config.balancer's semantic block in place.
+//
+// The CRD (like the Konnect API it mirrors) and the ai-deck-converter document
+// name two things differently, and the converter passes unknown keys through
+// verbatim, so without this the data plane rejects the whole pushed
+// configuration with "unknown field"/"required field missing" errors:
+//
+//   - the vector database strategy discriminator is `type` in the CRD and
+//     `strategy` in the ai-deck-converter document. Only that key changes: the
+//     union flattening that runs after this edit lifts the selected member's
+//     settings (dimensions, host, ssl, ...) next to it either way;
+//   - the embeddings model is flat in the CRD (`name`, `config`) and nested
+//     under `model` in the ai-deck-converter document, which is also where the
+//     converter resolves the embeddings' provider auth from;
+//   - the CRD's `allow_auth_override` sits at the embeddings level, while the
+//     plugin (and so the converter) carries it as `auth.allow_override`.
+//
+// `provider` stays where it is: ai-deck-converter reads it to resolve the
+// referenced provider's auth.
+//
+// See https://github.com/Kong/kong-operator/issues/6231.
+func lowerSemanticBalancer(cfg map[string]any) {
+	modelConfig, ok := cfg["config"].(map[string]any)
+	if !ok {
+		return
+	}
+	balancer, ok := modelConfig["balancer"].(map[string]any)
+	if !ok {
+		return
+	}
+	// The algorithm's settings still sit under a member named by the algorithm
+	// itself; selectedSDKOpsPayload flattens that member into the balancer block
+	// afterwards, which keeps the two edits below independent of each other.
+	algorithm, _ := balancer["algorithm"].(string)
+	if algorithm != "semantic" {
+		return
+	}
+	semantic, ok := balancer[algorithm].(map[string]any)
+	if !ok {
+		return
+	}
+	if vectordb, ok := semantic["vectordb"].(map[string]any); ok {
+		if strategy, ok := vectordb["type"]; ok {
+			delete(vectordb, "type")
+			vectordb["strategy"] = strategy
+		}
+	}
+	embeddings, ok := semantic["embeddings"].(map[string]any)
+	if !ok {
+		return
+	}
+	model := map[string]any{}
+	for _, field := range []string{"name", "config"} {
+		if v, ok := embeddings[field]; ok {
+			model[field] = v
+			delete(embeddings, field)
+		}
+	}
+	if len(model) > 0 {
+		embeddings["model"] = model
+	}
+	if allow, ok := embeddings["allow_auth_override"]; ok {
+		delete(embeddings, "allow_auth_override")
+		auth, _ := embeddings["auth"].(map[string]any)
+		if auth == nil {
+			auth = map[string]any{}
+			embeddings["auth"] = auth
+		}
+		auth["allow_override"] = allow
+	}
 }
 
 // renestModelSelector fixes up config.route.model in place.
