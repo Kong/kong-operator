@@ -3,6 +3,7 @@ package server
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 )
 
@@ -40,21 +41,16 @@ func (d Domains) String() string {
 	return strings.Join(d, ",")
 }
 
-// Allowed reports whether host belongs to one of the domains. The match is on a
-// DNS label boundary, so "notkonghq.com" is not under "konghq.com". Port and
-// path are dropped: NewServer keeps a path attached to the last label.
-func (d Domains) Allowed(host string) bool {
-	host = strings.ToLower(host)
-	// A userinfo part makes the dialed host the part after "@":
-	// "us.api.konghq.com:443@evil.example" is a URL whose host is evil.example.
-	// A hostname never carries one, so anything with "@" is refused.
-	if strings.Contains(host, "@") {
+// Allowed reports whether rawURL points at one of the domains. The URL is
+// parsed, so only the host the request will be sent to decides: a port, a path
+// and a userinfo part do not take part, and a URL that does not parse is
+// refused.
+func (d Domains) Allowed(rawURL string) bool {
+	u, err := url.Parse(rawURL)
+	if err != nil {
 		return false
 	}
-	if i := strings.IndexAny(host, "/:"); i >= 0 {
-		host = host[:i]
-	}
-	host = strings.TrimSuffix(host, ".")
+	host := strings.ToLower(strings.TrimSuffix(u.Hostname(), "."))
 
 	for _, domain := range d {
 		if domain == "" {

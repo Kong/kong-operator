@@ -9,28 +9,31 @@ import (
 func TestDomainsAllowed(t *testing.T) {
 	tests := []struct {
 		name    string
-		host    string
+		url     string
 		allowed bool
 	}{
-		{name: "exact domain", host: "konghq.com", allowed: true},
-		{name: "public subdomain", host: "us.api.konghq.com", allowed: true},
-		{name: "private host", host: "us.svc.konghq.com", allowed: true},
-		{name: "private host with path", host: "us.svc.konghq.com/api", allowed: true},
-		{name: "host with port", host: "us.api.konghq.tech:443", allowed: true},
-		{name: "uppercase", host: "US.API.KONGHQ.COM", allowed: true},
-		{name: "dev private host", host: "global.svc.konghq.tech", allowed: true},
-		{name: "lookalike suffix", host: "notkonghq.com", allowed: false},
-		{name: "allowed domain as prefix", host: "konghq.com.attacker.example", allowed: false},
-		{name: "userinfo behind an allowed host and port", host: "us.api.konghq.com:443@evil.example", allowed: false},
-		{name: "userinfo behind an allowed host", host: "us.api.konghq.com@evil.example", allowed: false},
-		{name: "attacker host", host: "us.attacker.example", allowed: false},
-		{name: "internal host", host: "us.10-0-0-1.internal", allowed: false},
-		{name: "empty", host: "", allowed: false},
+		{name: "exact domain", url: "https://konghq.com", allowed: true},
+		{name: "public subdomain", url: "https://us.api.konghq.com", allowed: true},
+		{name: "private host", url: "https://us.svc.konghq.com", allowed: true},
+		{name: "private host with path", url: "https://us.svc.konghq.com/api", allowed: true},
+		{name: "host with port", url: "https://us.api.konghq.tech:443", allowed: true},
+		{name: "uppercase", url: "https://US.API.KONGHQ.COM", allowed: true},
+		{name: "dev private host", url: "https://global.svc.konghq.tech", allowed: true},
+		{name: "trailing dot", url: "https://us.api.konghq.com./", allowed: true},
+		{name: "lookalike suffix", url: "https://notkonghq.com", allowed: false},
+		{name: "allowed domain as prefix", url: "https://konghq.com.attacker.example", allowed: false},
+		{name: "userinfo hiding the host being called", url: "https://us.api.konghq.com:443@evil.example", allowed: false},
+		{name: "userinfo with an allowed host", url: "https://evil.example@us.api.konghq.com", allowed: true},
+		{name: "attacker host", url: "https://us.attacker.example", allowed: false},
+		{name: "internal host", url: "https://us.10-0-0-1.internal", allowed: false},
+		{name: "no host", url: "https://", allowed: false},
+		{name: "unparsable", url: "https://us.api.konghq.com /x", allowed: false},
+		{name: "empty", url: "", allowed: false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			require.Equal(t, tt.allowed, DefaultDomains.Allowed(tt.host))
+			require.Equal(t, tt.allowed, DefaultDomains.Allowed(tt.url))
 		})
 	}
 }
@@ -58,6 +61,6 @@ func TestNewDomains(t *testing.T) {
 }
 
 func TestDomainsAllowedEmptyList(t *testing.T) {
-	require.False(t, Domains{}.Allowed("us.api.konghq.com"))
-	require.False(t, Domains{""}.Allowed(""))
+	require.False(t, Domains{}.Allowed("https://us.api.konghq.com"))
+	require.False(t, Domains{""}.Allowed("https://us.api.konghq.com"))
 }

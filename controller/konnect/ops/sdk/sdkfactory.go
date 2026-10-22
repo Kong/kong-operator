@@ -235,10 +235,10 @@ func NewSDKFactory(opts ...SDKFactoryOpt) SDKFactory {
 // domains: the server URL comes from a KonnectAPIAuthConfiguration, so an
 // unlisted host would make the operator call an address a tenant picked.
 func (f sdkFactory) NewKonnectSDK(server server.Server, token SDKToken) (SDKWrapper, error) {
-	if !f.allowedServerURLDomains.Allowed(server.Host()) {
+	if !f.allowedServerURLDomains.Allowed(server.URL()) {
 		return nil, fmt.Errorf(
-			"server URL host %q is not under the allowed Konnect domains (%s); use --konnect-server-url-domains to allow another domain",
-			server.Host(), f.allowedServerURLDomains,
+			"server URL %q is not under the allowed Konnect domains (%s); use --konnect-server-url-domains to allow another domain",
+			server.URL(), f.allowedServerURLDomains,
 		)
 	}
 
