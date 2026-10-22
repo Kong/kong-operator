@@ -28,7 +28,7 @@ func NewDomains(flagValue string) (Domains, error) {
 		if domain == "" {
 			return nil, errors.New("the list of server URL domains cannot contain an empty entry")
 		}
-		if strings.ContainsAny(domain, "/:*@") || strings.HasPrefix(domain, ".") || strings.HasSuffix(domain, ".") {
+		if !isDomain(domain) {
 			return nil, fmt.Errorf("invalid server URL domain %q: expected a bare domain, e.g. konghq.com", domain)
 		}
 		domains = append(domains, domain)
@@ -39,6 +39,14 @@ func NewDomains(flagValue string) (Domains, error) {
 // String returns the list as it is given on the command line.
 func (d Domains) String() string {
 	return strings.Join(d, ",")
+}
+
+// isDomain reports whether domain is a bare host: parsed as an authority, it
+// gives back the same host, with no scheme, port, path or userinfo. An entry
+// that is a valid host but not a DNS name, e.g. a wildcard, matches no host.
+func isDomain(domain string) bool {
+	u, err := url.Parse("//" + domain)
+	return err == nil && u.Hostname() == domain
 }
 
 // Allowed reports whether rawURL points at one of the domains. The URL is

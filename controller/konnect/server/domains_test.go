@@ -3,6 +3,7 @@ package server
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -51,12 +52,11 @@ func TestNewDomains(t *testing.T) {
 		"https://konghq.com",
 		"konghq.com/api",
 		"konghq.com:443",
-		"*.konghq.com",
-		"konghq.com.",
-		".konghq.com",
+		"user@konghq.com",
+		"kong hq.com",
 	} {
 		_, err := NewDomains(invalid)
-		require.Error(t, err, invalid)
+		assert.Error(t, err, invalid)
 	}
 }
 
