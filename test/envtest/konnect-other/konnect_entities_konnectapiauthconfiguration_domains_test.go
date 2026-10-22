@@ -51,10 +51,9 @@ func TestKonnectAPIAuthConfigurationServerURLDomains(t *testing.T) {
 	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 
 	for _, tc := range []struct {
-		name           string
-		serverURL      string
-		wantMessage    string
-		wantParseError bool
+		name        string
+		serverURL   string
+		wantMessage string
 	}{
 		{
 			name:        "host outside the allowed domains",
@@ -62,10 +61,14 @@ func TestKonnectAPIAuthConfigurationServerURLDomains(t *testing.T) {
 			wantMessage: "konghq.com",
 		},
 		{
-			name:           "host whose region does not parse",
-			serverURL:      "fooo.api.konghq.com",
-			wantMessage:    "failed to parse server URL",
-			wantParseError: true,
+			name:        "userinfo that hides the host being called",
+			serverURL:   "https://us.api.konghq.com:443@evil.example",
+			wantMessage: "konghq.com",
+		},
+		{
+			name:        "host whose region does not parse",
+			serverURL:   "fooo.api.konghq.com",
+			wantMessage: "failed to parse server URL",
 		},
 	} {
 		t.Run("gets APIAuthValid=false "+tc.name, func(t *testing.T) {
@@ -75,7 +78,7 @@ func TestKonnectAPIAuthConfigurationServerURLDomains(t *testing.T) {
 			})
 			t.Cleanup(func() { require.NoError(t, cl.Delete(ctx, apiAuth)) })
 
-			envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
+			obj := envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(r *konnectv1alpha1.KonnectAPIAuthConfiguration) bool {
 				if client.ObjectKeyFromObject(r) != client.ObjectKeyFromObject(apiAuth) {
 					return false
 				}
@@ -86,7 +89,7 @@ func TestKonnectAPIAuthConfigurationServerURLDomains(t *testing.T) {
 					strings.Contains(cond.Message, tc.wantMessage)
 			}, "KonnectAPIAuthConfiguration didn't get APIAuthValid=false with a message naming the reason")
 
-			require.Empty(t, apiAuth.Status.OrganizationID)
+			require.Empty(t, obj.Status.OrganizationID)
 		})
 	}
 }
