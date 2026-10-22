@@ -104,6 +104,7 @@ spec:
                 - message: when type is konnectID, namespacedRef must not be set
                   rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
             required:
+            - apiSpec
             - eventGatewayVirtualClusterRef
             type: object
           status:
@@ -173,6 +174,8 @@ spec:
                     type: string
                 type: object
             type: object
+        required:
+        - spec
         type: object
         x-kubernetes-validations:
         - message: spec.eventGatewayVirtualClusterRef is immutable when an entity
@@ -180,6 +183,17 @@ spec:
           rule: '!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status.conditions)
             || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
             == ''True'') || oldSelf.spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef'
+        - fieldPath: .spec.eventGatewayVirtualClusterRef
+          message: spec.eventGatewayVirtualClusterRef is immutable
+          rule: self.spec.eventGatewayVirtualClusterRef == oldSelf.spec.eventGatewayVirtualClusterRef
+        - fieldPath: .spec.eventGatewayVirtualClusterRef
+          message: spec.eventGatewayVirtualClusterRef must use namespacedRef
+          rule: self.spec.eventGatewayVirtualClusterRef.type == 'namespacedRef'
+        - fieldPath: .status.id
+          message: status.id must be unset because policy chains have no independent
+            Konnect ID
+          rule: '!has(self.status) || !has(self.status.id) || size(self.status.id)
+            == 0'
     served: true
     storage: true
     subresources:

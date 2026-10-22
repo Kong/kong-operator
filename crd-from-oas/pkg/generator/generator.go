@@ -1216,10 +1216,7 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 	return files, nil
 }
 
-// getAPISpecCursor returns the *config.FieldConfig cursor narrowed to the
-// spec.apiSpec level for the given CRD root entity name. Returns nil when no
-// CEL config is defined for the entity or when the spec/apiSpec path is absent.
-func (g *Generator) getAPISpecCursor(entityName string) *config.FieldConfig {
+func (g *Generator) getSpecCursor(entityName string) *config.FieldConfig {
 	if g.config.FieldConfig == nil {
 		return nil
 	}
@@ -1228,7 +1225,12 @@ func (g *Generator) getAPISpecCursor(entityName string) *config.FieldConfig {
 		return nil
 	}
 	root := &config.FieldConfig{Fields: entityCfg.Fields}
-	return root.Sub("spec").Sub("apiSpec")
+	return root.Sub("spec")
+}
+
+// getAPISpecCursor returns the field configuration at spec.apiSpec, if any.
+func (g *Generator) getAPISpecCursor(entityName string) *config.FieldConfig {
+	return g.getSpecCursor(entityName).Sub("apiSpec")
 }
 
 // buildSchemaCursors walks each entity's CEL config from the spec.apiSpec cursor
@@ -1313,13 +1315,8 @@ func isEmptyFieldConfig(fc *config.FieldConfig) bool {
 	return true
 }
 
-// apiSpecCursorValidations returns the validations configured directly on the
-// spec.apiSpec cursor, or nil when there are none.
-func apiSpecCursorValidations(apiSpecCursor *config.FieldConfig) []string {
-	if apiSpecCursor == nil || len(apiSpecCursor.Validations) == 0 {
-		return nil
-	}
-	return append([]string(nil), apiSpecCursor.Validations...)
+func optionalFieldValidations(cursor *config.FieldConfig) []string {
+	return applyValidationOverrides([]string{markerOptional()}, cursor)
 }
 
 // childFieldConfig returns a deep copy of fc containing only descendant field
@@ -2993,6 +2990,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ResponseStatusFields      []config.ResponseStatusFieldConfig
 		TrackCreateInputs         bool
 		TypeXValidations          []string
+		SpecValidations           []string
 		// APISpecValidations are the markers configured directly on
 		// spec.apiSpec (cel.spec.apiSpec._validations), emitted on the APISpec
 		// field, e.g. transition rules spanning a root union's discriminator.
@@ -3024,7 +3022,8 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ResponseStatusFields:      responseStatusFields,
 		TrackCreateInputs:         trackCreateInputs,
 		TypeXValidations:          typeXValidations,
-		APISpecValidations:        apiSpecCursorValidations(apiSpecCursor),
+		SpecValidations:           optionalFieldValidations(g.getSpecCursor(entityName)),
+		APISpecValidations:        optionalFieldValidations(apiSpecCursor),
 		SupportsMirror:            g.entitySupportsMirror(entityName),
 		NeedsCommonV1Alpha1Import: g.needsCommonV1Alpha1Import(entityName, objectRefImport),
 	}

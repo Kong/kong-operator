@@ -6,6 +6,8 @@
 # This example declares the gateway, backend, virtual cluster, and both policies.
 # The chain at the end selects their execution order:
 # policy-chain-deny-admin-topics -> policy-chain-allow-orders-topics.
+# Each reference names a policy CR, not a Konnect ID. Namespace defaults to
+# the chain's namespace; explicitly setting that same namespace is also valid.
 apiVersion: konnect.konghq.com/v1alpha1
 kind: KonnectEventGateway
 metadata:
@@ -122,8 +124,10 @@ spec:
     namespacedRef:
       name: policy-chain-virtual-cluster
   apiSpec:
-    # List every cluster-level policy of this virtual cluster, in execution order.
+    # List every cluster-level policy exactly once, in execution order.
     # YAML document order and policy resource names do not determine this order.
+    # Update this list when policies are created or deleted.
+    # An empty list is valid only when no policies exist; it does not clear them.
     policies:
       - name: policy-chain-deny-admin-topics
       - name: policy-chain-allow-orders-topics

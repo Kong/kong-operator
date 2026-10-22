@@ -138,10 +138,13 @@ func applyValidationOverrides(tags []string, propCursor *config.FieldConfig) []s
 }
 
 // markerKey returns the portion of a kubebuilder marker before the first '=',
-// which acts as the unique key for override matching.
-// For markers without '=' the whole string is the key (e.g. "+optional").
+// except that mutually exclusive requiredness markers share an override key.
 func markerKey(marker string) string {
 	key, _, _ := strings.Cut(marker, "=")
+	switch key {
+	case "+required", "+optional", "+kubebuilder:validation:Required", "+kubebuilder:validation:Optional":
+		return "requiredness"
+	}
 	return key
 }
 

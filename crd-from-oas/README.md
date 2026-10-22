@@ -55,6 +55,9 @@ fields, e.g. when it describes Konnect behavior that doesn't hold for the CR.
 Field markers also apply to configured reference arrays: use `+listType=atomic`
 when reference order is significant. Required reference arrays preserve an
 explicit empty list during JSON serialization.
+`cel.spec._validations` and `cel.spec.apiSpec._validations` can include
+`+required` to require those containers instead of their default `+optional`.
+Requiredness overrides replace the opposite marker rather than emitting both.
 
 `dataSources` lets a field be provided inline or read from a Kubernetes
 object in the same (or, for Secrets, a granted) namespace. The field becomes a

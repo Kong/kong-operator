@@ -26,6 +26,13 @@ func TestEventGatewayVirtualClusterPolicyChainPolicyOrder(t *testing.T) {
 		chain := &EventGatewayVirtualClusterPolicyChain{
 			Spec: EventGatewayVirtualClusterPolicyChainSpec{APISpec: spec},
 		}
+		chainData, err := json.Marshal(chain)
+		require.NoError(t, err)
+		require.Contains(t, string(chainData), `"apiSpec":{"policies":[`)
+		var decodedChain EventGatewayVirtualClusterPolicyChain
+		require.NoError(t, json.Unmarshal(chainData, &decodedChain))
+		require.Equal(t, policies, decodedChain.Spec.APISpec.Policies)
+
 		cloned := chain.DeepCopy()
 		require.Equal(t, policies, cloned.Spec.APISpec.Policies)
 		if len(policies) > 0 {
