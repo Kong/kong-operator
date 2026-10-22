@@ -188,10 +188,10 @@ func getEntities(ctx context.Context, gwAdmin gwadminapi.ClientInterface, gatewa
 }
 
 // sameEntities reports whether gw-admin holds the entities pushed, by their
-// JSON encoding, as gw-admin receives them: the entities hold times, which
-// can't be compared field by field. An empty list and a missing one are the
-// same, and so are a field left out and the default gw-admin sets on it (see
-// withGWAdminDefaults).
+// JSON encoding, as gw-admin receives them: the entities hold times, on whose
+// unexported fields equality.Semantic.DeepEqual panics. An empty list and a
+// missing one are the same, and so are a field left out and the default
+// gw-admin sets on it (see withGWAdminDefaults).
 func sameEntities(held, pushed gwadminapi.GatewayEntities) (bool, error) {
 	a, err := json.Marshal(withEmptyLists(held))
 	if err != nil {

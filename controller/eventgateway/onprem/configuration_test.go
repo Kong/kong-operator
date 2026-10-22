@@ -357,7 +357,8 @@ func TestSameEntities(t *testing.T) {
 		return ok
 	}
 
-	// The entities hold times: a field by field comparison panics on them.
+	// The entities hold times: equality.Semantic.DeepEqual panics on the
+	// unexported fields of time.Time.
 	// gw-admin returns the TLS versions it defaults to when they are left
 	// out.
 	heldBC := bc
