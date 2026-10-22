@@ -140,3 +140,50 @@ func TestServer_Domain(t *testing.T) {
 		})
 	}
 }
+
+func TestServer_Host(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		wantHost string
+	}{
+		{
+			name:     "public URL",
+			input:    "https://us.api.konghq.com",
+			wantHost: "us.api.konghq.com",
+		},
+		{
+			name:     "URL with port",
+			input:    "https://us.api.konghq.com:443",
+			wantHost: "us.api.konghq.com:443",
+		},
+		{
+			name:     "bare hostname",
+			input:    "us.konghq.com",
+			wantHost: "us.konghq.com",
+		},
+		{
+			name:     "private URL with path",
+			input:    "https://us.svc.konghq.com/api",
+			wantHost: "us.svc.konghq.com/api",
+		},
+		{
+			name:     "global region",
+			input:    "global.konghq.com",
+			wantHost: "global.konghq.com",
+		},
+		{
+			name:     "attacker host",
+			input:    "https://us.attacker.example",
+			wantHost: "us.attacker.example",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			s, err := server.NewServer[konnectv1alpha2.KonnectGatewayControlPlane](tc.input)
+			require.NoError(t, err)
+			assert.Equal(t, tc.wantHost, s.Host())
+		})
+	}
+}

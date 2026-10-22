@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	konnectserver "github.com/kong/kong-operator/v2/controller/konnect/server"
 	ingressmgrconfig "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/v2/modules/manager"
 	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
@@ -386,6 +387,24 @@ func TestParse(t *testing.T) {
 				return cfg
 			},
 		},
+		{
+			name: "server URL domains from the flag",
+			args: []string{"--konnect-server-url-domains=konghq.com,example.com"},
+			expectedCfg: func() manager.Config {
+				cfg := expectedDefaultCfg()
+				cfg.KonnectServerURLDomains = konnectserver.Domains{"konghq.com", "example.com"}
+				return cfg
+			},
+		},
+		{
+			name: "server URL domains use the default list",
+			args: []string{},
+			expectedCfg: func() manager.Config {
+				cfg := expectedDefaultCfg()
+				cfg.KonnectServerURLDomains = konnectserver.DefaultDomains
+				return cfg
+			},
+		},
 	}
 
 	for _, tC := range testCases {
@@ -443,6 +462,7 @@ func expectedDefaultCfg() manager.Config {
 		KonnectSyncPeriod:                        consts.DefaultKonnectSyncPeriod,
 		KonnectRequestTimeout:                    consts.DefaultKonnectRequestTimeout,
 		KonnectListPageSize:                      consts.DefaultKonnectListPageSize,
+		KonnectServerURLDomains:                  konnectserver.DefaultDomains,
 		KongPluginInstallationControllerEnabled:  false,
 		LoggerOpts:                               &zap.Options{},
 		MaxConcurrentReconcilesKonnect:           consts.DefaultMaxConcurrentReconcilesKonnect,

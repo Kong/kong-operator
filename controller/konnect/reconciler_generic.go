@@ -577,7 +577,10 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to parse server URL: %w", err)
 	}
-	sdk := r.sdkFactory.NewKonnectSDK(server, sdkops.SDKToken(token))
+	sdk, err := r.sdkFactory.NewKonnectSDK(server, sdkops.SDKToken(token))
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to build Konnect SDK: %w", err)
+	}
 
 	// If a type has a KonnectCloudGatewayNetwork ref, handle it.
 	res, err = handleKonnectNetworkRef(ctx, r.Client, ent, sdk)
