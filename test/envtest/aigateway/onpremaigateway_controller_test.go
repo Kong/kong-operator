@@ -1,7 +1,6 @@
 package aigateway
 
 import (
-	"context"
 	"slices"
 	"strings"
 	"testing"
@@ -30,7 +29,6 @@ import (
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/test/envtest"
 	"github.com/kong/kong-operator/v2/test/envtest/create"
-	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 )
 
 // TestOnPremAIGatewayReconciler_BecomesReady verifies that the reconciler
@@ -325,12 +323,18 @@ func TestOnPremAIGatewayReconciler_ConfigTracksEntities(t *testing.T) {
 	// The credential has no controller of its own: its rendered form lives in the consumer's
 	// document, so the consumer is what the credential's watch must re-reconcile. The
 	// consumer's own notifications must have stopped by now, otherwise they cannot be told
-	// apart from the credential's.
-	settled := countConsumerNotifications()
-	asserts.Never(t, func(context.Context) bool {
-		return countConsumerNotifications() != settled
-	}, 3*time.Second, 100*time.Millisecond,
-		"the consumer's own notifications must go quiet before the credential is created")
+	// apart from the credential's. The consumer's burst is a chain of reconciles, each
+	// waiting on a sync or a status update round-trip, so it can outlast the model steps
+	// above: wait for the count to hold steady rather than assuming it already does.
+	waitConsumerNotificationsSettled := func(msg string) (settled int) {
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			settled = countConsumerNotifications()
+			time.Sleep(3 * time.Second)
+			assert.Equal(ct, settled, countConsumerNotifications(), msg)
+		}, waitTime, tickTime)
+		return settled
+	}
+	settled := waitConsumerNotificationsSettled("the consumer's own notifications must go quiet before the credential is created")
 
 	t.Log("Creating an AIGatewayConsumerCredential for the consumer")
 	credential := &aiconfigurationv1alpha1.AIGatewayConsumerCredential{
@@ -360,11 +364,7 @@ func TestOnPremAIGatewayReconciler_ConfigTracksEntities(t *testing.T) {
 		assert.Zero(ct, countSendFailures())
 	}, waitTime, tickTime)
 
-	settled = countConsumerNotifications()
-	asserts.Never(t, func(context.Context) bool {
-		return countConsumerNotifications() != settled
-	}, 3*time.Second, 100*time.Millisecond,
-		"the consumer's notifications must go quiet before the credential is updated")
+	settled = waitConsumerNotificationsSettled("the consumer's notifications must go quiet before the credential is updated")
 
 	t.Log("Updating the credential's display name")
 	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(credential), credential))
