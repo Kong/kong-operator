@@ -2,6 +2,7 @@ package konnect
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -12,6 +13,7 @@ import (
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	hybridgatewayerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
 	hybridgatewayrefs "github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/controller/pkg/controlplane"
@@ -80,6 +82,12 @@ func GetAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 		if gateway != nil {
 			cpRef, err := hybridgatewayrefs.GetControlPlaneRefByGateway(ctx, cl, gateway)
 			if err != nil {
+				if errors.Is(err, hybridgatewayerrors.ErrGatewayNotReferencingControlPlane) {
+					return types.NamespacedName{}, ReferencedObjectDoesNotExistError{
+						Reference: client.ObjectKeyFromObject(gateway),
+						Err:       err,
+					}
+				}
 				return types.NamespacedName{}, err
 			}
 			return getCPAuthRefForRef(ctx, cl, *cpRef, gateway.Namespace)

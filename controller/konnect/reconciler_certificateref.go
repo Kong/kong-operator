@@ -44,13 +44,18 @@ func getGatewayForSNI(ctx context.Context, cl client.Client, sni *configurationv
 	if owner == nil {
 		return nil, nil
 	}
+	nn := client.ObjectKey{Namespace: sni.Namespace, Name: owner.Name}
 	var gateway gwtypes.Gateway
-	if err := cl.Get(ctx, client.ObjectKey{Namespace: sni.Namespace, Name: owner.Name}, &gateway); err != nil {
+	if err := cl.Get(ctx, nn, &gateway); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, ReferencedObjectDoesNotExistError{Reference: nn, Err: err}
+		}
 		return nil, fmt.Errorf("failed to get KongSNI owner Gateway: %w", err)
 	}
 	if gateway.UID != owner.UID {
-		return nil, &hybridgatewayrefs.ListenerCertificateRefError{
-			Reason: gatewayv1.ListenerReasonInvalidCertificateRef, Message: "KongSNI owner Gateway UID does not match",
+		return nil, ReferencedObjectDoesNotExistError{
+			Reference: nn,
+			Err:       fmt.Errorf("KongSNI owner Gateway UID %q does not match current Gateway UID %q", owner.UID, gateway.UID),
 		}
 	}
 	return &gateway, nil
@@ -60,6 +65,11 @@ func getGatewayForSNI(ctx context.Context, cl client.Client, sni *configurationv
 // or grants may have changed before the Gateway converter can remove its old SNI.
 func validateGatewaySNICertificate(ctx context.Context, cl client.Client, sni *configurationv1alpha1.KongSNI, cert *configurationv1alpha1.KongCertificate) error {
 	gateway, err := getGatewayForSNI(ctx, cl, sni)
+	if _, missing := errors.AsType[ReferencedObjectDoesNotExistError](err); missing {
+		return &hybridgatewayrefs.ListenerCertificateRefError{
+			Reason: gatewayv1.ListenerReasonInvalidCertificateRef, Message: err.Error(),
+		}
+	}
 	if err != nil || gateway == nil {
 		return err
 	}
