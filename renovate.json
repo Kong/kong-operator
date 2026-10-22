@@ -222,6 +222,16 @@
       "groupSlug": "golang"
     },
     {
+      "description": "Group the Kubernetes Testing Framework (KTF) bump in go.mod with the ktf CLI pin in .mise.toml: they must move together in one PR",
+      "matchManagers": ["gomod", "custom.regex"],
+      "matchDepNames": [
+        "github.com/kong/kubernetes-testing-framework",
+        "Kong/kubernetes-testing-framework"
+      ],
+      "groupName": "kubernetes-testing-framework",
+      "groupSlug": "kubernetes-testing-framework"
+    },
+    {
       "description": "Strip kustomize/ version prefix",
       "matchBaseBranches": ["$default"],
       "matchPackageNames": ["kubernetes-sigs/kustomize"],
