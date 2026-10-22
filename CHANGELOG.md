@@ -85,7 +85,9 @@
   `Programmed=False` with reason `Invalid`. The failure used to be invisible on
   the credential and to fail the whole `AIGatewayConsumer` instead, which was
   excluded from the rendered configuration together with its healthy
-  credentials; the consumer now keeps rendering them.
+  credentials; the consumer now keeps rendering them. The status is cleared
+  again when the consumer the credential belongs to is deleted, since nothing
+  renders the credential anymore.
   [#5963](https://github.com/Kong/kong-operator/issues/5963)
 - A `KonnectAPIAuthConfiguration` with a private `serverURL` that carries a path
   (for example `https://us.svc.konghq.tech/api`) now authenticates. The identity

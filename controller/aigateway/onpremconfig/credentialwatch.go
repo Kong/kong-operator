@@ -101,3 +101,20 @@ func credentialOnPremManaged(
 	consumer := credentialConsumer(ctx, cl, cred)
 	return consumer != nil && consumerTargetsOnPremAIGateway(consumer)
 }
+
+// credentialOrphaned reports whether the credential's consumer is gone. It is deliberately
+// narrower than "not managed by on-prem": a credential whose ref is not a namespacedRef, or
+// points at another namespace, may be Konnect-managed, and the Konnect reconciler owns
+// correcting the status of those. Only a consumer that should exist in the credential's own
+// namespace and does not leaves the credential rendered by nothing.
+func credentialOrphaned(
+	ctx context.Context,
+	cl client.Client,
+	cred *aiconfigurationv1alpha1.AIGatewayConsumerCredential,
+) bool {
+	ref := cred.GetAIGatewayConsumerRef().NamespacedRef
+	if ref == nil || (ref.Namespace != nil && *ref.Namespace != "" && *ref.Namespace != cred.GetNamespace()) {
+		return false
+	}
+	return credentialConsumer(ctx, cl, cred) == nil
+}

@@ -29,11 +29,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
+	"github.com/kong/kong-operator/v2/controller/pkg/patch"
 	ctrlutils "github.com/kong/kong-operator/v2/ingress-controller/pkg/controllerutils"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/status"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 )
 
 // -----------------------------------------------------------------------------
@@ -51,9 +53,10 @@ import (
 // covering it in the template would add per-kind hooks to a template shared by all the other
 // kinds, for this one entity.
 //
-// The reconciler therefore only writes the Programmed condition and never feeds the
-// ChangeNotifier: a credential event is already mapped to its parent consumer (see
-// mapCredentialToConsumer), and the consumer's own reconciler is what notifies the gateway.
+// The reconciler therefore only reports the Programmed condition - writing it, and clearing
+// it when the credential's consumer is gone - and never feeds the ChangeNotifier: a
+// credential event is already mapped to its parent consumer (see mapCredentialToConsumer),
+// and the consumer's own reconciler is what notifies the gateway.
 type AIGatewayConsumerCredentialReconciler struct {
 	client.Client
 
@@ -117,6 +120,13 @@ func (r *AIGatewayConsumerCredentialReconciler) Reconcile(ctx context.Context, r
 	// condition. An unresolvable consumer (absent, or referenced across namespaces) is
 	// likewise not ours to report.
 	if !credentialOnPremManaged(ctx, r.Client, obj) {
+		// A credential whose consumer is gone is rendered by nothing, so the Programmed
+		// condition written while it still was claims a rendering that no longer exists:
+		// clear it. Only that case is corrected here - the status of a credential with a
+		// Konnect-managed consumer is the Konnect reconciler's to write and to clear.
+		if credentialOrphaned(ctx, r.Client, obj) {
+			return patch.StatusWithoutCondition(ctx, r.Client, obj, string(configurationv1.ConditionProgrammed))
+		}
 		return ctrl.Result{}, nil
 	}
 

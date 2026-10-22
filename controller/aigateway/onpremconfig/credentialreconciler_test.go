@@ -87,7 +87,10 @@ func TestCredentialReconcilerWritesFailedConditionWithMessage(t *testing.T) {
 
 // TestCredentialReconcilerSkipsKonnectManagedCredentials pins that a credential rendered by a
 // Konnect-targeted consumer never receives an on-prem Programmed condition: the Konnect
-// reconciler owns its status.
+// reconciler owns its status. The credential starts with the condition this reconciler could
+// have written while its consumer still existed, so that both claims are pinned at once: a
+// condition on a credential the on-prem machinery does not own is left untouched, and the one
+// left behind by a consumer that is gone is cleared.
 func TestCredentialReconcilerSkipsKonnectManagedCredentials(t *testing.T) {
 	t.Parallel()
 
@@ -96,6 +99,8 @@ func TestCredentialReconcilerSkipsKonnectManagedCredentials(t *testing.T) {
 		ref  *commonv1alpha1.NamespacedRef
 		// objs are the consumers the credential may resolve to.
 		objs []client.Object
+		// wantCleared pins whether the seeded condition must be gone after the reconcile.
+		wantCleared bool
 	}{
 		{
 			name: "konnect-targeted consumer",
@@ -103,8 +108,9 @@ func TestCredentialReconcilerSkipsKonnectManagedCredentials(t *testing.T) {
 			objs: []client.Object{consumerTargeting("consumer", "default", "gw", true)},
 		},
 		{
-			name: "missing consumer",
-			ref:  &commonv1alpha1.NamespacedRef{Name: "consumer"},
+			name:        "missing consumer",
+			ref:         &commonv1alpha1.NamespacedRef{Name: "consumer"},
+			wantCleared: true,
 		},
 		{
 			name: "cross-namespace consumer reference",
@@ -117,11 +123,21 @@ func TestCredentialReconcilerSkipsKonnectManagedCredentials(t *testing.T) {
 		},
 	}
 
+	// seeded marks the condition as the one the reconciler found, so that a rewritten one
+	// cannot pass for it.
+	const seeded = "seeded"
+
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
 			cred := credentialReferencing("cred", "default", tc.ref)
+			cred.Status.Conditions = []metav1.Condition{{
+				Type:    string(configurationv1.ConditionProgrammed),
+				Status:  metav1.ConditionTrue,
+				Reason:  string(configurationv1.ReasonProgrammed),
+				Message: seeded,
+			}}
 			objs := append([]client.Object{cred}, tc.objs...)
 			cl := newCredentialReconcilerClient(t, objs...)
 			rec := &AIGatewayConsumerCredentialReconciler{
@@ -133,8 +149,13 @@ func TestCredentialReconcilerSkipsKonnectManagedCredentials(t *testing.T) {
 			_, err := rec.Reconcile(t.Context(), ctrl.Request{NamespacedName: client.ObjectKeyFromObject(cred)})
 			require.NoError(t, err)
 
-			require.Nil(t, credentialProgrammedCondition(t, cl, client.ObjectKeyFromObject(cred)),
-				"no condition must be written on a credential the on-prem machinery does not own")
+			cond := credentialProgrammedCondition(t, cl, client.ObjectKeyFromObject(cred))
+			if tc.wantCleared {
+				require.Nil(t, cond, "the condition of a credential whose consumer is gone must be cleared")
+				return
+			}
+			require.NotNil(t, cond, "no condition must be written on a credential the on-prem machinery does not own")
+			require.Equal(t, seeded, cond.Message, "the condition the reconciler found must be left as it was")
 		})
 	}
 }
@@ -151,7 +172,8 @@ func TestCredentialReconcilerIgnoresDeletedCredentials(t *testing.T) {
 	}
 
 	_, err := rec.Reconcile(t.Context(), ctrl.Request{
-		NamespacedName: client.ObjectKey{Namespace: "default", Name: "gone"},
+		Namespace: "default",
+		Name:      "gone",
 	})
 	require.NoError(t, err)
 }

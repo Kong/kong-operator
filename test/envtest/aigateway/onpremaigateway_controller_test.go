@@ -126,8 +126,8 @@ func TestOnPremAIGatewayReconciler_BecomesReady(t *testing.T) {
 // control plane instance so that it re-renders the gateway's configuration document. It also
 // verifies that deleting the model notifies the instance with the parent gateway reference
 // that the reconciler stored in its cache, and that a change to an AIGatewayConsumerCredential
-// - which has no controller of its own, its rendered form living in the parent consumer's
-// document - is mapped to its parent consumer and notifies the instance through it.
+// - whose rendered form lives in the parent consumer's document, so that the consumer must
+// re-render it - is mapped to its parent consumer and notifies the instance through it.
 func TestOnPremAIGatewayReconciler_ConfigTracksEntities(t *testing.T) {
 	t.Parallel()
 
