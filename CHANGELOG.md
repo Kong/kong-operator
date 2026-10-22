@@ -265,6 +265,7 @@
   (`--enable-controller-onpremeventgateway`).
   [#6114](https://github.com/Kong/kong-operator/pull/6114)
   [#6213](https://github.com/Kong/kong-operator/pull/6213)
+  [#6247](https://github.com/Kong/kong-operator/pull/6247)
 - Event Gateway: `spec.parentRef` of `EventGatewayBackendCluster`,
   `EventGatewayDataPlaneCertificate`, `EventGatewayListener`,
   `EventGatewaySchemaRegistry`, `EventGatewayStaticKey` and
@@ -324,6 +325,7 @@
   reason `DependenciesNotReady`.
   [#6132](https://github.com/Kong/kong-operator/pull/6132)
   [#6218](https://github.com/Kong/kong-operator/pull/6218)
+  [#6247](https://github.com/Kong/kong-operator/pull/6247)
 - The `OnPremEventGateway` controller pushes each gateway to every gw-admin
   pod of its `GWAdmin` over mTLS, writing only what changed; a new or
   restarted pod gets the full configuration. Entities are not pushed yet.
@@ -336,7 +338,7 @@
   finalizer removes a deleted gateway from gw-admin, giving up after 5
   minutes with a `GWAdminCleanupTimedOut` event; a gateway no longer allowed
   to use its `GWAdmin` is removed too.
-  [#6064](https://github.com/Kong/kong-operator/issues/6064)
+  [#6247](https://github.com/Kong/kong-operator/pull/6247)
 - `--konnect-list-page-size` flag (default and maximum `100`): the page size
   the operator requests when listing Konnect entities to find the Konnect
   entity of an object, e.g. one whose Konnect ID was lost. It is a fallback in
