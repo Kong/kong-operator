@@ -103,7 +103,7 @@ func (s *Syncer) getSecret(ctx context.Context, key client.ObjectKey, what strin
 	if err := s.Client.Get(ctx, key, &secret); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, NotReadyError{
-				Message: fmt.Sprintf("The %s Secret %s of the GWAdmin does not exist%s", what, key, secretHint(s.SecretLabelSelector)),
+				Message: fmt.Sprintf("The %s Secret %s of the GWAdmin does not exist%s", what, key, SecretHint(s.SecretLabelSelector)),
 				Cause:   CauseTLSNotReady,
 			}
 		}
@@ -118,9 +118,9 @@ func (s *Syncer) getSecret(ctx context.Context, key client.ObjectKey, what strin
 	return &secret, nil
 }
 
-// secretHint tells how to make a Secret visible to the operator when its
+// SecretHint tells how to make a Secret visible to the operator when its
 // Secret cache is filtered by the label selector, or "" when it isn't.
-func secretHint(selector string) string {
+func SecretHint(selector string) string {
 	if selector == "" {
 		return ""
 	}

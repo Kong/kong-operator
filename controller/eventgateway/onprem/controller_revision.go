@@ -47,16 +47,14 @@ type gatewayConfig struct {
 }
 
 // deriveConfig returns the configuration of the gateway, from the gateway
-// alone: it has no entities yet.
-//
-// TODO: derive the entities of the gateway, each list sorted (#6059).
-func deriveConfig(gateway *eventgatewayv1alpha1.OnPremEventGateway) gatewayConfig {
+// and the configuration built from its entities (see buildConfiguration).
+func deriveConfig(gateway *eventgatewayv1alpha1.OnPremEventGateway, cfg configuration) gatewayConfig {
 	return gatewayConfig{
 		Gateway: gwadminapi.UpsertGatewayRequestOnPrem{
 			Name:      gateway.Name,
 			CreatedAt: createdAt(gateway),
 		},
-		Entities: noEntities(),
+		Entities: cfg.entities,
 	}
 }
 

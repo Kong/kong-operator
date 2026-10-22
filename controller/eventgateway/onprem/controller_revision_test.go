@@ -31,12 +31,12 @@ import (
 
 func TestGatewayConfigHash(t *testing.T) {
 	gateway := newTestGateway("gateway")
-	config := deriveConfig(gateway)
+	config := deriveConfig(gateway, emptyConfiguration())
 	hash, err := config.hash()
 	require.NoError(t, err)
 	assert.True(t, strings.HasPrefix(hash, "sha256:"), hash)
 
-	again, err := deriveConfig(gateway).hash()
+	again, err := deriveConfig(gateway, emptyConfiguration()).hash()
 	require.NoError(t, err)
 	assert.Equal(t, hash, again, "the same configuration, the same hash")
 
@@ -46,7 +46,7 @@ func TestGatewayConfigHash(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, hash, nilHash, "a list missing and an empty one are the same")
 
-	renamed := deriveConfig(newTestGateway("other"))
+	renamed := deriveConfig(newTestGateway("other"), emptyConfiguration())
 	renamedHash, err := renamed.hash()
 	require.NoError(t, err)
 	assert.NotEqual(t, hash, renamedHash)
@@ -61,7 +61,7 @@ func TestGatewayConfigHash(t *testing.T) {
 
 func TestRecordRevision(t *testing.T) {
 	f := newPushFixture(t, interceptor.Funcs{}, nil)
-	config := deriveConfig(f.gateway)
+	config := deriveConfig(f.gateway, emptyConfiguration())
 	hash, err := config.hash()
 	require.NoError(t, err)
 
@@ -76,13 +76,13 @@ func TestRecordRevision(t *testing.T) {
 	assert.Equal(t, stored.ResourceVersion, read(t, f.cl, f.gateway).ResourceVersion, "the same configuration isn't recorded again")
 
 	stale := stored.DeepCopy()
-	changed := deriveConfig(f.gateway)
+	changed := deriveConfig(f.gateway, emptyConfiguration())
 	changed.Entities.Listeners = []gwadminapi.EventGatewayListenerOnPrem{{Name: "listener"}}
 	require.NoError(t, f.r.recordRevision(t.Context(), stored, changed))
 	assert.Equal(t, int64(2), read(t, f.cl, f.gateway).Status.ConfigRevision, "a new configuration, a new revision")
 
 	// A gateway read from a stale cache would reuse revision 2.
-	err = f.r.recordRevision(t.Context(), stale, deriveConfig(newTestGateway("other")))
+	err = f.r.recordRevision(t.Context(), stale, deriveConfig(newTestGateway("other"), emptyConfiguration()))
 	require.True(t, apierrors.IsConflict(err), "a stale gateway conflicts: %v", err)
 	assert.Equal(t, int64(1), stale.Status.ConfigRevision, "its status is left as read")
 	assert.Equal(t, int64(2), read(t, f.cl, f.gateway).Status.ConfigRevision)

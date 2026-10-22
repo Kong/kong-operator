@@ -272,3 +272,15 @@ func TestCall(t *testing.T) {
 	require.EqualError(t, Call("act", func() (*http.Response, error) { return nil, errors.New("connection refused") }),
 		"failed to act: connection refused")
 }
+
+func TestCallDescribingFields(t *testing.T) {
+	invalid := func() (*http.Response, error) {
+		return &http.Response{StatusCode: http.StatusBadRequest, Status: "400 Bad Request", Body: io.NopCloser(strings.NewReader(
+			`{"title": "invalid", "invalid_parameters": [{"field": "backend_clusters.0.name", "reason": "is required"}]}`))}, nil
+	}
+	describe := func(field string) string { return "the object (" + field + ")" }
+	require.EqualError(t, CallDescribingFields("act", describe, invalid),
+		"failed to act: gw-admin returned 400 Bad Request: the object (backend_clusters.0.name): is required")
+	require.EqualError(t, CallDescribingFields("act", nil, invalid),
+		"failed to act: gw-admin returned 400 Bad Request: backend_clusters.0.name: is required", "a nil describeField leaves the fields as they are")
+}

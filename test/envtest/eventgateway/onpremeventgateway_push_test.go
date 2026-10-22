@@ -55,6 +55,9 @@ type fakeGWAdmin struct {
 	expected []uuid.UUID
 	// writes counts the requests changing what the pod holds.
 	writes int
+	// reject, when it returns a non-empty field, rejects the entities with a 400
+	// on that field.
+	reject func(gwadminapi.GatewayEntities) string
 }
 
 type fakeGateway struct {
@@ -116,6 +119,12 @@ func newFakeGWAdmin(t *testing.T, tlsConfig *tls.Config) *fakeGWAdmin {
 			}
 			if !createdAtPattern.MatchString(bc.CreatedAt.Format("2006-01-02T15:04:05.999999999Z07:00")) {
 				badRequest(w, fmt.Sprintf("backend_clusters.%d.created_at", i), "not whole seconds in UTC")
+				return
+			}
+		}
+		if f.reject != nil {
+			if field := f.reject(doc); field != "" {
+				badRequest(w, field, "rejected by the test")
 				return
 			}
 		}
@@ -221,6 +230,13 @@ func (f *fakeGWAdmin) state(id uuid.UUID) (fakeGateway, bool, []uuid.UUID) {
 		return fakeGateway{}, false, slices.Clone(f.expected)
 	}
 	return *g, true, slices.Clone(f.expected)
+}
+
+// setReject sets the entities the pod rejects (see fakeGWAdmin.reject).
+func (f *fakeGWAdmin) setReject(reject func(gwadminapi.GatewayEntities) string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.reject = reject
 }
 
 // writeCount returns how many requests changed what the pod holds.
@@ -332,8 +348,11 @@ func (g *testGWAdmin) publishAPI(ctx context.Context) {
 // updateStatus updates the status of the GWAdmin, as its controller does.
 func (g *testGWAdmin) updateStatus(ctx context.Context, update func(*operatorv1alpha1.GWAdminStatus)) {
 	g.t.Helper()
-	// The client reads from the cache, which may not hold the last update yet.
-	require.NoError(g.t, retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	// The client reads from the cache, which may not hold the last update yet,
+	// nor the GWAdmin just created.
+	require.NoError(g.t, retry.OnError(retry.DefaultBackoff, func(err error) bool {
+		return apierrors.IsConflict(err) || apierrors.IsNotFound(err)
+	}, func() error {
 		if err := g.cl.Get(ctx, client.ObjectKeyFromObject(g.gwAdmin), g.gwAdmin); err != nil {
 			return err
 		}
@@ -412,8 +431,11 @@ func (g *testGWAdmin) stopPod(ctx context.Context, ip string) {
 
 func (g *testGWAdmin) updateEndpoints(ctx context.Context, update func([]discoveryv1.Endpoint) []discoveryv1.Endpoint) {
 	g.t.Helper()
-	// The client reads from the cache, which may not hold the last update yet.
-	require.NoError(g.t, retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	// The client reads from the cache, which may not hold the last update yet,
+	// nor the GWAdmin just created.
+	require.NoError(g.t, retry.OnError(retry.DefaultBackoff, func(err error) bool {
+		return apierrors.IsConflict(err) || apierrors.IsNotFound(err)
+	}, func() error {
 		if err := g.cl.Get(ctx, client.ObjectKeyFromObject(g.endpointSlice), g.endpointSlice); err != nil {
 			return err
 		}
@@ -515,9 +537,9 @@ spec:
 			if pushed := conditionOf(ct, gateway, "ConfigurationPushed"); pushed != nil {
 				assert.Equal(ct, metav1.ConditionTrue, pushed.Status, pushed.Message)
 			}
-			// The configuration of a gateway, its name and creation time until
-			// its entities are pushed, never changes: its first revision stays,
-			// whatever the status writes of the reconciles.
+			// The configuration of a gateway without entities, its name and
+			// creation time, never changes: its first revision stays, whatever
+			// the status writes of the reconciles.
 			if g := getGateway(ct, gateway); g != nil {
 				assert.Equal(ct, int64(1), g.Status.ConfigRevision)
 				assert.True(ct, strings.HasPrefix(g.Status.ConfigHash, "sha256:"), g.Status.ConfigHash)

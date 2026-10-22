@@ -64,7 +64,7 @@ func AIGatewayModelProviderReconciliationWatchOptions(
 			return b.Watches(
 				&corev1.Secret{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectsForSecretRef[aiconfigurationv1alpha1.AIGatewayModelProviderList](cl),
+					enqueueObjectsForSecretRef[aiconfigurationv1alpha1.AIGatewayModelProviderList](cl, index.IndexFieldAIGatewayModelProviderOnSecretRef),
 				),
 			)
 		},

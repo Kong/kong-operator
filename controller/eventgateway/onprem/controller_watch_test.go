@@ -23,6 +23,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -364,4 +365,57 @@ func TestMapEntityToOnPremEventGateway_ParentReadError(t *testing.T) {
 		{Namespace: ns, Name: "gateway-2"},
 		{Namespace: "other", Name: "gateway-3"},
 	}, got)
+}
+
+func TestMapKongReferenceGrantToOnPremEventGatewaysForSecrets(t *testing.T) {
+	grant := func(fromKind string, toKind configurationv1alpha1.Kind) *configurationv1alpha1.KongReferenceGrant {
+		return &configurationv1alpha1.KongReferenceGrant{
+			Name: "grant", Namespace: "secrets",
+			Spec: configurationv1alpha1.KongReferenceGrantSpec{
+				From: []configurationv1alpha1.ReferenceGrantFrom{{Group: "configuration.konghq.com", Kind: configurationv1alpha1.Kind(fromKind), Namespace: ns}},
+				To:   []configurationv1alpha1.ReferenceGrantTo{{Group: "core", Kind: toKind}},
+			},
+		}
+	}
+	gateway := newTestGateway("gateway")
+	other := newTestGateway("other")
+	other.Namespace = "other"
+	mapFn := mapKongReferenceGrantToOnPremEventGateways(newFakeClient(t, gateway, other))
+
+	assert.Equal(t,
+		[]reconcile.Request{{NamespacedName: client.ObjectKeyFromObject(gateway)}},
+		mapFn(t.Context(), grant("EventGatewayBackendCluster", "Secret")),
+		"the gateways of the namespace whose entities may read the Secrets")
+	assert.Empty(t, mapFn(t.Context(), grant("EventGatewayBackendCluster", "ConfigMap")), "not a grant to Secrets")
+	assert.Empty(t, mapFn(t.Context(), grant("KongService", "Secret")), "not a grant to entities of an OnPremEventGateway")
+}
+
+func TestMapSecretToOnPremEventGateways(t *testing.T) {
+	readingSecret := func(namespace, name string, gatewayRef *commonv1alpha1.GatewayRef, secretNamespace *string) *configurationv1alpha1.EventGatewayBackendCluster {
+		bc := backendCluster(namespace, name, gatewayRef)
+		bc.Spec.APISpec.TLS.ClientIdentity.Certificate = configurationv1alpha1.SensitiveDataSource{
+			Type:      configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+			SecretRef: &configurationv1alpha1.SensitiveDataSecretRef{Name: "tls", Namespace: secretNamespace, Key: "tls.crt"},
+		}
+		return bc
+	}
+	cl := newFakeClient(t,
+		readingSecret(ns, "a", onPremGatewayRef("gateway"), nil),
+		readingSecret(ns, "b", onPremGatewayRef("gateway"), new(ns)),
+		readingSecret(ns, "other-gateway", onPremGatewayRef("other"), new("secrets")),
+		readingSecret(ns, "konnect", konnectGatewayRef("konnect"), nil),
+		backendCluster(ns, "no-secret", onPremGatewayRef("unrelated")),
+	)
+	mapFn := mapSecretToOnPremEventGateways(cl)
+	secret := func(namespace string) *corev1.Secret { return &corev1.Secret{Name: "tls", Namespace: namespace} }
+
+	assert.Equal(t,
+		[]reconcile.Request{{Namespace: ns, Name: "gateway"}},
+		mapFn(t.Context(), secret(ns)),
+		"once per gateway, not for a backend cluster of a KonnectEventGateway")
+	assert.Equal(t,
+		[]reconcile.Request{{Namespace: ns, Name: "other"}},
+		mapFn(t.Context(), secret("secrets")),
+		"a Secret of another namespace")
+	assert.Empty(t, mapFn(t.Context(), secret("unread")))
 }

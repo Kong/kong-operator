@@ -13,6 +13,8 @@ const (
 	IndexFieldEventGatewayListenerPolicyOnEventGatewayListenerRef = "eventGatewayListenerPolicyOnEventGatewayListenerRef"
 	// IndexFieldEventGatewayListenerPolicyOnEventGatewayTLSTrustBundleRef is the index field for EventGatewayListenerPolicy -> EventGatewayTLSTrustBundle.
 	IndexFieldEventGatewayListenerPolicyOnEventGatewayTLSTrustBundleRef = "eventGatewayListenerPolicyOnEventGatewayTLSTrustBundleRef"
+	// IndexFieldEventGatewayListenerPolicyOnSecretRef is the index field for EventGatewayListenerPolicy -> the Secrets it reads.
+	IndexFieldEventGatewayListenerPolicyOnSecretRef = "eventGatewayListenerPolicyOnSecretRef"
 )
 
 // OptionsForEventGatewayListenerPolicy returns required Index options for EventGatewayListenerPolicy reconciler.
@@ -27,6 +29,11 @@ func OptionsForEventGatewayListenerPolicy() []Option {
 			Object:         &configurationv1alpha1.EventGatewayListenerPolicy{},
 			Field:          IndexFieldEventGatewayListenerPolicyOnEventGatewayTLSTrustBundleRef,
 			ExtractValueFn: eventGatewayListenerPolicyOnEventGatewayTLSTrustBundleRef,
+		},
+		{
+			Object:         &configurationv1alpha1.EventGatewayListenerPolicy{},
+			Field:          IndexFieldEventGatewayListenerPolicyOnSecretRef,
+			ExtractValueFn: eventGatewayListenerPolicyOnSecretRef,
 		},
 	}
 }
@@ -61,6 +68,23 @@ func eventGatewayListenerPolicyOnEventGatewayTLSTrustBundleRef(object client.Obj
 		ns := ref.Namespace
 		if ns == "" {
 			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
+}
+
+func eventGatewayListenerPolicyOnSecretRef(object client.Object) []string {
+	ent, ok := object.(*configurationv1alpha1.EventGatewayListenerPolicy)
+	if !ok {
+		return nil
+	}
+	refs := ent.GetSensitiveDataSecretRefs()
+	out := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		ns := ent.GetNamespace()
+		if ref.Namespace != nil && *ref.Namespace != "" {
+			ns = *ref.Namespace
 		}
 		out = append(out, ns+"/"+ref.Name)
 	}

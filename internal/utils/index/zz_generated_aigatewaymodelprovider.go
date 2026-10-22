@@ -13,6 +13,8 @@ const (
 	IndexFieldAIGatewayModelProviderOnKonnectAIGatewayRef = "aiGatewayModelProviderOnKonnectAIGatewayRef"
 	// IndexFieldAIGatewayModelProviderOnOnPremAIGatewayRef is the index field for AIGatewayModelProvider -> OnPremAIGateway.
 	IndexFieldAIGatewayModelProviderOnOnPremAIGatewayRef = "aiGatewayModelProviderOnOnPremAIGatewayRef"
+	// IndexFieldAIGatewayModelProviderOnSecretRef is the index field for AIGatewayModelProvider -> the Secrets it reads.
+	IndexFieldAIGatewayModelProviderOnSecretRef = "aiGatewayModelProviderOnSecretRef"
 )
 
 // OptionsForAIGatewayModelProvider returns required Index options for AIGatewayModelProvider reconciler.
@@ -27,6 +29,11 @@ func OptionsForAIGatewayModelProvider() []Option {
 			Object:         &aiconfigurationv1alpha1.AIGatewayModelProvider{},
 			Field:          IndexFieldAIGatewayModelProviderOnOnPremAIGatewayRef,
 			ExtractValueFn: aiGatewayModelProviderOnOnPremAIGatewayRef,
+		},
+		{
+			Object:         &aiconfigurationv1alpha1.AIGatewayModelProvider{},
+			Field:          IndexFieldAIGatewayModelProviderOnSecretRef,
+			ExtractValueFn: aiGatewayModelProviderOnSecretRef,
 		},
 	}
 }
@@ -72,4 +79,21 @@ func aiGatewayModelProviderOnOnPremAIGatewayRef(object client.Object) []string {
 	}
 
 	return []string{refNamespace + "/" + ent.Spec.AIGatewayRef.NamespacedRef.Name}
+}
+
+func aiGatewayModelProviderOnSecretRef(object client.Object) []string {
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayModelProvider)
+	if !ok {
+		return nil
+	}
+	refs := ent.GetSensitiveDataSecretRefs()
+	out := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		ns := ent.GetNamespace()
+		if ref.Namespace != nil && *ref.Namespace != "" {
+			ns = *ref.Namespace
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
 }

@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -31,6 +32,7 @@ import (
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminsync"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
@@ -232,4 +234,106 @@ func pushedMessage(pods int) string {
 		return "Pushed to 1 gw-admin pod"
 	}
 	return fmt.Sprintf("Pushed to %d gw-admin pods", pods)
+}
+
+// reportEntities sets the Programmed condition of the entities of the
+// gateway, from its configuration and its own Programmed condition: an
+// entity in the configuration is programmed along with the gateway, one left
+// out tells why. The SecretRefValid condition of an entity reading Secrets
+// tells whether they resolve. The status of an entity is patched only when
+// its conditions change.
+func (r *Reconciler) reportEntities(ctx context.Context, gateway *eventgatewayv1alpha1.OnPremEventGateway, cfg configuration) error {
+	gatewayKey := client.ObjectKeyFromObject(gateway)
+	programmed := apimeta.FindStatusCondition(gateway.Status.Conditions, string(eventgatewayv1alpha1.OnPremEventGatewayProgrammedType))
+
+	var errs []error
+	for _, e := range cfg.included {
+		cond := entityCondition(e.obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType, metav1.ConditionTrue, eventgatewayv1alpha1.OnPremEntityProgrammedReason,
+			fmt.Sprintf("In the configuration of the OnPremEventGateway %s, pushed to its gw-admin pods", gatewayKey)+keptMessage(e))
+		if programmed == nil || programmed.Status != metav1.ConditionTrue {
+			message := fmt.Sprintf("In the configuration of the OnPremEventGateway %s, which is not programmed", gatewayKey)
+			if programmed != nil {
+				message += ": " + programmed.Message
+			}
+			cond = entityCondition(e.obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType, metav1.ConditionFalse,
+				eventgatewayv1alpha1.OnPremEntityGatewayNotProgrammedReason, message+keptMessage(e))
+		}
+		errs = append(errs, r.setEntityConditions(ctx, e.obj, append(secretRefCondition(e), cond)...))
+	}
+	for _, e := range cfg.excluded {
+		cond := entityCondition(e.obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType, metav1.ConditionFalse, e.reason,
+			fmt.Sprintf("Left out of the configuration of the OnPremEventGateway %s: %s", gatewayKey, e.message))
+		errs = append(errs, r.setEntityConditions(ctx, e.obj, append(secretRefCondition(e.entityStatus), cond)...))
+	}
+	return errors.Join(errs...)
+}
+
+// reportEntitiesNotProgrammed sets the Programmed condition of the entities
+// of the gateway to False, with the message, e.g. when the gateway is being
+// deleted: their configuration is not built.
+func (r *Reconciler) reportEntitiesNotProgrammed(ctx context.Context, gateway *eventgatewayv1alpha1.OnPremEventGateway, message string) error {
+	backendClusters, err := backendClustersOf(ctx, r.Client, gateway)
+	if err != nil {
+		return err
+	}
+	var errs []error
+	for _, obj := range backendClusters {
+		errs = append(errs, r.setEntityConditions(ctx, obj, entityCondition(obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType,
+			metav1.ConditionFalse, eventgatewayv1alpha1.OnPremEntityGatewayNotProgrammedReason, message)))
+	}
+	return errors.Join(errs...)
+}
+
+// keptMessage tells, for an entity whose Secret can't be read, that its last
+// configuration is kept, or "".
+func keptMessage(e entityStatus) string {
+	if e.secretErr == "" {
+		return ""
+	}
+	return "; a Secret it reads can't be read, its last configuration is kept"
+}
+
+// secretRefCondition returns the SecretRefValid condition of the entity,
+// when it reads Secrets.
+func secretRefCondition(e entityStatus) []metav1.Condition {
+	switch {
+	case !e.secretsRead:
+		return nil
+	case e.secretErr != "":
+		return []metav1.Condition{entityCondition(e.obj, konnectv1alpha1.SecretRefValidConditionType, metav1.ConditionFalse,
+			konnectv1alpha1.SecretRefReasonInvalid, e.secretErr)}
+	default:
+		return []metav1.Condition{entityCondition(e.obj, konnectv1alpha1.SecretRefValidConditionType, metav1.ConditionTrue,
+			konnectv1alpha1.SecretRefReasonValid, "The Secrets it reads are resolved")}
+	}
+}
+
+// entityCondition returns a condition of the entity, at its generation.
+func entityCondition[T, R ~string](obj entityObject, conditionType T, status metav1.ConditionStatus, reason R, message string) metav1.Condition {
+	return k8sutils.NewConditionWithGeneration(kcfgconsts.ConditionType(conditionType), status, kcfgconsts.ConditionReason(reason),
+		k8sutils.TruncateMessage(message, maxConditionMessageLength), obj.GetGeneration())
+}
+
+// setEntityConditions sets the conditions on the entity, patching its status
+// when they change, with an optimistic lock: a cache behind the API server
+// could otherwise set back the conditions someone else set. An entity
+// deleted meanwhile is left alone.
+func (r *Reconciler) setEntityConditions(ctx context.Context, obj entityObject, conds ...metav1.Condition) error {
+	conditions := slices.Clone(obj.GetConditions())
+	changed := false
+	for _, cond := range conds {
+		changed = apimeta.SetStatusCondition(&conditions, cond) || changed
+	}
+	if !changed {
+		return nil
+	}
+	old, ok := obj.DeepCopyObject().(client.Object)
+	if !ok {
+		return fmt.Errorf("failed to copy %T", obj)
+	}
+	obj.SetConditions(conditions)
+	if err := r.Status().Patch(ctx, obj, client.MergeFromWithOptions(old, client.MergeFromWithOptimisticLock{})); err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("failed to set the conditions of the entity %s: %w", client.ObjectKeyFromObject(obj), err)
+	}
+	return nil
 }

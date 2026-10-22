@@ -64,7 +64,7 @@ func AIGatewayVaultReconciliationWatchOptions(
 			return b.Watches(
 				&corev1.Secret{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectsForSecretRef[aiconfigurationv1alpha1.AIGatewayVaultList](cl),
+					enqueueObjectsForSecretRef[aiconfigurationv1alpha1.AIGatewayVaultList](cl, index.IndexFieldAIGatewayVaultOnSecretRef),
 				),
 			)
 		},

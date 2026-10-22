@@ -61,7 +61,7 @@ func EventGatewayDataPlaneCertificateReconciliationWatchOptions(
 			return b.Watches(
 				&corev1.Secret{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectsForSecretRef[configurationv1alpha1.EventGatewayDataPlaneCertificateList](cl),
+					enqueueObjectsForSecretRef[configurationv1alpha1.EventGatewayDataPlaneCertificateList](cl, index.IndexFieldEventGatewayDataPlaneCertificateOnSecretRef),
 				),
 			)
 		},

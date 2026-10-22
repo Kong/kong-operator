@@ -17,8 +17,10 @@ limitations under the License.
 package onprem
 
 import (
+	"bytes"
 	"cmp"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -27,7 +29,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"k8s.io/apimachinery/pkg/api/equality"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
@@ -120,6 +121,7 @@ func (r *Reconciler) push(
 	pod gwadminsync.Pod,
 	gwAdmin gwadminapi.ClientInterface,
 	config gatewayConfig,
+	cfg configuration,
 	gatewayID uuid.UUID,
 	expected []uuid.UUID,
 ) error {
@@ -135,8 +137,12 @@ func (r *Reconciler) push(
 			return err
 		}
 	}
-	if !found || !sameEntities(held, config.Entities) {
-		if err := gwadminsync.Call("push the entities of the gateway", func() (*http.Response, error) {
+	same, err := sameEntities(held, config.Entities)
+	if err != nil {
+		return err
+	}
+	if !found || !same {
+		if err := gwadminsync.CallDescribingFields("push the entities of the gateway", cfg.describeField, func() (*http.Response, error) {
 			return gwAdmin.UpdateEventGatewayEntities(ctx, gatewayID, config.Entities)
 		}); err != nil {
 			return err
@@ -181,14 +187,34 @@ func getEntities(ctx context.Context, gwAdmin gwadminapi.ClientInterface, gatewa
 	return *parsed.JSON200, true, nil
 }
 
-// sameEntities reports whether gw-admin holds the entities pushed. An empty
-// list and a missing one are the same.
-//
-// TODO: once entities are pushed (#6059), compare them as gw-admin returns
-// them, e.g. regardless of their order or of the fields it defaults, or a
-// push would be repeated forever.
-func sameEntities(held, pushed gwadminapi.GatewayEntities) bool {
-	return equality.Semantic.DeepEqual(held, pushed)
+// sameEntities reports whether gw-admin holds the entities pushed, by their
+// JSON encoding, as gw-admin receives them: the entities hold times, which
+// can't be compared field by field. An empty list and a missing one are the
+// same, and so are a field left out and the default gw-admin sets on it (see
+// withGWAdminDefaults).
+func sameEntities(held, pushed gwadminapi.GatewayEntities) (bool, error) {
+	a, err := json.Marshal(withEmptyLists(held))
+	if err != nil {
+		return false, fmt.Errorf("failed to encode the entities gw-admin holds: %w", err)
+	}
+	b, err := json.Marshal(withGWAdminDefaults(withEmptyLists(pushed)))
+	if err != nil {
+		return false, fmt.Errorf("failed to encode the entities of the gateway: %w", err)
+	}
+	return bytes.Equal(a, b), nil
+}
+
+// withGWAdminDefaults returns the entities with the value gw-admin sets on
+// each field left out, as it returns them: otherwise they would be pushed
+// again on every reconcile. A default missing here has the same effect.
+func withGWAdminDefaults(e gwadminapi.GatewayEntities) gwadminapi.GatewayEntities {
+	e.BackendClusters = slices.Clone(e.BackendClusters)
+	for i := range e.BackendClusters {
+		if tls := &e.BackendClusters[i].Tls; tls.TlsVersions == nil {
+			tls.TlsVersions = &[]gwadminapi.BackendClusterTLSTlsVersions{gwadminapi.Tls12, gwadminapi.Tls13}
+		}
+	}
+	return e
 }
 
 // idsKey returns the ids, sorted, as one string, to tell whether the

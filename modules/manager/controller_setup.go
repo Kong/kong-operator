@@ -234,6 +234,11 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 	if cfg.OnPremEventGatewayControllerEnabled {
 		indexOptions = slices.Concat(indexOptions, gwadminref.IndexOptions())
 	}
+	// The OnPremEventGateway controller finds the entities of a gateway by the
+	// indexes the Konnect controllers register too.
+	if cfg.OnPremEventGatewayControllerEnabled && !cfg.KonnectControllersEnabled {
+		indexOptions = slices.Concat(indexOptions, egonprem.IndexOptions())
+	}
 
 	if cfg.FeatureGates.Enabled(FeatureGateMCPServer) {
 		cl := mgr.GetClient()
