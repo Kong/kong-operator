@@ -1,0 +1,170 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: onprem-agent-types
+spec:
+  description: |
+    Stands up an OnPremAIGateway, starts the shared go-echo backend in the test
+    namespace, creates HTTP and A2A AIGatewayAgent routes to that backend's
+    matching protocol surfaces, and verifies an in-cluster AIGatewayDataPlane
+    only returns the expected response shape for matching request types.
+    Mirrors the Konnect suite's `agent-types` test (from-cluster steps only).
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'onprem-cp']))
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+    - name: echo_deployment_name
+      value: echo
+    - name: echo_deployment_namespace
+      value: ($namespace)
+    - name: echo_deployment_replicas
+      value: 1
+    - name: http_agent_name
+      value: (join('-', [($test_name), 'http-agent']))
+    - name: http_agent_route_path
+      value: /http-agent
+    - name: a2a_agent_name
+      value: (join('-', [($test_name), 'a2a-agent']))
+    - name: a2a_agent_route_path
+      value: /a2a-agent
+    # Defaults for verify-aigw-agent-request-from-cluster optional bindings.
+    # Steps below only need to override what differs from these.
+    - name: request_headers
+      value: ''
+    - name: request_body
+      value: ''
+    - name: content_type
+      value: application/json
+    - name: expected_status
+      value: "200"
+    - name: expected_status_not
+      value: ''
+    - name: expected_body
+      value: ''
+    - name: unexpected_body
+      value: ''
+    - name: expected_jsonrpc
+      value: ''
+    - name: expected_json_id
+      value: ''
+    - name: expected_json_result_text
+      value: ''
+    - name: oidc_token_url
+      value: ''
+    - name: oidc_client_id
+      value: ''
+    - name: oidc_client_secret
+      value: ''
+    - name: oidc_scope
+      value: ''
+    - name: expected_success
+      value: 'true'
+  steps:
+    - name: Create-onprem-aigateway
+      use:
+        template: ../../common/_step_templates/apply-assert-onpremAIGateway.yaml
+    - name: Start-echo-agent-backend
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
+    - name: Create-aigateway-agents
+      try:
+        - apply:
+            file: 01-aigatewayagents.yaml
+    - name: Create-aigateway-dataplane
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+        with:
+          bindings:
+            - name: control_plane_ref
+              value: "({type: 'onpremNamespacedRef', onpremNamespacedRef: {name: ($aigw_cp_name)}})"
+    - name: Assert-entities-programmed
+      try:
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayAgent
+              metadata:
+                name: ($http_agent_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayAgent
+              metadata:
+                name: ($a2a_agent_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+    - name: Drive-matching-http-agent-traffic
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: (join('', [($http_agent_route_path), '?details=true']))
+        - name: expected_body
+          value: Running on Pod
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    - name: Drive-matching-a2a-agent-traffic
+      bindings:
+        - name: method
+          value: POST
+        - name: route_path
+          value: ($a2a_agent_route_path)
+        - name: request_body
+          value: '{"jsonrpc":"2.0","id":"e2e-a2a","method":"message/send","params":{"message":{"role":"user","parts":[{"kind":"text","text":"hello"}]}}}'
+        - name: expected_jsonrpc
+          value: "2.0"
+        - name: expected_json_id
+          value: e2e-a2a
+        - name: expected_json_result_text
+          value: mock A2A agent response from go-echo
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    - name: Reject-a2a-request-on-http-agent
+      bindings:
+        - name: method
+          value: POST
+        - name: route_path
+          value: ($http_agent_route_path)
+        - name: request_body
+          value: '{"jsonrpc":"2.0","id":"e2e-cross","method":"message/send","params":{"message":{"role":"user"}}}'
+        - name: expected_body
+          value: jsonrpc
+        - name: unexpected_body
+          value: mock A2A agent response from go-echo
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+    - name: Reject-http-request-on-a2a-agent
+      bindings:
+        - name: method
+          value: GET
+        - name: route_path
+          value: ($a2a_agent_route_path)
+        - name: expected_status
+          value: "405"
+        - name: unexpected_body
+          value: Running on Pod
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: onprem-agent-types
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
