@@ -18,7 +18,9 @@ package onprem
 
 import (
 	"context"
+	"fmt"
 
+	discoveryv1 "k8s.io/api/discovery/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -28,7 +30,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
+	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	log "github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
@@ -39,8 +43,9 @@ import (
 const ControllerName = "onprem-eventgateway"
 
 // Reconciler reconciles an OnPremEventGateway object. One reconcile serves
-// one gateway: a change to the gateway, or to any Event Gateway entity that
-// belongs to it, directly or through its parent entities, triggers it.
+// one gateway: a change to the gateway, to any Event Gateway entity that
+// belongs to it, directly or through its parent entities, or to its GWAdmin
+// and the pods of its API Service, triggers it.
 type Reconciler struct {
 	client.Client
 
@@ -66,14 +71,30 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 		b = b.Watches(entity, mapToGateway, builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 	}
 
+	// A change to the GWAdmin of a gateway triggers it, e.g. once it publishes
+	// its API, and so does a change to a KongReferenceGrant allowing the
+	// gateways of a namespace to use a GWAdmin of another. So does a change to
+	// the endpoints of its API Service: a pod that appears, changes address or
+	// goes away.
+	b = b.
+		Watches(&operatorv1alpha1.GWAdmin{}, handler.EnqueueRequestsFromMapFunc(mapGWAdminToOnPremEventGateways(mgr.GetClient())),
+			builder.WithPredicates(gwAdminServingChanged())).
+		Watches(&configurationv1alpha1.KongReferenceGrant{}, handler.EnqueueRequestsFromMapFunc(mapKongReferenceGrantToOnPremEventGateways(mgr.GetClient()))).
+		Watches(&discoveryv1.EndpointSlice{}, handler.EnqueueRequestsFromMapFunc(mapEndpointSliceToOnPremEventGateways(mgr.GetClient())))
+
 	return b.Complete(reconcile.AsReconciler(r.Client, r))
 }
 
 // Reconcile moves the current state of an OnPremEventGateway toward the
 // desired state.
 //
-// TODO: build the configuration of the gateway and push it to gw-admin. Until
-// then the gateway reports that its configuration has not been pushed.
+// It finds the gw-admin pods of the gateway: those of the API Service of its
+// GWAdmin. The gateway reports GWAdminResolved False while there are none,
+// e.g. while the GWAdmin doesn't exist or the gateway may not use it.
+//
+// TODO: build the configuration of the gateway and push it to the gw-admin
+// pods (#6064). Until then the gateway reports that its configuration has
+// not been pushed.
 func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha1.OnPremEventGateway) (ctrl.Result, error) {
 	logger := log.GetLogger(ctx, ControllerName, r.LoggingMode)
 
@@ -86,28 +107,48 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha
 		return ctrl.Result{}, nil
 	}
 
+	resolved := k8sutils.NewConditionWithGeneration(
+		eventgatewayv1alpha1.OnPremEventGatewayGWAdminResolvedType,
+		metav1.ConditionTrue,
+		eventgatewayv1alpha1.OnPremEventGatewayGWAdminResolvedReason,
+		fmt.Sprintf("The GWAdmin %s serves the gateway", gateway.GWAdminKey()),
+		gateway.GetGeneration(),
+	)
+	programmed := k8sutils.NewConditionWithGeneration(
+		eventgatewayv1alpha1.OnPremEventGatewayProgrammedType,
+		metav1.ConditionFalse,
+		eventgatewayv1alpha1.OnPremEventGatewayPendingReason,
+		eventgatewayv1alpha1.OnPremEventGatewayPendingMessage,
+		gateway.GetGeneration(),
+	)
+	pods, unresolved, err := r.resolveGWAdmin(ctx, gateway)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if unresolved != nil {
+		resolved.Status, resolved.Reason, resolved.Message = metav1.ConditionFalse, string(unresolved.reason), unresolved.message
+		programmed.Reason = string(eventgatewayv1alpha1.DependenciesNotReadyReason)
+		programmed.Message = eventgatewayv1alpha1.OnPremEventGatewayGWAdminNotResolvedMessage
+	} else {
+		log.Debug(logger, "found the gw-admin pods of the OnPremEventGateway", "pods", len(pods))
+	}
+
 	// This controller owns the whole status: it replaces it with the status
 	// it computes, dropping anything someone else wrote. The current
-	// Programmed condition is carried over, so its lastTransitionTime is kept
-	// when nothing changed.
+	// conditions it sets are carried over, so their lastTransitionTime is
+	// kept until their status changes.
 	old := gateway.DeepCopy()
 	status := eventgatewayv1alpha1.OnPremEventGatewayStatus{
 		ObservedGeneration: gateway.GetGeneration(),
 	}
-	if current := apimeta.FindStatusCondition(gateway.Status.Conditions, string(eventgatewayv1alpha1.OnPremEventGatewayProgrammedType)); current != nil {
-		status.Conditions = []metav1.Condition{*current}
+	for _, cond := range []metav1.Condition{resolved, programmed} {
+		if current := apimeta.FindStatusCondition(gateway.Status.Conditions, cond.Type); current != nil {
+			status.Conditions = append(status.Conditions, *current)
+		}
 	}
+	apimeta.SetStatusCondition(&status.Conditions, resolved)
+	apimeta.SetStatusCondition(&status.Conditions, programmed)
 	gateway.Status = status
-	k8sutils.SetCondition(
-		k8sutils.NewConditionWithGeneration(
-			eventgatewayv1alpha1.OnPremEventGatewayProgrammedType,
-			metav1.ConditionFalse,
-			eventgatewayv1alpha1.OnPremEventGatewayPendingReason,
-			eventgatewayv1alpha1.OnPremEventGatewayPendingMessage,
-			gateway.GetGeneration(),
-		),
-		gateway,
-	)
 
 	// A JSON merge patch replaces the conditions list as a whole.
 	if _, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, gateway, old); err != nil {

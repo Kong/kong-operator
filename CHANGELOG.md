@@ -302,11 +302,13 @@
   at most `--gwadmin-ca-ttl`.
   [#6170](https://github.com/Kong/kong-operator/pull/6170)
 - `--enable-controller-onpremeventgateway` flag (default `false`): enables the
-  `OnPremEventGateway` controller. A change to a gateway, or to an Event
-  Gateway entity attached to it directly or through its parent entities,
-  reconciles that gateway. The controller doesn't push any configuration to
-  gw-admin yet: the gateway reports `Programmed` `False` with reason `Pending`.
+  `OnPremEventGateway` controller. The `GWAdminResolved` condition tells
+  whether the gateway's `GWAdmin` can serve it: reason `NotFound`,
+  `RefNotPermitted` (no `KongReferenceGrant` allows the cross-namespace
+  reference) or `NotReady` (being deleted, API not published, or no gw-admin
+  pod). No configuration is pushed to gw-admin yet: `Programmed` stays `False`.
   [#6132](https://github.com/Kong/kong-operator/pull/6132)
+  [#6218](https://github.com/Kong/kong-operator/pull/6218)
 - `--konnect-list-page-size` flag (default and maximum `100`): the page size
   the operator requests when listing Konnect entities to find the Konnect
   entity of an object, e.g. one whose Konnect ID was lost. It is a fallback in

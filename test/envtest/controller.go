@@ -113,7 +113,7 @@ func StartReconcilers(
 	t.Helper()
 
 	// Setup cache indices for all types.
-	cfg := testutils.DefaultControllerConfigForTests()
+	cfg := testutils.DefaultControllerConfigForTests(testutils.WithOnPremEventGatewayController(true))
 	require.NoError(t, kgomanager.SetupCacheIndexes(ctx, mgr, cfg))
 
 	for _, r := range reconcilers {

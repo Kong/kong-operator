@@ -50,6 +50,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
+	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -449,15 +450,10 @@ func enqueueForDataPlane(_ context.Context, obj client.Object) []reconcile.Reque
 // enqueueForGrant maps a KongReferenceGrant to the GWAdmins of its
 // namespace: it decides which namespaces their data planes count in.
 func (r *Reconciler) enqueueForGrant(ctx context.Context, obj client.Object) []reconcile.Request {
-	list := &operatorv1alpha1.GWAdminList{}
-	if err := r.List(ctx, list, client.InNamespace(obj.GetNamespace())); err != nil {
-		log.Error(log.GetLogger(ctx, ControllerName, r.LoggingMode), err, "failed to list the GWAdmins of a KongReferenceGrant",
-			"namespace", obj.GetNamespace())
-		return nil
-	}
-	reqs := make([]reconcile.Request, 0, len(list.Items))
-	for _, gw := range list.Items {
-		reqs = append(reqs, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(&gw)})
+	keys := gwadminref.OfGrant(ctx, r.Client, obj)
+	reqs := make([]reconcile.Request, 0, len(keys))
+	for _, key := range keys {
+		reqs = append(reqs, reconcile.Request{NamespacedName: key})
 	}
 	return reqs
 }

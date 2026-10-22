@@ -18,6 +18,14 @@ func WithBlueGreenController(enabled bool) ControllerConfigOption {
 	}
 }
 
+// WithOnPremEventGatewayController enables or disables the
+// OnPremEventGateway controller. By default it's disabled.
+func WithOnPremEventGatewayController(enabled bool) ControllerConfigOption {
+	return func(cfg *manager.Config) {
+		cfg.OnPremEventGatewayControllerEnabled = enabled
+	}
+}
+
 // DefaultControllerConfigForTests returns a default configuration for the controller manager used in tests.
 // It can be adjusted by overriding arbitrary fields in the returned config or by providing config options.
 func DefaultControllerConfigForTests(opts ...ControllerConfigOption) manager.Config {
