@@ -234,11 +234,11 @@ func NewSDKFactory(opts ...SDKFactoryOpt) SDKFactory {
 // NewKonnectSDK creates a new Konnect SDK. It refuses a host outside the allowed
 // domains: the server URL comes from a KonnectAPIAuthConfiguration, so an
 // unlisted host would make the operator call an address a tenant picked.
-func (f sdkFactory) NewKonnectSDK(srv server.Server, token SDKToken) (SDKWrapper, error) {
-	if !f.allowedServerURLDomains.Allowed(srv.Host()) {
+func (f sdkFactory) NewKonnectSDK(server server.Server, token SDKToken) (SDKWrapper, error) {
+	if !f.allowedServerURLDomains.Allowed(server.Host()) {
 		return nil, fmt.Errorf(
 			"server URL host %q is not under the allowed Konnect domains (%s); use --konnect-server-url-domains to allow another domain",
-			srv.Host(), f.allowedServerURLDomains,
+			server.Host(), f.allowedServerURLDomains,
 		)
 	}
 
@@ -248,7 +248,7 @@ func (f sdkFactory) NewKonnectSDK(srv server.Server, token SDKToken) (SDKWrapper
 				PersonalAccessToken: new(string(token)),
 			},
 		),
-		sdkkonnectgo.WithServerURL(srv.URL()),
+		sdkkonnectgo.WithServerURL(server.URL()),
 	}
 
 	if f.httpClient != nil {
@@ -256,7 +256,7 @@ func (f sdkFactory) NewKonnectSDK(srv server.Server, token SDKToken) (SDKWrapper
 	}
 
 	return sdkWrapper{
-		server: srv,
+		server: server,
 		sdk:    sdkkonnectgo.New(opts...),
 	}, nil
 }
