@@ -678,6 +678,20 @@ func TestSameEntities(t *testing.T) {
 		tlsServer(`, "versions": {"min": "TLSv1.2", "max": "TLSv1.3"}`), `"type"`, `"condition": "", "type"`, 1))}
 	assert.True(t, same(held, pushed), "both TLS versions left out")
 
+	// gw-admin returns an empty condition for a policy forwarding to a
+	// virtual cluster too.
+	forward := func(condition string) string {
+		return `{"id": "5b6c7d8e-9f0a-4b1c-82d3-e4f5a6b7c8d9", "type": "forward_to_virtual_cluster", "name": "forward",
+			"description": "", "enabled": true, "created_at": "2026-10-16T10:00:00Z",` + condition + `
+			"config": {"type": "port_mapping", "advertised_host": "localhost", "bootstrap_port": "at_start", "min_broker_id": 0,
+				"destination": {"id": "6f1f6d1e-0f5e-4a8e-9a39-2b5c0c3f6c01"}}}`
+	}
+	pushed.Listeners = []gwadminapi.EventGatewayListenerOnPrem{listener(`[9092]`, forward(``))}
+	held.Listeners = []gwadminapi.EventGatewayListenerOnPrem{listener(`["9092"]`, forward(`"condition": "",`))}
+	assert.True(t, same(held, pushed), "the condition of a forwarding policy left out")
+	held.Listeners = []gwadminapi.EventGatewayListenerOnPrem{listener(`["9092"]`, forward(``))}
+	assert.False(t, same(held, pushed), "a forwarding policy held without the condition gw-admin sets")
+
 	// gw-admin may leave out the empty list of policies of a listener,
 	// which is pushed empty.
 	pushed.Listeners = []gwadminapi.EventGatewayListenerOnPrem{listener(`["9092"]`)}
