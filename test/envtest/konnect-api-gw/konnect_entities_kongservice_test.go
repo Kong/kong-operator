@@ -882,7 +882,7 @@ func TestKongService(t *testing.T) {
 			).
 			Return(
 				&sdkkonnectops.CreateServiceResponse{
-					Service: &sdkkonnectcomp.ServiceOutput{
+					Service: &sdkkonnectcomp.Service{
 						ID: new(serviceID),
 					},
 				},
