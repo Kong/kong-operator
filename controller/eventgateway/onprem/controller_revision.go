@@ -72,7 +72,7 @@ func (c gatewayConfig) hash() (string, error) {
 }
 
 // withEmptyLists returns the entities with an empty list for each one
-// missing, the policies of a virtual cluster included.
+// missing, the policies of a virtual cluster and of a listener included.
 func withEmptyLists(e gwadminapi.GatewayEntities) gwadminapi.GatewayEntities {
 	if e.BackendClusters == nil {
 		e.BackendClusters = []gwadminapi.EventGatewayBackendClusterOnPrem{}
@@ -103,6 +103,12 @@ func withEmptyLists(e gwadminapi.GatewayEntities) gwadminapi.GatewayEntities {
 		}
 		if vc.ProducePolicies == nil {
 			vc.ProducePolicies = []gwadminapi.EventGatewayProducePolicyOnPrem{}
+		}
+	}
+	e.Listeners = slices.Clone(e.Listeners)
+	for i := range e.Listeners {
+		if e.Listeners[i].Policies == nil {
+			e.Listeners[i].Policies = []gwadminapi.EventGatewayListenerPolicyOnPrem{}
 		}
 	}
 	return e

@@ -19,73 +19,26 @@ package onprem
 import (
 	"context"
 	"fmt"
-	"maps"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
-	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminapi"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
 // The virtual clusters of a gateway are the children of its backend clusters,
-// and their policies the children of the virtual clusters. A child is in the
-// configuration only when its parent is.
+// and their policies the children of the virtual clusters.
 
-// parents are the objects of a kind other entities are the children of.
-type parents struct {
-	kind string
-	// keys are every parent of the gateway, in the configuration or not.
-	keys []client.ObjectKey
-	// index is the index of each parent in the configuration in its list.
-	index map[client.ObjectKey]int
-}
-
-// childrenOf lists into list, whose items are items, the objects whose
-// parent, by the index field, is one of the parents. It returns those whose
-// parent is in the configuration, with the index of their parent, and the
-// keys of every object not being deleted: the others are left out.
-func childrenOf[T any, PT interface {
-	*T
-	entityObject
-}](
-	ctx context.Context, c *configuration, cl client.Client, list client.ObjectList, items *[]T, field string, p parents,
-) ([]PT, map[client.ObjectKey]int, []client.ObjectKey, error) {
-	var (
-		children    []PT
-		keys        []client.ObjectKey
-		parentIndex = map[client.ObjectKey]int{}
-	)
-	for _, parent := range p.keys {
-		if err := cl.List(ctx, list, client.MatchingFields{field: parent.String()}); err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to list %T by %s: %w", list, field, err)
-		}
-		for _, child := range live[T, PT](*items) {
-			key := client.ObjectKeyFromObject(child)
-			keys = append(keys, key)
-			i, ok := p.index[parent]
-			if !ok {
-				c.exclude(entityStatus{obj: child}, eventgatewayv1alpha1.OnPremEntityInvalidReason,
-					fmt.Sprintf("its %s %s isn't in the configuration", p.kind, parent))
-				continue
-			}
-			parentIndex[key] = i
-			children = append(children, child)
-		}
-	}
-	return children, parentIndex, keys, nil
-}
-
-// addVirtualClusters adds the virtual clusters of the backend clusters, with
-// their policies. A virtual cluster forwards to its backend cluster, by the id
-// of the backend cluster in the configuration.
-func (c *configuration) addVirtualClusters(ctx context.Context, cl uidResolver, backendClusters parents) error {
+// addVirtualClusters adds the virtual clusters of the backend clusters, and
+// returns them as the parents of their policies. A virtual cluster forwards to
+// its backend cluster, by the id of the backend cluster in the configuration.
+func (c *configuration) addVirtualClusters(ctx context.Context, cl uidResolver, backendClusters parents) (parents, error) {
 	var list configurationv1alpha1.EventGatewayVirtualClusterList
 	virtualClusters, backendClusterIndex, keys, err := childrenOf(ctx, c, cl, &list, &list.Items,
 		index.IndexFieldEventGatewayVirtualClusterOnEventGatewayBackendClusterRef, backendClusters)
 	if err != nil {
-		return err
+		return parents{}, err
 	}
 	vcIndex, err := addEntities(ctx, c, cl, virtualClusters, entityKind[*configurationv1alpha1.EventGatewayVirtualCluster, gwadminapi.EventGatewayVirtualClusterOnPrem]{
 		kind: "EventGatewayVirtualCluster", what: "virtual cluster",
@@ -101,7 +54,7 @@ func (c *configuration) addVirtualClusters(ctx context.Context, cl uidResolver, 
 		list: in[*configurationv1alpha1.EventGatewayVirtualCluster]("virtual_clusters", &c.entities.VirtualClusters),
 	})
 	if err != nil {
-		return err
+		return parents{}, err
 	}
 	// gw-admin requires every list of policies.
 	for i := range c.entities.VirtualClusters {
@@ -110,15 +63,13 @@ func (c *configuration) addVirtualClusters(ctx context.Context, cl uidResolver, 
 		vc.ConsumePolicies = []gwadminapi.EventGatewayConsumePolicyOnPrem{}
 		vc.ProducePolicies = []gwadminapi.EventGatewayProducePolicyOnPrem{}
 	}
-	return c.addVirtualClusterPolicies(ctx, cl, parents{kind: "EventGatewayVirtualCluster", keys: keys, index: vcIndex})
+	return parents{kind: "EventGatewayVirtualCluster", keys: keys, index: vcIndex}, nil
 }
 
 // addVirtualClusterPolicies adds the cluster, consume and produce policies of
 // the virtual clusters. A policy references its schema registry or its static
-// key by its id in the configuration.
-func (c *configuration) addVirtualClusterPolicies(ctx context.Context, cl uidResolver, virtualClusters parents) error {
-	targets := referenceTargetsOf(c, cl.read)
-
+// key by its id in the configuration, among the targets.
+func (c *configuration) addVirtualClusterPolicies(ctx context.Context, cl uidResolver, virtualClusters parents, targets referenceTargets) error {
 	var clusterPolicies configurationv1alpha1.EventGatewayVirtualClusterPolicyList
 	if err := addPolicies(ctx, c, cl, virtualClusters, &clusterPolicies, &clusterPolicies.Items,
 		index.IndexFieldEventGatewayVirtualClusterPolicyOnEventGatewayVirtualClusterRef, "cluster_policies",
@@ -199,54 +150,9 @@ func addPolicies[T any, PT interface {
 	field, path string, policiesOf func(*gwadminapi.EventGatewayVirtualClusterOnPrem) *[]E,
 	parentPolicy func(PT) (client.ObjectKey, bool), k entityKind[PT, E],
 ) error {
-	policies, vcIndex, _, err := childrenOf[T, PT](ctx, c, cl, list, items, field, virtualClusters)
-	if err != nil {
-		return err
-	}
-	k.list = func(p PT) (string, *[]E) {
-		i := vcIndex[client.ObjectKeyFromObject(p)]
+	return addChildren(ctx, c, cl, virtualClusters, list, items, field, func(i int) (string, *[]E) {
 		return fmt.Sprintf("virtual_clusters.%d.%s", i, path), policiesOf(&c.entities.VirtualClusters[i])
-	}
-	return addParentsFirst[PT, E](ctx, c, cl, policies, parentPolicy, k)
-}
-
-// addParentsFirst adds the objects, a parent, of their own kind, before its
-// children: those without a parent first, then their children, and so on.
-// One whose parent isn't added is left out. parentOf, when set, returns the
-// parent of an object.
-func addParentsFirst[PT entityObject, E any](
-	ctx context.Context, c *configuration, cl client.Client, objs []PT, parentOf func(PT) (client.ObjectKey, bool), k entityKind[PT, E],
-) error {
-	added := map[client.ObjectKey]int{}
-	for pending := objs; len(pending) > 0; {
-		var ready, waiting []PT
-		for _, obj := range pending {
-			if parentOf != nil {
-				if parent, ok := parentOf(obj); ok {
-					if _, ok := added[parent]; !ok {
-						waiting = append(waiting, obj)
-						continue
-					}
-				}
-			}
-			ready = append(ready, obj)
-		}
-		if len(ready) == 0 {
-			for _, obj := range waiting {
-				parent, _ := parentOf(obj)
-				c.exclude(entityStatus{obj: obj}, eventgatewayv1alpha1.OnPremEntityInvalidReason,
-					fmt.Sprintf("its parent policy %s isn't in the configuration", parent))
-			}
-			return nil
-		}
-		index, err := addEntities(ctx, c, cl, ready, k)
-		if err != nil {
-			return err
-		}
-		maps.Copy(added, index)
-		pending = waiting
-	}
-	return nil
+	}, parentPolicy, k)
 }
 
 // parentPolicyFrom returns the parent policy of a policy whose kind

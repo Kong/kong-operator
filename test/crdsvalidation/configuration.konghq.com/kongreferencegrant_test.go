@@ -113,7 +113,12 @@ func TestKongReferenceGrant(t *testing.T) {
 				TestObject: grantFrom("EventGatewayTLSTrustBundle"),
 			},
 			{
-				// Only the Event Gateway kinds pushed to gw-admin are supported.
+				Name:       "from an EventGatewayListenerPolicy works",
+				TestObject: grantFrom("EventGatewayListenerPolicy"),
+			},
+			{
+				// Only the Event Gateway kinds pushed to gw-admin that read
+				// Secrets are supported.
 				Name:                 "from another Event Gateway kind is rejected",
 				TestObject:           grantFrom("EventGatewayListener"),
 				ExpectedErrorMessage: new("kinds are supported for 'configuration.konghq.com' group"),

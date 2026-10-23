@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"strconv"
 
 	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminapi"
 )
@@ -54,8 +55,8 @@ func comparisonKey(e gwadminapi.GatewayEntities) ([]byte, error) {
 }
 
 // sortedByID returns the entities with each list sorted by id, the policies
-// of a virtual cluster included: gw-admin returns a child policy right after
-// its parent.
+// of a virtual cluster and of a listener included: gw-admin returns a child
+// policy right after its parent.
 func sortedByID(e gwadminapi.GatewayEntities) gwadminapi.GatewayEntities {
 	e.BackendClusters = byID(e.BackendClusters, func(bc gwadminapi.EventGatewayBackendClusterOnPrem) gwadminapi.UUIDv4 { return bc.Id })
 	e.TlsTrustBundles = byID(e.TlsTrustBundles, func(b gwadminapi.EventGatewayTLSTrustBundleOnPrem) gwadminapi.UUIDv4 { return b.Id })
@@ -67,6 +68,11 @@ func sortedByID(e gwadminapi.GatewayEntities) gwadminapi.GatewayEntities {
 		vc.ClusterPolicies = byID(vc.ClusterPolicies, func(p gwadminapi.EventGatewayClusterPolicyOnPrem) gwadminapi.UUIDv4 { return p.Id })
 		vc.ConsumePolicies = byID(vc.ConsumePolicies, func(p gwadminapi.EventGatewayConsumePolicyOnPrem) gwadminapi.UUIDv4 { return p.Id })
 		vc.ProducePolicies = byID(vc.ProducePolicies, func(p gwadminapi.EventGatewayProducePolicyOnPrem) gwadminapi.UUIDv4 { return p.Id })
+	}
+	e.Listeners = byID(e.Listeners, func(l gwadminapi.EventGatewayListenerOnPrem) gwadminapi.UUIDv4 { return l.Id })
+	for i := range e.Listeners {
+		l := &e.Listeners[i]
+		l.Policies = byID(l.Policies, func(p gwadminapi.EventGatewayListenerPolicyOnPrem) gwadminapi.UUIDv4 { return p.Id })
 	}
 	return e
 }
@@ -81,10 +87,13 @@ func byID[E any](entities []E, id func(E) gwadminapi.UUIDv4) []E {
 
 // withGWAdminDefaults returns the entities as gw-admin returns them: with the
 // value it sets on each field left out, e.g. the empty name of the
-// destination of a virtual cluster or the null fields of a policy (see
-// policyNulls), and without the empty descriptions of the TLS trust bundles
-// and the static keys, which it drops. Otherwise they would be pushed again
-// on every reconcile. A default missing here has the same effect. The value
+// destination of a virtual cluster, the null fields of a policy of a virtual
+// cluster (see policyNulls) or the condition and the TLS versions of a policy
+// of a listener (see withListenerPolicyDefaults), without the empty
+// descriptions of the TLS trust bundles and the static keys, which it drops,
+// and with the single ports of a listener as strings, as it returns them.
+// Otherwise they would be pushed again on every reconcile. A default missing
+// here has the same effect. The value
 // of a static key is compared as it is: gw-admin returns it, and a rotated
 // key must be pushed again.
 func withGWAdminDefaults(e gwadminapi.GatewayEntities) gwadminapi.GatewayEntities {
@@ -113,7 +122,58 @@ func withGWAdminDefaults(e gwadminapi.GatewayEntities) gwadminapi.GatewayEntitie
 		vc.ConsumePolicies = withPolicyNulls(vc.ConsumePolicies)
 		vc.ProducePolicies = withPolicyNulls(vc.ProducePolicies)
 	}
+	e.Listeners = slices.Clone(e.Listeners)
+	for i := range e.Listeners {
+		l := &e.Listeners[i]
+		l.Ports = portsAsStrings(l.Ports)
+		l.Policies = withListenerPolicyDefaults(l.Policies)
+	}
 	return e
+}
+
+// portsAsStrings returns a copy of the ports of a listener with each single
+// port as a string, e.g. "9092", as gw-admin returns it.
+func portsAsStrings(ports gwadminapi.EventGatewayListenerPorts) gwadminapi.EventGatewayListenerPorts {
+	asStrings := make(gwadminapi.EventGatewayListenerPorts, 0, len(ports))
+	for _, port := range ports {
+		if n, err := port.AsEventGatewayListenerPortInteger(); err == nil {
+			var s gwadminapi.EventGatewayListenerPort
+			if s.FromEventGatewayListenerPortString(strconv.Itoa(n)) == nil {
+				port = s
+			}
+		}
+		asStrings = append(asStrings, port)
+	}
+	return asStrings
+}
+
+// withListenerPolicyDefaults returns a copy of the policies of a listener
+// with the defaults gw-admin sets on the fields left out: an empty condition,
+// and the TLS versions 1.2 to 1.3 of a TLS server.
+func withListenerPolicyDefaults(policies []gwadminapi.EventGatewayListenerPolicyOnPrem) []gwadminapi.EventGatewayListenerPolicyOnPrem {
+	withDefaults := make([]gwadminapi.EventGatewayListenerPolicyOnPrem, 0, len(policies))
+	for _, p := range policies {
+		withDefaults = append(withDefaults, editedJSON(p, func(fields map[string]any) {
+			if _, ok := fields["condition"]; !ok {
+				fields["condition"] = ""
+			}
+			config, ok := fields["config"].(map[string]any)
+			if fields["type"] != "tls_server" || !ok {
+				return
+			}
+			versions, ok := config["versions"].(map[string]any)
+			if !ok {
+				versions = map[string]any{}
+				config["versions"] = versions
+			}
+			for field, version := range map[string]string{"min": "TLSv1.2", "max": "TLSv1.3"} {
+				if _, ok := versions[field]; !ok {
+					versions[field] = version
+				}
+			}
+		}))
+	}
+	return withDefaults
 }
 
 // policyNulls are, by type of policy, the fields gw-admin returns as null
