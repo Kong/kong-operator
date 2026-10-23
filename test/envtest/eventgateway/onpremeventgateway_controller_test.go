@@ -75,6 +75,7 @@ func TestOnPremEventGatewayReconciler(t *testing.T) {
 		Scheme:     scheme.Get(),
 		Metrics:    metricsserver.Options{BindAddress: "0"},
 		Controller: config.Controller{RecoverPanic: new(false), SkipNameValidation: new(true)},
+		Client:     envtest.ReadYourOwnWritesClientOptions(),
 	})
 	require.NoError(t, err)
 

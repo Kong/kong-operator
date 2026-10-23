@@ -475,7 +475,12 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					mock.Anything,
 					mock.MatchedBy(func(r sdkkonnectops.ListControlPlanesRequest) bool {
 						var cp konnectv1alpha2.KonnectGatewayControlPlane
-						require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Name: "cp-4"}, &cp))
+						// Context.Background, not t.Context(): this expectation is registered
+						// once and can still be consumed by an SDK call from a later subtest or
+						// a background reconcile, by which point the registering subtest's
+						// context is already cancelled. The read is a plain lookup, so it needs
+						// no cancellation.
+						require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: "cp-4"}, &cp))
 						// On conflict, we list cps by UID and check if there is already one created.
 						return r.FilterLabels != nil && *r.FilterLabels == ops.KubernetesUIDLabelKey+":"+string(cp.UID)
 					}),
@@ -603,7 +608,8 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					mock.Anything,
 					mock.MatchedBy(func(r sdkkonnectops.ListControlPlanesRequest) bool {
 						var cp konnectv1alpha2.KonnectGatewayControlPlane
-						require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Name: "cp-group-1"}, &cp))
+						// See the comment on the cp-4 matcher above for why this is not t.Context().
+						require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: "cp-group-1"}, &cp))
 						// On conflict, we list cps by UID and check if there is already one created.
 						return r.FilterLabels != nil && *r.FilterLabels == ops.KubernetesUIDLabelKey+":"+string(cp.UID)
 					}),

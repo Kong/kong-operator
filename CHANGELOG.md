@@ -125,6 +125,16 @@
   an otherwise healthy entity as unprogrammed. Existing entities establish an
   unverified baseline on upgrade.
   [#6142](https://github.com/Kong/kong-operator/pull/6142)
+- The operator's cached client now provides read-your-own-writes consistency. A
+  read that follows one of the operator's own successful writes waits for the
+  informer cache to observe that write instead of returning a stale object. This
+  removes the class of duplicate-create failures where a reconcile that ran
+  immediately after a `.status` patch still saw an empty Konnect ID, created the
+  entity in Konnect a second time, and got `409 Conflict` back. This is enabled
+  by default; set `--enable-read-your-own-writes-consistency=false` (or the
+  `KONG_OPERATOR_ENABLE_READ_YOUR_OWN_WRITES_CONSISTENCY` environment variable)
+  to disable it.
+  [#733](https://github.com/Kong/kong-operator/issues/733)
 - Konnect entities that resolve API authentication through a parent chain,
   including EventGateway policies and AI Gateway consumer credentials, no longer
   get stuck terminating when an ancestor has already been deleted. Their cleanup

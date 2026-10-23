@@ -42,7 +42,10 @@ func TestDataPlaneBlueGreen(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := create.ClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "cluster-ca-bluegreen-reconcile")
+	// Uncached client: the Secret is seeded before StartReconcilers starts the
+	// manager, and going through the manager's client that early deadlocks under
+	// read-your-own-writes consistency.
+	clusterCA := create.ClusterCASecret(t, ctx, envtest.NewControllerClient(t, scheme.Get(), cfg), ns.Name, "cluster-ca-bluegreen-reconcile")
 	bgReconciler := &dataplane.BlueGreenReconciler{
 		DataPlaneIPFamily:        ipfamily.IPv4,
 		Client:                   mgr.GetClient(),
@@ -252,7 +255,8 @@ func TestDataPlaneBlueGreenKonnectHybrid(t *testing.T) {
 			},
 		}, nil)
 
-	clusterCA := create.ClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "cluster-ca-bluegreen-hybrid")
+	// Uncached client: see the note in TestDataPlaneBlueGreen.
+	clusterCA := create.ClusterCASecret(t, ctx, envtest.NewControllerClient(t, scheme.Get(), cfg), ns.Name, "cluster-ca-bluegreen-hybrid")
 	bgReconciler := &dataplane.BlueGreenReconciler{
 		DataPlaneIPFamily:        ipfamily.IPv4,
 		Client:                   cl,

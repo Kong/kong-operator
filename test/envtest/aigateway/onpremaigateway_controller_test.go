@@ -50,7 +50,7 @@ func TestOnPremAIGatewayReconciler_BecomesReady(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := create.ClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "onprem-aigw-cluster-ca")
+	clusterCA := create.ClusterCASecret(t, ctx, envtest.NewControllerClient(t, scheme.Get(), cfg), ns.Name, "onprem-aigw-cluster-ca")
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
 	require.NoError(t, err)
@@ -140,7 +140,7 @@ func TestOnPremAIGatewayReconciler_ConfigTracksEntities(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := create.ClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "onprem-aigw-models-cluster-ca")
+	clusterCA := create.ClusterCASecret(t, ctx, envtest.NewControllerClient(t, scheme.Get(), cfg), ns.Name, "onprem-aigw-models-cluster-ca")
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
 	require.NoError(t, err)
@@ -424,7 +424,7 @@ func TestOnPremAIGatewayReconciler_PreservesInstanceOwnedCondition(t *testing.T)
 	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := create.ClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "onprem-aigw-instance-cond-cluster-ca")
+	clusterCA := create.ClusterCASecret(t, ctx, envtest.NewControllerClient(t, scheme.Get(), cfg), ns.Name, "onprem-aigw-instance-cond-cluster-ca")
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
 	require.NoError(t, err)
@@ -604,7 +604,7 @@ func TestOnPremAIGatewayReconciler_ObjectFilters(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := create.ClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "onprem-aigw-cluster-ca")
+	clusterCA := create.ClusterCASecret(t, ctx, envtest.NewControllerClient(t, scheme.Get(), cfg), ns.Name, "onprem-aigw-cluster-ca")
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
 	require.NoError(t, err)
