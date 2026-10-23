@@ -46,7 +46,7 @@ func sameEntities(held gwadminapi.GatewayEntities, pushedKey []byte) (bool, erro
 // nested fields in the order gw-admin sends them, while editedJSON sorts
 // those it edits.
 func comparisonKey(e gwadminapi.GatewayEntities) ([]byte, error) {
-	v, err := jsonValue(sortedByID(withEmptyLists(e)))
+	v, err := jsonValue(withEmptyLists(sortedByID(e)))
 	if err != nil {
 		return nil, err
 	}

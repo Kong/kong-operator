@@ -631,4 +631,18 @@ func TestSameEntities(t *testing.T) {
 	destination, err := pushed.VirtualClusters[0].Destination.MarshalJSON()
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"id": "`+bc.Id.String()+`"}`, string(destination), "the entities pushed are left as they are")
+
+	// gw-admin may leave out the empty lists of policies of a virtual
+	// cluster, which are pushed empty.
+	pushed.VirtualClusters = []gwadminapi.EventGatewayVirtualClusterOnPrem{virtualCluster(`{"id": "` + bc.Id.String() + `"}`)}
+	pushed.VirtualClusters[0].ClusterPolicies = []gwadminapi.EventGatewayClusterPolicyOnPrem{}
+	pushed.VirtualClusters[0].ConsumePolicies = []gwadminapi.EventGatewayConsumePolicyOnPrem{}
+	pushed.VirtualClusters[0].ProducePolicies = []gwadminapi.EventGatewayProducePolicyOnPrem{}
+	held.VirtualClusters = []gwadminapi.EventGatewayVirtualClusterOnPrem{virtualCluster(`{"id": "` + bc.Id.String() + `", "name": ""}`)}
+	held.VirtualClusters[0].ConsumePolicies = nil
+	assert.True(t, same(held, pushed), "a list of policies left out and an empty one are the same")
+	assert.Nil(t, held.VirtualClusters[0].ClusterPolicies, "the entities compared are left as they are")
+	encoded, err := comparisonKey(held)
+	require.NoError(t, err)
+	assert.Contains(t, string(encoded), `"cluster_policies":[]`, "a missing list is empty, not null")
 }

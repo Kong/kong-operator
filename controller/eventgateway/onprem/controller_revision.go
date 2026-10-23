@@ -22,6 +22,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -71,7 +72,7 @@ func (c gatewayConfig) hash() (string, error) {
 }
 
 // withEmptyLists returns the entities with an empty list for each one
-// missing.
+// missing, the policies of a virtual cluster included.
 func withEmptyLists(e gwadminapi.GatewayEntities) gwadminapi.GatewayEntities {
 	if e.BackendClusters == nil {
 		e.BackendClusters = []gwadminapi.EventGatewayBackendClusterOnPrem{}
@@ -90,6 +91,19 @@ func withEmptyLists(e gwadminapi.GatewayEntities) gwadminapi.GatewayEntities {
 	}
 	if e.VirtualClusters == nil {
 		e.VirtualClusters = []gwadminapi.EventGatewayVirtualClusterOnPrem{}
+	}
+	e.VirtualClusters = slices.Clone(e.VirtualClusters)
+	for i := range e.VirtualClusters {
+		vc := &e.VirtualClusters[i]
+		if vc.ClusterPolicies == nil {
+			vc.ClusterPolicies = []gwadminapi.EventGatewayClusterPolicyOnPrem{}
+		}
+		if vc.ConsumePolicies == nil {
+			vc.ConsumePolicies = []gwadminapi.EventGatewayConsumePolicyOnPrem{}
+		}
+		if vc.ProducePolicies == nil {
+			vc.ProducePolicies = []gwadminapi.EventGatewayProducePolicyOnPrem{}
+		}
 	}
 	return e
 }
