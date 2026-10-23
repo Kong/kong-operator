@@ -57,9 +57,10 @@ func (obj *AIGatewayModel) ToAIGWModel(ctx context.Context, cl client.Client) (*
 	}
 
 	var (
-		policies []AIGatewayPolicyRef
-		targets  []AIGatewayTarget
-		access   AIGatewayModelAccess
+		policies           []AIGatewayPolicyRef
+		targets            []AIGatewayTarget
+		access             AIGatewayModelAccess
+		embeddingsProvider string
 	)
 	switch spec.Type {
 	case AIGatewayModelConfigTypeAPI:
@@ -69,6 +70,9 @@ func (obj *AIGatewayModel) ToAIGWModel(ctx context.Context, cl client.Client) (*
 		policies = spec.API.Policies
 		targets = spec.API.Targets
 		access = spec.API.Access
+		if b := spec.API.Config.Balancer; b != nil && b.Semantic != nil {
+			embeddingsProvider = string(b.Semantic.Embeddings.Provider)
+		}
 	case AIGatewayModelConfigTypeModel:
 		if spec.Model == nil {
 			return nil, fmt.Errorf("AIGatewayModel %s/%s: spec.apiSpec.model is required for type model", obj.Namespace, obj.Name)
@@ -76,6 +80,9 @@ func (obj *AIGatewayModel) ToAIGWModel(ctx context.Context, cl client.Client) (*
 		policies = spec.Model.Policies
 		targets = spec.Model.Targets
 		access = spec.Model.Access
+		if b := spec.Model.Config.Balancer; b != nil && b.Semantic != nil {
+			embeddingsProvider = string(b.Semantic.Embeddings.Provider)
+		}
 	default:
 		return nil, fmt.Errorf("AIGatewayModel %s/%s: unsupported spec.apiSpec.type %q", obj.Namespace, obj.Name, spec.Type)
 	}
@@ -150,10 +157,11 @@ func (obj *AIGatewayModel) ToAIGWModel(ctx context.Context, cl client.Client) (*
 
 	// The semantic balancer's embeddings provider is a bare string in the CRD, so it names the
 	// referenced AIGatewayModelProvider by metadata.name; the document wants its entity name.
-	if b := model.Config.Balancer; b != nil {
-		embeddings, _ := b.Fields["embeddings"].(map[string]any)
-		if p, _ := embeddings["provider"].(string); p != "" {
-			name, err := resolveEntityName[AIGatewayModelProvider](ctx, cl, obj.Namespace, "", p)
+	// The payload strip that keeps it away from the union flattening means it is resolved from
+	// the typed spec, not from the decoded model.
+	if b := model.Config.Balancer; b != nil && embeddingsProvider != "" {
+		if embeddings, ok := b.Fields["embeddings"].(map[string]any); ok {
+			name, err := resolveEntityName[AIGatewayModelProvider](ctx, cl, obj.Namespace, "", embeddingsProvider)
 			if err != nil {
 				return nil, fmt.Errorf("resolving AIGatewayModel %s/%s config.balancer.semantic.embeddings.provider: %w", obj.Namespace, obj.Name, err)
 			}
@@ -222,11 +230,12 @@ func (spec *AIGatewayModelAPISpec) marshalAIGWPayload() ([]byte, error) {
 //   - the CRD's `allow_auth_override` sits at the embeddings level, while the
 //     plugin (and so the converter) carries it as `auth.allow_override`.
 //
-// `provider` stays where it is: ai-deck-converter reads it to resolve the
-// referenced provider's auth. It is a bare string in the CRD (not a
-// {kind,name} object like targets' provider), so it is resolved in ToAIGWModel
-// from the referenced AIGatewayModelProvider's metadata.name to its entity
-// name (spec.apiSpec.*.name).
+// `provider` is stripped here and re-attached resolved by ToAIGWModel, like
+// targets' provider: it is a bare string in the CRD (not a {kind,name} object)
+// that names the referenced AIGatewayModelProvider by metadata.name, and left in
+// place it would be read by selectedSDKOpsPayload's union flattening as a
+// discriminator: a provider CR named "model" (or "auth") points at the sibling
+// map created below, which the flattening would delete and hoist.
 //
 // See https://github.com/Kong/kong-operator/issues/6231.
 func lowerSemanticBalancer(cfg map[string]any) {
@@ -259,6 +268,7 @@ func lowerSemanticBalancer(cfg map[string]any) {
 	if !ok {
 		return
 	}
+	delete(embeddings, "provider")
 	model := map[string]any{}
 	for _, field := range []string{"name", "config"} {
 		if v, ok := embeddings[field]; ok {

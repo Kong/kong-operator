@@ -403,6 +403,76 @@ func TestAIGatewayModel_ToAIGWModel_SemanticBalancer(t *testing.T) {
 	}, balancer["embeddings"])
 }
 
+// TestAIGatewayModel_ToAIGWModel_SemanticBalancerProviderNamedLikeASibling pins the collision
+// the stripping in lowerSemanticBalancer prevents: the payload's union flattening reads a string
+// naming a sibling map as a discriminator, so an embeddings provider CR named "model" (or "auth")
+// would make it delete and hoist that sibling, which the gateway rejects.
+func TestAIGatewayModel_ToAIGWModel_SemanticBalancerProviderNamedLikeASibling(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, AddToScheme(scheme))
+
+	provider := &AIGatewayModelProvider{
+		Name: "model", Namespace: "default",
+		Spec: AIGatewayModelProviderSpec{
+			APISpec: AIGatewayModelProviderAPISpec{
+				AIGatewayModelProviderConfig: &AIGatewayModelProviderConfig{
+					Type: AIGatewayModelProviderConfigTypeOpenai,
+					Openai: &AIGatewayModelProviderOpenai{
+						Name:        "collision-provider",
+						DisplayName: "OpenAI",
+					},
+				},
+			},
+		},
+	}
+	obj := &AIGatewayModel{
+		Name: "semantic-collision-model", Namespace: "default",
+		Spec: AIGatewayModelSpec{
+			APISpec: AIGatewayModelAPISpec{
+				AIGatewayModelConfig: &AIGatewayModelConfig{
+					Type: AIGatewayModelConfigTypeModel,
+					Model: &AIGatewayModelModel{
+						Config: AIGatewayModelModelConfig{
+							Balancer: &AIGatewayModelModelConfigBalancer{
+								Algorithm: AIGatewayModelModelConfigBalancerTypeSemantic,
+								Semantic: &AIGatewayModelBalancerSemanticConfig{
+									Embeddings: AIGatewayModelBalancerSemanticConfigEmbeddings{
+										AllowAuthOverride: "Enabled",
+										Name:              "text-embedding-3-small",
+										Provider:          "model",
+										Config: &AIGatewayModelBalancerSemanticConfigEmbeddingsConfig{
+											Type: AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeOpenai,
+										},
+									},
+									Vectordb: &AIGatewayModelBalancerSemanticConfigVectordb{
+										Type:     AIGatewayModelBalancerSemanticConfigVectordbTypePgVector,
+										PgVector: &AIGatewayModelVectorDBConfigPgVector{Dimensions: 1536},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(provider).Build()
+	got, err := obj.ToAIGWModel(t.Context(), cl)
+	require.NoError(t, err)
+
+	require.Equal(t, map[string]any{
+		"provider": "collision-provider",
+		"model": map[string]any{
+			"name":   "text-embedding-3-small",
+			"config": map[string]any{"type": "openai"},
+		},
+		"auth": map[string]any{"allow_override": true},
+	}, got.Config.Balancer.Fields["embeddings"])
+}
+
 // TestAIGatewayModel_ToAIGWModel_StrictRoundTrip guards against a dropped or renamed field: it
 // decodes marshalAIGWPayload's output with yaml.v3's KnownFields(true), which errors on any key
 // aigw.Model (and its non-custom-unmarshaled sub-types) doesn't recognize. It's this check that
