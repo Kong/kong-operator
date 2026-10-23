@@ -164,6 +164,28 @@ jobs:
             echo "is-patch=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # NOTE: these checks run here, not in create-release-pr, so that a release
+      # triggered from the wrong branch fails before images are built and pushed.
+      - name: Check if we're not trying to trigger a major/minor release from non main
+        if: ${{ inputs.base != 'main' && steps.release-kind.outputs.is-patch != 'true' }}
+        env:
+          FULLVERSION: ${{ steps.semver_parser.outputs.fullversion }}
+          BASE: ${{ inputs.base }}
+        run: |
+          echo "Trying to release: $FULLVERSION from $BASE"
+          echo "Major/minor releases can only be triggered from main branch"
+          exit 1
+
+      - name: Check if we're not trying to trigger a patch release from main
+        if: ${{ inputs.base == 'main' && steps.release-kind.outputs.is-patch == 'true' }}
+        env:
+          FULLVERSION: ${{ steps.semver_parser.outputs.fullversion }}
+          BASE: ${{ inputs.base }}
+        run: |
+          echo "Trying to release: $FULLVERSION from $BASE"
+          echo "Patch releases can only be triggered from non main, release branch"
+          exit 1
+
   build-push-images:
     permissions:
       actions: read
@@ -291,26 +313,8 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: |
             kong-operator
-      - name: Check if we're not trying to trigger a major/minor release from non main
-        if: ${{ inputs.base != 'main' && needs.semver.outputs.is-patch != 'true' }}
-        env:
-          FULLVERSION: ${{ needs.semver.outputs.fullversion }}
-          BASE: ${{ inputs.base }}
-        run: |
-          echo "Trying to release: $FULLVERSION from $BASE"
-          echo "Major/minor releases can only be triggered from main branch"
-          exit 1
-
-      - name: Check if we're not trying to trigger a patch release from main
-        if: ${{ inputs.base == 'main' && needs.semver.outputs.is-patch == 'true' }}
-        env:
-          FULLVERSION: ${{ needs.semver.outputs.fullversion }}
-          BASE: ${{ inputs.base }}
-        run: |
-          echo "Trying to release: $FULLVERSION from $BASE"
-          echo "Patch releases can only be triggered from non main, release branch"
-          exit 1
-
+      # NOTE: the branch/version checks run in the semver job so that a wrong
+      # branch fails before images are built and pushed.
       # Use the branch set via inputs as a base for the release.
       # If anything needs to be fixed before the release, it should be done on the base branch
       # before the release workflow is triggered.
