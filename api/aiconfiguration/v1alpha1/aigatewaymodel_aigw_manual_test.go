@@ -330,7 +330,7 @@ func TestAIGatewayModel_ToAIGWModel_SemanticBalancer(t *testing.T) {
 									Embeddings: AIGatewayModelBalancerSemanticConfigEmbeddings{
 										AllowAuthOverride: "Enabled",
 										Name:              "text-embedding-3-small",
-										Provider:          "openai-provider",
+										Provider:          "ai-gw-provider-openai",
 										Config: &AIGatewayModelBalancerSemanticConfigEmbeddingsConfig{
 											Type: AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeOpenai,
 										},
@@ -390,8 +390,9 @@ func TestAIGatewayModel_ToAIGWModel_SemanticBalancer(t *testing.T) {
 	}, balancer["vectordb"])
 
 	// The embeddings model nests under `model`, `provider` stays at the embeddings
-	// level (the converter resolves the provider's auth from it), and the CRD's
-	// embeddings-level allow_auth_override becomes the plugin's auth.allow_override.
+	// level (the converter resolves the provider's auth from it) as its entity name,
+	// and the CRD's embeddings-level allow_auth_override becomes the plugin's
+	// auth.allow_override.
 	require.Equal(t, map[string]any{
 		"provider": "openai-provider",
 		"model": map[string]any{

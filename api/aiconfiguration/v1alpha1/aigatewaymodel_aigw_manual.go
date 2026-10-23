@@ -148,6 +148,19 @@ func (obj *AIGatewayModel) ToAIGWModel(ctx context.Context, cl client.Client) (*
 		model.TargetModels[i].Provider = name
 	}
 
+	// The semantic balancer's embeddings provider is a bare string in the CRD, so it names the
+	// referenced AIGatewayModelProvider by metadata.name; the document wants its entity name.
+	if b := model.Config.Balancer; b != nil {
+		embeddings, _ := b.Fields["embeddings"].(map[string]any)
+		if p, _ := embeddings["provider"].(string); p != "" {
+			name, err := resolveEntityName[AIGatewayModelProvider](ctx, cl, obj.Namespace, "", p)
+			if err != nil {
+				return nil, fmt.Errorf("resolving AIGatewayModel %s/%s config.balancer.semantic.embeddings.provider: %w", obj.Namespace, obj.Name, err)
+			}
+			embeddings["provider"] = name
+		}
+	}
+
 	return &model, nil
 }
 
@@ -210,7 +223,10 @@ func (spec *AIGatewayModelAPISpec) marshalAIGWPayload() ([]byte, error) {
 //     plugin (and so the converter) carries it as `auth.allow_override`.
 //
 // `provider` stays where it is: ai-deck-converter reads it to resolve the
-// referenced provider's auth.
+// referenced provider's auth. It is a bare string in the CRD (not a
+// {kind,name} object like targets' provider), so it is resolved in ToAIGWModel
+// from the referenced AIGatewayModelProvider's metadata.name to its entity
+// name (spec.apiSpec.*.name).
 //
 // See https://github.com/Kong/kong-operator/issues/6231.
 func lowerSemanticBalancer(cfg map[string]any) {

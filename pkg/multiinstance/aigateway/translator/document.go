@@ -301,6 +301,18 @@ func BuildDocument(
 						return nil, err
 					}
 				}
+				// ToAIGWModel resolves the semantic balancer's embeddings provider to the
+				// referenced provider's entity name; check it made it into the document.
+				var embeddingsProvider []string
+				if b := model.Config.Balancer; b != nil {
+					embeddings, _ := b.Fields["embeddings"].(map[string]any)
+					if p, _ := embeddings["provider"].(string); p != "" {
+						embeddingsProvider = []string{p}
+					}
+				}
+				if err := checkTranslatedRefs(translatedModelProviders, "AIGatewayModelProvider", embeddingsProvider); err != nil {
+					return nil, err
+				}
 				return model, nil
 			},
 			&doc.Models),
