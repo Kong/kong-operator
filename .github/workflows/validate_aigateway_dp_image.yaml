@@ -77,4 +77,4 @@ jobs:
       node_image_version: ${{ needs.resolve-k8s-version.outputs.latest }}
       aigw-dp-image: ${{ format('{0}:{1}', github.event.inputs.aigateway-image-repo,
         github.event.inputs.aigateway-image-tag) }}
-      suites: '[{"suite": "aigateway"}]'
+      suites: '[{"suite": "aigateway"}, {"suite": "onpremaigateway"}]'
