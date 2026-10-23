@@ -36,6 +36,7 @@ import (
 	adminapi "github.com/kong/kong-operator/v2/internal/adminapi"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/translator"
 )
 
 // newTestTypeConverter builds a managedfields.TypeConverter from the OnPremAIGateway
@@ -456,6 +457,38 @@ func TestReportTranslationStatus(t *testing.T) {
 		events := eventsOf(t, instance)
 		require.Len(t, events, 1)
 		require.Contains(t, events[0], aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslationFailedReason)
+	})
+
+	t.Run("model alias conflict stays a warning and is returned for the caller to emit", func(t *testing.T) {
+		instance := testPushInstance(t)
+		conflicted := testAIGatewayModel("model-b")
+		conflictErr := &translator.ModelAliasConflictError{Alias: "shared-alias", First: "model-a"}
+		returned := instance.reportTranslationStatus(ctx, gwNN, nil, []EntityFailure{
+			{Obj: conflicted, Err: conflictErr},
+		}, nil)
+
+		// The gateway condition stays True: a routing conflict is a per-entity
+		// failure, not a gateway-level translation failure. Its text is counted
+		// in the condition message as a warning.
+		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType)
+		require.Equal(t, metav1.ConditionTrue, condition.Status)
+		require.Equal(t, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedReason), condition.Reason)
+		require.Contains(t, condition.Message, "translated with 1 warnings")
+
+		// reportTranslationStatus does not emit the conflict's warning itself:
+		// the caller reports the warnings once the push has run. The returned
+		// warnings are the caller's emission contract.
+		require.Empty(t, eventsOf(t, instance))
+		require.Len(t, returned, 1)
+		require.Contains(t, returned[0], "duplicate model alias")
+
+		// The caller passing the returned warnings emits one Warning event
+		// carrying the conflict text.
+		instance.reportTranslationWarnings(gwNN, returned)
+		events := eventsOf(t, instance)
+		require.Len(t, events, 1)
+		require.Contains(t, events[0], aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslationWarningReason)
+		require.Contains(t, events[0], conflictErr.Error())
 	})
 
 	t.Run("recurring failure emits a single event and keeps the transition time", func(t *testing.T) {

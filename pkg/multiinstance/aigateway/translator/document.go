@@ -166,6 +166,53 @@ func checkTranslatedACLs(translated map[string]struct{}, acls aigw.ACLs) error {
 	)
 }
 
+// modelAliases mirrors ai-deck-converter's extractModelAliases: the model selector's
+// values when set, the model's entity name otherwise. The converter renders one
+// ai_models entity per alias, named after it, so these are the names the data plane
+// enforces uniqueness on.
+func modelAliases(m *aigw.Model) []string {
+	values := m.Config.Route.Model.Values
+	if len(values) == 0 {
+		return []string{m.Name}
+	}
+	// Collapse duplicate values to their first occurrence, mirroring the
+	// converter's extractModelAliases: a repeated value renders one ai_models
+	// entity, not two identically named ones.
+	seen := make(map[string]struct{}, len(values))
+	unique := make([]string, 0, len(values))
+	for _, v := range values {
+		if _, dup := seen[v]; dup {
+			continue
+		}
+		seen[v] = struct{}{}
+		unique = append(unique, v)
+	}
+	return unique
+}
+
+// ModelAliasConflictError reports a model whose selector alias (or entity name, when no
+// selector is set) is already claimed by another model of the same gateway.
+//
+// It is a per-entity routing conflict, not a gateway-level translation failure: the
+// later model is excluded from the document and reports the conflict on its own status,
+// while the rest of the configuration translated and pushed fine. The reporting layer
+// detects this type and treats it as a warning on the gateway's aggregated
+// ConfigurationTranslated condition, which therefore stays True and lets the gateway —
+// and its data planes — become Ready (see ai-deck-converter#248).
+type ModelAliasConflictError struct {
+	// Alias is the contested selector alias.
+	Alias string
+	// First is the name of the AIGatewayModel that claimed the alias first.
+	First string
+}
+
+func (e *ModelAliasConflictError) Error() string {
+	return fmt.Sprintf(
+		"duplicate model alias %q: AIGatewayModel %q already uses it, and each model alias renders one ai_models entity named after it (the data plane rejects duplicate names; the first model in namespace/name order wins)",
+		e.Alias, e.First,
+	)
+}
+
 // BuildDocument assembles the aigw.Document for the given OnPremAIGateway, translating every
 // aiconfiguration entity kind pointing at it. Alongside the document it returns the per-entity
 // translation status (see EntityStatus), so that the caller can report each entity's outcome on
@@ -223,6 +270,16 @@ func BuildDocument(
 	// namespace/name order wins; the duplicate is reported per-entity and excluded from the
 	// document.
 	translatedVaultPrefixes := make(map[string]string)
+
+	// Model aliases already claimed by a translated AIGatewayModel, mapped to the claiming
+	// CR's name: the converter renders one ai_models entity per model alias (the selector's
+	// values, or the model's entity name when no selector is set), and the data plane's
+	// declarative import rejects the whole payload when two entities share a name
+	// (uniqueness violation) — unlike the Konnect hybrid sync, which silently drops the
+	// later row. The first CR in namespace/name order wins; the duplicate is reported
+	// per-entity and excluded from the document. See ai-deck-converter#248 and its
+	// RFC 00229.
+	translatedModelAliases := make(map[string]string)
 
 	// The list is ordered so every kind translates after all the kinds it references:
 	// checkTranslatedRefs inside the converting wrappers relies on the referenced kinds'
@@ -300,6 +357,15 @@ func BuildDocument(
 					); err != nil {
 						return nil, err
 					}
+				}
+				aliases := modelAliases(model)
+				for _, alias := range aliases {
+					if first, ok := translatedModelAliases[alias]; ok {
+						return nil, &ModelAliasConflictError{Alias: alias, First: first}
+					}
+				}
+				for _, alias := range aliases {
+					translatedModelAliases[alias] = m.Name
 				}
 				return model, nil
 			},

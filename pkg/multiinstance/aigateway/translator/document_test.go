@@ -895,6 +895,156 @@ func TestBuildDocument_VaultDuplicatePrefix(t *testing.T) {
 	require.Equal(t, 1, failed)
 }
 
+// TestBuildDocument_ModelDuplicateAlias covers two models sharing a selector alias: the
+// converter renders one ai_models entity per alias, named after it, so two identically
+// named rows would make the data plane's declarative import reject the whole payload
+// (uniqueness violation). The later model in namespace/name order is excluded from the
+// document and reported per-entity instead; the first claimant programs normally.
+func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	modelA := aiGatewayModelFixture("model-a")
+	modelA.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
+		Values: []string{"shared-alias"},
+	}
+	modelB := aiGatewayModelFixture("model-b")
+	modelB.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
+		Values: []string{"shared-alias"},
+	}
+
+	builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gw, modelA, modelB)
+	// BuildDocument lists every configuration-entity kind, so every kind's index is needed.
+	for _, opts := range [][]index.Option{
+		index.OptionsForAIGatewayModel(),
+		index.OptionsForAIGatewayModelProvider(),
+		index.OptionsForAIGatewayPolicy(),
+		index.OptionsForAIGatewayConsumerGroup(),
+		index.OptionsForAIGatewayConsumer(),
+		index.OptionsForAIGatewayConsumerCredential(),
+		index.OptionsForAIGatewayAuthStrategy(),
+		index.OptionsForAIGatewayCACertificate(),
+		index.OptionsForAIGatewayCertificate(),
+		index.OptionsForAIGatewaySNI(),
+		index.OptionsForAIGatewayCustomPolicy(),
+		index.OptionsForAIGatewayAgent(),
+		index.OptionsForAIGatewayMCPServer(),
+		index.OptionsForAIGatewayVault(),
+	} {
+		for _, opt := range opts {
+			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+		}
+	}
+	cl := builder.Build()
+
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	require.NoError(t, err)
+
+	require.Len(t, doc.Models, 1)
+	require.Equal(t, "model-a", doc.Models[0].Name)
+
+	require.Len(t, statuses, 2)
+	failed := 0
+	for _, s := range statuses {
+		if s.Err != nil {
+			failed++
+			require.Equal(t, "model-b", s.Obj.GetName())
+			require.ErrorContains(t, s.Err, `duplicate model alias "shared-alias"`)
+			require.ErrorContains(t, s.Err, `"model-a"`)
+		}
+	}
+	require.Equal(t, 1, failed)
+}
+
+// TestBuildDocument_ModelAliasCollisionVariants covers the remaining collision
+// shapes of modelAliases's fallback rule: a no-selector model's entity name is
+// itself an alias, and each value of a multi-value selector is claimed
+// separately.
+func TestBuildDocument_ModelAliasCollisionVariants(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	// No selector: the model's entity name is its alias. model-c's selector
+	// value collides with it.
+	modelA := aiGatewayModelFixture("model-a")
+	modelC := aiGatewayModelFixture("model-c")
+	modelC.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
+		Values: []string{"model-a", "model-c-alias"},
+	}
+	// Multi-value selectors: model-d claims two aliases, model-e shares the
+	// second one (its first alias is unique).
+	modelD := aiGatewayModelFixture("model-d")
+	modelD.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
+		Values: []string{"d-alias-1", "d-alias-2"},
+	}
+	modelE := aiGatewayModelFixture("model-e")
+	modelE.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
+		Values: []string{"e-alias", "d-alias-2"},
+	}
+	// Duplicate values within one model collapse to their first occurrence
+	// (mirroring the converter's extractModelAliases): no conflict, one entity.
+	modelF := aiGatewayModelFixture("model-f")
+	modelF.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
+		Values: []string{"f-alias", "f-alias"},
+	}
+
+	builder := fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(gw, modelA, modelC, modelD, modelE, modelF)
+	for _, opts := range [][]index.Option{
+		index.OptionsForAIGatewayModel(),
+		index.OptionsForAIGatewayModelProvider(),
+		index.OptionsForAIGatewayPolicy(),
+		index.OptionsForAIGatewayConsumerGroup(),
+		index.OptionsForAIGatewayConsumer(),
+		index.OptionsForAIGatewayConsumerCredential(),
+		index.OptionsForAIGatewayAuthStrategy(),
+		index.OptionsForAIGatewayCACertificate(),
+		index.OptionsForAIGatewayCertificate(),
+		index.OptionsForAIGatewaySNI(),
+		index.OptionsForAIGatewayCustomPolicy(),
+		index.OptionsForAIGatewayAgent(),
+		index.OptionsForAIGatewayMCPServer(),
+		index.OptionsForAIGatewayVault(),
+	} {
+		for _, opt := range opts {
+			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+		}
+	}
+	cl := builder.Build()
+
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	require.NoError(t, err)
+
+	// model-a (no selector), model-d (first alias) and model-f (deduped
+	// values) survive; model-c and model-e conflict.
+	require.Len(t, doc.Models, 3)
+	names := make([]string, 0, len(doc.Models))
+	for _, m := range doc.Models {
+		names = append(names, m.Name)
+	}
+	require.Contains(t, names, "model-a")
+	require.Contains(t, names, "model-d")
+	require.Contains(t, names, "model-f")
+
+	require.Len(t, statuses, 5)
+	conflicts := 0
+	for _, s := range statuses {
+		if s.Err != nil {
+			conflicts++
+			require.ErrorContains(t, s.Err, "duplicate model alias")
+		}
+	}
+	require.Equal(t, 2, conflicts)
+}
+
 // TestBuildDocument_SNIFailsWhenReferencedCertificateFails covers the cross-entity dependency:
 // a certificate that fails its own translation is excluded from the document, and the SNI
 // referencing it must fail too (instead of reporting success while the converter drops it from
