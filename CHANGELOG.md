@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.1.13](#v2113)
 - [v2.1.12](#v2112)
 - [v2.1.11](#v2111)
 - [v2.1.10](#v2110)
@@ -51,6 +52,14 @@
 - [v0.2.0](#v020)
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
+
+## [v2.1.13]
+
+> Release date: 2026-10-23
+
+### Fixes
+
+- Bump dependencies and Golang to 1.26.10
 
 ## [v2.1.12]
 
@@ -2051,6 +2060,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.1.13]: https://github.com/Kong/kong-operator/compare/v2.1.12..v2.1.13
 [v2.1.12]: https://github.com/Kong/kong-operator/compare/v2.1.11..v2.1.12
 [v2.1.11]: https://github.com/Kong/kong-operator/compare/v2.1.10..v2.1.11
 [v2.1.10]: https://github.com/Kong/kong-operator/compare/v2.1.9..v2.1.10
