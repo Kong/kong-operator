@@ -78,6 +78,13 @@ on:
           dispatch produce the same tags as its scheduled run.
         default: false
         type: boolean
+      ref:
+        description: |
+          The git ref to build the image from.
+          Defaults to the caller's ref when empty.
+        required: false
+        type: string
+        default: ''
 
     outputs:
       full_tag:
@@ -162,6 +169,9 @@ jobs:
         with:
           egress-policy: audit
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        id: checkout
+        with:
+          ref: ${{ inputs.ref }}
 
       - name: Cache Docker layers
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -254,7 +264,7 @@ jobs:
           platforms: ${{ matrix.os }}/${{ matrix.arch }}
           build-args: |
             TAG=${{ steps.meta.outputs.version }}
-            COMMIT=${{ github.sha }}
+            COMMIT=${{ steps.checkout.outputs.sha }}
             REPO_INFO=https://github.com/${{ github.repository }}.git
             GOPATH=${{ env.GOPATH}}
             GOCACHE=${{ env.GOCACHE}}
