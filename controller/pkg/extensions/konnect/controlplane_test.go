@@ -42,6 +42,7 @@ func TestBuildKonnectAddress(t *testing.T) {
 		name     string
 		endpoint string
 		expected string
+		wantErr  bool
 	}{
 		{
 			name:     "standard endpoint",
@@ -58,11 +59,49 @@ func TestBuildKonnectAddress(t *testing.T) {
 			endpoint: "https://abcd1234.us.tp.konghq.foo.bar.tech:443",
 			expected: "https://us.kic.api.konghq.foo.bar.tech",
 		},
+		{
+			name:     "public value from Konnect",
+			endpoint: "https://2cf352e764.us.cp.konghq.tech",
+			expected: "https://us.kic.api.konghq.tech",
+		},
+		{
+			name:     "telemetry form",
+			endpoint: "https://2cf352e764.us.tp.konghq.tech:443",
+			expected: "https://us.kic.api.konghq.tech",
+		},
+		{
+			name:     "private value",
+			endpoint: "https://us.svc.konghq.tech/cp/2cf352e764",
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "single label",
+			endpoint: "host",
+			expected: "",
+			wantErr:  true,
+		},
+		{
+			name:     "envtest fixture",
+			endpoint: "cp.endpoint",
+			expected: "https://endpoint.kic.api.",
+		},
+		{
+			name:     "empty",
+			endpoint: "",
+			expected: "",
+			wantErr:  true,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := buildKonnectAddress(tt.endpoint)
+			result, err := buildKonnectAddress(tt.endpoint)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
 			require.Equal(t, tt.expected, result)
 		})
 	}
@@ -396,6 +435,7 @@ func TestControlPlaneKonnectExtensionProcessor_Process(t *testing.T) {
 		wantProcessed   bool
 		wantErr         bool
 		wantErrContains string
+		wantErrIs       error
 		checkAssertions func(t *testing.T, processor *ControlPlaneKonnectExtensionProcessor, cp *gwtypes.ControlPlane)
 	}{
 		{
@@ -568,6 +608,25 @@ func TestControlPlaneKonnectExtensionProcessor_Process(t *testing.T) {
 			wantErrContains: "unsupported Konnect cluster type",
 		},
 		{
+			name:   "error - KIC control plane endpoint carries a path",
+			object: createValidControlPlane(),
+			setupClient: func(t *testing.T) client.Client {
+				ext := createValidKonnectExtension()
+				ext.Status.Konnect.Endpoints.ControlPlaneEndpoint = "https://us.svc.konghq.tech/cp/2cf352e764"
+
+				return fake.NewClientBuilder().
+					WithScheme(s).
+					WithObjects(
+						ext,
+						createValidTLSSecret(),
+					).
+					Build()
+			},
+			wantProcessed: false,
+			wantErr:       true,
+			wantErrIs:     extensionserrors.ErrInvalidEndpoint,
+		},
+		{
 			name: "no KonnectExtension reference",
 			object: func() *gwtypes.ControlPlane {
 				cp := createValidControlPlane()
@@ -712,6 +771,9 @@ func TestControlPlaneKonnectExtensionProcessor_Process(t *testing.T) {
 				assert.Error(t, err)
 				if tt.wantErrContains != "" {
 					assert.Contains(t, err.Error(), tt.wantErrContains)
+				}
+				if tt.wantErrIs != nil {
+					assert.ErrorIs(t, err, tt.wantErrIs)
 				}
 			} else {
 				assert.NoError(t, err)
