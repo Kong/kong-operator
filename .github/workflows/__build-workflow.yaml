@@ -264,7 +264,7 @@ jobs:
           platforms: ${{ matrix.os }}/${{ matrix.arch }}
           build-args: |
             TAG=${{ steps.meta.outputs.version }}
-            COMMIT=${{ steps.checkout.outputs.sha }}
+            COMMIT=${{ steps.checkout.outputs.commit }}
             REPO_INFO=https://github.com/${{ github.repository }}.git
             GOPATH=${{ env.GOPATH}}
             GOCACHE=${{ env.GOCACHE}}
