@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"regexp"
-	"slices"
 	"sort"
 	"strings"
 
@@ -1054,32 +1053,9 @@ func equalKinds(a, b []string) bool {
 // unionMemberNameRegex matches a lowerCamelCase JSON field name.
 var unionMemberNameRegex = regexp.MustCompile(`^[a-z][a-zA-Z0-9]*$`)
 
-// validateFieldDescriptions checks _description is only set on spec.apiSpec's
-// direct fields, the only ones the generator applies it to.
-func validateFieldDescriptions(fields map[string]*FieldConfig, path []string) error {
-	for name, fc := range fields {
-		if fc == nil {
-			continue
-		}
-		p := append(slices.Clone(path), name)
-		if fc.Description != "" && (len(p) != 3 || p[0] != "spec" || p[1] != "apiSpec") {
-			return fmt.Errorf("cel.%s: _description is only supported on spec.apiSpec's direct fields", strings.Join(p, "."))
-		}
-		if err := validateFieldDescriptions(fc.Fields, p); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (tc *TypeConfig) validate() error {
 	if rc := tc.Reconciler; rc != nil && rc.GatewayRef != nil {
 		if err := rc.GatewayRef.validate(rc); err != nil {
-			return err
-		}
-	}
-	if tc.CEL != nil {
-		if err := validateFieldDescriptions(tc.CEL.Fields, nil); err != nil {
 			return err
 		}
 	}
@@ -1285,8 +1261,7 @@ type FieldConfig struct {
 	// Validations are additional kubebuilder markers to add to the field.
 	Validations []string `yaml:"_validations,omitempty"`
 	// Description replaces the field's OpenAPI description in the CRD, e.g.
-	// when it describes Konnect behavior that doesn't hold for the CR. Only
-	// supported on spec.apiSpec's direct fields.
+	// when it describes Konnect behavior that doesn't hold for the CR.
 	Description string `yaml:"_description,omitempty"`
 	// Fields maps child field names to their own FieldConfig, allowing
 	// multi-segment CEL paths that traverse referenced schema types.

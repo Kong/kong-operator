@@ -1521,6 +1521,7 @@ spec:
                                 The headers of the exported API.
                                 By default, Kong will extract the headers from API configuration.
                                 If the configured headers are not exactly matched, this field is required.
+                              type: object
                               x-kubernetes-preserve-unknown-fields: true
                             host:
                               description: |-
@@ -1619,16 +1620,18 @@ spec:
                                 The query arguments of the exported API.
                                 If the generated query arguments are not exactly matched, this field is
                                 required.
+                              type: object
                               x-kubernetes-preserve-unknown-fields: true
                             requestBody:
                               description: |-
                                 The API requestBody specification defined in OpenAPI JSON format.
                                 For example,
-                                '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
+                                {"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}.
                                 See
                                 https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/
                                 for more details.
                                 Note that `$ref` is not supported.
+                              type: object
                               x-kubernetes-preserve-unknown-fields: true
                             responses:
                               description: |-
@@ -1636,11 +1639,12 @@ spec:
                                 This specification will be used to validate the upstream response and map it
                                 back to the structuredOutput.
                                 For example,
-                                '{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'.
+                                {"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}.
                                 See https://swagger.io/docs/specification/v3_0/describing-responses/ for
                                 more details.
                                 Only one non-error (status code < 400) response is supported.
                                 Note that `$ref` is not supported.
+                              type: object
                               x-kubernetes-preserve-unknown-fields: true
                             scheme:
                               description: |-
@@ -2086,6 +2090,7 @@ spec:
                                 The headers of the exported API.
                                 By default, Kong will extract the headers from API configuration.
                                 If the configured headers are not exactly matched, this field is required.
+                              type: object
                               x-kubernetes-preserve-unknown-fields: true
                             host:
                               description: |-
@@ -2184,16 +2189,18 @@ spec:
                                 The query arguments of the exported API.
                                 If the generated query arguments are not exactly matched, this field is
                                 required.
+                              type: object
                               x-kubernetes-preserve-unknown-fields: true
                             requestBody:
                               description: |-
                                 The API requestBody specification defined in OpenAPI JSON format.
                                 For example,
-                                '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
+                                {"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}.
                                 See
                                 https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/
                                 for more details.
                                 Note that `$ref` is not supported.
+                              type: object
                               x-kubernetes-preserve-unknown-fields: true
                             responses:
                               description: |-
@@ -2201,11 +2208,12 @@ spec:
                                 This specification will be used to validate the upstream response and map it
                                 back to the structuredOutput.
                                 For example,
-                                '{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'.
+                                {"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}.
                                 See https://swagger.io/docs/specification/v3_0/describing-responses/ for
                                 more details.
                                 Only one non-error (status code < 400) response is supported.
                                 Note that `$ref` is not supported.
+                              type: object
                               x-kubernetes-preserve-unknown-fields: true
                             scheme:
                               description: |-

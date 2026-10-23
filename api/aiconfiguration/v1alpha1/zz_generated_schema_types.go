@@ -3042,6 +3042,7 @@ type AIGatewayMCPConversionTool struct {
 	// If the configured headers are not exactly matched, this field is required.
 	//
 	// +optional
+	// +kubebuilder:validation:Type=object
 	Headers AIGatewayMCPToolHeaders `json:"headers,omitzero"`
 	// The host used when forwarding the request to the upstream API.
 	// By default, Kong will extract the host from API configuration.
@@ -3091,28 +3092,31 @@ type AIGatewayMCPConversionTool struct {
 	// required.
 	//
 	// +optional
+	// +kubebuilder:validation:Type=object
 	Query AIGatewayMCPToolQuery `json:"query,omitzero"`
 	// The API requestBody specification defined in OpenAPI JSON format.
 	// For example,
-	// '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
+	// {"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}.
 	// See
 	// https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/
 	// for more details.
 	// Note that `$ref` is not supported.
 	//
 	// +optional
+	// +kubebuilder:validation:Type=object
 	RequestBody AIGatewayMCPToolRequestBody `json:"requestBody,omitzero"`
 	// The API responses specification defined in OpenAPI JSON format.
 	// This specification will be used to validate the upstream response and map it
 	// back to the structuredOutput.
 	// For example,
-	// '{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'.
+	// {"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}.
 	// See https://swagger.io/docs/specification/v3_0/describing-responses/ for
 	// more details.
 	// Only one non-error (status code < 400) response is supported.
 	// Note that `$ref` is not supported.
 	//
 	// +optional
+	// +kubebuilder:validation:Type=object
 	Responses AIGatewayMCPToolResponses `json:"responses,omitzero"`
 	// The scheme of the exported API.
 	// By default, Kong will extract the scheme from API configuration.
