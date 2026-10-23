@@ -99,13 +99,7 @@ func onPremEventGatewayOf(ctx context.Context, cl client.Client, obj client.Obje
 		if ref.Type != commonv1alpha1.ObjectRefTypeNamespacedRef || ref.NamespacedRef == nil {
 			return types.NamespacedName{}, false, nil
 		}
-		parentNN := types.NamespacedName{
-			Namespace: entity.GetNamespace(),
-			Name:      ref.NamespacedRef.Name,
-		}
-		if ns := ref.NamespacedRef.Namespace; ns != nil && *ns != "" {
-			parentNN.Namespace = *ns
-		}
+		parentNN := refKey(entity, ref.NamespacedRef.Namespace, ref.NamespacedRef.Name)
 
 		parentGVK := entity.GetParentGVK()
 		if parentGVK == onPremEventGatewayGVK {

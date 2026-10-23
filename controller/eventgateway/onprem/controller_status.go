@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"slices"
 	"strings"
 
@@ -265,7 +266,65 @@ func (r *Reconciler) reportEntities(ctx context.Context, gateway *eventgatewayv1
 			fmt.Sprintf("Left out of the configuration of the OnPremEventGateway %s: %s", gatewayKey, e.message))
 		errs = append(errs, r.setEntityStatus(ctx, e.entityStatus, cond))
 	}
+	errs = append(errs, r.reportDetached(ctx, gateway, cfg))
 	return errors.Join(errs...)
+}
+
+// reportedEntity is an object whose status was reported for a gateway.
+type reportedEntity struct {
+	typ reflect.Type
+	key client.ObjectKey
+}
+
+// reportDetached sets the Programmed condition of the objects reported last
+// for the gateway and no longer in its configuration to False, e.g. a virtual
+// cluster whose backend cluster was deleted: nothing else reports them. An
+// object whose Programmed condition another gateway set since, e.g. it moved
+// to it, is left alone, and so is one being deleted.
+func (r *Reconciler) reportDetached(ctx context.Context, gateway *eventgatewayv1alpha1.OnPremEventGateway, cfg configuration) error {
+	current := map[reportedEntity]struct{}{}
+	for _, e := range cfg.included {
+		current[reportedEntity{typ: reflect.TypeOf(e.obj), key: client.ObjectKeyFromObject(e.obj)}] = struct{}{}
+	}
+	for _, e := range cfg.excluded {
+		current[reportedEntity{typ: reflect.TypeOf(e.obj), key: client.ObjectKeyFromObject(e.obj)}] = struct{}{}
+	}
+	last, _ := r.reported.Swap(gateway.UID, current)
+	lastReported, _ := last.(map[reportedEntity]struct{})
+
+	gatewayKey := client.ObjectKeyFromObject(gateway)
+	var errs []error
+	for e := range lastReported {
+		if _, ok := current[e]; ok {
+			continue
+		}
+		obj, ok := reflect.TypeAssert[entityObject](reflect.New(e.typ.Elem()))
+		if !ok {
+			continue
+		}
+		if err := r.Get(ctx, e.key, obj); err != nil {
+			if !apierrors.IsNotFound(err) {
+				errs = append(errs, fmt.Errorf("failed to read the entity %s: %w", e.key, err))
+			}
+			continue
+		}
+		programmed := apimeta.FindStatusCondition(obj.GetConditions(), string(eventgatewayv1alpha1.OnPremEventGatewayProgrammedType))
+		if !obj.GetDeletionTimestamp().IsZero() || programmed == nil || !namesGateway(programmed.Message, gatewayKey) {
+			continue
+		}
+		errs = append(errs, r.setEntityConditions(ctx, obj, nil, entityCondition(obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType,
+			metav1.ConditionFalse, eventgatewayv1alpha1.OnPremEntityDetachedReason,
+			fmt.Sprintf("No longer in the configuration of the OnPremEventGateway %s: it doesn't belong to it anymore, e.g. its parent was deleted", gatewayKey))))
+	}
+	return errors.Join(errs...)
+}
+
+// namesGateway tells the message of a Programmed condition the controller
+// set names the gateway, e.g. "In the configuration of the
+// OnPremEventGateway ns/name, ...".
+func namesGateway(message string, gateway client.ObjectKey) bool {
+	_, rest, found := strings.Cut(message, "OnPremEventGateway "+gateway.String())
+	return found && (rest == "" || strings.ContainsAny(rest[:1], ",: "))
 }
 
 // reportEntitiesNotProgrammed sets the Programmed condition of the entities

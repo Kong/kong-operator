@@ -259,6 +259,10 @@ const (
 	// configuration of its OnPremEventGateway, e.g. it reads a Secret that
 	// doesn't exist, or sets a field gw-admin doesn't support.
 	OnPremEntityInvalidReason consts.ConditionReason = "Invalid"
+	// OnPremEntityDetachedReason indicates the entity was in the
+	// configuration of its OnPremEventGateway, and no longer belongs to it,
+	// e.g. its parent entity was deleted.
+	OnPremEntityDetachedReason consts.ConditionReason = "Detached"
 	// OnPremEntityRefNotPermittedReason indicates the entity is left out of
 	// the configuration of its OnPremEventGateway: it reads a Secret in
 	// another namespace, and no KongReferenceGrant allows it.

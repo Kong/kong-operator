@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"reflect"
 	"slices"
 	"strings"
 	"sync"
@@ -816,6 +817,45 @@ func TestReportEntities(t *testing.T) {
 		require.NoError(t, r.reportEntities(t.Context(), gateway, cfg))
 		assert.Zero(t, patched)
 	})
+}
+
+func TestReportEntitiesDetached(t *testing.T) {
+	gateway := newTestGateway("gateway")
+	withProgrammed := func(name, gatewayKey string) *configurationv1alpha1.EventGatewayBackendCluster {
+		bc := backendCluster(ns, name, nil)
+		bc.Status.Conditions = []metav1.Condition{{
+			Type: "Programmed", Status: metav1.ConditionTrue, Reason: "Programmed",
+			Message: "In the configuration of the OnPremEventGateway " + gatewayKey + ", pushed to its gw-admin pods",
+		}}
+		return bc
+	}
+	// Reported last for the gateway, and no longer in its configuration.
+	detached := withProgrammed("detached", ns+"/gateway")
+	// Reported since by another gateway, whose name starts like this one.
+	moved := withProgrammed("moved", ns+"/gateway-2")
+	cl := newFakeClient(t, gateway, detached, moved)
+	r := &Reconciler{Client: cl}
+	reported := func(objs ...entityObject) map[reportedEntity]struct{} {
+		set := map[reportedEntity]struct{}{}
+		for _, obj := range objs {
+			set[reportedEntity{typ: reflect.TypeOf(obj), key: client.ObjectKeyFromObject(obj)}] = struct{}{}
+		}
+		return set
+	}
+	gone := backendCluster(ns, "gone", nil)
+	r.reported.Store(gateway.UID, reported(detached, moved, gone))
+
+	require.NoError(t, r.reportEntities(t.Context(), gateway, configuration{}))
+	got := apimeta.FindStatusCondition(read(t, cl, detached).Status.Conditions, "Programmed")
+	require.NotNil(t, got)
+	assert.Equal(t, metav1.ConditionFalse, got.Status)
+	assert.Equal(t, "Detached", got.Reason)
+	assert.Equal(t, "No longer in the configuration of the OnPremEventGateway "+ns+"/gateway: it doesn't belong to it anymore, e.g. its parent was deleted", got.Message)
+	assert.Equal(t, moved.Status.Conditions[0].Message, apimeta.FindStatusCondition(read(t, cl, moved).Status.Conditions, "Programmed").Message,
+		"the condition another gateway set is left alone")
+
+	stored, _ := r.reported.Load(gateway.UID)
+	assert.Empty(t, stored, "what the gateway reported this time is remembered")
 }
 
 func TestReportEntitiesNotProgrammed(t *testing.T) {

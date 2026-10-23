@@ -38,7 +38,7 @@ package onprem
 // +kubebuilder:rbac:groups=events.k8s.io,resources=events,verbs=create;patch
 
 // The entities of a gateway report whether they are in its configuration.
-// +kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaybackendclusters/status;eventgatewayschemaregistries/status;eventgatewaystatickeys/status;eventgatewaytlstrustbundles/status,verbs=patch
+// +kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaybackendclusters/status;eventgatewayschemaregistries/status;eventgatewaystatickeys/status;eventgatewaytlstrustbundles/status;eventgatewayvirtualclusterconsumepolicies/status;eventgatewayvirtualclusterpolicies/status;eventgatewayvirtualclusterproducepolicies/status;eventgatewayvirtualclusters/status,verbs=patch
 
 // The RBAC to read the entities that can belong to an OnPremEventGateway is in
 // zz_generated_entities.go.
