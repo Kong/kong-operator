@@ -39,8 +39,8 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	adminapi "github.com/kong/kong-operator/v2/internal/adminapi"
-	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/translator"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // pusher is the subset of the Kong Admin API client used to push declarative
@@ -325,8 +325,7 @@ func (i *Instance) reportTranslationStatus(
 	// (see ai-deck-converter#248).
 	realFailures := make([]EntityFailure, 0, len(entityFailures))
 	for _, f := range entityFailures {
-		var conflict *translator.ModelAliasConflictError
-		if errors.As(f.Err, &conflict) {
+		if _, ok := errors.AsType[*translator.ModelAliasConflictError](f.Err); ok {
 			warnings = append(warnings, i.entityFailureDesc(f))
 			continue
 		}

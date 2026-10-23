@@ -30,12 +30,12 @@ import (
 	k8syaml "sigs.k8s.io/yaml"
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
-	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/translator"
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager"
 	adminapi "github.com/kong/kong-operator/v2/internal/adminapi"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/translator"
 )
 
 // newTestTypeConverter builds a managedfields.TypeConverter from the OnPremAIGateway
