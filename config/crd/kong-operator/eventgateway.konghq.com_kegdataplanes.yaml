@@ -58,7 +58,9 @@ spec:
               certificateSecret:
                 description: |-
                   CertificateSecret configures how the mTLS client certificate Secret used
-                  by this KegDataPlane to connect to Konnect is provisioned.
+                  by this KegDataPlane to connect to its control plane is provisioned:
+                  Konnect with a konnectNamespacedRef, the gw-admin of the
+                  OnPremEventGateway with an onpremNamespacedRef.
                   If left unset, it defaults to Automatic (operator-managed).
 
                   When Provisioning is Manual, SecretRef must point to an existing Secret
@@ -81,6 +83,13 @@ spec:
                   SecretRefOperatorManaged. Deleting the referenced Secret while it is in
                   use leaves running Pods untouched but prevents new ones from starting
                   until the Secret is recreated or the reference is changed.
+
+                  With an onpremNamespacedRef and Manual provisioning, the certificate must
+                  be issued by the cp client CA of the GWAdmin of the OnPremEventGateway,
+                  so that GWAdmin needs a Manual clientCA: an Automatic one keeps its key
+                  in the namespace of Kong Operator. During a rotation of that CA, a
+                  certificate from the previous one stays trusted until every data plane
+                  runs a certificate from the new one; reissue it from the new CA.
                 properties:
                   provisioning:
                     default: Automatic
