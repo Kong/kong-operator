@@ -45,7 +45,10 @@ LAST_OUTPUT=""
 CONSECUTIVE=0
 for ATTEMPT in $(seq 1 "${POLL_ATTEMPTS}"); do
   LAST_OUTPUT=$(bash "${SCRIPT_DIR}/host_connectivity_test_with_hostname_tls_check.sh" || true)
-  MATCH=$(echo "${LAST_OUTPUT}" | jq -r '.certificate_match // empty')
+  # tostring keeps a genuine JSON false distinct from a missing key: jq's
+  # "//" operator filters out boolean false, so ".certificate_match // empty"
+  # would hide the very mismatch this script waits for.
+  MATCH=$(echo "${LAST_OUTPUT}" | jq -r 'if type == "object" and has("certificate_match") then (.certificate_match | tostring) else empty end') || MATCH=""
   if [ -z "${MATCH}" ]; then
     # The inner script itself broke (no parseable result): that is an
     # infrastructure error, not evidence of a mismatch - fail loudly instead

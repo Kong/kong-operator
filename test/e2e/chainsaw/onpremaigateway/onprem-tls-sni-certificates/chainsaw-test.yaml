@@ -112,11 +112,11 @@ spec:
     - name: Create-certificates-and-sni-mappings
       try:
         - apply:
-            file: 02-aigateway-certs.yaml
+            file: 01-aigateway-certs.yaml
     - name: Create-provider-and-model
       try:
         - apply:
-            file: 01-provider-and-model.yaml
+            file: 02-provider-and-model.yaml
     - name: Create-aigateway-dataplane
       use:
         template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
