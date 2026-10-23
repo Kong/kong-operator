@@ -87,6 +87,11 @@ type ControlPlaneConditions struct {
 	// NotReadyMessage is the message used when a non-Konnect control plane is not yet Ready.
 	// Only used when the kind config sets ReadinessConditionType.
 	NotReadyMessage string
+	// EndpointMismatchReason is the reason used when the control plane returns
+	// endpoints its serverURL cannot be used with. The condition message is the
+	// error returned by the kind's EndpointCheck, so it names the endpoint.
+	// Only used when the kind config sets EndpointCheck.
+	EndpointMismatchReason string
 }
 
 // ControlPlaneKindConfig describes one kind of control plane that a DataPlane
@@ -110,6 +115,12 @@ type ControlPlaneKindConfig struct {
 	// control plane to be considered resolved. When empty, a non-Konnect
 	// control plane is considered resolved as soon as it exists.
 	ReadinessConditionType string
+	// EndpointCheck reports whether the control plane's endpoints are usable
+	// with its serverURL, naming the offending endpoint in the error. A
+	// non-nil error holds the DataPlane: it sets Resolved=False with
+	// Conditions.EndpointMismatchReason and returns errEndpointsMismatch.
+	// Nil for kinds that have no such endpoints.
+	EndpointCheck func(cp ControlPlaneObject) error
 	// Conditions carries the control plane resolution condition types, reasons
 	// and messages for this kind.
 	Conditions ControlPlaneConditions

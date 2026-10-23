@@ -138,7 +138,8 @@ func Test_resolveControlPlane_OnPremReadiness(t *testing.T) {
 				assert.True(t,
 					apierrors.IsNotFound(err) ||
 						errors.Is(err, errControlPlaneNotProgrammed) ||
-						errors.Is(err, errControlPlaneNotReady),
+						errors.Is(err, errControlPlaneNotReady) ||
+						errors.Is(err, errEndpointsMismatch),
 					"expected a transient (non-retried) resolution error, got: %v", err)
 				// The stale resolution condition of the other kind must still
 				// have been removed.
@@ -198,12 +199,15 @@ func Test_resolveControlPlane(t *testing.T) {
 		aigwcp            *konnectv1alpha1.KonnectAIGateway
 		getErr            error
 		refKind           string
+		endpointCheck     func(cp ControlPlaneObject) error
 		wantCP            bool
 		wantErr           bool
 		wantErrContains   string
+		wantErrIs         error
 		wantNoCondition   bool
 		wantConditionTrue bool
 		wantReason        string
+		wantMessage       string
 	}{
 		{
 			name:            "unsupported control plane kind: errors and sets no condition",
@@ -237,6 +241,19 @@ func Test_resolveControlPlane(t *testing.T) {
 			wantReason:        string(aigatewayv1alpha1.ControlPlaneResolvedReason),
 		},
 		{
+			name:   "aigwcp programmed with unusable endpoints: sets EndpointMismatch condition and returns transient error",
+			aigwcp: newKonnectAIGW(ns, aigwcpNM, metav1.ConditionTrue),
+			endpointCheck: func(ControlPlaneObject) error {
+				return errors.New(`endpoint "https://2cf352e764.us.cp.konghq.tech" is not private, server URL "https://us.svc.konghq.tech/api" is`)
+			},
+			wantCP:            true,
+			wantErr:           true,
+			wantErrIs:         errEndpointsMismatch,
+			wantConditionTrue: false,
+			wantReason:        string(aigatewayv1alpha1.KonnectAIGatewayEndpointMismatchReason),
+			wantMessage:       `endpoint "https://2cf352e764.us.cp.konghq.tech" is not private, server URL "https://us.svc.konghq.tech/api" is`,
+		},
+		{
 			name:    "GET returns unexpected error: propagated to caller",
 			getErr:  assert.AnError,
 			wantErr: true,
@@ -263,7 +280,13 @@ func Test_resolveControlPlane(t *testing.T) {
 					},
 				})
 			}
-			r := &testReconciler{Client: cl, Config: testConfig}
+			// The endpoint check under test belongs to the kind config, so it
+			// has to be overridden on a copy of the shared test config.
+			cfg := testConfig
+			cfg.ControlPlanes = []ControlPlaneKindConfig{testControlPlaneKind, testOnPremControlPlaneKind}
+			cfg.ControlPlanes[0].EndpointCheck = tc.endpointCheck
+
+			r := &testReconciler{Client: cl, Config: cfg}
 
 			aigwdp := newAIGWDP()
 			gotCP, err := r.resolveControlPlane(context.Background(), logger, aigwdp, ControlPlaneRef{
@@ -275,6 +298,9 @@ func Test_resolveControlPlane(t *testing.T) {
 				require.Error(t, err)
 				if tc.wantErrContains != "" {
 					require.ErrorContains(t, err, tc.wantErrContains)
+				}
+				if tc.wantErrIs != nil {
+					assert.ErrorIs(t, err, tc.wantErrIs)
 				}
 				if tc.wantNoCondition {
 					assert.Nil(t, gotCP.Object)
@@ -288,6 +314,9 @@ func Test_resolveControlPlane(t *testing.T) {
 					require.NotNil(t, cond, "KonnectAIGatewayResolved condition must be set")
 					assert.Equal(t, tc.wantReason, cond.Reason)
 					assert.Equal(t, metav1.ConditionFalse, cond.Status)
+					if tc.wantMessage != "" {
+						assert.Equal(t, tc.wantMessage, cond.Message)
+					}
 				}
 				return
 			}

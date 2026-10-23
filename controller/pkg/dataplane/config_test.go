@@ -71,14 +71,16 @@ var testControlPlaneKind = ControlPlaneKindConfig{
 	NewObject:                 func() ControlPlaneObject { return &konnectv1alpha1.KonnectAIGateway{} },
 	ControlPlaneRefIndexField: index.IndexFieldAIGatewayDataPlaneOnKonnectAIGateway,
 	IsKonnect:                 true,
+	EndpointCheck:             func(ControlPlaneObject) error { return nil },
 	Conditions: ControlPlaneConditions{
-		ResolvedType:         string(aigatewayv1alpha1.KonnectAIGatewayResolvedType),
-		ResolvedReason:       string(aigatewayv1alpha1.ControlPlaneResolvedReason),
-		ResolvedMessage:      aigatewayv1alpha1.KonnectAIGatewayResolvedMessage,
-		NotFoundReason:       string(aigatewayv1alpha1.ControlPlaneNotFoundReason),
-		NotFoundMessage:      aigatewayv1alpha1.KonnectAIGatewayNotFoundMessage,
-		NotProgrammedReason:  string(aigatewayv1alpha1.KonnectAIGatewayNotProgrammedReason),
-		NotProgrammedMessage: aigatewayv1alpha1.KonnectAIGatewayNotProgrammedMessage,
+		ResolvedType:           string(aigatewayv1alpha1.KonnectAIGatewayResolvedType),
+		ResolvedReason:         string(aigatewayv1alpha1.ControlPlaneResolvedReason),
+		ResolvedMessage:        aigatewayv1alpha1.KonnectAIGatewayResolvedMessage,
+		NotFoundReason:         string(aigatewayv1alpha1.ControlPlaneNotFoundReason),
+		NotFoundMessage:        aigatewayv1alpha1.KonnectAIGatewayNotFoundMessage,
+		NotProgrammedReason:    string(aigatewayv1alpha1.KonnectAIGatewayNotProgrammedReason),
+		NotProgrammedMessage:   aigatewayv1alpha1.KonnectAIGatewayNotProgrammedMessage,
+		EndpointMismatchReason: string(aigatewayv1alpha1.KonnectAIGatewayEndpointMismatchReason),
 	},
 }
 
@@ -513,10 +515,11 @@ func Test_validateConfig(t *testing.T) {
 	}
 
 	tests := []struct {
-		name     string
-		service  ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane]
-		adminAPI *AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]
-		wantErr  bool
+		name          string
+		service       ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane]
+		adminAPI      *AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]
+		controlPlanes []ControlPlaneKindConfig
+		wantErr       bool
 	}{
 		{
 			name:    "primary Service with SetStatusAddresses: valid",
@@ -597,6 +600,15 @@ func Test_validateConfig(t *testing.T) {
 			}),
 			wantErr: true,
 		},
+		{
+			name:    "control plane kind with EndpointCheck but no EndpointMismatchReason: invalid",
+			service: validService(),
+			controlPlanes: []ControlPlaneKindConfig{{
+				Kind:          "KonnectAIGateway",
+				EndpointCheck: func(ControlPlaneObject) error { return nil },
+			}},
+			wantErr: true,
+		},
 	}
 
 	for _, tc := range tests {
@@ -606,6 +618,9 @@ func Test_validateConfig(t *testing.T) {
 					cfg := testConfig
 					cfg.Service = tc.service
 					cfg.AdminAPI = tc.adminAPI
+					if tc.controlPlanes != nil {
+						cfg.ControlPlanes = tc.controlPlanes
+					}
 					cfg.Conditions = Conditions{
 						AdminCertificateProvisionedType:   string(aigatewayv1alpha1.AdminCertificateProvisionedType),
 						AdminCertificateProvisionedReason: string(aigatewayv1alpha1.AdminCertificateProvisionedReason),
