@@ -81,6 +81,15 @@
   without a path keeps the previous behaviour, and a development host with an
   explicit port no longer lands on the production global host.
   [#6108](https://github.com/Kong/kong-operator/issues/6108)
+- On-prem AI Gateway: two `AIGatewayModel`s declaring the same model alias
+  (the same `config.route.model.values` entry, or the same model name when no
+  selector is set) no longer make the whole gateway configuration fail to
+  push. The operator detects the conflict before the push, excludes the later
+  model from the document, and reports the conflict on that model's own
+  status (`Programmed=False`) while the rest of the configuration and the
+  data planes program normally. The conflict is also reported as a Warning
+  event on the `OnPremAIGateway`.
+  [#6220](https://github.com/Kong/kong-operator/pull/6220)
 - Konnect: a DataPlane attached to a `KonnectExtension` now renders control
   plane and telemetry endpoints that carry a path, as Konnect returns them
   over PrivateLink, in the form Kong Gateway accepts: the port no longer lands
