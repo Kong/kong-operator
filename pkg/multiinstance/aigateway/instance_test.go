@@ -469,6 +469,42 @@ func TestAttributeConversionIssues(t *testing.T) {
 		}
 	})
 
+	t.Run("a dropped consumer takes its embedded credentials with it", func(t *testing.T) {
+		// A credential is nested in its consumer's document entity, so the consumer's
+		// drop leaves it out of the pushed payload too, though its own translation
+		// succeeded. A credential of another consumer stays included.
+		consumer := &aiconfigurationv1alpha1.AIGatewayConsumer{
+			Namespace: "default", Name: "consumer",
+			Spec: aiconfigurationv1alpha1.AIGatewayConsumerSpec{
+				APISpec: aiconfigurationv1alpha1.AIGatewayConsumerAPISpec{Name: "consumer-a"},
+			},
+		}
+		credentialOf := func(name, consumerName string) *aiconfigurationv1alpha1.AIGatewayConsumerCredential {
+			return &aiconfigurationv1alpha1.AIGatewayConsumerCredential{
+				Namespace: "default", Name: name,
+				Spec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialSpec{
+					AIGatewayConsumerRef: commonv1alpha1.ObjectRef{
+						Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{Name: consumerName},
+					},
+				},
+			}
+		}
+		cred, other := credentialOf("cred", "consumer"), credentialOf("other", "other-consumer")
+
+		included, failures, warnings := i.attributeConversionIssues(
+			[]client.Object{consumer, cred, other},
+			nil,
+			[]convert.ConversionIssue{issue(convert.Error, "consumer", "consumer-a")},
+		)
+		require.Equal(t, []client.Object{other}, included, "only the unrelated credential stays included")
+		require.Len(t, failures, 2)
+		require.Equal(t, consumer, failures[0].Obj)
+		require.Equal(t, cred, failures[1].Obj, "the dropped consumer's credential must be failed")
+		require.Contains(t, failures[1].Err.Error(), "dropped its AIGatewayConsumer default/consumer")
+		require.Empty(t, warnings)
+	})
+
 	t.Run("WARNING issues become warnings", func(t *testing.T) {
 		obj := cr("AIGatewayModel", "model-a")
 		included, failures, warnings := i.attributeConversionIssues(

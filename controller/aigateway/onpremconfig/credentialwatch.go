@@ -19,6 +19,7 @@ package onpremconfig
 import (
 	"context"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -107,6 +108,10 @@ func credentialOnPremManaged(
 // points at another namespace, may be Konnect-managed, and the Konnect reconciler owns
 // correcting the status of those. Only a consumer that should exist in the credential's own
 // namespace and does not leaves the credential rendered by nothing.
+//
+// Only a definitive NotFound counts as gone: a transient read failure (the cache does not
+// serve a just recreated consumer yet) must not strip a valid condition, since Report
+// republishes the credential only when its status or message changes.
 func credentialOrphaned(
 	ctx context.Context,
 	cl client.Client,
@@ -116,5 +121,9 @@ func credentialOrphaned(
 	if ref == nil || (ref.Namespace != nil && *ref.Namespace != "" && *ref.Namespace != cred.GetNamespace()) {
 		return false
 	}
-	return credentialConsumer(ctx, cl, cred) == nil
+	var consumer aiconfigurationv1alpha1.AIGatewayConsumer
+	return apierrors.IsNotFound(cl.Get(ctx, types.NamespacedName{
+		Namespace: cred.GetNamespace(),
+		Name:      ref.Name,
+	}, &consumer))
 }

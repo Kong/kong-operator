@@ -1,6 +1,8 @@
 package onpremconfig
 
 import (
+	"context"
+	"errors"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -158,6 +160,50 @@ func TestCredentialReconcilerSkipsKonnectManagedCredentials(t *testing.T) {
 			require.Equal(t, seeded, cond.Message, "the condition the reconciler found must be left as it was")
 		})
 	}
+}
+
+// consumerReadFailingClient fails every AIGatewayConsumer read with a non-NotFound error,
+// simulating a transient cache miss on a consumer that does exist.
+type consumerReadFailingClient struct{ client.Client }
+
+var errTransientConsumerRead = errors.New("cache is not serving consumers")
+
+func (c consumerReadFailingClient) Get(
+	ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption,
+) error {
+	if _, ok := obj.(*aiconfigurationv1alpha1.AIGatewayConsumer); ok {
+		return errTransientConsumerRead
+	}
+	return c.Client.Get(ctx, key, obj, opts...)
+}
+
+// TestCredentialReconcilerKeepsConditionOnTransientConsumerReadError pins that only a
+// definitive NotFound clears the condition: a transient read failure must leave it, since
+// Report republishes the credential only when its status or message changes.
+func TestCredentialReconcilerKeepsConditionOnTransientConsumerReadError(t *testing.T) {
+	t.Parallel()
+
+	cred := credentialReferencing("cred", "default", &commonv1alpha1.NamespacedRef{Name: "consumer"})
+	cred.Status.Conditions = []metav1.Condition{{
+		Type:    string(configurationv1.ConditionProgrammed),
+		Status:  metav1.ConditionTrue,
+		Reason:  string(configurationv1.ReasonProgrammed),
+		Message: "seeded",
+	}}
+	cl := consumerReadFailingClient{Client: newCredentialReconcilerClient(t, cred)}
+	rec := &AIGatewayConsumerCredentialReconciler{
+		Client:       cl,
+		Log:          logr.Discard(),
+		StatusClient: &stubStatusClient{configStatus: status.ConfigurationStatusSucceeded, enableState: true},
+	}
+
+	_, err := rec.Reconcile(t.Context(), ctrl.Request{NamespacedName: client.ObjectKeyFromObject(cred)})
+	require.NoError(t, err)
+
+	cond := credentialProgrammedCondition(t, cl, client.ObjectKeyFromObject(cred))
+	require.NotNil(t, cond, "a transient read failure must not strip the condition")
+	require.Equal(t, metav1.ConditionTrue, cond.Status)
+	require.Equal(t, "seeded", cond.Message)
 }
 
 // TestCredentialReconcilerIgnoresDeletedCredentials pins that a delete event does not error.

@@ -131,7 +131,6 @@ func (r *AIGatewayConsumerCredentialReconciler) Reconcile(ctx context.Context, r
 	}
 
 	if r.StatusClient != nil && r.StatusClient.AreKubernetesObjectReportsEnabled() {
-		var updateNeeded bool
 		configurationStatus := r.StatusClient.KubernetesObjectConfigurationStatus(obj)
 		logger.Info("Updating programmed condition status", "configuration_status", configurationStatus)
 		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(

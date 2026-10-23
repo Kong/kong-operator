@@ -87,7 +87,8 @@
   excluded from the rendered configuration together with its healthy
   credentials; the consumer now keeps rendering them. A credential whose
   consumer cannot be rendered at all (for example the consumer references a
-  policy that failed its own translation) reports the consumer's failure, so its
+  policy that failed its own translation, or the converter drops the consumer
+  from the rendered payload) reports the consumer's failure, so its
   status cannot keep claiming a configuration it is no longer part of. The
   status is cleared again when the consumer the credential belongs to is
   deleted, since nothing renders the credential anymore.
