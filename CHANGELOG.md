@@ -80,7 +80,7 @@
   authentication error. A deployment pointed at another domain sets it with the
   new `--konnect-server-url-domains` flag, which defaults to
   `konghq.com,konghq.tech` and cannot be emptied.
-  [#6214](https://github.com/Kong/kong-operator/issues/6214)
+  [#6222](https://github.com/Kong/kong-operator/pull/6222)
 - Konnect: a DataPlane attached to a `KonnectExtension` now renders control
   plane and telemetry endpoints that carry a path, as Konnect returns them
   over PrivateLink, in the form Kong Gateway accepts: the port no longer lands
