@@ -264,6 +264,9 @@ func buildContainer(
 		// keg needs its KonnectEventGateway's region and cluster ID to start, so
 		// there is no Deployment to build without one. This happens with an
 		// onpremNamespacedRef, which the controller doesn't support yet.
+		if egdp.Spec.ControlPlaneRef.Type == eventgatewayv1alpha1.ControlPlaneRefTypeOnPremNamespacedRef {
+			return corev1.Container{}, nil, fmt.Errorf("KegDataPlane %s/%s references an OnPremEventGateway: an onpremNamespacedRef is not supported by the controller yet", egdp.Namespace, egdp.Name)
+		}
 		return corev1.Container{}, nil, fmt.Errorf("KegDataPlane %s/%s has no resolved KonnectEventGateway", egdp.Namespace, egdp.Name)
 	}
 	envVars, err := buildKEGEnvVars(egdp, keg)
