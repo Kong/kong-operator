@@ -472,6 +472,27 @@ spec:
               value: (join('', ['apikey:', ($broken_api_key_value)]))
             - name: expected_body
               value: Running on Pod
+    - name: Delete-repaired-credential-and-revoke-its-access
+      try:
+        - delete:
+            ref:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumerCredential
+              name: ($broken_credential_name)
+              namespace: ($namespace)
+    - name: Reject-request-with-repaired-credential-after-revoke
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+        with:
+          bindings:
+            - name: method
+              value: GET
+            - name: route_path
+              value: ($http_agent_route_path)
+            - name: request_headers
+              value: (join('', ['apikey:', ($broken_api_key_value)]))
+            - name: expected_status
+              value: "403"
     - name: Delete-second-credential-and-revoke-all-access
       try:
         - delete:
@@ -497,7 +518,7 @@ spec:
             - name: route_path
               value: ($http_agent_route_path)
             - name: request_headers
-              value: (join('', ['apikey:', ($api_key_value)]))
+              value: (join('', ['apikey:', ($api_key_value_2)]))
             - name: expected_status
               value: "403"
   catch:

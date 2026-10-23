@@ -321,8 +321,9 @@ func TestOnPremAIGatewayReconciler_ConfigTracksEntities(t *testing.T) {
 		assert.Zero(ct, countSendFailures())
 	}, waitTime, tickTime)
 
-	// The credential has no controller of its own: its rendered form lives in the consumer's
-	// document, so the consumer is what the credential's watch must re-reconcile. The
+	// The credential's own controller only writes its Programmed condition and never feeds
+	// the ChangeNotifier: its rendered form lives in the consumer's document, so the consumer
+	// is what the credential's watch must re-reconcile. The
 	// consumer's own notifications must have stopped by now, otherwise they cannot be told
 	// apart from the credential's. The consumer's burst is a chain of reconciles, each
 	// waiting on a sync or a status update round-trip, so it can outlast the model steps

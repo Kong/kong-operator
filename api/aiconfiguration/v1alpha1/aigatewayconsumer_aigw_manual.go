@@ -40,10 +40,11 @@ type CredentialTranslation struct {
 // on the credential itself: a credential whose translation fails is left out of the
 // consumer, and the consumer still carries its healthy credentials.
 //
-// On error the credential outcomes gathered so far are returned too (their Err unset, since
-// nothing of theirs is at fault): the caller reports them against the credential, which
-// otherwise holds a stale Programmed condition - its consumer's failure keeps it out of the
-// pushed configuration, and the status reporter only notifies the entities of a sync.
+// On error the credential outcomes gathered so far are returned too (a broken credential
+// keeps its own Err; the others carry none, since nothing of theirs is at fault): the caller
+// reports them against the credential, which otherwise holds a stale Programmed condition -
+// its consumer's failure keeps it out of the pushed configuration, and the status reporter
+// only notifies the entities of the current sync.
 //
 // credIndexField is the field name of the AIGatewayConsumerCredential ->
 // AIGatewayConsumer index (internal/utils/index's

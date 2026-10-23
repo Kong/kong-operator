@@ -18,6 +18,7 @@ package onpremconfig
 
 import (
 	"context"
+	"time"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -119,6 +120,11 @@ func (r *AIGatewayConsumerCredentialReconciler) Reconcile(ctx context.Context, r
 		// A deleted credential has no status left to report, and the consumer's re-render
 		// is driven by the credential's own watch, not by this reconciler.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
+		logger.Info("Resource is being deleted, its configuration will be removed")
+		return ctrl.Result{}, nil
 	}
 
 	// Credentials of a consumer that does not target an OnPremAIGateway are owned by the
