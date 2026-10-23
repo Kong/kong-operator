@@ -139,3 +139,50 @@ objects reference it. This includes unprogrammed and terminating children.
 Deleting the last child triggers reconciliation and unblocks parent deletion.
 An invalid reference to a policy that is not a schema-validation policy in
 Konnect does not block deletion, since that policy cannot have remote children.
+
+## Cluster policy-chain API
+
+`EventGatewayVirtualClusterPolicyChain` declares the execution order of all
+cluster-level policies in one `EventGatewayVirtualCluster`. A chain corresponds
+to an execution scope, not a policy subtype: the same chain can include ACL
+and request-validation policies.
+The resource defines singleton configuration on its parent, not an independent
+Konnect entity. `spec.eventGatewayVirtualClusterRef` must use `namespacedRef` and
+cannot change, even before programming. To manage another virtual cluster,
+create a new chain CR.
+
+`spec`, `spec.apiSpec`, and `spec.apiSpec.policies` must be supplied explicitly.
+Each list entry references an `EventGatewayVirtualClusterPolicy` CR by `name`,
+with optional `kind` and `namespace`. An omitted namespace defaults to the chain's
+namespace; explicitly specifying the same namespace is allowed. Cross-namespace
+references are not supported, and every policy must reference the same virtual
+cluster as the chain. List order, not resource names or YAML document order,
+determines execution order. See the
+[complete example](../config/samples/konnect_eventgateway_virtualcluster_policy_chain.yaml).
+
+The API models complete-set reordering: reference every existing cluster-level
+policy exactly once. An explicit `policies: []` is meaningful only when there
+are no policies; it is not a request to clear an existing chain. Omitted and
+null lists are invalid. Newly created policies must be added to the declaration,
+and deleted policies must be removed.
+
+Backend validation against `eu.api.konghq.tech` on 2026-10-22 confirmed that
+complete permutations are accepted; partial lists, duplicates, unknown IDs, and
+empty lists for nonempty chains are rejected without changing the remote chain.
+New policies were appended to the existing order, and deleted policies were
+removed without reordering the remaining policies. This is evidence from the
+tested development backend, not a guarantee for every production version.
+The SDK v0.73.1 OAS does not declare a policy-count maximum; successful reordering
+of 16 distinct policies does not establish an upper limit.
+
+The shared status structure is retained for compatibility with the operator's
+Konnect interfaces, but `status.id` must remain unset: there is no independent
+chain ID. Conditions, organization/server information, and parent IDs describe
+the observed state instead.
+
+Controller integration is a separate layer. It must resolve and validate
+references, reject duplicates and cross-namespace references, enforce one active
+chain owner per virtual cluster, and report conflicts rather than let competing
+CRs overwrite each other. Deleting a chain CR must release ownership and stop
+management while retaining the remote chain and all policy entities; it must not
+PUT an empty list or delete policies.

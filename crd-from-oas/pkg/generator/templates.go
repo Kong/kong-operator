@@ -49,8 +49,8 @@ type {{.EntityName}} struct {
 	metav1.TypeMeta   ` + "`" + `json:",inline"` + "`" + `
 	metav1.ObjectMeta ` + "`" + `json:"metadata,omitzero"` + "`" + `
 
-	// +optional
-	Spec {{.EntityName}}Spec ` + "`" + `json:"spec,omitzero"` + "`" + `
+{{range .SpecValidations}}	// {{.}}
+{{end}}	Spec {{.EntityName}}Spec ` + "`" + `json:"spec,omitzero"` + "`" + `
 
 	// +optional
 	Status {{.EntityName}}Status ` + "`" + `json:"status,omitzero"` + "`" + `
@@ -136,7 +136,6 @@ type {{.EntityName}}Spec struct {
 
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
-	// +optional
 {{- range .APISpecValidations}}
 	// {{.}}
 {{- end}}
@@ -185,7 +184,7 @@ type {{.EntityName}}APISpec struct {
 {{- end}}
 {{- if isRefConfigField $prop}}
 {{- if eq $prop.Type "array"}}
-	{{goFieldName $prop.Name}} []{{refTypeNameForField $prop}} ` + "`" + `json:"{{jsonPropName $prop}},omitempty"` + "`" + `
+	{{goFieldName $prop.Name}} []{{refTypeNameForField $prop}} ` + "`" + `json:"{{jsonPropName $prop}},{{if $prop.Required}}omitzero{{else}}omitempty{{end}}"` + "`" + `
 {{- else}}
 	{{goFieldName $prop.Name}} {{refTypeNameForField $prop}} ` + "`" + `json:"{{jsonPropName $prop}},omitzero"` + "`" + `
 {{- end}}
@@ -4622,7 +4621,9 @@ type {{.TypeName}} struct {
 	// permitted by a KongReferenceGrant in that namespace.
 	//
 	// +optional
-{{else}}	// Namespace is reserved for future cross-namespace support.
+{{else}}	// Namespace defaults to the referrer's namespace. If set, it must be
+	// the same as the referrer's namespace; cross-namespace references are
+	// not supported.
 	//
 	// +optional
 {{end}}	Namespace string ` + "`" + `json:"namespace,omitempty"` + "`" + `

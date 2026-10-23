@@ -94,7 +94,9 @@ type EventGatewaySchemaRegistryRef struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Namespace is reserved for future cross-namespace support.
+	// Namespace defaults to the referrer's namespace. If set, it must be
+	// the same as the referrer's namespace; cross-namespace references are
+	// not supported.
 	//
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
@@ -116,7 +118,9 @@ type EventGatewayStaticKeyRef struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Namespace is reserved for future cross-namespace support.
+	// Namespace defaults to the referrer's namespace. If set, it must be
+	// the same as the referrer's namespace; cross-namespace references are
+	// not supported.
 	//
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
@@ -138,7 +142,9 @@ type EventGatewayTLSTrustBundleRef struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Namespace is reserved for future cross-namespace support.
+	// Namespace defaults to the referrer's namespace. If set, it must be
+	// the same as the referrer's namespace; cross-namespace references are
+	// not supported.
 	//
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
@@ -160,7 +166,33 @@ type EventGatewayVirtualClusterConsumePolicyRef struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Namespace is reserved for future cross-namespace support.
+	// Namespace defaults to the referrer's namespace. If set, it must be
+	// the same as the referrer's namespace; cross-namespace references are
+	// not supported.
+	//
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+}
+
+// EventGatewayVirtualClusterPolicyRef references an EventGatewayVirtualClusterPolicy in the cluster. The referenced
+// object's Konnect id is used where the Konnect API accepts it.
+type EventGatewayVirtualClusterPolicyRef struct {
+	// Kind is the kind of the referenced object.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=EventGatewayVirtualClusterPolicy
+	// +kubebuilder:default=EventGatewayVirtualClusterPolicy
+	Kind string `json:"kind,omitempty"`
+
+	// Name is the name of the referenced object.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+
+	// Namespace defaults to the referrer's namespace. If set, it must be
+	// the same as the referrer's namespace; cross-namespace references are
+	// not supported.
 	//
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
@@ -182,7 +214,9 @@ type EventGatewayVirtualClusterProducePolicyRef struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Namespace is reserved for future cross-namespace support.
+	// Namespace defaults to the referrer's namespace. If set, it must be
+	// the same as the referrer's namespace; cross-namespace references are
+	// not supported.
 	//
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
