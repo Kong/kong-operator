@@ -567,4 +567,26 @@ func TestSameEntities(t *testing.T) {
 	}
 	assert.True(t, same(held, pushed), "an empty description left out, in another order")
 	assert.Equal(t, new(""), pushed.StaticKeys[0].Description, "the entities pushed are left as they are")
+
+	// A schema registry keeps its fields as gw-admin sends them, in any
+	// order, nested ones included.
+	id := uuid.New()
+	registry := func(data string) gwadminapi.EventGatewaySchemaRegistryOnPrem {
+		t.Helper()
+		var r gwadminapi.EventGatewaySchemaRegistryOnPrem
+		require.NoError(t, json.Unmarshal([]byte(data), &r))
+		return r
+	}
+	pushed = noEntities()
+	pushed.SchemaRegistries = []gwadminapi.EventGatewaySchemaRegistryOnPrem{registry(`{
+		"config": {"authentication": {"password": "p", "type": "basic", "username": "u"}, "endpoint": "http://registry", "schema_type": "avro"},
+		"created_at": "2026-10-16T10:00:00Z", "id": "` + id.String() + `", "name": "registry", "type": "confluent"}`)}
+	held = gwadminapi.GatewayEntities{SchemaRegistries: []gwadminapi.EventGatewaySchemaRegistryOnPrem{registry(`{
+		"id": "` + id.String() + `", "name": "registry", "type": "confluent", "created_at": "2026-10-16T10:00:00Z",
+		"config": {"schema_type": "avro", "endpoint": "http://registry", "authentication": {"type": "basic", "username": "u", "password": "p"}}}`)}}
+	assert.True(t, same(held, pushed), "nested fields in another order")
+	held.SchemaRegistries[0] = registry(`{
+		"id": "` + id.String() + `", "name": "registry", "type": "confluent", "created_at": "2026-10-16T10:00:00Z",
+		"config": {"schema_type": "avro", "endpoint": "http://other", "authentication": {"type": "basic", "username": "u", "password": "p"}}}`)
+	assert.False(t, same(held, pushed), "another endpoint")
 }

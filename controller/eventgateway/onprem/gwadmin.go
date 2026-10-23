@@ -202,8 +202,15 @@ func sameEntities(held gwadminapi.GatewayEntities, pushedKey []byte) (bool, erro
 // JSON encoding, as gw-admin receives them, as the entities hold times, on
 // whose unexported fields equality.Semantic.DeepEqual panics. Each list is
 // sorted by id, as its order doesn't matter, and a missing list is empty.
+// The encoding goes through a generic value, which sorts the keys of every
+// object: an entity holding a [json.RawMessage], like a schema registry, keeps
+// its nested fields in the order gw-admin sends them.
 func comparisonKey(e gwadminapi.GatewayEntities) ([]byte, error) {
-	return json.Marshal(sortedByID(withEmptyLists(e)))
+	v, err := jsonValue(sortedByID(withEmptyLists(e)))
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(v)
 }
 
 // sortedByID returns the entities with each list sorted by id.
