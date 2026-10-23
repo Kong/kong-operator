@@ -191,10 +191,23 @@ func checkTranslatedACLs(translated map[string]struct{}, acls aigw.ACLs) error {
 // ai_models entity per alias, named after it, so these are the names the data plane
 // enforces uniqueness on.
 func modelAliases(m *aigw.Model) []string {
-	if len(m.Config.Route.Model.Values) > 0 {
-		return m.Config.Route.Model.Values
+	values := m.Config.Route.Model.Values
+	if len(values) == 0 {
+		return []string{m.Name}
 	}
-	return []string{m.Name}
+	// Collapse duplicate values to their first occurrence, mirroring the
+	// converter's extractModelAliases: a repeated value renders one ai_models
+	// entity, not two identically named ones.
+	seen := make(map[string]struct{}, len(values))
+	unique := make([]string, 0, len(values))
+	for _, v := range values {
+		if _, dup := seen[v]; dup {
+			continue
+		}
+		seen[v] = struct{}{}
+		unique = append(unique, v)
+	}
+	return unique
 }
 
 // ModelAliasConflictError reports a model whose selector alias (or entity name, when no
