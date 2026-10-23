@@ -16,6 +16,7 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	"github.com/kong/kong-operator/v2/api/konnect"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
@@ -477,4 +478,115 @@ func TestEnforceKonnectExtensionStatus(t *testing.T) {
 		require.NotNil(t, ext.Status.DataPlaneClientAuth)
 		assert.Equal(t, "my-secret", ext.Status.DataPlaneClientAuth.CertificateSecretRef.Name)
 	})
+}
+
+func TestKonnectEndpointsVerdict(t *testing.T) {
+	privateEndpoints := konnectv1alpha2.KonnectEndpoints{
+		ControlPlaneEndpoint: "https://us.svc.konghq.tech/cp/2cf352e764",
+		TelemetryEndpoint:    "https://us.svc.konghq.tech/tp/2cf352e764",
+	}
+	publicEndpoints := konnectv1alpha2.KonnectEndpoints{
+		ControlPlaneEndpoint: "https://2cf352e764.us.cp.konghq.tech",
+		TelemetryEndpoint:    "https://2cf352e764.us.tp.konghq.tech:443",
+	}
+	kicControlPlaneWithPath := konnectv1alpha2.KonnectEndpoints{
+		ControlPlaneEndpoint: privateEndpoints.ControlPlaneEndpoint,
+		TelemetryEndpoint:    publicEndpoints.TelemetryEndpoint,
+	}
+	controlPlanePrivateTelemetryPublic := kicControlPlaneWithPath
+
+	tests := []struct {
+		name        string
+		clusterType konnectv1alpha2.KonnectExtensionClusterType
+		serverURL   string
+		endpoints   konnectv1alpha2.KonnectEndpoints
+		wantBad     bool
+		wantReason  string
+		// wantEndpoint is the endpoint the mismatch message has to name.
+		wantEndpoint string
+	}{
+		{
+			name:        "KIC control plane endpoint with a path",
+			clusterType: konnectv1alpha2.ClusterTypeK8sIngressController,
+			serverURL:   "https://us.svc.konghq.tech/api",
+			endpoints:   kicControlPlaneWithPath,
+			wantBad:     true,
+			wantReason:  string(konnect.InvalidEndpointReason),
+		},
+		{
+			name:        "KIC control plane endpoint with a path and a public server URL",
+			clusterType: konnectv1alpha2.ClusterTypeK8sIngressController,
+			serverURL:   "https://us.api.konghq.tech",
+			endpoints:   kicControlPlaneWithPath,
+			wantBad:     true,
+			wantReason:  string(konnect.InvalidEndpointReason),
+		},
+		{
+			name:         "KIC endpoints public",
+			clusterType:  konnectv1alpha2.ClusterTypeK8sIngressController,
+			serverURL:    "https://us.svc.konghq.tech/api",
+			endpoints:    publicEndpoints,
+			wantBad:      true,
+			wantReason:   konnectv1alpha2.KonnectExtensionReadyReasonEndpointMismatch,
+			wantEndpoint: publicEndpoints.ControlPlaneEndpoint,
+		},
+		{
+			name:        "KIC endpoints public with a public server URL",
+			clusterType: konnectv1alpha2.ClusterTypeK8sIngressController,
+			serverURL:   "https://us.api.konghq.tech",
+			endpoints:   publicEndpoints,
+		},
+		{
+			name:        "ControlPlane endpoint with a path",
+			clusterType: konnectv1alpha2.ClusterTypeControlPlane,
+			serverURL:   "https://us.svc.konghq.tech/api",
+			endpoints:   privateEndpoints,
+		},
+		{
+			name:         "ControlPlane with a public telemetry endpoint",
+			clusterType:  konnectv1alpha2.ClusterTypeControlPlane,
+			serverURL:    "https://us.svc.konghq.tech/api",
+			endpoints:    controlPlanePrivateTelemetryPublic,
+			wantBad:      true,
+			wantReason:   konnectv1alpha2.KonnectExtensionReadyReasonEndpointMismatch,
+			wantEndpoint: publicEndpoints.TelemetryEndpoint,
+		},
+		{
+			name:        "ControlPlaneGroup endpoint with a path",
+			clusterType: konnectv1alpha2.ClusterTypeControlPlaneGroup,
+			serverURL:   "https://us.svc.konghq.tech/api",
+			endpoints:   privateEndpoints,
+		},
+		{
+			name:        "public server URL with a private endpoint",
+			clusterType: konnectv1alpha2.ClusterTypeControlPlane,
+			serverURL:   "https://us.api.konghq.tech",
+			endpoints:   privateEndpoints,
+		},
+		{
+			name:        "empty server URL",
+			clusterType: konnectv1alpha2.ClusterTypeControlPlane,
+			endpoints:   publicEndpoints,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cond, bad := konnectEndpointsVerdict(tt.clusterType, tt.serverURL, tt.endpoints)
+			assert.Equal(t, tt.wantBad, bad)
+			if !tt.wantBad {
+				return
+			}
+			assert.Equal(t, konnectv1alpha2.KonnectExtensionReadyConditionType, cond.Type)
+			assert.Equal(t, metav1.ConditionFalse, cond.Status)
+			assert.Equal(t, tt.wantReason, cond.Reason)
+			// The condition is read with kubectl describe: it must name the values that fail.
+			if tt.wantReason == string(konnect.InvalidEndpointReason) {
+				assert.Contains(t, cond.Message, tt.endpoints.ControlPlaneEndpoint)
+			} else {
+				assert.Contains(t, cond.Message, tt.serverURL)
+				assert.Contains(t, cond.Message, tt.wantEndpoint)
+			}
+		})
+	}
 }

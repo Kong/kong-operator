@@ -535,6 +535,12 @@ func (r *Reconciler[T, Cert]) validateConfig() error {
 			return fmt.Errorf("Conditions: AdminCertificateProvisionedReason must be set when AdminAPI is configured")
 		}
 	}
+	// A reason lands in a status condition, whose Reason must not be empty.
+	for _, cpKind := range r.Config.ControlPlanes {
+		if cpKind.EndpointCheck != nil && cpKind.Conditions.EndpointMismatchReason == "" {
+			return fmt.Errorf("ControlPlanes[%s]: Conditions.EndpointMismatchReason must be set when EndpointCheck is set", cpKind.Kind)
+		}
+	}
 	return nil
 }
 
@@ -576,14 +582,15 @@ func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Res
 	if ref.Name != "" {
 		cp, err = r.resolveControlPlane(ctx, logger, dp, ref)
 		if err != nil {
-			// A missing, not yet Programmed, or not yet Ready control plane is
-			// an expected, user-fixable state: resolveControlPlane has set the
-			// resolution condition and the control plane watch re-triggers the
-			// reconcile once the control plane appears or becomes healthy, so
-			// there is no need to retry with error backoff.
+			// A missing, not yet Programmed, not yet Ready, or endpoint-mismatched
+			// control plane is an expected, user-fixable state: resolveControlPlane
+			// has set the resolution condition and the control plane watch
+			// re-triggers the reconcile once the control plane appears or becomes
+			// healthy, so there is no need to retry with error backoff.
 			if apierrors.IsNotFound(err) ||
 				errors.Is(err, errControlPlaneNotProgrammed) ||
-				errors.Is(err, errControlPlaneNotReady) {
+				errors.Is(err, errControlPlaneNotReady) ||
+				errors.Is(err, errEndpointsMismatch) {
 				return ctrl.Result{}, nil
 			}
 			return ctrl.Result{}, err

@@ -102,3 +102,56 @@ func TestParseUnusableValue(t *testing.T) {
 		})
 	}
 }
+
+func TestCarriesPath(t *testing.T) {
+	testCases := []struct {
+		name string
+		raw  string
+		want bool
+	}{
+		{name: "private control plane endpoint", raw: "https://us.svc.konghq.tech/cp/2cf352e764", want: true},
+		{name: "private endpoint without scheme", raw: "us.svc.konghq.tech/api", want: true},
+		{name: "public endpoint with scheme", raw: "https://2cf352e764.us.cp.konghq.tech", want: false},
+		{name: "public endpoint without scheme", raw: "us.api.konghq.tech", want: false},
+		{name: "lone slash is not a path", raw: "https://us.api.konghq.tech/", want: false},
+		{name: "unusable value", raw: "https://host:bad", want: false},
+		{name: "empty value", raw: "", want: false},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, CarriesPath(tc.raw))
+		})
+	}
+}
+
+func TestCheckPrivateEndpoints(t *testing.T) {
+	testCases := []struct {
+		name         string
+		serverURL    string
+		endpoints    []string
+		wantErr      bool
+		wantEndpoint string
+	}{
+		{"both private", "https://us.svc.konghq.tech/api", []string{"https://us.svc.konghq.tech/cp/2cf352e764"}, false, ""},
+		{"private server URL with a public endpoint", "https://us.svc.konghq.tech/api", []string{"https://2cf352e764.us.cp.konghq.tech"}, true, "https://2cf352e764.us.cp.konghq.tech"},
+		{"public server URL with a private endpoint", "https://us.api.konghq.tech", []string{"https://us.svc.konghq.tech/cp/x"}, false, ""},
+		{"both public", "https://us.api.konghq.tech", []string{"https://2cf352e764.us.cp.konghq.tech"}, false, ""},
+		{"one of two endpoints public", "https://us.svc.konghq.com/api", []string{"https://us.svc.konghq.com/cp/x", "https://x.us.tp.konghq.com:443"}, true, "https://x.us.tp.konghq.com:443"},
+		{"empty server URL", "", []string{"https://2cf352e764.us.cp.konghq.tech"}, false, ""},
+		{"no endpoints", "https://us.svc.konghq.tech/api", nil, false, ""},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := CheckPrivateEndpoints(tc.serverURL, tc.endpoints...)
+			if tc.wantErr {
+				require.Error(t, err)
+				// The error is read with kubectl describe: it must name the endpoint that fails.
+				assert.Contains(t, err.Error(), tc.wantEndpoint)
+				return
+			}
+			assert.NoError(t, err)
+		})
+	}
+}

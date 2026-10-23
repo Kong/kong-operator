@@ -43,6 +43,12 @@ var errControlPlaneNotProgrammed = errors.New("control plane is not yet Programm
 // errControlPlaneNotProgrammed it is an expected transient state.
 var errControlPlaneNotReady = errors.New("control plane is not yet Ready")
 
+// errEndpointsMismatch is returned by resolveControlPlane when the referenced
+// control plane is Programmed but returns endpoints its serverURL cannot be
+// used with. Like errControlPlaneNotProgrammed it is an expected transient
+// state, even though only a user or Konnect can resolve it.
+var errEndpointsMismatch = errors.New("control plane endpoints cannot be used with its serverURL")
+
 // resolveControlPlane resolves the control plane referenced by the DataPlane.
 // It sets the kind-specific control plane resolved condition on the DataPlane
 // and returns the resolved control plane if successful.
@@ -123,6 +129,28 @@ func (r *Reconciler[T, Cert]) resolveControlPlane(
 		return resolved, fmt.Errorf("referenced %s %q: %w",
 			cpKindCfg.Kind, ref.Name, errControlPlaneNotProgrammed)
 	}
+
+	// A Programmed control plane can still hand out endpoints the DataPlane
+	// cannot use: holding it here keeps a data plane from booting against the
+	// wrong Konnect endpoint.
+	if cpKindCfg.EndpointCheck != nil {
+		if err := cpKindCfg.EndpointCheck(cp); err != nil {
+			log.Debug(logger, "referenced "+cpKindCfg.Kind+" has unusable endpoints",
+				"ref", ref.Name, "error", err.Error())
+
+			setStatusCondition(dp, metav1.Condition{
+				Type:               cpKindCfg.Conditions.ResolvedType,
+				Status:             metav1.ConditionFalse,
+				Reason:             cpKindCfg.Conditions.EndpointMismatchReason,
+				Message:            err.Error(),
+				ObservedGeneration: dp.GetGeneration(),
+			})
+
+			return resolved, fmt.Errorf("referenced %s %q: %w",
+				cpKindCfg.Kind, ref.Name, errEndpointsMismatch)
+		}
+	}
+
 	if !cpKindCfg.IsKonnect && cpKindCfg.ReadinessConditionType != "" &&
 		!apimeta.IsStatusConditionTrue(cp.GetConditions(), cpKindCfg.ReadinessConditionType) {
 		log.Debug(logger, "referenced "+cpKindCfg.Kind+" is not yet Ready",

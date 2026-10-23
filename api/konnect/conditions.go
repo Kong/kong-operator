@@ -18,7 +18,7 @@ const (
 	InvalidExtensionRefReason consts.ConditionReason = "InvalidExtension"
 	// InvalidSecretRefReason is a reason describing that the secret reference in the KonnectExtension is invalid. It must be used when the KonnectExtensionApplied condition is set to False.
 	InvalidSecretRefReason consts.ConditionReason = "InvalidSecret"
-	// InvalidEndpointReason is a reason describing that an endpoint value in the KonnectExtension status is not usable. It must be used when the KonnectExtensionApplied condition is set to False.
+	// InvalidEndpointReason is a reason describing that an endpoint value in the KonnectExtension status is not usable. It must be used when the KonnectExtensionApplied condition is set to False, or on a KonnectExtension whose Ready condition is set to False.
 	InvalidEndpointReason consts.ConditionReason = "InvalidEndpoint"
 	// KonnectExtensionNotReadyReason is a reason describing that the Konnect extension is not ready. It must be used when the KonnectExtensionApplied condition is set to False.
 	KonnectExtensionNotReadyReason consts.ConditionReason = "KonnectExtensionNotReady"
