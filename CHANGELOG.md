@@ -230,12 +230,8 @@
   order of cluster-level policies within an Event Gateway virtual cluster.
   The API requires an explicit policy list and an immutable virtual-cluster CR
   reference; it has no independent Konnect ID.
-- Added Konnect reconciliation for `EventGatewayVirtualClusterPolicyChain`,
-  including ordered policy references, parent-scoped ownership, and periodic
-  drift correction without a separate chain ID. As a conservative controller
-  restriction, only complete-set reordering is supported; empty lists require
-  an empty remote chain. Deleting the CR retains the remote configuration.
-  This controller is Konnect-only; on-prem support is outside its scope.
+  [#6188](https://github.com/Kong/kong-operator/pull/6188)
+  [#6200](https://github.com/Kong/kong-operator/pull/6200)
 - OnPremAIGateway spec: added a `dataplaneSync` field with optional
   `intervalSeconds` and `timeoutSeconds` (non-negative integers, in seconds) to
   tune the cadence of and the timeout for pushing configuration to the data
