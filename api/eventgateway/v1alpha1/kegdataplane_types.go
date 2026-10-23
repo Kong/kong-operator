@@ -63,11 +63,13 @@ type KegDataPlaneList struct {
 }
 
 // KegDataPlaneSpec defines the desired state of KegDataPlane.
+// +kubebuilder:validation:XValidation:rule="self.controlPlaneRef.type != 'onpremNamespacedRef' || !has(self.config) || !has(self.config.konnect) || !has(self.config.konnect.domain)",message="config.konnect.domain can't be set with an onpremNamespacedRef: the data plane reaches gw-admin on the address of the OnPremEventGateway"
 type KegDataPlaneSpec struct {
 	// ControlPlaneRef references the control plane this KegDataPlane connects to.
-	// The type field identifies which kind of control plane is being referenced.
-	// Currently only konnectNamespacedRef is supported, which references a
-	// KonnectEventGateway resource in the same namespace.
+	// The type field identifies which kind of control plane is being referenced:
+	// konnectNamespacedRef references a KonnectEventGateway resource in the
+	// same namespace, onpremNamespacedRef an OnPremEventGateway resource in
+	// the same namespace.
 	//
 	// +required
 	ControlPlaneRef ControlPlaneRef `json:"controlPlaneRef,omitzero"`
