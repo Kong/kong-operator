@@ -30,6 +30,8 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/dataplane"
 	"github.com/kong/kong-operator/v2/controller/konnect"
+	"github.com/kong/kong-operator/v2/controller/pkg/extensions"
+	extensionskonnect "github.com/kong/kong-operator/v2/controller/pkg/extensions/konnect"
 	secretcert "github.com/kong/kong-operator/v2/controller/secret_cert"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -156,6 +158,225 @@ func TestKonnectExtensionManualSnapshotDeletion(t *testing.T) {
 	assert.True(t, registrations.Items[0].DeletionTimestamp.IsZero())
 	require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(source), source))
 	assert.Empty(t, source.Finalizers)
+}
+
+// TestKonnectExtensionRefusesAnEndpointWithAPath asserts that a KIC control plane whose endpoint
+// carries a path is held on InvalidEndpoint, and that the DataPlane attached to it is never told
+// the extension was applied.
+func TestKonnectExtensionRefusesAnEndpointWithAPath(t *testing.T) {
+	t.Parallel()
+	ctx := t.Context()
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+	apiClient, err := client.New(cfg, client.Options{Scheme: scheme.Get()})
+	require.NoError(t, err)
+	cl := client.NewNamespacedClient(apiClient, ns.Name)
+
+	const endpoint = "https://us.svc.konghq.tech/cp/2cf352e764"
+	auth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
+	auth.Status.ServerURL = "https://us.api.konghq.tech"
+	require.NoError(t, cl.Status().Update(ctx, auth))
+	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, cl, auth, func(obj client.Object) {
+		cp := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
+		cp.Status.ClusterType = sdkkonnectcomp.ControlPlaneClusterTypeClusterTypeK8SIngressController
+		cp.Status.Endpoints = &konnectv1alpha2.KonnectEndpoints{
+			ControlPlaneEndpoint: endpoint,
+			TelemetryEndpoint:    "https://2cf352e764.us.tp.konghq.tech:443",
+		}
+	})
+	ext, reconcile := konnectExtensionWithManualCertificate(t, ctx, cl, "kic-endpoint-with-path", cp)
+
+	dp := &operatorv1beta1.DataPlane{
+		Name: "dataplane", Namespace: ns.Name,
+		Spec: operatorv1beta1.DataPlaneSpec{
+			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+				Extensions: []commonv1alpha1.ExtensionRef{{
+					Group: konnectv1alpha1.GroupVersion.Group,
+					Kind:  konnectv1alpha2.KonnectExtensionKind,
+					Name:  ext.Name,
+				}},
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{{
+									Name:  consts.DataPlaneProxyContainerName,
+									Image: consts.DefaultDataPlaneImage,
+								}},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	require.NoError(t, cl.Create(ctx, dp))
+
+	// assert, not require: a regression here must not hide the DataPlane consequence asserted below.
+	assert.EventuallyWithT(t, func(t *assert.CollectT) {
+		reconcile()
+		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(ext), ext))
+		cond, found := k8sutils.GetCondition(konnectv1alpha2.KonnectExtensionReadyConditionType, ext)
+		require.True(t, found, "expected a Ready condition, got: %+v", ext.Status.Conditions)
+		require.Equal(t, metav1.ConditionFalse, cond.Status)
+		require.Equal(t, string(konnect2.InvalidEndpointReason), cond.Reason)
+		require.Contains(t, cond.Message, endpoint)
+	}, waitTime, tickTime)
+
+	// The extension step the DataPlane controller runs at the top of its reconcile. The KIC template
+	// renders no control plane endpoint, so only the verdict keeps this DataPlane from being told
+	// the extension was applied.
+	_, _, err = extensions.ApplyExtensions(ctx, cl, dp, true, &extensionskonnect.DataPlaneKonnectExtensionProcessor{})
+	require.NoError(t, err)
+	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(dp), dp))
+	applied, found := k8sutils.GetCondition(konnect2.KonnectExtensionAppliedType, dp)
+	require.True(t, found, "expected a KonnectExtensionApplied condition, got: %+v", dp.Status.Conditions)
+	assert.Equal(t, metav1.ConditionFalse, applied.Status)
+	assert.Equal(t, string(konnect2.KonnectExtensionNotReadyReason), applied.Reason)
+}
+
+// TestKonnectExtensionRefusesAPublicEndpointWhenTheServerURLIsPrivate asserts that a data plane
+// reaching Konnect through a private server URL is held on EndpointMismatch when its endpoint is
+// the public one, with both values in the message. The endpoints carry no path, so nothing but the
+// verdict can keep the DataPlane from being told the extension was applied.
+func TestKonnectExtensionRefusesAPublicEndpointWhenTheServerURLIsPrivate(t *testing.T) {
+	t.Parallel()
+	ctx := t.Context()
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+	apiClient, err := client.New(cfg, client.Options{Scheme: scheme.Get()})
+	require.NoError(t, err)
+	cl := client.NewNamespacedClient(apiClient, ns.Name)
+
+	const (
+		serverURL = "https://us.svc.konghq.tech/api"
+		endpoint  = "https://2cf352e764.us.cp.konghq.tech"
+	)
+	auth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
+	auth.Status.ServerURL = serverURL
+	require.NoError(t, cl.Status().Update(ctx, auth))
+	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, cl, auth, func(obj client.Object) {
+		obj.(*konnectv1alpha2.KonnectGatewayControlPlane).Status.Endpoints = &konnectv1alpha2.KonnectEndpoints{
+			ControlPlaneEndpoint: endpoint,
+			TelemetryEndpoint:    "https://2cf352e764.us.tp.konghq.tech:443",
+		}
+	})
+	ext, reconcile := konnectExtensionWithManualCertificate(t, ctx, cl, "private-server-url", cp)
+
+	dp := &operatorv1beta1.DataPlane{
+		Name: "dataplane", Namespace: ns.Name,
+		Spec: operatorv1beta1.DataPlaneSpec{
+			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+				Extensions: []commonv1alpha1.ExtensionRef{{
+					Group: konnectv1alpha1.GroupVersion.Group,
+					Kind:  konnectv1alpha2.KonnectExtensionKind,
+					Name:  ext.Name,
+				}},
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{{
+									Name:  consts.DataPlaneProxyContainerName,
+									Image: consts.DefaultDataPlaneImage,
+								}},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	require.NoError(t, cl.Create(ctx, dp))
+
+	// assert, not require: a regression here must not hide the DataPlane consequence asserted below.
+	assert.EventuallyWithT(t, func(t *assert.CollectT) {
+		reconcile()
+		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(ext), ext))
+		cond, found := k8sutils.GetCondition(konnectv1alpha2.KonnectExtensionReadyConditionType, ext)
+		require.True(t, found, "expected a Ready condition, got: %+v", ext.Status.Conditions)
+		require.Equal(t, metav1.ConditionFalse, cond.Status)
+		require.Equal(t, konnectv1alpha2.KonnectExtensionReadyReasonEndpointMismatch, cond.Reason)
+		require.Contains(t, cond.Message, endpoint)
+		require.Contains(t, cond.Message, serverURL)
+	}, waitTime, tickTime)
+
+	// The extension step the DataPlane controller runs at the top of its reconcile. Nothing else
+	// refuses these endpoints, so a DataPlane told the extension was applied would roll out against
+	// the wrong Konnect.
+	_, _, err = extensions.ApplyExtensions(ctx, cl, dp, true, &extensionskonnect.DataPlaneKonnectExtensionProcessor{})
+	require.NoError(t, err)
+	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(dp), dp))
+	applied, found := k8sutils.GetCondition(konnect2.KonnectExtensionAppliedType, dp)
+	require.True(t, found, "expected a KonnectExtensionApplied condition, got: %+v", dp.Status.Conditions)
+	assert.Equal(t, metav1.ConditionFalse, applied.Status)
+	assert.Equal(t, string(konnect2.KonnectExtensionNotReadyReason), applied.Reason)
+}
+
+// konnectExtensionWithManualCertificate creates the labeled source Secret and the KonnectExtension
+// provisioning its certificate manually. It returns the extension and a step that runs one
+// reconciliation of it, with the client certificate it registers marked as programmed in Konnect.
+func konnectExtensionWithManualCertificate(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	name string,
+	cp *konnectv1alpha2.KonnectGatewayControlPlane,
+) (*konnectv1alpha2.KonnectExtension, func()) {
+	t.Helper()
+
+	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName(name))
+	source := &corev1.Secret{
+		Name: name + "-source", Namespace: cp.Namespace, Type: corev1.SecretTypeTLS,
+		Labels: map[string]string{konnect.SecretKonnectDataPlaneCertificateLabel: "true"},
+		Data:   map[string][]byte{corev1.TLSCertKey: cert, corev1.TLSPrivateKeyKey: key},
+	}
+	require.NoError(t, cl.Create(ctx, source))
+
+	ext := &konnectv1alpha2.KonnectExtension{
+		Name: name, Namespace: cp.Namespace,
+		Spec: konnectv1alpha2.KonnectExtensionSpec{
+			ClientAuth: &konnectv1alpha2.KonnectExtensionClientAuth{
+				CertificateSecret: konnectv1alpha2.CertificateSecret{
+					Provisioning:         new(konnectv1alpha2.ManualSecretProvisioning),
+					CertificateSecretRef: &konnectv1alpha2.SecretRef{Name: source.Name},
+				},
+			},
+			Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+				ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+					Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+						Type:                 commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{Name: cp.Name},
+					},
+				},
+			},
+		},
+	}
+	require.NoError(t, cl.Create(ctx, ext))
+
+	r := &konnect.KonnectExtensionReconciler{Client: cl, SyncPeriod: konnectInfiniteSyncTime}
+	return ext, func() {
+		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(ext), ext))
+		_, err := r.Reconcile(ctx, ext)
+		require.NoError(t, err)
+
+		var dpCertificates configurationv1alpha1.KongDataPlaneClientCertificateList
+		require.NoError(t, cl.List(ctx, &dpCertificates))
+		for _, dpCertificate := range dpCertificates.Items {
+			if dpCertificate.GetKonnectID() != "" {
+				continue
+			}
+			dpCertificate.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+				ID: "certificate-id", ControlPlaneID: cp.Status.ID,
+			}
+			k8sutils.SetCondition(metav1.Condition{
+				Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
+				Status:             metav1.ConditionTrue,
+				Reason:             konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed,
+				ObservedGeneration: dpCertificate.Generation,
+				LastTransitionTime: metav1.Now(),
+			}, &dpCertificate)
+			require.NoError(t, cl.Status().Update(ctx, &dpCertificate))
+		}
+	}
 }
 
 func TestDataPlaneKonnectExtension(t *testing.T) {
