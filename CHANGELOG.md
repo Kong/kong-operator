@@ -407,7 +407,6 @@
   with one, `spec.config.konnect.domain` can't be set. This adds the API
   only: the operator doesn't deploy a data plane for an
   `onpremNamespacedRef` yet.
-  [#6282](https://github.com/Kong/kong-operator/issues/6282)
   [#6283](https://github.com/Kong/kong-operator/pull/6283)
 - `--konnect-list-page-size` flag (default and maximum `100`): the page size
   the operator requests when listing Konnect entities to find the Konnect
