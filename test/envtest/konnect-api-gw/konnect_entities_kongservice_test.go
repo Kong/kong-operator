@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"slices"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -24,6 +25,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/konnect"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/pkg/metadata"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/test/envtest"
 	"github.com/kong/kong-operator/v2/test/envtest/consts"
@@ -813,5 +815,102 @@ func TestKongService(t *testing.T) {
 		}, "KongService should get the Programmed condition set to status=False due to network error on update")
 
 		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, consts.WaitTime, consts.TickTime)
+	})
+
+	t.Run("reserved tags in konghq.com/tags annotation set Programmed condition to False until removed", func(t *testing.T) {
+		const (
+			serviceID   = "service-reserved-tags-test"
+			host        = "reserved-tags-test.com"
+			reservedTag = "k8s-uid:spoofed-uid"
+		)
+
+		w := envtest.SetupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Creating a KongService with a reserved tag in the konghq.com/tags annotation")
+		createdService := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+			func(obj client.Object) {
+				s := obj.(*configurationv1alpha1.KongService)
+				s.Spec.Host = host
+				s.Annotations = map[string]string{
+					metadata.AnnotationKeyTags: "tag1," + reservedTag,
+				}
+			},
+		)
+
+		t.Log("Waiting for Service to get Programmed condition with status=False and reason InvalidTags")
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
+			if ks.GetName() != createdService.GetName() {
+				return false
+			}
+			c, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ks)
+			return ok &&
+				c.Status == metav1.ConditionFalse &&
+				c.Reason == konnectv1alpha1.KonnectEntityProgrammedReasonInvalidTags &&
+				!envtest.ObjectHasFinalizer[*configurationv1alpha1.KongService](konnect.KonnectCleanupFinalizer)(ks)
+		}, "KongService should get Programmed=False with reason InvalidTags and no cleanup finalizer")
+
+		t.Log("Setting up SDK expectations on Service creation")
+		sdk.ServicesSDK.EXPECT().
+			CreateService(
+				mock.Anything,
+				cp.GetKonnectID(),
+				mock.MatchedBy(func(req sdkkonnectcomp.Service) bool {
+					return req.Host == host && !slices.Contains(req.Tags, reservedTag)
+				}),
+			).
+			Return(
+				&sdkkonnectops.CreateServiceResponse{
+					Service: &sdkkonnectcomp.ServiceOutput{
+						ID: new(serviceID),
+					},
+				},
+				nil,
+			)
+
+		t.Log("Removing the reserved tag from the konghq.com/tags annotation")
+		serviceToPatch := createdService.DeepCopy()
+		serviceToPatch.Annotations[metadata.AnnotationKeyTags] = "tag1"
+		require.NoError(t, clientNamespaced.Patch(ctx, serviceToPatch, client.MergeFrom(createdService)))
+
+		t.Log("Waiting for Service to be programmed and get Konnect ID")
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
+			return ks.GetName() == createdService.GetName() &&
+				ks.GetKonnectID() == serviceID &&
+				k8sutils.IsProgrammed(ks)
+		}, "KongService didn't get Programmed status condition or didn't get the correct Konnect ID assigned")
+
+		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, consts.WaitTime, consts.TickTime)
+	})
+
+	t.Run("KongService with reserved tags in konghq.com/tags annotation can be deleted", func(t *testing.T) {
+		w := envtest.SetupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Creating a KongService with a reserved tag in the konghq.com/tags annotation")
+		createdService := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+			func(obj client.Object) {
+				s := obj.(*configurationv1alpha1.KongService)
+				s.Spec.Host = "reserved-tags-delete-test.com"
+				s.Annotations = map[string]string{
+					metadata.AnnotationKeyTags: "managed-by:someone-else",
+				}
+			},
+		)
+
+		t.Log("Waiting for Service to get Programmed condition with status=False and reason InvalidTags")
+		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
+			if ks.GetName() != createdService.GetName() {
+				return false
+			}
+			c, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, ks)
+			return ok &&
+				c.Status == metav1.ConditionFalse &&
+				c.Reason == konnectv1alpha1.KonnectEntityProgrammedReasonInvalidTags
+		}, "KongService should get Programmed=False with reason InvalidTags")
+
+		t.Log("Deleting KongService")
+		require.NoError(t, clientNamespaced.Delete(ctx, createdService))
+		eventually.WaitForObjectToNotExist(t, ctx, cl, createdService, consts.WaitTime, consts.TickTime)
 	})
 }

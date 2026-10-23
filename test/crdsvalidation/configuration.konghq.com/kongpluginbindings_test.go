@@ -734,6 +734,49 @@ func TestKongPluginBindings(t *testing.T) {
 				ExpectedErrorMessage: new("tags entries must not be longer than 128 characters"),
 			},
 			{
+				Name: "tags entries must not start with reserved prefix k8s-name:",
+				TestObject: &configurationv1alpha1.KongPluginBinding{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongPluginBindingSpec{
+						PluginReference: configurationv1alpha1.PluginRef{
+							Kind: new("KongPlugin"),
+							Name: "my-plugin",
+						},
+						Targets: &configurationv1alpha1.KongPluginBindingTargets{
+							ServiceReference: &configurationv1alpha1.TargetRefWithGroupKind{
+								Name:  "test-service",
+								Kind:  "Service",
+								Group: "core",
+							},
+						},
+						ControlPlaneRef: validTestCPRef(),
+						Tags:            []string{"tag1", "tag2", "k8s-name:value"},
+					},
+				},
+				ExpectedErrorMessage: new("tags entries must not start with reserved prefixes"),
+			},
+			{
+				Name: "tags entries starting with k8s- but not with a reserved prefix are allowed",
+				TestObject: &configurationv1alpha1.KongPluginBinding{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongPluginBindingSpec{
+						PluginReference: configurationv1alpha1.PluginRef{
+							Kind: new("KongPlugin"),
+							Name: "my-plugin",
+						},
+						Targets: &configurationv1alpha1.KongPluginBindingTargets{
+							ServiceReference: &configurationv1alpha1.TargetRefWithGroupKind{
+								Name:  "test-service",
+								Kind:  "Service",
+								Group: "core",
+							},
+						},
+						ControlPlaneRef: validTestCPRef(),
+						Tags:            []string{"tag1", "tag2", "k8s-team:value"},
+					},
+				},
+			},
+			{
 				Name: "tags field with too many tags should fail",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),

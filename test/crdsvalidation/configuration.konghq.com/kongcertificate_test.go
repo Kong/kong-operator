@@ -113,6 +113,49 @@ func TestKongCertificate(t *testing.T) {
 					},
 					ExpectedErrorMessage: new("tags entries must not be longer than 128 characters"),
 				},
+				{
+					Name: "tags entries must not start with reserved prefix k8s-group:",
+					TestObject: &configurationv1alpha1.KongCertificate{
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
+						Spec: configurationv1alpha1.KongCertificateSpec{
+							ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+								Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+								KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+									Name: "test-konnect-control-plane",
+								},
+							},
+							KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
+								Key:  "key",
+								Cert: "cert",
+								Tags: []string{
+									"k8s-group:value",
+								},
+							},
+						},
+					},
+					ExpectedErrorMessage: new("tags entries must not start with reserved prefixes"),
+				},
+				{
+					Name: "tags entries starting with k8s- but not with a reserved prefix are allowed",
+					TestObject: &configurationv1alpha1.KongCertificate{
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
+						Spec: configurationv1alpha1.KongCertificateSpec{
+							ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+								Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+								KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+									Name: "test-konnect-control-plane",
+								},
+							},
+							KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
+								Key:  "key",
+								Cert: "cert",
+								Tags: []string{
+									"k8s-team:value",
+								},
+							},
+						},
+					},
+				},
 			}.
 				RunWithConfig(t, cfg, scheme)
 		})
