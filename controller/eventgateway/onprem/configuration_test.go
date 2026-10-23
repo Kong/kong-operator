@@ -460,7 +460,7 @@ func TestConvertEntity(t *testing.T) {
 		var payload map[string]any
 		require.NoError(t, json.Unmarshal([]byte(from), &payload))
 		var entity gwadminapi.EventGatewayStaticKeyOnPrem
-		return entity, convertEntity(payload, obj, id, &entity)
+		return entity, convertEntity(payload, obj, id, &entity, nil)
 	}
 
 	t.Run("the id and the creation time are set, a null field left out", func(t *testing.T) {
@@ -589,4 +589,60 @@ func TestSameEntities(t *testing.T) {
 		"id": "` + id.String() + `", "name": "registry", "type": "confluent", "created_at": "2026-10-16T10:00:00Z",
 		"config": {"schema_type": "avro", "endpoint": "http://other", "authentication": {"type": "basic", "username": "u", "password": "p"}}}`)
 	assert.False(t, same(held, pushed), "another endpoint")
+
+	// gw-admin names the destination of a virtual cluster, and returns a
+	// child policy right after its parent.
+	virtualCluster := func(destination string, policies ...string) gwadminapi.EventGatewayVirtualClusterOnPrem {
+		t.Helper()
+		var vc gwadminapi.EventGatewayVirtualClusterOnPrem
+		require.NoError(t, json.Unmarshal([]byte(`{"id": "6f1f6d1e-0f5e-4a8e-9a39-2b5c0c3f6c01", "name": "vc",
+			"created_at": "2026-10-16T10:00:00Z", "destination": `+destination+`,
+			"consume_policies": [`+strings.Join(policies, ",")+`]}`), &vc))
+		return vc
+	}
+	parent := `{"id": "0b6e2f0a-3a51-4c43-8f39-3c1c2a7e8d01", "type": "schema_validation", "created_at": "2026-10-16T10:00:00Z"}`
+	child := `{"id": "9c0f5a3e-7d4b-4e1a-9b1c-5e2d3f4a6b02", "type": "modify_headers", "parent_policy_id": "0b6e2f0a-3a51-4c43-8f39-3c1c2a7e8d01", "created_at": "2026-10-16T10:00:00Z"}`
+	sibling := `{"id": "1d2e3f4a-5b6c-4d7e-8f90-a1b2c3d4e5f6", "type": "schema_validation", "created_at": "2026-10-16T10:00:00Z"}`
+	pushed = noEntities()
+	pushed.VirtualClusters = []gwadminapi.EventGatewayVirtualClusterOnPrem{virtualCluster(`{"id": "`+bc.Id.String()+`"}`, parent, sibling, child)}
+	held = gwadminapi.GatewayEntities{VirtualClusters: []gwadminapi.EventGatewayVirtualClusterOnPrem{
+		virtualCluster(`{"id": "`+bc.Id.String()+`", "name": ""}`, parent, child, sibling),
+	}}
+	assert.True(t, same(held, pushed), "a destination named by gw-admin, policies in another order")
+
+	// gw-admin returns the parent policy of a policy that can have one, and
+	// the configuration of one that has none, as null.
+	skip := `{"id": "2e3f4a5b-6c7d-4e8f-9a0b-c1d2e3f4a5b6", "type": "skip_record", "created_at": "2026-10-16T10:00:00Z"}`
+	skipHeld := `{"id": "2e3f4a5b-6c7d-4e8f-9a0b-c1d2e3f4a5b6", "type": "skip_record", "created_at": "2026-10-16T10:00:00Z",
+		"config": null, "parent_policy_id": null}`
+	pushed.VirtualClusters = []gwadminapi.EventGatewayVirtualClusterOnPrem{virtualCluster(`{"id": "`+bc.Id.String()+`"}`, skip)}
+	held.VirtualClusters = []gwadminapi.EventGatewayVirtualClusterOnPrem{virtualCluster(`{"id": "`+bc.Id.String()+`", "name": ""}`, skipHeld)}
+	assert.True(t, same(held, pushed), "the null fields of a policy left out")
+
+	// gw-admin may return the fields of an object in any order, those of a
+	// union, e.g. a destination or the configuration of a policy, included.
+	headers := `{"id": "3f4a5b6c-7d8e-4f9a-8b0c-d1e2f3a4b5c6", "type": "modify_headers", "created_at": "2026-10-16T10:00:00Z",
+		"config": {"actions": [{"op": "remove", "key": "k"}]}}`
+	headersHeld := `{"parent_policy_id": null, "created_at": "2026-10-16T10:00:00Z", "type": "modify_headers",
+		"config": {"actions": [{"key": "k", "op": "remove"}]}, "id": "3f4a5b6c-7d8e-4f9a-8b0c-d1e2f3a4b5c6"}`
+	pushed.VirtualClusters = []gwadminapi.EventGatewayVirtualClusterOnPrem{virtualCluster(`{"id": "`+bc.Id.String()+`"}`, headers)}
+	held.VirtualClusters = []gwadminapi.EventGatewayVirtualClusterOnPrem{virtualCluster(`{"name": "", "id": "`+bc.Id.String()+`"}`, headersHeld)}
+	assert.True(t, same(held, pushed), "the fields of the unions in another order")
+	destination, err := pushed.VirtualClusters[0].Destination.MarshalJSON()
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"id": "`+bc.Id.String()+`"}`, string(destination), "the entities pushed are left as they are")
+
+	// gw-admin may leave out the empty lists of policies of a virtual
+	// cluster, which are pushed empty.
+	pushed.VirtualClusters = []gwadminapi.EventGatewayVirtualClusterOnPrem{virtualCluster(`{"id": "` + bc.Id.String() + `"}`)}
+	pushed.VirtualClusters[0].ClusterPolicies = []gwadminapi.EventGatewayClusterPolicyOnPrem{}
+	pushed.VirtualClusters[0].ConsumePolicies = []gwadminapi.EventGatewayConsumePolicyOnPrem{}
+	pushed.VirtualClusters[0].ProducePolicies = []gwadminapi.EventGatewayProducePolicyOnPrem{}
+	held.VirtualClusters = []gwadminapi.EventGatewayVirtualClusterOnPrem{virtualCluster(`{"id": "` + bc.Id.String() + `", "name": ""}`)}
+	held.VirtualClusters[0].ConsumePolicies = nil
+	assert.True(t, same(held, pushed), "a list of policies left out and an empty one are the same")
+	assert.Nil(t, held.VirtualClusters[0].ClusterPolicies, "the entities compared are left as they are")
+	encoded, err := comparisonKey(held)
+	require.NoError(t, err)
+	assert.Contains(t, string(encoded), `"cluster_policies":[]`, "a missing list is empty, not null")
 }

@@ -371,14 +371,21 @@
   [#6247](https://github.com/Kong/kong-operator/pull/6247)
 - The `OnPremEventGateway` controller pushes the gateway's
   `EventGatewayBackendCluster`s, `EventGatewayTLSTrustBundle`s,
-  `EventGatewaySchemaRegistry`s and `EventGatewayStaticKey`s to gw-admin, again
-  when they or their Secrets change. Invalid ones are left out; one whose
-  Secret is deleted keeps its last configuration. Their `Programmed` and
-  `SecretRefValid` conditions report the outcome. `KongReferenceGrant` now
-  accepts `EventGatewayBackendCluster`, `EventGatewaySchemaRegistry` and
-  `EventGatewayTLSTrustBundle` in `spec.from`, for Secrets in other namespaces.
+  `EventGatewaySchemaRegistry`s and `EventGatewayStaticKey`s to gw-admin, and
+  the `EventGatewayVirtualCluster`s of its backend clusters with their
+  cluster, consume and produce policies, again when they or their Secrets
+  change. A policy references its parent policy, schema registry or static key
+  by the UID of their object, and is sent after its parent. Invalid ones, and
+  those whose parent or reference isn't in the configuration, are left out;
+  one whose Secret is deleted keeps its last configuration. Their `Programmed`
+  and `SecretRefValid` conditions report the outcome; `Programmed` turns
+  `Detached` for one that no longer belongs to the gateway, e.g. whose parent
+  was deleted. `KongReferenceGrant` now accepts `EventGatewayBackendCluster`,
+  `EventGatewaySchemaRegistry` and `EventGatewayTLSTrustBundle` in
+  `spec.from`, for Secrets in other namespaces.
   [#6254](https://github.com/Kong/kong-operator/pull/6254)
   [#6270](https://github.com/Kong/kong-operator/pull/6270)
+  [#6276](https://github.com/Kong/kong-operator/pull/6276)
 - `--konnect-list-page-size` flag (default and maximum `100`): the page size
   the operator requests when listing Konnect entities to find the Konnect
   entity of an object, e.g. one whose Konnect ID was lost. It is a fallback in

@@ -133,6 +133,25 @@ spec:
 		t.Helper()
 		expectCondition(t, name, "Programmed", status, reason)
 	}
+	// expectEntityProgrammed waits for the Programmed condition of an entity
+	// of any kind.
+	expectEntityProgrammed := func(t *testing.T, obj interface {
+		client.Object
+		GetConditions() []metav1.Condition
+	}, status metav1.ConditionStatus, reason string,
+	) {
+		t.Helper()
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)) {
+				return
+			}
+			cond := apimeta.FindStatusCondition(obj.GetConditions(), "Programmed")
+			if assert.NotNil(ct, cond, "%T %s", obj, obj.GetName()) {
+				assert.Equal(ct, status, cond.Status, cond.Message)
+				assert.Equal(ct, reason, cond.Reason, cond.Message)
+			}
+		}, waitTime, tickTime)
+	}
 
 	backendCluster := objectFromYAML[configurationv1alpha1.EventGatewayBackendCluster](t, ns.Name,
 		backendClusterYAML("backend-cluster", "backend-cluster", gateway.Name))
@@ -385,9 +404,98 @@ spec:`+onPremEventGatewayParentRef(gateway.Name)+`
 		}, waitTime, tickTime)
 	})
 
-	t.Run("the backend clusters of a deleted gateway are not programmed", func(t *testing.T) {
+	t.Run("its virtual clusters are pushed with their policies, a child policy after its parent", func(t *testing.T) {
+		virtualCluster := objectFromYAML[configurationv1alpha1.EventGatewayVirtualCluster](t, ns.Name, `
+metadata: {name: virtual-cluster}
+spec:
+  eventGatewayBackendClusterRef: {type: namespacedRef, namespacedRef: {name: other}}
+  apiSpec:
+    name: virtual-cluster
+    aclMode: passthrough
+    authentication: [{type: anonymous}]
+    dnsLabel: virtual-cluster
+`)
+		consumePolicy := func(name, manifest string) *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy {
+			return objectFromYAML[configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy](t, ns.Name, `
+metadata: {name: `+name+`}
+spec:
+  eventGatewayVirtualClusterRef: {type: namespacedRef, namespacedRef: {name: virtual-cluster}}
+  apiSpec:
+`+manifest)
+		}
+		parent := consumePolicy("parent", `
+    type: schemaValidation
+    schemaValidation:
+      name: parent
+      config: {type: confluentSchemaRegistry, confluentSchemaRegistry: {schemaRegistry: {name: registry}, valueValidationAction: mark}}
+`)
+		child := consumePolicy("child", `
+    type: modifyHeaders
+    parentPolicyRef: {name: parent}
+    modifyHeaders:
+      name: child
+      config:
+        actions: [{op: remove, remove: {key: x-header}}]
+`)
+		// Created first: added once its parent is.
+		for _, obj := range []client.Object{child, virtualCluster, parent} {
+			require.NoError(t, cl.Create(ctx, obj))
+		}
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			for _, pod := range []*fakeGWAdmin{pod0, pod1} {
+				g, ok, _ := pod.state(gatewayID(ct, gateway))
+				if !assert.True(ct, ok) || !assert.Len(ct, g.entities.VirtualClusters, 1) {
+					continue
+				}
+				vc := g.entities.VirtualClusters[0]
+				assert.Equal(ct, string(virtualCluster.UID), vc.Id.String())
+				if assert.Len(ct, vc.ConsumePolicies, 2) {
+					assert.Equal(ct, string(parent.UID), vc.ConsumePolicies[0].Id.String())
+					assert.Equal(ct, string(child.UID), vc.ConsumePolicies[1].Id.String())
+				}
+			}
+		}, waitTime, tickTime)
+		expectEntityProgrammed(t, virtualCluster, metav1.ConditionTrue, "Programmed")
+		expectEntityProgrammed(t, parent, metav1.ConditionTrue, "Programmed")
+		expectEntityProgrammed(t, child, metav1.ConditionTrue, "Programmed")
+	})
+
+	t.Run("a virtual cluster whose backend cluster is deleted is detached", func(t *testing.T) {
+		bc := objectFromYAML[configurationv1alpha1.EventGatewayBackendCluster](t, ns.Name,
+			backendClusterYAML("detached-backend-cluster", "detached-backend-cluster", gateway.Name))
+		vc := objectFromYAML[configurationv1alpha1.EventGatewayVirtualCluster](t, ns.Name, `
+metadata: {name: detached}
+spec:
+  eventGatewayBackendClusterRef: {type: namespacedRef, namespacedRef: {name: detached-backend-cluster}}
+  apiSpec:
+    name: detached
+    aclMode: passthrough
+    authentication: [{type: anonymous}]
+    dnsLabel: detached
+`)
+		require.NoError(t, cl.Create(ctx, bc))
+		require.NoError(t, cl.Create(ctx, vc))
+		expectEntityProgrammed(t, vc, metav1.ConditionTrue, "Programmed")
+
+		require.NoError(t, cl.Delete(ctx, bc))
+		expectEntityProgrammed(t, vc, metav1.ConditionFalse, "Detached")
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			g, _, _ := pod0.state(gatewayID(ct, gateway))
+			for _, pushed := range g.entities.VirtualClusters {
+				assert.NotEqual(ct, string(vc.UID), pushed.Id.String(), "the virtual cluster is removed from gw-admin")
+			}
+		}, waitTime, tickTime)
+	})
+
+	t.Run("the entities of a deleted gateway are not programmed", func(t *testing.T) {
 		require.NoError(t, cl.Delete(ctx, gateway))
 		expectProgrammed(t, "other", metav1.ConditionFalse, "GatewayNotProgrammed")
+		expectEntityProgrammed(t, &configurationv1alpha1.EventGatewayVirtualCluster{Name: "virtual-cluster", Namespace: ns.Name},
+			metav1.ConditionFalse, "GatewayNotProgrammed")
+		for _, name := range []string{"parent", "child"} {
+			expectEntityProgrammed(t, &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{Name: name, Namespace: ns.Name},
+				metav1.ConditionFalse, "GatewayNotProgrammed")
+		}
 	})
 }
 

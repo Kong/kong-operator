@@ -17,10 +17,8 @@ limitations under the License.
 package onprem
 
 import (
-	"bytes"
 	"cmp"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -185,81 +183,6 @@ func getEntities(ctx context.Context, gwAdmin gwadminapi.ClientInterface, gatewa
 		return gwadminapi.GatewayEntities{}, false, fmt.Errorf("failed to %s: gw-admin returned %s without a JSON body", action, resp.Status)
 	}
 	return *parsed.JSON200, true, nil
-}
-
-// sameEntities reports whether gw-admin holds the entities pushed, pushedKey
-// being their comparisonKey once withGWAdminDefaults applied: a field left
-// out and the default gw-admin sets on it are the same.
-func sameEntities(held gwadminapi.GatewayEntities, pushedKey []byte) (bool, error) {
-	heldKey, err := comparisonKey(held)
-	if err != nil {
-		return false, fmt.Errorf("failed to encode the entities gw-admin holds: %w", err)
-	}
-	return bytes.Equal(heldKey, pushedKey), nil
-}
-
-// comparisonKey returns the entities as sameEntities compares them: their
-// JSON encoding, as gw-admin receives them, as the entities hold times, on
-// whose unexported fields equality.Semantic.DeepEqual panics. Each list is
-// sorted by id, as its order doesn't matter, and a missing list is empty.
-// The encoding goes through a generic value, which sorts the keys of every
-// object: an entity holding a [json.RawMessage], like a schema registry, keeps
-// its nested fields in the order gw-admin sends them.
-func comparisonKey(e gwadminapi.GatewayEntities) ([]byte, error) {
-	v, err := jsonValue(sortedByID(withEmptyLists(e)))
-	if err != nil {
-		return nil, err
-	}
-	return json.Marshal(v)
-}
-
-// sortedByID returns the entities with each list sorted by id.
-func sortedByID(e gwadminapi.GatewayEntities) gwadminapi.GatewayEntities {
-	e.BackendClusters = byID(e.BackendClusters, func(bc gwadminapi.EventGatewayBackendClusterOnPrem) gwadminapi.UUIDv4 { return bc.Id })
-	e.TlsTrustBundles = byID(e.TlsTrustBundles, func(b gwadminapi.EventGatewayTLSTrustBundleOnPrem) gwadminapi.UUIDv4 { return b.Id })
-	e.SchemaRegistries = byID(e.SchemaRegistries, func(r gwadminapi.EventGatewaySchemaRegistryOnPrem) gwadminapi.UUIDv4 { return r.Id })
-	e.StaticKeys = byID(e.StaticKeys, func(k gwadminapi.EventGatewayStaticKeyOnPrem) gwadminapi.UUIDv4 { return k.Id })
-	return e
-}
-
-// byID returns a copy of the entities sorted by id.
-func byID[E any](entities []E, id func(E) gwadminapi.UUIDv4) []E {
-	return slices.SortedFunc(slices.Values(entities), func(a, b E) int {
-		idA, idB := id(a), id(b)
-		return bytes.Compare(idA[:], idB[:])
-	})
-}
-
-// withGWAdminDefaults returns the entities as gw-admin returns them: with the
-// value it sets on each field left out, and without the empty descriptions
-// of the TLS trust bundles and the static keys, which it drops. Otherwise
-// they would be pushed again on every reconcile. A default missing here has
-// the same effect. The value of a static key is compared as it is:
-// gw-admin returns it, and a rotated key must be pushed again.
-func withGWAdminDefaults(e gwadminapi.GatewayEntities) gwadminapi.GatewayEntities {
-	e.BackendClusters = slices.Clone(e.BackendClusters)
-	for i := range e.BackendClusters {
-		if tls := &e.BackendClusters[i].Tls; tls.TlsVersions == nil {
-			tls.TlsVersions = &[]gwadminapi.BackendClusterTLSTlsVersions{gwadminapi.Tls12, gwadminapi.Tls13}
-		}
-	}
-	e.TlsTrustBundles = slices.Clone(e.TlsTrustBundles)
-	for i := range e.TlsTrustBundles {
-		e.TlsTrustBundles[i].Description = withoutEmpty(e.TlsTrustBundles[i].Description)
-	}
-	e.StaticKeys = slices.Clone(e.StaticKeys)
-	for i := range e.StaticKeys {
-		e.StaticKeys[i].Description = withoutEmpty(e.StaticKeys[i].Description)
-	}
-	return e
-}
-
-// withoutEmpty returns nil for an empty string, s otherwise.
-func withoutEmpty(s *string) *string {
-	if s != nil && *s == "" {
-		return nil
-	}
-	return s
 }
 
 // idsKey returns the ids, sorted, as one string, to tell whether the

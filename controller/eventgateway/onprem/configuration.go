@@ -110,7 +110,7 @@ type excludedEntity struct {
 // the cluster, other than an object that doesn't exist, is returned: leaving
 // the entity out would delete it from gw-admin.
 //
-// TODO: add the virtual clusters and the listeners (#6061, #6062).
+// TODO: add the listeners (#6062).
 func buildConfiguration(
 	ctx context.Context, cl client.Client, gateway *eventgatewayv1alpha1.OnPremEventGateway, secretHint string, previous map[types.UID]any,
 ) (configuration, error) {
@@ -122,7 +122,11 @@ func buildConfiguration(
 		previous:   previous,
 		built:      map[types.UID]any{},
 	}
-	if err := cfg.addGatewayEntities(ctx, cl, gateway); err != nil {
+	backendClusters, err := cfg.addGatewayEntities(ctx, cl, gateway)
+	if err != nil {
+		return configuration{}, err
+	}
+	if err := cfg.addVirtualClusters(ctx, uidResolver{Client: cl, read: map[uuid.UUID]client.ObjectKey{}}, backendClusters); err != nil {
 		return configuration{}, err
 	}
 	key, err := comparisonKey(withGWAdminDefaults(cfg.entities))
@@ -133,57 +137,62 @@ func buildConfiguration(
 	return cfg, nil
 }
 
-// addGatewayEntities adds the entities attached to the gateway itself.
-func (c *configuration) addGatewayEntities(ctx context.Context, cl client.Client, gateway *eventgatewayv1alpha1.OnPremEventGateway) error {
+// addGatewayEntities adds the entities attached to the gateway itself. It
+// returns its backend clusters, the parents of its virtual clusters.
+func (c *configuration) addGatewayEntities(ctx context.Context, cl client.Client, gateway *eventgatewayv1alpha1.OnPremEventGateway) (parents, error) {
 	var backendClusters configurationv1alpha1.EventGatewayBackendClusterList
-	if err := addEntities(ctx, c, cl, gateway, &backendClusters, &backendClusters.Items, entityKind[*configurationv1alpha1.EventGatewayBackendCluster, gwadminapi.EventGatewayBackendClusterOnPrem]{
-		kind: "EventGatewayBackendCluster", what: "backend cluster", path: "backend_clusters",
-		field: index.IndexFieldEventGatewayBackendClusterOnOnPremEventGatewayRef,
-		request: func(ctx context.Context, cl client.Client, bc *configurationv1alpha1.EventGatewayBackendCluster) (any, error) {
-			return bc.ToCreateBackendClusterRequest(ctx, cl)
-		},
-		name:     func(e gwadminapi.EventGatewayBackendClusterOnPrem) string { return e.Name },
-		entities: &c.entities.BackendClusters,
-	}); err != nil {
-		return err
+	bcs, err := addAttached(ctx, c, cl, gateway, &backendClusters, &backendClusters.Items, index.IndexFieldEventGatewayBackendClusterOnOnPremEventGatewayRef,
+		entityKind[*configurationv1alpha1.EventGatewayBackendCluster, gwadminapi.EventGatewayBackendClusterOnPrem]{
+			kind: "EventGatewayBackendCluster", what: "backend cluster",
+			request: func(ctx context.Context, cl client.Client, bc *configurationv1alpha1.EventGatewayBackendCluster) (any, error) {
+				return bc.ToCreateBackendClusterRequest(ctx, cl)
+			},
+			name: func(e gwadminapi.EventGatewayBackendClusterOnPrem) string { return e.Name },
+			list: in[*configurationv1alpha1.EventGatewayBackendCluster]("backend_clusters", &c.entities.BackendClusters),
+		})
+	if err != nil {
+		return parents{}, err
 	}
 
 	var bundles configurationv1alpha1.EventGatewayTLSTrustBundleList
-	if err := addEntities(ctx, c, cl, gateway, &bundles, &bundles.Items, entityKind[*configurationv1alpha1.EventGatewayTLSTrustBundle, gwadminapi.EventGatewayTLSTrustBundleOnPrem]{
-		kind: "EventGatewayTLSTrustBundle", what: "TLS trust bundle", path: "tls_trust_bundles",
-		field: index.IndexFieldEventGatewayTLSTrustBundleOnOnPremEventGatewayRef,
-		request: func(ctx context.Context, cl client.Client, b *configurationv1alpha1.EventGatewayTLSTrustBundle) (any, error) {
-			return b.ToCreateTLSTrustBundleRequest(ctx, cl)
-		},
-		name:     func(e gwadminapi.EventGatewayTLSTrustBundleOnPrem) string { return e.Name },
-		entities: &c.entities.TlsTrustBundles,
-	}); err != nil {
-		return err
+	if _, err := addAttached(ctx, c, cl, gateway, &bundles, &bundles.Items, index.IndexFieldEventGatewayTLSTrustBundleOnOnPremEventGatewayRef,
+		entityKind[*configurationv1alpha1.EventGatewayTLSTrustBundle, gwadminapi.EventGatewayTLSTrustBundleOnPrem]{
+			kind: "EventGatewayTLSTrustBundle", what: "TLS trust bundle",
+			request: func(ctx context.Context, cl client.Client, b *configurationv1alpha1.EventGatewayTLSTrustBundle) (any, error) {
+				return b.ToCreateTLSTrustBundleRequest(ctx, cl)
+			},
+			name: func(e gwadminapi.EventGatewayTLSTrustBundleOnPrem) string { return e.Name },
+			list: in[*configurationv1alpha1.EventGatewayTLSTrustBundle]("tls_trust_bundles", &c.entities.TlsTrustBundles),
+		}); err != nil {
+		return parents{}, err
 	}
 
 	var registries configurationv1alpha1.EventGatewaySchemaRegistryList
-	if err := addEntities(ctx, c, cl, gateway, &registries, &registries.Items, entityKind[*configurationv1alpha1.EventGatewaySchemaRegistry, gwadminapi.EventGatewaySchemaRegistryOnPrem]{
-		kind: "EventGatewaySchemaRegistry", what: "schema registry", path: "schema_registries",
-		field: index.IndexFieldEventGatewaySchemaRegistryOnOnPremEventGatewayRef,
-		request: func(ctx context.Context, cl client.Client, r *configurationv1alpha1.EventGatewaySchemaRegistry) (any, error) {
-			return r.ToSchemaRegistryCreate(ctx, cl)
-		},
-		name:     schemaRegistryName,
-		entities: &c.entities.SchemaRegistries,
-	}); err != nil {
-		return err
+	if _, err := addAttached(ctx, c, cl, gateway, &registries, &registries.Items, index.IndexFieldEventGatewaySchemaRegistryOnOnPremEventGatewayRef,
+		entityKind[*configurationv1alpha1.EventGatewaySchemaRegistry, gwadminapi.EventGatewaySchemaRegistryOnPrem]{
+			kind: "EventGatewaySchemaRegistry", what: "schema registry",
+			request: func(ctx context.Context, cl client.Client, r *configurationv1alpha1.EventGatewaySchemaRegistry) (any, error) {
+				return r.ToSchemaRegistryCreate(ctx, cl)
+			},
+			name: schemaRegistryName,
+			list: in[*configurationv1alpha1.EventGatewaySchemaRegistry]("schema_registries", &c.entities.SchemaRegistries),
+		}); err != nil {
+		return parents{}, err
 	}
 
 	var keys configurationv1alpha1.EventGatewayStaticKeyList
-	return addEntities(ctx, c, cl, gateway, &keys, &keys.Items, entityKind[*configurationv1alpha1.EventGatewayStaticKey, gwadminapi.EventGatewayStaticKeyOnPrem]{
-		kind: "EventGatewayStaticKey", what: "static key", path: "static_keys",
-		field: index.IndexFieldEventGatewayStaticKeyOnOnPremEventGatewayRef,
-		request: func(ctx context.Context, cl client.Client, k *configurationv1alpha1.EventGatewayStaticKey) (any, error) {
-			return k.ToEventGatewayStaticKeyCreate(ctx, cl)
-		},
-		name:     func(e gwadminapi.EventGatewayStaticKeyOnPrem) string { return e.Name },
-		entities: &c.entities.StaticKeys,
-	})
+	if _, err := addAttached(ctx, c, cl, gateway, &keys, &keys.Items, index.IndexFieldEventGatewayStaticKeyOnOnPremEventGatewayRef,
+		entityKind[*configurationv1alpha1.EventGatewayStaticKey, gwadminapi.EventGatewayStaticKeyOnPrem]{
+			kind: "EventGatewayStaticKey", what: "static key",
+			request: func(ctx context.Context, cl client.Client, k *configurationv1alpha1.EventGatewayStaticKey) (any, error) {
+				return k.ToEventGatewayStaticKeyCreate(ctx, cl)
+			},
+			name: func(e gwadminapi.EventGatewayStaticKeyOnPrem) string { return e.Name },
+			list: in[*configurationv1alpha1.EventGatewayStaticKey]("static_keys", &c.entities.StaticKeys),
+		}); err != nil {
+		return parents{}, err
+	}
+	return bcs, nil
 }
 
 // schemaRegistryName returns the name of a schema registry: Confluent is its
@@ -196,127 +205,201 @@ func schemaRegistryName(e gwadminapi.EventGatewaySchemaRegistryOnPrem) string {
 	return registry.Name
 }
 
-// entityKind is a kind of entity attached to the gateway itself.
+// entityKind is a kind of entity of the configuration.
 type entityKind[PT entityObject, E any] struct {
 	// kind is the kind of the objects, e.g. EventGatewayBackendCluster.
 	kind string
 	// what names an entity of the kind in messages, e.g. "backend cluster".
 	what string
-	// path is the list of the entities in the configuration, e.g.
-	// backend_clusters.
-	path string
-	// field is the index field of the objects by gateway.
-	field string
-	// request returns the Konnect SDK request of an object, reading its
-	// Secrets with the client: its entity is converted from it.
+	// request returns the Konnect SDK request of an object, reading what it
+	// references with the client: its entity is converted from it.
 	request func(context.Context, client.Client, PT) (any, error)
-	// name returns the name of an entity.
+	// adjust, when set, adjusts the JSON payload of an entity, e.g. to
+	// resolve its references.
+	adjust func(map[string]any) error
+	// name, when set, returns the name of an entity, which must be unique
+	// among the entities of the kind.
 	name func(E) string
-	// entities is the list of the configuration the entities are added to.
-	entities *[]E
+	// list returns the path of the list of the configuration the entity of
+	// an object is added to, e.g. backend_clusters, and the list.
+	list func(PT) (string, *[]E)
 }
 
-// addEntities lists the objects of the kind attached to the gateway into
-// list, whose items are items, and adds their entities, from the oldest. Two
-// entities of a kind can't have the same name: the oldest one is kept.
-func addEntities[T any, PT interface {
+// in returns the list of an entityKind whose entities all go to the list at
+// the path.
+func in[PT entityObject, E any](path string, entities *[]E) func(PT) (string, *[]E) {
+	return func(PT) (string, *[]E) { return path, entities }
+}
+
+// addAttached lists into list, whose items are items, the objects of a kind
+// attached to the gateway, by the index field of the kind by gateway, and
+// adds their entities. It returns the objects as parents.
+func addAttached[T any, PT interface {
 	*T
 	entityObject
 }, E any](
 	ctx context.Context, c *configuration, cl client.Client, gateway *eventgatewayv1alpha1.OnPremEventGateway,
-	list client.ObjectList, items *[]T, k entityKind[PT, E],
-) error {
-	if err := cl.List(ctx, list, client.MatchingFields{k.field: client.ObjectKeyFromObject(gateway).String()}); err != nil {
-		return fmt.Errorf("failed to list the %ss of the gateway: %w", k.kind, err)
+	list client.ObjectList, items *[]T, field string, k entityKind[PT, E],
+) (parents, error) {
+	if err := cl.List(ctx, list, client.MatchingFields{field: client.ObjectKeyFromObject(gateway).String()}); err != nil {
+		return parents{}, fmt.Errorf("failed to list the %ss of the gateway: %w", k.kind, err)
 	}
-	objs := make([]PT, 0, len(*items))
-	for i := range *items {
-		objs = append(objs, PT(&(*items)[i]))
+	objs := live[T, PT](*items)
+	index, err := addEntities(ctx, c, cl, objs, k)
+	if err != nil {
+		return parents{}, err
 	}
-	slices.SortFunc(objs, func(a, b PT) int {
-		return cmp.Or(
-			a.GetCreationTimestamp().Compare(b.GetCreationTimestamp().Time),
-			cmp.Compare(a.GetName(), b.GetName()),
-		)
-	})
+	p := parents{kind: k.kind, index: index}
+	for _, obj := range objs {
+		p.keys = append(p.keys, client.ObjectKeyFromObject(obj))
+	}
+	return p, nil
+}
 
+// live returns a pointer to a copy of each item not being deleted: an object
+// being deleted is left out of the configuration without a reason, it is
+// going away.
+func live[T any, PT interface {
+	*T
+	entityObject
+}](items []T) []PT {
+	objs := make([]PT, 0, len(items))
+	for _, item := range items {
+		obj := PT(&item)
+		if obj.GetDeletionTimestamp().IsZero() {
+			objs = append(objs, obj)
+		}
+	}
+	return objs
+}
+
+// addEntities adds the entities of the objects, from the oldest, and returns
+// the index of the entity of each object added in its list. Two entities of a
+// kind with a name can't have the same name: the oldest one is kept.
+func addEntities[PT entityObject, E any](ctx context.Context, c *configuration, cl client.Client, objs []PT, k entityKind[PT, E]) (map[client.ObjectKey]int, error) {
+	objs = slices.Clone(objs)
+	slices.SortFunc(objs, byCreation[PT])
+
+	index := map[client.ObjectKey]int{}
 	names := map[string]struct{}{}
 	for _, obj := range objs {
-		if !obj.GetDeletionTimestamp().IsZero() {
-			continue
-		}
-		status := entityStatus{obj: obj}
-		refs := sensitiveDataSecretRefs(obj)
-		readsSecrets := len(refs) > 0
-		setSecretRefValid := func(problem string) {
-			if readsSecrets {
-				status.secretRefValid = secretRefValidCondition(obj, problem)
-			}
-		}
-		exclude := func(reason kcfgconsts.ConditionReason, message string) {
-			if status.secretRefValid == nil {
-				setSecretRefValid("The Secrets it reads aren't read: " + message)
-			}
-			c.excluded = append(c.excluded, excludedEntity{entityStatus: status, reason: reason, message: message})
-		}
-		id, message := c.entityID(obj)
-		if message != "" {
-			exclude(eventgatewayv1alpha1.OnPremEntityInvalidReason, message)
-			continue
-		}
-		message, err := secretRefsNotGranted(ctx, cl, obj, refs, k.kind)
+		conv, ok, err := convertObject[PT, E](ctx, c, cl, obj, k.kind, k.request, k.adjust)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		if message != "" {
-			exclude(eventgatewayv1alpha1.OnPremEntityRefNotPermittedReason, message)
+		if !ok {
 			continue
 		}
-
-		reader := &referenceReader{Client: cl, secrets: map[client.ObjectKey]*corev1.Secret{}}
-		var entity E
-		req, err := k.request(ctx, reader, obj)
-		if err == nil {
-			err = convertEntity(req, obj, id, &entity)
-		}
-		if reader.err != nil && !apierrors.IsNotFound(reader.err) {
-			return fmt.Errorf("failed to read a reference of %s %s: %w", k.kind, client.ObjectKeyFromObject(obj), reader.err)
-		}
-		secretErr := ""
-		if err != nil {
-			secretErr = c.secretProblem(obj, refs, reader.secrets)
-			if secretErr == "" {
-				if reader.readAll(obj, refs) {
-					setSecretRefValid("")
-				}
-				exclude(eventgatewayv1alpha1.OnPremEntityInvalidReason, err.Error())
+		if k.name != nil {
+			name := k.name(conv.entity)
+			if _, ok := names[name]; ok {
+				c.exclude(conv.status, eventgatewayv1alpha1.OnPremEntityInvalidReason, fmt.Sprintf("another %s of the gateway is named %q", k.what, name))
 				continue
 			}
-		} else {
+			names[name] = struct{}{}
+		}
+		path, entities := k.list(obj)
+		index[client.ObjectKeyFromObject(obj)] = len(*entities)
+		c.record(fmt.Sprintf("%s.%d", path, len(*entities)), k.kind, conv.status, conv.entity)
+		*entities = append(*entities, conv.entity)
+	}
+	return index, nil
+}
+
+// converted is an object converted into its entity.
+type converted[E any] struct {
+	entity E
+	status entityStatus
+}
+
+// convertObject converts the object into its entity, from its Konnect SDK
+// request, whose JSON payload adjust, when set, adjusts, e.g. to resolve its
+// references. It leaves the object out, with the reason, when it is in
+// another namespace than the gateway, its UID is not a version 4 UUID, it
+// reads a Secret of another namespace no KongReferenceGrant allows, or it
+// can't be converted, unless only a Secret it reads is gone or lacks the key
+// read: its entity is then the one of the last configuration built for the
+// gateway. It returns false for an object left out, and an error when what it
+// references can't be read, other than an object that doesn't exist.
+func convertObject[PT entityObject, E any](
+	ctx context.Context, c *configuration, cl client.Client, obj PT, kind string,
+	request func(context.Context, client.Client, PT) (any, error), adjust func(map[string]any) error,
+) (converted[E], bool, error) {
+	conv := converted[E]{status: entityStatus{obj: obj}}
+	refs := sensitiveDataSecretRefs(obj)
+	setSecretRefValid := func(problem string) {
+		if len(refs) > 0 {
+			conv.status.secretRefValid = secretRefValidCondition(obj, problem)
+		}
+	}
+	id, message := c.entityID(obj)
+	if message != "" {
+		c.exclude(conv.status, eventgatewayv1alpha1.OnPremEntityInvalidReason, message)
+		return conv, false, nil
+	}
+	message, err := secretRefsNotGranted(ctx, cl, obj, refs, kind)
+	if err != nil {
+		return conv, false, err
+	}
+	if message != "" {
+		c.exclude(conv.status, eventgatewayv1alpha1.OnPremEntityRefNotPermittedReason, message)
+		return conv, false, nil
+	}
+
+	reader := &referenceReader{Client: cl, secrets: map[client.ObjectKey]*corev1.Secret{}}
+	req, err := request(ctx, reader, obj)
+	if err == nil {
+		err = convertEntity(req, obj, id, &conv.entity, adjust)
+	}
+	if reader.err != nil && !apierrors.IsNotFound(reader.err) {
+		return conv, false, fmt.Errorf("failed to read a reference of %s %s: %w", kind, client.ObjectKeyFromObject(obj), reader.err)
+	}
+	if err == nil {
+		setSecretRefValid("")
+		return conv, true, nil
+	}
+	secretErr := c.secretProblem(obj, refs, reader.secrets)
+	if secretErr == "" {
+		if reader.readAll(obj, refs) {
 			setSecretRefValid("")
 		}
-		if secretErr != "" {
-			setSecretRefValid(secretErr)
-			last, ok := c.previous[obj.GetUID()].(E)
-			if !ok {
-				exclude(eventgatewayv1alpha1.OnPremEntityInvalidReason, secretErr)
-				continue
-			}
-			entity, status.kept = last, true
-		}
-
-		name := k.name(entity)
-		if _, ok := names[name]; ok {
-			exclude(eventgatewayv1alpha1.OnPremEntityInvalidReason, fmt.Sprintf("another %s of the gateway is named %q", k.what, name))
-			continue
-		}
-		names[name] = struct{}{}
-		c.objects[fmt.Sprintf("%s.%d", k.path, len(*k.entities))] = k.kind + " " + client.ObjectKeyFromObject(obj).String()
-		*k.entities = append(*k.entities, entity)
-		c.built[obj.GetUID()] = entity
-		c.included = append(c.included, status)
+		c.exclude(conv.status, eventgatewayv1alpha1.OnPremEntityInvalidReason, err.Error())
+		return conv, false, nil
 	}
-	return nil
+	setSecretRefValid(secretErr)
+	last, ok := c.previous[obj.GetUID()].(E)
+	if !ok {
+		c.exclude(conv.status, eventgatewayv1alpha1.OnPremEntityInvalidReason, secretErr)
+		return conv, false, nil
+	}
+	conv.entity, conv.status.kept = last, true
+	return conv, true, nil
+}
+
+// record records the object an entity of the configuration comes from, at
+// the path of the entity, and includes the object in the configuration.
+func (c *configuration) record(path, kind string, status entityStatus, entity any) {
+	c.objects[path] = kind + " " + client.ObjectKeyFromObject(status.obj).String()
+	c.built[status.obj.GetUID()] = entity
+	c.included = append(c.included, status)
+}
+
+// exclude leaves the object out of the configuration, with the reason. An
+// object reading Secrets whose SecretRefValid condition isn't known yet
+// reports that its Secrets aren't read.
+func (c *configuration) exclude(status entityStatus, reason kcfgconsts.ConditionReason, message string) {
+	if status.secretRefValid == nil && len(sensitiveDataSecretRefs(status.obj)) > 0 {
+		status.secretRefValid = secretRefValidCondition(status.obj, "The Secrets it reads aren't read: "+message)
+	}
+	c.excluded = append(c.excluded, excludedEntity{entityStatus: status, reason: reason, message: message})
+}
+
+// byCreation orders objects from the oldest to the newest, then by name.
+func byCreation[PT client.Object](a, b PT) int {
+	return cmp.Or(
+		a.GetCreationTimestamp().Compare(b.GetCreationTimestamp().Time),
+		cmp.Compare(a.GetName(), b.GetName()),
+	)
 }
 
 // asEntities returns the entities held in lastEntities for a gateway, or nil.
@@ -390,9 +473,15 @@ func (c *configuration) secretProblem(obj client.Object, refs []configurationv1a
 
 // secretKey returns the key of the Secret the reference names.
 func secretKey(obj client.Object, ref configurationv1alpha1.SensitiveDataSecretRef) client.ObjectKey {
-	key := client.ObjectKey{Namespace: obj.GetNamespace(), Name: ref.Name}
-	if ref.Namespace != nil && *ref.Namespace != "" {
-		key.Namespace = *ref.Namespace
+	return refKey(obj, ref.Namespace, ref.Name)
+}
+
+// refKey returns the key of the object a reference of obj names, in the
+// namespace of obj unless it names one.
+func refKey(obj client.Object, namespace *string, name string) client.ObjectKey {
+	key := client.ObjectKey{Namespace: obj.GetNamespace(), Name: name}
+	if namespace != nil && *namespace != "" {
+		key.Namespace = *namespace
 	}
 	return key
 }
@@ -468,7 +557,9 @@ func (c configuration) describeField(field string) string {
 // leaving it out means to gw-admin too. A field gw-admin doesn't know is
 // refused, naming the field: dropped silently, it would change what the
 // entity does, and gw-admin rejects the unknown properties it is sent anyway.
-func convertEntity(from any, obj client.Object, id uuid.UUID, to any) error {
+// adjust, when set, adjusts the JSON payload before it is decoded, e.g. to
+// resolve its references: its error is the error of the conversion.
+func convertEntity(from any, obj client.Object, id uuid.UUID, to any, adjust func(map[string]any) error) error {
 	value, err := jsonValue(from)
 	if err != nil {
 		return fmt.Errorf("failed to convert %T: %w", from, err)
@@ -476,6 +567,11 @@ func convertEntity(from any, obj client.Object, id uuid.UUID, to any) error {
 	fields, ok := value.(map[string]any)
 	if !ok {
 		return fmt.Errorf("failed to convert %T: not a JSON object", from)
+	}
+	if adjust != nil {
+		if err := adjust(fields); err != nil {
+			return err
+		}
 	}
 	fields["id"] = id.String()
 	fields["created_at"] = createdAt(obj).Format(time.RFC3339)

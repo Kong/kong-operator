@@ -101,6 +101,9 @@ type Reconciler struct {
 	// It is kept in memory: after a restart of the operator, an entity whose
 	// Secret is gone is left out.
 	lastEntities sync.Map
+	// reported holds, by gateway UID, the objects whose status was last
+	// reported for the gateway (see reportDetached). Kept in memory too.
+	reported sync.Map
 }
 
 // pendingRetries returns the backoff of the pushes to the gw-admin pods still
@@ -555,6 +558,7 @@ func (r *Reconciler) forgetDeleted() predicate.Funcs {
 func (r *Reconciler) forget(uid types.UID) {
 	r.removedFromGWAdmin.Delete(uid)
 	r.lastEntities.Delete(uid)
+	r.reported.Delete(uid)
 	r.backoff.Forget(uid)
 	r.pendingRetries().Forget(uid)
 }
