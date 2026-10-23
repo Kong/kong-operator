@@ -405,6 +405,19 @@ func TestMapSecretToOnPremEventGateways(t *testing.T) {
 		readingSecret(ns, "other-gateway", onPremGatewayRef("other"), new("secrets")),
 		readingSecret(ns, "konnect", konnectGatewayRef("konnect"), nil),
 		backendCluster(ns, "no-secret", onPremGatewayRef("unrelated")),
+		&configurationv1alpha1.EventGatewayStaticKey{
+			Name: "key", Namespace: ns,
+			Spec: configurationv1alpha1.EventGatewayStaticKeySpec{
+				ParentRef: onPremGatewayRef("key-gateway"),
+				APISpec: configurationv1alpha1.EventGatewayStaticKeyAPISpec{
+					Name: "key",
+					Value: configurationv1alpha1.SensitiveDataSource{
+						Type:      configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+						SecretRef: &configurationv1alpha1.SensitiveDataSecretRef{Name: "key", Key: "key"},
+					},
+				},
+			},
+		},
 	)
 	mapFn := mapSecretToOnPremEventGateways(cl)
 	secret := func(namespace string) *corev1.Secret { return &corev1.Secret{Name: "tls", Namespace: namespace} }
@@ -418,4 +431,8 @@ func TestMapSecretToOnPremEventGateways(t *testing.T) {
 		mapFn(t.Context(), secret("secrets")),
 		"a Secret of another namespace")
 	assert.Empty(t, mapFn(t.Context(), secret("unread")))
+	assert.Equal(t,
+		[]reconcile.Request{{Namespace: ns, Name: "key-gateway"}},
+		mapFn(t.Context(), &corev1.Secret{Name: "key", Namespace: ns}),
+		"a Secret another kind of entity reads")
 }

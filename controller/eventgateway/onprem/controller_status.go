@@ -258,28 +258,35 @@ func (r *Reconciler) reportEntities(ctx context.Context, gateway *eventgatewayv1
 			cond = entityCondition(e.obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType, metav1.ConditionFalse,
 				eventgatewayv1alpha1.OnPremEntityGatewayNotProgrammedReason, message+keptMessage(e))
 		}
-		errs = append(errs, r.setEntityConditions(ctx, e.obj, e.conditions(cond)...))
+		errs = append(errs, r.setEntityStatus(ctx, e, cond))
 	}
 	for _, e := range cfg.excluded {
 		cond := entityCondition(e.obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType, metav1.ConditionFalse, e.reason,
 			fmt.Sprintf("Left out of the configuration of the OnPremEventGateway %s: %s", gatewayKey, e.message))
-		errs = append(errs, r.setEntityConditions(ctx, e.obj, e.conditions(cond)...))
+		errs = append(errs, r.setEntityStatus(ctx, e.entityStatus, cond))
 	}
 	return errors.Join(errs...)
 }
 
 // reportEntitiesNotProgrammed sets the Programmed condition of the entities
 // of the gateway to False, with the message, e.g. when the gateway is being
-// deleted: their configuration is not built.
+// deleted: they are not pushed. The entities are those its configuration
+// would hold, or leave out.
 func (r *Reconciler) reportEntitiesNotProgrammed(ctx context.Context, gateway *eventgatewayv1alpha1.OnPremEventGateway, message string) error {
-	backendClusters, err := backendClustersOf(ctx, r.Client, gateway)
+	cfg, err := buildConfiguration(ctx, r.Client, gateway, "", nil)
 	if err != nil {
 		return err
 	}
 	var errs []error
-	for _, obj := range backendClusters {
-		errs = append(errs, r.setEntityConditions(ctx, obj, entityCondition(obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType,
+	notProgrammed := func(obj entityObject) {
+		errs = append(errs, r.setEntityConditions(ctx, obj, nil, entityCondition(obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType,
 			metav1.ConditionFalse, eventgatewayv1alpha1.OnPremEntityGatewayNotProgrammedReason, message)))
+	}
+	for _, e := range cfg.included {
+		notProgrammed(e.obj)
+	}
+	for _, e := range cfg.excluded {
+		notProgrammed(e.obj)
 	}
 	return errors.Join(errs...)
 }
@@ -293,13 +300,14 @@ func keptMessage(e entityStatus) string {
 	return "; a Secret it reads can't be used, its last configuration is kept"
 }
 
-// conditions returns the conditions of the entity: programmed, and its
-// SecretRefValid condition, when it reads Secrets.
-func (e entityStatus) conditions(programmed metav1.Condition) []metav1.Condition {
+// setEntityStatus sets the conditions of the entity: programmed, and its
+// SecretRefValid condition, removed when it reads no Secret, e.g. one whose
+// value moved from a Secret to an inline one.
+func (r *Reconciler) setEntityStatus(ctx context.Context, e entityStatus, programmed metav1.Condition) error {
 	if e.secretRefValid == nil {
-		return []metav1.Condition{programmed}
+		return r.setEntityConditions(ctx, e.obj, []string{string(konnectv1alpha1.SecretRefValidConditionType)}, programmed)
 	}
-	return []metav1.Condition{*e.secretRefValid, programmed}
+	return r.setEntityConditions(ctx, e.obj, nil, *e.secretRefValid, programmed)
 }
 
 // secretRefValidCondition returns the SecretRefValid condition of the
@@ -323,13 +331,16 @@ func entityCondition[T, R ~string](obj entityObject, conditionType T, status met
 		k8sutils.TruncateMessage(message, maxConditionMessageLength), obj.GetGeneration())
 }
 
-// setEntityConditions sets the conditions on the entity, patching its status
-// when they change, with an optimistic lock: a cache behind the API server
-// could otherwise set back the conditions someone else set. An entity
-// deleted meanwhile is left alone.
-func (r *Reconciler) setEntityConditions(ctx context.Context, obj entityObject, conds ...metav1.Condition) error {
+// setEntityConditions sets the conditions on the entity and removes those of
+// the removed types, patching its status when they change, with an
+// optimistic lock: a cache behind the API server could otherwise set back the
+// conditions someone else set. An entity deleted meanwhile is left alone.
+func (r *Reconciler) setEntityConditions(ctx context.Context, obj entityObject, removed []string, conds ...metav1.Condition) error {
 	conditions := slices.Clone(obj.GetConditions())
 	changed := false
+	for _, conditionType := range removed {
+		changed = apimeta.RemoveStatusCondition(&conditions, conditionType) || changed
+	}
 	for _, cond := range conds {
 		changed = apimeta.SetStatusCondition(&conditions, cond) || changed
 	}

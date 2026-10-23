@@ -43,7 +43,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminapi"
 	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminsync"
@@ -311,7 +310,7 @@ func newFakeClient(t *testing.T, objects ...client.Object) client.Client {
 func newFakeClientWithInterceptor(t *testing.T, funcs interceptor.Funcs, objects ...client.Object) client.WithWatch {
 	t.Helper()
 	b := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).
-		WithStatusSubresource(&eventgatewayv1alpha1.OnPremEventGateway{}, &configurationv1alpha1.EventGatewayBackendCluster{}).
+		WithStatusSubresource(append(entityTypes(), &eventgatewayv1alpha1.OnPremEventGateway{})...).
 		WithTypeConverters(testTypeConverter).
 		WithInterceptorFuncs(funcs)
 	for _, opt := range slices.Concat(gwadminref.IndexOptions(), IndexOptions()) {

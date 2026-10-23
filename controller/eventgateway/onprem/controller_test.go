@@ -792,6 +792,14 @@ func TestReportEntities(t *testing.T) {
 		assert.Equal(t, "secret not found", got.Message)
 	})
 
+	t.Run("an entity that reads no Secret anymore loses its SecretRefValid condition", func(t *testing.T) {
+		require.NotNil(t, condition(included, "SecretRefValid"))
+		cfg := configuration{included: []entityStatus{{obj: read(t, cl, included)}}}
+		require.NoError(t, r.reportEntities(t.Context(), gateway, cfg))
+		assert.Nil(t, condition(included, "SecretRefValid"))
+		assert.NotNil(t, programmed(included))
+	})
+
 	t.Run("an unchanged condition isn't patched", func(t *testing.T) {
 		var patched int
 		cl := newFakeClientWithInterceptor(t, interceptor.Funcs{

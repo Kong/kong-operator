@@ -105,8 +105,15 @@ func TestKongReferenceGrant(t *testing.T) {
 				TestObject: grantFrom("EventGatewayBackendCluster"),
 			},
 			{
-				// Only EventGatewayStaticKey and EventGatewayBackendCluster
-				// are supported among Event Gateway kinds.
+				Name:       "from an EventGatewaySchemaRegistry works",
+				TestObject: grantFrom("EventGatewaySchemaRegistry"),
+			},
+			{
+				Name:       "from an EventGatewayTLSTrustBundle works",
+				TestObject: grantFrom("EventGatewayTLSTrustBundle"),
+			},
+			{
+				// Only the Event Gateway kinds pushed to gw-admin are supported.
 				Name:                 "from another Event Gateway kind is rejected",
 				TestObject:           grantFrom("EventGatewayListener"),
 				ExpectedErrorMessage: new("kinds are supported for 'configuration.konghq.com' group"),
