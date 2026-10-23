@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -402,6 +403,16 @@ func TestWithoutNulls(t *testing.T) {
 		"a null item of a list is kept: it isn't a field")
 }
 
+// TestSemanticDeepEqualPanicsOnEntities pins why sameEntities compares the
+// JSON encoding of the entities: equality.Semantic.DeepEqual panics on the
+// unexported fields of the times they hold.
+func TestSemanticDeepEqualPanicsOnEntities(t *testing.T) {
+	created := time.Now()
+	held := gwadminapi.GatewayEntities{BackendClusters: []gwadminapi.EventGatewayBackendClusterOnPrem{{CreatedAt: created}}}
+	pushed := gwadminapi.GatewayEntities{BackendClusters: []gwadminapi.EventGatewayBackendClusterOnPrem{{CreatedAt: created}}}
+	assert.Panics(t, func() { equality.Semantic.DeepEqual(held, pushed) })
+}
+
 func TestSameEntities(t *testing.T) {
 	created := time.Date(2026, 10, 16, 10, 0, 0, 0, time.UTC)
 	bc := gwadminapi.EventGatewayBackendClusterOnPrem{Id: uuid.New(), Name: "bc", CreatedAt: created}
@@ -416,8 +427,6 @@ func TestSameEntities(t *testing.T) {
 		return ok
 	}
 
-	// The entities hold times: equality.Semantic.DeepEqual panics on the
-	// unexported fields of time.Time.
 	// gw-admin returns the TLS versions it defaults to when they are left
 	// out.
 	heldBC := bc
