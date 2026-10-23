@@ -170,7 +170,7 @@ rows:
     default: '`false`'
   - flag: '`--enable-controller-onpremeventgateway`'
     type: '`bool`'
-    description: "Enable the on-prem Event Gateway controller (alpha, no configuration is pushed to gw-admin yet)."
+    description: "Enable the on-prem Event Gateway controller (alpha), pushing the OnPremEventGateways to gw-admin."
     default: '`false`'
   - flag: '`--enable-controlplane-config-dump`'
     type: '`bool`'

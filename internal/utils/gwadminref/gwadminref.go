@@ -15,18 +15,19 @@ limitations under the License.
 */
 
 // Package gwadminref follows the reference of an OnPremEventGateway to its
-// GWAdmin: it finds the gateways of a GWAdmin, and tells whether a gateway is
-// allowed to use a GWAdmin in another namespace.
+// GWAdmin: it finds the gateways of a GWAdmin, tells whether a gateway is
+// allowed to use a GWAdmin in another namespace, and names the API Service
+// and the operator Secrets the GWAdmin controller provisions.
 package gwadminref
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"slices"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -34,6 +35,7 @@ import (
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 // IndexFieldOnPremEventGatewayOnGWAdmin is the index field of the
@@ -97,6 +99,24 @@ func NotAllowed(ctx context.Context, cl client.Client, gateway *eventgatewayv1al
 	return "", err
 }
 
+// GatewaysAllowedToUse returns the gateways of the list allowed to use the
+// GWAdmin: those of its namespace, and those of the namespaces a
+// KongReferenceGrant in its namespace allows.
+func GatewaysAllowedToUse(ctx context.Context, cl client.Client, gwAdmin types.NamespacedName, gateways []eventgatewayv1alpha1.OnPremEventGateway) ([]eventgatewayv1alpha1.OnPremEventGateway, error) {
+	var grants configurationv1alpha1.KongReferenceGrantList
+	if err := cl.List(ctx, &grants, client.InNamespace(gwAdmin.Namespace)); err != nil {
+		return nil, fmt.Errorf("failed to list the KongReferenceGrants of namespace %s: %w", gwAdmin.Namespace, err)
+	}
+	allowed := make([]eventgatewayv1alpha1.OnPremEventGateway, 0, len(gateways))
+	for _, g := range gateways {
+		if g.Namespace == gwAdmin.Namespace ||
+			crossnamespace.ReferenceGrantsAllow(grants.Items, g.Namespace, gwAdmin.Name, onPremEventGatewayGroupVersionKind, gwAdminGroupVersionKind) {
+			allowed = append(allowed, g)
+		}
+	}
+	return allowed, nil
+}
+
 // NamespacesGrantedBy returns the namespaces whose OnPremEventGateways the
 // KongReferenceGrant allows to reference GWAdmins of its namespace, some or
 // all of them, other than its own namespace.
@@ -118,17 +138,54 @@ func NamespacesGrantedBy(grant *configurationv1alpha1.KongReferenceGrant) []stri
 	return namespaces
 }
 
+// OfSecret returns the GWAdmin a Secret belongs to: its labels name the
+// GWAdmin, and, for the Secrets kept in the operator namespace, its
+// namespace.
+func OfSecret(obj client.Object) (types.NamespacedName, bool) {
+	labels := obj.GetLabels()
+	name := labels[consts.GatewayOperatorManagedByNameLabel]
+	if labels[consts.GWAdminUIDLabel] == "" || name == "" {
+		return types.NamespacedName{}, false
+	}
+	return types.NamespacedName{Namespace: cmp.Or(labels[consts.GatewayOperatorManagedByNamespaceLabel], obj.GetNamespace()), Name: name}, true
+}
+
 // OfGrant returns the GWAdmins a KongReferenceGrant may allow objects of
 // other namespaces to reference: those of its namespace.
-func OfGrant(ctx context.Context, cl client.Client, grant client.Object) []types.NamespacedName {
+func OfGrant(ctx context.Context, cl client.Client, grant client.Object) ([]types.NamespacedName, error) {
 	var gwAdmins operatorv1alpha1.GWAdminList
 	if err := cl.List(ctx, &gwAdmins, client.InNamespace(grant.GetNamespace())); err != nil {
-		ctrl.LoggerFrom(ctx).Error(err, "failed to list the GWAdmins of a KongReferenceGrant", "grant", client.ObjectKeyFromObject(grant))
-		return nil
+		return nil, fmt.Errorf("failed to list the GWAdmins of namespace %s: %w", grant.GetNamespace(), err)
 	}
 	keys := make([]types.NamespacedName, 0, len(gwAdmins.Items))
 	for i := range gwAdmins.Items {
 		keys = append(keys, client.ObjectKeyFromObject(&gwAdmins.Items[i]))
 	}
-	return keys
+	return keys, nil
+}
+
+// APIServiceLabels returns the labels of the API Service of the named
+// GWAdmin. Its EndpointSlices carry them too, as the EndpointSlice controller
+// copies the labels of a Service onto its EndpointSlices: they tell the
+// gw-admin pods of a GWAdmin, by its name.
+func APIServiceLabels(gwAdminName string) map[string]string {
+	return map[string]string{
+		consts.GatewayOperatorManagedByLabel:     consts.GWAdminManagedByLabelValue,
+		consts.GatewayOperatorManagedByNameLabel: gwAdminName,
+		consts.GWAdminServiceRoleLabel:           consts.GWAdminServiceRoleAPI,
+	}
+}
+
+// The Secrets only Kong Operator uses live in the operator namespace, named
+// after the UID of the GWAdmin.
+
+// OperatorSecretPrefix returns the prefix of the names of the Secrets the
+// GWAdmin keeps in the operator namespace.
+func OperatorSecretPrefix(gw *operatorv1alpha1.GWAdmin) string { return "gwadmin-" + string(gw.UID) }
+
+// OperatorClientTLSSecretName returns the name of the Secret, in the operator
+// namespace, holding the client certificate Kong Operator authenticates to
+// the API listener of the GWAdmin with.
+func OperatorClientTLSSecretName(gw *operatorv1alpha1.GWAdmin) string {
+	return OperatorSecretPrefix(gw) + "-operator-client-tls"
 }

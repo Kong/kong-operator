@@ -16156,6 +16156,8 @@ OnPremEventGatewayStatus defines the observed state of OnPremEventGateway.
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the OnPremEventGateway. |
 | `serverURL` _string_ | ServerURL is the address the data planes of this gateway use to reach gw-admin: the cp endpoint of its GWAdmin. |
 | `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed. |
+| `configRevision` _int64_ | ConfigRevision is the revision of the configuration of the gateway that Kong Operator pushes to gw-admin. It increases by one every time that configuration changes, and never decreases. |
+| `configHash` _string_ | ConfigHash identifies the configuration that ConfigRevision stands for: it changes only along with a new revision. |
 
 _Appears in:_
 

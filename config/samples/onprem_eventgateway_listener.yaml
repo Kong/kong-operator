@@ -1,8 +1,8 @@
 # Sample attaching an Event Gateway entity to an OnPremEventGateway.
 #
 # The Konnect controllers leave the listener alone. The OnPremEventGateway
-# reconciler (--enable-controller-onpremeventgateway) doesn't push any
-# configuration to gw-admin yet.
+# reconciler (--enable-controller-onpremeventgateway) pushes the gateway to
+# gw-admin, but not its entities yet.
 apiVersion: eventgateway.konghq.com/v1alpha1
 kind: OnPremEventGateway
 metadata:

@@ -130,9 +130,24 @@ func StartReconcilers(
 	reconcilers ...Reconciler,
 ) {
 	t.Helper()
+	StartReconcilersWithConfig(ctx, t, mgr, logs, nil, reconcilers...)
+}
+
+// StartReconcilersWithConfig is StartReconcilers, with the cache indices of
+// the controller config the options give, e.g. those of an opt in controller
+// the reconcilers include.
+func StartReconcilersWithConfig(
+	ctx context.Context,
+	t *testing.T,
+	mgr manager.Manager,
+	logs LogsObserver,
+	cfgOpts []testutils.ControllerConfigOption,
+	reconcilers ...Reconciler,
+) {
+	t.Helper()
 
 	// Setup cache indices for all types.
-	cfg := testutils.DefaultControllerConfigForTests(testutils.WithOnPremEventGatewayController(true))
+	cfg := testutils.DefaultControllerConfigForTests(cfgOpts...)
 	require.NoError(t, kgomanager.SetupCacheIndexes(ctx, mgr, cfg))
 
 	for _, r := range reconcilers {
