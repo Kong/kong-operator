@@ -146,20 +146,28 @@ func translateKind[
 // reported on the credential (its Err) instead of failing the consumer, and the consumer
 // keeps rendering its healthy credentials.
 //
-// consumerErr is the failure of the consumer the credentials belong to, nil when it made it
-// into the document: credentials are rendered through their consumer, so a consumer left out
-// leaves them out of the pushed configuration too. Reporting them failed is what keeps their
-// status fresh - the reporter only notifies the entities of the current sync, so a credential
-// dropped from the status set keeps whatever condition it had (often Programmed=True).
+// consumer is the consumer the credentials belong to, and consumerErr its failure, nil when it
+// made it into the document: credentials are rendered through their consumer, so a consumer
+// left out leaves them out of the pushed configuration too. Reporting them failed is what
+// keeps their status fresh - the reporter only notifies the entities of the current sync, so
+// a credential dropped from the status set keeps whatever condition it had (often
+// Programmed=True).
+//
+// The status scheme has one failure reason, so the message carries the cause: a credential
+// that translates fine but is left out with its consumer reports the consumer's failure.
 func credentialEntityStatuses(
 	translations []aiconfigurationv1alpha1.CredentialTranslation,
+	consumer *aiconfigurationv1alpha1.AIGatewayConsumer,
 	consumerErr error,
 ) []EntityStatus {
 	statuses := make([]EntityStatus, 0, len(translations))
 	for _, t := range translations {
 		status := EntityStatus{Obj: t.Obj}
-		if err := cmp.Or(t.Err, consumerErr); err != nil {
-			status.Err = fmt.Errorf("converting %T %s: %w", t.Obj, client.ObjectKeyFromObject(t.Obj), err)
+		switch {
+		case t.Err != nil:
+			status.Err = fmt.Errorf("converting %T %s: %w", t.Obj, client.ObjectKeyFromObject(t.Obj), t.Err)
+		case consumerErr != nil:
+			status.Err = fmt.Errorf("its AIGatewayConsumer %s failed: %w", client.ObjectKeyFromObject(consumer), consumerErr)
 		}
 		statuses = append(statuses, status)
 	}
@@ -367,7 +375,7 @@ func BuildDocument(
 				// Reported before the early return below: credentials are rendered through
 				// their consumer, so one that fails or is excluded leaves them out of the
 				// pushed configuration as well and they must be reported failed.
-				credentialStatuses = append(credentialStatuses, credentialEntityStatuses(credentialTranslations, err)...)
+				credentialStatuses = append(credentialStatuses, credentialEntityStatuses(credentialTranslations, c, err)...)
 				if err != nil {
 					return nil, err
 				}
@@ -494,6 +502,36 @@ func BuildDocument(
 			return nil, nil, err
 		}
 		statuses = append(statuses, s...)
+	}
+
+	// A consumer living in another namespace is rejected by translateKind before its
+	// conversion runs, so the credentials it embeds never reach the closure above: report
+	// them with the consumer's error here, for the same reason - they are rendered through
+	// the consumer and must not keep a stale Programmed condition. A consumer that reached
+	// its conversion lives in the gateway's namespace, so it is not reported twice.
+	for _, s := range statuses {
+		consumer, ok := s.Obj.(*aiconfigurationv1alpha1.AIGatewayConsumer)
+		if !ok || s.Err == nil || consumer.Namespace == gw.Namespace {
+			continue
+		}
+		var creds aiconfigurationv1alpha1.AIGatewayConsumerCredentialList
+		// The same listing the consumer's own translation does. A failure here cannot be
+		// reported on the credentials it failed to read: the consumer's error is already
+		// reported, and the next sync retries.
+		if err := cl.List(ctx, &creds,
+			client.InNamespace(consumer.Namespace),
+			client.MatchingFields{
+				index.IndexFieldAIGatewayConsumerCredentialOnAIGatewayConsumerRef: consumer.Namespace + "/" + consumer.Name,
+			},
+		); err != nil {
+			continue
+		}
+		for i := range creds.Items {
+			credentialStatuses = append(credentialStatuses, EntityStatus{
+				Obj: &creds.Items[i],
+				Err: fmt.Errorf("its AIGatewayConsumer %s failed: %w", client.ObjectKeyFromObject(consumer), s.Err),
+			})
+		}
 	}
 	statuses = append(statuses, credentialStatuses...)
 

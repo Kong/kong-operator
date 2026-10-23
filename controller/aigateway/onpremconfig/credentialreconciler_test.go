@@ -105,6 +105,8 @@ func TestCredentialReconcilerSkipsKonnectManagedCredentials(t *testing.T) {
 		ref  *commonv1alpha1.NamespacedRef
 		// objs are the consumers the credential may resolve to.
 		objs []client.Object
+		// konnectID marks the credential as one the Konnect reconciler created.
+		konnectID bool
 		// wantCleared pins whether the seeded condition must be gone after the reconcile.
 		wantCleared bool
 	}{
@@ -117,6 +119,13 @@ func TestCredentialReconcilerSkipsKonnectManagedCredentials(t *testing.T) {
 			name:        "missing consumer",
 			ref:         &commonv1alpha1.NamespacedRef{Name: "consumer"},
 			wantCleared: true,
+		},
+		{
+			// The condition is the Konnect reconciler's to clear, even when the
+			// consumer is gone.
+			name:      "missing consumer of a credential Konnect created",
+			ref:       &commonv1alpha1.NamespacedRef{Name: "consumer"},
+			konnectID: true,
 		},
 		{
 			name: "cross-namespace consumer reference",
@@ -138,6 +147,9 @@ func TestCredentialReconcilerSkipsKonnectManagedCredentials(t *testing.T) {
 			t.Parallel()
 
 			cred := credentialReferencing("cred", "default", tc.ref)
+			if tc.konnectID {
+				cred.Status.ID = "konnect-id"
+			}
 			cred.Status.Conditions = []metav1.Condition{{
 				Type:    string(configurationv1.ConditionProgrammed),
 				Status:  metav1.ConditionTrue,
@@ -182,8 +194,7 @@ func (c consumerReadFailingClient) Get(
 }
 
 // TestCredentialReconcilerKeepsConditionOnTransientConsumerReadError pins that only a
-// definitive NotFound clears the condition: a transient read failure must leave it, since
-// Report republishes the credential only when its status or message changes.
+// definitive NotFound clears the condition: a read error of another kind leaves it.
 func TestCredentialReconcilerKeepsConditionOnTransientConsumerReadError(t *testing.T) {
 	t.Parallel()
 

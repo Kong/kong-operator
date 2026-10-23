@@ -1450,10 +1450,60 @@ func TestBuildDocument_ConsumerFailsWhenReferencedPolicyFails(t *testing.T) {
 	require.NoError(t, findStatusByName(t, statuses, "consumer-healthy").Err)
 
 	credentialStatus := findStatusByName(t, statuses, credentialOfBrokenConsumer.Name)
-	require.ErrorContains(t, credentialStatus.Err, credentialOfBrokenConsumer.Name)
+	require.ErrorContains(t, credentialStatus.Err,
+		"its AIGatewayConsumer default/consumer-broken failed",
+		"the credential reports that its consumer, not the credential, failed")
 	require.ErrorContains(t, credentialStatus.Err,
 		`referenced AIGatewayPolicy "policy-broken" was excluded from the document`,
 		"the credential reports why its consumer was excluded")
+}
+
+// TestBuildDocument_ReportsCrossNamespaceConsumerCredentials pins that the credentials of a
+// consumer rejected for its namespace are reported too: they are rendered through the
+// consumer, so leaving them out of the status set keeps a stale Programmed condition.
+func TestBuildDocument_ReportsCrossNamespaceConsumerCredentials(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	consumer := aiGatewayConsumerFixture("consumer-other")
+	consumer.Namespace = "other"
+	// The reference has to name the gateway's namespace, or it would default to the
+	// consumer's own and never match this gateway.
+	consumer.Spec.AIGatewayRef.NamespacedRef = &commonv1alpha1.NamespacedRef{Namespace: new("default"), Name: "gw"}
+	credential := &aiconfigurationv1alpha1.AIGatewayConsumerCredential{
+		Name: "cred-other", Namespace: "other",
+		Spec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialSpec{
+			AIGatewayConsumerRef: commonv1alpha1.ObjectRef{
+				Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "consumer-other"},
+			},
+			APISpec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialAPISpec{
+				Name:        "cred-other",
+				DisplayName: "Credential Of Another Namespace",
+				Type:        "api-key",
+				APIKey: aiconfigurationv1alpha1.SensitiveDataSource{
+					Type:  aiconfigurationv1alpha1.SensitiveDataSourceTypeInline,
+					Value: new("s3cr3t"),
+				},
+			},
+		},
+	}
+
+	cl := newTestBuilder(scheme, gw, consumer, credential).Build()
+
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	require.NoError(t, err)
+
+	require.Empty(t, doc.Consumers, "the cross-namespace consumer must not render")
+	require.ErrorContains(t, findStatusByName(t, statuses, "consumer-other").Err, "cross-namespace")
+
+	credentialStatus := findStatusByName(t, statuses, "cred-other")
+	require.ErrorContains(t, credentialStatus.Err, "its AIGatewayConsumer other/consumer-other failed")
+	require.ErrorContains(t, credentialStatus.Err, "cross-namespace")
 }
 
 // TestBuildDocument_ConsumerGroupFailsWhenReferencedPolicyFails pins the translated-reference

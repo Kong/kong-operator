@@ -560,13 +560,9 @@ func (i *Instance) attributeConversionIssues(
 		if !ok {
 			continue
 		}
-		ref := cred.GetAIGatewayConsumerRef().NamespacedRef
-		if ref == nil {
+		consumerNN, ok := cred.ConsumerNamespacedName()
+		if !ok {
 			continue
-		}
-		consumerNN := types.NamespacedName{Namespace: cred.GetNamespace(), Name: ref.Name}
-		if ref.Namespace != nil && *ref.Namespace != "" {
-			consumerNN.Namespace = *ref.Namespace
 		}
 		issue, ok := droppedConsumers[consumerNN]
 		if !ok {

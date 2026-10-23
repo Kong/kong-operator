@@ -20,7 +20,6 @@ import (
 	"context"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -44,6 +43,8 @@ func (r *AIGatewayConsumerCredentialReconciler) mapConsumerToCredentials(
 	if err := r.List(ctx, &creds, client.MatchingFields{
 		index.IndexFieldAIGatewayConsumerCredentialOnAIGatewayConsumerRef: client.ObjectKeyFromObject(consumer).String(),
 	}); err != nil {
+		r.Log.Error(err, "listing the credentials of an AIGatewayConsumer",
+			"aigatewayconsumer", client.ObjectKeyFromObject(consumer))
 		return nil
 	}
 	reqs := make([]reconcile.Request, 0, len(creds.Items))
@@ -91,15 +92,9 @@ func credentialConsumer(
 	cl client.Client,
 	cred *aiconfigurationv1alpha1.AIGatewayConsumerCredential,
 ) *aiconfigurationv1alpha1.AIGatewayConsumer {
-	ref := cred.GetAIGatewayConsumerRef().NamespacedRef
-	if ref == nil {
-		return nil
-	}
-	consumerNN := types.NamespacedName{Namespace: cred.GetNamespace(), Name: ref.Name}
-	if ref.Namespace != nil && *ref.Namespace != "" {
-		consumerNN.Namespace = *ref.Namespace
-	}
-	if consumerNN.Namespace != cred.GetNamespace() {
+	consumerNN, ok := cred.ConsumerNamespacedName()
+	// The translation only renders credentials living in the consumer's namespace.
+	if !ok || consumerNN.Namespace != cred.GetNamespace() {
 		return nil
 	}
 
@@ -135,21 +130,26 @@ func credentialOnPremManaged(
 // correcting the status of those. Only a consumer that should exist in the credential's own
 // namespace and does not leaves the credential rendered by nothing.
 //
-// Only a definitive NotFound counts as gone: a transient read failure (the cache does not
-// serve a just recreated consumer yet) must not strip a valid condition, since Report
-// republishes the credential only when its status or message changes.
+// Only a definitive NotFound counts as gone; a read error of another kind leaves the
+// condition alone. A consumer that was just recreated can still read as NotFound from a
+// cache that has not observed it yet: the condition is cleared then, and the next render of
+// the consumer reports the credential again.
+//
+// A credential that Konnect has created carries a Konnect ID, and its condition is the
+// Konnect reconciler's to write and to clear even when its consumer is gone, as in
+// removeKonnectConditions.
 func credentialOrphaned(
 	ctx context.Context,
 	cl client.Client,
 	cred *aiconfigurationv1alpha1.AIGatewayConsumerCredential,
 ) bool {
-	ref := cred.GetAIGatewayConsumerRef().NamespacedRef
-	if ref == nil || (ref.Namespace != nil && *ref.Namespace != "" && *ref.Namespace != cred.GetNamespace()) {
+	if cred.Status.ID != "" {
+		return false
+	}
+	consumerNN, ok := cred.ConsumerNamespacedName()
+	if !ok || consumerNN.Namespace != cred.GetNamespace() {
 		return false
 	}
 	var consumer aiconfigurationv1alpha1.AIGatewayConsumer
-	return apierrors.IsNotFound(cl.Get(ctx, types.NamespacedName{
-		Namespace: cred.GetNamespace(),
-		Name:      ref.Name,
-	}, &consumer))
+	return apierrors.IsNotFound(cl.Get(ctx, consumerNN, &consumer))
 }
