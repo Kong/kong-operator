@@ -36,12 +36,12 @@ import (
 	"sigs.k8s.io/yaml"
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
-	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/translator"
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	adminapi "github.com/kong/kong-operator/v2/internal/adminapi"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/translator"
 )
 
 // pusher is the subset of the Kong Admin API client used to push declarative

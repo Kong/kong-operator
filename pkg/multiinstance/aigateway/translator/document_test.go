@@ -989,9 +989,15 @@ func TestBuildDocument_ModelAliasCollisionVariants(t *testing.T) {
 	modelE.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 		Values: []string{"e-alias", "d-alias-2"},
 	}
+	// Duplicate values within one model collapse to their first occurrence
+	// (mirroring the converter's extractModelAliases): no conflict, one entity.
+	modelF := aiGatewayModelFixture("model-f")
+	modelF.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
+		Values: []string{"f-alias", "f-alias"},
+	}
 
 	builder := fake.NewClientBuilder().WithScheme(scheme).
-		WithObjects(gw, modelA, modelC, modelD, modelE)
+		WithObjects(gw, modelA, modelC, modelD, modelE, modelF)
 	for _, opts := range [][]index.Option{
 		index.OptionsForAIGatewayModel(),
 		index.OptionsForAIGatewayModelProvider(),
@@ -1017,14 +1023,18 @@ func TestBuildDocument_ModelAliasCollisionVariants(t *testing.T) {
 	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
 	require.NoError(t, err)
 
-	// model-a (no selector) and model-d (first alias) survive; model-c and
-	// model-e conflict.
-	require.Len(t, doc.Models, 2)
-	names := []string{doc.Models[0].Name, doc.Models[1].Name}
+	// model-a (no selector), model-d (first alias) and model-f (deduped
+	// values) survive; model-c and model-e conflict.
+	require.Len(t, doc.Models, 3)
+	names := make([]string, 0, len(doc.Models))
+	for _, m := range doc.Models {
+		names = append(names, m.Name)
+	}
 	require.Contains(t, names, "model-a")
 	require.Contains(t, names, "model-d")
+	require.Contains(t, names, "model-f")
 
-	require.Len(t, statuses, 4)
+	require.Len(t, statuses, 5)
 	conflicts := 0
 	for _, s := range statuses {
 		if s.Err != nil {
