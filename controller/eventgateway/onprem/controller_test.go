@@ -856,6 +856,38 @@ func TestReportEntitiesDetached(t *testing.T) {
 
 	stored, _ := r.reported.Load(gateway.UID)
 	assert.Empty(t, stored, "what the gateway reported this time is remembered")
+
+	// One that fails to be read or patched is tried again.
+	failRead := withProgrammed("fail-read", ns+"/gateway")
+	failPatch := withProgrammed("fail-patch", ns+"/gateway")
+	failing := true
+	cl = newFakeClientWithInterceptor(t, interceptor.Funcs{
+		Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			if failing && key.Name == failRead.Name {
+				return errors.New("read failed")
+			}
+			return cl.Get(ctx, key, obj, opts...)
+		},
+		SubResourcePatch: func(ctx context.Context, cl client.Client, sub string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
+			if failing && obj.GetName() == failPatch.Name {
+				return errors.New("patch failed")
+			}
+			return cl.SubResource(sub).Patch(ctx, obj, patch, opts...)
+		},
+	}, gateway, failRead, failPatch)
+	r = &Reconciler{Client: cl}
+	r.reported.Store(gateway.UID, reported(failRead, failPatch))
+	require.Error(t, r.reportEntities(t.Context(), gateway, configuration{}))
+	stored, _ = r.reported.Load(gateway.UID)
+	assert.Equal(t, reported(failRead, failPatch), stored, "kept to be tried again")
+
+	failing = false
+	require.NoError(t, r.reportEntities(t.Context(), gateway, configuration{}))
+	for _, obj := range []*configurationv1alpha1.EventGatewayBackendCluster{failRead, failPatch} {
+		assert.Equal(t, "Detached", apimeta.FindStatusCondition(read(t, cl, obj).Status.Conditions, "Programmed").Reason, obj.Name)
+	}
+	stored, _ = r.reported.Load(gateway.UID)
+	assert.Empty(t, stored)
 }
 
 func TestReportEntitiesNotProgrammed(t *testing.T) {

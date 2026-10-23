@@ -618,6 +618,16 @@ func TestSameEntities(t *testing.T) {
 	pushed.VirtualClusters = []gwadminapi.EventGatewayVirtualClusterOnPrem{virtualCluster(`{"id": "`+bc.Id.String()+`"}`, skip)}
 	held.VirtualClusters = []gwadminapi.EventGatewayVirtualClusterOnPrem{virtualCluster(`{"id": "`+bc.Id.String()+`", "name": ""}`, skipHeld)}
 	assert.True(t, same(held, pushed), "the null fields of a policy left out")
+
+	// gw-admin may return the fields of an object in any order, those of a
+	// union, e.g. a destination or the configuration of a policy, included.
+	headers := `{"id": "3f4a5b6c-7d8e-4f9a-8b0c-d1e2f3a4b5c6", "type": "modify_headers", "created_at": "2026-10-16T10:00:00Z",
+		"config": {"actions": [{"op": "remove", "key": "k"}]}}`
+	headersHeld := `{"parent_policy_id": null, "created_at": "2026-10-16T10:00:00Z", "type": "modify_headers",
+		"config": {"actions": [{"key": "k", "op": "remove"}]}, "id": "3f4a5b6c-7d8e-4f9a-8b0c-d1e2f3a4b5c6"}`
+	pushed.VirtualClusters = []gwadminapi.EventGatewayVirtualClusterOnPrem{virtualCluster(`{"id": "`+bc.Id.String()+`"}`, headers)}
+	held.VirtualClusters = []gwadminapi.EventGatewayVirtualClusterOnPrem{virtualCluster(`{"name": "", "id": "`+bc.Id.String()+`"}`, headersHeld)}
+	assert.True(t, same(held, pushed), "the fields of the unions in another order")
 	destination, err := pushed.VirtualClusters[0].Destination.MarshalJSON()
 	require.NoError(t, err)
 	assert.JSONEq(t, `{"id": "`+bc.Id.String()+`"}`, string(destination), "the entities pushed are left as they are")

@@ -280,7 +280,8 @@ type reportedEntity struct {
 // for the gateway and no longer in its configuration to False, e.g. a virtual
 // cluster whose backend cluster was deleted: nothing else reports them. An
 // object whose Programmed condition another gateway set since, e.g. it moved
-// to it, is left alone, and so is one being deleted.
+// to it, is left alone, and so is one being deleted. One that fails to be
+// read or patched is kept in the objects reported, to be tried again.
 func (r *Reconciler) reportDetached(ctx context.Context, gateway *eventgatewayv1alpha1.OnPremEventGateway, cfg configuration) error {
 	current := map[reportedEntity]struct{}{}
 	for _, e := range cfg.included {
@@ -289,7 +290,7 @@ func (r *Reconciler) reportDetached(ctx context.Context, gateway *eventgatewayv1
 	for _, e := range cfg.excluded {
 		current[reportedEntity{typ: reflect.TypeOf(e.obj), key: client.ObjectKeyFromObject(e.obj)}] = struct{}{}
 	}
-	last, _ := r.reported.Swap(gateway.UID, current)
+	last, _ := r.reported.Load(gateway.UID)
 	lastReported, _ := last.(map[reportedEntity]struct{})
 
 	gatewayKey := client.ObjectKeyFromObject(gateway)
@@ -304,6 +305,7 @@ func (r *Reconciler) reportDetached(ctx context.Context, gateway *eventgatewayv1
 		}
 		if err := r.Get(ctx, e.key, obj); err != nil {
 			if !apierrors.IsNotFound(err) {
+				current[e] = struct{}{}
 				errs = append(errs, fmt.Errorf("failed to read the entity %s: %w", e.key, err))
 			}
 			continue
@@ -312,10 +314,14 @@ func (r *Reconciler) reportDetached(ctx context.Context, gateway *eventgatewayv1
 		if !obj.GetDeletionTimestamp().IsZero() || programmed == nil || !namesGateway(programmed.Message, gatewayKey) {
 			continue
 		}
-		errs = append(errs, r.setEntityConditions(ctx, obj, nil, entityCondition(obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType,
+		if err := r.setEntityConditions(ctx, obj, nil, entityCondition(obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType,
 			metav1.ConditionFalse, eventgatewayv1alpha1.OnPremEntityDetachedReason,
-			fmt.Sprintf("No longer in the configuration of the OnPremEventGateway %s: it doesn't belong to it anymore, e.g. its parent was deleted", gatewayKey))))
+			fmt.Sprintf("No longer in the configuration of the OnPremEventGateway %s: it doesn't belong to it anymore, e.g. its parent was deleted", gatewayKey))); err != nil {
+			current[e] = struct{}{}
+			errs = append(errs, err)
+		}
 	}
+	r.reported.Store(gateway.UID, current)
 	return errors.Join(errs...)
 }
 
