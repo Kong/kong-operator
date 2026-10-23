@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.4.3
+
+### Changed
+
+- Bump default image to 2.3.4
+
+## 1.4.2
+
+### Changed
+
+- Bump default image to 2.3.3
+
+## 1.4.1
+
+### Changed
+
+- Bump default image to 2.3.2
+
 ## 1.4.0
 
 ### Added
