@@ -88,6 +88,12 @@ func (r *AIGatewayConsumerCredentialReconciler) SetupWithManager(mgr ctrl.Manage
 	// Reconcile instead — the events it lets through for Konnect-managed credentials cost one
 	// cached Get each and write nothing.
 	return blder.
+		// A credential has no aiGatewayRef: watch its parent consumer so that deleting the
+		// consumer clears the credentials' Programmed condition.
+		Watches(
+			&aiconfigurationv1alpha1.AIGatewayConsumer{},
+			handler.EnqueueRequestsFromMapFunc(r.mapConsumerToCredentials),
+		).
 		For(
 			&aiconfigurationv1alpha1.AIGatewayConsumerCredential{},
 			builder.WithPredicates(GenerationChangedPredicate{}),

@@ -25,7 +25,33 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
+
+// mapConsumerToCredentials maps an AIGatewayConsumer to the AIGatewayConsumerCredentials that
+// reference it. A deleted consumer's credentials are in no sync's status set — Report only
+// republishes the current sync's entities — so nothing else would re-trigger them, and their
+// Programmed condition would keep claiming a rendering that no longer exists.
+func (r *AIGatewayConsumerCredentialReconciler) mapConsumerToCredentials(
+	ctx context.Context,
+	obj client.Object,
+) []reconcile.Request {
+	consumer, ok := obj.(*aiconfigurationv1alpha1.AIGatewayConsumer)
+	if !ok {
+		return nil
+	}
+	var creds aiconfigurationv1alpha1.AIGatewayConsumerCredentialList
+	if err := r.List(ctx, &creds, client.MatchingFields{
+		index.IndexFieldAIGatewayConsumerCredentialOnAIGatewayConsumerRef: client.ObjectKeyFromObject(consumer).String(),
+	}); err != nil {
+		return nil
+	}
+	reqs := make([]reconcile.Request, 0, len(creds.Items))
+	for i := range creds.Items {
+		reqs = append(reqs, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(&creds.Items[i])})
+	}
+	return reqs
+}
 
 // mapCredentialToConsumer maps an AIGatewayConsumerCredential to the AIGatewayConsumer whose
 // document embeds it. The credential has no aiGatewayRef, so the consumer is what must
