@@ -22,6 +22,27 @@ func TestGetSupportedFeaturesIncludesTCPRoute(t *testing.T) {
 	}
 }
 
+func TestGetSupportedFeaturesIncludesBackendTLSPolicy(t *testing.T) {
+	for _, routerFlavor := range []consts.RouterFlavor{
+		consts.RouterFlavorTraditionalCompatible,
+		consts.RouterFlavorExpressions,
+	} {
+		for _, gatewayMode := range []struct {
+			name     string
+			isHybrid bool
+		}{
+			{name: "standard"},
+			{name: "hybrid", isHybrid: true},
+		} {
+			t.Run(string(routerFlavor)+"/"+gatewayMode.name, func(t *testing.T) {
+				supportedFeatures, err := GetSupportedFeatures(routerFlavor, gatewayMode.isHybrid)
+				require.NoError(t, err)
+				require.Contains(t, supportedFeatures, features.SupportBackendTLSPolicy)
+			})
+		}
+	}
+}
+
 func TestGetSupportedFeaturesMethodMatching(t *testing.T) {
 	for _, tc := range []struct {
 		name          string
