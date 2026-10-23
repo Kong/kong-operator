@@ -344,6 +344,106 @@ func assertSecretRefValid(t *testing.T, e entityStatus, status metav1.ConditionS
 	}
 }
 
+func TestBuildConfigurationGatewayEntities(t *testing.T) {
+	gateway := &eventgatewayv1alpha1.OnPremEventGateway{Name: "gateway", Namespace: ns}
+	gateway.SetUID(types.UID(uuid.NewString()))
+	created := time.Date(2026, 10, 16, 10, 0, 0, 0, time.UTC)
+
+	bundle := fromYAML[configurationv1alpha1.EventGatewayTLSTrustBundle](t, created, `
+metadata: {name: bundle}
+spec:
+  parentRef: {group: eventgateway.konghq.com, kind: OnPremEventGateway, name: gateway}
+  apiSpec:
+    name: bundle
+    config: {trustedCa: {type: inline, value: ca-pem}}
+`)
+	registry := fromYAML[configurationv1alpha1.EventGatewaySchemaRegistry](t, created, `
+metadata: {name: registry}
+spec:
+  parentRef: {group: eventgateway.konghq.com, kind: OnPremEventGateway, name: gateway}
+  apiSpec:
+    type: confluent
+    confluent:
+      name: registry
+      config: {endpoint: "https://registry.example.com", schemaType: json}
+`)
+	key := fromYAML[configurationv1alpha1.EventGatewayStaticKey](t, created, `
+metadata: {name: key}
+spec:
+  parentRef: {group: eventgateway.konghq.com, kind: OnPremEventGateway, name: gateway}
+  apiSpec:
+    name: key
+    value: {type: secretRef, secretRef: {name: key-secret, key: key}}
+`)
+	keySecret := &corev1.Secret{Name: "key-secret", Namespace: ns, Data: map[string][]byte{"key": []byte("c2VjcmV0LWtleS0xMjM0NTY3ODkwMTIzNDU2")}}
+	// The same name as registry, created later: left out.
+	duplicateRegistry := fromYAML[configurationv1alpha1.EventGatewaySchemaRegistry](t, created.Add(time.Minute), `
+metadata: {name: duplicate-registry}
+spec:
+  parentRef: {group: eventgateway.konghq.com, kind: OnPremEventGateway, name: gateway}
+  apiSpec:
+    type: confluent
+    confluent:
+      name: registry
+      config: {endpoint: "https://other.example.com", schemaType: json}
+`)
+	// Its Secret doesn't exist, and nothing was built for it before: left out.
+	missingSecret := fromYAML[configurationv1alpha1.EventGatewayStaticKey](t, created, `
+metadata: {name: missing-secret}
+spec:
+  parentRef: {group: eventgateway.konghq.com, kind: OnPremEventGateway, name: gateway}
+  apiSpec:
+    name: missing-secret
+    value: {type: secretRef, secretRef: {name: missing, key: key}}
+`)
+
+	cl := newFakeClient(t, bundle, registry, key, keySecret, duplicateRegistry, missingSecret)
+	cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
+	require.NoError(t, err)
+
+	t.Run("each kind is converted, under the UID of its object", func(t *testing.T) {
+		require.Len(t, cfg.entities.TlsTrustBundles, 1)
+		assert.Equal(t, string(bundle.UID), cfg.entities.TlsTrustBundles[0].Id.String())
+		assert.Equal(t, "bundle", cfg.entities.TlsTrustBundles[0].Name)
+
+		require.Len(t, cfg.entities.SchemaRegistries, 1)
+		assert.Equal(t, "registry", schemaRegistryName(cfg.entities.SchemaRegistries[0]))
+		got, err := json.Marshal(cfg.entities.SchemaRegistries[0])
+		require.NoError(t, err)
+		assert.Contains(t, string(got), `"id":"`+string(registry.UID)+`"`)
+		assert.Contains(t, string(got), `"endpoint":"https://registry.example.com"`)
+
+		require.Len(t, cfg.entities.StaticKeys, 1)
+		assert.Equal(t, string(key.UID), cfg.entities.StaticKeys[0].Id.String())
+		assert.Equal(t, "key", cfg.entities.StaticKeys[0].Name)
+
+		assert.Equal(t, map[string]string{
+			"tls_trust_bundles.0": "EventGatewayTLSTrustBundle " + client.ObjectKeyFromObject(bundle).String(),
+			"schema_registries.0": "EventGatewaySchemaRegistry " + client.ObjectKeyFromObject(registry).String(),
+			"static_keys.0":       "EventGatewayStaticKey " + client.ObjectKeyFromObject(key).String(),
+		}, cfg.objects)
+	})
+
+	t.Run("those that can't be sent are left out with a reason", func(t *testing.T) {
+		reasons := map[string]string{}
+		for _, e := range cfg.excluded {
+			reasons[e.obj.GetName()] = e.message
+		}
+		assert.Len(t, reasons, 2, "excluded: %v", cfg.excluded)
+		assert.Contains(t, reasons["duplicate-registry"], `another schema registry of the gateway is named "registry"`)
+		assert.Contains(t, reasons["missing-secret"], "the Secret default/missing doesn't exist")
+	})
+
+	t.Run("the static key reading a Secret reports it", func(t *testing.T) {
+		statuses := map[string]entityStatus{}
+		for _, e := range cfg.included {
+			statuses[e.obj.GetName()] = e
+		}
+		assertSecretRefValid(t, statuses["key"], metav1.ConditionTrue, "The Secrets it reads are resolved")
+		assert.Nil(t, statuses["bundle"].secretRefValid, "an inline value is no Secret")
+	})
+}
+
 func TestDescribeField(t *testing.T) {
 	cfg := configuration{objects: map[string]string{"backend_clusters.0": "EventGatewayBackendCluster ns/bc"}}
 	assert.Equal(t, "EventGatewayBackendCluster ns/bc (backend_clusters.0.tls.ca_bundle)", cfg.describeField("backend_clusters.0.tls.ca_bundle"))
@@ -450,4 +550,21 @@ func TestSameEntities(t *testing.T) {
 	held.BackendClusters = []gwadminapi.EventGatewayBackendClusterOnPrem{heldOther, heldBC}
 	assert.True(t, same(held, pushed), "in another order")
 	assert.Equal(t, []gwadminapi.EventGatewayBackendClusterOnPrem{bc, other}, pushed.BackendClusters, "the entities pushed are left as they are")
+
+	// gw-admin drops the empty description of a TLS trust bundle and of a
+	// static key.
+	bundle := gwadminapi.EventGatewayTLSTrustBundleOnPrem{Id: uuid.New(), Name: "bundle", CreatedAt: created, Description: new("")}
+	key := gwadminapi.EventGatewayStaticKeyOnPrem{Id: uuid.New(), Name: "key", CreatedAt: created, Description: new("")}
+	otherKey := gwadminapi.EventGatewayStaticKeyOnPrem{Id: uuid.New(), Name: "other-key", CreatedAt: created}
+	pushed = noEntities()
+	pushed.TlsTrustBundles = []gwadminapi.EventGatewayTLSTrustBundleOnPrem{bundle}
+	pushed.StaticKeys = []gwadminapi.EventGatewayStaticKeyOnPrem{key, otherKey}
+	heldBundle, heldKey := bundle, key
+	heldBundle.Description, heldKey.Description = nil, nil
+	held = gwadminapi.GatewayEntities{
+		TlsTrustBundles: []gwadminapi.EventGatewayTLSTrustBundleOnPrem{heldBundle},
+		StaticKeys:      []gwadminapi.EventGatewayStaticKeyOnPrem{otherKey, heldKey},
+	}
+	assert.True(t, same(held, pushed), "an empty description left out, in another order")
+	assert.Equal(t, new(""), pushed.StaticKeys[0].Description, "the entities pushed are left as they are")
 }

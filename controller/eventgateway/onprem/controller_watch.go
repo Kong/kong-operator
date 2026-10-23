@@ -25,6 +25,8 @@ import (
 
 	"github.com/google/uuid"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -213,25 +215,46 @@ func namespacesGrantedSecrets(grant *configurationv1alpha1.KongReferenceGrant) [
 	return namespaces
 }
 
+// secretReaders are the kinds of entity reading values from Secrets: the
+// index field of the Secrets they read, and a list of the kind.
+var secretReaders = []struct {
+	field string
+	list  func() client.ObjectList
+}{
+	{index.IndexFieldEventGatewayBackendClusterOnSecretRef, func() client.ObjectList { return &configurationv1alpha1.EventGatewayBackendClusterList{} }},
+	{index.IndexFieldEventGatewaySchemaRegistryOnSecretRef, func() client.ObjectList { return &configurationv1alpha1.EventGatewaySchemaRegistryList{} }},
+	{index.IndexFieldEventGatewayStaticKeyOnSecretRef, func() client.ObjectList { return &configurationv1alpha1.EventGatewayStaticKeyList{} }},
+	{index.IndexFieldEventGatewayTLSTrustBundleOnSecretRef, func() client.ObjectList { return &configurationv1alpha1.EventGatewayTLSTrustBundleList{} }},
+}
+
 // mapSecretToOnPremEventGateways returns a MapFunc that enqueues the
-// OnPremEventGateways of the backend clusters reading the Secret: one
-// created, e.g. one they were left out for, or changed, e.g. a key rotated,
-// is pushed to gw-admin.
+// OnPremEventGateways of the entities reading the Secret: one created, e.g.
+// one they were left out for, or changed, e.g. a key rotated, is pushed to
+// gw-admin.
 func mapSecretToOnPremEventGateways(cl client.Client) handler.MapFunc {
 	toGateway := mapEntityToOnPremEventGateway(cl)
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		var backendClusters configurationv1alpha1.EventGatewayBackendClusterList
-		if err := cl.List(ctx, &backendClusters, client.MatchingFields{
-			index.IndexFieldEventGatewayBackendClusterOnSecretRef: client.ObjectKeyFromObject(obj).String(),
-		}); err != nil {
-			ctrl.LoggerFrom(ctx).Error(err, "failed to list the EventGatewayBackendClusters reading a Secret", "secret", client.ObjectKeyFromObject(obj))
-			return nil
-		}
 		var requests []reconcile.Request
-		for i := range backendClusters.Items {
-			for _, req := range toGateway(ctx, &backendClusters.Items[i]) {
-				if !slices.Contains(requests, req) {
-					requests = append(requests, req)
+		for _, reader := range secretReaders {
+			list := reader.list()
+			var items []runtime.Object
+			err := cl.List(ctx, list, client.MatchingFields{reader.field: client.ObjectKeyFromObject(obj).String()})
+			if err == nil {
+				items, err = apimeta.ExtractList(list)
+			}
+			if err != nil {
+				ctrl.LoggerFrom(ctx).Error(err, "failed to list the entities reading a Secret", "secret", client.ObjectKeyFromObject(obj), "type", fmt.Sprintf("%T", list))
+				continue
+			}
+			for _, item := range items {
+				entity, ok := item.(client.Object)
+				if !ok {
+					continue
+				}
+				for _, req := range toGateway(ctx, entity) {
+					if !slices.Contains(requests, req) {
+						requests = append(requests, req)
+					}
 				}
 			}
 		}

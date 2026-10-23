@@ -142,7 +142,7 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 	}
 	b = r.GWAdminSync.Watch(b, requests)
 	b = b.Watches(&configurationv1alpha1.KongReferenceGrant{}, handler.EnqueueRequestsFromMapFunc(mapKongReferenceGrantToOnPremEventGateways(mgr.GetClient())))
-	// A change to a Secret a backend cluster reads triggers its gateway.
+	// A change to a Secret an entity reads triggers its gateway.
 	b = b.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(mapSecretToOnPremEventGateways(mgr.GetClient())))
 
 	// The deletion of a gateway triggers the other gateways of its GWAdmin:

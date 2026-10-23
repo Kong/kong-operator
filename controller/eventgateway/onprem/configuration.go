@@ -110,7 +110,7 @@ type excludedEntity struct {
 // the cluster, other than an object that doesn't exist, is returned: leaving
 // the entity out would delete it from gw-admin.
 //
-// TODO: add the other kinds of entities (#6060, #6061, #6062).
+// TODO: add the virtual clusters and the listeners (#6061, #6062).
 func buildConfiguration(
 	ctx context.Context, cl client.Client, gateway *eventgatewayv1alpha1.OnPremEventGateway, secretHint string, previous map[types.UID]any,
 ) (configuration, error) {
@@ -122,7 +122,7 @@ func buildConfiguration(
 		previous:   previous,
 		built:      map[types.UID]any{},
 	}
-	if err := cfg.addBackendClusters(ctx, cl, gateway); err != nil {
+	if err := cfg.addGatewayEntities(ctx, cl, gateway); err != nil {
 		return configuration{}, err
 	}
 	key, err := comparisonKey(withGWAdminDefaults(cfg.entities))
@@ -133,38 +133,67 @@ func buildConfiguration(
 	return cfg, nil
 }
 
-// addBackendClusters adds the backend clusters of the gateway.
-func (c *configuration) addBackendClusters(ctx context.Context, cl client.Client, gateway *eventgatewayv1alpha1.OnPremEventGateway) error {
-	backendClusters, err := backendClustersOf(ctx, cl, gateway)
-	if err != nil {
-		return err
-	}
-	return addEntities(ctx, c, cl, backendClusters, entityKind[*configurationv1alpha1.EventGatewayBackendCluster, gwadminapi.EventGatewayBackendClusterOnPrem]{
-		kind: "EventGatewayBackendCluster",
-		what: "backend cluster",
-		path: "backend_clusters",
-		convert: func(ctx context.Context, cl client.Client, bc *configurationv1alpha1.EventGatewayBackendCluster, id uuid.UUID) (gwadminapi.EventGatewayBackendClusterOnPrem, error) {
-			var entity gwadminapi.EventGatewayBackendClusterOnPrem
-			req, err := bc.ToCreateBackendClusterRequest(ctx, cl)
-			if err != nil {
-				return entity, err
-			}
-			return entity, convertEntity(req, bc, id, &entity)
+// addGatewayEntities adds the entities attached to the gateway itself.
+func (c *configuration) addGatewayEntities(ctx context.Context, cl client.Client, gateway *eventgatewayv1alpha1.OnPremEventGateway) error {
+	var backendClusters configurationv1alpha1.EventGatewayBackendClusterList
+	if err := addEntities(ctx, c, cl, gateway, &backendClusters, &backendClusters.Items, entityKind[*configurationv1alpha1.EventGatewayBackendCluster, gwadminapi.EventGatewayBackendClusterOnPrem]{
+		kind: "EventGatewayBackendCluster", what: "backend cluster", path: "backend_clusters",
+		field: index.IndexFieldEventGatewayBackendClusterOnOnPremEventGatewayRef,
+		request: func(ctx context.Context, cl client.Client, bc *configurationv1alpha1.EventGatewayBackendCluster) (any, error) {
+			return bc.ToCreateBackendClusterRequest(ctx, cl)
 		},
 		name:     func(e gwadminapi.EventGatewayBackendClusterOnPrem) string { return e.Name },
 		entities: &c.entities.BackendClusters,
+	}); err != nil {
+		return err
+	}
+
+	var bundles configurationv1alpha1.EventGatewayTLSTrustBundleList
+	if err := addEntities(ctx, c, cl, gateway, &bundles, &bundles.Items, entityKind[*configurationv1alpha1.EventGatewayTLSTrustBundle, gwadminapi.EventGatewayTLSTrustBundleOnPrem]{
+		kind: "EventGatewayTLSTrustBundle", what: "TLS trust bundle", path: "tls_trust_bundles",
+		field: index.IndexFieldEventGatewayTLSTrustBundleOnOnPremEventGatewayRef,
+		request: func(ctx context.Context, cl client.Client, b *configurationv1alpha1.EventGatewayTLSTrustBundle) (any, error) {
+			return b.ToCreateTLSTrustBundleRequest(ctx, cl)
+		},
+		name:     func(e gwadminapi.EventGatewayTLSTrustBundleOnPrem) string { return e.Name },
+		entities: &c.entities.TlsTrustBundles,
+	}); err != nil {
+		return err
+	}
+
+	var registries configurationv1alpha1.EventGatewaySchemaRegistryList
+	if err := addEntities(ctx, c, cl, gateway, &registries, &registries.Items, entityKind[*configurationv1alpha1.EventGatewaySchemaRegistry, gwadminapi.EventGatewaySchemaRegistryOnPrem]{
+		kind: "EventGatewaySchemaRegistry", what: "schema registry", path: "schema_registries",
+		field: index.IndexFieldEventGatewaySchemaRegistryOnOnPremEventGatewayRef,
+		request: func(ctx context.Context, cl client.Client, r *configurationv1alpha1.EventGatewaySchemaRegistry) (any, error) {
+			return r.ToSchemaRegistryCreate(ctx, cl)
+		},
+		name:     schemaRegistryName,
+		entities: &c.entities.SchemaRegistries,
+	}); err != nil {
+		return err
+	}
+
+	var keys configurationv1alpha1.EventGatewayStaticKeyList
+	return addEntities(ctx, c, cl, gateway, &keys, &keys.Items, entityKind[*configurationv1alpha1.EventGatewayStaticKey, gwadminapi.EventGatewayStaticKeyOnPrem]{
+		kind: "EventGatewayStaticKey", what: "static key", path: "static_keys",
+		field: index.IndexFieldEventGatewayStaticKeyOnOnPremEventGatewayRef,
+		request: func(ctx context.Context, cl client.Client, k *configurationv1alpha1.EventGatewayStaticKey) (any, error) {
+			return k.ToEventGatewayStaticKeyCreate(ctx, cl)
+		},
+		name:     func(e gwadminapi.EventGatewayStaticKeyOnPrem) string { return e.Name },
+		entities: &c.entities.StaticKeys,
 	})
 }
 
-// backendClustersOf returns the backend clusters attached to the gateway.
-func backendClustersOf(ctx context.Context, cl client.Client, gateway *eventgatewayv1alpha1.OnPremEventGateway) ([]*configurationv1alpha1.EventGatewayBackendCluster, error) {
-	var list configurationv1alpha1.EventGatewayBackendClusterList
-	if err := cl.List(ctx, &list, client.MatchingFields{
-		index.IndexFieldEventGatewayBackendClusterOnOnPremEventGatewayRef: client.ObjectKeyFromObject(gateway).String(),
-	}); err != nil {
-		return nil, fmt.Errorf("failed to list the EventGatewayBackendClusters of the gateway: %w", err)
+// schemaRegistryName returns the name of a schema registry: Confluent is its
+// only type.
+func schemaRegistryName(e gwadminapi.EventGatewaySchemaRegistryOnPrem) string {
+	registry, err := e.AsSchemaRegistryConfluent()
+	if err != nil {
+		return ""
 	}
-	return pointersTo(list.Items), nil
+	return registry.Name
 }
 
 // entityKind is a kind of entity attached to the gateway itself.
@@ -176,18 +205,34 @@ type entityKind[PT entityObject, E any] struct {
 	// path is the list of the entities in the configuration, e.g.
 	// backend_clusters.
 	path string
-	// convert converts an object into its entity, with its id, reading its
-	// Secrets with the client.
-	convert func(context.Context, client.Client, PT, uuid.UUID) (E, error)
+	// field is the index field of the objects by gateway.
+	field string
+	// request returns the Konnect SDK request of an object, reading its
+	// Secrets with the client: its entity is converted from it.
+	request func(context.Context, client.Client, PT) (any, error)
 	// name returns the name of an entity.
 	name func(E) string
 	// entities is the list of the configuration the entities are added to.
 	entities *[]E
 }
 
-// addEntities adds the entities of the objects, from the oldest. Two
+// addEntities lists the objects of the kind attached to the gateway into
+// list, whose items are items, and adds their entities, from the oldest. Two
 // entities of a kind can't have the same name: the oldest one is kept.
-func addEntities[PT entityObject, E any](ctx context.Context, c *configuration, cl client.Client, objs []PT, k entityKind[PT, E]) error {
+func addEntities[T any, PT interface {
+	*T
+	entityObject
+}, E any](
+	ctx context.Context, c *configuration, cl client.Client, gateway *eventgatewayv1alpha1.OnPremEventGateway,
+	list client.ObjectList, items *[]T, k entityKind[PT, E],
+) error {
+	if err := cl.List(ctx, list, client.MatchingFields{k.field: client.ObjectKeyFromObject(gateway).String()}); err != nil {
+		return fmt.Errorf("failed to list the %ss of the gateway: %w", k.kind, err)
+	}
+	objs := make([]PT, 0, len(*items))
+	for i := range *items {
+		objs = append(objs, PT(&(*items)[i]))
+	}
 	slices.SortFunc(objs, func(a, b PT) int {
 		return cmp.Or(
 			a.GetCreationTimestamp().Compare(b.GetCreationTimestamp().Time),
@@ -229,7 +274,11 @@ func addEntities[PT entityObject, E any](ctx context.Context, c *configuration, 
 		}
 
 		reader := &referenceReader{Client: cl, secrets: map[client.ObjectKey]*corev1.Secret{}}
-		entity, err := k.convert(ctx, reader, obj, id)
+		var entity E
+		req, err := k.request(ctx, reader, obj)
+		if err == nil {
+			err = convertEntity(req, obj, id, &entity)
+		}
 		if reader.err != nil && !apierrors.IsNotFound(reader.err) {
 			return fmt.Errorf("failed to read a reference of %s %s: %w", k.kind, client.ObjectKeyFromObject(obj), reader.err)
 		}
@@ -274,15 +323,6 @@ func addEntities[PT entityObject, E any](ctx context.Context, c *configuration, 
 func asEntities(v any) map[types.UID]any {
 	entities, _ := v.(map[types.UID]any)
 	return entities
-}
-
-// pointersTo returns a pointer to each item.
-func pointersTo[T any](items []T) []*T {
-	ptrs := make([]*T, 0, len(items))
-	for i := range items {
-		ptrs = append(ptrs, &items[i])
-	}
-	return ptrs
 }
 
 // entityID returns the id of the entity in gw-admin, its UID, or why the

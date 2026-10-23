@@ -327,6 +327,64 @@ spec:`+onPremEventGatewayParentRef(gateway.Name)+`
 		}, waitTime, tickTime)
 	})
 
+	t.Run("its TLS trust bundles, schema registries and static keys are pushed and programmed", func(t *testing.T) {
+		require.NoError(t, cl.Create(ctx, &corev1.Secret{
+			Name: "key-secret", Namespace: ns.Name,
+			Data: map[string][]byte{"key": []byte("c2VjcmV0LWtleS0xMjM0NTY3ODkwMTIzNDU2")},
+		}))
+		bundle := objectFromYAML[configurationv1alpha1.EventGatewayTLSTrustBundle](t, ns.Name, `
+metadata: {name: bundle}
+spec:`+onPremEventGatewayParentRef(gateway.Name)+`
+  apiSpec:
+    name: bundle
+    config: {trustedCa: {type: inline, value: ca-pem}}
+`)
+		registry := objectFromYAML[configurationv1alpha1.EventGatewaySchemaRegistry](t, ns.Name, `
+metadata: {name: registry}
+spec:`+onPremEventGatewayParentRef(gateway.Name)+`
+  apiSpec:
+    type: confluent
+    confluent:
+      name: registry
+      config: {endpoint: "https://registry.example.com", schemaType: json}
+`)
+		key := objectFromYAML[configurationv1alpha1.EventGatewayStaticKey](t, ns.Name, `
+metadata: {name: key}
+spec:`+onPremEventGatewayParentRef(gateway.Name)+`
+  apiSpec:
+    name: key
+    value: {type: secretRef, secretRef: {name: key-secret, key: key}}
+`)
+		for _, obj := range []client.Object{bundle, registry, key} {
+			require.NoError(t, cl.Create(ctx, obj))
+		}
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			for _, pod := range []*fakeGWAdmin{pod0, pod1} {
+				g, ok, _ := pod.state(gatewayID(ct, gateway))
+				if !assert.True(ct, ok) {
+					continue
+				}
+				if assert.Len(ct, g.entities.TlsTrustBundles, 1) {
+					assert.Equal(ct, string(bundle.UID), g.entities.TlsTrustBundles[0].Id.String())
+				}
+				assert.Len(ct, g.entities.SchemaRegistries, 1)
+				if assert.Len(ct, g.entities.StaticKeys, 1) {
+					assert.Equal(ct, string(key.UID), g.entities.StaticKeys[0].Id.String())
+				}
+			}
+		}, waitTime, tickTime)
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			for _, obj := range []interface {
+				client.Object
+				GetConditions() []metav1.Condition
+			}{bundle, registry, key} {
+				if assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)) {
+					assert.True(ct, apimeta.IsStatusConditionTrue(obj.GetConditions(), "Programmed"), "%T %s", obj, obj.GetName())
+				}
+			}
+		}, waitTime, tickTime)
+	})
+
 	t.Run("the backend clusters of a deleted gateway are not programmed", func(t *testing.T) {
 		require.NoError(t, cl.Delete(ctx, gateway))
 		expectProgrammed(t, "other", metav1.ConditionFalse, "GatewayNotProgrammed")

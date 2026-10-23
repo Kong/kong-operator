@@ -208,15 +208,26 @@ func comparisonKey(e gwadminapi.GatewayEntities) ([]byte, error) {
 
 // sortedByID returns the entities with each list sorted by id.
 func sortedByID(e gwadminapi.GatewayEntities) gwadminapi.GatewayEntities {
-	e.BackendClusters = slices.SortedFunc(slices.Values(e.BackendClusters), func(a, b gwadminapi.EventGatewayBackendClusterOnPrem) int {
-		return bytes.Compare(a.Id[:], b.Id[:])
-	})
+	e.BackendClusters = byID(e.BackendClusters, func(bc gwadminapi.EventGatewayBackendClusterOnPrem) gwadminapi.UUIDv4 { return bc.Id })
+	e.TlsTrustBundles = byID(e.TlsTrustBundles, func(b gwadminapi.EventGatewayTLSTrustBundleOnPrem) gwadminapi.UUIDv4 { return b.Id })
+	e.SchemaRegistries = byID(e.SchemaRegistries, func(r gwadminapi.EventGatewaySchemaRegistryOnPrem) gwadminapi.UUIDv4 { return r.Id })
+	e.StaticKeys = byID(e.StaticKeys, func(k gwadminapi.EventGatewayStaticKeyOnPrem) gwadminapi.UUIDv4 { return k.Id })
 	return e
 }
 
-// withGWAdminDefaults returns the entities with the value gw-admin sets on
-// each field left out, as it returns them: otherwise they would be pushed
-// again on every reconcile. A default missing here has the same effect.
+// byID returns a copy of the entities sorted by id.
+func byID[E any](entities []E, id func(E) gwadminapi.UUIDv4) []E {
+	return slices.SortedFunc(slices.Values(entities), func(a, b E) int {
+		idA, idB := id(a), id(b)
+		return bytes.Compare(idA[:], idB[:])
+	})
+}
+
+// withGWAdminDefaults returns the entities as gw-admin returns them: with the
+// value it sets on each field left out, and without the empty descriptions
+// of the TLS trust bundles and the static keys, which it drops. Otherwise
+// they would be pushed again on every reconcile. A default missing here has
+// the same effect.
 func withGWAdminDefaults(e gwadminapi.GatewayEntities) gwadminapi.GatewayEntities {
 	e.BackendClusters = slices.Clone(e.BackendClusters)
 	for i := range e.BackendClusters {
@@ -224,7 +235,23 @@ func withGWAdminDefaults(e gwadminapi.GatewayEntities) gwadminapi.GatewayEntitie
 			tls.TlsVersions = &[]gwadminapi.BackendClusterTLSTlsVersions{gwadminapi.Tls12, gwadminapi.Tls13}
 		}
 	}
+	e.TlsTrustBundles = slices.Clone(e.TlsTrustBundles)
+	for i := range e.TlsTrustBundles {
+		e.TlsTrustBundles[i].Description = withoutEmpty(e.TlsTrustBundles[i].Description)
+	}
+	e.StaticKeys = slices.Clone(e.StaticKeys)
+	for i := range e.StaticKeys {
+		e.StaticKeys[i].Description = withoutEmpty(e.StaticKeys[i].Description)
+	}
 	return e
+}
+
+// withoutEmpty returns nil for an empty string, s otherwise.
+func withoutEmpty(s *string) *string {
+	if s != nil && *s == "" {
+		return nil
+	}
+	return s
 }
 
 // idsKey returns the ids, sorted, as one string, to tell whether the
