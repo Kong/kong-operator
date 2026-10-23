@@ -3,6 +3,7 @@ package server
 import (
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"strings"
 )
@@ -44,7 +45,11 @@ func (d Domains) String() string {
 // isDomain reports whether domain is a bare host: parsed as an authority, it
 // gives back the same host, with no scheme, port, path or userinfo. An entry
 // that is a valid host but not a DNS name, e.g. a wildcard, matches no host.
+// An IP is refused: NewServer reads the first label as a region, so it cannot match.
 func isDomain(domain string) bool {
+	if net.ParseIP(domain) != nil {
+		return false
+	}
 	u, err := url.Parse("//" + domain)
 	return err == nil && u.Hostname() == domain
 }

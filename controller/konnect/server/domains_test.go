@@ -54,6 +54,8 @@ func TestNewDomains(t *testing.T) {
 		"konghq.com:443",
 		"user@konghq.com",
 		"kong hq.com",
+		"127.0.0.1",
+		"::1",
 	} {
 		_, err := NewDomains(invalid)
 		assert.Error(t, err, invalid)
