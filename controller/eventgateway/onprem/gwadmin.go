@@ -227,7 +227,8 @@ func byID[E any](entities []E, id func(E) gwadminapi.UUIDv4) []E {
 // value it sets on each field left out, and without the empty descriptions
 // of the TLS trust bundles and the static keys, which it drops. Otherwise
 // they would be pushed again on every reconcile. A default missing here has
-// the same effect.
+// the same effect. The value of a static key is compared as it is:
+// gw-admin returns it, and a rotated key must be pushed again.
 func withGWAdminDefaults(e gwadminapi.GatewayEntities) gwadminapi.GatewayEntities {
 	e.BackendClusters = slices.Clone(e.BackendClusters)
 	for i := range e.BackendClusters {
