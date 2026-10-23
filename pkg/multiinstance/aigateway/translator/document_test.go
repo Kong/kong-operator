@@ -1268,6 +1268,49 @@ func TestBuildDocument_ModelFailsWhenReferencedProviderFails(t *testing.T) {
 	require.NoError(t, findStatusByName(t, statuses, "model-healthy").Err)
 }
 
+// TestBuildDocument_ModelEmbeddingsProviderResolvedByCRName pins the semantic balancer's
+// embeddings provider: a bare string naming the AIGatewayModelProvider by metadata.name, which
+// must reach the document as the provider's entity name (spec.apiSpec.*.name).
+func TestBuildDocument_ModelEmbeddingsProviderResolvedByCRName(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	provider := aiGatewayModelProviderFixture("provider-cr")
+	provider.Spec.APISpec.Openai.Name = "provider-entity"
+
+	withEmbeddingsProvider := func(m *aiconfigurationv1alpha1.AIGatewayModel, provider string) *aiconfigurationv1alpha1.AIGatewayModel {
+		m.Spec.APISpec.Model.Config.Balancer = &aiconfigurationv1alpha1.AIGatewayModelModelConfigBalancer{
+			Algorithm: aiconfigurationv1alpha1.AIGatewayModelModelConfigBalancerTypeSemantic,
+			Semantic: &aiconfigurationv1alpha1.AIGatewayModelBalancerSemanticConfig{
+				Embeddings: aiconfigurationv1alpha1.AIGatewayModelBalancerSemanticConfigEmbeddings{
+					Name:     "text-embedding-3-small",
+					Provider: aiconfigurationv1alpha1.AIGatewayModelProviderReference(provider),
+					Config: &aiconfigurationv1alpha1.AIGatewayModelBalancerSemanticConfigEmbeddingsConfig{
+						Type: aiconfigurationv1alpha1.AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeOpenai,
+					},
+				},
+			},
+		}
+		return m
+	}
+	model := withEmbeddingsProvider(aiGatewayModelFixture("model"), "provider-cr")
+
+	cl := newTestBuilder(scheme, gw, provider, model).Build()
+
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	require.NoError(t, err)
+
+	require.Len(t, doc.Models, 1)
+	embeddings, ok := doc.Models[0].Config.Balancer.Fields["embeddings"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, "provider-entity", embeddings["provider"])
+	require.NoError(t, findStatusByName(t, statuses, "model").Err)
+}
+
 // TestBuildDocument_ConsumerFailsWhenReferencedPolicyFails pins the translated-reference check
 // for consumer policy references: a consumer referencing an AIGatewayPolicy that failed its
 // own translation must be excluded with a per-entity error.
