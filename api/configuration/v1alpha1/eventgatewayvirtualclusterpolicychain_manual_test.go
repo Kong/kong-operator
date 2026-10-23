@@ -62,6 +62,11 @@ func TestEventGatewayVirtualClusterPolicyChainReferences(t *testing.T) {
 		err    string
 	}{
 		{name: "ordered references"},
+		{name: "explicit same namespace", change: func(c *EventGatewayVirtualClusterPolicyChain, p *EventGatewayVirtualClusterPolicy) {
+			c.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Namespace = new("default")
+			c.Spec.APISpec.Policies[0].Namespace = "default"
+			p.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Namespace = new("default")
+		}},
 		{name: "missing list", change: func(c *EventGatewayVirtualClusterPolicyChain, _ *EventGatewayVirtualClusterPolicy) {
 			c.Spec.APISpec.Policies = nil
 		}, err: "supplied explicitly"},

@@ -169,6 +169,8 @@ and deleted policies must be removed.
 Backend validation against `eu.api.konghq.tech` on 2026-10-22 confirmed that
 complete permutations are accepted; partial lists, duplicates, unknown IDs, and
 empty lists for nonempty chains are rejected without changing the remote chain.
+Missing and null policy lists were also rejected. Duplicate and unknown IDs were
+rejected even when the submitted list had the correct number of entries.
 New policies were appended to the existing order, and deleted policies were
 removed without reordering the remaining policies. This is evidence from the
 tested development backend, not a guarantee for every production version.
@@ -196,7 +198,8 @@ from its Kubernetes references.
 These conservative controller restrictions match the development backend
 observations above; they do not depend on every backend version enforcing them.
 GET and PUT are not an atomic transaction: avoid concurrent out-of-band changes
-to the policy set.
+to the policy set. No policy-count limit is imposed by this controller; the
+backend's actual maximum remains unknown.
 
 The first chain to claim the parent owns it, recorded in the parent annotation
 `gateway-operator.konghq.com/cluster-policy-chain-owner`. A competing chain reports

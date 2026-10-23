@@ -121,7 +121,7 @@ func (obj *EventGatewayVirtualClusterPolicyChain) ToCreateUpdateEventGatewayVirt
 	if err != nil {
 		return nil, fmt.Errorf("resolving spec.apiSpec.policies references: %w", err)
 	}
-	// Preserve explicit empty lists in the SDK payload.
+	// Always include the resolved list, even when empty; this does not clear policies.
 	payload["policies"] = resolvedPolicies
 	data, err = json.Marshal(payload)
 	if err != nil {
@@ -155,7 +155,7 @@ func (obj *EventGatewayVirtualClusterPolicyChain) ToUpdateUpdateEventGatewayVirt
 	if err != nil {
 		return nil, fmt.Errorf("resolving spec.apiSpec.policies references: %w", err)
 	}
-	// Preserve explicit empty lists in the SDK payload.
+	// Always include the resolved list, even when empty; this does not clear policies.
 	payload["policies"] = resolvedPolicies
 	data, err = json.Marshal(payload)
 	if err != nil {

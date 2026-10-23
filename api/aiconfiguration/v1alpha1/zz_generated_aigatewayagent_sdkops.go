@@ -519,7 +519,7 @@ func (obj *AIGatewayAgent) ToCreateAIGatewayAgentRequest(ctx context.Context, cl
 	if err != nil {
 		return nil, fmt.Errorf("resolving spec.apiSpec.policies references: %w", err)
 	}
-	// Preserve explicit empty lists in the SDK payload.
+	// Always set: an empty list must explicitly clear the field in Konnect.
 	payload["policies"] = resolvedPolicies
 	// spec.apiSpec.access.acls carries CR references: rebuild the "acls" union
 	// value in the SDK payload from the CRD ACL union's selected variant with the
@@ -591,7 +591,7 @@ func (obj *AIGatewayAgent) ToUpdateAIGatewayAgentRequest(ctx context.Context, cl
 	if err != nil {
 		return nil, fmt.Errorf("resolving spec.apiSpec.policies references: %w", err)
 	}
-	// Preserve explicit empty lists in the SDK payload.
+	// Always set: an empty list must explicitly clear the field in Konnect.
 	payload["policies"] = resolvedPolicies
 	// spec.apiSpec.access.acls carries CR references: rebuild the "acls" union
 	// value in the SDK payload from the CRD ACL union's selected variant with the

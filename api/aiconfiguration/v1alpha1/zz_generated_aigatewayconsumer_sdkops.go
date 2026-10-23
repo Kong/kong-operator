@@ -140,7 +140,7 @@ func (obj *AIGatewayConsumer) ToCreateAIGatewayConsumerRequest(ctx context.Conte
 	if err != nil {
 		return nil, fmt.Errorf("resolving spec.apiSpec.policies references: %w", err)
 	}
-	// Preserve explicit empty lists in the SDK payload.
+	// Always set: an empty list must explicitly clear the field in Konnect.
 	payload["policies"] = resolvedPolicies
 	data, err = json.Marshal(payload)
 	if err != nil {
@@ -172,7 +172,7 @@ func (obj *AIGatewayConsumer) ToUpdateAIGatewayConsumerRequest(ctx context.Conte
 	if err != nil {
 		return nil, fmt.Errorf("resolving spec.apiSpec.policies references: %w", err)
 	}
-	// Preserve explicit empty lists in the SDK payload.
+	// Always set: an empty list must explicitly clear the field in Konnect.
 	payload["policies"] = resolvedPolicies
 	data, err = json.Marshal(payload)
 	if err != nil {

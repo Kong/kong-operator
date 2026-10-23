@@ -1048,7 +1048,11 @@ func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Clie
 {{- else if .DirectScalarRef}}
 	payload["{{.SDKJSONFieldName}}"] = resolved{{.GoResolverName}}[0]
 {{- else}}
-	// Preserve explicit empty lists in the SDK payload.
+{{- if eq $.EntityName "EventGatewayVirtualClusterPolicyChain"}}
+	// Always include the resolved list, even when empty; this does not clear policies.
+{{- else}}
+	// Always set: an empty list must explicitly clear the field in Konnect.
+{{- end}}
 	payload["{{.SDKJSONFieldName}}"] = resolved{{.GoResolverName}}
 {{- end}}
 {{- end}}

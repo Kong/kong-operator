@@ -14,8 +14,8 @@ import (
 )
 
 // applyEventGatewayVirtualClusterPolicyChain deliberately supports only reordering
-// the complete remote set. Subset and empty-list replacement semantics are not
-// established by the backend contract.
+// the complete remote set. Development backend probes confirmed this constraint;
+// keep the guard rather than relying on all backend versions to enforce it.
 func applyEventGatewayVirtualClusterPolicyChain(
 	ctx context.Context,
 	cl client.Client,
