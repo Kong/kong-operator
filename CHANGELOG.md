@@ -3,6 +3,8 @@
 ## Table of Contents
 
 - [Unreleased](#unreleased)
+- [v2.2.7](#v227)
+- [v2.2.6](#v226)
 - [v2.2.6](#v226)
 - [v2.2.5](#v225)
 - [v2.2.4](#v224)
@@ -59,6 +61,10 @@
 
 ## Unreleased
 
+## [v2.2.7]
+
+> Release date: 2026-10-23
+
 ### Fixes
 
 - Konnect: a `KonnectExtension` now registers the certificate of its
@@ -79,6 +85,7 @@
   The extension remains unready until its current certificate is programmed.
   [#5982](https://github.com/Kong/kong-operator/pull/5982)
   [#6045](https://github.com/Kong/kong-operator/pull/6045)
+- Bump dependencies and Golang to 1.26.10
 
 ## [v2.2.6]
 
@@ -2510,6 +2517,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.2.7]: https://github.com/Kong/kong-operator/compare/v2.2.6..v2.2.7
 [v2.2.6]: https://github.com/Kong/kong-operator/compare/v2.2.5..v2.2.6
 [v2.2.5]: https://github.com/Kong/kong-operator/compare/v2.2.4..v2.2.5
 [v2.2.4]: https://github.com/Kong/kong-operator/compare/v2.2.3..v2.2.4
