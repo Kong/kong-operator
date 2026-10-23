@@ -4368,6 +4368,8 @@ func TestGenerateOnPremEventGatewayEntitiesDispatcher(t *testing.T) {
 			`// +kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaybackendclusters;eventgatewaylistenerpolicies;eventgatewaylisteners;eventgatewayvirtualclusterproducepolicies;eventgatewayvirtualclusters,verbs=get;list;watch`)
 		assert.Contains(t, file.Content, `configurationv1alpha1.GroupVersion.WithResource("eventgatewaylistenerpolicies"),`)
 		assert.Contains(t, file.Content, `configurationv1alpha1.GroupVersion.WithResource("eventgatewayvirtualclusterproducepolicies"),`)
+		assert.Contains(t, file.Content, "index.OptionsForEventGatewayBackendCluster(),")
+		assert.Contains(t, file.Content, "index.OptionsForEventGatewayVirtualClusterProducePolicy(),")
 
 		formatted, err := format.Source([]byte(file.Content))
 		require.NoError(t, err)
@@ -7642,6 +7644,53 @@ func TestGenerateSDKOps_ReferenceToKindNotManagedByKonnect(t *testing.T) {
 			} else {
 				require.NotContains(t, content, "SkipKonnectReconciliation")
 			}
+		})
+	}
+}
+
+// TestGenerateIndex_SecretRefIndex verifies that the entities reading Secrets
+// through their sensitive data sources get an index of those Secrets, and
+// the others don't.
+func TestGenerateIndex_SecretRefIndex(t *testing.T) {
+	metadata := reconcilerEntityMetadata{
+		EntityName:           "EventGatewayBackendCluster",
+		EntityNameLowerCamel: "eventGatewayBackendCluster",
+		ParentEntityName:     "KonnectEventGateway",
+		ParentRefFieldName:   "GatewayRef",
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/configuration/v1alpha1",
+		APIGroupPackageAlias: "configurationv1alpha1",
+	}
+	generate := func(t *testing.T, dataSources map[string][]config.DataSourceConfig, rc *config.ReconcilerConfig) string {
+		t.Helper()
+		g := NewGenerator(Config{
+			APIGroupPackagePath:  metadata.APIGroupPackagePath,
+			APIGroupPackageAlias: metadata.APIGroupPackageAlias,
+			DataSources:          dataSources,
+		})
+		content, err := g.generateIndex(metadata, rc)
+		require.NoError(t, err)
+		_, err = format.Source([]byte(content))
+		require.NoError(t, err, "generated code must be valid Go")
+		return content
+	}
+	secretSources := map[string][]config.DataSourceConfig{
+		"EventGatewayBackendCluster": {{Path: "spec.apiSpec.tls.clientIdentity.key", Type: "Secret"}},
+	}
+
+	for name, rc := range map[string]*config.ReconcilerConfig{"child": {}, "root": {IsRoot: new(true)}} {
+		t.Run(name+" with Secret sources", func(t *testing.T) {
+			content := generate(t, secretSources, rc)
+			assert.Contains(t, content, `IndexFieldEventGatewayBackendClusterOnSecretRef = "eventGatewayBackendClusterOnSecretRef"`)
+			assert.Contains(t, content, "Field:          IndexFieldEventGatewayBackendClusterOnSecretRef,")
+			assert.Contains(t, content, "refs := ent.GetSensitiveDataSecretRefs()")
+			assert.Contains(t, content, `out = append(out, ns+"/"+ref.Name)`)
+		})
+		t.Run(name+" without Secret sources", func(t *testing.T) {
+			configMapSources := map[string][]config.DataSourceConfig{
+				"EventGatewayBackendCluster": {{Path: "spec.apiSpec.tls.caBundle", Type: "ConfigMap"}},
+			}
+			assert.NotContains(t, generate(t, configMapSources, rc), "OnSecretRef")
+			assert.NotContains(t, generate(t, nil, rc), "OnSecretRef")
 		})
 	}
 }

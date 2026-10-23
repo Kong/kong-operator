@@ -13,6 +13,8 @@ const (
 	IndexFieldAIGatewayCertificateOnKonnectAIGatewayRef = "aiGatewayCertificateOnKonnectAIGatewayRef"
 	// IndexFieldAIGatewayCertificateOnOnPremAIGatewayRef is the index field for AIGatewayCertificate -> OnPremAIGateway.
 	IndexFieldAIGatewayCertificateOnOnPremAIGatewayRef = "aiGatewayCertificateOnOnPremAIGatewayRef"
+	// IndexFieldAIGatewayCertificateOnSecretRef is the index field for AIGatewayCertificate -> the Secrets it reads.
+	IndexFieldAIGatewayCertificateOnSecretRef = "aiGatewayCertificateOnSecretRef"
 )
 
 // OptionsForAIGatewayCertificate returns required Index options for AIGatewayCertificate reconciler.
@@ -27,6 +29,11 @@ func OptionsForAIGatewayCertificate() []Option {
 			Object:         &aiconfigurationv1alpha1.AIGatewayCertificate{},
 			Field:          IndexFieldAIGatewayCertificateOnOnPremAIGatewayRef,
 			ExtractValueFn: aiGatewayCertificateOnOnPremAIGatewayRef,
+		},
+		{
+			Object:         &aiconfigurationv1alpha1.AIGatewayCertificate{},
+			Field:          IndexFieldAIGatewayCertificateOnSecretRef,
+			ExtractValueFn: aiGatewayCertificateOnSecretRef,
 		},
 	}
 }
@@ -72,4 +79,21 @@ func aiGatewayCertificateOnOnPremAIGatewayRef(object client.Object) []string {
 	}
 
 	return []string{refNamespace + "/" + ent.Spec.AIGatewayRef.NamespacedRef.Name}
+}
+
+func aiGatewayCertificateOnSecretRef(object client.Object) []string {
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayCertificate)
+	if !ok {
+		return nil
+	}
+	refs := ent.GetSensitiveDataSecretRefs()
+	out := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		ns := ent.GetNamespace()
+		if ref.Namespace != nil && *ref.Namespace != "" {
+			ns = *ref.Namespace
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
 }

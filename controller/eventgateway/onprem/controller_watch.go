@@ -36,6 +36,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
 // onPremEventGatewayGVK is the GroupVersionKind of OnPremEventGateway.
@@ -164,8 +165,9 @@ func onPremEventGatewaysIn(ctx context.Context, cl client.Client, namespaces ...
 }
 
 // mapKongReferenceGrantToOnPremEventGateways returns a MapFunc that enqueues
-// the OnPremEventGateways the KongReferenceGrant may allow to use their
-// GWAdmin: those of the namespaces it grants that reference a GWAdmin of its
+// the OnPremEventGateways the KongReferenceGrant may concern: those of the
+// namespaces it grants that reference a GWAdmin of its namespace, and those
+// of the namespaces whose entities it allows to read Secrets of its
 // namespace. The other gateways don't depend on it.
 func mapKongReferenceGrantToOnPremEventGateways(cl client.Client) handler.MapFunc {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
@@ -183,6 +185,53 @@ func mapKongReferenceGrantToOnPremEventGateways(cl client.Client) handler.MapFun
 			for i := range gateways.Items {
 				if gateways.Items[i].GWAdminKey().Namespace == grant.Namespace {
 					requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(&gateways.Items[i])})
+				}
+			}
+		}
+		// An entity is in the namespace of its gateway (see
+		// configuration.entityID).
+		return append(requests, onPremEventGatewaysIn(ctx, cl, namespacesGrantedSecrets(grant)...)...)
+	}
+}
+
+// namespacesGrantedSecrets returns the namespaces whose entities the
+// KongReferenceGrant allows to read Secrets of its namespace.
+func namespacesGrantedSecrets(grant *configurationv1alpha1.KongReferenceGrant) []string {
+	if !slices.ContainsFunc(grant.Spec.To, func(to configurationv1alpha1.ReferenceGrantTo) bool {
+		return to.Group == "core" && to.Kind == "Secret"
+	}) {
+		return nil
+	}
+	var namespaces []string
+	for _, from := range grant.Spec.From {
+		ns := string(from.Namespace)
+		if _, ok := entityGroupKinds[schema.GroupKind{Group: string(from.Group), Kind: string(from.Kind)}]; ok &&
+			ns != grant.Namespace && !slices.Contains(namespaces, ns) {
+			namespaces = append(namespaces, ns)
+		}
+	}
+	return namespaces
+}
+
+// mapSecretToOnPremEventGateways returns a MapFunc that enqueues the
+// OnPremEventGateways of the backend clusters reading the Secret: one
+// created, e.g. one they were left out for, or changed, e.g. a key rotated,
+// is pushed to gw-admin.
+func mapSecretToOnPremEventGateways(cl client.Client) handler.MapFunc {
+	toGateway := mapEntityToOnPremEventGateway(cl)
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		var backendClusters configurationv1alpha1.EventGatewayBackendClusterList
+		if err := cl.List(ctx, &backendClusters, client.MatchingFields{
+			index.IndexFieldEventGatewayBackendClusterOnSecretRef: client.ObjectKeyFromObject(obj).String(),
+		}); err != nil {
+			ctrl.LoggerFrom(ctx).Error(err, "failed to list the EventGatewayBackendClusters reading a Secret", "secret", client.ObjectKeyFromObject(obj))
+			return nil
+		}
+		var requests []reconcile.Request
+		for i := range backendClusters.Items {
+			for _, req := range toGateway(ctx, &backendClusters.Items[i]) {
+				if !slices.Contains(requests, req) {
+					requests = append(requests, req)
 				}
 			}
 		}

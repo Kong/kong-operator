@@ -415,8 +415,9 @@ spec:
 			assert.Len(ct, gateway.Status.Conditions, 4, "GWAdminResolved, ConfigurationPushed, Programmed and the one of someone else")
 			assert.Empty(ct, gateway.Status.ServerURL)
 			// The revision is recorded even while the GWAdmin can't be pushed
-			// to, and the status the controller applies leaves it as it is.
-			assert.Equal(ct, int64(1), revision)
+			// to, one for each change of the entities of the gateway, and the
+			// status the controller applies leaves it as it is.
+			assert.Positive(ct, revision)
 			assert.Equal(ct, revision, gateway.Status.ConfigRevision)
 		}, waitTime, tickTime)
 	})

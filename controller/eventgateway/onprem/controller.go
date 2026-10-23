@@ -60,7 +60,9 @@ import (
 // one gateway: a change to the gateway, to any Event Gateway entity that
 // belongs to it, directly or through its parent entities, to its GWAdmin, the
 // Secrets of the GWAdmin or its gw-admin pods, or to a KongReferenceGrant
-// allowing it to use a GWAdmin in another namespace triggers it.
+// allowing it to use a GWAdmin in another namespace, or its entities to read
+// Secrets of another namespace, or to a Secret its entities read, triggers
+// it.
 type Reconciler struct {
 	client.Client
 
@@ -92,6 +94,13 @@ type Reconciler struct {
 	// their GWAdmin and that every gw-admin pod was told to stop serving:
 	// they aren't told again on every change of the GWAdmin.
 	removedFromGWAdmin sync.Map
+	// lastEntities holds, by gateway UID, the entities of the last
+	// configuration built for the gateway, by the UID of their object (see
+	// buildConfiguration).
+	//
+	// It is kept in memory: after a restart of the operator, an entity whose
+	// Secret is gone is left out.
+	lastEntities sync.Map
 }
 
 // pendingRetries returns the backoff of the pushes to the gw-admin pods still
@@ -126,12 +135,15 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 
 	// A change to the GWAdmin of a gateway, to its Secrets or to its gw-admin
 	// pods triggers it, and so does a change to a KongReferenceGrant allowing
-	// the gateways of a namespace to use a GWAdmin of another.
+	// the gateways of a namespace to use a GWAdmin of another, or their
+	// entities to read the Secrets of another.
 	requests := func(ctx context.Context, gwAdmin types.NamespacedName) []reconcile.Request {
 		return requestsForGWAdmin(ctx, mgr.GetClient(), gwAdmin)
 	}
 	b = r.GWAdminSync.Watch(b, requests)
 	b = b.Watches(&configurationv1alpha1.KongReferenceGrant{}, handler.EnqueueRequestsFromMapFunc(mapKongReferenceGrantToOnPremEventGateways(mgr.GetClient())))
+	// A change to a Secret a backend cluster reads triggers its gateway.
+	b = b.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(mapSecretToOnPremEventGateways(mgr.GetClient())))
 
 	// The deletion of a gateway triggers the other gateways of its GWAdmin:
 	// they set the gateways gw-admin serves again, without it, e.g. when it
@@ -184,18 +196,27 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha
 	}
 
 	// The revision of the configuration is recorded before it is pushed.
-	config := deriveConfig(gateway)
+	previous, _ := r.lastEntities.Load(gateway.UID)
+	cfg, err := buildConfiguration(ctx, r.Client, gateway, gwadminsync.SecretHint(r.GWAdminSync.SecretLabelSelector), asEntities(previous))
+	if err != nil {
+		return requeueOnConflict(logger, ctrl.Result{}, err)
+	}
+	r.lastEntities.Store(gateway.UID, cfg.built)
+	config := deriveConfig(gateway, cfg)
 	if err := r.recordRevision(ctx, gateway, config); err != nil {
 		return requeueOnConflict(logger, ctrl.Result{}, err)
 	}
 
-	result, pushErr, err := r.pushConfiguration(ctx, gateway, gatewayID, config)
+	result, pushErr, err := r.pushConfiguration(ctx, gateway, gatewayID, config, cfg)
 	if !result.done {
 		// The push has no outcome yet, e.g. the gateways of the GWAdmin
 		// couldn't be listed: it is retried, and the status is left as it is.
 		return requeueOnConflict(logger, ctrl.Result{}, err)
 	}
 	if statusErr := r.reportPush(ctx, logger, gateway, result, pushErr); statusErr != nil {
+		err = errors.Join(err, statusErr)
+	}
+	if statusErr := r.reportEntities(ctx, gateway, cfg); statusErr != nil {
 		err = errors.Join(err, statusErr)
 	}
 	switch {
@@ -242,7 +263,11 @@ func (r *Reconciler) reportInvalidUID(ctx context.Context, logger logr.Logger, g
 	if !gateway.DeletionTimestamp.IsZero() {
 		return nil
 	}
-	return r.reportPush(ctx, logger, gateway, pushResult{done: true}, invalidUIDError{uid: gateway.GetUID()})
+	invalid := invalidUIDError{uid: gateway.GetUID()}
+	return errors.Join(
+		r.reportPush(ctx, logger, gateway, pushResult{done: true}, invalid),
+		r.reportEntitiesNotProgrammed(ctx, gateway, invalid.Error()),
+	)
 }
 
 // reportPush sets the status of the gateway from the outcome of the push, and
@@ -312,7 +337,7 @@ type pushResult struct {
 // errors of the push: any other error, e.g. listing the gateways of the
 // GWAdmin, is returned apart, and only retried.
 func (r *Reconciler) pushConfiguration(
-	ctx context.Context, gateway *eventgatewayv1alpha1.OnPremEventGateway, gatewayID uuid.UUID, config gatewayConfig,
+	ctx context.Context, gateway *eventgatewayv1alpha1.OnPremEventGateway, gatewayID uuid.UUID, config gatewayConfig, cfg configuration,
 ) (result pushResult, pushErr error, err error) {
 	target, err := r.resolveGWAdmin(ctx, gateway, true)
 	if notReady, ok := errors.AsType[gwAdminNotReadyError](err); ok {
@@ -335,7 +360,7 @@ func (r *Reconciler) pushConfiguration(
 	}
 	pending, pushErr := r.GWAdminSync.ForEachPod(ctx, target, target.Pods,
 		func(ctx context.Context, pod gwadminsync.Pod, gwAdmin gwadminapi.ClientInterface) error {
-			return r.push(ctx, target, pod, gwAdmin, config, gatewayID, expected)
+			return r.push(ctx, target, pod, gwAdmin, config, cfg, gatewayID, expected)
 		})
 	result = pushResult{done: true, target: target, pending: pending}
 	if pushErr != nil {
@@ -431,6 +456,11 @@ func (r *Reconciler) cleanup(ctx context.Context, logger logr.Logger, gateway *e
 	if !controllerutil.ContainsFinalizer(gateway, FinalizerGWAdminCleanup) {
 		return ctrl.Result{}, nil
 	}
+	// The deletion of the gateway goes on when the status of its entities
+	// can't be set: it would be held by them otherwise.
+	if err := r.reportEntitiesNotProgrammed(ctx, gateway, fmt.Sprintf("The OnPremEventGateway %s is being deleted", client.ObjectKeyFromObject(gateway))); err != nil {
+		log.Error(logger, err, "failed to report the deletion of the OnPremEventGateway on its entities")
+	}
 	started, err := r.cleanupStarted(ctx, gateway)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -524,6 +554,7 @@ func (r *Reconciler) forgetDeleted() predicate.Funcs {
 // forget drops what the reconciles remember of a deleted gateway.
 func (r *Reconciler) forget(uid types.UID) {
 	r.removedFromGWAdmin.Delete(uid)
+	r.lastEntities.Delete(uid)
 	r.backoff.Forget(uid)
 	r.pendingRetries().Forget(uid)
 }

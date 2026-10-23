@@ -232,14 +232,25 @@ type problem struct {
 // Call makes a call to gw-admin, and returns its error, as CheckResponse
 // does.
 func Call(action string, call func() (*http.Response, error)) error {
+	return CallDescribingFields(action, nil, call)
+}
+
+// CallDescribingFields makes a call to gw-admin, as Call does, describing
+// each field gw-admin reports invalid with describeField, e.g. to name the
+// object it comes from. A nil describeField leaves the fields as they are.
+func CallDescribingFields(action string, describeField func(string) string, call func() (*http.Response, error)) error {
 	resp, err := call()
-	return CheckResponse(action, resp, err)
+	return checkResponse(action, resp, err, describeField)
 }
 
 // CheckResponse returns an error when the call failed: the error of the
 // transport, or a ResponseError with the problem gw-admin reports. It closes
 // the body of the response.
 func CheckResponse(action string, resp *http.Response, err error) error {
+	return checkResponse(action, resp, err, nil)
+}
+
+func checkResponse(action string, resp *http.Response, err error, describeField func(string) string) error {
 	if err != nil {
 		return fmt.Errorf("failed to %s: %w", action, err)
 	}
@@ -259,7 +270,11 @@ func CheckResponse(action string, resp *http.Response, err error) error {
 	if len(p.InvalidParameters) > 0 {
 		reasons := make([]string, 0, len(p.InvalidParameters))
 		for _, param := range p.InvalidParameters {
-			reasons = append(reasons, fmt.Sprintf("%s: %s", param.Field, param.Reason))
+			field := param.Field
+			if describeField != nil {
+				field = describeField(field)
+			}
+			reasons = append(reasons, fmt.Sprintf("%s: %s", field, param.Reason))
 		}
 		respErr.Message = strings.Join(reasons, "; ")
 	}

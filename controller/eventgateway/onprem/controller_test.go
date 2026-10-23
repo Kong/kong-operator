@@ -49,6 +49,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
@@ -120,7 +121,7 @@ func (f *pushFixture) terminatingPod() *fakeGWAdminClient {
 func TestPushConfiguration(t *testing.T) {
 	t.Run("pushed to every pod", func(t *testing.T) {
 		f := newPushFixture(t, interceptor.Funcs{}, nil)
-		result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway))
+		result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
 		require.NoError(t, err)
 		require.NoError(t, pushErr)
 		assert.True(t, result.done)
@@ -132,7 +133,7 @@ func TestPushConfiguration(t *testing.T) {
 	t.Run("a pod fails", func(t *testing.T) {
 		f := newPushFixture(t, interceptor.Funcs{}, nil)
 		f.pod().respond = failing(callEntities, http.StatusBadRequest)
-		result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway))
+		result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
 		require.NoError(t, err)
 		require.ErrorContains(t, pushErr, "gw-admin pod gw-admin-0: failed to push the entities of the gateway")
 		assert.True(t, result.done)
@@ -143,7 +144,7 @@ func TestPushConfiguration(t *testing.T) {
 		f := newPushFixture(t, interceptor.Funcs{}, func(f *pushFixture) []client.Object {
 			return []client.Object{f.gateway}
 		})
-		result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway))
+		result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
 		require.NoError(t, err)
 		assert.True(t, result.done)
 		assert.Nil(t, result.target)
@@ -154,7 +155,7 @@ func TestPushConfiguration(t *testing.T) {
 
 	t.Run("the gateway may not use the GWAdmin: it is removed", func(t *testing.T) {
 		f := newPushFixture(t, interceptor.Funcs{}, inAnotherNamespace)
-		_, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway))
+		_, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
 		require.NoError(t, err)
 		notReady, ok := errors.AsType[gwAdminNotReadyError](pushErr)
 		require.True(t, ok)
@@ -167,13 +168,13 @@ func TestPushConfiguration(t *testing.T) {
 	t.Run("the gateway may not use the GWAdmin, and a pod fails to remove it", func(t *testing.T) {
 		f := newPushFixture(t, interceptor.Funcs{}, inAnotherNamespace)
 		f.pod().respond = failing(callDeleteGateway, http.StatusInternalServerError)
-		_, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway))
+		_, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
 		require.NoError(t, err)
 		require.ErrorContains(t, pushErr, "failed to make gw-admin stop serving the gateway: gw-admin pod gw-admin-0")
 		assert.False(t, onlyNotReady(pushErr), "retried")
 
 		f.pod().reset()
-		result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway))
+		result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
 		require.NoError(t, err)
 		assert.Positive(t, result.retryAfter, "after its backoff")
 		assert.Empty(t, f.pod().recorded(), "not removed again before its backoff")
@@ -185,7 +186,7 @@ func TestPushConfiguration(t *testing.T) {
 		f := newPushFixture(t, interceptor.Funcs{}, inAnotherNamespace)
 		removed := []string{callExpected + " ", callDeleteGateway}
 		for range 2 {
-			_, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway))
+			_, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
 			require.NoError(t, err)
 			assert.True(t, onlyNotReady(pushErr))
 		}
@@ -193,12 +194,12 @@ func TestPushConfiguration(t *testing.T) {
 
 		grant := gwadminreftest.Grant("admins", "gateways", ns, "")
 		require.NoError(t, f.cl.Create(t.Context(), grant))
-		_, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway))
+		_, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
 		require.NoError(t, err)
 		require.NoError(t, pushErr)
 
 		require.NoError(t, f.cl.Delete(t.Context(), grant))
-		_, _, err = f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway))
+		_, _, err = f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
 		require.NoError(t, err)
 		pushed := []string{callGetEntities, callRegister, callEntities, callExpected + " " + f.gatewayID.String()}
 		assert.Equal(t, slices.Concat(removed, pushed, removed), f.pod().recorded(), "told again once no longer allowed")
@@ -210,7 +211,7 @@ func TestPushConfiguration(t *testing.T) {
 			return slices.DeleteFunc(objects, func(o client.Object) bool { return o == f.gwAdmin.ClientSecret })
 		})
 		for range 2 {
-			_, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway))
+			_, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
 			require.NoError(t, err)
 			require.ErrorContains(t, pushErr, "gw-admin can't be told to stop serving the gateway yet: The operator client certificate Secret")
 			assert.True(t, onlyNotReady(pushErr), "a change to the GWAdmin triggers it again")
@@ -231,7 +232,7 @@ func TestPushConfiguration(t *testing.T) {
 			g.gateway.Spec.GWAdminRef.Namespace = new("admins")
 			return []client.Object{g.gateway}
 		})
-		result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway))
+		result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
 		require.ErrorContains(t, err, "unavailable", "an error reading the cluster is only retried")
 		assert.True(t, result.done)
 		assert.True(t, onlyNotReady(pushErr), "the status reports the gateway may not use the GWAdmin")
@@ -266,7 +267,7 @@ func TestPushConfiguration(t *testing.T) {
 	for _, tc := range transient {
 		t.Run("not pushed, only retried: "+tc.name, func(t *testing.T) {
 			f := newPushFixture(t, tc.funcs, nil)
-			result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway))
+			result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
 			require.ErrorContains(t, err, tc.want)
 			require.NoError(t, pushErr, "not an error of the push: the status doesn't report it")
 			assert.False(t, result.done)
@@ -729,6 +730,103 @@ func TestApplyStatus(t *testing.T) {
 	})
 }
 
+func TestReportEntities(t *testing.T) {
+	gateway := newTestGateway("gateway")
+	included := backendCluster(ns, "included", nil)
+	excluded := backendCluster(ns, "excluded", nil)
+	cl := newFakeClient(t, gateway, included, excluded)
+	r := &Reconciler{Client: cl}
+	cfg := configuration{
+		included: []entityStatus{{obj: included, secretRefValid: secretRefValidCondition(included, "")}},
+		excluded: []excludedEntity{{
+			obj:            excluded,
+			secretRefValid: secretRefValidCondition(excluded, "The Secrets it reads aren't read: no grant"),
+			reason:         eventgatewayv1alpha1.OnPremEntityRefNotPermittedReason,
+			message:        "no grant",
+		}},
+	}
+	condition := func(obj client.Object, conditionType string) *metav1.Condition {
+		return apimeta.FindStatusCondition(read(t, cl, obj.(*configurationv1alpha1.EventGatewayBackendCluster)).Status.Conditions, conditionType)
+	}
+	programmed := func(obj client.Object) *metav1.Condition { return condition(obj, "Programmed") }
+
+	gateway.Status.Conditions = []metav1.Condition{{Type: "Programmed", Status: metav1.ConditionFalse, Reason: "ConfigurationPushFailed", Message: "pod down"}}
+	require.NoError(t, r.reportEntities(t.Context(), gateway, cfg))
+	got := programmed(included)
+	require.NotNil(t, got)
+	assert.Equal(t, metav1.ConditionFalse, got.Status)
+	assert.Equal(t, "GatewayNotProgrammed", got.Reason)
+	assert.Equal(t, "In the configuration of the OnPremEventGateway default/gateway, which is not programmed: pod down", got.Message)
+	got = programmed(excluded)
+	require.NotNil(t, got)
+	assert.Equal(t, metav1.ConditionFalse, got.Status)
+	assert.Equal(t, "RefNotPermitted", got.Reason)
+	assert.Equal(t, "Left out of the configuration of the OnPremEventGateway default/gateway: no grant", got.Message)
+	if got := condition(included, "SecretRefValid"); assert.NotNil(t, got) {
+		assert.Equal(t, metav1.ConditionTrue, got.Status)
+	}
+	if got := condition(excluded, "SecretRefValid"); assert.NotNil(t, got, "its Secrets weren't read") {
+		assert.Equal(t, metav1.ConditionFalse, got.Status)
+		assert.Equal(t, "Invalid", got.Reason)
+		assert.Equal(t, "The Secrets it reads aren't read: no grant", got.Message)
+	}
+
+	gateway.Status.Conditions[0].Status = metav1.ConditionTrue
+	cfg.included[0].obj = read(t, cl, included)
+	cfg.excluded[0].obj = read(t, cl, excluded)
+	require.NoError(t, r.reportEntities(t.Context(), gateway, cfg))
+	got = programmed(included)
+	assert.Equal(t, metav1.ConditionTrue, got.Status)
+	assert.Equal(t, "Programmed", got.Reason)
+
+	t.Run("an entity whose Secret is gone is programmed with its last configuration", func(t *testing.T) {
+		obj := read(t, cl, included)
+		cfg := configuration{included: []entityStatus{{obj: obj, kept: true, secretRefValid: secretRefValidCondition(obj, "secret not found")}}}
+		require.NoError(t, r.reportEntities(t.Context(), gateway, cfg))
+		got := programmed(included)
+		assert.Equal(t, metav1.ConditionTrue, got.Status)
+		assert.Contains(t, got.Message, "its last configuration is kept")
+		got = condition(included, "SecretRefValid")
+		assert.Equal(t, metav1.ConditionFalse, got.Status)
+		assert.Equal(t, "Invalid", got.Reason)
+		assert.Equal(t, "secret not found", got.Message)
+	})
+
+	t.Run("an unchanged condition isn't patched", func(t *testing.T) {
+		var patched int
+		cl := newFakeClientWithInterceptor(t, interceptor.Funcs{
+			SubResourcePatch: func(ctx context.Context, cl client.Client, sub string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
+				patched++
+				return cl.SubResource(sub).Patch(ctx, obj, patch, opts...)
+			},
+		}, read(t, r.Client, included))
+		r := &Reconciler{Client: cl}
+		cfg := configuration{included: []entityStatus{{obj: read(t, cl, included)}}}
+		require.NoError(t, r.reportEntities(t.Context(), gateway, cfg))
+		patched = 0
+		cfg.included[0].obj = read(t, cl, included)
+		require.NoError(t, r.reportEntities(t.Context(), gateway, cfg))
+		assert.Zero(t, patched)
+	})
+}
+
+func TestReportEntitiesNotProgrammed(t *testing.T) {
+	gateway := newTestGateway("gateway")
+	ofGateway := backendCluster(ns, "of-gateway", onPremGatewayRef("gateway"))
+	ofGateway.Status.Conditions = []metav1.Condition{{Type: "Programmed", Status: metav1.ConditionTrue, Reason: "Programmed", Message: "pushed"}}
+	other := backendCluster(ns, "other", onPremGatewayRef("other"))
+	cl := newFakeClient(t, gateway, ofGateway, other)
+	r := &Reconciler{Client: cl}
+
+	require.NoError(t, r.reportEntitiesNotProgrammed(t.Context(), gateway, "The OnPremEventGateway default/gateway is being deleted"))
+	got := apimeta.FindStatusCondition(read(t, cl, ofGateway).Status.Conditions, "Programmed")
+	require.NotNil(t, got)
+	assert.Equal(t, metav1.ConditionFalse, got.Status)
+	assert.Equal(t, "GatewayNotProgrammed", got.Reason)
+	assert.Equal(t, "The OnPremEventGateway default/gateway is being deleted", got.Message)
+	assert.Empty(t, read(t, cl, other).Status.Conditions, "of another gateway")
+}
+
 func TestPushConditions(t *testing.T) {
 	gateway := newTestGateway("gateway")
 	byType := func(conditions []metav1.Condition) map[string]metav1.Condition {
@@ -1062,7 +1160,7 @@ func TestReconcileWarnsWhenEveryPodIsPending(t *testing.T) {
 func TestRemovalRetriedOnceItsPodsChange(t *testing.T) {
 	f := newPushFixture(t, interceptor.Funcs{}, inAnotherNamespace)
 	f.pod().respond = failing(callDeleteGateway, http.StatusInternalServerError)
-	result, _, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway))
+	result, _, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
 	require.NoError(t, err)
 	require.True(t, result.failed)
 	require.Positive(t, result.retryAfter)
@@ -1073,7 +1171,7 @@ func TestRemovalRetriedOnceItsPodsChange(t *testing.T) {
 	slice := read(t, f.cl, f.gwAdmin.EndpointSlice)
 	slice.Endpoints = []discoveryv1.Endpoint{endpoint("gw-admin-2", "10.0.0.1", false)}
 	require.NoError(t, f.cl.Update(t.Context(), slice))
-	result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway))
+	result, pushErr, err := f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
 	require.NoError(t, err)
 	assert.Zero(t, result.retryAfter, "not waiting for its backoff")
 	assert.Equal(t, []string{callExpected + " ", callDeleteGateway}, f.pod().recorded())

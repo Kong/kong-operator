@@ -43,6 +43,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminapi"
 	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminsync"
@@ -297,8 +298,9 @@ func newTestGateway(name string) *eventgatewayv1alpha1.OnPremEventGateway {
 // status, in the fake client and the reconcilers of the tests.
 var testTypeConverter = managedfields.NewDeducedTypeConverter()
 
-// newFakeClient returns a fake client with the objects, the index of the
-// gateways by GWAdmin, and the type converter of the status.
+// newFakeClient returns a fake client with the objects, the indexes of the
+// gateways by GWAdmin and of the entities by gateway, and the type converter
+// of the status.
 func newFakeClient(t *testing.T, objects ...client.Object) client.Client {
 	t.Helper()
 	return newFakeClientWithInterceptor(t, interceptor.Funcs{}, objects...)
@@ -309,10 +311,10 @@ func newFakeClient(t *testing.T, objects ...client.Object) client.Client {
 func newFakeClientWithInterceptor(t *testing.T, funcs interceptor.Funcs, objects ...client.Object) client.WithWatch {
 	t.Helper()
 	b := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).
-		WithStatusSubresource(&eventgatewayv1alpha1.OnPremEventGateway{}).
+		WithStatusSubresource(&eventgatewayv1alpha1.OnPremEventGateway{}, &configurationv1alpha1.EventGatewayBackendCluster{}).
 		WithTypeConverters(testTypeConverter).
 		WithInterceptorFuncs(funcs)
-	for _, opt := range gwadminref.IndexOptions() {
+	for _, opt := range slices.Concat(gwadminref.IndexOptions(), IndexOptions()) {
 		b = b.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
 	return b.Build()

@@ -52,7 +52,7 @@ func EventGatewayListenerPolicyReconciliationWatchOptions(
 			return b.Watches(
 				&corev1.Secret{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectsForSecretRef[configurationv1alpha1.EventGatewayListenerPolicyList](cl),
+					enqueueObjectsForSecretRef[configurationv1alpha1.EventGatewayListenerPolicyList](cl, index.IndexFieldEventGatewayListenerPolicyOnSecretRef),
 				),
 			)
 		},

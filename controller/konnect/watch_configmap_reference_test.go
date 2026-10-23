@@ -87,12 +87,12 @@ func TestEnqueueObjectsForConfigMapRef(t *testing.T) {
 }
 
 // TestDataSourceRefDispatchCoversAllGeneratedTypes guards the per-API-group
-// type switches in configMapRefsForDataSource and secretRefsForSensitiveData:
-// a type generated with ConfigMap or Secret dataSources in a group the switch
-// doesn't know would otherwise silently skip reference validation and the
-// ConfigMap/Secret watches.
+// type switch in configMapRefsForDataSource: a type generated with ConfigMap
+// dataSources in a group the switch doesn't know would otherwise silently skip
+// reference validation and the ConfigMap watch. The Secret watch finds the
+// objects by their generated index instead.
 func TestDataSourceRefDispatchCoversAllGeneratedTypes(t *testing.T) {
-	var configMapTypes, secretTypes int
+	var configMapTypes int
 	for gvk, typ := range scheme.Get().AllKnownTypes() {
 		obj := reflect.New(typ).Interface()
 		ptrType := reflect.TypeOf(obj)
@@ -102,12 +102,6 @@ func TestDataSourceRefDispatchCoversAllGeneratedTypes(t *testing.T) {
 			_, handled := configMapRefsForDataSource(obj)
 			require.Truef(t, handled, "%s has GetConfigMapDataSourceRefs but configMapRefsForDataSource doesn't handle its API group", gvk)
 		}
-		if _, ok := ptrType.MethodByName("GetSensitiveDataSecretRefs"); ok {
-			secretTypes++
-			_, handled := secretRefsForSensitiveData(obj)
-			require.Truef(t, handled, "%s has GetSensitiveDataSecretRefs but secretRefsForSensitiveData doesn't handle its API group", gvk)
-		}
 	}
 	require.NotZero(t, configMapTypes, "expected at least one type with ConfigMap data sources")
-	require.NotZero(t, secretTypes, "expected at least one type with Secret data sources")
 }

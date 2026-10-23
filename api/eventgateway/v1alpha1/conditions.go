@@ -239,3 +239,28 @@ const (
 	// published its API or its TLS material, or it has no gw-admin pod.
 	OnPremEventGatewayGWAdminNotReadyReason consts.ConditionReason = "NotReady"
 )
+
+// -----------------------------------------------------------------------------
+// Entities of an OnPremEventGateway - Programmed Condition Constants
+// -----------------------------------------------------------------------------
+
+// The reasons of the Programmed condition (OnPremEventGatewayProgrammedType)
+// the OnPremEventGateway controller sets on the entities of a gateway.
+const (
+	// OnPremEntityProgrammedReason indicates the entity is in the
+	// configuration of its OnPremEventGateway, pushed to every gw-admin pod
+	// serving: those not serving yet get it later.
+	OnPremEntityProgrammedReason consts.ConditionReason = "Programmed"
+	// OnPremEntityGatewayNotProgrammedReason indicates the entity is in the
+	// configuration of its OnPremEventGateway, which is not programmed: its
+	// Programmed condition tells why.
+	OnPremEntityGatewayNotProgrammedReason consts.ConditionReason = "GatewayNotProgrammed"
+	// OnPremEntityInvalidReason indicates the entity is left out of the
+	// configuration of its OnPremEventGateway, e.g. it reads a Secret that
+	// doesn't exist, or sets a field gw-admin doesn't support.
+	OnPremEntityInvalidReason consts.ConditionReason = "Invalid"
+	// OnPremEntityRefNotPermittedReason indicates the entity is left out of
+	// the configuration of its OnPremEventGateway: it reads a Secret in
+	// another namespace, and no KongReferenceGrant allows it.
+	OnPremEntityRefNotPermittedReason consts.ConditionReason = "RefNotPermitted"
+)

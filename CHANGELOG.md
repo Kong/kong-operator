@@ -328,7 +328,7 @@
   [#6247](https://github.com/Kong/kong-operator/pull/6247)
 - The `OnPremEventGateway` controller pushes each gateway to every gw-admin
   pod of its `GWAdmin` over mTLS, writing only what changed; a new or
-  restarted pod gets the full configuration. Entities are not pushed yet.
+  restarted pod gets the full configuration.
   `status.configRevision` and `status.configHash` number the configuration;
   the revision never decreases. Failures are retried with backoff and
   reported in the `ConfigurationPushed` and `Programmed` conditions, with a
@@ -339,6 +339,13 @@
   minutes with a `GWAdminCleanupTimedOut` event; a gateway no longer allowed
   to use its `GWAdmin` is removed too.
   [#6247](https://github.com/Kong/kong-operator/pull/6247)
+- The `OnPremEventGateway` controller pushes the gateway's
+  `EventGatewayBackendCluster`s to gw-admin, again when they or their Secrets
+  change. Invalid ones are left out; one whose Secret is deleted keeps its
+  last configuration. Their `Programmed` and `SecretRefValid` conditions
+  report the outcome. `KongReferenceGrant` now accepts
+  `EventGatewayBackendCluster` in `spec.from`, for Secrets in other namespaces.
+  [#6254](https://github.com/Kong/kong-operator/pull/6254)
 - `--konnect-list-page-size` flag (default and maximum `100`): the page size
   the operator requests when listing Konnect entities to find the Konnect
   entity of an object, e.g. one whose Konnect ID was lost. It is a fallback in
