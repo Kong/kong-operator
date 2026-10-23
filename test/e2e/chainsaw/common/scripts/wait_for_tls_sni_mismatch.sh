@@ -57,14 +57,19 @@ for ATTEMPT in $(seq 1 "${POLL_ATTEMPTS}"); do
     exit 1
   fi
   if [[ "${MATCH}" != "true" ]]; then
-    CONSECUTIVE=$((CONSECUTIVE + 1))
-    if [[ "${CONSECUTIVE}" -ge "${CONFIRMATIONS}" ]]; then
-      break
+      CONSECUTIVE=$((CONSECUTIVE + 1))
+      if [[ "${CONSECUTIVE}" -ge "${CONFIRMATIONS}" ]]; then
+        break
+      fi
+    else
+      CONSECUTIVE=0
     fi
-  else
-    CONSECUTIVE=0
+    if [ "${ATTEMPT}" -lt "${POLL_ATTEMPTS}" ]; then
+      sleep "${POLL_DELAY}"
+    fi
+  done
+  if [ "${CONSECUTIVE}" -lt "${CONFIRMATIONS}" ]; then
+    echo "wait_for_tls_sni_mismatch: no mismatch confirmed within ${POLL_ATTEMPTS} attempts (last streak: ${CONSECUTIVE})" >&2
+    exit 1
   fi
-  sleep "${POLL_DELAY}"
-done
-
 echo "${LAST_OUTPUT}"
