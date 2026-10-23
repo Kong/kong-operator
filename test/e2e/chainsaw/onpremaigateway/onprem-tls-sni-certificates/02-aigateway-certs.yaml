@@ -1,0 +1,84 @@
+# The TLS certificate chain resources for the SNI test: an AIGatewayCACertificate
+# wrapping the generated CA, an AIGatewayCertificate wrapping the leaf serving
+# certificate, and two AIGatewaySNI mappings pointing at it — an exact hostname
+# and a wildcard.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayCACertificate
+metadata:
+  name: ($ca_cert_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    name: ($ca_cert_name)
+    cert:
+      type: secretRef
+      secretRef:
+        name: ($ca_secret_name)
+        key: ca.crt
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayCertificate
+metadata:
+  name: ($serving_cert_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    name: ($serving_cert_name)
+    cert:
+      type: secretRef
+      secretRef:
+        name: ($serving_cert_secret_name)
+        key: tls.crt
+    key:
+      type: secretRef
+      secretRef:
+        name: ($serving_cert_secret_name)
+        key: tls.key
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewaySNI
+metadata:
+  name: ($exact_sni_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    name: ($exact_sni_name)
+    displayName: ($exact_sni_name)
+    hostname: ($exact_hostname)
+    certificate:
+      kind: AIGatewayCertificate
+      name: ($serving_cert_name)
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewaySNI
+metadata:
+  name: ($wildcard_sni_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    name: ($wildcard_sni_name)
+    displayName: ($wildcard_sni_name)
+    hostname: ($wildcard_hostname)
+    certificate:
+      kind: AIGatewayCertificate
+      name: ($serving_cert_name)
