@@ -58,7 +58,9 @@ spec:
               certificateSecret:
                 description: |-
                   CertificateSecret configures how the mTLS client certificate Secret used
-                  by this KegDataPlane to connect to Konnect is provisioned.
+                  by this KegDataPlane to connect to its control plane is provisioned:
+                  Konnect with a konnectNamespacedRef, the gw-admin of the
+                  OnPremEventGateway with an onpremNamespacedRef.
                   If left unset, it defaults to Automatic (operator-managed).
 
                   When Provisioning is Manual, SecretRef must point to an existing Secret
@@ -81,6 +83,13 @@ spec:
                   SecretRefOperatorManaged. Deleting the referenced Secret while it is in
                   use leaves running Pods untouched but prevents new ones from starting
                   until the Secret is recreated or the reference is changed.
+
+                  With an onpremNamespacedRef and Manual provisioning, the certificate must
+                  be issued by the cp client CA of the GWAdmin of the OnPremEventGateway,
+                  so that GWAdmin needs a Manual clientCA: an Automatic one keeps its key
+                  in the namespace of Kong Operator. During a rotation of that CA, a
+                  certificate from the previous one stays trusted until every data plane
+                  runs a certificate from the new one; reissue it from the new CA.
                 properties:
                   provisioning:
                     default: Automatic
@@ -235,9 +244,10 @@ spec:
               controlPlaneRef:
                 description: |-
                   ControlPlaneRef references the control plane this KegDataPlane connects to.
-                  The type field identifies which kind of control plane is being referenced.
-                  Currently only konnectNamespacedRef is supported, which references a
-                  KonnectEventGateway resource in the same namespace.
+                  The type field identifies which kind of control plane is being referenced:
+                  konnectNamespacedRef references a KonnectEventGateway resource in the
+                  same namespace, onpremNamespacedRef an OnPremEventGateway resource in
+                  the same namespace.
                 properties:
                   konnectNamespacedRef:
                     description: |-
@@ -252,12 +262,31 @@ spec:
                     required:
                     - name
                     type: object
+                  onpremNamespacedRef:
+                    description: |-
+                      OnPremNamespacedRef references an OnPremEventGateway resource in the
+                      same namespace. The data plane pulls its configuration from the gw-admin
+                      pods of the GWAdmin of that gateway, and authenticates with a client
+                      certificate trusted by the cp client CA of the GWAdmin.
+                      Must be set when type is onpremNamespacedRef; validated by CEL rules on this struct.
+                    properties:
+                      name:
+                        description: Name is the name of the OnPremEventGateway resource.
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                    required:
+                    - name
+                    type: object
                   type:
                     description: |-
-                      Type indicates the type of the control plane being referenced.
-                      Currently only konnectNamespacedRef is supported.
+                      Type indicates the type of the control plane being referenced: a
+                      KonnectEventGateway (konnectNamespacedRef) or an OnPremEventGateway
+                      (onpremNamespacedRef). It can't be changed, and neither can an
+                      onpremNamespacedRef.
                     enum:
                     - konnectNamespacedRef
+                    - onpremNamespacedRef
                     type: string
                 required:
                 - type
@@ -266,6 +295,16 @@ spec:
                 - message: konnectNamespacedRef must be set when type is konnectNamespacedRef
                   rule: 'self.type == ''konnectNamespacedRef'' ? has(self.konnectNamespacedRef)
                     : true'
+                - message: onpremNamespacedRef must be set when type is onpremNamespacedRef
+                  rule: self.type != 'onpremNamespacedRef' || has(self.onpremNamespacedRef)
+                - message: only one of konnectNamespacedRef or onpremNamespacedRef
+                    can be set
+                  rule: '!(has(self.konnectNamespacedRef) && has(self.onpremNamespacedRef))'
+                - message: type is immutable
+                  rule: self.type == oldSelf.type
+                - message: onpremNamespacedRef is immutable
+                  rule: self.type != 'onpremNamespacedRef' || !has(oldSelf.onpremNamespacedRef)
+                    || self.onpremNamespacedRef == oldSelf.onpremNamespacedRef
               deployment:
                 description: |-
                   Deployment configures the keg Deployment: image, replicas, resources,
@@ -10007,6 +10046,11 @@ spec:
             required:
             - controlPlaneRef
             type: object
+            x-kubernetes-validations:
+            - message: 'config.konnect.domain can''t be set with an onpremNamespacedRef:
+                the data plane reaches gw-admin on the address of the OnPremEventGateway'
+              rule: self.controlPlaneRef.type != 'onpremNamespacedRef' || !has(self.config)
+                || !has(self.config.konnect) || !has(self.config.konnect.domain)
           status:
             description: Status defines the observed state of KegDataPlane.
             properties:

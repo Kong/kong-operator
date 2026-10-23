@@ -79,8 +79,8 @@ var config = shareddataplane.Config[
 	ControlPlaneRef: func(egdp *eventgatewayv1alpha1.KegDataPlane) shareddataplane.ControlPlaneRef {
 		ref := egdp.Spec.ControlPlaneRef.KonnectNamespacedRef
 		if ref == nil {
-			// The CRD schema requires konnectNamespacedRef, so this shouldn't
-			// happen. Returning an empty ref skips control plane resolution;
+			// An onpremNamespacedRef isn't supported by the controller yet.
+			// Returning an empty ref skips control plane resolution;
 			// buildContainer then refuses to build a Deployment without a
 			// resolved KonnectEventGateway, instead of panicking.
 			return shareddataplane.ControlPlaneRef{}
@@ -262,8 +262,11 @@ func buildContainer(
 	keg := konnectEventGatewayFromResolved(cp)
 	if keg == nil {
 		// keg needs its KonnectEventGateway's region and cluster ID to start, so
-		// there is no Deployment to build without one. The CRD schema requires
-		// spec.controlPlaneRef.konnectNamespacedRef, so this shouldn't happen.
+		// there is no Deployment to build without one. This happens with an
+		// onpremNamespacedRef, which the controller doesn't support yet.
+		if egdp.Spec.ControlPlaneRef.Type == eventgatewayv1alpha1.ControlPlaneRefTypeOnPremNamespacedRef {
+			return corev1.Container{}, nil, fmt.Errorf("KegDataPlane %s/%s references an OnPremEventGateway: an onpremNamespacedRef is not supported by the controller yet", egdp.Namespace, egdp.Name)
+		}
 		return corev1.Container{}, nil, fmt.Errorf("KegDataPlane %s/%s has no resolved KonnectEventGateway", egdp.Namespace, egdp.Name)
 	}
 	envVars, err := buildKEGEnvVars(egdp, keg)

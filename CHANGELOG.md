@@ -391,6 +391,13 @@
   [#6270](https://github.com/Kong/kong-operator/pull/6270)
   [#6276](https://github.com/Kong/kong-operator/pull/6276)
   [#6281](https://github.com/Kong/kong-operator/pull/6281)
+- `KegDataPlane`: `spec.controlPlaneRef` accepts an `OnPremEventGateway` in
+  the same namespace, with `type: onpremNamespacedRef`. The control plane
+  reference can't change type, and an `onpremNamespacedRef` can't change;
+  with one, `spec.config.konnect.domain` can't be set. This adds the API
+  only: the operator doesn't deploy a data plane for an
+  `onpremNamespacedRef` yet.
+  [#6283](https://github.com/Kong/kong-operator/pull/6283)
 - `--konnect-list-page-size` flag (default and maximum `100`): the page size
   the operator requests when listing Konnect entities to find the Konnect
   entity of an object, e.g. one whose Konnect ID was lost. It is a fallback in
