@@ -171,8 +171,6 @@ plugins:
       id: 8cbafe44-dc26-57b9-9eb0-37630f9efe9d
   - id: e3755ad8-2dec-569d-9f27-e233721c6b8e
     name: key-auth
-    config:
-      anonymous: anonymous
     route:
       id: 8ae36805-da7a-55b9-b056-72bde6bb937d
 custom_plugins:
