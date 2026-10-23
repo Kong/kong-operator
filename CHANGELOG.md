@@ -79,6 +79,23 @@
   and the JSON string workaround was rejected by Konnect. A `POST` tool can now
   send a JSON body.
   [#6252](https://github.com/Kong/kong-operator/issues/6252)
+- On-prem AI Gateway: an `AIGatewayConsumerCredential` that cannot be
+  translated (for example its `secretRef` points at a missing or unlabelled
+  Secret) now reports that failure on the credential itself, as
+  `Programmed=False` with reason `Invalid`. The failure used to be invisible on
+  the credential and to fail the whole `AIGatewayConsumer` instead, which was
+  excluded from the rendered configuration together with its healthy
+  credentials; the consumer now keeps rendering them. A credential whose
+  consumer cannot be rendered by the gateway that still lists it (for example
+  the consumer references a policy that failed its own translation, the
+  consumer lives in another namespace than the gateway, or the converter drops
+  the consumer from the rendered payload) reports the consumer's failure, so
+  its status cannot keep claiming a configuration it is no longer part of. A
+  credential whose consumer points at an `OnPremAIGateway` that does not exist
+  keeps its last reported status, as every other entity of that gateway does.
+  The status is cleared again when the consumer the credential belongs to is
+  deleted, since nothing renders the credential anymore.
+  [#5963](https://github.com/Kong/kong-operator/issues/5963)
 - A `KonnectAPIAuthConfiguration` with a private `serverURL` that carries a path
   (for example `https://us.svc.konghq.tech/api`) now authenticates. The identity
   request behind `APIAuthValid` keeps the configured host instead of being sent
@@ -499,6 +516,12 @@
 
 ### Changed
 
+- On-prem AI Gateway: an `AIGatewayConsumer` with a broken
+  `AIGatewayConsumerCredential` now reports `Programmed=True` while its healthy
+  credentials keep rendering. The failure of the broken credential reports on
+  the credential itself, so the consumer no longer goes `Programmed=False` for
+  it.
+  [#5963](https://github.com/Kong/kong-operator/issues/5963)
 - `BackendTLSPolicy` is now supported in Gateway API `v1` (previously `v1alpha3`)
   and no longer requires the `GatewayAlpha` feature gate. It's enabled by default
   and can be disabled with the `GWAPI_BACKEND_TLS_POLICY` ControlPlane controller.

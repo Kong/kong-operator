@@ -27,7 +27,7 @@ func consumerTargeting(name, ns, gwName string, konnect bool) *aiconfigurationv1
 	return &aiconfigurationv1alpha1.AIGatewayConsumer{
 		Namespace: ns,
 		Name:      name,
-		Spec: aiconfigurationv1alpha1.AIGatewayConsumerSpec{AIGatewayRef: ref},
+		Spec:      aiconfigurationv1alpha1.AIGatewayConsumerSpec{AIGatewayRef: ref},
 	}
 }
 
@@ -108,6 +108,65 @@ func TestMapCredentialToConsumer(t *testing.T) {
 				return
 			}
 			require.Equal(t, []reconcile.Request{{NamespacedName: *tc.want}}, got)
+		})
+	}
+}
+
+func TestMapConsumerToCredentials(t *testing.T) {
+	const consumerName = "consumer"
+	sameNSRef := func() *commonv1alpha1.NamespacedRef {
+		return &commonv1alpha1.NamespacedRef{Name: consumerName}
+	}
+
+	tests := []struct {
+		name string
+		obj  client.Object
+		objs []client.Object
+		want []types.NamespacedName
+	}{
+		{
+			name: "credentials referencing the consumer are enqueued",
+			obj:  consumerTargeting(consumerName, "default", "gw", false),
+			objs: []client.Object{
+				credentialReferencing("cred-a", "default", sameNSRef()),
+				credentialReferencing("cred-b", "default", sameNSRef()),
+			},
+			want: []types.NamespacedName{
+				{Namespace: "default", Name: "cred-a"},
+				{Namespace: "default", Name: "cred-b"},
+			},
+		},
+		{
+			name: "credentials of another consumer are not enqueued",
+			obj:  consumerTargeting(consumerName, "default", "gw", false),
+			objs: []client.Object{
+				credentialReferencing("cred-a", "default", sameNSRef()),
+				credentialReferencing("cred-other", "default", &commonv1alpha1.NamespacedRef{Name: "other"}),
+			},
+			want: []types.NamespacedName{{Namespace: "default", Name: "cred-a"}},
+		},
+		{
+			name: "consumer without credentials enqueues nothing",
+			obj:  consumerTargeting(consumerName, "default", "gw", false),
+		},
+		{
+			name: "non-consumer object is ignored",
+			obj:  credentialReferencing("cred-a", "default", sameNSRef()),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := &AIGatewayConsumerCredentialReconciler{Client: newCredentialReconcilerClient(t, tc.objs...)}
+
+			got := rec.mapConsumerToCredentials(t.Context(), tc.obj)
+
+			reqs := make([]reconcile.Request, 0, len(tc.want))
+			for _, nn := range tc.want {
+				reqs = append(reqs, reconcile.Request{NamespacedName: nn})
+			}
+			// The List returns no guaranteed order.
+			require.ElementsMatch(t, reqs, got)
 		})
 	}
 }

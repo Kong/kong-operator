@@ -28,6 +28,12 @@ limitations under the License.
 // syncs (translation and push) through the EntityStatusClient implemented by
 // the instance's EntityStatusReporter, and turn it into the Programmed
 // condition.
+//
+// AIGatewayConsumerCredentials are reported the same way, by a hand-written
+// reconciler (see AIGatewayConsumerCredentialReconciler): a credential's
+// outcome is attributed to the credential itself, so a broken credential no
+// longer fails the whole consumer, which keeps rendering its healthy
+// credentials.
 package onpremconfig
 
 import (
@@ -116,9 +122,19 @@ func (cs *Controllers) SetupWithManager(_ context.Context, mgr ctrl.Manager) err
 	// The Secret reconciler is not a configuration-entity reconciler: it watches the
 	// Secrets referenced by the entities' secretRefs so that updating a Secret
 	// re-renders the configuration without waiting for an unrelated entity event.
-	return (&SecretReconciler{
+	if err := (&SecretReconciler{
 		Client:         cs.Client,
 		Log:            cs.Log,
 		ChangeNotifier: cs.ChangeNotifier,
+	}).SetupWithManager(mgr); err != nil {
+		return err
+	}
+	// The credential reconciler is hand-written rather than generated: see
+	// AIGatewayConsumerCredentialReconciler for why.
+	return (&AIGatewayConsumerCredentialReconciler{
+		Client:       cs.Client,
+		Log:          cs.Log,
+		StatusClient: cs.StatusClient,
+		StatusQueue:  cs.StatusQueue,
 	}).SetupWithManager(mgr)
 }
