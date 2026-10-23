@@ -93,9 +93,6 @@ jobs:
       minor: ${{ steps.semver_parser.outputs.minor }}
       patch: ${{ steps.semver_parser.outputs.patch }}
       prerelease: ${{ steps.semver_parser.outputs.prerelease }}
-      # NOTE: true for N.M.P with P != 0 and for rapid patches (e.g. 2.4.0-rapid.2.1).
-      # The first release of a rapid line (e.g. 2.4.0-rapid.2.0) is not a patch.
-      is-patch: ${{ steps.release-kind.outputs.is-patch }}
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
@@ -152,6 +149,8 @@ jobs:
             exit 1
           fi
 
+      # NOTE: true for N.M.P with P != 0 and for rapid patches (e.g. 2.4.0-rapid.2.1).
+      # The first release of a rapid line (e.g. 2.4.0-rapid.2.0) is not a patch.
       - name: Determine whether this is a patch release
         id: release-kind
         env:
