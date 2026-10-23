@@ -40,7 +40,6 @@ import (
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminapi"
 	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
-	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
 // configuration is what gw-admin must have for a gateway, built from the
@@ -109,8 +108,6 @@ type excludedEntity struct {
 // entity has the UID and the creation time of its object. An error reading
 // the cluster, other than an object that doesn't exist, is returned: leaving
 // the entity out would delete it from gw-admin.
-//
-// TODO: add the listeners (#6062).
 func buildConfiguration(
 	ctx context.Context, cl client.Client, gateway *eventgatewayv1alpha1.OnPremEventGateway, secretHint string, previous map[types.UID]any,
 ) (configuration, error) {
@@ -126,7 +123,17 @@ func buildConfiguration(
 	if err != nil {
 		return configuration{}, err
 	}
-	if err := cfg.addVirtualClusters(ctx, uidResolver{Client: cl, read: map[uuid.UUID]client.ObjectKey{}}, backendClusters); err != nil {
+	resolver := uidResolver{Client: cl, read: map[uuid.UUID]client.ObjectKey{}}
+	virtualClusters, err := cfg.addVirtualClusters(ctx, resolver, backendClusters)
+	if err != nil {
+		return configuration{}, err
+	}
+	// The policies reference the entities added so far.
+	targets := referenceTargetsOf(&cfg, resolver.read)
+	if err := cfg.addVirtualClusterPolicies(ctx, resolver, virtualClusters, targets); err != nil {
+		return configuration{}, err
+	}
+	if err := cfg.addListeners(ctx, resolver, gateway, targets); err != nil {
 		return configuration{}, err
 	}
 	key, err := comparisonKey(withGWAdminDefaults(cfg.entities))
@@ -135,74 +142,6 @@ func buildConfiguration(
 	}
 	cfg.pushedKey = key
 	return cfg, nil
-}
-
-// addGatewayEntities adds the entities attached to the gateway itself. It
-// returns its backend clusters, the parents of its virtual clusters.
-func (c *configuration) addGatewayEntities(ctx context.Context, cl client.Client, gateway *eventgatewayv1alpha1.OnPremEventGateway) (parents, error) {
-	var backendClusters configurationv1alpha1.EventGatewayBackendClusterList
-	bcs, err := addAttached(ctx, c, cl, gateway, &backendClusters, &backendClusters.Items, index.IndexFieldEventGatewayBackendClusterOnOnPremEventGatewayRef,
-		entityKind[*configurationv1alpha1.EventGatewayBackendCluster, gwadminapi.EventGatewayBackendClusterOnPrem]{
-			kind: "EventGatewayBackendCluster", what: "backend cluster",
-			request: func(ctx context.Context, cl client.Client, bc *configurationv1alpha1.EventGatewayBackendCluster) (any, error) {
-				return bc.ToCreateBackendClusterRequest(ctx, cl)
-			},
-			name: func(e gwadminapi.EventGatewayBackendClusterOnPrem) string { return e.Name },
-			list: in[*configurationv1alpha1.EventGatewayBackendCluster]("backend_clusters", &c.entities.BackendClusters),
-		})
-	if err != nil {
-		return parents{}, err
-	}
-
-	var bundles configurationv1alpha1.EventGatewayTLSTrustBundleList
-	if _, err := addAttached(ctx, c, cl, gateway, &bundles, &bundles.Items, index.IndexFieldEventGatewayTLSTrustBundleOnOnPremEventGatewayRef,
-		entityKind[*configurationv1alpha1.EventGatewayTLSTrustBundle, gwadminapi.EventGatewayTLSTrustBundleOnPrem]{
-			kind: "EventGatewayTLSTrustBundle", what: "TLS trust bundle",
-			request: func(ctx context.Context, cl client.Client, b *configurationv1alpha1.EventGatewayTLSTrustBundle) (any, error) {
-				return b.ToCreateTLSTrustBundleRequest(ctx, cl)
-			},
-			name: func(e gwadminapi.EventGatewayTLSTrustBundleOnPrem) string { return e.Name },
-			list: in[*configurationv1alpha1.EventGatewayTLSTrustBundle]("tls_trust_bundles", &c.entities.TlsTrustBundles),
-		}); err != nil {
-		return parents{}, err
-	}
-
-	var registries configurationv1alpha1.EventGatewaySchemaRegistryList
-	if _, err := addAttached(ctx, c, cl, gateway, &registries, &registries.Items, index.IndexFieldEventGatewaySchemaRegistryOnOnPremEventGatewayRef,
-		entityKind[*configurationv1alpha1.EventGatewaySchemaRegistry, gwadminapi.EventGatewaySchemaRegistryOnPrem]{
-			kind: "EventGatewaySchemaRegistry", what: "schema registry",
-			request: func(ctx context.Context, cl client.Client, r *configurationv1alpha1.EventGatewaySchemaRegistry) (any, error) {
-				return r.ToSchemaRegistryCreate(ctx, cl)
-			},
-			name: schemaRegistryName,
-			list: in[*configurationv1alpha1.EventGatewaySchemaRegistry]("schema_registries", &c.entities.SchemaRegistries),
-		}); err != nil {
-		return parents{}, err
-	}
-
-	var keys configurationv1alpha1.EventGatewayStaticKeyList
-	if _, err := addAttached(ctx, c, cl, gateway, &keys, &keys.Items, index.IndexFieldEventGatewayStaticKeyOnOnPremEventGatewayRef,
-		entityKind[*configurationv1alpha1.EventGatewayStaticKey, gwadminapi.EventGatewayStaticKeyOnPrem]{
-			kind: "EventGatewayStaticKey", what: "static key",
-			request: func(ctx context.Context, cl client.Client, k *configurationv1alpha1.EventGatewayStaticKey) (any, error) {
-				return k.ToEventGatewayStaticKeyCreate(ctx, cl)
-			},
-			name: func(e gwadminapi.EventGatewayStaticKeyOnPrem) string { return e.Name },
-			list: in[*configurationv1alpha1.EventGatewayStaticKey]("static_keys", &c.entities.StaticKeys),
-		}); err != nil {
-		return parents{}, err
-	}
-	return bcs, nil
-}
-
-// schemaRegistryName returns the name of a schema registry: Confluent is its
-// only type.
-func schemaRegistryName(e gwadminapi.EventGatewaySchemaRegistryOnPrem) string {
-	registry, err := e.AsSchemaRegistryConfluent()
-	if err != nil {
-		return ""
-	}
-	return registry.Name
 }
 
 // entityKind is a kind of entity of the configuration.
@@ -215,7 +154,8 @@ type entityKind[PT entityObject, E any] struct {
 	// references with the client: its entity is converted from it.
 	request func(context.Context, client.Client, PT) (any, error)
 	// adjust, when set, adjusts the JSON payload of an entity, e.g. to
-	// resolve its references.
+	// resolve its references. It is also applied to an entity kept from the
+	// last configuration, so it must leave a payload it adjusted as it is.
 	adjust func(map[string]any) error
 	// name, when set, returns the name of an entity, which must be unique
 	// among the entities of the kind.
@@ -306,6 +246,110 @@ func addEntities[PT entityObject, E any](ctx context.Context, c *configuration, 
 	return index, nil
 }
 
+// parents are the objects of a kind other entities are the children of. A
+// child is in the configuration only when its parent is.
+type parents struct {
+	kind string
+	// keys are every parent of the gateway, in the configuration or not.
+	keys []client.ObjectKey
+	// index is the index of each parent in the configuration in its list.
+	index map[client.ObjectKey]int
+}
+
+// childrenOf lists into list, whose items are items, the objects whose
+// parent, by the index field, is one of the parents. It returns those whose
+// parent is in the configuration, with the index of their parent, and the
+// keys of every object not being deleted: the others are left out.
+func childrenOf[T any, PT interface {
+	*T
+	entityObject
+}](
+	ctx context.Context, c *configuration, cl client.Client, list client.ObjectList, items *[]T, field string, p parents,
+) ([]PT, map[client.ObjectKey]int, []client.ObjectKey, error) {
+	var (
+		children    []PT
+		keys        []client.ObjectKey
+		parentIndex = map[client.ObjectKey]int{}
+	)
+	for _, parent := range p.keys {
+		if err := cl.List(ctx, list, client.MatchingFields{field: parent.String()}); err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to list %T by %s: %w", list, field, err)
+		}
+		for _, child := range live[T, PT](*items) {
+			key := client.ObjectKeyFromObject(child)
+			keys = append(keys, key)
+			i, ok := p.index[parent]
+			if !ok {
+				c.exclude(entityStatus{obj: child}, eventgatewayv1alpha1.OnPremEntityInvalidReason,
+					fmt.Sprintf("its %s %s isn't in the configuration", p.kind, parent))
+				continue
+			}
+			parentIndex[key] = i
+			children = append(children, child)
+		}
+	}
+	return children, parentIndex, keys, nil
+}
+
+// addChildren adds the objects of a kind whose parent, by the index field, is
+// one of the parents, listed into list, whose items are items. listOf returns
+// the path and the list of the entities of the children of the parent at an
+// index in its list, e.g. listeners.0.policies. A child of its own kind, of
+// the parent parentOf returns when set, is added after its parent.
+func addChildren[T any, PT interface {
+	*T
+	entityObject
+}, E any](
+	ctx context.Context, c *configuration, cl client.Client, p parents, list client.ObjectList, items *[]T, field string,
+	listOf func(parent int) (string, *[]E), parentOf func(PT) (client.ObjectKey, bool), k entityKind[PT, E],
+) error {
+	children, parentIndex, _, err := childrenOf[T, PT](ctx, c, cl, list, items, field, p)
+	if err != nil {
+		return err
+	}
+	k.list = func(obj PT) (string, *[]E) { return listOf(parentIndex[client.ObjectKeyFromObject(obj)]) }
+	return addParentsFirst[PT, E](ctx, c, cl, children, parentOf, k)
+}
+
+// addParentsFirst adds the objects, a parent, of their own kind, before its
+// children: those without a parent first, then their children, and so on.
+// One whose parent isn't added is left out. parentOf, when set, returns the
+// parent of an object.
+func addParentsFirst[PT entityObject, E any](
+	ctx context.Context, c *configuration, cl client.Client, objs []PT, parentOf func(PT) (client.ObjectKey, bool), k entityKind[PT, E],
+) error {
+	added := map[client.ObjectKey]int{}
+	for pending := objs; len(pending) > 0; {
+		var ready, waiting []PT
+		for _, obj := range pending {
+			if parentOf != nil {
+				if parent, ok := parentOf(obj); ok {
+					if _, ok := added[parent]; !ok {
+						waiting = append(waiting, obj)
+						continue
+					}
+				}
+			}
+			ready = append(ready, obj)
+		}
+		if len(ready) == 0 {
+			for _, obj := range waiting {
+				parent, _ := parentOf(obj)
+				c.exclude(entityStatus{obj: obj}, eventgatewayv1alpha1.OnPremEntityInvalidReason,
+					fmt.Sprintf("its parent policy %s isn't in the configuration", parent))
+			}
+			return nil
+		}
+		index, err := addEntities(ctx, c, cl, ready, k)
+		if err != nil {
+			return err
+		}
+		maps.Copy(added, index)
+		pending = waiting
+	}
+	return nil
+}
+
 // converted is an object converted into its entity.
 type converted[E any] struct {
 	entity E
@@ -372,7 +416,16 @@ func convertObject[PT entityObject, E any](
 		c.exclude(conv.status, eventgatewayv1alpha1.OnPremEntityInvalidReason, secretErr)
 		return conv, false, nil
 	}
-	conv.entity, conv.status.kept = last, true
+	// What the entity references may have changed since: it is adjusted
+	// again, e.g. to check its references are still in the configuration.
+	// Left out, it is still the last entity of the object, to be kept once
+	// its references are back.
+	if err := convertEntity(last, obj, id, &conv.entity, adjust); err != nil {
+		c.built[obj.GetUID()] = last
+		c.exclude(conv.status, eventgatewayv1alpha1.OnPremEntityInvalidReason, err.Error())
+		return conv, false, nil
+	}
+	conv.status.kept = true
 	return conv, true, nil
 }
 

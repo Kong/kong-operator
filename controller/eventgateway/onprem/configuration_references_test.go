@@ -94,3 +94,53 @@ func TestResolveReferences(t *testing.T) {
 		assert.Empty(t, objectsAt(map[string]any{"leaf": "x"}, []string{"leaf"}))
 	})
 }
+
+func TestResolveListenerPolicyReferences(t *testing.T) {
+	bundle, vc := uuid.New(), uuid.New()
+	targets := referenceTargets{
+		tlsTrustBundles: entityIDs{kind: "EventGatewayTLSTrustBundle", names: map[uuid.UUID]string{bundle: "bundle"}},
+		virtualClusters: map[string]uuid.UUID{"vc": vc},
+		read:            map[uuid.UUID]client.ObjectKey{},
+	}
+
+	t.Run("the TLS trust bundles verifying the clients", func(t *testing.T) {
+		payload := map[string]any{"config": map[string]any{"client_authentication": map[string]any{
+			"tls_trust_bundles": []any{map[string]any{"id": bundle.String()}},
+		}}}
+		require.NoError(t, targets.resolveReferences(listenerPolicyReferences)(payload))
+		assert.Equal(t, []any{map[string]any{"id": bundle.String()}},
+			payload["config"].(map[string]any)["client_authentication"].(map[string]any)["tls_trust_bundles"])
+
+		payload = map[string]any{"config": map[string]any{"client_authentication": map[string]any{
+			"tls_trust_bundles": []any{map[string]any{"id": uuid.NewString()}},
+		}}}
+		require.EqualError(t, targets.resolveReferences(listenerPolicyReferences)(payload),
+			"it references an EventGatewayTLSTrustBundle that isn't in the configuration of the gateway")
+	})
+
+	t.Run("a virtual cluster forwarded to by name is sent by its id", func(t *testing.T) {
+		payload := map[string]any{"config": map[string]any{"destination": map[string]any{"name": "vc"}}}
+		require.NoError(t, targets.resolveReferences(listenerPolicyReferences)(payload))
+		assert.Equal(t, map[string]any{"id": vc.String()}, payload["config"].(map[string]any)["destination"])
+	})
+
+	t.Run("a virtual cluster that isn't in the configuration", func(t *testing.T) {
+		payload := map[string]any{"config": map[string]any{"destination": map[string]any{"name": "unknown"}}}
+		require.EqualError(t, targets.resolveReferences(listenerPolicyReferences)(payload),
+			`it forwards to the virtual cluster "unknown", which isn't in the configuration of the gateway`)
+	})
+
+	t.Run("a virtual cluster forwarded to by id", func(t *testing.T) {
+		payload := map[string]any{"config": map[string]any{"destination": map[string]any{"id": uuid.NewString()}}}
+		require.EqualError(t, targets.resolveReferences(listenerPolicyReferences)(payload),
+			"it forwards to a virtual cluster by id: name a virtual cluster of the gateway instead")
+	})
+
+	t.Run("a destination already resolved is left as it is", func(t *testing.T) {
+		payload := map[string]any{"config": map[string]any{"destination": map[string]any{"name": "vc"}}}
+		resolve := targets.resolveReferences(listenerPolicyReferences)
+		require.NoError(t, resolve(payload))
+		require.NoError(t, resolve(payload))
+		assert.Equal(t, map[string]any{"id": vc.String()}, payload["config"].(map[string]any)["destination"])
+	})
+}

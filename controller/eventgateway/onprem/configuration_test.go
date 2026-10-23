@@ -60,7 +60,7 @@ func fromYAML[T any, TPtr interface {
 }](t *testing.T, created time.Time, manifest string) TPtr {
 	t.Helper()
 	var obj T
-	require.NoError(t, yaml.Unmarshal([]byte(manifest), &obj))
+	require.NoError(t, yaml.UnmarshalStrict([]byte(manifest), &obj))
 	ptr := TPtr(&obj)
 	if ptr.GetNamespace() == "" {
 		ptr.SetNamespace(ns)
@@ -645,4 +645,47 @@ func TestSameEntities(t *testing.T) {
 	encoded, err := comparisonKey(held)
 	require.NoError(t, err)
 	assert.Contains(t, string(encoded), `"cluster_policies":[]`, "a missing list is empty, not null")
+
+	// gw-admin returns the single ports of a listener as strings, an empty
+	// condition for a policy that has none, and the TLS versions of a TLS
+	// server it defaults to, each one, when they are left out.
+	listener := func(ports string, policies ...string) gwadminapi.EventGatewayListenerOnPrem {
+		t.Helper()
+		var l gwadminapi.EventGatewayListenerOnPrem
+		require.NoError(t, json.Unmarshal([]byte(`{"id": "3f4a5b6c-7d8e-4f90-a1b2-c3d4e5f6a7b8", "name": "listener",
+			"created_at": "2026-10-16T10:00:00Z", "addresses": ["0.0.0.0"], "ports": `+ports+`,
+			"policies": [`+strings.Join(policies, ",")+`]}`), &l))
+		return l
+	}
+	tlsServer := func(fields string) string {
+		return `{"id": "4a5b6c7d-8e9f-4a0b-b1c2-d3e4f5a6b7c8", "type": "tls_server", "created_at": "2026-10-16T10:00:00Z", "config": {"certificates": []` + fields + `}}`
+	}
+	pushed = noEntities()
+	pushed.Listeners = []gwadminapi.EventGatewayListenerOnPrem{listener(`[9092, "9093-9095"]`, tlsServer(`, "versions": {"min": "TLSv1.3"}`))}
+	held = gwadminapi.GatewayEntities{Listeners: []gwadminapi.EventGatewayListenerOnPrem{
+		listener(`["9092", "9093-9095"]`, `{"id": "4a5b6c7d-8e9f-4a0b-b1c2-d3e4f5a6b7c8", "type": "tls_server", "condition": "",
+			"created_at": "2026-10-16T10:00:00Z", "config": {"certificates": [], "versions": {"min": "TLSv1.3", "max": "TLSv1.3"}}}`),
+	}}
+	assert.True(t, same(held, pushed), "ports as strings, the defaults of a TLS server")
+	ports, err := json.Marshal(pushed.Listeners[0].Ports)
+	require.NoError(t, err)
+	assert.JSONEq(t, `[9092, "9093-9095"]`, string(ports), "the entities pushed are left as they are")
+
+	pushed.Listeners = []gwadminapi.EventGatewayListenerOnPrem{listener(`[9092]`, tlsServer(``))}
+	held.Listeners = []gwadminapi.EventGatewayListenerOnPrem{listener(`["9092"]`, tlsServer(`, "versions": {"min": "TLSv1.2", "max": "TLSv1.3"}`))}
+	assert.False(t, same(held, pushed), "a policy held without the condition gw-admin sets")
+	held.Listeners = []gwadminapi.EventGatewayListenerOnPrem{listener(`["9092"]`, strings.Replace(
+		tlsServer(`, "versions": {"min": "TLSv1.2", "max": "TLSv1.3"}`), `"type"`, `"condition": "", "type"`, 1))}
+	assert.True(t, same(held, pushed), "both TLS versions left out")
+
+	// gw-admin may leave out the empty list of policies of a listener,
+	// which is pushed empty.
+	pushed.Listeners = []gwadminapi.EventGatewayListenerOnPrem{listener(`["9092"]`)}
+	held.Listeners = []gwadminapi.EventGatewayListenerOnPrem{listener(`["9092"]`)}
+	held.Listeners[0].Policies = nil
+	assert.True(t, same(held, pushed), "a list of policies left out and an empty one are the same")
+	assert.Nil(t, held.Listeners[0].Policies, "the entities compared are left as they are")
+	encoded, err = comparisonKey(held)
+	require.NoError(t, err)
+	assert.Contains(t, string(encoded), `"policies":[]`, "a missing list is empty, not null")
 }
