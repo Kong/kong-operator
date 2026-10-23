@@ -737,8 +737,13 @@ func TestReportEntities(t *testing.T) {
 	cl := newFakeClient(t, gateway, included, excluded)
 	r := &Reconciler{Client: cl}
 	cfg := configuration{
-		included: []entityStatus{{obj: included, secretsRead: true}},
-		excluded: []excludedEntity{{obj: excluded, reason: eventgatewayv1alpha1.OnPremEntityRefNotPermittedReason, message: "no grant"}},
+		included: []entityStatus{{obj: included, secretRefValid: secretRefValidCondition(included, "")}},
+		excluded: []excludedEntity{{
+			obj:            excluded,
+			secretRefValid: secretRefValidCondition(excluded, "The Secrets it reads aren't read: no grant"),
+			reason:         eventgatewayv1alpha1.OnPremEntityRefNotPermittedReason,
+			message:        "no grant",
+		}},
 	}
 	condition := func(obj client.Object, conditionType string) *metav1.Condition {
 		return apimeta.FindStatusCondition(read(t, cl, obj.(*configurationv1alpha1.EventGatewayBackendCluster)).Status.Conditions, conditionType)
@@ -760,7 +765,11 @@ func TestReportEntities(t *testing.T) {
 	if got := condition(included, "SecretRefValid"); assert.NotNil(t, got) {
 		assert.Equal(t, metav1.ConditionTrue, got.Status)
 	}
-	assert.Nil(t, condition(excluded, "SecretRefValid"), "its Secrets weren't read")
+	if got := condition(excluded, "SecretRefValid"); assert.NotNil(t, got, "its Secrets weren't read") {
+		assert.Equal(t, metav1.ConditionFalse, got.Status)
+		assert.Equal(t, "Invalid", got.Reason)
+		assert.Equal(t, "The Secrets it reads aren't read: no grant", got.Message)
+	}
 
 	gateway.Status.Conditions[0].Status = metav1.ConditionTrue
 	cfg.included[0].obj = read(t, cl, included)
@@ -771,7 +780,8 @@ func TestReportEntities(t *testing.T) {
 	assert.Equal(t, "Programmed", got.Reason)
 
 	t.Run("an entity whose Secret is gone is programmed with its last configuration", func(t *testing.T) {
-		cfg := configuration{included: []entityStatus{{obj: read(t, cl, included), secretsRead: true, secretErr: "secret not found"}}}
+		obj := read(t, cl, included)
+		cfg := configuration{included: []entityStatus{{obj: obj, kept: true, secretRefValid: secretRefValidCondition(obj, "secret not found")}}}
 		require.NoError(t, r.reportEntities(t.Context(), gateway, cfg))
 		got := programmed(included)
 		assert.Equal(t, metav1.ConditionTrue, got.Status)

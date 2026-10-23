@@ -137,7 +137,7 @@ func (r *Reconciler) push(
 			return err
 		}
 	}
-	same, err := sameEntities(held, config.Entities)
+	same, err := sameEntities(held, cfg.pushedKey)
 	if err != nil {
 		return err
 	}
@@ -187,22 +187,23 @@ func getEntities(ctx context.Context, gwAdmin gwadminapi.ClientInterface, gatewa
 	return *parsed.JSON200, true, nil
 }
 
-// sameEntities reports whether gw-admin holds the entities pushed, by their
-// JSON encoding, as gw-admin receives them: the entities hold times, on whose
-// unexported fields equality.Semantic.DeepEqual panics. The order of a list
-// doesn't matter, an empty list and a missing one are the same, and so are a
-// field left out and the default gw-admin sets on it (see
-// withGWAdminDefaults).
-func sameEntities(held, pushed gwadminapi.GatewayEntities) (bool, error) {
-	a, err := json.Marshal(sortedByID(withEmptyLists(held)))
+// sameEntities reports whether gw-admin holds the entities pushed, pushedKey
+// being their comparisonKey once withGWAdminDefaults applied: a field left
+// out and the default gw-admin sets on it are the same.
+func sameEntities(held gwadminapi.GatewayEntities, pushedKey []byte) (bool, error) {
+	heldKey, err := comparisonKey(held)
 	if err != nil {
 		return false, fmt.Errorf("failed to encode the entities gw-admin holds: %w", err)
 	}
-	b, err := json.Marshal(sortedByID(withGWAdminDefaults(withEmptyLists(pushed))))
-	if err != nil {
-		return false, fmt.Errorf("failed to encode the entities of the gateway: %w", err)
-	}
-	return bytes.Equal(a, b), nil
+	return bytes.Equal(heldKey, pushedKey), nil
+}
+
+// comparisonKey returns the entities as sameEntities compares them: their
+// JSON encoding, as gw-admin receives them, as the entities hold times, on
+// whose unexported fields equality.Semantic.DeepEqual panics. Each list is
+// sorted by id, as its order doesn't matter, and a missing list is empty.
+func comparisonKey(e gwadminapi.GatewayEntities) ([]byte, error) {
+	return json.Marshal(sortedByID(withEmptyLists(e)))
 }
 
 // sortedByID returns the entities with each list sorted by id.

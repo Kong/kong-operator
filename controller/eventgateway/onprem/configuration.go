@@ -59,6 +59,9 @@ type configuration struct {
 	// excluded are the objects left out of the configuration, with the
 	// reason.
 	excluded []excludedEntity
+	// pushedKey is entities as they are compared with the entities gw-admin
+	// holds (see sameEntities), encoded once for every gw-admin pod.
+	pushedKey []byte
 	// previous holds the entities of the last configuration built for the
 	// gateway, by the UID of their object, and built those of this one: an
 	// entity reading a Secret that is gone is sent as it was last.
@@ -82,12 +85,12 @@ type entityObject interface {
 // entityStatus is what the status of an object reports of its entity.
 type entityStatus struct {
 	obj entityObject
-	// secretsRead tells the Secrets the object reads were read, or tried:
-	// its SecretRefValid condition reports whether they resolve.
-	secretsRead bool
-	// secretErr is why a Secret the object reads can't be read, e.g. it
-	// doesn't exist.
-	secretErr string
+	// secretRefValid is the SecretRefValid condition of the object, which
+	// tells whether the Secrets it reads resolve, or nil when it reads none.
+	secretRefValid *metav1.Condition
+	// kept tells the entity is sent as it was last, a Secret it reads being
+	// unusable.
+	kept bool
 }
 
 // excludedEntity is an object left out of the configuration of its gateway.
@@ -100,9 +103,9 @@ type excludedEntity struct {
 
 // buildConfiguration builds the configuration of the gateway from the
 // entities attached to it. An entity that can't be sent as it is left out,
-// with a reason, unless only a Secret it reads is gone: it is then sent as it
-// was in previous, the entities of the last configuration built for the
-// gateway. The same entities always produce the same configuration: each
+// with a reason, unless only a Secret it reads is gone or lacks the key read:
+// it is then sent as it was in previous, the entities of the last
+// configuration built for the gateway. The same entities always produce the same configuration: each
 // entity has the UID and the creation time of its object. An error reading
 // the cluster, other than an object that doesn't exist, is returned: leaving
 // the entity out would delete it from gw-admin.
@@ -122,6 +125,11 @@ func buildConfiguration(
 	if err := cfg.addBackendClusters(ctx, cl, gateway); err != nil {
 		return configuration{}, err
 	}
+	key, err := comparisonKey(withGWAdminDefaults(cfg.entities))
+	if err != nil {
+		return configuration{}, fmt.Errorf("failed to encode the entities of the gateway: %w", err)
+	}
+	cfg.pushedKey = key
 	return cfg, nil
 }
 
@@ -193,7 +201,17 @@ func addEntities[PT entityObject, E any](ctx context.Context, c *configuration, 
 			continue
 		}
 		status := entityStatus{obj: obj}
+		refs := sensitiveDataSecretRefs(obj)
+		readsSecrets := len(refs) > 0
+		setSecretRefValid := func(problem string) {
+			if readsSecrets {
+				status.secretRefValid = secretRefValidCondition(obj, problem)
+			}
+		}
 		exclude := func(reason kcfgconsts.ConditionReason, message string) {
+			if status.secretRefValid == nil {
+				setSecretRefValid("The Secrets it reads aren't read: " + message)
+			}
 			c.excluded = append(c.excluded, excludedEntity{entityStatus: status, reason: reason, message: message})
 		}
 		id, message := c.entityID(obj)
@@ -201,7 +219,7 @@ func addEntities[PT entityObject, E any](ctx context.Context, c *configuration, 
 			exclude(eventgatewayv1alpha1.OnPremEntityInvalidReason, message)
 			continue
 		}
-		message, err := secretRefsNotGranted(ctx, cl, obj, k.kind)
+		message, err := secretRefsNotGranted(ctx, cl, obj, refs, k.kind)
 		if err != nil {
 			return err
 		}
@@ -210,24 +228,32 @@ func addEntities[PT entityObject, E any](ctx context.Context, c *configuration, 
 			continue
 		}
 
-		reader := &readErrRecorder{Client: cl}
+		reader := &referenceReader{Client: cl, secrets: map[client.ObjectKey]*corev1.Secret{}}
 		entity, err := k.convert(ctx, reader, obj, id)
 		if reader.err != nil && !apierrors.IsNotFound(reader.err) {
 			return fmt.Errorf("failed to read a reference of %s %s: %w", k.kind, client.ObjectKeyFromObject(obj), reader.err)
 		}
-		status.secretsRead = len(sensitiveDataSecretRefs(obj)) > 0
+		secretErr := ""
 		if err != nil {
-			if !reader.secretNotFound {
+			secretErr = c.secretProblem(obj, refs, reader.secrets)
+			if secretErr == "" {
+				if reader.readAll(obj, refs) {
+					setSecretRefValid("")
+				}
 				exclude(eventgatewayv1alpha1.OnPremEntityInvalidReason, err.Error())
 				continue
 			}
-			status.secretErr = err.Error() + c.secretHint
+		} else {
+			setSecretRefValid("")
+		}
+		if secretErr != "" {
+			setSecretRefValid(secretErr)
 			last, ok := c.previous[obj.GetUID()].(E)
 			if !ok {
-				exclude(eventgatewayv1alpha1.OnPremEntityInvalidReason, status.secretErr)
+				exclude(eventgatewayv1alpha1.OnPremEntityInvalidReason, secretErr)
 				continue
 			}
-			entity = last
+			entity, status.kept = last, true
 		}
 
 		name := k.name(entity)
@@ -276,25 +302,59 @@ func (c *configuration) entityID(obj client.Object) (uuid.UUID, string) {
 	return id, ""
 }
 
-// secretRefsNotGranted returns why the object can't read a Secret it
-// references in another namespace, or "" when a KongReferenceGrant allows
-// every such reference.
-func secretRefsNotGranted(ctx context.Context, cl client.Client, obj client.Object, kind string) (string, error) {
+// secretRefsNotGranted returns why the object can't read a Secret of refs,
+// the Secrets it reads, in another namespace, or "" when a
+// KongReferenceGrant allows every such Secret.
+func secretRefsNotGranted(
+	ctx context.Context, cl client.Client, obj client.Object, refs []configurationv1alpha1.SensitiveDataSecretRef, kind string,
+) (string, error) {
 	from := metav1.GroupVersionKind(configurationv1alpha1.GroupVersion.WithKind(kind))
-	secret := metav1.GroupVersionKind(corev1.SchemeGroupVersion.WithKind("Secret"))
-	for _, ref := range sensitiveDataSecretRefs(obj) {
-		if ref.Namespace == nil || *ref.Namespace == "" || *ref.Namespace == obj.GetNamespace() {
+	secretGVK := metav1.GroupVersionKind(corev1.SchemeGroupVersion.WithKind("Secret"))
+	checked := map[client.ObjectKey]struct{}{}
+	for _, ref := range refs {
+		key := secretKey(obj, ref)
+		if _, ok := checked[key]; ok || key.Namespace == obj.GetNamespace() {
 			continue
 		}
-		err := crossnamespace.CheckKongReferenceGrantForResource(ctx, cl, obj.GetNamespace(), *ref.Namespace, ref.Name, from, secret)
+		checked[key] = struct{}{}
+		err := crossnamespace.CheckKongReferenceGrantForResource(ctx, cl, obj.GetNamespace(), key.Namespace, key.Name, from, secretGVK)
 		if crossnamespace.IsReferenceNotGranted(err) {
-			return fmt.Sprintf("no KongReferenceGrant allows it to read the Secret %s/%s", *ref.Namespace, ref.Name), nil
+			return fmt.Sprintf("no KongReferenceGrant allows it to read the Secret %s", key), nil
 		}
 		if err != nil {
 			return "", err
 		}
 	}
 	return "", nil
+}
+
+// secretProblem returns why a Secret of refs, the Secrets the object reads,
+// can't be used, from the Secrets read to convert it: it doesn't exist, or
+// lacks the key read.
+func (c *configuration) secretProblem(obj client.Object, refs []configurationv1alpha1.SensitiveDataSecretRef, secrets map[client.ObjectKey]*corev1.Secret) string {
+	for _, ref := range refs {
+		key := secretKey(obj, ref)
+		secret, read := secrets[key]
+		if !read {
+			continue
+		}
+		if secret == nil {
+			return fmt.Sprintf("the Secret %s doesn't exist%s", key, c.secretHint)
+		}
+		if _, ok := secret.Data[ref.Key]; !ok {
+			return fmt.Sprintf("the Secret %s has no key %q", key, ref.Key)
+		}
+	}
+	return ""
+}
+
+// secretKey returns the key of the Secret the reference names.
+func secretKey(obj client.Object, ref configurationv1alpha1.SensitiveDataSecretRef) client.ObjectKey {
+	key := client.ObjectKey{Namespace: obj.GetNamespace(), Name: ref.Name}
+	if ref.Namespace != nil && *ref.Namespace != "" {
+		key.Namespace = *ref.Namespace
+	}
+	return key
 }
 
 // sensitiveDataSecretRefs returns the Secrets the object reads through its
@@ -309,25 +369,40 @@ func sensitiveDataSecretRefs(obj client.Object) []configurationv1alpha1.Sensitiv
 	return withSecrets.GetSensitiveDataSecretRefs()
 }
 
-// readErrRecorder is the client an entity reads the objects it references
-// with, e.g. its Secrets, when it is converted, recording the last error
-// reading one: one that doesn't exist leaves the entity out, unless it is a
-// Secret (see buildConfiguration), any other is retried.
-type readErrRecorder struct {
+// referenceReader is the client an entity reads the objects it references
+// with, e.g. its Secrets, when it is converted. It records the last error
+// reading one, and the Secrets read, nil for one that doesn't exist, which
+// tell why the conversion failed (see configuration.secretProblem).
+type referenceReader struct {
 	client.Client
 
-	err            error
-	secretNotFound bool
+	err     error
+	secrets map[client.ObjectKey]*corev1.Secret
 }
 
-// Get reads the object, recording the error.
-func (r *readErrRecorder) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+// Get reads the object, recording the error, or the Secret.
+func (r *referenceReader) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 	err := r.Client.Get(ctx, key, obj, opts...)
 	if err != nil {
-		_, isSecret := obj.(*corev1.Secret)
-		r.err, r.secretNotFound = err, isSecret && apierrors.IsNotFound(err)
+		r.err = err
+	}
+	if secret, ok := obj.(*corev1.Secret); ok && (err == nil || apierrors.IsNotFound(err)) {
+		r.secrets[key] = nil
+		if err == nil {
+			r.secrets[key] = secret
+		}
 	}
 	return err
+}
+
+// readAll tells every Secret of refs, the Secrets the object reads, was read.
+func (r *referenceReader) readAll(obj client.Object, refs []configurationv1alpha1.SensitiveDataSecretRef) bool {
+	for _, ref := range refs {
+		if r.secrets[secretKey(obj, ref)] == nil {
+			return false
+		}
+	}
+	return true
 }
 
 // describeField names the object a field gw-admin reports comes from, e.g.

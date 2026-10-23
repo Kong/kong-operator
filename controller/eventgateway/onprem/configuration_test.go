@@ -44,7 +44,11 @@ import (
 
 // emptyConfiguration returns the configuration of a gateway without entities.
 func emptyConfiguration() configuration {
-	return configuration{entities: noEntities(), objects: map[string]string{}}
+	key, err := comparisonKey(noEntities())
+	if err != nil {
+		panic(err)
+	}
+	return configuration{entities: noEntities(), objects: map[string]string{}, pushedKey: key}
 }
 
 // fromYAML returns an object of type T from its manifest, with a version 4
@@ -168,6 +172,12 @@ spec:
 		}, cfg.objects)
 	})
 
+	t.Run("the entities are encoded once to compare them with gw-admin", func(t *testing.T) {
+		key, err := comparisonKey(withGWAdminDefaults(cfg.entities))
+		require.NoError(t, err)
+		assert.Equal(t, key, cfg.pushedKey)
+	})
+
 	t.Run("the other kinds are empty lists, not null", func(t *testing.T) {
 		got, err := json.Marshal(cfg.entities)
 		require.NoError(t, err)
@@ -202,13 +212,16 @@ spec:
 
 		require.Len(t, cfg.included, 1)
 		assert.Equal(t, client.ObjectKeyFromObject(backendCluster), client.ObjectKeyFromObject(cfg.included[0].obj))
-		assert.True(t, cfg.included[0].secretsRead)
-		assert.Empty(t, cfg.included[0].secretErr)
+		assertSecretRefValid(t, cfg.included[0], metav1.ConditionTrue, "The Secrets it reads are resolved")
+		assert.False(t, cfg.included[0].kept)
 		assert.Equal(t, map[types.UID]any{backendCluster.UID: cfg.entities.BackendClusters[0]}, cfg.built)
 		missing := slices.IndexFunc(cfg.excluded, func(e excludedEntity) bool { return e.obj.GetName() == "missing-secret" })
 		require.GreaterOrEqual(t, missing, 0)
-		assert.True(t, cfg.excluded[missing].secretsRead)
-		assert.NotEmpty(t, cfg.excluded[missing].secretErr)
+		assertSecretRefValid(t, cfg.excluded[missing].entityStatus, metav1.ConditionFalse, "the Secret default/missing doesn't exist")
+		notGrantedAt := slices.IndexFunc(cfg.excluded, func(e excludedEntity) bool { return e.obj.GetName() == "not-granted" })
+		require.GreaterOrEqual(t, notGrantedAt, 0)
+		assertSecretRefValid(t, cfg.excluded[notGrantedAt].entityStatus, metav1.ConditionFalse,
+			"The Secrets it reads aren't read: no KongReferenceGrant allows it to read the Secret secrets/tls")
 	})
 
 	t.Run("the same entities produce the same configuration", func(t *testing.T) {
@@ -240,8 +253,29 @@ spec:
 		assert.Equal(t, withSecret.entities.BackendClusters, gone.entities.BackendClusters)
 		assert.Equal(t, withSecret.built, gone.built, "kept for the next configuration too")
 		require.Len(t, gone.included, 1)
-		assert.Contains(t, gone.included[0].secretErr, "backend-cluster-tls")
-		assert.True(t, strings.HasSuffix(gone.included[0].secretErr, " (hint)"))
+		assert.True(t, gone.included[0].kept)
+		assertSecretRefValid(t, gone.included[0], metav1.ConditionFalse, "the Secret default/backend-cluster-tls doesn't exist (hint)")
+	})
+
+	t.Run("a Secret lacking the key read is reported, the entity kept as it was last", func(t *testing.T) {
+		withSecret, err := buildConfiguration(t.Context(), newFakeClient(t, backendCluster, backendClusterSecret), gateway, "", nil)
+		require.NoError(t, err)
+		noKey := backendClusterSecret.DeepCopy()
+		delete(noKey.Data, "tls.key")
+
+		withoutLast, err := buildConfiguration(t.Context(), newFakeClient(t, backendCluster, noKey), gateway, " (hint)", nil)
+		require.NoError(t, err)
+		require.Len(t, withoutLast.excluded, 1)
+		assert.Equal(t, `the Secret default/backend-cluster-tls has no key "tls.key"`, withoutLast.excluded[0].message)
+		assertSecretRefValid(t, withoutLast.excluded[0].entityStatus, metav1.ConditionFalse, `the Secret default/backend-cluster-tls has no key "tls.key"`)
+
+		kept, err := buildConfiguration(t.Context(), newFakeClient(t, backendCluster, noKey), gateway, "", withSecret.built)
+		require.NoError(t, err)
+		assert.Empty(t, kept.excluded)
+		assert.Equal(t, withSecret.entities.BackendClusters, kept.entities.BackendClusters)
+		require.Len(t, kept.included, 1)
+		assert.True(t, kept.included[0].kept)
+		assertSecretRefValid(t, kept.included[0], metav1.ConditionFalse, `the Secret default/backend-cluster-tls has no key "tls.key"`)
 	})
 
 	t.Run("a Secret of another namespace a KongReferenceGrant allows is read", func(t *testing.T) {
@@ -254,8 +288,21 @@ spec:
 		}
 		secret := backendClusterSecret.DeepCopy()
 		secret.Name, secret.Namespace = "tls", "secrets"
-		cfg, err := buildConfiguration(t.Context(), newFakeClient(t, notGranted, grant, secret, backendClusterSecret), gateway, "", nil)
+		// The certificate and the key of the same Secret: one check.
+		bothFromSecret := notGranted.DeepCopy()
+		bothFromSecret.Spec.APISpec.TLS.ClientIdentity.Key.SecretRef = &configurationv1alpha1.SensitiveDataSecretRef{Name: "tls", Namespace: new("secrets"), Key: "tls.key"}
+		var grantLists int
+		cl := newFakeClientWithInterceptor(t, interceptor.Funcs{
+			List: func(ctx context.Context, cl client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+				if _, ok := list.(*configurationv1alpha1.KongReferenceGrantList); ok {
+					grantLists++
+				}
+				return cl.List(ctx, list, opts...)
+			},
+		}, bothFromSecret, grant, secret)
+		cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
 		require.NoError(t, err)
+		assert.Equal(t, 1, grantLists)
 		assert.Empty(t, cfg.excluded)
 		require.Len(t, cfg.entities.BackendClusters, 1)
 		assert.Equal(t, "client-cert", cfg.entities.BackendClusters[0].Tls.ClientIdentity.Certificate)
@@ -284,6 +331,16 @@ spec:
 		_, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
 		require.ErrorContains(t, err, "failed to list the EventGatewayBackendClusters of the gateway: list failed")
 	})
+}
+
+// assertSecretRefValid asserts the SecretRefValid condition of the entity has
+// that status and message.
+func assertSecretRefValid(t *testing.T, e entityStatus, status metav1.ConditionStatus, message string) {
+	t.Helper()
+	if assert.NotNil(t, e.secretRefValid) {
+		assert.Equal(t, status, e.secretRefValid.Status)
+		assert.Equal(t, message, e.secretRefValid.Message)
+	}
 }
 
 func TestDescribeField(t *testing.T) {
@@ -352,7 +409,9 @@ func TestSameEntities(t *testing.T) {
 	pushed.BackendClusters = []gwadminapi.EventGatewayBackendClusterOnPrem{bc}
 	same := func(held, pushed gwadminapi.GatewayEntities) bool {
 		t.Helper()
-		ok, err := sameEntities(held, pushed)
+		key, err := comparisonKey(withGWAdminDefaults(pushed))
+		require.NoError(t, err)
+		ok, err := sameEntities(held, key)
 		require.NoError(t, err)
 		return ok
 	}

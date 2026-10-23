@@ -258,12 +258,12 @@ func (r *Reconciler) reportEntities(ctx context.Context, gateway *eventgatewayv1
 			cond = entityCondition(e.obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType, metav1.ConditionFalse,
 				eventgatewayv1alpha1.OnPremEntityGatewayNotProgrammedReason, message+keptMessage(e))
 		}
-		errs = append(errs, r.setEntityConditions(ctx, e.obj, append(secretRefCondition(e), cond)...))
+		errs = append(errs, r.setEntityConditions(ctx, e.obj, e.conditions(cond)...))
 	}
 	for _, e := range cfg.excluded {
 		cond := entityCondition(e.obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType, metav1.ConditionFalse, e.reason,
 			fmt.Sprintf("Left out of the configuration of the OnPremEventGateway %s: %s", gatewayKey, e.message))
-		errs = append(errs, r.setEntityConditions(ctx, e.obj, append(secretRefCondition(e.entityStatus), cond)...))
+		errs = append(errs, r.setEntityConditions(ctx, e.obj, e.conditions(cond)...))
 	}
 	return errors.Join(errs...)
 }
@@ -284,28 +284,37 @@ func (r *Reconciler) reportEntitiesNotProgrammed(ctx context.Context, gateway *e
 	return errors.Join(errs...)
 }
 
-// keptMessage tells, for an entity whose Secret can't be read, that its last
+// keptMessage tells, for an entity sent as it was last, that its last
 // configuration is kept, or "".
 func keptMessage(e entityStatus) string {
-	if e.secretErr == "" {
+	if !e.kept {
 		return ""
 	}
-	return "; a Secret it reads can't be read, its last configuration is kept"
+	return "; a Secret it reads can't be used, its last configuration is kept"
 }
 
-// secretRefCondition returns the SecretRefValid condition of the entity,
-// when it reads Secrets.
-func secretRefCondition(e entityStatus) []metav1.Condition {
-	switch {
-	case !e.secretsRead:
-		return nil
-	case e.secretErr != "":
-		return []metav1.Condition{entityCondition(e.obj, konnectv1alpha1.SecretRefValidConditionType, metav1.ConditionFalse,
-			konnectv1alpha1.SecretRefReasonInvalid, e.secretErr)}
-	default:
-		return []metav1.Condition{entityCondition(e.obj, konnectv1alpha1.SecretRefValidConditionType, metav1.ConditionTrue,
-			konnectv1alpha1.SecretRefReasonValid, "The Secrets it reads are resolved")}
+// conditions returns the conditions of the entity: programmed, and its
+// SecretRefValid condition, when it reads Secrets.
+func (e entityStatus) conditions(programmed metav1.Condition) []metav1.Condition {
+	if e.secretRefValid == nil {
+		return []metav1.Condition{programmed}
 	}
+	return []metav1.Condition{*e.secretRefValid, programmed}
+}
+
+// secretRefValidCondition returns the SecretRefValid condition of the
+// entity: True, or False with the problem when there is one. Its
+// lastTransitionTime is set when it is applied (see setEntityConditions), so
+// that the same entities build the same configuration.
+func secretRefValidCondition(obj entityObject, problem string) *metav1.Condition {
+	cond := entityCondition(obj, konnectv1alpha1.SecretRefValidConditionType, metav1.ConditionTrue,
+		konnectv1alpha1.SecretRefReasonValid, "The Secrets it reads are resolved")
+	if problem != "" {
+		cond = entityCondition(obj, konnectv1alpha1.SecretRefValidConditionType, metav1.ConditionFalse,
+			konnectv1alpha1.SecretRefReasonInvalid, problem)
+	}
+	cond.LastTransitionTime = metav1.Time{}
+	return &cond
 }
 
 // entityCondition returns a condition of the entity, at its generation.
