@@ -104,8 +104,9 @@ spec:
 		assert.Equal(ct, gateway.Generation, gateway.Status.ObservedGeneration)
 		cond := apimeta.FindStatusCondition(gateway.Status.Conditions, string(eventgatewayv1alpha1.OnPremEventGatewayProgrammedType))
 		if assert.NotNil(ct, cond) {
+			// The gateways of this test have no GWAdmin.
 			assert.Equal(ct, "False", string(cond.Status))
-			assert.Equal(ct, string(eventgatewayv1alpha1.OnPremEventGatewayPendingReason), cond.Reason)
+			assert.Equal(ct, string(eventgatewayv1alpha1.DependenciesNotReadyReason), cond.Reason)
 			assert.Equal(ct, gateway.Generation, cond.ObservedGeneration)
 		}
 	}
@@ -384,13 +385,19 @@ spec:
 			cond := apimeta.FindStatusCondition(gateway.Status.Conditions, string(eventgatewayv1alpha1.OnPremEventGatewayProgrammedType))
 			if assert.NotNil(ct, cond) {
 				assert.Equal(ct, metav1.ConditionFalse, cond.Status)
-				assert.Equal(ct, string(eventgatewayv1alpha1.OnPremEventGatewayPendingReason), cond.Reason)
-				assert.Equal(ct, eventgatewayv1alpha1.OnPremEventGatewayPendingMessage, cond.Message)
+				assert.Equal(ct, string(eventgatewayv1alpha1.DependenciesNotReadyReason), cond.Reason)
+				assert.Equal(ct, eventgatewayv1alpha1.OnPremEventGatewayGWAdminNotResolvedMessage, cond.Message)
+			}
+			resolved := apimeta.FindStatusCondition(gateway.Status.Conditions, string(eventgatewayv1alpha1.OnPremEventGatewayGWAdminResolvedType))
+			if assert.NotNil(ct, resolved) {
+				assert.Equal(ct, metav1.ConditionFalse, resolved.Status)
+				assert.Equal(ct, string(eventgatewayv1alpha1.OnPremEventGatewayGWAdminNotFoundReason), resolved.Reason)
+				assert.Contains(ct, resolved.Message, "does not exist")
 			}
 			// The controller owns the whole status: what it doesn't set is
 			// removed.
 			assert.Nil(ct, apimeta.FindStatusCondition(gateway.Status.Conditions, "SetBySomeoneElse"))
-			assert.Len(ct, gateway.Status.Conditions, 1)
+			assert.Len(ct, gateway.Status.Conditions, 2)
 			assert.Empty(ct, gateway.Status.ServerURL)
 		}, waitTime, tickTime)
 	})

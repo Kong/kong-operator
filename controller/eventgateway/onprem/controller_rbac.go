@@ -23,5 +23,11 @@ package onprem
 // +kubebuilder:rbac:groups=eventgateway.konghq.com,resources=onpremeventgateways,verbs=get;list;watch
 // +kubebuilder:rbac:groups=eventgateway.konghq.com,resources=onpremeventgateways/status,verbs=update;patch
 
+// The GWAdmin of a gateway, the KongReferenceGrants allowing a gateway to use
+// a GWAdmin in another namespace, and the endpoints of its API Service.
+// +kubebuilder:rbac:groups=gateway-operator.konghq.com,resources=gwadmins,verbs=get;list;watch
+// +kubebuilder:rbac:groups=configuration.konghq.com,resources=kongreferencegrants,verbs=get;list;watch
+// +kubebuilder:rbac:groups=discovery.k8s.io,resources=endpointslices,verbs=get;list;watch
+
 // The RBAC to read the entities that can belong to an OnPremEventGateway is in
 // zz_generated_entities.go.
