@@ -1,4 +1,4 @@
-FROM docker:29.9@sha256:ba3d67c44952ffc448696659a36ef91dd813f03a9c70a2bc0ad1d286d542f4fb
+FROM docker:29.9@sha256:9e79b879b177fbd72c34376a3dd3d91747da5db49e1f560f76aea59561471977
 
 RUN apk add bash
 
