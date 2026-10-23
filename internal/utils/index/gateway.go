@@ -4,6 +4,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
@@ -13,6 +14,8 @@ const (
 	// TLSCertificateSecretsOnGatewayIndex maps Secret "namespace/name" to Gateway objects that
 	// reference them in listeners.tls.certificateRefs.
 	TLSCertificateSecretsOnGatewayIndex = "TLSCertificateSecretsOnGateway"
+	// TLSKongCertificatesOnGatewayIndex maps KongCertificate "namespace/name" to referencing Gateways.
+	TLSKongCertificatesOnGatewayIndex = "TLSKongCertificatesOnGateway"
 )
 
 // OptionsForGateway returns a slice of Option configured for indexing Gateway objects by GatewayClass name.
@@ -27,6 +30,11 @@ func OptionsForGateway() []Option {
 			Object:         &gwtypes.Gateway{},
 			Field:          TLSCertificateSecretsOnGatewayIndex,
 			ExtractValueFn: TLSCertificateSecretsOnGateway,
+		},
+		{
+			Object:         &gwtypes.Gateway{},
+			Field:          TLSKongCertificatesOnGatewayIndex,
+			ExtractValueFn: TLSKongCertificatesOnGateway,
 		},
 	}
 }
@@ -45,6 +53,15 @@ func GatewayClassOnGateway(o client.Object) []string {
 
 // TLSCertificateSecretsOnGateway extracts Secret references (namespace/name) from a Gateway's listeners.tls.certificateRefs.
 func TLSCertificateSecretsOnGateway(o client.Object) []string {
+	return tlsCertificatesOnGateway(o, corev1.GroupName, "Secret")
+}
+
+// TLSKongCertificatesOnGateway extracts KongCertificate references from Gateway TLS listeners.
+func TLSKongCertificatesOnGateway(o client.Object) []string {
+	return tlsCertificatesOnGateway(o, configurationv1alpha1.GroupVersion.Group, "KongCertificate")
+}
+
+func tlsCertificatesOnGateway(o client.Object, group, kind string) []string {
 	gw, ok := o.(*gwtypes.Gateway)
 	if !ok {
 		return nil
@@ -56,15 +73,18 @@ func TLSCertificateSecretsOnGateway(o client.Object) []string {
 			continue
 		}
 		for _, ref := range l.TLS.CertificateRefs {
-			// Only index core/v1 Secret references (or defaulted ones when group/kind are nil).
-			if ref.Group != nil && string(*ref.Group) != corev1.GroupName {
-				continue
+			refGroup, refKind := "", "Secret"
+			if ref.Group != nil {
+				refGroup = string(*ref.Group)
 			}
-			if ref.Kind != nil && string(*ref.Kind) != "Secret" {
+			if ref.Kind != nil {
+				refKind = string(*ref.Kind)
+			}
+			if refGroup != group || refKind != kind {
 				continue
 			}
 			ns := gw.Namespace
-			if ref.Namespace != nil {
+			if ref.Namespace != nil && *ref.Namespace != "" {
 				ns = string(*ref.Namespace)
 			}
 			if ref.Name == "" {

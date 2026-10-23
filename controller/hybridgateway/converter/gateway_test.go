@@ -20,7 +20,9 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
@@ -31,6 +33,100 @@ import (
 // sensitive to which one the cluster serves; see referencegranthelpers.V1. Tests that
 // depend on a grant being found run against referencegranthelpers.Versions instead.
 var testReferenceGrantVersion = referencegranthelpers.V1()
+
+func TestGatewayConverter_ExistingKongCertificate(t *testing.T) {
+	ctx := t.Context()
+	gateway := &gwtypes.Gateway{
+		Name: "gateway", Namespace: "default", UID: "gateway-uid",
+		Annotations: map[string]string{"konghq.com/tags": "gateway-tag"},
+		Spec:        gwtypes.GatewaySpec{GatewayClassName: "gateway-class"},
+	}
+	gatewayClass := &gwtypes.GatewayClass{
+		Name:        string(gateway.Spec.GatewayClassName),
+		Annotations: map[string]string{"konghq.com/tags": "class-tag"},
+	}
+	programmed := []metav1.Condition{{Type: konnectv1alpha1.KonnectEntityProgrammedConditionType, Status: metav1.ConditionTrue}}
+	cp := &konnectv1alpha2.KonnectGatewayControlPlane{
+		Name: "cp", Namespace: gateway.Namespace,
+		Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
+			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{ID: "cp-id"}, Conditions: programmed,
+		},
+	}
+	extension := &konnectv1alpha2.KonnectExtension{
+		Name: "extension", Namespace: gateway.Namespace,
+		Labels: map[string]string{"gateway-operator.konghq.com/managed-by": "gateway"},
+		OwnerReferences: []metav1.OwnerReference{{
+			APIVersion: gatewayv1.GroupVersion.String(), Kind: "Gateway", Name: gateway.Name, UID: gateway.UID,
+		}},
+		Spec: konnectv1alpha2.KonnectExtensionSpec{Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+			ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+				Type:                 commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{Name: cp.Name},
+			}},
+		}},
+	}
+	cert := &configurationv1alpha1.KongCertificate{
+		Name: "vault-certificate", Namespace: gateway.Namespace,
+		Spec: configurationv1alpha1.KongCertificateSpec{
+			Type: new(configurationv1alpha1.KongCertificateSourceTypeInline),
+			Cert: "{vault://certificates/tls/certificate}", Key: "{vault://certificates/tls/key}",
+			Tags: commonv1alpha1.Tags{"cert-tag"},
+			ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+				Type:                 commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{Name: cp.Name},
+			},
+		},
+		Status: configurationv1alpha1.KongCertificateStatus{
+			Konnect:    &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{ID: "certificate-id", ControlPlaneID: cp.Status.ID},
+			Conditions: programmed,
+		},
+	}
+	ref := gatewayv1.SecretObjectReference{
+		Group: new(gatewayv1.Group(configurationv1alpha1.GroupVersion.Group)), Kind: new(gatewayv1.Kind("KongCertificate")),
+		Name: gatewayv1.ObjectName(cert.Name),
+	}
+	gateway.Spec.Listeners = []gatewayv1.Listener{
+		{Name: "first", Port: 443, Protocol: gatewayv1.HTTPSProtocolType, Hostname: new(gatewayv1.Hostname("first.example.test")),
+			TLS: &gatewayv1.ListenerTLSConfig{CertificateRefs: []gatewayv1.SecretObjectReference{ref}}},
+		{Name: "second", Port: 443, Protocol: gatewayv1.HTTPSProtocolType, Hostname: new(gatewayv1.Hostname("second.example.test")),
+			TLS: &gatewayv1.ListenerTLSConfig{CertificateRefs: []gatewayv1.SecretObjectReference{ref}}},
+	}
+	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(cp, extension, cert, gatewayClass).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+				if _, ok := obj.(*corev1.Secret); ok {
+					t.Error("existing certificate references must not read TLS Secrets")
+				}
+				return cl.Get(ctx, key, obj, opts...)
+			},
+		}).Build()
+	conv := newGatewayConverter(gateway, cl, testReferenceGrantVersion).(*gatewayConverter)
+	count, err := conv.Translate(ctx, logr.Discard())
+	require.NoError(t, err)
+	require.Equal(t, 2, count)
+	first := conv.outputStore[0].(*configurationv1alpha1.KongSNI)
+	second := conv.outputStore[1].(*configurationv1alpha1.KongSNI)
+	require.NotEqual(t, first.Name, second.Name, "listeners sharing a certificate must not share Kubernetes SNI identity")
+	for i, obj := range conv.outputStore {
+		sni, ok := obj.(*configurationv1alpha1.KongSNI)
+		require.True(t, ok, "only KongSNI resources should be generated")
+		require.Equal(t, cert.Name, sni.Spec.CertificateRef.Name)
+		require.Equal(t, string(*gateway.Spec.Listeners[i].Hostname), sni.Spec.Name)
+		require.Equal(t, gateway.UID, sni.OwnerReferences[0].UID)
+		require.Equal(t, commonv1alpha1.Tags{"cert-tag", "gateway-tag", "class-tag"}, sni.Spec.Tags)
+	}
+	var current configurationv1alpha1.KongCertificate
+	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(cert), &current))
+	require.Equal(t, cert.Spec, current.Spec)
+	require.Empty(t, current.OwnerReferences)
+	require.Empty(t, current.Annotations)
+
+	require.NoError(t, cl.Delete(ctx, cert))
+	conv = newGatewayConverter(gateway, cl, testReferenceGrantVersion).(*gatewayConverter)
+	count, err = conv.Translate(ctx, logr.Discard())
+	require.NoError(t, err)
+	require.Zero(t, count, "missing references must leave no desired SNI, allowing stale binding cleanup")
+}
 
 func TestNewGatewayConverter(t *testing.T) {
 	tests := []struct {
@@ -370,7 +466,7 @@ func TestBuildKongSNI(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			require.Equal(t, tt.kongCert.Name, sni.Name)
+			require.Equal(t, namegen.NewKongCertificateName(tt.gateway.Name, fmt.Sprint(tt.listener.Port), string(tt.listener.Name)), sni.Name)
 			require.Equal(t, tt.gateway.Namespace, sni.Namespace)
 			require.Equal(t, tt.expectedSNI, sni.Spec.Name)
 			require.Equal(t, tt.kongCert.Name, sni.Spec.CertificateRef.Name)

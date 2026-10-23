@@ -1,0 +1,14 @@
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: sni-certificate
+  namespace: ($certificate_namespace)
+spec:
+  from:
+    - group: configuration.konghq.com
+      kind: KongSNI
+      namespace: ($namespace)
+  to:
+    - group: configuration.konghq.com
+      kind: KongCertificate
+      name: serving
