@@ -7479,6 +7479,40 @@ func TestGenerateSchemaTypes_AllOfCompositeEmitsPlainStruct(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestGenerateSchemaTypes_FreeformObjectEmitsJSONAlias(t *testing.T) {
+	// A named free-form object schema (additionalProperties: true, no declared
+	// properties) must alias apiextensionsv1.JSON: a defined type does not
+	// inherit its Marshal/UnmarshalJSON and would marshal as {}.
+	// Fields referencing it need an explicit object type, because the alias
+	// alone yields only x-kubernetes-preserve-unknown-fields, which accepts any
+	// JSON value. A _description override on such a field must be applied.
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+
+	content := g.generateSchemaTypes(
+		map[string]bool{"Freeform": true, "Parent": true},
+		&parser.ParsedSpec{
+			Schemas: map[string]*parser.Schema{
+				"Freeform": {Name: "Freeform", Type: "object"},
+				"Parent": {Name: "Parent", Type: "object", Properties: []*parser.Property{
+					{Name: "body", RefName: "Freeform"},
+				}},
+			},
+		},
+		map[string]*config.FieldConfig{
+			"Parent": {Fields: map[string]*config.FieldConfig{
+				"body": {Description: "Object form example."},
+			}},
+		},
+	)
+
+	assert.Contains(t, content, "type Freeform = apiextensionsv1.JSON")
+	assert.Contains(t, content, "// Object form example.")
+	assert.Contains(t, content, "// +kubebuilder:validation:Type=object\n\tBody Freeform")
+
+	_, err := format.Source([]byte(content))
+	require.NoError(t, err)
+}
+
 func TestGenerateSDKOps_AllOfCompositeRefCollectsBoolAndFreeformFields(t *testing.T) {
 	// Bools and free-form maps nested behind $ref chains (here: listener
 	// variant -> config -> route, where route was flattened from a composite

@@ -17,6 +17,7 @@ const (
 	kbValidationEnumFmt          = "+kubebuilder:validation:Enum=%s"
 	kbValidationMaxPropertiesFmt = "+kubebuilder:validation:MaxProperties=%d"
 	kbValidationMaxItemsFmt      = "+kubebuilder:validation:MaxItems=%d"
+	kbValidationTypeObject       = "+kubebuilder:validation:Type=object"
 )
 
 func markerOptional() string { return kbOptional }
@@ -28,6 +29,7 @@ func markerValidationPattern(v string) string    { return fmt.Sprintf(kbValidati
 func markerValidationEnum(v string) string       { return fmt.Sprintf(kbValidationEnumFmt, v) }
 func markerValidationMaxProperties(v int) string { return fmt.Sprintf(kbValidationMaxPropertiesFmt, v) }
 func markerValidationMaxItems(v int) string      { return fmt.Sprintf(kbValidationMaxItemsFmt, v) }
+func markerValidationTypeObject() string         { return kbValidationTypeObject }
 
 // markerValidationMinimum/Maximum format via [strconv.FormatFloat] (not fmt's %v/%g) because %g
 // switches to scientific notation for large magnitudes (e.g. 2147483646 -> 2.147483646e+09),

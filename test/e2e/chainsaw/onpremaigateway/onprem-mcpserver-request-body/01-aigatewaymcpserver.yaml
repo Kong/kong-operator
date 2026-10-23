@@ -1,0 +1,58 @@
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayMCPServer
+metadata:
+  name: ($mcp_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    type: namespacedRef
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: conversion-listener
+    conversion-listener:
+      name: ($mcp_name)
+      displayName: ($mcp_name)
+      enabled: Enabled
+      config:
+        url: https://httpbin.example.com
+        route:
+          paths:
+            - /mcp/httpbin
+      tools:
+        - name: get
+          description: The request's query parameters.
+          method: GET
+          path: /get
+        # The request body must be the OpenAPI object with content keyed by media
+        # type (issue #6252): the CRD used to type it map[string]string, so this
+        # nested shape was rejected at apply time.
+        - name: post
+          description: Returns the request's POST parameters.
+          method: POST
+          path: /post
+          requestBody:
+            content:
+              application/json:
+                schema:
+                  type: object
+                  required:
+                    - message
+                  properties:
+                    message:
+                      type: string
+                      description: Free-text message to echo back.
+                    count:
+                      type: integer
+                      description: Optional number to echo back.
+          responses:
+            "200":
+              content:
+                application/json:
+                  schema:
+                    type: object
+                    properties:
+                      json:
+                        type: object

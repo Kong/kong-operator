@@ -1587,16 +1587,9 @@ func TestSourceConfigs_Accessor(t *testing.T) {
 }
 
 func TestTypeConfig_ValidateFieldDescriptions(t *testing.T) {
+	// _description is accepted at any depth: nested fields reach schema types
+	// shared across entities.
 	tc := &TypeConfig{CEL: &EntityConfig{Fields: map[string]*FieldConfig{
-		"spec": {Fields: map[string]*FieldConfig{
-			"apiSpec": {Fields: map[string]*FieldConfig{
-				"value": {Description: "ok"},
-			}},
-		}},
-	}}}
-	require.NoError(t, tc.validate())
-
-	tc = &TypeConfig{CEL: &EntityConfig{Fields: map[string]*FieldConfig{
 		"spec": {Fields: map[string]*FieldConfig{
 			"apiSpec": {Fields: map[string]*FieldConfig{
 				"tls": {Fields: map[string]*FieldConfig{
@@ -1605,5 +1598,5 @@ func TestTypeConfig_ValidateFieldDescriptions(t *testing.T) {
 			}},
 		}},
 	}}}
-	require.ErrorContains(t, tc.validate(), "cel.spec.apiSpec.tls.caBundle: _description is only supported on spec.apiSpec's direct fields")
+	require.NoError(t, tc.validate())
 }
