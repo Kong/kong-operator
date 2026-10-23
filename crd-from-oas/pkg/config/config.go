@@ -416,6 +416,10 @@ type ReconcilerConfig struct {
 	// GatewayRef, when set, adds a GatewayRef typed parent reference field next
 	// to the OpenAPI-derived one. See GatewayRefConfig.
 	GatewayRef *GatewayRefConfig `yaml:"gatewayRef,omitempty"`
+	// SkipOnPremEventGateway excludes this entity from the generated on-prem
+	// Event Gateway watches, indexes, CRD checks and RBAC. It does not affect Konnect
+	// wiring. By default, entities inherit on-prem registration from their parent.
+	SkipOnPremEventGateway bool `yaml:"skipOnPremEventGateway,omitempty"`
 	// AncestorEntityGVKs lists the ancestor entity kinds and optional API groups
 	// for each OpenAPI-derived path-parameter dependency in URL order
 	// (outermost first). Only the Kind values are used by current ancestor-ID

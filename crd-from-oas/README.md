@@ -101,6 +101,12 @@ with accessor `Portal`), the heuristic will pick the entity name and emit
 existing convention, prefer to align the OAS accessor alias instead of layering
 overrides here.
 
+Entities that accept an `OnPremEventGateway` parent, and transitively their
+children, are registered with the on-prem Event Gateway controller by default.
+Set `reconciler.skipOnPremEventGateway: true` for a Konnect-only entity to omit
+its on-prem watches, indexes, CRD checks and RBAC without affecting Konnect wiring.
+Descendants cannot inherit on-prem registration through an excluded entity.
+
 ### `ops.getForUID`
 
 Generated `getForUID` helpers are used only as a temporary way to find an

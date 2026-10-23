@@ -4383,6 +4383,35 @@ func TestGenerateOnPremEventGatewayEntitiesDispatcher(t *testing.T) {
 		require.NoError(t, err)
 		assert.Nil(t, file)
 	})
+
+	t.Run("explicit opt out excludes roots and descendants but keeps siblings", func(t *testing.T) {
+		skippedRoot := entity("SkippedRoot", "KonnectEventGateway", onPrem)
+		skippedRoot.SkipOnPremEventGateway = true
+		skippedChild := entity("SkippedChild", "EventGatewayBackendCluster", nil)
+		skippedChild.SkipOnPremEventGateway = true
+		file, err := GenerateOnPremEventGatewayEntitiesDispatcher([]*WatchFileInfo{
+			skippedRoot,
+			entity("ChildOfSkippedRoot", "SkippedRoot", nil),
+			skippedChild,
+			entity("ChildOfSkippedChild", "SkippedChild", nil),
+			entity("EventGatewayBackendCluster", "KonnectEventGateway", onPrem),
+			entity("EventGatewayVirtualCluster", "EventGatewayBackendCluster", nil),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, file)
+		for _, kind := range []string{"SkippedRoot", "ChildOfSkippedRoot", "SkippedChild", "ChildOfSkippedChild"} {
+			assert.NotContains(t, file.Content, kind)
+			assert.NotContains(t, file.Content, strings.ToLower(kind))
+		}
+		assert.Contains(t, file.Content, "&configurationv1alpha1.EventGatewayBackendCluster{},")
+		assert.Contains(t, file.Content, "&configurationv1alpha1.EventGatewayVirtualCluster{},")
+		assert.Contains(t, file.Content, "index.OptionsForEventGatewayBackendCluster(),")
+		assert.Contains(t, file.Content, "index.OptionsForEventGatewayVirtualCluster(),")
+
+		file, err = GenerateOnPremEventGatewayEntitiesDispatcher([]*WatchFileInfo{skippedRoot})
+		require.NoError(t, err)
+		assert.Nil(t, file)
+	})
 }
 
 func TestGenerateKonnectConstraintsDispatcher(t *testing.T) {
@@ -4785,6 +4814,38 @@ func TestGenerateReconcilerFiles_IncludesRBAC(t *testing.T) {
 	require.NotNil(t, rbacFile, "expected RBAC file in generated files")
 	assert.Equal(t, "controller/konnect", rbacFile.RelativeDir)
 	assert.Contains(t, rbacFile.Content, "//+kubebuilder:rbac:groups=x-konnect.konghq.com,resources=portals,verbs=get;list;watch;update;patch")
+}
+
+func TestGenerateReconcilerFiles_SkipOnPremEventGateway(t *testing.T) {
+	for _, skip := range []bool{false, true} {
+		t.Run(fmt.Sprintf("skip=%t", skip), func(t *testing.T) {
+			g := NewGenerator(Config{
+				APIGroup:             "konnect.konghq.com",
+				APIVersion:           "v1alpha1",
+				APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+				APIGroupPackageAlias: "konnectv1alpha1",
+				ReconcilerConfig: map[string]*config.ReconcilerConfig{
+					"Portal": {IsRoot: new(true), SkipOnPremEventGateway: skip},
+				},
+			})
+			_, err := g.generateReconcilerFiles(
+				[]string{"Portal"}, map[string]*parser.Schema{"Portal": {Name: "CreatePortal"}},
+			)
+			require.NoError(t, err)
+			require.Len(t, g.watchInfos, 1)
+			assert.Equal(t, skip, g.watchInfos[0].SkipOnPremEventGateway)
+
+			controllers, err := GenerateKonnectControllerSetupDispatcher(g.watchInfos)
+			require.NoError(t, err)
+			assert.Contains(t, controllers.Content, "newKonnectEntityController[konnectv1alpha1.Portal]")
+			indexes, err := GenerateKonnectIndexOptionsDispatcher(g.watchInfos)
+			require.NoError(t, err)
+			assert.Contains(t, indexes.Content, "index.OptionsForPortal()")
+			watches, err := GenerateWatchDispatcher(g.watchInfos)
+			require.NoError(t, err)
+			assert.Contains(t, watches.Content, "PortalReconciliationWatchOptions")
+		})
+	}
 }
 
 func TestGenerateOpsCreate_RootEntity(t *testing.T) {

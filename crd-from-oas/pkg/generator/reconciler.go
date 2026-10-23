@@ -1049,11 +1049,12 @@ func (g *Generator) generateReconcilerFiles(entityNames []string, entitySchemas 
 			RelativeDir: "controller/konnect",
 		})
 		info := &WatchFileInfo{
-			Entity:         entityName,
-			APIAlias:       g.config.APIGroupPackageAlias,
-			APIPackagePath: g.config.APIGroupPackagePath,
-			IsRoot:         rc.GetIsRoot(),
-			Group:          g.config.APIGroup,
+			Entity:                 entityName,
+			APIAlias:               g.config.APIGroupPackageAlias,
+			APIPackagePath:         g.config.APIGroupPackagePath,
+			IsRoot:                 rc.GetIsRoot(),
+			Group:                  g.config.APIGroup,
+			SkipOnPremEventGateway: rc.SkipOnPremEventGateway,
 		}
 		if dep := rootRefDependency(schema); dep != nil {
 			info.ParentKind = rc.ParentEntityKind()

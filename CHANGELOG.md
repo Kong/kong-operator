@@ -235,7 +235,7 @@
   drift correction without a separate chain ID. As a conservative controller
   restriction, only complete-set reordering is supported; empty lists require
   an empty remote chain. Deleting the CR retains the remote configuration.
-  On-prem gw-admin application is not implemented.
+  This controller is Konnect-only; on-prem support is outside its scope.
 - OnPremAIGateway spec: added a `dataplaneSync` field with optional
   `intervalSeconds` and `timeoutSeconds` (non-negative integers, in seconds) to
   tune the cadence of and the timeout for pushing configuration to the data

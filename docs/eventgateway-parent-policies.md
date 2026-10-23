@@ -216,6 +216,6 @@ Deleting the chain CR releases ownership and stops management. It preserves the
 remote chain and all policy objects, even if authentication or referenced policies
 are no longer available; it does not PUT an empty list or delete policies.
 
-This controller applies ordering through Konnect only. On-prem entity watches
-are registered, but the on-prem controller does not yet build or apply a complete
-gw-admin configuration; on-prem policy ordering is not implemented by this layer.
+This controller supports Konnect only. Policy chains are not registered with
+the on-prem Event Gateway controller; on-prem ordering and gw-admin application
+are outside this layer's scope.

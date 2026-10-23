@@ -40,12 +40,16 @@ type onPremGatewayEntity struct {
 // gatewayRef accepts it and, transitively, their children. The controller
 // watches them, checks their CRDs are installed, gets the RBAC to read them
 // and registers the indexes that find them by gateway.
+// SkipOnPremEventGateway entries are excluded, including from ancestor traversal.
 // Call after all per-group generation has finished.
 func GenerateOnPremEventGatewayEntitiesDispatcher(infos []*WatchFileInfo) (*GeneratedFile, error) {
 	key := func(group, kind string) string { return group + "/" + kind }
 
 	selected := make(map[string]*WatchFileInfo)
 	for _, info := range infos {
+		if info.SkipOnPremEventGateway {
+			continue
+		}
 		for _, gvk := range info.GatewayKinds {
 			if gvk.Group == onPremEventGatewayGroup && gvk.Kind == onPremEventGatewayKind {
 				selected[key(info.Group, info.Entity)] = info
@@ -58,7 +62,7 @@ func GenerateOnPremEventGatewayEntitiesDispatcher(infos []*WatchFileInfo) (*Gene
 	for added := true; added; {
 		added = false
 		for _, info := range infos {
-			if _, ok := selected[key(info.Group, info.Entity)]; ok || info.ParentKind == "" {
+			if _, ok := selected[key(info.Group, info.Entity)]; ok || info.ParentKind == "" || info.SkipOnPremEventGateway {
 				continue
 			}
 			if _, ok := selected[key(info.ParentGroup, info.ParentKind)]; ok {
