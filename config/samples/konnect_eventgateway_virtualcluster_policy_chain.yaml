@@ -1,0 +1,133 @@
+# Prepare konnect-api-auth-1 using konnect_apiauth_configuration.yaml with your token.
+# Replace kafka:9092 with your Kafka bootstrap server.
+# Anonymous authentication and disabled TLS are for demonstration only.
+# This CRD defines the API only; controller support is not implemented yet.
+#
+# This example declares the gateway, backend, virtual cluster, and both policies.
+# The chain at the end selects their execution order:
+# policy-chain-deny-admin-topics -> policy-chain-allow-orders-topics.
+# Each reference names a policy CR, not a Konnect ID. Namespace defaults to
+# the chain's namespace; explicitly setting that same namespace is also valid.
+apiVersion: konnect.konghq.com/v1alpha1
+kind: KonnectEventGateway
+metadata:
+  name: policy-chain-gateway
+  namespace: default
+spec:
+  apiSpec:
+    name: policy-chain-gateway
+  konnect:
+    authRef:
+      name: konnect-api-auth-1
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayBackendCluster
+metadata:
+  name: policy-chain-backend
+  namespace: default
+spec:
+  parentRef:
+    group: konnect.konghq.com
+    kind: KonnectEventGateway
+    name: policy-chain-gateway
+  apiSpec:
+    name: policy-chain-backend
+    bootstrapServers:
+      - kafka:9092
+    authentication:
+      type: anonymous
+      anonymous: {}
+    insecureAllowAnonymousVirtualClusterAuth: Enabled
+    tls:
+      enabled: Disabled
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualCluster
+metadata:
+  name: policy-chain-virtual-cluster
+  namespace: default
+spec:
+  eventGatewayBackendClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: policy-chain-backend
+  apiSpec:
+    name: policy-chain-virtual-cluster
+    dnsLabel: policy-chain-example
+    aclMode: enforce_on_gateway
+    authentication:
+      - type: anonymous
+        anonymous: {}
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterPolicy
+metadata:
+  name: policy-chain-deny-admin-topics
+  namespace: default
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: policy-chain-virtual-cluster
+  apiSpec:
+    type: acls
+    acls:
+      name: deny-admin-topics
+      enabled: Enabled
+      config:
+        rules:
+          - action: deny
+            resourceType: topic
+            operations:
+              - name: all
+            resourceNames:
+              type: stat
+              stat:
+                - match: admin-*
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterPolicy
+metadata:
+  name: policy-chain-allow-orders-topics
+  namespace: default
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: policy-chain-virtual-cluster
+  apiSpec:
+    type: acls
+    acls:
+      name: allow-orders-topics
+      enabled: Enabled
+      config:
+        rules:
+          - action: allow
+            resourceType: topic
+            operations:
+              - name: read
+              - name: write
+              - name: describe
+            resourceNames:
+              type: stat
+              stat:
+                - match: orders-*
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterPolicyChain
+metadata:
+  name: policy-chain-example
+  namespace: default
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: policy-chain-virtual-cluster
+  apiSpec:
+    # List every cluster-level policy exactly once, in execution order.
+    # YAML document order and policy resource names do not determine this order.
+    # Update this list when policies are created or deleted.
+    # An empty list is valid only when no policies exist; it does not clear them.
+    policies:
+      - name: policy-chain-deny-admin-topics
+      - name: policy-chain-allow-orders-topics

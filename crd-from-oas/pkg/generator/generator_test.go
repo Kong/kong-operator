@@ -628,6 +628,82 @@ func TestGenerateCRDType_ReferenceFieldTypeSwap(t *testing.T) {
 	require.Contains(t, content, "+kubebuilder:validation:MaxItems=50")
 }
 
+func TestGenerateCRDType_RequiredOrderedReferenceArray(t *testing.T) {
+	t.Parallel()
+
+	schema := &parser.Schema{
+		Name: "CreateEventGatewayVirtualClusterPolicyChain",
+		Properties: []*parser.Property{{
+			Name:     "policies",
+			Type:     "array",
+			Required: true,
+			Items:    &parser.Property{Type: "string", Format: "uuid"},
+		}},
+	}
+	g := NewGenerator(Config{
+		APIGroup:   "configuration.konghq.com",
+		APIVersion: "v1alpha1",
+		References: map[string][]config.ReferenceConfig{
+			"EventGatewayVirtualClusterPolicyChain": {{
+				Path:       "spec.apiSpec.policies",
+				Kinds:      []string{"EventGatewayVirtualClusterPolicy"},
+				ResolvesTo: "id",
+			}},
+		},
+		FieldConfig: &config.Config{
+			Entities: map[string]*config.EntityConfig{
+				"EventGatewayVirtualClusterPolicyChain": {
+					Fields: map[string]*config.FieldConfig{
+						"spec": {Fields: map[string]*config.FieldConfig{
+							"apiSpec": {Fields: map[string]*config.FieldConfig{
+								"policies": {Validations: []string{"+listType=atomic"}},
+							}},
+						}},
+					},
+				},
+			},
+		},
+	})
+	content, err := g.generateCRDType(schema.Name, schema)
+	require.NoError(t, err)
+	require.Contains(t, content, "// +required\n\t// +listType=atomic\n\tPolicies []EventGatewayVirtualClusterPolicyRef `json:\"policies,omitzero\"`")
+}
+
+func TestGenerateCRDType_ContainerRequiredness(t *testing.T) {
+	t.Parallel()
+
+	for _, required := range []bool{false, true} {
+		t.Run(fmt.Sprintf("required=%t", required), func(t *testing.T) {
+			t.Parallel()
+
+			g := NewGenerator(Config{APIVersion: "v1alpha1"})
+			marker := "+optional"
+			if required {
+				marker = "+required"
+				g.config.FieldConfig = &config.Config{
+					Entities: map[string]*config.EntityConfig{
+						"EventGatewayVirtualClusterPolicyChain": {
+							Fields: map[string]*config.FieldConfig{
+								"spec": {
+									Validations: []string{marker},
+									Fields: map[string]*config.FieldConfig{
+										"apiSpec": {Validations: []string{marker}},
+									},
+								},
+							},
+						},
+					},
+				}
+			}
+			content, err := g.generateCRDType("CreateEventGatewayVirtualClusterPolicyChain", &parser.Schema{})
+			require.NoError(t, err)
+			require.Contains(t, content, "// "+marker+"\n\tSpec EventGatewayVirtualClusterPolicyChainSpec")
+			require.Contains(t, content, "// "+marker+"\n\tAPISpec EventGatewayVirtualClusterPolicyChainAPISpec")
+			require.NotContains(t, content, "// +optional\n\t// +required")
+		})
+	}
+}
+
 func TestGenerateCRDType_Association(t *testing.T) {
 	schema := &parser.Schema{
 		Name:       "CreateAIGatewayConsumer",
@@ -6992,6 +7068,8 @@ func TestGenerateReferencesFile(t *testing.T) {
 	require.Contains(t, out, `Kind string `+"`"+`json:"kind,omitempty"`+"`")
 	require.Contains(t, out, `Name string `+"`"+`json:"name"`+"`")
 	require.Contains(t, out, `Namespace string `+"`"+`json:"namespace,omitempty"`+"`")
+	require.Contains(t, out, "Namespace defaults to the referrer's namespace. If set, it must be")
+	require.NotContains(t, out, "reserved for future cross-namespace support")
 	require.Contains(t, out, "KonnectReferencesResolvedConditionType")
 	require.Contains(t, out, "KonnectReferencesResolvedReasonInvalid")
 	require.Contains(t, out, "KonnectReferencesResolvedReasonResolutionFailed")

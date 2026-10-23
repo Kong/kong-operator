@@ -195,7 +195,10 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 					"tls.key": key,
 				},
 			}
-			require.NoError(t, cl.Create(ctx, caSecret))
+			// Uncached client: this Secret is seeded before StartReconcilers starts
+			// the manager, and going through the manager's client that early
+			// deadlocks under read-your-own-writes consistency.
+			require.NoError(t, envtest.NewControllerClient(t, scheme.Get(), cfg).Create(ctx, caSecret))
 
 			dpReconciler := &dataplane.Reconciler{
 				DataPlaneIPFamily:        ipfamily.IPv4,

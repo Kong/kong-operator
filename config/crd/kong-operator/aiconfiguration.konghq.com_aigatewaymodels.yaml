@@ -284,8 +284,10 @@ spec:
                                   minLength: 1
                                   type: string
                                 namespace:
-                                  description: Namespace is reserved for future cross-namespace
-                                    support.
+                                  description: |-
+                                    Namespace defaults to the referrer's namespace. If set, it must be
+                                    the same as the referrer's namespace; cross-namespace references are
+                                    not supported.
                                   type: string
                               required:
                               - name
@@ -1793,8 +1795,10 @@ spec:
                               minLength: 1
                               type: string
                             namespace:
-                              description: Namespace is reserved for future cross-namespace
-                                support.
+                              description: |-
+                                Namespace defaults to the referrer's namespace. If set, it must be
+                                the same as the referrer's namespace; cross-namespace references are
+                                not supported.
                               type: string
                           required:
                           - name
@@ -6710,8 +6714,10 @@ spec:
                                   minLength: 1
                                   type: string
                                 namespace:
-                                  description: Namespace is reserved for future cross-namespace
-                                    support.
+                                  description: |-
+                                    Namespace defaults to the referrer's namespace. If set, it must be
+                                    the same as the referrer's namespace; cross-namespace references are
+                                    not supported.
                                   type: string
                               required:
                               - name
@@ -6897,8 +6903,10 @@ spec:
                                   minLength: 1
                                   type: string
                                 namespace:
-                                  description: Namespace is reserved for future cross-namespace
-                                    support.
+                                  description: |-
+                                    Namespace defaults to the referrer's namespace. If set, it must be
+                                    the same as the referrer's namespace; cross-namespace references are
+                                    not supported.
                                   type: string
                               required:
                               - name
@@ -8417,8 +8425,10 @@ spec:
                               minLength: 1
                               type: string
                             namespace:
-                              description: Namespace is reserved for future cross-namespace
-                                support.
+                              description: |-
+                                Namespace defaults to the referrer's namespace. If set, it must be
+                                the same as the referrer's namespace; cross-namespace references are
+                                not supported.
                               type: string
                           required:
                           - name
@@ -13334,8 +13344,10 @@ spec:
                                   minLength: 1
                                   type: string
                                 namespace:
-                                  description: Namespace is reserved for future cross-namespace
-                                    support.
+                                  description: |-
+                                    Namespace defaults to the referrer's namespace. If set, it must be
+                                    the same as the referrer's namespace; cross-namespace references are
+                                    not supported.
                                   type: string
                               required:
                               - name

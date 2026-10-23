@@ -14,6 +14,13 @@
 # Optional env:
 #   POLL_ATTEMPTS   Outer poll attempts. Default: 40.
 #   POLL_DELAY      Seconds between outer polls. Default: 3.
+#   CONFIRMATIONS   Number of *consecutive* non-matching attempts required
+#                   before concluding the mapping is gone. Default: 3. The
+#                   inner script reports certificate_match=false for ANY curl
+#                   failure (connection refused, TLS blip), not only for a
+#                   genuine mismatch, so a lone transient failure must not
+#                   conclude the poll - symmetric with REJECT_CONFIRMATIONS
+#                   in aigw_chat_completion.sh.
 #
 # Chainsaw usage: json_parse($stdout).certificate_match
 set -o errexit
@@ -23,6 +30,7 @@ set -o pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 POLL_ATTEMPTS="${POLL_ATTEMPTS:-40}"
 POLL_DELAY="${POLL_DELAY:-3}"
+CONFIRMATIONS="${CONFIRMATIONS:-3}"
 
 CA_CERT_RESULT=$(bash "${SCRIPT_DIR}/write_ca_cert_file.sh")
 CACERT_PATH=$(echo "${CA_CERT_RESULT}" | jq -r '.ca_cert_path')
@@ -34,13 +42,34 @@ trap 'rm -f "${CACERT_PATH}"' EXIT
 export MAX_RETRIES=1
 
 LAST_OUTPUT=""
+CONSECUTIVE=0
 for ATTEMPT in $(seq 1 "${POLL_ATTEMPTS}"); do
   LAST_OUTPUT=$(bash "${SCRIPT_DIR}/host_connectivity_test_with_hostname_tls_check.sh" || true)
-  MATCH=$(echo "${LAST_OUTPUT}" | jq -r '.certificate_match // "null"')
-  if [[ "${MATCH}" != "true" ]]; then
-    break
+  # tostring keeps a genuine JSON false distinct from a missing key: jq's
+  # "//" operator filters out boolean false, so ".certificate_match // empty"
+  # would hide the very mismatch this script waits for.
+  MATCH=$(echo "${LAST_OUTPUT}" | jq -r 'if type == "object" and has("certificate_match") then (.certificate_match | tostring) else empty end') || MATCH=""
+  if [ -z "${MATCH}" ]; then
+    # The inner script itself broke (no parseable result): that is an
+    # infrastructure error, not evidence of a mismatch - fail loudly instead
+    # of counting it toward the confirmation.
+    echo "wait_for_tls_sni_mismatch: inner script produced no result (attempt ${ATTEMPT})" >&2
+    exit 1
   fi
-  sleep "${POLL_DELAY}"
-done
-
+  if [[ "${MATCH}" != "true" ]]; then
+      CONSECUTIVE=$((CONSECUTIVE + 1))
+      if [[ "${CONSECUTIVE}" -ge "${CONFIRMATIONS}" ]]; then
+        break
+      fi
+    else
+      CONSECUTIVE=0
+    fi
+    if [ "${ATTEMPT}" -lt "${POLL_ATTEMPTS}" ]; then
+      sleep "${POLL_DELAY}"
+    fi
+  done
+  if [ "${CONSECUTIVE}" -lt "${CONFIRMATIONS}" ]; then
+    echo "wait_for_tls_sni_mismatch: no mismatch confirmed within ${POLL_ATTEMPTS} attempts (last streak: ${CONSECUTIVE})" >&2
+    exit 1
+  fi
 echo "${LAST_OUTPUT}"

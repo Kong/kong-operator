@@ -1258,7 +1258,7 @@ object's Konnect name is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -1465,7 +1465,7 @@ object's Konnect name is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -1779,7 +1779,7 @@ object's Konnect name is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -2625,7 +2625,7 @@ object's Konnect name is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -4868,7 +4868,7 @@ object's Konnect name is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -5600,7 +5600,7 @@ object's Konnect name is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 

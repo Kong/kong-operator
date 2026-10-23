@@ -18,6 +18,7 @@ import (
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -50,7 +51,7 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := createKEGClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "keg-cluster-ca")
+	clusterCA := createKEGClusterCASecret(t, ctx, cfg, ns.Name, "keg-cluster-ca")
 
 	// Builds the shared TypeConverter from the CRDs envtest already installed
 	// (in-process, apiserver-style; no OpenAPI publication lag to wait out).
@@ -1110,8 +1111,13 @@ func kegGetEnvValue(t *testing.T, envVars []corev1.EnvVar, name string) string {
 
 // createKEGClusterCASecret creates a self-signed CA Secret for use as the cluster CA
 // in KEG DataPlane controller tests.
-func createKEGClusterCASecret(t *testing.T, ctx context.Context, cl client.Client, namespace, name string) *corev1.Secret {
+func createKEGClusterCASecret(t *testing.T, ctx context.Context, cfg *rest.Config, namespace, name string) *corev1.Secret {
 	t.Helper()
+
+	// Uncached client: the Secret is seeded before StartReconcilers starts the
+	// manager, and going through the manager's client that early deadlocks under
+	// read-your-own-writes consistency.
+	cl := envtest.NewControllerClient(t, scheme.Get(), cfg)
 
 	cert, key := certificate.MustGenerateCertPEMFormat(
 		certificate.WithCommonName(fmt.Sprintf("%s-ca", name)),
@@ -1166,7 +1172,7 @@ func TestKEGDataPlaneReconciler_HPA(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := createKEGClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "keg-cluster-ca-hpa")
+	clusterCA := createKEGClusterCASecret(t, ctx, cfg, ns.Name, "keg-cluster-ca-hpa")
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, kegCRDGroups)
 	require.NoError(t, err)
@@ -1360,7 +1366,7 @@ func TestKEGDataPlaneReconciler_ManualCertificateSecret(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := createKEGClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "keg-cluster-ca")
+	clusterCA := createKEGClusterCASecret(t, ctx, cfg, ns.Name, "keg-cluster-ca")
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, kegCRDGroups)
 	require.NoError(t, err)
