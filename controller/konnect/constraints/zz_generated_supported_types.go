@@ -36,6 +36,7 @@ type SupportedGeneratedKonnectEntityType interface {
 		configurationv1alpha1.EventGatewayVirtualCluster |
 		configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy |
 		configurationv1alpha1.EventGatewayVirtualClusterPolicy |
+		configurationv1alpha1.EventGatewayVirtualClusterPolicyChain |
 		configurationv1alpha1.EventGatewayVirtualClusterProducePolicy |
 		konnectv1alpha1.KonnectAIGateway |
 		konnectv1alpha1.KonnectConfigStore |

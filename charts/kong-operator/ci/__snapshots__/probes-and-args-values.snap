@@ -74428,6 +74428,7 @@ rules:
   - eventgatewaytlstrustbundles
   - eventgatewayvirtualclusterconsumepolicies
   - eventgatewayvirtualclusterpolicies
+  - eventgatewayvirtualclusterpolicychains
   - eventgatewayvirtualclusterproducepolicies
   - eventgatewayvirtualclusters
   - kongcacertificates
@@ -74464,6 +74465,8 @@ rules:
   - eventgatewayvirtualclusterconsumepolicies/status
   - eventgatewayvirtualclusterpolicies/finalizers
   - eventgatewayvirtualclusterpolicies/status
+  - eventgatewayvirtualclusterpolicychains/finalizers
+  - eventgatewayvirtualclusterpolicychains/status
   - eventgatewayvirtualclusterproducepolicies/finalizers
   - eventgatewayvirtualclusterproducepolicies/status
   - eventgatewayvirtualclusters/finalizers

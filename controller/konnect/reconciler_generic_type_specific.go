@@ -15,6 +15,7 @@ import (
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/controller/konnect/ops"
@@ -56,6 +57,13 @@ func handleTypeSpecific[
 	}
 
 	switch e := any(ent).(type) {
+	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain:
+		if !isProblem {
+			owned, res, err := claimPolicyChain(ctx, cl, e)
+			if err != nil || !res.IsZero() || !owned {
+				return true, res, err
+			}
+		}
 	case *configurationv1.KongConsumer:
 		u, p := handleKongConsumerSpecific(ctx, cl, e)
 		updated = updated || u
@@ -335,6 +343,9 @@ func isExpectedKonnectReferenceResolutionError(err error) bool {
 		}
 		return true
 	}
+	if _, ok := errors.AsType[configurationv1alpha1.PolicyChainInvalidError](err); ok {
+		return true
+	}
 	if _, ok := errors.AsType[commonv1alpha1.ReferenceNotFoundError](err); ok {
 		return true
 	}
@@ -366,6 +377,9 @@ func isExpectedKonnectReferenceResolutionError(err error) bool {
 }
 
 func hasInvalidKonnectReferenceResolutionError(err error) bool {
+	if _, ok := errors.AsType[configurationv1alpha1.PolicyChainInvalidError](err); ok {
+		return true
+	}
 	if _, ok := errors.AsType[commonv1alpha1.ReferenceCrossNamespaceError](err); ok {
 		return true
 	}

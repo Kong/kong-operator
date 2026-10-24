@@ -126,6 +126,8 @@ func Create[
 		err = createSNI(ctx, sdk.GetSNIsSDK(), ent)
 	case *configurationv1alpha1.KongDataPlaneClientCertificate:
 		err = CreateKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), ent)
+	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain:
+		err = applyEventGatewayVirtualClusterPolicyChain(ctx, cl, sdk.GetEventGatewayVirtualClusterPoliciesSDK(), ent, CreateOp)
 	case *konnectv1alpha1.MCPServer:
 		// MCPServer is mirror-only, so we use Konnect as the source of truth for it.
 		err = ensureMCPServer(ctx, sdk.GetMCPServersSDK(), ent)
@@ -444,6 +446,9 @@ func Delete[
 		err = deleteSNI(ctx, sdk.GetSNIsSDK(), e)
 	case *configurationv1alpha1.KongDataPlaneClientCertificate:
 		err = DeleteKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), e)
+	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain:
+		// Deleting the declaration relinquishes management, not remote configuration.
+		break
 	case *konnectv1alpha1.MCPServer:
 		// MCPServer is mirror-only, so we use Konnect as the source of truth for it.
 		break
@@ -611,6 +616,8 @@ func Update[
 		err = nil // AIGatewayConsumerCredentials are immutable.
 	case *configurationv1alpha1.EventGatewayStaticKey:
 		err = updateEventGatewayStaticKey(ctx, cl, sdk.GetEventGatewayStaticKeysSDK(), ent)
+	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain:
+		err = applyEventGatewayVirtualClusterPolicyChain(ctx, cl, sdk.GetEventGatewayVirtualClusterPoliciesSDK(), ent, UpdateOp)
 	case *konnectv1alpha1.MCPServer:
 		// MCPServer is mirror-only, so we use Konnect as the source of truth for it.
 		break

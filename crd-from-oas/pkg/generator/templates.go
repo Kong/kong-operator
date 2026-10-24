@@ -738,7 +738,7 @@ import (
 
 {{if .NeedsSecretFetchImport}}	corev1 "k8s.io/api/core/v1"
 {{end}}{{if .NeedsCrossNamespaceCheck}}	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-{{end}}{{if .References}}	apierrors "k8s.io/apimachinery/pkg/api/errors"
+{{end}}{{if .NeedsReferenceLookup}}	apierrors "k8s.io/apimachinery/pkg/api/errors"
 {{end}}	"sigs.k8s.io/controller-runtime/pkg/client"
 {{- end}}
 
@@ -1048,7 +1048,11 @@ func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Clie
 {{- else if .DirectScalarRef}}
 	payload["{{.SDKJSONFieldName}}"] = resolved{{.GoResolverName}}[0]
 {{- else}}
+{{- if eq $.EntityName "EventGatewayVirtualClusterPolicyChain"}}
+	// Always include the resolved list, even when empty; this does not clear policies.
+{{- else}}
 	// Always set: an empty list must explicitly clear the field in Konnect.
+{{- end}}
 	payload["{{.SDKJSONFieldName}}"] = resolved{{.GoResolverName}}
 {{- end}}
 {{- end}}
@@ -1341,6 +1345,9 @@ func (obj *{{$.EntityName}}) GetConfigMapDataSourceRefs() []ConfigMapDataSourceR
 // resolve{{$.EntityName}}{{.GoResolverName}} resolves the ObjectRef at {{.Path}}
 // to a Konnect {{if .ResolvesToName}}name{{else}}ID{{end}}.
 func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.Client, obj *{{$.EntityName}}) ([]string, error) {
+{{- if .ResolverMethod}}
+	return obj.{{.ResolverMethod}}(ctx, cl)
+{{- else}}
 	ref := obj.Spec.APISpec.{{.GoFieldName}}
 	if ref == nil {
 		return nil, nil
@@ -1416,6 +1423,7 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 	default:
 		return nil, fmt.Errorf("unsupported reference type %q at {{.Path}}", ref.Type)
 	}
+{{- end}}
 }
 {{- else}}
 {{- if or .NestedRef .OptionalRef}}
@@ -1524,6 +1532,9 @@ func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) {{if .Nest
 // resolve{{$.EntityName}}{{.GoResolverName}} resolves the CR references in {{.Path}}
 // to Konnect {{if .ResolvesToName}}names{{else}}IDs{{end}}.
 func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.Client, obj *{{$.EntityName}}) ({{if .NestedArrayList}}[][]{{else}}[]{{end}}string, error) {
+{{- if .ResolverMethod}}
+	return obj.{{.ResolverMethod}}(ctx, cl)
+{{- else}}
 {{- $collect := "resolved"}}
 {{- if .NestedArrayList}}
 	groups := {{.RefsExpr}}
@@ -1689,6 +1700,7 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 		return nil, err
 	}
 	return resolved, nil
+{{- end}}
 }
 {{- end}}
 {{- end}}
@@ -1996,7 +2008,7 @@ import (
 
 {{if .NeedsSecretFetchImport}}	corev1 "k8s.io/api/core/v1"
 {{end}}{{if .NeedsCrossNamespaceCheck}}	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-{{end}}{{if .References}}	apierrors "k8s.io/apimachinery/pkg/api/errors"
+{{end}}{{if .NeedsReferenceLookup}}	apierrors "k8s.io/apimachinery/pkg/api/errors"
 {{end}}	"sigs.k8s.io/controller-runtime/pkg/client"
 {{- end}}
 
@@ -3528,7 +3540,9 @@ func update{{.Entity}}(
 {{- range .Parents}}
 	req.{{.SDKFieldName}} = {{.VarName}}
 {{- end}}
+{{- if not .UpdateOmitsEntityID}}
 	req.{{.EntityIDField}} = id
+{{- end}}
 
 	{{if .ResponseStatusFields}}resp, err :={{else}}_, err ={{end}} sdk.{{.UpdateSDKMethod}}(ctx, *req)
 {{- else if .UpdateWrapped}}

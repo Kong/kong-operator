@@ -4383,6 +4383,35 @@ func TestGenerateOnPremEventGatewayEntitiesDispatcher(t *testing.T) {
 		require.NoError(t, err)
 		assert.Nil(t, file)
 	})
+
+	t.Run("explicit opt out excludes roots and descendants but keeps siblings", func(t *testing.T) {
+		skippedRoot := entity("SkippedRoot", "KonnectEventGateway", onPrem)
+		skippedRoot.SkipOnPremEventGateway = true
+		skippedChild := entity("SkippedChild", "EventGatewayBackendCluster", nil)
+		skippedChild.SkipOnPremEventGateway = true
+		file, err := GenerateOnPremEventGatewayEntitiesDispatcher([]*WatchFileInfo{
+			skippedRoot,
+			entity("ChildOfSkippedRoot", "SkippedRoot", nil),
+			skippedChild,
+			entity("ChildOfSkippedChild", "SkippedChild", nil),
+			entity("EventGatewayBackendCluster", "KonnectEventGateway", onPrem),
+			entity("EventGatewayVirtualCluster", "EventGatewayBackendCluster", nil),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, file)
+		for _, kind := range []string{"SkippedRoot", "ChildOfSkippedRoot", "SkippedChild", "ChildOfSkippedChild"} {
+			assert.NotContains(t, file.Content, kind)
+			assert.NotContains(t, file.Content, strings.ToLower(kind))
+		}
+		assert.Contains(t, file.Content, "&configurationv1alpha1.EventGatewayBackendCluster{},")
+		assert.Contains(t, file.Content, "&configurationv1alpha1.EventGatewayVirtualCluster{},")
+		assert.Contains(t, file.Content, "index.OptionsForEventGatewayBackendCluster(),")
+		assert.Contains(t, file.Content, "index.OptionsForEventGatewayVirtualCluster(),")
+
+		file, err = GenerateOnPremEventGatewayEntitiesDispatcher([]*WatchFileInfo{skippedRoot})
+		require.NoError(t, err)
+		assert.Nil(t, file)
+	})
 }
 
 func TestGenerateKonnectConstraintsDispatcher(t *testing.T) {
@@ -4785,6 +4814,38 @@ func TestGenerateReconcilerFiles_IncludesRBAC(t *testing.T) {
 	require.NotNil(t, rbacFile, "expected RBAC file in generated files")
 	assert.Equal(t, "controller/konnect", rbacFile.RelativeDir)
 	assert.Contains(t, rbacFile.Content, "//+kubebuilder:rbac:groups=x-konnect.konghq.com,resources=portals,verbs=get;list;watch;update;patch")
+}
+
+func TestGenerateReconcilerFiles_SkipOnPremEventGateway(t *testing.T) {
+	for _, skip := range []bool{false, true} {
+		t.Run(fmt.Sprintf("skip=%t", skip), func(t *testing.T) {
+			g := NewGenerator(Config{
+				APIGroup:             "konnect.konghq.com",
+				APIVersion:           "v1alpha1",
+				APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+				APIGroupPackageAlias: "konnectv1alpha1",
+				ReconcilerConfig: map[string]*config.ReconcilerConfig{
+					"Portal": {IsRoot: new(true), SkipOnPremEventGateway: skip},
+				},
+			})
+			_, err := g.generateReconcilerFiles(
+				[]string{"Portal"}, map[string]*parser.Schema{"Portal": {Name: "CreatePortal"}},
+			)
+			require.NoError(t, err)
+			require.Len(t, g.watchInfos, 1)
+			assert.Equal(t, skip, g.watchInfos[0].SkipOnPremEventGateway)
+
+			controllers, err := GenerateKonnectControllerSetupDispatcher(g.watchInfos)
+			require.NoError(t, err)
+			assert.Contains(t, controllers.Content, "newKonnectEntityController[konnectv1alpha1.Portal]")
+			indexes, err := GenerateKonnectIndexOptionsDispatcher(g.watchInfos)
+			require.NoError(t, err)
+			assert.Contains(t, indexes.Content, "index.OptionsForPortal()")
+			watches, err := GenerateWatchDispatcher(g.watchInfos)
+			require.NoError(t, err)
+			assert.Contains(t, watches.Content, "PortalReconciliationWatchOptions")
+		})
+	}
 }
 
 func TestGenerateOpsCreate_RootEntity(t *testing.T) {
@@ -6252,6 +6313,50 @@ func TestGenerateSDKOps_EmitsResolveKonnectReferences(t *testing.T) {
 	require.Contains(t, content, "func (obj *AIGatewayAgent) ResolveKonnectReferences(ctx context.Context, cl client.Client) error {")
 	require.Contains(t, content, "if _, err := resolveAIGatewayAgentPolicies(ctx, cl, obj); err != nil {")
 	require.Contains(t, content, "return errors.Join(errs...)")
+}
+
+func TestGenerateSDKOps_CustomReferenceResolver(t *testing.T) {
+	for _, mixed := range []bool{false, true} {
+		t.Run(fmt.Sprintf("mixed=%t", mixed), func(t *testing.T) {
+			refs := []config.ReferenceConfig{{
+				Path: "spec.apiSpec.policies", Kinds: []string{"AIGatewayPolicy"},
+				ResolvesTo: "id", ResolverMethod: "ResolveValidatedPolicyIDs",
+			}}
+			if mixed {
+				refs = append(refs, config.ReferenceConfig{
+					Path: "spec.apiSpec.consumerGroups", Kinds: []string{"AIGatewayConsumerGroup"}, ResolvesTo: "id",
+				})
+			}
+			g := NewGenerator(Config{
+				APIVersion: "v1alpha1",
+				References: map[string][]config.ReferenceConfig{"AIGatewayAgent": refs},
+			})
+			schema := &parser.Schema{Properties: []*parser.Property{
+				{Name: "policies", Type: "array"}, {Name: "consumerGroups", Type: "array"},
+			}}
+			content, err := g.generateSDKOps("AIGatewayAgent", schema, &config.EntityOpsConfig{
+				Ops: map[string]*config.OpConfig{
+					"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayAgentRequest"},
+					"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayAgentRequest"},
+				},
+			})
+			require.NoError(t, err)
+			_, err = format.Source([]byte(content))
+			require.NoError(t, err)
+			require.Contains(t, content, "return obj.ResolveValidatedPolicyIDs(ctx, cl)")
+			require.NotContains(t, content, "var referenced AIGatewayPolicy")
+			require.NotContains(t, content, "for _, ref := range obj.Spec.APISpec.Policies")
+			require.Equal(t, 3, strings.Count(content, "resolveAIGatewayAgentPolicies(ctx, cl, obj)"),
+				"both converters and ResolveKonnectReferences must use the same helper")
+			if mixed {
+				require.Contains(t, content, `apierrors "k8s.io/apimachinery/pkg/api/errors"`)
+				require.Contains(t, content, "var referenced AIGatewayConsumerGroup")
+			} else {
+				require.NotContains(t, content, `"k8s.io/apimachinery/pkg/api/errors"`)
+				require.NotContains(t, content, "cl.Get(")
+			}
+		})
+	}
 }
 
 func TestGenerateSDKOps_CrossNamespaceSiblingReferences(t *testing.T) {
