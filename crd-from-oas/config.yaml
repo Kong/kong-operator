@@ -1211,6 +1211,7 @@ apiGroupVersions:
           - path: spec.apiSpec.policies
             kinds: [EventGatewayVirtualClusterPolicy]
             resolvesTo: id
+            resolverMethod: ResolveValidatedPolicyIDs
         cel:
           _validations:
             - '+kubebuilder:validation:XValidation:rule="self.spec.eventGatewayVirtualClusterRef == oldSelf.spec.eventGatewayVirtualClusterRef",message="spec.eventGatewayVirtualClusterRef is immutable",fieldPath=".spec.eventGatewayVirtualClusterRef"'

@@ -59,6 +59,14 @@ explicit empty list during JSON serialization.
 `+required` to require those containers instead of their default `+optional`.
 Requiredness overrides replace the opposite marker rather than emitting both.
 
+A `references` entry can set `resolverMethod` to a hand-written CR method taking
+`(context.Context, client.Client)` and returning the generated resolver's result
+shape and an error. For example, `resolverMethod: ResolveValidatedPolicyIDs`
+lets one reference list apply stricter readiness and parent checks consistently
+in `ResolveKonnectReferences` and both SDK converters. The method must validate
+every reference and preserve order and explicit empty lists. Entries without
+this setting retain the default generated resolution.
+
 `dataSources` lets a field be provided inline or read from a Kubernetes
 object in the same (or, for Secrets, a granted) namespace. The field becomes a
 union struct with a `type` discriminator:

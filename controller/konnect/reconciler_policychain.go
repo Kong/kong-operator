@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	apiconsts "github.com/kong/kong-operator/v2/api/common/consts"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -24,24 +25,26 @@ func finalizePolicyChain(ctx context.Context, cl client.Client, chain *configura
 	if chain.DeletionTimestamp.After(time.Now()) {
 		return ctrl.Result{RequeueAfter: time.Until(chain.DeletionTimestamp.Time)}, nil
 	}
-	ref := chain.Spec.EventGatewayVirtualClusterRef.NamespacedRef
-	if ref == nil || ref.Name == "" || (ref.Namespace != nil && *ref.Namespace != "" && *ref.Namespace != chain.Namespace) {
-		return ctrl.Result{}, configurationv1alpha1.PolicyChainInvalidError{Message: "cannot release ownership without a same-namespace virtual cluster reference"}
-	}
-	var parent configurationv1alpha1.EventGatewayVirtualCluster
-	if err := cl.Get(ctx, client.ObjectKey{Namespace: chain.Namespace, Name: ref.Name}, &parent); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return ctrl.Result{}, fmt.Errorf("getting virtual cluster to release policy chain ownership: %w", err)
-		}
-	} else if parent.Annotations[policyChainOwnerAnnotation] == chain.Name+"/"+string(chain.UID) {
-		old := parent.DeepCopy()
-		delete(parent.Annotations, policyChainOwnerAnnotation)
-		if err := cl.Patch(ctx, &parent, client.MergeFromWithOptions(old, client.MergeFromWithOptimisticLock{})); err != nil {
-			if apierrors.IsConflict(err) {
-				return ctrl.Result{Requeue: true}, nil
-			}
+	ref := chain.Spec.EventGatewayVirtualClusterRef
+	// Invalid parent references cannot claim ownership, but can acquire the
+	// generic cleanup finalizer before validation rejects them.
+	if ref.Type == commonv1alpha1.ObjectRefTypeNamespacedRef && ref.NamespacedRef != nil && ref.NamespacedRef.Name != "" &&
+		(ref.NamespacedRef.Namespace == nil || *ref.NamespacedRef.Namespace == "" || *ref.NamespacedRef.Namespace == chain.Namespace) {
+		var parent configurationv1alpha1.EventGatewayVirtualCluster
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: chain.Namespace, Name: ref.NamespacedRef.Name}, &parent); err != nil {
 			if !apierrors.IsNotFound(err) {
-				return ctrl.Result{}, fmt.Errorf("releasing policy chain ownership: %w", err)
+				return ctrl.Result{}, fmt.Errorf("getting virtual cluster to release policy chain ownership: %w", err)
+			}
+		} else if parent.Annotations[policyChainOwnerAnnotation] == chain.Name+"/"+string(chain.UID) {
+			old := parent.DeepCopy()
+			delete(parent.Annotations, policyChainOwnerAnnotation)
+			if err := cl.Patch(ctx, &parent, client.MergeFromWithOptions(old, client.MergeFromWithOptimisticLock{})); err != nil {
+				if apierrors.IsConflict(err) {
+					return ctrl.Result{Requeue: true}, nil
+				}
+				if !apierrors.IsNotFound(err) {
+					return ctrl.Result{}, fmt.Errorf("releasing policy chain ownership: %w", err)
+				}
 			}
 		}
 	}

@@ -169,3 +169,67 @@ spec:
 	require.Equal(t, []string{"second-id", "first-recreated-id"}, remote)
 	mu.Unlock()
 }
+
+func TestEventGatewayVirtualClusterPolicyChainCrossNamespaceDeletion(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := envtest.Context(t, t.Context())
+	defer cancel()
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
+	factory := sdkmocks.NewMockSDKFactory(t)
+	envtest.StartReconcilers(ctx, t, mgr, logs,
+		konnect.NewKonnectEntityReconciler[configurationv1alpha1.EventGatewayVirtualClusterPolicyChain](
+			factory, logging.DevelopmentMode, mgr.GetClient(),
+			konnect.WithMetricRecorder[configurationv1alpha1.EventGatewayVirtualClusterPolicyChain](&metricsmocks.MockRecorder{}),
+		),
+	)
+	cl, err := client.New(cfg, client.Options{Scheme: scheme.Get()})
+	require.NoError(t, err)
+	parentNS := deploy.Namespace(t, ctx, cl)
+	parentClient := client.NewNamespacedClient(cl, parentNS.Name)
+	auth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, parentClient)
+	gateway := deploy.KonnectEventGateway(t, ctx, parentClient, auth)
+	envtest.UpdateKonnectEventGatewayStatusWithProgrammed(t, ctx, parentClient, gateway, "gateway-id")
+	backend := deploy.EventGatewayBackendCluster(t, ctx, parentClient, gateway)
+	vc := deploy.EventGatewayVirtualCluster(t, ctx, parentClient, backend, deploy.WithName("vc"))
+	vc.SetKonnectID("vc-id")
+	vc.SetGatewayID("gateway-id")
+	vc.Status.Conditions = []metav1.Condition{envtest.ProgrammedCondition(vc.Generation)}
+	require.NoError(t, cl.Status().Update(ctx, vc))
+	chain := objectFromYAML[configurationv1alpha1.EventGatewayVirtualClusterPolicyChain](t, ns.Name, `
+metadata: {name: cross-namespace}
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef: {name: vc, namespace: `+parentNS.Name+`}
+  apiSpec: {policies: []}
+`)
+	// KongReferenceGrant admission currently excludes this kind. Seed the cleanup
+	// finalizer here; the grant-authorized runtime path is covered by a fake-client test.
+	chain.Finalizers = []string{konnect.KonnectCleanupFinalizer}
+	require.NoError(t, cl.Create(ctx, chain), "cross-namespace parents are admitted")
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(chain), chain)) {
+			return
+		}
+		assert.Contains(ct, chain.Finalizers, konnect.KonnectCleanupFinalizer)
+		grant := meta.FindStatusCondition(chain.Status.Conditions, "ResolvedRefs")
+		if assert.NotNil(ct, grant) {
+			assert.Equal(ct, metav1.ConditionFalse, grant.Status)
+			assert.Equal(ct, string(configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted), grant.Reason)
+		}
+		programmed := meta.FindStatusCondition(chain.Status.Conditions, "Programmed")
+		if assert.NotNil(ct, programmed) {
+			assert.Equal(ct, metav1.ConditionFalse, programmed.Status)
+		}
+	}, consts.WaitTime, consts.TickTime)
+	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(vc), vc))
+	require.NotContains(t, vc.Annotations, "gateway-operator.konghq.com/cluster-policy-chain-owner")
+	require.NoError(t, cl.Delete(ctx, chain))
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		assert.True(ct, apierrors.IsNotFound(cl.Get(ctx, client.ObjectKeyFromObject(chain), chain)))
+	}, consts.WaitTime, consts.TickTime)
+	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(vc), vc))
+	factory.SDK.EventGatewayVirtualClusterPoliciesSDK.AssertNotCalled(t, "GetEventGatewayVirtualClusterClusterLevelPolicyChain", mock.Anything, mock.Anything, mock.Anything)
+	factory.SDK.EventGatewayVirtualClusterPoliciesSDK.AssertNotCalled(t, "UpdateEventGatewayVirtualClusterClusterLevelPolicyChain", mock.Anything, mock.Anything)
+}

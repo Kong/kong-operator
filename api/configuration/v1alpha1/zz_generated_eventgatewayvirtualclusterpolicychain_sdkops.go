@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -38,49 +37,7 @@ func (s *EventGatewayVirtualClusterPolicyChainAPISpec) marshalSDKOpsPayload() ([
 // resolveEventGatewayVirtualClusterPolicyChainPolicies resolves the CR references in spec.apiSpec.policies
 // to Konnect IDs.
 func resolveEventGatewayVirtualClusterPolicyChainPolicies(ctx context.Context, cl client.Client, obj *EventGatewayVirtualClusterPolicyChain) ([]string, error) {
-	resolved := make([]string, 0, len(obj.Spec.APISpec.Policies))
-	var errs []error
-	for _, ref := range obj.Spec.APISpec.Policies {
-		ns := ref.Namespace
-		if ns == "" {
-			ns = obj.GetNamespace()
-		}
-		kind := ref.Kind
-		if kind == "" {
-			kind = "EventGatewayVirtualClusterPolicy"
-		}
-		if ref.Name == "" {
-			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
-			continue
-		}
-		if ns != obj.GetNamespace() {
-			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
-			continue
-		}
-		var referenced EventGatewayVirtualClusterPolicy
-		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
-			if apierrors.IsNotFound(err) {
-				errs = append(errs, ReferenceNotFoundError{Kind: "EventGatewayVirtualClusterPolicy", Namespace: ns, Name: ref.Name, Err: err})
-				continue
-			}
-			errs = append(errs, fmt.Errorf("failed to get referenced EventGatewayVirtualClusterPolicy %s/%s: %w", ns, ref.Name, err))
-			continue
-		}
-		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
-			errs = append(errs, ReferenceDifferentGatewayError{Kind: "EventGatewayVirtualClusterPolicy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
-			continue
-		}
-		id := referenced.GetKonnectID()
-		if id == "" {
-			errs = append(errs, ReferenceNotProgrammedError{Kind: "EventGatewayVirtualClusterPolicy", Namespace: ns, Name: ref.Name})
-			continue
-		}
-		resolved = append(resolved, id)
-	}
-	if err := errors.Join(errs...); err != nil {
-		return nil, err
-	}
-	return resolved, nil
+	return obj.ResolveValidatedPolicyIDs(ctx, cl)
 }
 
 // ResolveKonnectReferences resolves every CR reference declared on the spec and

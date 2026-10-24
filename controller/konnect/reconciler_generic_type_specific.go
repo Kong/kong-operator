@@ -44,9 +44,6 @@ func handleTypeSpecific[
 	)
 
 	if resolver, ok := any(ent).(konnectReferenceResolver); ok {
-		if chain, ok := any(ent).(*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain); ok {
-			resolver = policyChainReferenceResolver{chain}
-		}
 		refUpdated, refProblem, refRes, err := handleKonnectReferences(ctx, cl, ent, resolver)
 		if err != nil {
 			return false, ctrl.Result{}, err
@@ -157,18 +154,6 @@ func handleKongConsumerSpecific(
 // that declare CR references on their spec (see crd-from-oas `references` config).
 type konnectReferenceResolver interface {
 	ResolveKonnectReferences(ctx context.Context, cl client.Client) error
-}
-
-type policyChainReferenceResolver struct {
-	*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain
-}
-
-// ResolveKonnectReferences validates chain membership before resolving ordered IDs.
-func (r policyChainReferenceResolver) ResolveKonnectReferences(ctx context.Context, cl client.Client) error {
-	if err := r.ValidatePolicyReferences(ctx, cl); err != nil {
-		return err
-	}
-	return r.EventGatewayVirtualClusterPolicyChain.ResolveKonnectReferences(ctx, cl)
 }
 
 // crossNamespaceSiblingReferences returns every cross-namespace sibling

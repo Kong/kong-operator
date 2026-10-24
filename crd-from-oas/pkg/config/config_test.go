@@ -1355,6 +1355,18 @@ func TestReferenceConfigValidation(t *testing.T) {
 		wantErr string
 	}{
 		{name: "valid single-kind id ref", cfg: base(nil)},
+		{name: "custom resolver", cfg: base(func(rc *ReferenceConfig) {
+			rc.ResolverMethod = "ResolveValidatedPolicyIDs"
+		})},
+		{name: "invalid custom resolver", cfg: base(func(rc *ReferenceConfig) {
+			rc.ResolverMethod = "Resolve.PolicyIDs"
+		}), wantErr: "resolverMethod must be a Go method name"},
+		{name: "keyword custom resolver", cfg: base(func(rc *ReferenceConfig) {
+			rc.ResolverMethod = "func"
+		}), wantErr: "resolverMethod must be a Go method name"},
+		{name: "blank custom resolver", cfg: base(func(rc *ReferenceConfig) {
+			rc.ResolverMethod = "_"
+		}), wantErr: "resolverMethod must be a Go method name"},
 		{
 			name:    "empty kinds rejected",
 			cfg:     base(func(rc *ReferenceConfig) { rc.Kinds = nil }),

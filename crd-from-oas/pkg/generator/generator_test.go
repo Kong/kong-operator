@@ -6315,6 +6315,50 @@ func TestGenerateSDKOps_EmitsResolveKonnectReferences(t *testing.T) {
 	require.Contains(t, content, "return errors.Join(errs...)")
 }
 
+func TestGenerateSDKOps_CustomReferenceResolver(t *testing.T) {
+	for _, mixed := range []bool{false, true} {
+		t.Run(fmt.Sprintf("mixed=%t", mixed), func(t *testing.T) {
+			refs := []config.ReferenceConfig{{
+				Path: "spec.apiSpec.policies", Kinds: []string{"AIGatewayPolicy"},
+				ResolvesTo: "id", ResolverMethod: "ResolveValidatedPolicyIDs",
+			}}
+			if mixed {
+				refs = append(refs, config.ReferenceConfig{
+					Path: "spec.apiSpec.consumerGroups", Kinds: []string{"AIGatewayConsumerGroup"}, ResolvesTo: "id",
+				})
+			}
+			g := NewGenerator(Config{
+				APIVersion: "v1alpha1",
+				References: map[string][]config.ReferenceConfig{"AIGatewayAgent": refs},
+			})
+			schema := &parser.Schema{Properties: []*parser.Property{
+				{Name: "policies", Type: "array"}, {Name: "consumerGroups", Type: "array"},
+			}}
+			content, err := g.generateSDKOps("AIGatewayAgent", schema, &config.EntityOpsConfig{
+				Ops: map[string]*config.OpConfig{
+					"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayAgentRequest"},
+					"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayAgentRequest"},
+				},
+			})
+			require.NoError(t, err)
+			_, err = format.Source([]byte(content))
+			require.NoError(t, err)
+			require.Contains(t, content, "return obj.ResolveValidatedPolicyIDs(ctx, cl)")
+			require.NotContains(t, content, "var referenced AIGatewayPolicy")
+			require.NotContains(t, content, "for _, ref := range obj.Spec.APISpec.Policies")
+			require.Equal(t, 3, strings.Count(content, "resolveAIGatewayAgentPolicies(ctx, cl, obj)"),
+				"both converters and ResolveKonnectReferences must use the same helper")
+			if mixed {
+				require.Contains(t, content, `apierrors "k8s.io/apimachinery/pkg/api/errors"`)
+				require.Contains(t, content, "var referenced AIGatewayConsumerGroup")
+			} else {
+				require.NotContains(t, content, `"k8s.io/apimachinery/pkg/api/errors"`)
+				require.NotContains(t, content, "cl.Get(")
+			}
+		})
+	}
+}
+
 func TestGenerateSDKOps_CrossNamespaceSiblingReferences(t *testing.T) {
 	g := NewGenerator(Config{
 		APIVersion: "v1alpha1",

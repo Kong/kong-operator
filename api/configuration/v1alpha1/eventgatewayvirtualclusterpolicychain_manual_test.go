@@ -1,13 +1,16 @@
 package v1alpha1
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
@@ -62,6 +65,9 @@ func TestEventGatewayVirtualClusterPolicyChainReferences(t *testing.T) {
 		err    string
 	}{
 		{name: "ordered references"},
+		{name: "explicit empty", change: func(c *EventGatewayVirtualClusterPolicyChain, _ *EventGatewayVirtualClusterPolicy) {
+			c.Spec.APISpec.Policies = []EventGatewayVirtualClusterPolicyRef{}
+		}},
 		{name: "explicit same namespace", change: func(c *EventGatewayVirtualClusterPolicyChain, p *EventGatewayVirtualClusterPolicy) {
 			c.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Namespace = new("default")
 			c.Spec.APISpec.Policies[0].Namespace = "default"
@@ -85,6 +91,19 @@ func TestEventGatewayVirtualClusterPolicyChainReferences(t *testing.T) {
 		{name: "wrong parent", change: func(_ *EventGatewayVirtualClusterPolicyChain, p *EventGatewayVirtualClusterPolicy) {
 			p.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Name = "other"
 		}, err: "different EventGatewayVirtualCluster"},
+		{name: "wrong parent ID", change: func(_ *EventGatewayVirtualClusterPolicyChain, p *EventGatewayVirtualClusterPolicy) {
+			p.SetVirtualClusterID("other")
+		}, err: "different EventGatewayVirtualCluster"},
+		{name: "wrong gateway ID", change: func(_ *EventGatewayVirtualClusterPolicyChain, p *EventGatewayVirtualClusterPolicy) {
+			p.SetGatewayID("other")
+		}, err: "not referrer Gateway"},
+		{name: "cross-namespace parent", change: func(c *EventGatewayVirtualClusterPolicyChain, _ *EventGatewayVirtualClusterPolicy) {
+			c.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Namespace = new("other")
+		}, err: "same namespace"},
+		{name: "deleting", change: func(_ *EventGatewayVirtualClusterPolicyChain, p *EventGatewayVirtualClusterPolicy) {
+			p.DeletionTimestamp = new(metav1.Now())
+			p.Finalizers = []string{"test"}
+		}, err: "being deleted"},
 		{name: "unready", change: func(_ *EventGatewayVirtualClusterPolicyChain, p *EventGatewayVirtualClusterPolicy) {
 			p.Status.Conditions[0].Status = metav1.ConditionFalse
 		}, err: "not programmed"},
@@ -102,11 +121,15 @@ func TestEventGatewayVirtualClusterPolicyChainReferences(t *testing.T) {
 					},
 				},
 			}
+			c.SetGatewayID("gateway-id")
+			c.SetVirtualClusterID("vc-id")
 			first := &EventGatewayVirtualClusterPolicy{
 				Name: "first", Namespace: "default", Generation: 1,
 				Spec: EventGatewayVirtualClusterPolicySpec{EventGatewayVirtualClusterRef: *parent.DeepCopy()},
 			}
 			first.SetKonnectID("first-id")
+			first.SetGatewayID("gateway-id")
+			first.SetVirtualClusterID("vc-id")
 			first.Status.Conditions = []metav1.Condition{{Type: "Programmed", Status: metav1.ConditionTrue, ObservedGeneration: 1}}
 			second := first.DeepCopy()
 			second.Name = "second"
@@ -116,16 +139,57 @@ func TestEventGatewayVirtualClusterPolicyChainReferences(t *testing.T) {
 			}
 			s := runtime.NewScheme()
 			require.NoError(t, AddToScheme(s))
-			cl := fake.NewClientBuilder().WithScheme(s).WithObjects(first, second).Build()
-			err := c.ValidatePolicyReferences(t.Context(), cl)
-			if tt.err != "" {
-				require.ErrorContains(t, err, tt.err)
-				return
+			for _, entry := range []struct {
+				name string
+				call func(context.Context, client.Client) ([]string, error)
+				ids  bool
+			}{
+				{name: "validate", call: func(ctx context.Context, cl client.Client) ([]string, error) {
+					return nil, c.ValidatePolicyReferences(ctx, cl)
+				}},
+				{name: "resolve", call: func(ctx context.Context, cl client.Client) ([]string, error) {
+					return nil, c.ResolveKonnectReferences(ctx, cl)
+				}},
+				{name: "create converter", ids: true, call: func(ctx context.Context, cl client.Client) ([]string, error) {
+					req, err := c.ToCreateUpdateEventGatewayVirtualClusterClusterLevelPolicyChainRequest(ctx, cl)
+					if err != nil {
+						return nil, err
+					}
+					return req.UpdateEventGatewayPolicyChainRequest.Policies, nil
+				}},
+				{name: "update converter", ids: true, call: func(ctx context.Context, cl client.Client) ([]string, error) {
+					req, err := c.ToUpdateUpdateEventGatewayVirtualClusterClusterLevelPolicyChainRequest(ctx, cl)
+					if err != nil {
+						return nil, err
+					}
+					return req.UpdateEventGatewayPolicyChainRequest.Policies, nil
+				}},
+			} {
+				t.Run(entry.name, func(t *testing.T) {
+					reads := 0
+					cl := fake.NewClientBuilder().WithScheme(s).WithObjects(first, second).
+						WithInterceptorFuncs(interceptor.Funcs{
+							Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+								reads++
+								return cl.Get(ctx, key, obj, opts...)
+							},
+						}).Build()
+					ids, err := entry.call(t.Context(), cl)
+					if tt.err != "" {
+						require.ErrorContains(t, err, tt.err)
+						return
+					}
+					require.NoError(t, err)
+					require.Equal(t, len(c.Spec.APISpec.Policies), reads, "read each policy once per entry")
+					if entry.ids {
+						expected := []string{"second-id", "first-id"}
+						if len(c.Spec.APISpec.Policies) == 0 {
+							expected = []string{}
+						}
+						require.Equal(t, expected, ids)
+					}
+				})
 			}
-			require.NoError(t, err)
-			req, err := c.ToUpdateUpdateEventGatewayVirtualClusterClusterLevelPolicyChainRequest(t.Context(), cl)
-			require.NoError(t, err)
-			require.Equal(t, []string{"second-id", "first-id"}, req.UpdateEventGatewayPolicyChainRequest.Policies)
 			require.False(t, c.PersistsKonnectID())
 		})
 	}
