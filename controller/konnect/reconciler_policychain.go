@@ -80,15 +80,16 @@ func claimPolicyChain(ctx context.Context, cl client.Client, chain *configuratio
 	owner := parent.Annotations[policyChainOwnerAnnotation]
 	if owner != "" && owner != claim {
 		name, uid, valid := strings.Cut(owner, "/")
-		if !valid {
-			return false, ctrl.Result{}, fmt.Errorf("invalid %s annotation %q on %s", policyChainOwnerAnnotation, owner, client.ObjectKeyFromObject(&parent))
-		}
 		var existing configurationv1alpha1.EventGatewayVirtualClusterPolicyChain
-		err := cl.Get(ctx, client.ObjectKey{Namespace: chain.Namespace, Name: name}, &existing)
-		if err != nil && !apierrors.IsNotFound(err) {
-			return false, ctrl.Result{}, err
+		claimed := false
+		if valid && name != "" && uid != "" {
+			err := cl.Get(ctx, client.ObjectKey{Namespace: chain.Namespace, Name: name}, &existing)
+			if err != nil && !apierrors.IsNotFound(err) {
+				return false, ctrl.Result{}, err
+			}
+			claimed = err == nil && string(existing.UID) == uid
 		}
-		if err == nil && string(existing.UID) == uid {
+		if claimed {
 			res, err := patch.StatusWithCondition(ctx, cl, chain,
 				apiconsts.ConditionType("PolicyChainOwnerValid"), metav1.ConditionFalse,
 				apiconsts.ConditionReason("ConflictingChain"),

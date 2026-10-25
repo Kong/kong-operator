@@ -205,6 +205,8 @@ The first chain to claim the parent owns it, recorded in the parent annotation
 `gateway-operator.konghq.com/cluster-policy-chain-owner`. A competing chain reports
 `PolicyChainOwnerValid=False` with reason `ConflictingChain`; it does not write
 the remote chain. Delete the owning chain before replacing it.
+Malformed ownership annotations and claims whose owner no longer exists or has
+been recreated with a different UID are treated as stale and can be replaced.
 
 Reconciliation runs periodically to correct ordering drift. Policy changes and
 recreation enqueue referencing chains and invalidate unready references; a

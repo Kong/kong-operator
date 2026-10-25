@@ -70,6 +70,80 @@ func TestPolicyChainOwnership(t *testing.T) {
 	require.Equal(t, "second/second-uid", parent.Annotations[policyChainOwnerAnnotation])
 }
 
+func TestPolicyChainOwnershipStaleAnnotation(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name        string
+		owner       string
+		lookupOwner bool
+	}{
+		{name: "missing separator", owner: "garbage"},
+		{name: "missing name", owner: "/other-uid"},
+		{name: "missing UID", owner: "other/"},
+		{name: "missing name and UID", owner: "/"},
+		{name: "missing owner", owner: "missing/missing-uid", lookupOwner: true},
+		{name: "recreated owner", owner: "other/old-uid", lookupOwner: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := t.Context()
+			chain, other := testPolicyChain("chain"), testPolicyChain("other")
+			parent := &configurationv1alpha1.EventGatewayVirtualCluster{
+				Name: "vc", Namespace: "default",
+				Annotations: map[string]string{policyChainOwnerAnnotation: tt.owner},
+			}
+			lookedUpOwner := false
+			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).
+				WithStatusSubresource(chain).WithObjects(parent, chain, other).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+						if _, ok := obj.(*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain); ok {
+							lookedUpOwner = true
+							require.True(t, tt.lookupOwner, "malformed ownership must not trigger an owner lookup")
+						}
+						return cl.Get(ctx, key, obj, opts...)
+					},
+				}).Build()
+
+			owned, res, err := claimPolicyChain(ctx, cl, chain)
+			require.NoError(t, err)
+			require.True(t, owned)
+			require.True(t, res.IsZero())
+			require.Equal(t, tt.lookupOwner, lookedUpOwner)
+			require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(parent), parent))
+			require.Equal(t, "chain/chain-uid", parent.Annotations[policyChainOwnerAnnotation])
+			require.True(t, apimeta.IsStatusConditionTrue(chain.Status.Conditions, "PolicyChainOwnerValid"))
+		})
+	}
+}
+
+func TestPolicyChainOwnershipLookupError(t *testing.T) {
+	t.Parallel()
+	ctx := t.Context()
+	chain := testPolicyChain("chain")
+	parent := &configurationv1alpha1.EventGatewayVirtualCluster{
+		Name: "vc", Namespace: "default",
+		Annotations: map[string]string{policyChainOwnerAnnotation: "other/other-uid"},
+	}
+	failure := errors.New("owner lookup unavailable")
+	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).
+		WithStatusSubresource(chain).WithObjects(parent, chain).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+				if _, ok := obj.(*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain); ok {
+					return failure
+				}
+				return cl.Get(ctx, key, obj, opts...)
+			},
+		}).Build()
+
+	owned, res, err := claimPolicyChain(ctx, cl, chain)
+	require.ErrorIs(t, err, failure)
+	require.False(t, owned)
+	require.True(t, res.IsZero())
+	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(parent), parent))
+	require.Equal(t, "other/other-uid", parent.Annotations[policyChainOwnerAnnotation])
+}
+
 func TestPolicyChainSingletonReadiness(t *testing.T) {
 	t.Parallel()
 	chain := testPolicyChain("chain")

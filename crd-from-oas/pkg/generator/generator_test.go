@@ -6281,6 +6281,7 @@ func TestGenerateSDKOps_ClientRequestMethodsResolveReferences(t *testing.T) {
 	require.NotContains(t, content, "func (s *AIGatewayAgentAPISpec) ToCreateAIGatewayAgentRequest()")
 	require.NotContains(t, content, "func (s *AIGatewayAgentAPISpec) ToUpdateAIGatewayAgentRequest()")
 	require.Contains(t, content, "resolvedPolicies, err := resolveAIGatewayAgentPolicies(ctx, cl, obj)")
+	require.Contains(t, content, "// Always include the resolved list, including an explicit empty list.")
 	require.Contains(t, content, `payload["policies"] = resolvedPolicies`)
 }
 
@@ -6348,6 +6349,7 @@ func TestGenerateSDKOps_CustomReferenceResolver(t *testing.T) {
 			require.NotContains(t, content, "for _, ref := range obj.Spec.APISpec.Policies")
 			require.Equal(t, 3, strings.Count(content, "resolveAIGatewayAgentPolicies(ctx, cl, obj)"),
 				"both converters and ResolveKonnectReferences must use the same helper")
+			require.Contains(t, content, "// Always include the resolved list, including an explicit empty list.")
 			if mixed {
 				require.Contains(t, content, `apierrors "k8s.io/apimachinery/pkg/api/errors"`)
 				require.Contains(t, content, "var referenced AIGatewayConsumerGroup")
