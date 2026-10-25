@@ -2,10 +2,12 @@ package ops
 
 import (
 	"errors"
+	"net/http"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -46,6 +48,8 @@ func TestPolicyChainGuardedOperations(t *testing.T) {
 			{name: "duplicate resolved IDs", desired: []string{"first", "first"}, remote: []string{"first"}, wantErr: "unique, non-empty"},
 			{name: "invalid reference", desired: []string{"first"}, invalidRef: true, wantErr: "not programmed"},
 			{name: "GET error", desired: []string{}, getErr: errors.New("GET unavailable"), wantErr: "GET unavailable"},
+			{name: "GET typed 404", desired: []string{}, getErr: &sdkkonnecterrs.NotFoundError{Status: http.StatusNotFound, Title: "Not Found"}, wantErr: "Not Found"},
+			{name: "GET generic 404", desired: []string{}, getErr: &sdkkonnecterrs.SDKError{StatusCode: http.StatusNotFound, Message: "virtual cluster not found"}, wantErr: "virtual cluster not found"},
 			{name: "GET nil response", desired: []string{}, nilGet: true, wantErr: ErrNilResponse.Error()},
 			{name: "PUT error", desired: []string{}, putErr: errors.New("PUT unavailable"), wantPUT: true, wantErr: "PUT unavailable"},
 			{name: "PUT nil response", desired: []string{}, nilPut: true, wantPUT: true, wantErr: ErrNilResponse.Error()},
@@ -111,6 +115,12 @@ func TestPolicyChainGuardedOperations(t *testing.T) {
 					_, err = Create(t.Context(), sdk, cl, &metricsmocks.MockRecorder{}, chain)
 				} else {
 					_, err = Update(t.Context(), sdk, 0, cl, &metricsmocks.MockRecorder{}, chain)
+				}
+				if tt.getErr != nil {
+					require.ErrorIs(t, err, tt.getErr)
+				}
+				if !tt.wantPUT {
+					policySDK.AssertNotCalled(t, "UpdateEventGatewayVirtualClusterClusterLevelPolicyChain", mock.Anything, mock.Anything)
 				}
 				programmed := meta.FindStatusCondition(chain.Status.Conditions, "Programmed")
 				require.NotNil(t, programmed)

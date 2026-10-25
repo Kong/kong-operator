@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -21,6 +23,7 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
@@ -46,28 +49,97 @@ func TestPolicyChainOwnership(t *testing.T) {
 	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).
 		WithStatusSubresource(first, second).WithObjects(parent, first, second).Build()
 
-	owned, res, err := claimPolicyChain(ctx, cl, first)
+	owned, res, err := claimPolicyChain(ctx, cl, first, consts.DefaultKonnectSyncPeriod)
 	require.NoError(t, err)
 	require.True(t, owned)
 	require.True(t, res.IsZero())
 	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(parent), parent))
 	require.Equal(t, "first/first-uid", parent.Annotations[policyChainOwnerAnnotation])
 
-	owned, res, err = claimPolicyChain(ctx, cl, second)
+	owned, res, err = claimPolicyChain(ctx, cl, second, consts.DefaultKonnectSyncPeriod)
 	require.NoError(t, err)
 	require.False(t, owned)
-	require.Positive(t, res.RequeueAfter)
+	require.Equal(t, consts.DefaultKonnectSyncPeriod, res.RequeueAfter)
 	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(second), second))
 	require.False(t, entityHasProgrammedStatusTrue(second))
 	require.Contains(t, second.Status.Conditions[0].Message, "owned by policy chain first")
 
 	require.NoError(t, cl.Delete(ctx, first))
-	owned, res, err = claimPolicyChain(ctx, cl, second)
+	owned, res, err = claimPolicyChain(ctx, cl, second, consts.DefaultKonnectSyncPeriod)
 	require.NoError(t, err)
 	require.True(t, owned)
 	require.True(t, res.IsZero())
 	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(parent), parent))
 	require.Equal(t, "second/second-uid", parent.Annotations[policyChainOwnerAnnotation])
+}
+
+func TestPolicyChainOwnershipSyncPeriod(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name       string
+		syncPeriod time.Duration
+		wantPeriod time.Duration
+	}{
+		{name: "default", wantPeriod: consts.DefaultKonnectSyncPeriod},
+		{name: "shorter", syncPeriod: 7 * time.Second, wantPeriod: 7 * time.Second},
+		{name: "longer", syncPeriod: 3 * time.Minute, wantPeriod: 3 * time.Minute},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := t.Context()
+			owner, chain := testPolicyChain("owner"), testPolicyChain("chain")
+			mapper := apimeta.NewDefaultRESTMapper([]schema.GroupVersion{configurationv1alpha1.GroupVersion, konnectv1alpha1.GroupVersion})
+			for _, kind := range []string{"EventGatewayVirtualClusterPolicyChain", "EventGatewayVirtualCluster", "EventGatewayBackendCluster", "KongReferenceGrant"} {
+				mapper.Add(configurationv1alpha1.GroupVersion.WithKind(kind), apimeta.RESTScopeNamespace)
+			}
+			for _, kind := range []string{"KonnectAPIAuthConfiguration", "KonnectEventGateway"} {
+				mapper.Add(konnectv1alpha1.GroupVersion.WithKind(kind), apimeta.RESTScopeNamespace)
+			}
+			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithRESTMapper(mapper).
+				WithStatusSubresource(chain, &configurationv1alpha1.EventGatewayVirtualCluster{}, &konnectv1alpha1.KonnectAPIAuthConfiguration{}).
+				WithObjects(owner, chain).Build()
+			nsClient := client.NewNamespacedClient(cl, chain.Namespace)
+			auth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, nsClient)
+			gateway := deploy.KonnectEventGateway(t, ctx, nsClient, auth)
+			backend := deploy.EventGatewayBackendCluster(t, ctx, nsClient, gateway)
+			parent := deploy.EventGatewayVirtualCluster(t, ctx, nsClient, backend, deploy.WithName("vc"))
+			parent.Annotations = map[string]string{policyChainOwnerAnnotation: "owner/owner-uid"}
+			require.NoError(t, cl.Update(ctx, parent))
+			parent.SetKonnectID("vc-id")
+			parent.SetGatewayID("gateway-id")
+			parent.Status.Conditions = []metav1.Condition{{Type: "Programmed", Status: metav1.ConditionTrue}}
+			require.NoError(t, cl.Status().Update(ctx, parent))
+
+			opts := []KonnectEntityReconcilerOption[configurationv1alpha1.EventGatewayVirtualClusterPolicyChain, *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain]{
+				WithMetricRecorder[configurationv1alpha1.EventGatewayVirtualClusterPolicyChain](&metricsmocks.MockRecorder{}),
+			}
+			if tt.syncPeriod != 0 {
+				opts = append(opts, WithKonnectEntitySyncPeriod[configurationv1alpha1.EventGatewayVirtualClusterPolicyChain](tt.syncPeriod))
+			}
+			factory := sdkmocks.NewMockSDKFactory(t)
+			r := NewKonnectEntityReconciler(factory, logging.DevelopmentMode, cl, opts...)
+			conflicted := false
+			for range 20 {
+				require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(chain), chain))
+				chain.GetObjectKind().SetGroupVersionKind(configurationv1alpha1.GroupVersion.WithKind("EventGatewayVirtualClusterPolicyChain"))
+				res, err := r.Reconcile(ctx, chain)
+				require.NoError(t, err)
+				require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(chain), chain))
+				condition := apimeta.FindStatusCondition(chain.Status.Conditions, "PolicyChainOwnerValid")
+				if condition != nil && condition.Status == metav1.ConditionFalse {
+					require.Equal(t, "ConflictingChain", condition.Reason)
+					require.Equal(t, tt.wantPeriod, res.RequeueAfter)
+					require.False(t, entityHasProgrammedStatusTrue(chain))
+					conflicted = true
+					break
+				}
+			}
+			require.True(t, conflicted, "reconciliation must reach the ownership conflict")
+			require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(parent), parent))
+			require.Equal(t, "owner/owner-uid", parent.Annotations[policyChainOwnerAnnotation])
+			factory.SDK.EventGatewayVirtualClusterPoliciesSDK.AssertNotCalled(t, "GetEventGatewayVirtualClusterClusterLevelPolicyChain", mock.Anything, mock.Anything, mock.Anything)
+			factory.SDK.EventGatewayVirtualClusterPoliciesSDK.AssertNotCalled(t, "UpdateEventGatewayVirtualClusterClusterLevelPolicyChain", mock.Anything, mock.Anything)
+		})
+	}
 }
 
 func TestPolicyChainOwnershipStaleAnnotation(t *testing.T) {
@@ -104,7 +176,7 @@ func TestPolicyChainOwnershipStaleAnnotation(t *testing.T) {
 					},
 				}).Build()
 
-			owned, res, err := claimPolicyChain(ctx, cl, chain)
+			owned, res, err := claimPolicyChain(ctx, cl, chain, consts.DefaultKonnectSyncPeriod)
 			require.NoError(t, err)
 			require.True(t, owned)
 			require.True(t, res.IsZero())
@@ -136,7 +208,7 @@ func TestPolicyChainOwnershipLookupError(t *testing.T) {
 			},
 		}).Build()
 
-	owned, res, err := claimPolicyChain(ctx, cl, chain)
+	owned, res, err := claimPolicyChain(ctx, cl, chain, consts.DefaultKonnectSyncPeriod)
 	require.ErrorIs(t, err, failure)
 	require.False(t, owned)
 	require.True(t, res.IsZero())

@@ -177,6 +177,15 @@ tested development backend, not a guarantee for every production version.
 The SDK v0.73.1 OAS does not declare a policy-count maximum; successful reordering
 of 16 distinct policies does not establish an upper limit.
 
+A separate probe against `eu.api.konghq.tech` on 2026-10-25 created an isolated
+gateway, backend cluster, and fresh virtual cluster with no policies. Before any
+chain PUT, three consecutive chain GETs returned `200 {"policies":[]}`. An initial
+PUT of `{"policies":[]}` and the subsequent GET also returned `200 {"policies":[]}`.
+A chain GET for a nonexistent virtual cluster returned `404`. All temporary
+resources were deleted and their absence confirmed. This observation is specific
+to the tested development backend: a GET error, including `404`, remains an error
+and must not be interpreted as an empty chain or bypass the complete-set guard.
+
 The shared status structure is retained for compatibility with the operator's
 Konnect interfaces, but `status.id` must remain unset: there is no independent
 chain ID. Conditions, organization/server information, and parent IDs describe
@@ -207,6 +216,8 @@ The first chain to claim the parent owns it, recorded in the parent annotation
 the remote chain. Delete the owning chain before replacing it.
 Malformed ownership annotations and claims whose owner no longer exists or has
 been recreated with a different UID are treated as stale and can be replaced.
+Conflicting chains retry at the configured Konnect sync period; parent changes
+also enqueue them so ownership can be claimed promptly after release.
 
 Reconciliation runs periodically to correct ordering drift. Policy changes and
 recreation enqueue referencing chains and invalidate unready references; a

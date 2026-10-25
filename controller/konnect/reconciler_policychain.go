@@ -16,10 +16,13 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
-	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 const policyChainOwnerAnnotation = "gateway-operator.konghq.com/cluster-policy-chain-owner"
+
+func policyChainOwnerClaim(chain *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain) string {
+	return chain.Name + "/" + string(chain.UID)
+}
 
 func finalizePolicyChain(ctx context.Context, cl client.Client, chain *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain) (ctrl.Result, error) {
 	if chain.DeletionTimestamp.After(time.Now()) {
@@ -35,7 +38,7 @@ func finalizePolicyChain(ctx context.Context, cl client.Client, chain *configura
 			if !apierrors.IsNotFound(err) {
 				return ctrl.Result{}, fmt.Errorf("getting virtual cluster to release policy chain ownership: %w", err)
 			}
-		} else if parent.Annotations[policyChainOwnerAnnotation] == chain.Name+"/"+string(chain.UID) {
+		} else if parent.Annotations[policyChainOwnerAnnotation] == policyChainOwnerClaim(chain) {
 			old := parent.DeepCopy()
 			delete(parent.Annotations, policyChainOwnerAnnotation)
 			if err := cl.Patch(ctx, &parent, client.MergeFromWithOptions(old, client.MergeFromWithOptimisticLock{})); err != nil {
@@ -64,7 +67,7 @@ func finalizePolicyChain(ctx context.Context, cl client.Client, chain *configura
 
 // claimPolicyChain serializes ownership on the parent with an optimistic-lock
 // patch. A cached list of chains alone cannot prevent simultaneous claimants.
-func claimPolicyChain(ctx context.Context, cl client.Client, chain *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain) (bool, ctrl.Result, error) {
+func claimPolicyChain(ctx context.Context, cl client.Client, chain *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain, syncPeriod time.Duration) (bool, ctrl.Result, error) {
 	ref := chain.Spec.EventGatewayVirtualClusterRef.NamespacedRef
 	if ref == nil || ref.Name == "" || (ref.Namespace != nil && *ref.Namespace != "" && *ref.Namespace != chain.Namespace) {
 		return false, ctrl.Result{}, configurationv1alpha1.PolicyChainInvalidError{Message: "policy-chain ownership requires a same-namespace EventGatewayVirtualCluster reference"}
@@ -76,7 +79,7 @@ func claimPolicyChain(ctx context.Context, cl client.Client, chain *configuratio
 	if err := cl.Get(ctx, client.ObjectKey{Namespace: chain.Namespace, Name: ref.Name}, &parent); err != nil {
 		return false, ctrl.Result{}, err
 	}
-	claim := chain.Name + "/" + string(chain.UID)
+	claim := policyChainOwnerClaim(chain)
 	owner := parent.Annotations[policyChainOwnerAnnotation]
 	if owner != "" && owner != claim {
 		name, uid, valid := strings.Cut(owner, "/")
@@ -101,7 +104,7 @@ func claimPolicyChain(ctx context.Context, cl client.Client, chain *configuratio
 			if err != nil || !res.IsZero() {
 				return false, res, err
 			}
-			return false, ctrl.Result{RequeueAfter: consts.DefaultKonnectSyncPeriod}, nil
+			return false, ctrl.Result{RequeueAfter: syncPeriod}, nil
 		}
 	}
 	if owner != claim {

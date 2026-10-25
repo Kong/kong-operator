@@ -724,7 +724,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 	// Handle type specific operations and stop reconciliation if needed.
 	// This can happen for instance when KongConsumer references credentials Secrets
 	// that do not exist or populate some Status fields based on Konnect API.
-	if stop, res, err := handleTypeSpecific(ctx, sdk, r.Client, ent); err != nil {
+	if stop, res, err := handleTypeSpecific(ctx, sdk, r.SyncPeriod, r.Client, ent); err != nil {
 		// If the error was a network error, handle it here, there's no need to proceed,
 		// as no state has changed.
 		// Status conditions are updated in handleOpsErr.

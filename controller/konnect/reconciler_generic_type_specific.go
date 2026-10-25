@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -33,6 +34,7 @@ func handleTypeSpecific[
 ](
 	ctx context.Context,
 	sdk sdkops.SDKWrapper,
+	syncPeriod time.Duration,
 	cl client.Client,
 	ent TEnt,
 ) (bool, ctrl.Result, error) {
@@ -59,7 +61,7 @@ func handleTypeSpecific[
 	switch e := any(ent).(type) {
 	case *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain:
 		if !isProblem {
-			owned, res, err := claimPolicyChain(ctx, cl, e)
+			owned, res, err := claimPolicyChain(ctx, cl, e, syncPeriod)
 			if err != nil || !res.IsZero() || !owned {
 				return true, res, err
 			}
