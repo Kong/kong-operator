@@ -2,6 +2,7 @@ package eventgateway
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"slices"
 	"sync"
@@ -487,6 +488,58 @@ spec:
 		}, waitTime, tickTime)
 	})
 
+	t.Run("its listeners are pushed with their policies, forwarding to a virtual cluster by its id", func(t *testing.T) {
+		listener := objectFromYAML[configurationv1alpha1.EventGatewayListener](t, ns.Name, `
+metadata: {name: listener}
+spec:`+onPremEventGatewayParentRef(gateway.Name)+`
+  apiSpec:
+    name: listener
+    addresses: ["0.0.0.0"]
+    ports: [19092]
+`)
+		forward := objectFromYAML[configurationv1alpha1.EventGatewayListenerPolicy](t, ns.Name, `
+metadata: {name: forward}
+spec:
+  eventGatewayListenerRef: {type: namespacedRef, namespacedRef: {name: listener}}
+  apiSpec:
+    type: forwardToVirtualCluster
+    forwardToVirtualCluster:
+      name: forward
+      config:
+        type: portMapping
+        portMapping: {advertisedHost: localhost, destination: {name: virtual-cluster}}
+`)
+		var virtualCluster configurationv1alpha1.EventGatewayVirtualCluster
+		require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: ns.Name, Name: "virtual-cluster"}, &virtualCluster))
+		require.NoError(t, cl.Create(ctx, listener))
+		require.NoError(t, cl.Create(ctx, forward))
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			for _, pod := range []*fakeGWAdmin{pod0, pod1} {
+				g, ok, _ := pod.state(gatewayID(ct, gateway))
+				if !assert.True(ct, ok) || !assert.Len(ct, g.entities.Listeners, 1) {
+					continue
+				}
+				l := g.entities.Listeners[0]
+				assert.Equal(ct, string(listener.UID), l.Id.String())
+				if assert.Len(ct, l.Policies, 1) {
+					assert.Equal(ct, string(forward.UID), l.Policies[0].Id.String())
+					policy, err := json.Marshal(l.Policies[0])
+					if assert.NoError(ct, err) {
+						var fields struct {
+							Config struct {
+								Destination map[string]any `json:"destination"`
+							} `json:"config"`
+						}
+						assert.NoError(ct, json.Unmarshal(policy, &fields))
+						assert.Equal(ct, map[string]any{"id": string(virtualCluster.UID)}, fields.Config.Destination)
+					}
+				}
+			}
+		}, waitTime, tickTime)
+		expectEntityProgrammed(t, listener, metav1.ConditionTrue, "Programmed")
+		expectEntityProgrammed(t, forward, metav1.ConditionTrue, "Programmed")
+	})
+
 	t.Run("the entities of a deleted gateway are not programmed", func(t *testing.T) {
 		require.NoError(t, cl.Delete(ctx, gateway))
 		expectProgrammed(t, "other", metav1.ConditionFalse, "GatewayNotProgrammed")
@@ -496,6 +549,10 @@ spec:
 			expectEntityProgrammed(t, &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{Name: name, Namespace: ns.Name},
 				metav1.ConditionFalse, "GatewayNotProgrammed")
 		}
+		expectEntityProgrammed(t, &configurationv1alpha1.EventGatewayListener{Name: "listener", Namespace: ns.Name},
+			metav1.ConditionFalse, "GatewayNotProgrammed")
+		expectEntityProgrammed(t, &configurationv1alpha1.EventGatewayListenerPolicy{Name: "forward", Namespace: ns.Name},
+			metav1.ConditionFalse, "GatewayNotProgrammed")
 	})
 }
 
