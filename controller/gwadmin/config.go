@@ -28,7 +28,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	shareddataplane "github.com/kong/kong-operator/v2/controller/pkg/dataplane"
-	"github.com/kong/kong-operator/v2/internal/gwadmin/published"
+	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
@@ -210,7 +210,7 @@ func generateAPIService(gw *operatorv1alpha1.GWAdmin) *corev1.Service {
 	svc := shareddataplane.GenerateBaseService(gw, apiServiceConfig())
 	// The controllers pushing to gw-admin find the pods of the API Service by
 	// these labels, which its EndpointSlices carry too.
-	svc.Labels = published.APIServiceLabels(gw.Name)
+	svc.Labels = gwadminref.APIServiceLabels(gw.Name)
 	svc.Spec.PublishNotReadyAddresses = true
 	return svc
 }

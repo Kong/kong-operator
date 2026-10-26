@@ -1,410 +1,267 @@
+/*
+Copyright 2026 Kong, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package onprem
 
 import (
-	"context"
 	"errors"
+	"net/http"
+	"slices"
+	"strings"
 	"testing"
-	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
-	discoveryv1 "k8s.io/api/discovery/v1"
-	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
-	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
-	"github.com/kong/kong-operator/v2/internal/gwadmin/published"
-	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
+	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminapi"
+	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminsync"
 	"github.com/kong/kong-operator/v2/internal/utils/gwadminref/gwadminreftest"
-	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
-const (
-	testGWAdminName    = "gw-admin"
-	testAPIServiceName = "gw-admin-api"
-)
+func TestPush(t *testing.T) {
+	gateway := newTestGateway("gateway")
+	gatewayID := uuid.MustParse(string(gateway.UID))
+	other := uuid.New()
+	target := &gwadminsync.Target{GWAdmin: newGWAdminFixture(t).GWAdmin}
+	pod := gwadminsync.Pod{Name: "gw-admin-0", UID: "pod-uid", Address: "10.0.0.1:8083"}
+	expected := []uuid.UUID{gatewayID, other}
+	expectedCall := callExpected + " " + gatewayID.String() + "," + other.String()
+	all := []string{callGetEntities, callRegister, callEntities, expectedCall}
 
-// newTestGateway returns an OnPremEventGateway of the namespace ns
-// referencing the GWAdmin of the test.
-func newTestGateway(name string) *eventgatewayv1alpha1.OnPremEventGateway {
-	gateway := &eventgatewayv1alpha1.OnPremEventGateway{Name: name, Namespace: ns}
-	gateway.Spec.GWAdminRef.Name = testGWAdminName
-	gateway.SetGeneration(1)
-	return gateway
-}
+	t.Run("a pod that doesn't know the gateway gets it all, in order", func(t *testing.T) {
+		r, gwAdmin := newPushReconciler(), &fakeGWAdminClient{}
+		require.NoError(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected))
+		assert.Equal(t, all, gwAdmin.recorded())
+	})
 
-// newTestGWAdmin returns a GWAdmin of the namespace ns that has published its
-// API, and the EndpointSlice of its API Service publishing the endpoints.
-func newTestGWAdmin(endpoints ...discoveryv1.Endpoint) (*operatorv1alpha1.GWAdmin, *discoveryv1.EndpointSlice) {
-	gw := &operatorv1alpha1.GWAdmin{Name: testGWAdminName, Namespace: ns}
-	gw.Status.API = &operatorv1alpha1.GWAdminAPIStatus{ServiceName: testAPIServiceName, PortName: "api", Port: 8443}
-	return gw, &discoveryv1.EndpointSlice{
-		Name: testAPIServiceName + "-abcde", Namespace: ns,
-		Labels:      apiEndpointSliceLabelsOf(testAPIServiceName),
-		AddressType: discoveryv1.AddressTypeIPv4,
-		Ports:       []discoveryv1.EndpointPort{{Name: new("api"), Port: new(int32(8443))}},
-		Endpoints:   endpoints,
+	// pushed returns a reconciler and a pod the gateway was pushed to.
+	pushed := func(t *testing.T) (*Reconciler, *fakeGWAdminClient) {
+		t.Helper()
+		r, gwAdmin := newPushReconciler(), &fakeGWAdminClient{}
+		require.NoError(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected))
+		gwAdmin.reset()
+		return r, gwAdmin
 	}
-}
 
-// apiEndpointSliceLabelsOf returns the labels of the EndpointSlices of the
-// API Service serviceName of the GWAdmin of the test.
-func apiEndpointSliceLabelsOf(serviceName string) map[string]string {
-	labels := apiEndpointSliceLabels(testGWAdminName)
-	labels[discoveryv1.LabelServiceName] = serviceName
-	return labels
-}
+	t.Run("nothing changed: only read", func(t *testing.T) {
+		r, gwAdmin := pushed(t)
+		require.NoError(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected))
+		assert.Equal(t, []string{callGetEntities}, gwAdmin.recorded())
+	})
 
-// endpoint returns the endpoint of a gw-admin pod.
-func endpoint(name, ip string, terminating bool) discoveryv1.Endpoint {
-	return discoveryv1.Endpoint{
-		Addresses:  []string{ip},
-		TargetRef:  &corev1.ObjectReference{Kind: "Pod", Name: name},
-		Conditions: discoveryv1.EndpointConditions{Terminating: new(terminating), Serving: new(true)},
-	}
-}
+	t.Run("the expected gateways changed: only they are set", func(t *testing.T) {
+		r, gwAdmin := pushed(t)
+		require.NoError(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, []uuid.UUID{gatewayID}))
+		assert.Equal(t, []string{callGetEntities, callExpected + " " + gatewayID.String()}, gwAdmin.recorded())
+	})
 
-// grantGatewaysOf returns a KongReferenceGrant in the namespace ns allowing
-// the OnPremEventGateways of namespace from to reference its GWAdmins.
-func grantGatewaysOf(from string) *configurationv1alpha1.KongReferenceGrant {
-	return gwadminreftest.Grant(ns, "grant", from, "")
-}
+	t.Run("expected gateways that may have been set by a call that failed are set again", func(t *testing.T) {
+		r, gwAdmin := pushed(t)
+		// The call times out, but gw-admin may have applied it.
+		gwAdmin.respond = func(call string) (*reply, error) {
+			if strings.HasPrefix(call, callExpected) {
+				return nil, errors.New("timeout")
+			}
+			return nil, nil
+		}
+		require.Error(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, []uuid.UUID{gatewayID}))
+		gwAdmin.respond = nil
+		gwAdmin.reset()
+		require.NoError(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected))
+		assert.Equal(t, []string{callGetEntities, expectedCall}, gwAdmin.recorded(),
+			"those recorded before the failed call aren't trusted, even when they are the ones to set")
+	})
 
-// newGWAdminTestClient returns a fake client with the index of the gateways
-// by GWAdmin, going through funcs.
-func newGWAdminTestClient(t *testing.T, funcs interceptor.Funcs, objects ...client.Object) client.Client {
-	t.Helper()
-	b := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).
-		WithStatusSubresource(&eventgatewayv1alpha1.OnPremEventGateway{}).
-		WithInterceptorFuncs(funcs)
-	for _, opt := range gwadminref.IndexOptions() {
-		b = b.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
-	}
-	return b.Build()
-}
+	t.Run("a read answered with another 2xx than 200 fails", func(t *testing.T) {
+		r, gwAdmin := newPushReconciler(), &fakeGWAdminClient{respond: func(call string) (*reply, error) {
+			if call == callGetEntities {
+				return &reply{status: http.StatusNoContent}, nil
+			}
+			return nil, nil
+		}}
+		require.EqualError(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected),
+			"failed to read the entities of the gateway: gw-admin returned 204 No Content, not 200")
+	})
 
-func failingList(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
-	return errors.New("unavailable")
-}
+	t.Run("the pod holds other entities: only they are pushed", func(t *testing.T) {
+		r, gwAdmin := pushed(t)
+		gwAdmin.gateways[gatewayID] = gwadminapi.GatewayEntities{BackendClusters: []gwadminapi.EventGatewayBackendClusterOnPrem{{Name: "stale"}}}
+		require.NoError(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected))
+		assert.Equal(t, []string{callGetEntities, callEntities}, gwAdmin.recorded())
+	})
 
-func TestResolveGWAdmin(t *testing.T) {
-	ready := []gwAdminPod{{name: "gw-admin-0", address: "10.0.0.1:8443"}}
+	t.Run("a restarted pod lost everything: it gets it all", func(t *testing.T) {
+		r, gwAdmin := pushed(t)
+		gwAdmin.restart()
+		require.NoError(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected))
+		assert.Equal(t, all, gwAdmin.recorded())
+	})
 
-	tests := []struct {
-		name string
-		// objects returns the objects of the cluster, from the GWAdmin of the
-		// test and the EndpointSlice of its API Service.
-		objects func(*operatorv1alpha1.GWAdmin, *discoveryv1.EndpointSlice) []client.Object
-		// gatewayNamespace, when set, is the namespace of the gateway, which
-		// references the GWAdmin of the namespace ns.
-		gatewayNamespace string
-		funcs            interceptor.Funcs
-		wantReason       kcfgconsts.ConditionReason
-		wantMessage      string
-		wantErr          string
-		wantPods         []gwAdminPod
+	t.Run("another pod gets it all", func(t *testing.T) {
+		r, _ := pushed(t)
+		replaced := &fakeGWAdminClient{}
+		require.NoError(t, r.push(t.Context(), target, gwadminsync.Pod{Name: "gw-admin-0", UID: "new-pod-uid", Address: "10.0.0.1:8083"},
+			replaced, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected))
+		assert.Equal(t, all, replaced.recorded())
+	})
+
+	// A failure is retried with what failed: only what succeeded is
+	// remembered, and the pod is read again.
+	failures := []struct {
+		name      string
+		respond   func(string) (*reply, error)
+		wantCalls int
+		wantErr   string
+		// wantRetry are the calls of the push tried again.
+		wantRetry []string
 	}{
-		{
-			name:     "ready",
-			wantPods: ready,
-		},
-		{
-			name: "the GWAdmin doesn't exist",
-			objects: func(_ *operatorv1alpha1.GWAdmin, es *discoveryv1.EndpointSlice) []client.Object {
-				return []client.Object{es}
-			},
-			wantReason:  eventgatewayv1alpha1.OnPremEventGatewayGWAdminNotFoundReason,
-			wantMessage: "The GWAdmin default/gw-admin does not exist",
-		},
-		{
-			name: "the GWAdmin can't be read",
-			funcs: interceptor.Funcs{Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-				if _, ok := obj.(*operatorv1alpha1.GWAdmin); ok {
-					return errors.New("unavailable")
-				}
-				return cl.Get(ctx, key, obj, opts...)
-			}},
-			wantErr: "failed to get the GWAdmin default/gw-admin: unavailable",
-		},
-		{
-			name: "the GWAdmin is being deleted",
-			objects: func(gw *operatorv1alpha1.GWAdmin, es *discoveryv1.EndpointSlice) []client.Object {
-				gw.SetDeletionTimestamp(new(metav1.Now()))
-				gw.SetFinalizers([]string{"example.com/hold"})
-				return []client.Object{gw, es}
-			},
-			wantReason:  eventgatewayv1alpha1.OnPremEventGatewayGWAdminNotReadyReason,
-			wantMessage: "The GWAdmin default/gw-admin is being deleted",
-		},
-		{
-			name: "the GWAdmin hasn't published its API",
-			objects: func(gw *operatorv1alpha1.GWAdmin, es *discoveryv1.EndpointSlice) []client.Object {
-				gw.Status.API = nil
-				return []client.Object{gw, es}
-			},
-			wantReason:  eventgatewayv1alpha1.OnPremEventGatewayGWAdminNotReadyReason,
-			wantMessage: "The GWAdmin default/gw-admin hasn't published its API yet",
-		},
-		{
-			name: "the GWAdmin has no pod",
-			objects: func(gw *operatorv1alpha1.GWAdmin, _ *discoveryv1.EndpointSlice) []client.Object {
-				return []client.Object{gw}
-			},
-			wantReason:  eventgatewayv1alpha1.OnPremEventGatewayGWAdminNotReadyReason,
-			wantMessage: "The GWAdmin default/gw-admin has no gw-admin pod",
-		},
-		{
-			name: "pods shutting down don't count",
-			objects: func(gw *operatorv1alpha1.GWAdmin, es *discoveryv1.EndpointSlice) []client.Object {
-				es.Endpoints = []discoveryv1.Endpoint{endpoint("gw-admin-1", "10.0.0.2", true)}
-				return []client.Object{gw, es}
-			},
-			wantReason:  eventgatewayv1alpha1.OnPremEventGatewayGWAdminNotReadyReason,
-			wantMessage: "The GWAdmin default/gw-admin has no gw-admin pod",
-		},
-		{
-			name:    "the EndpointSlices can't be listed",
-			funcs:   interceptor.Funcs{List: failingList},
-			wantErr: "failed to list the EndpointSlices of the API Service default/gw-admin-api of the GWAdmin",
-		},
-		{
-			name:             "a GWAdmin in another namespace, without a KongReferenceGrant",
-			gatewayNamespace: "other",
-			wantReason:       eventgatewayv1alpha1.OnPremEventGatewayGWAdminRefNotPermittedReason,
-			wantMessage:      "The gateway may not use its GWAdmin: no KongReferenceGrant in namespace default allows the OnPremEventGateways of namespace other to reference the GWAdmin default/gw-admin",
-		},
-		{
-			name:             "the KongReferenceGrants can't be listed",
-			gatewayNamespace: "other",
-			funcs:            interceptor.Funcs{List: failingList},
-			wantErr:          "unavailable",
-		},
-		{
-			name:             "a GWAdmin in another namespace, with a KongReferenceGrant",
-			gatewayNamespace: "other",
-			objects: func(gw *operatorv1alpha1.GWAdmin, es *discoveryv1.EndpointSlice) []client.Object {
-				return []client.Object{gw, es, grantGatewaysOf("other")}
-			},
-			wantPods: ready,
-		},
+		{name: "reading the entities fails", respond: failing(callGetEntities, http.StatusInternalServerError), wantCalls: 1,
+			wantErr:   "failed to read the entities of the gateway: gw-admin returned 500 Internal Server Error: failed get-entities",
+			wantRetry: all},
+		{name: "registering the gateway fails", respond: failing(callRegister, http.StatusInternalServerError), wantCalls: 2,
+			wantErr:   "failed to register the gateway: gw-admin returned 500 Internal Server Error: failed register",
+			wantRetry: all},
+		// The pod holds no entities, which is what is pushed: the expected
+		// gateways, never set, are.
+		{name: "pushing the entities fails", respond: failing(callEntities, http.StatusBadRequest), wantCalls: 3,
+			wantErr:   "failed to push the entities of the gateway",
+			wantRetry: []string{callGetEntities, expectedCall}},
+		{name: "setting the expected gateways fails", respond: failing(callExpected, http.StatusBadRequest), wantCalls: 4,
+			wantErr:   "failed to set the gateways gw-admin serves",
+			wantRetry: []string{callGetEntities, expectedCall}},
+		{name: "a transport error", respond: func(string) (*reply, error) { return nil, errors.New("connection refused") }, wantCalls: 1,
+			wantErr:   "failed to read the entities of the gateway: connection refused",
+			wantRetry: all},
+	}
+	for _, tc := range failures {
+		t.Run(tc.name, func(t *testing.T) {
+			r, gwAdmin := newPushReconciler(), &fakeGWAdminClient{respond: tc.respond}
+			require.ErrorContains(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected), tc.wantErr)
+			assert.Equal(t, all[:tc.wantCalls], gwAdmin.recorded())
+
+			gwAdmin.respond = nil
+			gwAdmin.reset()
+			require.NoError(t, r.push(t.Context(), target, pod, gwAdmin, deriveConfig(gateway, emptyConfiguration()), emptyConfiguration(), gatewayID, expected))
+			assert.Equal(t, tc.wantRetry, gwAdmin.recorded())
+		})
+	}
+}
+
+func TestRemoveGateway(t *testing.T) {
+	gatewayID, other := uuid.New(), uuid.New()
+	target := &gwadminsync.Target{GWAdmin: newGWAdminFixture(t).GWAdmin}
+	pod := gwadminsync.Pod{Name: "gw-admin-0", UID: "pod-uid", Address: "10.0.0.1:8083"}
+	tests := []struct {
+		name      string
+		respond   func(string) (*reply, error)
+		wantCalls []string
+		wantErr   string
+	}{
+		{name: "left out of the expected gateways, then deleted", wantCalls: []string{callExpected + " " + other.String(), callDeleteGateway}},
+		{name: "a gateway gw-admin doesn't know is deleted already", respond: failing(callDeleteGateway, http.StatusNotFound),
+			wantCalls: []string{callExpected + " " + other.String(), callDeleteGateway}},
+		{name: "the deletion fails", respond: failing(callDeleteGateway, http.StatusInternalServerError),
+			wantCalls: []string{callExpected + " " + other.String(), callDeleteGateway}, wantErr: "failed to delete the gateway"},
+		{name: "setting the expected gateways fails", respond: failing(callExpected, http.StatusInternalServerError),
+			wantCalls: []string{callExpected + " " + other.String()}, wantErr: "failed to set the gateways gw-admin serves"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			gw, es := newTestGWAdmin(endpoint("gw-admin-0", "10.0.0.1", false), endpoint("gw-admin-1", "10.0.0.2", true))
-			objects := []client.Object{gw, es}
-			if tc.objects != nil {
-				objects = tc.objects(gw, es)
-			}
-			gateway := newTestGateway("gateway")
-			if tc.gatewayNamespace != "" {
-				gateway.Namespace = tc.gatewayNamespace
-				gateway.Spec.GWAdminRef.Namespace = new(ns)
-			}
-			r := &Reconciler{Client: newGWAdminTestClient(t, tc.funcs, append(objects, gateway)...)}
-
-			pods, unresolved, err := r.resolveGWAdmin(t.Context(), gateway)
-			switch {
-			case tc.wantErr != "":
+			r, gwAdmin := newPushReconciler(), &fakeGWAdminClient{respond: tc.respond}
+			r.GWAdminSync.Record(target, pod, itemExpected, idsKey([]uuid.UUID{gatewayID, other}))
+			err := r.removeGateway(t.Context(), target, pod, gwAdmin, gatewayID, []uuid.UUID{other})
+			assert.Equal(t, tc.wantCalls, gwAdmin.recorded())
+			recorded := r.GWAdminSync.Recorded(target, pod, itemExpected)
+			if tc.wantErr != "" {
 				require.ErrorContains(t, err, tc.wantErr)
-				assert.Nil(t, unresolved)
-			case tc.wantReason != "":
-				require.NoError(t, err, "not retried: a change triggers the gateway again")
-				require.NotNil(t, unresolved)
-				assert.Equal(t, tc.wantReason, unresolved.reason)
-				assert.Equal(t, tc.wantMessage, unresolved.message)
-				assert.Empty(t, pods)
-			default:
+			} else {
 				require.NoError(t, err)
-				assert.Nil(t, unresolved)
-				assert.Equal(t, tc.wantPods, pods)
+			}
+			if len(tc.wantCalls) > 1 {
+				assert.Equal(t, idsKey([]uuid.UUID{other}), recorded, "the expected gateways set are recorded")
+			} else {
+				assert.Empty(t, recorded, "expected gateways that may have been set by a call that failed aren't trusted")
 			}
 		})
 	}
 }
 
-func TestGWAdminPods(t *testing.T) {
-	slice := func(name string, addressType discoveryv1.AddressType, portName string, endpoints ...discoveryv1.Endpoint) *discoveryv1.EndpointSlice {
-		return &discoveryv1.EndpointSlice{
-			Name: name, Namespace: ns, Labels: apiEndpointSliceLabelsOf(testAPIServiceName),
-			AddressType: addressType,
-			Ports:       []discoveryv1.EndpointPort{{Name: new(portName), Port: new(int32(8443))}},
-			Endpoints:   endpoints,
-		}
-	}
-	notAPod := discoveryv1.Endpoint{Addresses: []string{"10.0.0.9"}}
-	notManaged := slice("gw-admin-api-manual", discoveryv1.AddressTypeIPv4, "api", endpoint("gw-admin-4", "10.0.0.5", false))
-	delete(notManaged.Labels, discoveryv1.LabelManagedBy)
-	otherService := slice("gw-admin-cp-abcde", discoveryv1.AddressTypeIPv4, "api", endpoint("gw-admin-5", "10.0.0.6", false))
-	otherService.Labels = apiEndpointSliceLabelsOf("gw-admin-cp")
-	gw, _ := newTestGWAdmin()
-	cl := newGWAdminTestClient(t, interceptor.Funcs{},
-		// Sorted before the IPv4 one by name: the IPv4 address is still used.
-		slice("gw-admin-api-a6", discoveryv1.AddressTypeIPv6, "api", endpoint("gw-admin-0", "fd00::1", false), endpoint("gw-admin-6", "fd00::7", false)),
-		slice("gw-admin-api-v4", discoveryv1.AddressTypeIPv4, "api",
-			endpoint("gw-admin-1", "10.0.0.2", false), endpoint("gw-admin-0", "10.0.0.1", false),
-			endpoint("gw-admin-2", "10.0.0.3", true), notAPod, discoveryv1.Endpoint{}),
-		slice("gw-admin-api-other", discoveryv1.AddressTypeIPv4, "other", endpoint("gw-admin-3", "10.0.0.4", false)),
-		notManaged, otherService,
-	)
-
-	pods, err := gwAdminPods(t.Context(), cl, gw)
-	require.NoError(t, err)
-	assert.Equal(t, []gwAdminPod{
-		{name: "gw-admin-0", address: "10.0.0.1:8443"},
-		{name: "gw-admin-1", address: "10.0.0.2:8443"},
-		{name: "gw-admin-6", address: "[fd00::7]:8443"},
-	}, pods, "a pod of a dual-stack Service is returned once, on its IPv4 address; a pod shutting down, of another port, "+
-		"of another Service or of an EndpointSlice the EndpointSlice controller doesn't manage isn't, and neither is an endpoint that isn't a pod")
+func TestResolveGWAdminNotAllowed(t *testing.T) {
+	gateway := newTestGateway("gateway")
+	gateway.Namespace = "other"
+	gateway.Spec.GWAdminRef.Namespace = new(ns)
+	f := newGWAdminFixture(t)
+	cl := newFakeClient(t, append(f.Objects(), gateway)...)
+	r := &Reconciler{Client: cl, GWAdminSync: &gwadminsync.Syncer{Client: cl, OperatorNamespace: ns}}
+	_, err := r.resolveGWAdmin(t.Context(), gateway, true)
+	notReady, ok := errors.AsType[gwAdminNotReadyError](err)
+	require.True(t, ok, "not ready: %v", err)
+	assert.True(t, notReady.notAllowed)
+	assert.Equal(t, eventgatewayv1alpha1.OnPremEventGatewayGWAdminRefNotPermittedReason, notReady.resolvedReason())
+	assert.Contains(t, notReady.msg, "The gateway may not use its GWAdmin: no KongReferenceGrant in namespace default")
 }
 
-func TestReconcileReportsTheGWAdmin(t *testing.T) {
-	conditions := func(t *testing.T, cl client.Client, gateway *eventgatewayv1alpha1.OnPremEventGateway) (resolved, programmed *metav1.Condition) {
+func TestResolveGWAdminReasons(t *testing.T) {
+	gateway := newTestGateway("gateway")
+	resolve := func(t *testing.T, objects ...client.Object) gwAdminNotReadyError {
 		t.Helper()
-		var got eventgatewayv1alpha1.OnPremEventGateway
-		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(gateway), &got))
-		return apimeta.FindStatusCondition(got.Status.Conditions, string(eventgatewayv1alpha1.OnPremEventGatewayGWAdminResolvedType)),
-			apimeta.FindStatusCondition(got.Status.Conditions, string(eventgatewayv1alpha1.OnPremEventGatewayProgrammedType))
+		cl := newFakeClient(t, append(objects, gateway)...)
+		r := &Reconciler{Client: cl, GWAdminSync: &gwadminsync.Syncer{Client: cl, OperatorNamespace: ns}}
+		_, err := r.resolveGWAdmin(t.Context(), gateway, true)
+		notReady, ok := errors.AsType[gwAdminNotReadyError](err)
+		require.True(t, ok, "not ready: %v", err)
+		return notReady
 	}
 
-	t.Run("pods are found", func(t *testing.T) {
-		gw, es := newTestGWAdmin(endpoint("gw-admin-0", "10.0.0.1", false))
-		gateway := newTestGateway("gateway")
-		cl := newGWAdminTestClient(t, interceptor.Funcs{}, gw, es, gateway)
-		_, err := (&Reconciler{Client: cl}).Reconcile(t.Context(), gateway)
-		require.NoError(t, err)
-		resolved, programmed := conditions(t, cl, gateway)
-		require.NotNil(t, resolved)
-		assert.Equal(t, metav1.ConditionTrue, resolved.Status)
-		assert.Equal(t, string(eventgatewayv1alpha1.OnPremEventGatewayGWAdminResolvedReason), resolved.Reason)
-		assert.Equal(t, "The GWAdmin default/gw-admin serves the gateway", resolved.Message)
-		require.NotNil(t, programmed)
-		assert.Equal(t, metav1.ConditionFalse, programmed.Status)
-		assert.Equal(t, string(eventgatewayv1alpha1.OnPremEventGatewayPendingReason), programmed.Reason)
-		assert.Equal(t, eventgatewayv1alpha1.OnPremEventGatewayPendingMessage, programmed.Message)
-	})
+	notFound := resolve(t)
+	assert.Equal(t, eventgatewayv1alpha1.OnPremEventGatewayGWAdminNotFoundReason, notFound.resolvedReason())
+	assert.Equal(t, "The GWAdmin default/gw-admin does not exist", notFound.msg)
+	assert.True(t, notFound.nothingToRemove)
 
-	t.Run("the GWAdmin isn't resolved", func(t *testing.T) {
-		gateway := newTestGateway("gateway")
-		cl := newGWAdminTestClient(t, interceptor.Funcs{}, gateway)
-		_, err := (&Reconciler{Client: cl}).Reconcile(t.Context(), gateway)
-		require.NoError(t, err, "not retried: a change of the GWAdmin triggers the gateway")
-		resolved, programmed := conditions(t, cl, gateway)
-		require.NotNil(t, resolved)
-		assert.Equal(t, metav1.ConditionFalse, resolved.Status)
-		assert.Equal(t, string(eventgatewayv1alpha1.OnPremEventGatewayGWAdminNotFoundReason), resolved.Reason)
-		assert.Equal(t, "The GWAdmin default/gw-admin does not exist", resolved.Message)
-		require.NotNil(t, programmed)
-		assert.Equal(t, metav1.ConditionFalse, programmed.Status)
-		assert.Equal(t, string(eventgatewayv1alpha1.DependenciesNotReadyReason), programmed.Reason)
-		assert.Equal(t, eventgatewayv1alpha1.OnPremEventGatewayGWAdminNotResolvedMessage, programmed.Message)
-	})
-
-	t.Run("the conditions are carried over, their lastTransitionTime kept until they change", func(t *testing.T) {
-		gw, es := newTestGWAdmin(endpoint("gw-admin-0", "10.0.0.1", false))
-		gateway := newTestGateway("gateway")
-		cl := newGWAdminTestClient(t, interceptor.Funcs{}, gw, es, gateway)
-		r := &Reconciler{Client: cl}
-		_, err := r.Reconcile(t.Context(), gateway)
-		require.NoError(t, err)
-
-		// Move the lastTransitionTime of both conditions back, to tell a kept
-		// one from a new one.
-		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(gateway), gateway))
-		past := metav1.NewTime(time.Now().Add(-time.Hour).Truncate(time.Second))
-		for i := range gateway.Status.Conditions {
-			gateway.Status.Conditions[i].LastTransitionTime = past
-		}
-		require.NoError(t, cl.Status().Update(t.Context(), gateway))
-
-		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(gateway), gateway))
-		_, err = r.Reconcile(t.Context(), gateway)
-		require.NoError(t, err)
-		resolved, programmed := conditions(t, cl, gateway)
-		require.NotNil(t, resolved)
-		require.NotNil(t, programmed)
-		assert.True(t, resolved.LastTransitionTime.Equal(&past), "GWAdminResolved didn't change")
-		assert.True(t, programmed.LastTransitionTime.Equal(&past), "Programmed didn't change")
-
-		require.NoError(t, cl.Delete(t.Context(), es))
-		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(gateway), gateway))
-		_, err = r.Reconcile(t.Context(), gateway)
-		require.NoError(t, err)
-		resolved, programmed = conditions(t, cl, gateway)
-		require.NotNil(t, resolved)
-		require.NotNil(t, programmed)
-		assert.Equal(t, metav1.ConditionFalse, resolved.Status)
-		assert.True(t, resolved.LastTransitionTime.After(past.Time), "GWAdminResolved turned False")
-		assert.Equal(t, string(eventgatewayv1alpha1.DependenciesNotReadyReason), programmed.Reason)
-		assert.True(t, programmed.LastTransitionTime.Equal(&past), "Programmed stayed False: only its reason changed")
-	})
-
-	t.Run("a gateway being deleted is left alone", func(t *testing.T) {
-		gateway := newTestGateway("gateway")
-		gateway.SetDeletionTimestamp(new(metav1.Now()))
-		gateway.SetFinalizers([]string{"example.com/hold"})
-		cl := newGWAdminTestClient(t, interceptor.Funcs{}, gateway)
-		require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(gateway), gateway))
-		_, err := (&Reconciler{Client: cl}).Reconcile(t.Context(), gateway)
-		require.NoError(t, err)
-		resolved, programmed := conditions(t, cl, gateway)
-		assert.Nil(t, resolved)
-		assert.Nil(t, programmed)
-	})
-
-	t.Run("an error writing the status is retried", func(t *testing.T) {
-		gateway := newTestGateway("gateway")
-		cl := newGWAdminTestClient(t, interceptor.Funcs{
-			SubResourcePatch: func(context.Context, client.Client, string, client.Object, client.Patch, ...client.SubResourcePatchOption) error {
-				return errors.New("unavailable")
-			},
-		}, gateway)
-		_, err := (&Reconciler{Client: cl}).Reconcile(t.Context(), gateway)
-		require.ErrorContains(t, err, "unavailable")
-	})
-
-	t.Run("an error reading the cluster is retried, and the status left alone", func(t *testing.T) {
-		gateway := newTestGateway("gateway")
-		cl := newGWAdminTestClient(t, interceptor.Funcs{Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-			if _, ok := obj.(*operatorv1alpha1.GWAdmin); ok {
-				return errors.New("unavailable")
-			}
-			return cl.Get(ctx, key, obj, opts...)
-		}}, gateway)
-		_, err := (&Reconciler{Client: cl}).Reconcile(t.Context(), gateway)
-		require.ErrorContains(t, err, "unavailable")
-		resolved, programmed := conditions(t, cl, gateway)
-		assert.Nil(t, resolved)
-		assert.Nil(t, programmed)
-	})
+	f := newGWAdminFixture(t)
+	noPod := resolve(t, f.Objects()...)
+	assert.Equal(t, eventgatewayv1alpha1.OnPremEventGatewayGWAdminNotReadyReason, noPod.resolvedReason(), "any other cause")
+	assert.Equal(t, "The GWAdmin default/gw-admin has no gw-admin pod", noPod.msg)
+	assert.True(t, noPod.nothingToRemove, "a GWAdmin without a pod has nothing to remove")
 }
 
-func requestsFor(objs ...client.Object) []reconcile.Request {
-	requests := make([]reconcile.Request, 0, len(objs))
-	for _, obj := range objs {
-		requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(obj)})
-	}
-	return requests
-}
-
-func TestMapGWAdminToOnPremEventGateways(t *testing.T) {
+func TestRequestsForGWAdmin(t *testing.T) {
 	gateway, other := newTestGateway("gateway"), newTestGateway("other")
 	other.Spec.GWAdminRef.Name = "other"
-	gw, _ := newTestGWAdmin()
-	cl := newGWAdminTestClient(t, interceptor.Funcs{}, gateway, other, gw)
-	assert.Equal(t, requestsFor(gateway), mapGWAdminToOnPremEventGateways(cl)(t.Context(), gw))
+	key := client.ObjectKey{Namespace: ns, Name: testGWAdminName}
+	cl := newFakeClient(t, gateway, other)
+	assert.Equal(t, requestsFor(gateway), requestsForGWAdmin(t.Context(), cl, key), "the gateways of the GWAdmin, whether it exists or not")
 
-	cl = newGWAdminTestClient(t, interceptor.Funcs{List: failingList})
-	assert.Empty(t, mapGWAdminToOnPremEventGateways(cl)(t.Context(), gw), "an error maps to nothing")
+	cl = newFakeClientWithInterceptor(t, interceptor.Funcs{List: failingList})
+	assert.Empty(t, requestsForGWAdmin(t.Context(), cl, key), "an error maps to nothing")
+}
+
+func TestMapGatewayToGatewaysOfItsGWAdmin(t *testing.T) {
+	deleted, sibling, other := newTestGateway("deleted"), newTestGateway("sibling"), newTestGateway("other")
+	other.Spec.GWAdminRef.Name = "other"
+	cl := newFakeClient(t, sibling, other)
+	assert.Equal(t, requestsFor(sibling), mapGatewayToGatewaysOfItsGWAdmin(cl)(t.Context(), deleted),
+		"the gateways of the GWAdmin of the deleted one")
+	assert.Empty(t, mapGatewayToGatewaysOfItsGWAdmin(cl)(t.Context(), newGWAdminFixture(t).GWAdmin), "not a gateway")
 }
 
 func TestMapKongReferenceGrantToOnPremEventGateways(t *testing.T) {
@@ -416,9 +273,9 @@ func TestMapKongReferenceGrantToOnPremEventGateways(t *testing.T) {
 	local := newTestGateway("local")
 	local.Namespace = "other"
 	sameNamespace := newTestGateway("same-namespace")
-	gw, _ := newTestGWAdmin()
-	grant := grantGatewaysOf("other")
-	cl := newGWAdminTestClient(t, interceptor.Funcs{}, gateway, local, sameNamespace, gw, grant)
+	gw := &operatorv1alpha1.GWAdmin{Name: testGWAdminName, Namespace: ns}
+	grant := gwadminreftest.Grant(ns, "grant", "other", "")
+	cl := newFakeClient(t, gateway, local, sameNamespace, gw, grant)
 	assert.Equal(t, requestsFor(gateway), mapKongReferenceGrantToOnPremEventGateways(cl)(t.Context(), grant),
 		"the gateways of the granted namespaces referencing a GWAdmin of the namespace of the grant")
 
@@ -428,52 +285,34 @@ func TestMapKongReferenceGrantToOnPremEventGateways(t *testing.T) {
 
 	assert.Empty(t, mapKongReferenceGrantToOnPremEventGateways(cl)(t.Context(), gw), "not a KongReferenceGrant")
 
-	cl = newGWAdminTestClient(t, interceptor.Funcs{List: failingList})
+	cl = newFakeClientWithInterceptor(t, interceptor.Funcs{List: failingList})
 	assert.Empty(t, mapKongReferenceGrantToOnPremEventGateways(cl)(t.Context(), grant))
 }
 
-func TestMapEndpointSliceToOnPremEventGateways(t *testing.T) {
+func TestExpectedGateways(t *testing.T) {
 	gateway := newTestGateway("gateway")
-	cl := newGWAdminTestClient(t, interceptor.Funcs{}, gateway)
-	_, slice := newTestGWAdmin()
-	mapFn := mapEndpointSliceToOnPremEventGateways(cl)
+	deleting := newTestGateway("deleting")
+	deleting.Finalizers = []string{FinalizerGWAdminCleanup}
+	deleting.SetDeletionTimestamp(new(metav1.Now()))
+	notV4 := newTestGateway("not-v4")
+	notV4.SetUID("11111111-1111-1111-1111-111111111111")
+	notAllowed := newTestGateway("not-allowed")
+	notAllowed.Namespace = "other"
+	notAllowed.Spec.GWAdminRef.Namespace = new(ns)
+	allowed := newTestGateway("allowed")
+	allowed.Namespace = "granted"
+	allowed.Spec.GWAdminRef.Namespace = new(ns)
+	otherGWAdmin := newTestGateway("other-gw-admin")
+	otherGWAdmin.Spec.GWAdminRef.Name = "other"
+	cl := newFakeClient(t, gateway, deleting, notV4, notAllowed, allowed, otherGWAdmin,
+		gwadminreftest.Grant(ns, "grant", "granted", ""))
 
-	assert.Equal(t, requestsFor(gateway), mapFn(t.Context(), slice),
-		"the gateways of the GWAdmin, whether it exists or not")
+	ids, err := expectedGateways(t.Context(), cl, gateway)
+	require.NoError(t, err)
+	want := []uuid.UUID{uuid.MustParse(string(gateway.UID)), uuid.MustParse(string(allowed.UID))}
+	slices.SortFunc(want, func(a, b uuid.UUID) int { return strings.Compare(a.String(), b.String()) })
+	assert.Equal(t, want, ids, "the gateways allowed to use the GWAdmin, not being deleted, with a version 4 UID, sorted")
 
-	cp := slice.DeepCopy()
-	cp.Labels[published.APIServiceRoleLabel] = "cp"
-	assert.Empty(t, mapFn(t.Context(), cp), "not the API Service")
-
-	notManaged := slice.DeepCopy()
-	delete(notManaged.Labels, discoveryv1.LabelManagedBy)
-	assert.Empty(t, mapFn(t.Context(), notManaged), "not managed by the EndpointSlice controller")
-
-	unlabelled := slice.DeepCopy()
-	unlabelled.Labels = map[string]string{discoveryv1.LabelServiceName: testAPIServiceName}
-	assert.Empty(t, mapFn(t.Context(), unlabelled), "not a Service of a GWAdmin")
-
-	key, ok := gwAdminOfEndpointSlice(slice)
-	assert.True(t, ok)
-	assert.Equal(t, types.NamespacedName{Namespace: ns, Name: testGWAdminName}, key)
-}
-
-func TestGWAdminServingChanged(t *testing.T) {
-	gw, _ := newTestGWAdmin()
-	update := func(mutate func(*operatorv1alpha1.GWAdmin)) bool {
-		updated := gw.DeepCopy()
-		mutate(updated)
-		return gwAdminServingChanged().Update(event.UpdateEvent{ObjectOld: gw, ObjectNew: updated})
-	}
-
-	assert.False(t, update(func(g *operatorv1alpha1.GWAdmin) {
-		g.Generation++
-		g.Status.Conditions = []metav1.Condition{{Type: "Ready", Status: metav1.ConditionTrue}}
-	}), "a change the gateways don't read")
-	assert.True(t, update(func(g *operatorv1alpha1.GWAdmin) { g.Status.API.Port = 9443 }), "the API it publishes")
-	assert.True(t, update(func(g *operatorv1alpha1.GWAdmin) { g.Status.API = nil }), "the API it no longer publishes")
-	assert.True(t, update(func(g *operatorv1alpha1.GWAdmin) { g.SetDeletionTimestamp(new(metav1.Now())) }), "its deletion")
-	assert.True(t, gwAdminServingChanged().Update(event.UpdateEvent{ObjectOld: &corev1.Secret{}, ObjectNew: &corev1.Secret{}}), "not a GWAdmin")
-	assert.True(t, gwAdminServingChanged().Create(event.CreateEvent{Object: gw}))
-	assert.True(t, gwAdminServingChanged().Delete(event.DeleteEvent{Object: gw}))
+	_, err = expectedGateways(t.Context(), newFakeClientWithInterceptor(t, interceptor.Funcs{List: failingList}), gateway)
+	require.Error(t, err)
 }

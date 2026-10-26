@@ -472,6 +472,44 @@ apiGroupVersions:
             resolvesTo: name
             refTypeName: AIGatewayMCPACLRef
             supportCrossNamespaceReference: true
+        # The OpenAPI examples quote the value as a JSON string, which the
+        # object-typed requestBody/responses fields reject at apply time. The
+        # descriptions below show the same shapes in their object form.
+        cel:
+          spec:
+            apiSpec:
+              conversion-only:
+                tools:
+                  requestBody:
+                    _description: |-
+                      The API requestBody specification defined in OpenAPI JSON format.
+                      For example, {"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}.
+                      See https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/ for more details.
+                      Note that `$ref` is not supported.
+                  responses:
+                    _description: |-
+                      The API responses specification defined in OpenAPI JSON format.
+                      This specification will be used to validate the upstream response and map it back to the structuredOutput.
+                      For example, {"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}.
+                      See https://swagger.io/docs/specification/v3_0/describing-responses/ for more details.
+                      Only one non-error (status code < 400) response is supported.
+                      Note that `$ref` is not supported.
+              conversion-listener:
+                tools:
+                  requestBody:
+                    _description: |-
+                      The API requestBody specification defined in OpenAPI JSON format.
+                      For example, {"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}.
+                      See https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/ for more details.
+                      Note that `$ref` is not supported.
+                  responses:
+                    _description: |-
+                      The API responses specification defined in OpenAPI JSON format.
+                      This specification will be used to validate the upstream response and map it back to the structuredOutput.
+                      For example, {"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}.
+                      See https://swagger.io/docs/specification/v3_0/describing-responses/ for more details.
+                      Only one non-error (status code < 400) response is supported.
+                      Note that `$ref` is not supported.
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayMCPServersSDK

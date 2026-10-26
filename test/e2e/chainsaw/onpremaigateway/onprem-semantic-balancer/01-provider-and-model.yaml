@@ -1,0 +1,102 @@
+# The provider (with the credentials Secret its apikey comes from) and a model
+# whose load balancer is semantic, backed by pgvector. The embeddings reference
+# the same provider, so the rendered embeddings auth comes from its Secret.
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ($provider_credentials_name)
+  namespace: ($namespace)
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+stringData:
+  apikey: test-ai-gateway-key
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModelProvider
+metadata:
+  name: ($provider_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: openai
+    openai:
+      name: ($provider_name)
+      displayName: OpenAI-compatible mock provider
+      config:
+        auth:
+          headers:
+            - name: apikey
+              value:
+                type: secretRef
+                secretRef:
+                  name: ($provider_credentials_name)
+                  key: apikey
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModel
+metadata:
+  name: ($model_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: model
+    model:
+      name: ($model_name)
+      displayName: On-prem semantic-balancer model
+      enabled: Enabled
+      capabilities:
+        - generate
+      formats:
+        - type: openai
+      config:
+        route:
+          paths:
+            - /semantic-chat
+        balancer:
+          algorithm: semantic
+          # The CRD mirrors the Konnect API here: the vector database is a
+          # `type`-discriminated union with the strategy's settings nested under
+          # the member, and the embeddings model is flat. ai-deck-converter's
+          # document format is the other way round on both counts (see
+          # lowerSemanticBalancer), and the converter passes an unknown shape
+          # through to the data plane instead of reporting it.
+          semantic:
+            slots: 10000
+            embeddings:
+              name: text-embedding-3-small
+              provider: ($provider_name)
+              allowAuthOverride: Enabled
+              config:
+                type: openai
+            vectordb:
+              type: pgvector
+              pgvector:
+                database: kong-pgvector
+                dimensions: 1536
+                distanceMetric: cosine
+                host: pgvector.example.com
+                password: pgvector-password
+                port: 5432
+                threshold: 0.7
+                ssl:
+                  enabled: Enabled
+      targets:
+        - name: qwen2.5:0.5b
+          provider:
+            name: ($provider_name)
+          config:
+            type: openai
+            openai:
+              upstreamURL: http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/provider-a

@@ -61,7 +61,7 @@ func EventGatewayBackendClusterReconciliationWatchOptions(
 			return b.Watches(
 				&corev1.Secret{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectsForSecretRef[configurationv1alpha1.EventGatewayBackendClusterList](cl),
+					enqueueObjectsForSecretRef[configurationv1alpha1.EventGatewayBackendClusterList](cl, index.IndexFieldEventGatewayBackendClusterOnSecretRef),
 				),
 			)
 		},

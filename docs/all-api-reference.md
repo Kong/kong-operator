@@ -2137,8 +2137,8 @@ AIGatewayMCPConversionTool A tool exposed by an MCP Server in
 | `parameters` _[][AIGatewayMCPToolParameter](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolparameter)_ |  |
 | `path` _string_ | The path of the exported API. Always treated as relative to the path component of `config.url` and simply concatenated onto it — a leading `/` has no special "absolute path" meaning. If this tool's `host` or `scheme` overrides the source's URL, `path` is instead relative to the root of that overridden host, since there is no URL path from a different host to append to. By default, Kong will extract the path from API configuration. |
 | `query` _[AIGatewayMCPToolQuery](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolquery)_ | The query arguments of the exported API. If the generated query arguments are not exactly matched, this field is required. |
-| `requestBody` _[AIGatewayMCPToolRequestBody](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolrequestbody)_ | The API requestBody specification defined in OpenAPI JSON format. For example, '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'. See https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/ for more details. Note that `$ref` is not supported. |
-| `responses` _[AIGatewayMCPToolResponses](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolresponses)_ | The API responses specification defined in OpenAPI JSON format. This specification will be used to validate the upstream response and map it back to the structuredOutput. For example, '{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'. See https://swagger.io/docs/specification/v3_0/describing-responses/ for more details. Only one non-error (status code < 400) response is supported. Note that `$ref` is not supported. |
+| `requestBody` _[AIGatewayMCPToolRequestBody](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolrequestbody)_ | The API requestBody specification defined in OpenAPI JSON format. For example, {"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}. See https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/ for more details. Note that `$ref` is not supported. |
+| `responses` _[AIGatewayMCPToolResponses](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolresponses)_ | The API responses specification defined in OpenAPI JSON format. This specification will be used to validate the upstream response and map it back to the structuredOutput. For example, {"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}. See https://swagger.io/docs/specification/v3_0/describing-responses/ for more details. Only one non-error (status code < 400) response is supported. Note that `$ref` is not supported. |
 | `scheme` _string_ | The scheme of the exported API. By default, Kong will extract the scheme from API configuration. If the configured scheme is not expected, this field can be used to override it. |
 
 _Appears in:_
@@ -3162,20 +3162,7 @@ _Appears in:_
 - [AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
 - [AIGatewayMCPUpstreamTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpupstreamtool)
 
-#### AIGatewayMCPToolHeaders
 
-_Underlying type:_ `object`
-
-AIGatewayMCPToolHeaders The headers of the exported API.
-By default, Kong will extract the headers from API configuration.
-If the configured headers are not exactly matched, this field is required.
-
-
-
-
-_Appears in:_
-
-- [AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
 
 #### AIGatewayMCPToolParameter
 
@@ -3202,62 +3189,11 @@ _Appears in:_
 
 - [AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
 
-#### AIGatewayMCPToolQuery
-
-_Underlying type:_ `object`
-
-AIGatewayMCPToolQuery The query arguments of the exported API.
-If the generated query arguments are not exactly matched, this field is
-required.
 
 
 
 
-_Appears in:_
 
-- [AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
-
-#### AIGatewayMCPToolRequestBody
-
-_Underlying type:_ `object`
-
-AIGatewayMCPToolRequestBody The API requestBody specification defined in
-OpenAPI JSON format.
-For example,
-'{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
-See
-https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/
-for more details.
-Note that `$ref` is not supported.
-
-
-
-
-_Appears in:_
-
-- [AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
-
-#### AIGatewayMCPToolResponses
-
-_Underlying type:_ `object`
-
-AIGatewayMCPToolResponses The API responses specification defined in OpenAPI
-JSON format.
-This specification will be used to validate the upstream response and map it
-back to the structuredOutput.
-For example,
-'{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'.
-See https://swagger.io/docs/specification/v3_0/describing-responses/ for more
-details.
-Only one non-error (status code < 400) response is supported.
-Note that `$ref` is not supported.
-
-
-
-
-_Appears in:_
-
-- [AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
 
 #### AIGatewayMCPUpstreamTool
 
@@ -16156,6 +16092,8 @@ OnPremEventGatewayStatus defines the observed state of OnPremEventGateway.
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the OnPremEventGateway. |
 | `serverURL` _string_ | ServerURL is the address the data planes of this gateway use to reach gw-admin: the cp endpoint of its GWAdmin. |
 | `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed. |
+| `configRevision` _int64_ | ConfigRevision is the revision of the configuration of the gateway that Kong Operator pushes to gw-admin. It increases by one every time that configuration changes, and never decreases. |
+| `configHash` _string_ | ConfigHash identifies the configuration that ConfigRevision stands for: it changes only along with a new revision. |
 
 _Appears in:_
 

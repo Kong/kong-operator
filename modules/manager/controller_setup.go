@@ -57,6 +57,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/specialized"
 	kiccontrollers "github.com/kong/kong-operator/v2/ingress-controller/pkg/controllers"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstance"
+	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminsync"
 	"github.com/kong/kong-operator/v2/internal/metrics"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
@@ -232,6 +233,11 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 	// The OnPremEventGateway controller looks the gateways of a GWAdmin up.
 	if cfg.OnPremEventGatewayControllerEnabled {
 		indexOptions = slices.Concat(indexOptions, gwadminref.IndexOptions())
+	}
+	// The OnPremEventGateway controller finds the entities of a gateway by the
+	// indexes the Konnect controllers register too.
+	if cfg.OnPremEventGatewayControllerEnabled && !cfg.KonnectControllersEnabled {
+		indexOptions = slices.Concat(indexOptions, egonprem.IndexOptions())
 	}
 
 	if cfg.FeatureGates.Enabled(FeatureGateMCPServer) {
@@ -965,6 +971,14 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			Controller: &egonprem.Reconciler{
 				Client:      mgr.GetClient(),
 				LoggingMode: c.LoggingMode,
+				GWAdminSync: &gwadminsync.Syncer{
+					Client: mgr.GetClient(),
+					// Where the GWAdmin controller keeps the operator client
+					// certificates.
+					OperatorNamespace:   c.ControllerNamespace,
+					SecretLabelSelector: c.SecretLabelSelector,
+				},
+				TypeConverter: ssaProvider,
 			},
 		},
 		// GWAdmin controller

@@ -27,3 +27,12 @@ spec:
   parallel: 4
   failFast: false
   fullName: true
+
+  # Chainsaw names an auto-created test namespace with two random petname words
+  # (~200k combinations). When two tests in the same parallel run draw the same
+  # name, chainsaw silently reuses the existing namespace instead of failing, and
+  # the tests overwrite each other's resources. Appending the test's run id makes
+  # every namespace unique by construction.
+  namespaceTemplate:
+    metadata:
+      name: (join('-', [$namespace, to_string($test.Id)]))

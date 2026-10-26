@@ -13,6 +13,8 @@ const (
 	IndexFieldEventGatewayBackendClusterOnKonnectEventGatewayRef = "eventGatewayBackendClusterOnKonnectEventGatewayRef"
 	// IndexFieldEventGatewayBackendClusterOnOnPremEventGatewayRef is the index field for EventGatewayBackendCluster -> OnPremEventGateway.
 	IndexFieldEventGatewayBackendClusterOnOnPremEventGatewayRef = "eventGatewayBackendClusterOnOnPremEventGatewayRef"
+	// IndexFieldEventGatewayBackendClusterOnSecretRef is the index field for EventGatewayBackendCluster -> the Secrets it reads.
+	IndexFieldEventGatewayBackendClusterOnSecretRef = "eventGatewayBackendClusterOnSecretRef"
 )
 
 // OptionsForEventGatewayBackendCluster returns required Index options for EventGatewayBackendCluster reconciler.
@@ -27,6 +29,11 @@ func OptionsForEventGatewayBackendCluster() []Option {
 			Object:         &configurationv1alpha1.EventGatewayBackendCluster{},
 			Field:          IndexFieldEventGatewayBackendClusterOnOnPremEventGatewayRef,
 			ExtractValueFn: eventGatewayBackendClusterOnOnPremEventGatewayRef,
+		},
+		{
+			Object:         &configurationv1alpha1.EventGatewayBackendCluster{},
+			Field:          IndexFieldEventGatewayBackendClusterOnSecretRef,
+			ExtractValueFn: eventGatewayBackendClusterOnSecretRef,
 		},
 	}
 }
@@ -71,4 +78,21 @@ func eventGatewayBackendClusterOnOnPremEventGatewayRef(object client.Object) []s
 	}
 
 	return []string{refNamespace + "/" + ref.Name}
+}
+
+func eventGatewayBackendClusterOnSecretRef(object client.Object) []string {
+	ent, ok := object.(*configurationv1alpha1.EventGatewayBackendCluster)
+	if !ok {
+		return nil
+	}
+	refs := ent.GetSensitiveDataSecretRefs()
+	out := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		ns := ent.GetNamespace()
+		if ref.Namespace != nil && *ref.Namespace != "" {
+			ns = *ref.Namespace
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
 }

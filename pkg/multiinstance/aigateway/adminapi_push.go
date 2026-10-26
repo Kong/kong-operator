@@ -24,7 +24,6 @@ import (
 	"io"
 	"slices"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/kong/go-kong/kong"
 	corev1 "k8s.io/api/core/v1"
@@ -474,17 +473,7 @@ const maxConditionMessageLength = 512
 // truncateMessage truncates s to maxConditionMessageLength bytes, cutting on
 // a rune boundary and appending an ellipsis when truncated.
 func truncateMessage(s string) string {
-	if len(s) <= maxConditionMessageLength {
-		return s
-	}
-	cut := maxConditionMessageLength - 3
-	// The cut > 0 guard keeps the loop on rune boundaries of malformed input:
-	// valid UTF-8 runs at most 3 continuation bytes in a row, but arbitrary
-	// (non-UTF-8) bytes do not have to.
-	for cut > 0 && !utf8.RuneStart(s[cut]) {
-		cut--
-	}
-	return s[:cut] + "..."
+	return k8sutils.TruncateMessage(s, maxConditionMessageLength)
 }
 
 // entityFailureDesc returns a "Kind/namespace/name: error" description of an

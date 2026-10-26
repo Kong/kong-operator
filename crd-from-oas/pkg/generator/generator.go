@@ -1298,13 +1298,14 @@ func fieldConfigsEqual(a, b *config.FieldConfig) bool {
 	return reflect.DeepEqual(a, b)
 }
 
-// isEmptyFieldConfig reports whether a field config carries no validations and
-// no non-empty descendants, which makes it equivalent to an absent cursor.
+// isEmptyFieldConfig reports whether a field config carries no validations,
+// no description and no non-empty descendants, which makes it equivalent to an
+// absent cursor.
 func isEmptyFieldConfig(fc *config.FieldConfig) bool {
 	if fc == nil {
 		return true
 	}
-	if len(fc.Validations) > 0 {
+	if len(fc.Validations) > 0 || fc.Description != "" {
 		return false
 	}
 	for _, child := range fc.Fields {
@@ -1364,6 +1365,7 @@ func cloneFieldConfig(fc *config.FieldConfig) *config.FieldConfig {
 	if len(fc.Validations) > 0 {
 		clone.Validations = append([]string(nil), fc.Validations...)
 	}
+	clone.Description = fc.Description
 	if len(fc.Fields) > 0 {
 		clone.Fields = cloneFieldConfigMap(fc.Fields)
 	}
@@ -2129,6 +2131,7 @@ func shouldSkipUnionMemberDiscriminator(refName string, prop *parser.Property, u
 // schemaCursors maps each schema's Go type name to the *config.FieldConfig cursor
 // at that schema's level, used to apply custom kubebuilder validation markers.
 func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.ParsedSpec, schemaCursors map[string]*config.FieldConfig) string {
+	g.parsed = parsed
 	g.ensureInlineTypeNames(parsed)
 	unionMemberDiscriminators := collectUnionMemberDiscriminators(parsed)
 
@@ -2288,7 +2291,14 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 				// Generate based on the schema's actual type
 				body.WriteString(comment)
 				goType := schemaToGoType(schema)
-				fmt.Fprintf(&body, "type %s %s\n\n", goName, goType)
+				if goType == "apiextensionsv1.JSON" {
+					// Alias, not a named type: a defined type does not inherit
+					// apiextensionsv1.JSON's Marshal/UnmarshalJSON and would silently
+					// serialize as an empty object.
+					fmt.Fprintf(&body, "type %s = %s\n\n", goName, goType)
+				} else {
+					fmt.Fprintf(&body, "type %s %s\n\n", goName, goType)
+				}
 			}
 		} else {
 			panic("Schema not found for reference: " + refName)
@@ -2370,7 +2380,11 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 	// the per-CRD cost budget), and swap the element type for the ref struct.
 	refTypeName := g.schemaTypeRefFields()[typeName][jsonFieldName]
 
-	buf.WriteString(formatComment(prop.Description))
+	description := prop.Description
+	if c := fieldCursor.Sub(jsonTagForProperty(prop)); c != nil && c.Description != "" {
+		description = c.Description
+	}
+	buf.WriteString(formatComment(description))
 	buf.WriteString("\n")
 	buf.WriteString("\t//\n")
 	switch {
@@ -2392,7 +2406,11 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 			fmt.Fprintf(buf, "\t// %s\n", markerOptional())
 		}
 	default:
-		for _, tag := range KubebuilderTags(prop, fieldCursor) {
+		tags := KubebuilderTags(prop, fieldCursor)
+		if freeformObjectRef(g.parsed, prop) {
+			tags = append(tags, markerValidationTypeObject())
+		}
+		for _, tag := range tags {
 			fmt.Fprintf(buf, "\t// %s\n", tag)
 		}
 	}
@@ -2424,6 +2442,24 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 		goType = g.inlineTypeName("", typeName, prop.Name)
 	}
 	fmt.Fprintf(buf, "\t%s %s `json:\"%s\"`\n", goFieldName(prop.Name), goType, jsonTag(prop, goType))
+}
+
+// freeformObjectRef reports whether prop references a free-form object schema,
+// i.e. one generateSchemaTypes emits as an apiextensionsv1.JSON alias. Such a
+// field needs an explicit Type=object marker: the alias alone yields only
+// x-kubernetes-preserve-unknown-fields, which accepts any JSON value (a
+// string, an array) instead of an object.
+func freeformObjectRef(parsed *parser.ParsedSpec, prop *parser.Property) bool {
+	if parsed == nil || prop.RefName == "" {
+		return false
+	}
+	schema, ok := parsed.Schemas[prop.RefName]
+	if !ok {
+		return false
+	}
+	// Only a plain object without declared properties or a map value type is
+	// emitted as an apiextensionsv1.JSON alias (see generateSchemaTypes).
+	return schema.Type == "object" && len(schema.Properties) == 0 && schema.AdditionalProperties == nil
 }
 
 // writeDedicatedSensitiveTypesForSchema appends dedicated union type
@@ -2615,8 +2651,11 @@ func schemaToGoType(schema *parser.Schema) string {
 			}
 		}
 		return "[]any"
+	case "object":
+		// A free-form object (additionalProperties: true, no declared properties) must
+		// accept arbitrary JSON, matching goType's fallback for such properties.
+		return "apiextensionsv1.JSON"
 	default:
-		// For object types without properties or unknown types, default to map[string]string
 		return "map[string]string"
 	}
 }

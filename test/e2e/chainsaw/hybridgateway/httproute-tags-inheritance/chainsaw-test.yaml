@@ -143,7 +143,7 @@ spec:
               metadata:
                 namespace: ($namespace)
               spec:
-                (contains(tags, 'route-tag')): true
+                (contains(tags || `[]`, 'route-tag')): true
               status:
                 (conditions[?type == 'Programmed']):
                   - status: 'True'
@@ -194,8 +194,8 @@ spec:
               metadata:
                 namespace: ($namespace)
               spec:
-                (contains(tags, 'route-tag')): true
-                (contains(tags, 'gw-tag')): true
+                (contains(tags || `[]`, 'route-tag')): true
+                (contains(tags || `[]`, 'gw-tag')): true
         - assert:
             resource:
               apiVersion: configuration.konghq.com/v1alpha1
@@ -203,7 +203,7 @@ spec:
               metadata:
                 namespace: ($namespace)
               spec:
-                (contains(tags, 'gw-tag')): true
+                (contains(tags || `[]`, 'gw-tag')): true
         - assert:
             resource:
               apiVersion: configuration.konghq.com/v1alpha1
@@ -211,7 +211,7 @@ spec:
               metadata:
                 namespace: ($namespace)
               spec:
-                (contains(tags, 'gw-tag')): true
+                (contains(tags || `[]`, 'gw-tag')): true
         - assert:
             resource:
               apiVersion: configuration.konghq.com/v1alpha1
@@ -219,7 +219,7 @@ spec:
               metadata:
                 namespace: ($namespace)
               spec:
-                (contains(tags, 'gw-tag')): true
+                (contains(tags || `[]`, 'gw-tag')): true
 
     - name: Assert-gateway-tag-on-listener-certificate
       description: |
@@ -234,7 +234,7 @@ spec:
                 namespace: ($namespace)
                 (labels."gateway-operator.konghq.com/managed-by"): 'Gateway'
               spec:
-                (contains(tags, 'gw-tag')): true
+                (contains(tags || `[]`, 'gw-tag')): true
         - assert:
             resource:
               apiVersion: configuration.konghq.com/v1alpha1
@@ -243,7 +243,7 @@ spec:
                 namespace: ($namespace)
                 (labels."gateway-operator.konghq.com/managed-by"): 'Gateway'
               spec:
-                (contains(tags, 'gw-tag')): true
+                (contains(tags || `[]`, 'gw-tag')): true
 
     # -------------------------------------------------------------------------
     # Phase 3: annotate the GatewayClass. This checks two separate watches: the
@@ -281,9 +281,9 @@ spec:
               metadata:
                 namespace: ($namespace)
               spec:
-                (contains(tags, 'route-tag')): true
-                (contains(tags, 'gw-tag')): true
-                (contains(tags, 'class-tag')): true
+                (contains(tags || `[]`, 'route-tag')): true
+                (contains(tags || `[]`, 'gw-tag')): true
+                (contains(tags || `[]`, 'class-tag')): true
         - assert:
             resource:
               apiVersion: configuration.konghq.com/v1alpha1
@@ -291,8 +291,8 @@ spec:
               metadata:
                 namespace: ($namespace)
               spec:
-                (contains(tags, 'gw-tag')): true
-                (contains(tags, 'class-tag')): true
+                (contains(tags || `[]`, 'gw-tag')): true
+                (contains(tags || `[]`, 'class-tag')): true
         - assert:
             resource:
               apiVersion: configuration.konghq.com/v1alpha1
@@ -300,8 +300,8 @@ spec:
               metadata:
                 namespace: ($namespace)
               spec:
-                (contains(tags, 'gw-tag')): true
-                (contains(tags, 'class-tag')): true
+                (contains(tags || `[]`, 'gw-tag')): true
+                (contains(tags || `[]`, 'class-tag')): true
         - assert:
             resource:
               apiVersion: configuration.konghq.com/v1alpha1
@@ -309,8 +309,8 @@ spec:
               metadata:
                 namespace: ($namespace)
               spec:
-                (contains(tags, 'gw-tag')): true
-                (contains(tags, 'class-tag')): true
+                (contains(tags || `[]`, 'gw-tag')): true
+                (contains(tags || `[]`, 'class-tag')): true
         - assert:
             resource:
               apiVersion: configuration.konghq.com/v1alpha1
@@ -319,8 +319,8 @@ spec:
                 namespace: ($namespace)
                 (labels."gateway-operator.konghq.com/managed-by"): 'Gateway'
               spec:
-                (contains(tags, 'gw-tag')): true
-                (contains(tags, 'class-tag')): true
+                (contains(tags || `[]`, 'gw-tag')): true
+                (contains(tags || `[]`, 'class-tag')): true
         - assert:
             resource:
               apiVersion: configuration.konghq.com/v1alpha1
@@ -329,8 +329,8 @@ spec:
                 namespace: ($namespace)
                 (labels."gateway-operator.konghq.com/managed-by"): 'Gateway'
               spec:
-                (contains(tags, 'gw-tag')): true
-                (contains(tags, 'class-tag')): true
+                (contains(tags || `[]`, 'gw-tag')): true
+                (contains(tags || `[]`, 'class-tag')): true
 
     # -------------------------------------------------------------------------
     # Phase 4: remove the Gateway's annotation. Inherited tags have to shrink,
@@ -368,9 +368,9 @@ spec:
               metadata:
                 namespace: ($namespace)
               spec:
-                (contains(tags, 'route-tag')): true
-                (contains(tags, 'gw-tag')): false
-                (contains(tags, 'class-tag')): true
+                (contains(tags || `[]`, 'route-tag')): true
+                (contains(tags || `[]`, 'gw-tag')): false
+                (contains(tags || `[]`, 'class-tag')): true
         - assert:
             resource:
               apiVersion: configuration.konghq.com/v1alpha1
@@ -378,8 +378,8 @@ spec:
               metadata:
                 namespace: ($namespace)
               spec:
-                (contains(tags, 'gw-tag')): false
-                (contains(tags, 'class-tag')): true
+                (contains(tags || `[]`, 'gw-tag')): false
+                (contains(tags || `[]`, 'class-tag')): true
 
   catch:
     # Capture debug snapshot on test failure.

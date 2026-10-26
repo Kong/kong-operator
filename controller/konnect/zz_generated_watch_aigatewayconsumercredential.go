@@ -45,7 +45,7 @@ func AIGatewayConsumerCredentialReconciliationWatchOptions(
 			return b.Watches(
 				&corev1.Secret{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectsForSecretRef[aiconfigurationv1alpha1.AIGatewayConsumerCredentialList](cl),
+					enqueueObjectsForSecretRef[aiconfigurationv1alpha1.AIGatewayConsumerCredentialList](cl, index.IndexFieldAIGatewayConsumerCredentialOnSecretRef),
 				),
 			)
 		},

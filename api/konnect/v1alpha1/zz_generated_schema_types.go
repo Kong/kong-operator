@@ -2,6 +2,10 @@
 
 package v1alpha1
 
+import (
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+)
+
 // AIGatewayMinRuntimeVersion The minimum AI Gateway runtime version supported
 // by this AI Gateway.
 // This is the lowest data plane version that may receive configuration from it,
@@ -53,7 +57,7 @@ const (
 )
 
 // CreatePortalCustomDomainSSL is a type alias.
-type CreatePortalCustomDomainSSL map[string]string
+type CreatePortalCustomDomainSSL = apiextensionsv1.JSON
 
 // CreatePortalCustomDomainSSLStandard is a type alias.
 type CreatePortalCustomDomainSSLStandard struct {

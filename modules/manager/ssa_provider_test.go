@@ -32,7 +32,7 @@ func TestIsSSAProviderNeeded(t *testing.T) {
 		{
 			name: "OnPremEventGateway controller enabled",
 			cfg:  Config{OnPremEventGatewayControllerEnabled: true},
-			want: false,
+			want: true,
 		},
 		{
 			name: "MCPServer feature gate enabled",

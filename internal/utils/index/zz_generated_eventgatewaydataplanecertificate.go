@@ -13,6 +13,8 @@ const (
 	IndexFieldEventGatewayDataPlaneCertificateOnKonnectEventGatewayRef = "eventGatewayDataPlaneCertificateOnKonnectEventGatewayRef"
 	// IndexFieldEventGatewayDataPlaneCertificateOnOnPremEventGatewayRef is the index field for EventGatewayDataPlaneCertificate -> OnPremEventGateway.
 	IndexFieldEventGatewayDataPlaneCertificateOnOnPremEventGatewayRef = "eventGatewayDataPlaneCertificateOnOnPremEventGatewayRef"
+	// IndexFieldEventGatewayDataPlaneCertificateOnSecretRef is the index field for EventGatewayDataPlaneCertificate -> the Secrets it reads.
+	IndexFieldEventGatewayDataPlaneCertificateOnSecretRef = "eventGatewayDataPlaneCertificateOnSecretRef"
 )
 
 // OptionsForEventGatewayDataPlaneCertificate returns required Index options for EventGatewayDataPlaneCertificate reconciler.
@@ -27,6 +29,11 @@ func OptionsForEventGatewayDataPlaneCertificate() []Option {
 			Object:         &configurationv1alpha1.EventGatewayDataPlaneCertificate{},
 			Field:          IndexFieldEventGatewayDataPlaneCertificateOnOnPremEventGatewayRef,
 			ExtractValueFn: eventGatewayDataPlaneCertificateOnOnPremEventGatewayRef,
+		},
+		{
+			Object:         &configurationv1alpha1.EventGatewayDataPlaneCertificate{},
+			Field:          IndexFieldEventGatewayDataPlaneCertificateOnSecretRef,
+			ExtractValueFn: eventGatewayDataPlaneCertificateOnSecretRef,
 		},
 	}
 }
@@ -71,4 +78,21 @@ func eventGatewayDataPlaneCertificateOnOnPremEventGatewayRef(object client.Objec
 	}
 
 	return []string{refNamespace + "/" + ref.Name}
+}
+
+func eventGatewayDataPlaneCertificateOnSecretRef(object client.Object) []string {
+	ent, ok := object.(*configurationv1alpha1.EventGatewayDataPlaneCertificate)
+	if !ok {
+		return nil
+	}
+	refs := ent.GetSensitiveDataSecretRefs()
+	out := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		ns := ent.GetNamespace()
+		if ref.Namespace != nil && *ref.Namespace != "" {
+			ns = *ref.Namespace
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
 }

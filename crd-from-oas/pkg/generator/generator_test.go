@@ -4368,6 +4368,8 @@ func TestGenerateOnPremEventGatewayEntitiesDispatcher(t *testing.T) {
 			`// +kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaybackendclusters;eventgatewaylistenerpolicies;eventgatewaylisteners;eventgatewayvirtualclusterproducepolicies;eventgatewayvirtualclusters,verbs=get;list;watch`)
 		assert.Contains(t, file.Content, `configurationv1alpha1.GroupVersion.WithResource("eventgatewaylistenerpolicies"),`)
 		assert.Contains(t, file.Content, `configurationv1alpha1.GroupVersion.WithResource("eventgatewayvirtualclusterproducepolicies"),`)
+		assert.Contains(t, file.Content, "index.OptionsForEventGatewayBackendCluster(),")
+		assert.Contains(t, file.Content, "index.OptionsForEventGatewayVirtualClusterProducePolicy(),")
 
 		formatted, err := format.Source([]byte(file.Content))
 		require.NoError(t, err)
@@ -7477,6 +7479,40 @@ func TestGenerateSchemaTypes_AllOfCompositeEmitsPlainStruct(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestGenerateSchemaTypes_FreeformObjectEmitsJSONAlias(t *testing.T) {
+	// A named free-form object schema (additionalProperties: true, no declared
+	// properties) must alias apiextensionsv1.JSON: a defined type does not
+	// inherit its Marshal/UnmarshalJSON and would marshal as {}.
+	// Fields referencing it need an explicit object type, because the alias
+	// alone yields only x-kubernetes-preserve-unknown-fields, which accepts any
+	// JSON value. A _description override on such a field must be applied.
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+
+	content := g.generateSchemaTypes(
+		map[string]bool{"Freeform": true, "Parent": true},
+		&parser.ParsedSpec{
+			Schemas: map[string]*parser.Schema{
+				"Freeform": {Name: "Freeform", Type: "object"},
+				"Parent": {Name: "Parent", Type: "object", Properties: []*parser.Property{
+					{Name: "body", RefName: "Freeform"},
+				}},
+			},
+		},
+		map[string]*config.FieldConfig{
+			"Parent": {Fields: map[string]*config.FieldConfig{
+				"body": {Description: "Object form example."},
+			}},
+		},
+	)
+
+	assert.Contains(t, content, "type Freeform = apiextensionsv1.JSON")
+	assert.Contains(t, content, "// Object form example.")
+	assert.Contains(t, content, "// +kubebuilder:validation:Type=object\n\tBody Freeform")
+
+	_, err := format.Source([]byte(content))
+	require.NoError(t, err)
+}
+
 func TestGenerateSDKOps_AllOfCompositeRefCollectsBoolAndFreeformFields(t *testing.T) {
 	// Bools and free-form maps nested behind $ref chains (here: listener
 	// variant -> config -> route, where route was flattened from a composite
@@ -7642,6 +7678,53 @@ func TestGenerateSDKOps_ReferenceToKindNotManagedByKonnect(t *testing.T) {
 			} else {
 				require.NotContains(t, content, "SkipKonnectReconciliation")
 			}
+		})
+	}
+}
+
+// TestGenerateIndex_SecretRefIndex verifies that the entities reading Secrets
+// through their sensitive data sources get an index of those Secrets, and
+// the others don't.
+func TestGenerateIndex_SecretRefIndex(t *testing.T) {
+	metadata := reconcilerEntityMetadata{
+		EntityName:           "EventGatewayBackendCluster",
+		EntityNameLowerCamel: "eventGatewayBackendCluster",
+		ParentEntityName:     "KonnectEventGateway",
+		ParentRefFieldName:   "GatewayRef",
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/configuration/v1alpha1",
+		APIGroupPackageAlias: "configurationv1alpha1",
+	}
+	generate := func(t *testing.T, dataSources map[string][]config.DataSourceConfig, rc *config.ReconcilerConfig) string {
+		t.Helper()
+		g := NewGenerator(Config{
+			APIGroupPackagePath:  metadata.APIGroupPackagePath,
+			APIGroupPackageAlias: metadata.APIGroupPackageAlias,
+			DataSources:          dataSources,
+		})
+		content, err := g.generateIndex(metadata, rc)
+		require.NoError(t, err)
+		_, err = format.Source([]byte(content))
+		require.NoError(t, err, "generated code must be valid Go")
+		return content
+	}
+	secretSources := map[string][]config.DataSourceConfig{
+		"EventGatewayBackendCluster": {{Path: "spec.apiSpec.tls.clientIdentity.key", Type: "Secret"}},
+	}
+
+	for name, rc := range map[string]*config.ReconcilerConfig{"child": {}, "root": {IsRoot: new(true)}} {
+		t.Run(name+" with Secret sources", func(t *testing.T) {
+			content := generate(t, secretSources, rc)
+			assert.Contains(t, content, `IndexFieldEventGatewayBackendClusterOnSecretRef = "eventGatewayBackendClusterOnSecretRef"`)
+			assert.Contains(t, content, "Field:          IndexFieldEventGatewayBackendClusterOnSecretRef,")
+			assert.Contains(t, content, "refs := ent.GetSensitiveDataSecretRefs()")
+			assert.Contains(t, content, `out = append(out, ns+"/"+ref.Name)`)
+		})
+		t.Run(name+" without Secret sources", func(t *testing.T) {
+			configMapSources := map[string][]config.DataSourceConfig{
+				"EventGatewayBackendCluster": {{Path: "spec.apiSpec.tls.caBundle", Type: "ConfigMap"}},
+			}
+			assert.NotContains(t, generate(t, configMapSources, rc), "OnSecretRef")
+			assert.NotContains(t, generate(t, nil, rc), "OnSecretRef")
 		})
 	}
 }

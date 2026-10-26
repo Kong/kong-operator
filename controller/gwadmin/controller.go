@@ -424,14 +424,16 @@ func ownedByPredecessor(obj client.Object, gw *operatorv1alpha1.GWAdmin) bool {
 // enqueueForPrivateSecret maps a Secret of a GWAdmin in the operator
 // namespace to the GWAdmin.
 func enqueueForPrivateSecret(_ context.Context, obj client.Object) []reconcile.Request {
-	labels := obj.GetLabels()
-	if labels[consts.GWAdminUIDLabel] == "" || labels[consts.GatewayOperatorManagedByNamespaceLabel] == "" {
+	// The GWAdmin owns the Secrets of its namespace: only those of the
+	// operator namespace name the namespace of their GWAdmin.
+	if obj.GetLabels()[consts.GatewayOperatorManagedByNamespaceLabel] == "" {
 		return nil
 	}
-	return []reconcile.Request{{
-		Namespace: labels[consts.GatewayOperatorManagedByNamespaceLabel],
-		Name:      labels[consts.GatewayOperatorManagedByNameLabel],
-	}}
+	gwAdmin, ok := gwadminref.OfSecret(obj)
+	if !ok {
+		return nil
+	}
+	return []reconcile.Request{{NamespacedName: gwAdmin}}
 }
 
 // enqueueForDataPlane maps a data plane Deployment to the GWAdmin its
@@ -450,7 +452,12 @@ func enqueueForDataPlane(_ context.Context, obj client.Object) []reconcile.Reque
 // enqueueForGrant maps a KongReferenceGrant to the GWAdmins of its
 // namespace: it decides which namespaces their data planes count in.
 func (r *Reconciler) enqueueForGrant(ctx context.Context, obj client.Object) []reconcile.Request {
-	keys := gwadminref.OfGrant(ctx, r.Client, obj)
+	keys, err := gwadminref.OfGrant(ctx, r.Client, obj)
+	if err != nil {
+		log.Error(log.GetLogger(ctx, ControllerName, r.LoggingMode), err, "failed to find the GWAdmins of a KongReferenceGrant",
+			"grant", client.ObjectKeyFromObject(obj))
+		return nil
+	}
 	reqs := make([]reconcile.Request, 0, len(keys))
 	for _, key := range keys {
 		reqs = append(reqs, reconcile.Request{NamespacedName: key})
