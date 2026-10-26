@@ -60,10 +60,9 @@ type opsUpdateFuncData struct {
 	// passes it directly to the SDK, instead of constructing a manual struct literal.
 	UpdateFullyWrapped bool
 	// UpdateOmitsEntityID is true for parent-scoped singleton resources whose
-	// PATCH path contains only parent path params and no entity-specific ID (e.g.
-	// PATCH /portals/{portalId}/email-config). The SDK method takes the parent ID
-	// directly instead of a separate entity ID, so neither the id local variable
-	// nor an entity ID argument should be emitted.
+	// update path contains only parent path params and no entity-specific ID.
+	// Only the resolved parent IDs are passed to the SDK, positionally or in
+	// the fully wrapped request.
 	UpdateOmitsEntityID bool
 	// ParentIDField is used only for single-parent wrapped updates (UpdateWrapped &&
 	// !UpdateFullyWrapped). e.g. "PortalID".
@@ -156,12 +155,14 @@ func (g *Generator) resolveUpdateOpCallShape(
 	wrapped := len(schema.UpdatePathParams) >= 2
 	updateFullyWrapped := len(schema.UpdatePathParams) >= 3 ||
 		strings.HasSuffix(updateImportPath, "/operations")
-	updateOmitsEntityID := !wrapped && len(parents) > 0
+	updateOmitsEntityID := len(parents) > 0 && len(schema.UpdatePathParams) <= len(parents)
 
 	var parentIDField, entityIDField, updateBodyField string
 	if wrapped {
 		params := schema.UpdatePathParams
-		entityIDField = pathParamToFieldName(params[len(params)-1])
+		if !updateOmitsEntityID {
+			entityIDField = pathParamToFieldName(params[len(params)-1])
+		}
 		if !updateFullyWrapped {
 			parentIDField = pathParamToFieldName(params[len(params)-2])
 			updateBodyField = updateReqType

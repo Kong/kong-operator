@@ -5270,6 +5270,12 @@ func referencesNeedCrossNamespaceCheck(refs []TemplateReferenceConfig) bool {
 	return false
 }
 
+func referencesNeedLookup(refs []TemplateReferenceConfig) bool {
+	return slices.ContainsFunc(refs, func(ref TemplateReferenceConfig) bool {
+		return ref.ResolverMethod == ""
+	})
+}
+
 // TemplateRefParentNav is one sibling-preserving navigation hop from the SDK
 // payload root down to the map holding the value being written.
 type TemplateRefParentNav struct {
@@ -7152,6 +7158,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		HasReferences            bool
 		References               []TemplateReferenceConfig
 		NeedsCrossNamespaceCheck bool
+		NeedsReferenceLookup     bool
 		RefInjections            []TemplateRefInjection
 		HasParentRefReplacement  bool
 		ParentRefReplacesField   string
@@ -7174,6 +7181,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		HasReferences:            g.entityHasReferences(entityName),
 		References:               references,
 		NeedsCrossNamespaceCheck: referencesNeedCrossNamespaceCheck(references),
+		NeedsReferenceLookup:     referencesNeedLookup(references),
 		RefInjections:            injections,
 		HasParentRefReplacement:  hasParentRefReplacement,
 		ParentRefReplacesField:   parentRefReplacesField,
@@ -7476,6 +7484,7 @@ func (g *Generator) generateRootUnionSDKOps(
 		NeedsSecretFetchImport   bool
 		References               []TemplateReferenceConfig
 		NeedsCrossNamespaceCheck bool
+		NeedsReferenceLookup     bool
 		RefInjections            []TemplateRefInjection
 		ObjectRefTypePrefix      string
 		// UpdateUsesPayloadTarget is true when at least one variant rebuilds the
@@ -7504,6 +7513,7 @@ func (g *Generator) generateRootUnionSDKOps(
 		NeedsSecretFetchImport:   dataSourcesNeedCoreV1Import(dataSources),
 		References:               references,
 		NeedsCrossNamespaceCheck: referencesNeedCrossNamespaceCheck(references),
+		NeedsReferenceLookup:     referencesNeedLookup(references),
 		RefInjections:            injections,
 		ObjectRefTypePrefix:      objectRefTypePrefix,
 	}

@@ -1287,6 +1287,7 @@ apiGroupVersions:
 			require.NotNil(t, agv.Types[0].Reconciler)
 			require.NotNil(t, agv.Types[0].Reconciler.IsRoot)
 			assert.Equal(t, tc.wantIsRoot, *agv.Types[0].Reconciler.IsRoot)
+			assert.False(t, agv.Types[0].Reconciler.SkipOnPremEventGateway)
 		})
 	}
 }
@@ -1298,6 +1299,7 @@ apiGroupVersions:
     types:
       - path: /v1/event-gateways/{gatewayId}/listeners/{eventGatewayListenerId}/policies
         reconciler:
+          skipOnPremEventGateway: true
           parentEntityGVK:
             kind: EventGatewayListener
             group: configuration.konghq.com
@@ -1318,6 +1320,7 @@ apiGroupVersions:
 	require.NotNil(t, agv.Types[0].Reconciler)
 
 	rc := agv.Types[0].Reconciler
+	assert.True(t, rc.SkipOnPremEventGateway)
 	require.NotNil(t, rc.ParentEntityGVK)
 	assert.Equal(t, "EventGatewayListener", rc.ParentEntityKind())
 	assert.Equal(t, "configuration.konghq.com", rc.ParentEntityGroup("ignored.example.com"))
@@ -1352,6 +1355,18 @@ func TestReferenceConfigValidation(t *testing.T) {
 		wantErr string
 	}{
 		{name: "valid single-kind id ref", cfg: base(nil)},
+		{name: "custom resolver", cfg: base(func(rc *ReferenceConfig) {
+			rc.ResolverMethod = "ResolveValidatedPolicyIDs"
+		})},
+		{name: "invalid custom resolver", cfg: base(func(rc *ReferenceConfig) {
+			rc.ResolverMethod = "Resolve.PolicyIDs"
+		}), wantErr: "resolverMethod must be a Go method name"},
+		{name: "keyword custom resolver", cfg: base(func(rc *ReferenceConfig) {
+			rc.ResolverMethod = "func"
+		}), wantErr: "resolverMethod must be a Go method name"},
+		{name: "blank custom resolver", cfg: base(func(rc *ReferenceConfig) {
+			rc.ResolverMethod = "_"
+		}), wantErr: "resolverMethod must be a Go method name"},
 		{
 			name:    "empty kinds rejected",
 			cfg:     base(func(rc *ReferenceConfig) { rc.Kinds = nil }),

@@ -253,6 +253,8 @@
   order of cluster-level policies within an Event Gateway virtual cluster.
   The API requires an explicit policy list and an immutable virtual-cluster CR
   reference; it has no independent Konnect ID.
+  [#6188](https://github.com/Kong/kong-operator/pull/6188)
+  [#6200](https://github.com/Kong/kong-operator/pull/6200)
 - OnPremAIGateway spec: added a `dataplaneSync` field with optional
   `intervalSeconds` and `timeoutSeconds` (non-negative integers, in seconds) to
   tune the cadence of and the timeout for pushing configuration to the data

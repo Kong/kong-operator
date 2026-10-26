@@ -81,12 +81,7 @@ func (obj *EventGatewayVirtualClusterPolicyChain) SetVirtualClusterID(id string)
 	obj.Status.VirtualClusterID.ID = id
 }
 
-// GetVirtualClusterRef returns the reference to the root VirtualCluster.
-func (obj *EventGatewayVirtualClusterPolicyChain) GetVirtualClusterRef() commonv1alpha1.ObjectRef {
-	return obj.Spec.EventGatewayVirtualClusterRef
-}
-
-// GetEventGatewayVirtualClusterRef returns the reference to the root EventGatewayVirtualCluster.
+// GetEventGatewayVirtualClusterRef returns the reference to the parent EventGatewayVirtualCluster.
 func (obj *EventGatewayVirtualClusterPolicyChain) GetEventGatewayVirtualClusterRef() commonv1alpha1.ObjectRef {
 	return obj.Spec.EventGatewayVirtualClusterRef
 }
@@ -138,4 +133,23 @@ func (obj *EventGatewayVirtualClusterPolicyChain) GetStatusConditionReasonParent
 // programmed in Konnect.
 func (obj *EventGatewayVirtualClusterPolicyChain) GetStatusConditionReasonParentRefNotProgrammed() string {
 	return EventGatewayVirtualClusterRefReasonNotProgrammed
+}
+
+// GetAncestorIDs returns the Konnect IDs of the ancestor entities keyed by their Kind.
+func (obj *EventGatewayVirtualClusterPolicyChain) GetAncestorIDs() map[string]string {
+	m := make(map[string]string, 1)
+	if obj.Status.GatewayID != nil {
+		m["KonnectEventGateway"] = obj.Status.GatewayID.ID
+	} else {
+		m["KonnectEventGateway"] = ""
+	}
+	return m
+}
+
+// SetAncestorID sets the Konnect ID for the ancestor entity identified by kind.
+func (obj *EventGatewayVirtualClusterPolicyChain) SetAncestorID(kind, id string) {
+	switch kind {
+	case "KonnectEventGateway":
+		obj.SetGatewayID(id)
+	}
 }

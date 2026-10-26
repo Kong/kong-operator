@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"go/token"
 	"os"
 	"regexp"
 	"sort"
@@ -95,6 +96,12 @@ type ReferenceConfig struct {
 	// ResolvesTo selects what is pushed to Konnect for each reference:
 	// "id" (the referenced CR's Konnect ID) or "name" (its Konnect name).
 	ResolvesTo string `yaml:"resolvesTo"`
+	// ResolverMethod optionally delegates resolution to a hand-written method on
+	// the referring CR. It takes (context.Context, client.Client) and returns the
+	// generated resolver's result shape ([]string, or [][]string for nested
+	// reference lists) and an error. It must validate all references and preserve
+	// order and explicit empty lists. Used by validation and both SDK converters.
+	ResolverMethod string `yaml:"resolverMethod,omitempty"`
 	// RefTypeName names the generated ref struct. Required when Kinds has more
 	// than one entry (the name cannot be derived); must be empty otherwise
 	// (single-kind names derive as "<Kind>Ref").
@@ -415,6 +422,10 @@ type ReconcilerConfig struct {
 	// GatewayRef, when set, adds a GatewayRef typed parent reference field next
 	// to the OpenAPI-derived one. See GatewayRefConfig.
 	GatewayRef *GatewayRefConfig `yaml:"gatewayRef,omitempty"`
+	// SkipOnPremEventGateway excludes this entity from the generated on-prem
+	// Event Gateway watches, indexes, CRD checks and RBAC. It does not affect Konnect
+	// wiring. By default, entities inherit on-prem registration from their parent.
+	SkipOnPremEventGateway bool `yaml:"skipOnPremEventGateway,omitempty"`
 	// AncestorEntityGVKs lists the ancestor entity kinds and optional API groups
 	// for each OpenAPI-derived path-parameter dependency in URL order
 	// (outermost first). Only the Kind values are used by current ancestor-ID
@@ -1065,6 +1076,9 @@ func (tc *TypeConfig) validate() error {
 		}
 		if len(ref.Kinds) == 0 {
 			return fmt.Errorf("reference %q: kinds must not be empty", ref.Path)
+		}
+		if ref.ResolverMethod != "" && (!token.IsIdentifier(ref.ResolverMethod) || ref.ResolverMethod == "_") {
+			return fmt.Errorf("reference %q: resolverMethod must be a Go method name, got %q", ref.Path, ref.ResolverMethod)
 		}
 		switch ref.ResolvesTo {
 		case "id", "name":
