@@ -420,6 +420,29 @@
   only: the operator doesn't deploy a data plane for an
   `onpremNamespacedRef` yet.
   [#6283](https://github.com/Kong/kong-operator/pull/6283)
+- `OnPremEventGateway`: the controller pushes the
+  `EventGatewayDataPlaneCertificate`s attached to a gateway to its gw-admin
+  pods. On every push it reads the certificates each pod holds for the
+  gateway, registers those missing or changed, and deletes those the gateway
+  doesn't have anymore, e.g. deleted, left out or moved to another gateway.
+  The terminating pods, not pushed to, stop trusting those and those whose
+  content changed, as far as they can be reached. A pod that can't be
+  reached is told once it is. A certificate is `Programmed` once every
+  gw-admin pod reached holds it, whatever the rest of the configuration, and
+  reports `NotRegistered` with the pods missing it or whose push failed, or
+  `Invalid` with the reason when gw-admin rejects it: a rejected certificate
+  doesn't fail the push of the gateway. The entities are sent
+  with the version of the configuration, its `status.configRevision`.
+  Rotate a data plane certificate with a new
+  `EventGatewayDataPlaneCertificate`, deleting the previous one once no data
+  plane uses it: a new certificate in the Secret of an existing one replaces
+  it on every gw-admin pod at once, and one whose Secret can't be read
+  anymore is no longer trusted. Requires a gw-admin serving version 1.11.0
+  of its API, which lists the data plane certificates. gw-admin keeps the
+  certificates of a gateway it deletes, and trusts them again once it is
+  registered again: the operator reads them after registering it, and
+  removes those the gateway doesn't have.
+  [#6314](https://github.com/Kong/kong-operator/pull/6314)
 - `--konnect-list-page-size` flag (default and maximum `100`): the page size
   the operator requests when listing Konnect entities to find the Konnect
   entity of an object, e.g. one whose Konnect ID was lost. It is a fallback in

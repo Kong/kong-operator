@@ -154,6 +154,20 @@ func TestForEachPod(t *testing.T) {
 			TLSFingerprint: t.Name(),
 			tlsConfig:      &tls.Config{MinVersion: tls.VersionTLS12, RootCAs: roots, ServerName: "example.com"},
 		}
+		// The pod at 10.0.0.7 is stuck: the kernel accepts its connections,
+		// the process never reads them.
+		stuck, err := net.Listen("tcp", "127.0.0.1:0")
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = stuck.Close() })
+		go func() {
+			for {
+				conn, err := stuck.Accept()
+				if err != nil {
+					return
+				}
+				t.Cleanup(func() { _ = conn.Close() })
+			}
+		}()
 		s := &Syncer{
 			notServingTimeout: window,
 			// The pod at 10.0.0.9 is on a node down: the dial hangs until
@@ -162,6 +176,9 @@ func TestForEachPod(t *testing.T) {
 				if strings.HasPrefix(addr, "10.0.0.9:") {
 					<-ctx.Done()
 					return nil, &net.OpError{Op: "dial", Net: network, Err: ctx.Err()}
+				}
+				if strings.HasPrefix(addr, "10.0.0.7:") {
+					return (&net.Dialer{}).DialContext(ctx, network, stuck.Addr().String())
 				}
 				return (&net.Dialer{}).DialContext(ctx, network, server.Listener.Addr().String())
 			},
@@ -178,6 +195,13 @@ func TestForEachPod(t *testing.T) {
 		assert.Equal(t, []Pod{{Name: "down", Address: "10.0.0.9:8083"}}, pending,
 			"a pod not serving whose connection hangs is pending, not failed")
 		assert.Less(t, time.Since(start), podTimeout/2, "it gets the short window to connect")
+
+		start = time.Now()
+		pending, err = s.ForEachPod(t.Context(), target, []Pod{{Name: "stuck", Address: "10.0.0.7:8083"}}, get(fastID))
+		require.NoError(t, err)
+		assert.Equal(t, []Pod{{Name: "stuck", Address: "10.0.0.7:8083"}}, pending,
+			"a pod not serving that accepts a connection but never completes TLS is pending, not failed")
+		assert.Less(t, time.Since(start), podTimeout/2, "it gets the short window too")
 
 		pending, err = s.ForEachPod(t.Context(), target, []Pod{{Name: "slow", Address: "10.0.0.8:8083"}}, get(slowID))
 		require.NoError(t, err, "a pod not serving that connected gets more than the window to answer")

@@ -216,6 +216,7 @@ var secretReaders = []struct {
 	list  func() client.ObjectList
 }{
 	{index.IndexFieldEventGatewayBackendClusterOnSecretRef, func() client.ObjectList { return &configurationv1alpha1.EventGatewayBackendClusterList{} }},
+	{index.IndexFieldEventGatewayDataPlaneCertificateOnSecretRef, func() client.ObjectList { return &configurationv1alpha1.EventGatewayDataPlaneCertificateList{} }},
 	{index.IndexFieldEventGatewayListenerPolicyOnSecretRef, func() client.ObjectList { return &configurationv1alpha1.EventGatewayListenerPolicyList{} }},
 	{index.IndexFieldEventGatewaySchemaRegistryOnSecretRef, func() client.ObjectList { return &configurationv1alpha1.EventGatewaySchemaRegistryList{} }},
 	{index.IndexFieldEventGatewayStaticKeyOnSecretRef, func() client.ObjectList { return &configurationv1alpha1.EventGatewayStaticKeyList{} }},

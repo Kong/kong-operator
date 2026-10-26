@@ -3,16 +3,20 @@ package eventgateway
 import (
 	"slices"
 	"testing"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
 	"github.com/kong/kong-operator/v2/internal/utils/gwadminref/gwadminreftest"
@@ -141,6 +145,59 @@ func TestOnPremEventGatewayGWAdmin(t *testing.T) {
 		_, ok, expected := pod.state(gatewayID(t, gateway))
 		require.True(t, ok, "the gateway of the namespace of the GWAdmin is still served")
 		require.Contains(t, expected, gatewayID(t, gateway))
+	})
+
+	t.Run("a certificate deleted while the gateway may not use its GWAdmin isn't trusted again once it may", func(t *testing.T) {
+		// gw-admin keeps the certificates of a gateway it deletes, and trusts
+		// them again once the gateway is registered again under the same id.
+		other := envtest.CreateNamespace(ctx, t, cl)
+		crossNamespace := &eventgatewayv1alpha1.OnPremEventGateway{
+			Name: "gateway", Namespace: other.Name,
+			Spec: eventgatewayv1alpha1.OnPremEventGatewaySpec{GWAdminRef: eventgatewayv1alpha1.GWAdminRef{Name: testGWAdminName, Namespace: new(ns.Name)}},
+		}
+		require.NoError(t, cl.Create(ctx, crossNamespace))
+		grant := gwadminreftest.Grant(ns.Name, "gateways-of-"+other.Name, other.Name, "")
+		require.NoError(t, cl.Create(ctx, grant))
+		require.NoError(t, cl.Create(ctx, &corev1.Secret{
+			Name: "dp-tls", Namespace: other.Name,
+			Data: map[string][]byte{"tls.crt": []byte(selfSignedCertificatePEM(t))},
+		}))
+		cert := objectFromYAML[configurationv1alpha1.EventGatewayDataPlaneCertificate](t, other.Name, `
+metadata: {name: dp-certificate}
+spec:`+onPremEventGatewayParentRef(crossNamespace.Name)+`
+  apiSpec:
+    certificate: {type: secretRef, secretRef: {name: dp-tls, key: tls.crt}}
+`)
+		require.NoError(t, cl.Create(ctx, cert))
+		trusted := func(ct *assert.CollectT) bool {
+			g, ok, _ := pod.state(gatewayID(ct, crossNamespace))
+			_, held := g.certificates[uuid.MustParse(string(cert.UID))]
+			return ok && held
+		}
+		require.EventuallyWithT(t, func(ct *assert.CollectT) { assert.True(ct, trusted(ct)) }, waitTime, tickTime)
+
+		require.NoError(t, cl.Delete(ctx, grant))
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			_, ok, _ := pod.state(gatewayID(ct, crossNamespace))
+			assert.False(ct, ok, "the pod still serves the gateway")
+		}, waitTime, tickTime)
+		require.NoError(t, cl.Delete(ctx, cert))
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			err := cl.Get(ctx, client.ObjectKeyFromObject(cert), &configurationv1alpha1.EventGatewayDataPlaneCertificate{})
+			assert.True(ct, apierrors.IsNotFound(err), "no pod serves the gateway: nothing holds the certificate: %v", err)
+		}, waitTime, tickTime)
+
+		grant.ResourceVersion = ""
+		require.NoError(t, cl.Create(ctx, grant))
+		reports(t, crossNamespace, resolved, servedBy)
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			_, ok, _ := pod.state(gatewayID(ct, crossNamespace))
+			assert.True(ct, ok)
+		}, waitTime, tickTime)
+		require.Never(t, func() bool {
+			ct := &assert.CollectT{}
+			return trusted(ct)
+		}, 2*time.Second, tickTime, "the deleted certificate is trusted again")
 	})
 
 	t.Run("a pod that goes away is noticed", func(t *testing.T) {

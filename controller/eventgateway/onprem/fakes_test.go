@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net"
 	"net/http"
 	"net/url"
@@ -31,6 +32,7 @@ import (
 	"sync"
 	"syscall"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -54,14 +56,19 @@ import (
 // fakeGWAdminClient is a gw-admin pod: it records the calls it gets, and
 // answers each with respond, when it returns a reply or an error. Otherwise
 // it behaves as gw-admin does: it holds the gateways registered, with their
-// entities, and answers 404 for a gateway it doesn't know.
+// entities, the version of the configuration they were sent with and their
+// data plane certificates, and answers 404 for a gateway it doesn't know. As
+// gw-admin does, it keeps the certificates of a gateway it deletes, and holds
+// them again once the gateway is registered again under the same id.
 type fakeGWAdminClient struct {
 	gwadminapi.ClientInterface
 
-	mu       sync.Mutex
-	calls    []string
-	respond  func(call string) (*reply, error)
-	gateways map[uuid.UUID]gwadminapi.GatewayEntities
+	mu           sync.Mutex
+	calls        []string
+	respond      func(call string) (*reply, error)
+	gateways     map[uuid.UUID]gwadminapi.GatewayEntitySet
+	versions     map[uuid.UUID]gwadminapi.GatewayConfigVersion
+	certificates map[uuid.UUID]map[uuid.UUID]gwadminapi.EventGatewayDataPlaneCertificateOnPrem
 }
 
 // reply is the response of a gw-admin pod to a call.
@@ -77,6 +84,11 @@ const (
 	callExpected      = "expected"
 	callEntities      = "entities"
 	callDeleteGateway = "delete-gateway"
+	// callCertificate and callDeleteCertificate are followed by the ids of
+	// the gateway and the certificate.
+	callCertificate       = "certificate"
+	callDeleteCertificate = "delete-certificate"
+	callListCertificates  = "list-certificates"
 )
 
 // call records the call, and returns the response of respond, if any.
@@ -99,7 +111,13 @@ func (f *fakeGWAdminClient) call(name string, serve func() reply) (*http.Respons
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.gateways == nil {
-		f.gateways = map[uuid.UUID]gwadminapi.GatewayEntities{}
+		f.gateways = map[uuid.UUID]gwadminapi.GatewayEntitySet{}
+	}
+	if f.versions == nil {
+		f.versions = map[uuid.UUID]gwadminapi.GatewayConfigVersion{}
+	}
+	if f.certificates == nil {
+		f.certificates = map[uuid.UUID]map[uuid.UUID]gwadminapi.EventGatewayDataPlaneCertificateOnPrem{}
 	}
 	return response(serve()), nil
 }
@@ -139,7 +157,14 @@ func (f *fakeGWAdminClient) reset() {
 func (f *fakeGWAdminClient) restart() {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.gateways = nil
+	f.gateways, f.versions, f.certificates = nil, nil, nil
+}
+
+// holds returns the data plane certificates the pod holds for the gateway.
+func (f *fakeGWAdminClient) holds(gatewayID uuid.UUID) map[uuid.UUID]gwadminapi.EventGatewayDataPlaneCertificateOnPrem {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return maps.Clone(f.certificates[gatewayID])
 }
 
 func (f *fakeGWAdminClient) GetEventGatewayEntities(_ context.Context, id uuid.UUID, _ ...gwadminapi.RequestEditorFn) (*http.Response, error) {
@@ -148,7 +173,7 @@ func (f *fakeGWAdminClient) GetEventGatewayEntities(_ context.Context, id uuid.U
 		if !ok {
 			return notFound
 		}
-		body, err := json.Marshal(entities)
+		body, err := json.Marshal(gwadminapi.GatewayEntities{ConfigVersion: f.versions[id], Entities: entities})
 		if err != nil {
 			panic(err)
 		}
@@ -159,7 +184,7 @@ func (f *fakeGWAdminClient) GetEventGatewayEntities(_ context.Context, id uuid.U
 func (f *fakeGWAdminClient) UpdateEventGateway(_ context.Context, id uuid.UUID, _ gwadminapi.UpdateEventGatewayJSONRequestBody, _ ...gwadminapi.RequestEditorFn) (*http.Response, error) {
 	return f.call(callRegister, func() reply {
 		if _, ok := f.gateways[id]; !ok {
-			f.gateways[id] = gwadminapi.GatewayEntities{}
+			f.gateways[id] = gwadminapi.GatewayEntitySet{}
 		}
 		return reply{status: http.StatusOK, body: "{}"}
 	})
@@ -185,19 +210,63 @@ func (f *fakeGWAdminClient) UpdateEventGatewayEntities(_ context.Context, id uui
 		}
 		// gw-admin requires every list.
 		for name, list := range map[string]bool{
-			"backend_clusters":  body.BackendClusters == nil,
-			"listeners":         body.Listeners == nil,
-			"schema_registries": body.SchemaRegistries == nil,
-			"static_keys":       body.StaticKeys == nil,
-			"tls_trust_bundles": body.TlsTrustBundles == nil,
-			"virtual_clusters":  body.VirtualClusters == nil,
+			"backend_clusters":  body.Entities.BackendClusters == nil,
+			"listeners":         body.Entities.Listeners == nil,
+			"schema_registries": body.Entities.SchemaRegistries == nil,
+			"static_keys":       body.Entities.StaticKeys == nil,
+			"tls_trust_bundles": body.Entities.TlsTrustBundles == nil,
+			"virtual_clusters":  body.Entities.VirtualClusters == nil,
 		} {
 			if list {
-				return badRequest(name, "required and not nullable")
+				return badRequest("entities."+name, "required and not nullable")
 			}
 		}
-		f.gateways[id] = body
+		f.gateways[id], f.versions[id] = body.Entities, body.ConfigVersion
 		return reply{status: http.StatusOK, body: "{}"}
+	})
+}
+
+func (f *fakeGWAdminClient) UpdateEventGatewayDataPlaneCertificate(
+	_ context.Context, gatewayID, id uuid.UUID, body gwadminapi.UpdateEventGatewayDataPlaneCertificateJSONRequestBody, _ ...gwadminapi.RequestEditorFn,
+) (*http.Response, error) {
+	return f.call(callCertificate+" "+gatewayID.String()+"/"+id.String(), func() reply {
+		if _, ok := f.gateways[gatewayID]; !ok {
+			return notFound
+		}
+		if f.certificates[gatewayID] == nil {
+			f.certificates[gatewayID] = map[uuid.UUID]gwadminapi.EventGatewayDataPlaneCertificateOnPrem{}
+		}
+		f.certificates[gatewayID][id] = gwadminapi.EventGatewayDataPlaneCertificateOnPrem{
+			Id: id, Certificate: body.Certificate, CreatedAt: body.CreatedAt, Name: body.Name, Description: body.Description,
+		}
+		return reply{status: http.StatusOK, body: "{}"}
+	})
+}
+
+func (f *fakeGWAdminClient) DeleteEventGatewayDataPlaneCertificate(_ context.Context, gatewayID, id uuid.UUID, _ ...gwadminapi.RequestEditorFn) (*http.Response, error) {
+	return f.call(callDeleteCertificate+" "+gatewayID.String()+"/"+id.String(), func() reply {
+		if _, ok := f.certificates[gatewayID][id]; !ok {
+			return notFound
+		}
+		delete(f.certificates[gatewayID], id)
+		return reply{status: http.StatusNoContent}
+	})
+}
+
+func (f *fakeGWAdminClient) ListEventGatewayDataPlaneCertificates(_ context.Context, gatewayID uuid.UUID, _ ...gwadminapi.RequestEditorFn) (*http.Response, error) {
+	return f.call(callListCertificates, func() reply {
+		if _, ok := f.gateways[gatewayID]; !ok {
+			return notFound
+		}
+		list := gwadminapi.ListEventGatewayDataPlaneCertificatesOnPrem{Data: []gwadminapi.EventGatewayDataPlaneCertificateOnPrem{}}
+		for _, id := range slices.SortedFunc(maps.Keys(f.certificates[gatewayID]), func(a, b uuid.UUID) int { return strings.Compare(a.String(), b.String()) }) {
+			list.Data = append(list.Data, f.certificates[gatewayID][id])
+		}
+		body, err := json.Marshal(list)
+		if err != nil {
+			panic(err)
+		}
+		return reply{status: http.StatusOK, body: string(body)}
 	})
 }
 
@@ -206,7 +275,9 @@ func (f *fakeGWAdminClient) DeleteEventGateway(_ context.Context, id uuid.UUID, 
 		if _, ok := f.gateways[id]; !ok {
 			return notFound
 		}
+		// Not its data plane certificates.
 		delete(f.gateways, id)
+		delete(f.versions, id)
 		return reply{status: http.StatusNoContent}
 	})
 }
@@ -358,5 +429,12 @@ func requestsFor(objs ...client.Object) []reconcile.Request {
 func connectionRefused() error {
 	return &url.Error{Op: "Get", URL: "https://10.0.0.1:8083/v1", Err: &net.OpError{
 		Op: "dial", Net: "tcp", Err: &os.SyscallError{Syscall: "connect", Err: syscall.ECONNREFUSED},
+	}}
+}
+
+// testCertificate returns a data plane certificate of the configuration.
+func testCertificate(id uuid.UUID, key client.ObjectKey) dataPlaneCertificate {
+	return dataPlaneCertificate{id: id, key: key, body: gwadminapi.UpsertEventGatewayDataPlaneCertificateRequestOnPrem{
+		Certificate: "certificate of " + key.String(), CreatedAt: time.Date(2026, 10, 26, 10, 0, 0, 0, time.UTC),
 	}}
 }

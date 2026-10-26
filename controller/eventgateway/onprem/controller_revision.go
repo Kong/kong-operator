@@ -23,11 +23,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"strings"
 
+	"golang.org/x/mod/semver"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminapi"
+	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 )
 
 // The configuration of a gateway is derived from the API server alone, and
@@ -44,18 +47,49 @@ type gatewayConfig struct {
 	// Gateway registers the gateway.
 	Gateway gwadminapi.UpsertGatewayRequestOnPrem `json:"gateway"`
 	// Entities are the entities of the gateway, each list sorted.
-	Entities gwadminapi.GatewayEntities `json:"entities"`
+	Entities gwadminapi.GatewayEntitySet `json:"entities"`
+	// Certificates are the data plane certificates of the gateway, by id:
+	// they are registered one by one, not with the entities. Left out when
+	// there are none, so that the revision of a gateway without certificates
+	// is the one recorded before they were part of it.
+	Certificates map[string]gwadminapi.UpsertEventGatewayDataPlaneCertificateRequestOnPrem `json:"certificates,omitempty"`
+	// Version is the version of the configuration the entities are sent
+	// with: its revision, once recorded (see configVersion). It isn't part
+	// of the configuration it versions.
+	Version gwadminapi.GatewayConfigVersion `json:"-"`
+}
+
+// configVersion returns the version of the configuration of the gateway, as
+// gw-admin takes it with the entities: its revision, which every change of
+// the configuration increments, and the version of the operator, as a
+// semver without its leading v, 0.0.0 when it isn't one, e.g. in a build
+// without a release. No feature flag changes the configuration.
+func configVersion(gateway *eventgatewayv1alpha1.OnPremEventGateway) gwadminapi.GatewayConfigVersion {
+	release := metadata.Metadata().Release
+	if !semver.IsValid("v" + strings.TrimPrefix(release, "v")) {
+		release = "0.0.0"
+	}
+	return gwadminapi.GatewayConfigVersion{
+		DataVersion:     int(gateway.Status.ConfigRevision),
+		OperatorVersion: strings.TrimPrefix(release, "v"),
+		FeatureBitmap:   0,
+	}
 }
 
 // deriveConfig returns the configuration of the gateway, from the gateway
 // and the configuration built from its entities (see buildConfiguration).
 func deriveConfig(gateway *eventgatewayv1alpha1.OnPremEventGateway, cfg configuration) gatewayConfig {
+	certificates := make(map[string]gwadminapi.UpsertEventGatewayDataPlaneCertificateRequestOnPrem, len(cfg.certificates))
+	for _, cert := range cfg.certificates {
+		certificates[cert.id.String()] = cert.body
+	}
 	return gatewayConfig{
 		Gateway: gwadminapi.UpsertGatewayRequestOnPrem{
 			Name:      gateway.Name,
 			CreatedAt: createdAt(gateway),
 		},
-		Entities: cfg.entities,
+		Entities:     cfg.entities,
+		Certificates: certificates,
 	}
 }
 
@@ -73,7 +107,7 @@ func (c gatewayConfig) hash() (string, error) {
 
 // withEmptyLists returns the entities with an empty list for each one
 // missing, the policies of a virtual cluster and of a listener included.
-func withEmptyLists(e gwadminapi.GatewayEntities) gwadminapi.GatewayEntities {
+func withEmptyLists(e gwadminapi.GatewayEntitySet) gwadminapi.GatewayEntitySet {
 	if e.BackendClusters == nil {
 		e.BackendClusters = []gwadminapi.EventGatewayBackendClusterOnPrem{}
 	}
