@@ -71,6 +71,16 @@
 
 ## [Unreleased]
 
+### Breaking changes
+
+- A data plane whose `KonnectAPIAuthConfiguration` `serverURL` carries a path,
+  on a geo that does not return private endpoints yet, is no longer reconciled:
+  it keeps serving, but no spec, image or certificate change is applied until
+  the geo returns private endpoints. Its `KonnectExtension` reports
+  `Ready=False` with reason `EndpointMismatch`. Use a `serverURL` without a path
+  to keep the previous behaviour.
+  [#6265](https://github.com/Kong/kong-operator/pull/6265)
+
 ### Fixed
 
 - An `AIGatewayMCPServer` tool now accepts the OpenAPI `requestBody` and
@@ -246,24 +256,15 @@
   route may run without plugin in the time window between old plugin deleted and
   new plugin created.
   [#6181](https://github.com/Kong/kong-operator/pull/6181)
-- A `KonnectExtension` whose Konnect endpoints cannot be used no longer lets the
-  data plane boot against them and silently reach Konnect through the public
-  endpoint: the extension now reports `Ready=False`. An endpoint carrying a path
-  for a `K8SIngressController` cluster, for which `kic.api` has no private
-  surface, reports reason `InvalidEndpoint`, and a private `serverURL` (one that
-  carries a path) paired with an endpoint that is not private reports reason
-  `EndpointMismatch`. A data plane attached to such an extension is held instead
-  of rolled out, through the same gate that already holds it on a not-ready
-  extension. A Konnect-backed `AIGatewayDataPlane` reports
-  `KonnectAIGatewayResolved=False` with reason `EndpointMismatch` on the same
-  mismatch, and an AI Gateway endpoint that carries a path keeps the data plane
-  unrolled with `KonnectAIGatewayResolved=False` until the private endpoint
-  rendering lands. When neither the endpoints nor the `serverURL` carry a path,
-  the behaviour is unchanged. A data plane already running with a `serverURL`
-  that carries a path on a geo that does not return private endpoints yet keeps
-  serving, but is no longer reconciled: no spec, image or certificate change is
-  applied until the geo returns private endpoints.
-  [#6106](https://github.com/Kong/kong-operator/issues/6106)
+- A `KonnectExtension` whose Konnect endpoints cannot be used now reports
+  `Ready=False` and holds its data plane, instead of letting it reach Konnect
+  through the public endpoint: reason `InvalidEndpoint` for a
+  `K8SIngressController` endpoint carrying a path, `EndpointMismatch` for a
+  `serverURL` carrying a path paired with an endpoint that does not. A
+  Konnect-backed `AIGatewayDataPlane` reports `KonnectAIGatewayResolved=False`
+  with reason `EndpointMismatch` on the same mismatch, and on any endpoint
+  carrying a path until its private rendering lands.
+  [#6265](https://github.com/Kong/kong-operator/pull/6265)
 
 ### Added
 

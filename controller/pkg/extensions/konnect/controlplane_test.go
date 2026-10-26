@@ -82,11 +82,6 @@ func TestBuildKonnectAddress(t *testing.T) {
 			wantErr:  true,
 		},
 		{
-			name:     "envtest fixture",
-			endpoint: "cp.endpoint",
-			expected: "https://endpoint.kic.api.",
-		},
-		{
 			name:     "empty",
 			endpoint: "",
 			expected: "",

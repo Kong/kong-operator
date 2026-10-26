@@ -51,14 +51,14 @@ func TestCheckKonnectAIGatewayEndpoints(t *testing.T) {
 		wantErrContains string
 	}{
 		{
-			name:          "private server URL, private endpoints without a path",
+			name:          "server URL and endpoints on the private host without a path",
 			serverURL:     privateNoPath,
 			configuration: privateNoPath,
 			telemetry:     privateNoPath,
 		},
 		{
 			name:          "private server URL, private endpoints with a path",
-			serverURL:     privateNoPath,
+			serverURL:     privateServerURL,
 			configuration: privateCPPath,
 			telemetry:     privateTPPath,
 			wantErr:       true,
