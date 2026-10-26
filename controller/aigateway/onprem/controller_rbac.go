@@ -23,3 +23,4 @@ package onprem
 // +kubebuilder:rbac:groups=aigateway.konghq.com,resources=onpremaigateways,verbs=get;list;watch;update;patch
 // +kubebuilder:rbac:groups=aigateway.konghq.com,resources=onpremaigateways/status,verbs=update;patch
 // +kubebuilder:rbac:groups=aigateway.konghq.com,resources=onpremaigateways/finalizers,verbs=update
+// +kubebuilder:rbac:groups=gateway-operator.konghq.com,resources=watchnamespacegrants,verbs=get;list;watch

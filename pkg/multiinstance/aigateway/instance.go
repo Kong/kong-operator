@@ -79,6 +79,14 @@ type Config struct {
 	// instance: its cache is built at manager start and cannot pick the new
 	// filters up otherwise.
 	SecretLabelFilters map[string]string
+
+	// WatchNamespaces are the namespaces the instance watches for the
+	// configuration entities and the Secrets they reference, resolved from the
+	// OnPremAIGateway's spec.watchNamespaces. A nil list means every namespace.
+	// It's part of the hashed config so that changing it restarts the instance:
+	// its caches are built at manager start and cannot pick the new namespaces
+	// up otherwise.
+	WatchNamespaces []string
 }
 
 // Hash computes a hash of the given config. It's used to detect configuration drift of running instances.
@@ -102,6 +110,15 @@ func Hash(cfg Config) (string, error) {
 		// Sorted so the hash is stable regardless of map iteration order.
 		for _, k := range slices.Sorted(maps.Keys(cfg.SecretLabelFilters)) {
 			h.Write([]byte("secretFilter:" + k + "=" + cfg.SecretLabelFilters[k]))
+		}
+	}
+	// Only a concrete list is written: an empty list means every namespace, the
+	// zero value, which keeps an empty config hashing to sha256(""). The
+	// controller resolves the list already sorted.
+	if len(cfg.WatchNamespaces) > 0 {
+		h.Write([]byte("watchNamespaces:"))
+		for _, ns := range cfg.WatchNamespaces {
+			h.Write([]byte(ns + ","))
 		}
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
@@ -294,28 +311,42 @@ func (i *Instance) newCtrlManager() (ctrl.Manager, error) {
 }
 
 // cacheOpts scopes the instance manager's per-object caches. The configuration entities
-// (e.g. AIGatewayModels) stay cluster-wide: the translation lists them cluster-wide via
-// the OnOnPremAIGatewayRef field index, and cross-namespace references to the gateway are
-// rejected there (see the translator's appendEntities). EndpointSlices,
-// Secrets and the OnPremAIGateway itself are scoped to the gateway's namespace: the
-// onpremNamespacedRef is same-namespace and only objects in it are read there. Secrets
-// keep a label filter: the instance reads the Admin API client certificate Secret and,
-// through the generated secretRef resolvers (e.g. AIGatewayAuthStrategy's oidc
-// clientSecret and consumer credential apiKeys), user entity Secrets. Both match
-// i.secretSelector(): user Secrets must carry the operator's Secret label selector to
-// be ingestible at all, and the Admin API client certificate Secret carries it too (see
-// the OnPremAIGateway controller's ensureAdminClientCertificateSecret).
+// (e.g. AIGatewayModels) and the Secrets they reference are cached in the gateway's
+// watch namespaces, resolved from spec.watchNamespaces into cfg.WatchNamespaces: the
+// translation lists the entities there via the OnOnPremAIGatewayRef field index, so the
+// cache is what decides which namespaces the gateway serves. A nil list means every
+// namespace. EndpointSlices, the AIGatewayDataPlanes and the OnPremAIGateway itself stay
+// scoped to the gateway's namespace: the onpremNamespacedRef is same-namespace and only
+// objects in it are read there. Secrets keep a label filter: the instance reads the Admin
+// API client certificate Secret and, through the generated secretRef resolvers (e.g.
+// AIGatewayAuthStrategy's oidc clientSecret and consumer credential apiKeys), user entity
+// Secrets. Both match i.secretSelector(): user Secrets must carry the operator's Secret
+// label selector to be ingestible at all, and the Admin API client certificate Secret
+// carries it too (see the OnPremAIGateway controller's ensureAdminClientCertificateSecret).
 func (i *Instance) cacheOpts() cache.Options {
 	opts := cache.Options{}
 	if i.env.GatewayNN.Namespace == "" {
 		return opts
 	}
-	namespaces := map[string]cache.Config{i.env.GatewayNN.Namespace: {}}
+	gatewayNamespaces := map[string]cache.Config{i.env.GatewayNN.Namespace: {}}
+
+	// entityNamespaces is nil when the gateway watches every namespace: the
+	// caches then stay cluster-wide, as DefaultNamespaces is unset.
+	var entityNamespaces map[string]cache.Config
+	if len(i.cfg.WatchNamespaces) > 0 {
+		entityNamespaces = make(map[string]cache.Config, len(i.cfg.WatchNamespaces))
+		for _, ns := range i.cfg.WatchNamespaces {
+			entityNamespaces[ns] = cache.Config{}
+		}
+		opts.DefaultNamespaces = entityNamespaces
+	}
+
+	secrets := cache.ByObject{Namespaces: entityNamespaces, Label: i.secretSelector()}
 	opts.ByObject = map[client.Object]cache.ByObject{
-		&discoveryv1.EndpointSlice{}:            {Namespaces: namespaces},
-		&aigatewayv1alpha1.AIGatewayDataPlane{}: {Namespaces: namespaces},
-		&aigatewayv1alpha1.OnPremAIGateway{}:    {Namespaces: namespaces},
-		&corev1.Secret{}:                        {Namespaces: namespaces, Label: i.secretSelector()},
+		&discoveryv1.EndpointSlice{}:            {Namespaces: gatewayNamespaces},
+		&aigatewayv1alpha1.AIGatewayDataPlane{}: {Namespaces: gatewayNamespaces},
+		&aigatewayv1alpha1.OnPremAIGateway{}:    {Namespaces: gatewayNamespaces},
+		&corev1.Secret{}:                        secrets,
 	}
 	return opts
 }

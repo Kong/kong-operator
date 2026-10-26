@@ -7,6 +7,13 @@ metadata:
   name: ai-gw-cp-onprem-1
   namespace: default
 spec:
+  # Optional namespaces the gateway watches for configuration entities and the
+  # Secrets they reference. Defaults to the gateway's own namespace ("own").
+  # "list" also watches the listed namespaces and needs a WatchNamespaceGrant
+  # in each of them. "all" watches every namespace and needs an operator that
+  # runs with an empty --watch-namespaces.
+  watchNamespaces:
+    type: own
   dataplaneSync:
     intervalSeconds: 5
     timeoutSeconds: 3

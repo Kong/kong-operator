@@ -680,13 +680,33 @@ func TestCacheOpts(t *testing.T) {
 		require.False(t, secretCfg.Label.Matches(labels.Set{"a": "b"}))
 	})
 
-	t.Run("namespace scoping of the other objects", func(t *testing.T) {
+	t.Run("unset watch namespaces: every namespace for the entities and Secrets", func(t *testing.T) {
 		i := Instance{env: Env{GatewayNN: types.NamespacedName{Namespace: "ns", Name: "gw"}}}
 		opts := i.cacheOpts()
-		for _, obj := range opts.ByObject {
-			require.Equal(t, map[string]cache.Config{"ns": {}}, obj.Namespaces)
+		require.Nil(t, opts.DefaultNamespaces, "no default namespace scoping")
+		for obj, cfg := range opts.ByObject {
+			switch obj.(type) {
+			case *corev1.Secret:
+				require.Nil(t, cfg.Namespaces)
+			default:
+				// The gateway's own objects stay scoped to its namespace.
+				require.Equal(t, map[string]cache.Config{"ns": {}}, cfg.Namespaces)
+			}
 		}
 		require.Len(t, opts.ByObject, 4)
+	})
+
+	t.Run("watch namespaces scope the entities and the Secrets", func(t *testing.T) {
+		i := Instance{
+			env: Env{GatewayNN: types.NamespacedName{Namespace: "ns", Name: "gw"}},
+			cfg: Config{WatchNamespaces: []string{"ns", "team-a"}},
+		}
+		opts := i.cacheOpts()
+		want := map[string]cache.Config{"ns": {}, "team-a": {}}
+		require.Equal(t, want, opts.DefaultNamespaces)
+		secretCfg, ok := secretCacheCfg(opts)
+		require.True(t, ok)
+		require.Equal(t, want, secretCfg.Namespaces)
 	})
 
 	// No gateway namespace: no per-object cache configuration at all.

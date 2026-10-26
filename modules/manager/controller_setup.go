@@ -1029,6 +1029,9 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				SecretLabelSelector:      c.SecretLabelSelector,
 				CertTTL:                  c.CertTTL,
 				LicenseGetter:            aigwLicenseGetter,
+				// The operator's own watch scope: an OnPremAIGateway's
+				// spec.watchNamespaces cannot exceed it.
+				WatchNamespaces: c.WatchNamespaces,
 			},
 		},
 		// CRD schema reconciler: rebuilds the shared SSA TypeConverter when

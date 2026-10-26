@@ -70,6 +70,30 @@ spec:
                           rule: self.all(key,self[key].size() <= 63)
                     type: object
                 type: object
+              watchNamespaces:
+                default:
+                  type: own
+                properties:
+                  list:
+                    items:
+                      maxLength: 64
+                      type: string
+                    maxItems: 64
+                    type: array
+                  type:
+                    enum:
+                    - all
+                    - list
+                    - own
+                    type: string
+                required:
+                - type
+                type: object
+                x-kubernetes-validations:
+                - message: list is required when type is 'list'
+                  rule: 'self.type == ''list'' ? has(self.list) : true'
+                - message: list must not be specified when type is not 'list'
+                  rule: 'self.type != ''list'' ? !has(self.list) : true'
             type: object
           status:
             properties:

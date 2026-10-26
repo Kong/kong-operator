@@ -41,6 +41,7 @@ import (
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	dataplane "github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 	"github.com/kong/kong-operator/v2/controller/pkg/finalizer"
@@ -87,6 +88,11 @@ type Reconciler struct {
 	ClusterCASecretNamespace string
 	SecretLabelSelector      string
 
+	// WatchNamespaces is the operator's own watch scope (--watch-namespaces). An
+	// empty list means the operator watches every namespace. A gateway's
+	// spec.watchNamespaces cannot exceed it.
+	WatchNamespaces []string
+
 	// CertTTL is the TTL of the certificates provisioned by this controller.
 	CertTTL time.Duration
 
@@ -128,6 +134,14 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 				handler.OnlyControllerOwner(),
 			),
 			builder.WithPredicates(clientCertSecretPredicate()),
+		).
+		// Watch WatchNamespaceGrants so that a grant created, edited or deleted
+		// after the gateway re-triggers the reconcile that requested it: without
+		// this watch the WatchNamespaceGrantValid condition would stay stale until
+		// an unrelated event arrives.
+		Watches(
+			&operatorv1alpha1.WatchNamespaceGrant{},
+			watchNamespaceGrantHandler(mgr.GetClient(), mgr.GetLogger()),
 		).
 		Complete(reconcile.AsReconciler(r.Client, r))
 }
@@ -230,6 +244,56 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 		onprem,
 	)
 
+	// Namespaces the instance watches for configuration entities and Secrets.
+	// Already validated above, so the error cannot trigger here.
+	watchNamespaces, err := resolveWatchNamespaces(onprem)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("resolving watch namespaces: %w", err)
+	}
+
+	// Watching namespaces outside the gateway's own requires permission from the
+	// namespace owners. The instance must not run its caches for them before the
+	// grants exist, so a running instance is stopped and the gateway is not ready
+	// until the grants are back.
+	if err := r.validateWatchNamespaceGrants(ctx, onprem, watchNamespaces); err != nil {
+		k8sutils.SetCondition(
+			k8sutils.NewCondition(
+				aigatewayv1alpha1.OnPremAIGatewayWatchNamespaceGrantValidType,
+				metav1.ConditionFalse,
+				aigatewayv1alpha1.OnPremAIGatewayWatchNamespaceGrantInvalidReason,
+				fmt.Sprintf("WatchNamespaceGrants are missing or invalid for the OnPremAIGateway: %v", err),
+			),
+			onprem,
+		)
+		setReadySkippingLicenseCondition(onprem)
+		// A revoked grant must stop the instance: it still caches the entities and
+		// Secrets of the namespace no longer granted. The spec did not change, so
+		// the config hash does not drift and would never restart it.
+		if err := r.InstancesManager.StopInstance(mgrID); err != nil {
+			if _, ok := errors.AsType[instances.InstanceNotFoundError](err); !ok {
+				return ctrl.Result{}, fmt.Errorf("failed to stop instance: %w", err)
+			}
+		}
+		if err := r.applyStatus(ctx, logger, onprem); err != nil {
+			return ctrl.Result{}, err
+		}
+		// The grant watch re-triggers this reconcile; the requeue is the backstop.
+		return ctrl.Result{RequeueAfter: requeueAfterMissingGrant}, nil
+	}
+	grantMessage := "WatchNamespaceGrants are not required"
+	if requiresWatchNamespaceGrants(watchNamespaces, onprem.Namespace) {
+		grantMessage = "WatchNamespaceGrants are present and valid"
+	}
+	k8sutils.SetCondition(
+		k8sutils.NewCondition(
+			aigatewayv1alpha1.OnPremAIGatewayWatchNamespaceGrantValidType,
+			metav1.ConditionTrue,
+			aigatewayv1alpha1.OnPremAIGatewayWatchNamespaceGrantValidReason,
+			grantMessage,
+		),
+		onprem,
+	)
+
 	// The mTLS client certificate is what the instance presents to the data planes'
 	// Admin API when pushing configuration. Provision it before scheduling the
 	// instance: an instance without it cannot push, and the push loop would only
@@ -241,7 +305,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 		return ctrl.Result{}, fmt.Errorf("failed to ensure the Admin API client certificate Secret: %w", err)
 	}
 
-	cfg := r.configFromSpec(onprem)
+	cfg := r.configFromSpec(onprem, watchNamespaces)
 	// Part of the hashed instance config: when the Secret is renewed under a new
 	// name, the hash drifts and the instance restarts with the new reference.
 	cfg.AdminClientCertSecretNN = client.ObjectKeyFromObject(adminClientCertSecret)
@@ -333,13 +397,17 @@ func setReadySkippingLicenseCondition(onprem *aigatewayv1alpha1.OnPremAIGateway)
 // AIGatewayModel assembly and dbless rendering live in Instance.sendConfig, which converts
 // non-strict until spec.conversion options drive convert.Options: dangling references are
 // warnings, not fatal errors.
+// watchNamespaces is the resolved spec.watchNamespaces (nil means every namespace).
 // TODO: https://github.com/Kong/kong-operator/issues/5569 - fill in the remaining config
 // from the spec; restore the (context, logger, error) signature and the caller's
 // error-handling branch when config building can fail.
 func (r *Reconciler) configFromSpec(
 	onprem *aigatewayv1alpha1.OnPremAIGateway,
+	watchNamespaces []string,
 ) multiinstanceai.Config {
-	cfg := multiinstanceai.Config{}
+	cfg := multiinstanceai.Config{
+		WatchNamespaces: watchNamespaces,
+	}
 	if dps := onprem.Spec.DataPlaneSync; dps != nil {
 		if dps.IntervalSeconds != nil {
 			cfg.SyncInterval = time.Duration(*dps.IntervalSeconds) * time.Second
@@ -358,8 +426,16 @@ func (r *Reconciler) configFromSpec(
 // the operator specific configuration. It returns a boolean as the validation result and
 // a string as the error message when the validation fails. For example, it fails when a
 // matchLabels key of spec.objectFilters.secrets conflicts with the operator's secret
-// label selector or with the operator-managed Admin API client certificate label.
+// label selector or with the operator-managed Admin API client certificate label, or when
+// spec.watchNamespaces exceeds the operator's own watch scope.
 func (r *Reconciler) validateOnPremAIGatewayOptions(onprem *aigatewayv1alpha1.OnPremAIGateway) (string, bool) {
+	if _, err := resolveWatchNamespaces(onprem); err != nil {
+		return err.Error(), false
+	}
+	if err := validateWatchNamespacesScope(onprem, r.WatchNamespaces); err != nil {
+		return err.Error(), false
+	}
+
 	if onprem.Spec.ObjectFilters == nil || onprem.Spec.ObjectFilters.Secrets == nil {
 		return "", true
 	}

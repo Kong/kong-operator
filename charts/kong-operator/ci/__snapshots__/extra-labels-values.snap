@@ -25536,6 +25536,30 @@ spec:
                           rule: self.all(key,self[key].size() <= 63)
                     type: object
                 type: object
+              watchNamespaces:
+                default:
+                  type: own
+                properties:
+                  list:
+                    items:
+                      maxLength: 64
+                      type: string
+                    maxItems: 64
+                    type: array
+                  type:
+                    enum:
+                    - all
+                    - list
+                    - own
+                    type: string
+                required:
+                - type
+                type: object
+                x-kubernetes-validations:
+                - message: list is required when type is 'list'
+                  rule: 'self.type == ''list'' ? has(self.list) : true'
+                - message: list must not be specified when type is not 'list'
+                  rule: 'self.type != ''list'' ? !has(self.list) : true'
             type: object
           status:
             properties:
@@ -50757,10 +50781,12 @@ spec:
                     group:
                       enum:
                       - gateway-operator.konghq.com
+                      - aigateway.konghq.com
                       type: string
                     kind:
                       enum:
                       - ControlPlane
+                      - OnPremAIGateway
                       type: string
                     namespace:
                       type: string
@@ -74678,6 +74704,7 @@ rules:
   - controlplane
   - dataplanemetricsextensions
   - gatewayconfigurations
+  - watchnamespacegrants
   verbs:
   - get
   - list
@@ -74693,13 +74720,6 @@ rules:
   - list
   - patch
   - update
-  - watch
-- apiGroups:
-  - gateway-operator.konghq.com
-  resources:
-  - watchnamespacegrants
-  verbs:
-  - list
   - watch
 - apiGroups:
   - gateway.networking.k8s.io
