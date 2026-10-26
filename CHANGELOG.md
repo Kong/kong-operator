@@ -81,6 +81,16 @@
   new `--konnect-server-url-domains` flag, which defaults to
   `konghq.com,konghq.tech` and cannot be emptied.
   [#6222](https://github.com/Kong/kong-operator/pull/6222)
+- `KegDataPlane`: the keg pods get a termination grace period covering keg's
+  drain, its shutdown timeout and a 5s margin when that exceeds the default of
+  30s. They were killed mid-drain before. The timeouts are the ones keg runs
+  with: `KEG__RUNTIME__DRAIN_DURATION` and `KEG__RUNTIME__SHUTDOWN_TIMEOUT` in
+  the keg container of `spec.deployment.podTemplateSpec`, else
+  `spec.config.runtime.drainDurationSeconds` and `shutdownTimeoutSeconds`,
+  else keg's defaults of 5s and 10s. A grace period set in
+  `spec.deployment.podTemplateSpec` still wins, and data planes whose timeouts
+  fit in the default are unchanged.
+  [#6305](https://github.com/Kong/kong-operator/pull/6305)
 - An `AIGatewayMCPServer` tool now accepts the OpenAPI `requestBody` and
   `responses` objects, with `content` keyed by media type. The CRD typed these
   fields as `map[string]string`, so a nested object was rejected at apply time

@@ -682,6 +682,99 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 		assert.True(t, kegHasEnvVar(keg.Env, egdataplane.EnvRuntimeHealthAddr))
 	})
 
+	t.Run("Deployment: the termination grace period covers keg's drain and shutdown", func(t *testing.T) {
+		t.Parallel()
+
+		drain := int32(45)
+		egdp := setupProgrammedKEGDP(t, ctx, cl, ns.Name,
+			"kep-grace", "konnect-id-grace", "egdp-grace",
+			eventgatewayv1alpha1.KegDataPlaneSpec{
+				Config: &eventgatewayv1alpha1.KegDataPlaneConfiguration{
+					Runtime: &eventgatewayv1alpha1.RuntimeOptions{DrainDurationSeconds: &drain},
+				},
+			},
+		)
+
+		deploy := waitForKEGDeployment(t, ctx, cl, ns.Name, egdp.Name)
+		require.NotNil(t, deploy.Spec.Template.Spec.TerminationGracePeriodSeconds)
+		assert.EqualValues(t, 45+egdataplane.DefaultShutdownTimeoutSeconds+egdataplane.TerminationGracePeriodMarginSeconds,
+			*deploy.Spec.Template.Spec.TerminationGracePeriodSeconds, "the drain, keg's default shutdown timeout and the margin")
+	})
+
+	t.Run("Deployment: a termination grace period set in the PodTemplateSpec wins", func(t *testing.T) {
+		t.Parallel()
+
+		drain := int32(45)
+		grace := int64(20)
+		egdp := setupProgrammedKEGDP(t, ctx, cl, ns.Name,
+			"kep-grace-overlay", "konnect-id-grace-overlay", "egdp-grace-overlay",
+			eventgatewayv1alpha1.KegDataPlaneSpec{
+				Config: &eventgatewayv1alpha1.KegDataPlaneConfiguration{
+					Runtime: &eventgatewayv1alpha1.RuntimeOptions{DrainDurationSeconds: &drain},
+				},
+				Deployment: &eventgatewayv1alpha1.DeploymentOptions{
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							// The CRD requires the containers: the keg one, by
+							// name, is merged with the operator's.
+							Containers:                    []corev1.Container{{Name: consts.KEGContainerName}},
+							TerminationGracePeriodSeconds: &grace,
+						},
+					},
+				},
+			},
+		)
+
+		deploy := waitForKEGDeployment(t, ctx, cl, ns.Name, egdp.Name)
+		require.NotNil(t, deploy.Spec.Template.Spec.TerminationGracePeriodSeconds)
+		assert.EqualValues(t, 20, *deploy.Spec.Template.Spec.TerminationGracePeriodSeconds)
+	})
+
+	t.Run("Deployment: the termination grace period covers a drain the keg container env sets", func(t *testing.T) {
+		t.Parallel()
+
+		drain := int32(45)
+		egdp := setupProgrammedKEGDP(t, ctx, cl, ns.Name,
+			"kep-grace-env", "konnect-id-grace-env", "egdp-grace-env",
+			eventgatewayv1alpha1.KegDataPlaneSpec{
+				Config: &eventgatewayv1alpha1.KegDataPlaneConfiguration{
+					Runtime: &eventgatewayv1alpha1.RuntimeOptions{DrainDurationSeconds: &drain},
+				},
+				Deployment: &eventgatewayv1alpha1.DeploymentOptions{
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{{
+								Name: consts.KEGContainerName,
+								Env:  []corev1.EnvVar{{Name: egdataplane.EnvRuntimeDrainDuration, Value: "2m"}},
+							}},
+						},
+					},
+				},
+			},
+		)
+
+		deploy := waitForKEGDeployment(t, ctx, cl, ns.Name, egdp.Name)
+		keg := getKEGContainer(t, deploy)
+		assert.Contains(t, keg.Env, corev1.EnvVar{Name: egdataplane.EnvRuntimeDrainDuration, Value: "2m"}, "keg runs with the env of the PodTemplateSpec")
+		require.NotNil(t, deploy.Spec.Template.Spec.TerminationGracePeriodSeconds)
+		assert.EqualValues(t, 120+egdataplane.DefaultShutdownTimeoutSeconds+egdataplane.TerminationGracePeriodMarginSeconds,
+			*deploy.Spec.Template.Spec.TerminationGracePeriodSeconds, "the drain of the env, keg's default shutdown timeout and the margin")
+	})
+
+	t.Run("Deployment: without runtime timeouts, the Kubernetes default grace period is kept", func(t *testing.T) {
+		t.Parallel()
+
+		egdp := setupProgrammedKEGDP(t, ctx, cl, ns.Name,
+			"kep-grace-default", "konnect-id-grace-default", "egdp-grace-default",
+			eventgatewayv1alpha1.KegDataPlaneSpec{},
+		)
+
+		deploy := waitForKEGDeployment(t, ctx, cl, ns.Name, egdp.Name)
+		// The API server defaults the field the operator leaves unset.
+		require.NotNil(t, deploy.Spec.Template.Spec.TerminationGracePeriodSeconds)
+		assert.EqualValues(t, egdataplane.DefaultTerminationGracePeriodSeconds, *deploy.Spec.Template.Spec.TerminationGracePeriodSeconds)
+	})
+
 	t.Run("Deployment: spec.deployment.replicas change is propagated to Deployment", func(t *testing.T) {
 		t.Parallel()
 

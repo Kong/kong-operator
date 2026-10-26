@@ -522,6 +522,54 @@ func Test_BuildDeployment_ReassertEnvVars(t *testing.T) {
 	})
 }
 
+func Test_BuildDeployment_TerminationGracePeriodSeconds(t *testing.T) {
+	tc := managedfields.NewDeducedTypeConverter()
+
+	// gracePeriodOf runs BuildDeployment and returns the termination grace
+	// period of its Pod template, or nil when unset.
+	gracePeriodOf := func(t *testing.T, aigwdp *aigatewayv1alpha1.AIGatewayDataPlane, grace func(*aigatewayv1alpha1.AIGatewayDataPlane) *int64) any {
+		t.Helper()
+		cfg := testConfig
+		cfg.Deployment.TerminationGracePeriodSeconds = grace
+		u, err := BuildDeployment(logr.Discard(), tc, aigwdp, resolvedTestCP(testKonnectAIGateway()), "kong/aigw:test", "cert-secret", "", "", cfg.Deployment, cfg.Certificate.ChecksumAnnotation)
+		require.NoError(t, err)
+		got, _, err := unstructured.NestedFieldNoCopy(u.Object, "spec", "template", "spec", "terminationGracePeriodSeconds")
+		require.NoError(t, err)
+		return got
+	}
+	withOverlay := func(seconds int64) *aigatewayv1alpha1.AIGatewayDataPlane {
+		return &aigatewayv1alpha1.AIGatewayDataPlane{
+			Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+				Deployment: &aigatewayv1alpha1.DeploymentOptions{
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{TerminationGracePeriodSeconds: new(seconds)},
+					},
+				},
+			},
+		}
+	}
+	seconds := func(v int64) func(*aigatewayv1alpha1.AIGatewayDataPlane) *int64 {
+		return func(*aigatewayv1alpha1.AIGatewayDataPlane) *int64 { return new(v) }
+	}
+
+	t.Run("without the hook, the Kubernetes default is kept", func(t *testing.T) {
+		assert.Nil(t, gracePeriodOf(t, &aigatewayv1alpha1.AIGatewayDataPlane{}, nil))
+	})
+
+	t.Run("a hook returning nil keeps the Kubernetes default", func(t *testing.T) {
+		assert.Nil(t, gracePeriodOf(t, &aigatewayv1alpha1.AIGatewayDataPlane{}, func(*aigatewayv1alpha1.AIGatewayDataPlane) *int64 { return nil }))
+	})
+
+	t.Run("the hook sets the grace period of the pods", func(t *testing.T) {
+		assert.EqualValues(t, 75, gracePeriodOf(t, &aigatewayv1alpha1.AIGatewayDataPlane{}, seconds(75)))
+	})
+
+	t.Run("a grace period the user pod template overlay sets wins", func(t *testing.T) {
+		assert.EqualValues(t, 20, gracePeriodOf(t, withOverlay(20), seconds(75)))
+		assert.EqualValues(t, 120, gracePeriodOf(t, withOverlay(120), seconds(75)))
+	})
+}
+
 // -----------------------------------------------------------------
 // ensureDeployment
 // -----------------------------------------------------------------
