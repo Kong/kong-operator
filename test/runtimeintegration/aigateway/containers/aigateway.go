@@ -183,7 +183,7 @@ func (a AIGateway) StatusURL(ctx context.Context, t *testing.T) string {
 
 // aigwImageUnderTest returns the AI Gateway image to be used for the contract
 // tests. If both TEST_AIGW_IMAGE and TEST_AIGW_TAG are set, it returns the
-// image and tag they specify. Otherwise it returns kong/kong-ai-gateway with
+// image and tag they specify. Otherwise it returns kong/kong-ai-gateway-dev with
 // the version pinned in test/test_dependencies.yaml.
 func aigwImageUnderTest(t *testing.T) string {
 	t.Helper()
@@ -195,5 +195,5 @@ func aigwImageUnderTest(t *testing.T) string {
 
 	aigwTag, err := testenv.GetDependencyVersion("kongintegration.aigw-dp")
 	require.NoError(t, err)
-	return "kong/kong-ai-gateway:" + aigwTag
+	return "kong/kong-ai-gateway-dev:" + aigwTag
 }

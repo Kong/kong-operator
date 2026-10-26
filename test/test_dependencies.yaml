@@ -17,8 +17,8 @@ kongintegration:
   kong-oss: '3.9.4'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
   kong-ee: '3.16.0.1'
-  # renovate: datasource=docker depName=kong/kong-ai-gateway versioning=docker
-  aigw-dp: '2.2.0'
+  # renovate: datasource=docker depName=kong/kong-ai-gateway-dev versioning=docker
+  aigw-dp: '2.3.0-rc.1'
 
 envtests:
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
@@ -33,9 +33,9 @@ chainsaw:
     # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
     tag: '3.16.0.1'
   aigw-dp:
-    image: kong/kong-ai-gateway
-    # renovate: datasource=docker depName=kong/kong-ai-gateway versioning=docker
-    tag: '2.2.0'
+    image: kong/kong-ai-gateway-dev
+    # renovate: datasource=docker depName=kong/kong-ai-gateway-dev versioning=docker
+    tag: '2.3.0-rc.1'
   keg-dp:
     image: kong/kong-event-gateway
     # renovate: datasource=docker depName=kong/kong-event-gateway versioning=docker
