@@ -525,8 +525,6 @@ func Test_BuildDeployment_ReassertEnvVars(t *testing.T) {
 func Test_BuildDeployment_TerminationGracePeriodSeconds(t *testing.T) {
 	tc := managedfields.NewDeducedTypeConverter()
 
-	// gracePeriodOf runs BuildDeployment and returns the termination grace
-	// period of its Pod template, or nil when unset.
 	gracePeriodOf := func(t *testing.T, aigwdp *aigatewayv1alpha1.AIGatewayDataPlane, grace func(*aigatewayv1alpha1.AIGatewayDataPlane) *int64) any {
 		t.Helper()
 		cfg := testConfig

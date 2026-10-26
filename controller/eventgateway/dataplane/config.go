@@ -208,7 +208,11 @@ func runtimeTimeoutSeconds(kegContainer *corev1.Container, envName string, spec 
 		if i := slices.IndexFunc(kegContainer.Env, func(e corev1.EnvVar) bool { return e.Name == envName }); i >= 0 {
 			if e := kegContainer.Env[i]; e.ValueFrom == nil {
 				if d, err := time.ParseDuration(e.Value); err == nil && d >= 0 {
-					return int64((d + time.Second - 1) / time.Second)
+					s := d / time.Second
+					if d%time.Second != 0 {
+						s++
+					}
+					return int64(s)
 				}
 			}
 		}

@@ -207,6 +207,11 @@ func TestTerminationGracePeriodSeconds(t *testing.T) {
 			want: new(int64(5400 + 2 + 5)),
 		},
 		{
+			name: "the longest env duration is rounded up without overflowing",
+			egdp: withEnv(&eventgatewayv1alpha1.KegDataPlane{}, consts.KEGContainerName, drainEnv("2562047h47m16.854775807s")),
+			want: new(int64(9223372037 + 10 + 5)),
+		},
+		{
 			name: "an env that isn't a duration falls back to the runtime options",
 			egdp: withEnv(
 				withRuntime(&eventgatewayv1alpha1.RuntimeOptions{DrainDurationSeconds: new(int32(60))}),
