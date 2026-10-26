@@ -40,6 +40,7 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/Kong/ai-deck-converter/aigw"
 	"gopkg.in/yaml.v3"
@@ -115,11 +116,23 @@ func (obj *AIGatewayModel) ToAIGWModel(ctx context.Context, cl client.Client) (*
 				aclRefs = access.Acls.Deny.Deny
 			}
 			target = &model.Access.ACLs.Deny
+		// allowWhen and denyWhen carry CEL expressions, not consumer group
+		// references, so they go through unresolved.
+		case AIGatewayModelAccessAclsTypeAllowWhen:
+			if access.Acls.AllowWhen != nil {
+				model.Access.ACLs.AllowWhen = slices.Clone(access.Acls.AllowWhen.AllowWhen)
+			}
+		case AIGatewayModelAccessAclsTypeDenyWhen:
+			if access.Acls.DenyWhen != nil {
+				model.Access.ACLs.DenyWhen = slices.Clone(access.Acls.DenyWhen.DenyWhen)
+			}
 		default:
 			return nil, fmt.Errorf("AIGatewayModel %s/%s: unsupported access.acls.type %q", obj.Namespace, obj.Name, access.Acls.Type)
 		}
-		if *target, err = resolveEntityNames[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, consumerGroupRefs(aclRefs)); err != nil {
-			return nil, fmt.Errorf("resolving AIGatewayModel %s/%s access.acls: %w", obj.Namespace, obj.Name, err)
+		if target != nil {
+			if *target, err = resolveEntityNames[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, consumerGroupRefs(aclRefs)); err != nil {
+				return nil, fmt.Errorf("resolving AIGatewayModel %s/%s access.acls: %w", obj.Namespace, obj.Name, err)
+			}
 		}
 	}
 

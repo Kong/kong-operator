@@ -277,6 +277,17 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
+			name: "--enable-read-your-own-writes-consistency argument is set to false",
+			args: []string{
+				"--enable-read-your-own-writes-consistency=false",
+			},
+			expectedCfg: func() manager.Config {
+				cfg := expectedDefaultCfg()
+				cfg.ReadYourOwnWritesConsistencyEnabled = false
+				return cfg
+			},
+		},
+		{
 			name: "deprecated env vars are honored",
 			envVars: map[string]string{
 				"GATEWAY_OPERATOR_ANONYMOUS_REPORTS":         "false",
@@ -480,5 +491,6 @@ func expectedDefaultCfg() manager.Config {
 		CertExpirationMargin:                     consts.DefaultCertExpirationMargin,
 		GWAdminCATTL:                             consts.GWAdminCATTL,
 		GWAdminCertTTL:                           consts.GWAdminLeafTTL,
+		ReadYourOwnWritesConsistencyEnabled:      true,
 	}
 }

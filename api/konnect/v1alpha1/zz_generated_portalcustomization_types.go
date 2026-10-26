@@ -176,6 +176,22 @@ type SpecRenderer struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	TryItUi string `json:"tryItUi,omitzero"`
+	// The audience for the Try It UI feature.
+	//
+	// `all` means that the Try It UI will be available to all users, including
+	// unauthenticated users.
+	//
+	// `authenticated` means that the Try It UI will only be available to
+	// authenticated users.
+	//
+	// `registered` means that the Try It UI will only be available to users who
+	// have registered for the API.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=all;authenticated;registered
+	TryItUiAudience string `json:"tryItUiAudience,omitzero"`
 }
 
 // Theme The theme settings for this portal.
@@ -191,7 +207,7 @@ type Theme struct {
 	// +kubebuilder:validation:Enum=light;dark;system
 	Mode string `json:"mode,omitzero"`
 	// The theme name to apply to this portal.
-	// Supported names are 'ocean' and 'glacier'.
+	// Supported names are 'ocean', 'mesa', and 'grove'.
 	// If another name is provided or this property is omitted, the portal uses the
 	// default 'ocean' theme.
 	//

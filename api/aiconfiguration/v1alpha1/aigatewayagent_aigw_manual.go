@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 
 	"github.com/Kong/ai-deck-converter/aigw"
 	"gopkg.in/yaml.v3"
@@ -68,14 +69,26 @@ func (obj *AIGatewayAgent) resolveAIGWAccess(
 				aclRefs = acls.Deny.Deny
 			}
 			target = &agent.Access.ACLs.Deny
+		// allowWhen and denyWhen carry CEL expressions, not consumer group
+		// references, so they go through unresolved.
+		case AIGatewayAgentAccessAclsTypeAllowWhen:
+			if acls.AllowWhen != nil {
+				agent.Access.ACLs.AllowWhen = slices.Clone(acls.AllowWhen.AllowWhen)
+			}
+		case AIGatewayAgentAccessAclsTypeDenyWhen:
+			if acls.DenyWhen != nil {
+				agent.Access.ACLs.DenyWhen = slices.Clone(acls.DenyWhen.DenyWhen)
+			}
 		default:
 			return fmt.Errorf("AIGatewayAgent %s/%s: unsupported access.acls.type %q", obj.Namespace, obj.Name, acls.Type)
 		}
-		names, err := resolveEntityNames[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, consumerGroupRefs(aclRefs))
-		if err != nil {
-			return fmt.Errorf("resolving AIGatewayAgent %s/%s access.acls: %w", obj.Namespace, obj.Name, err)
+		if target != nil {
+			names, err := resolveEntityNames[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, consumerGroupRefs(aclRefs))
+			if err != nil {
+				return fmt.Errorf("resolving AIGatewayAgent %s/%s access.acls: %w", obj.Namespace, obj.Name, err)
+			}
+			*target = names
 		}
-		*target = names
 	}
 
 	authStrategies, err := resolveEntityNames[AIGatewayAuthStrategy](ctx, cl, obj.Namespace, authStrategyRefs(spec.Access.AuthStrategies))

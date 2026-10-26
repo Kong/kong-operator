@@ -143,6 +143,11 @@ func TestGatewayInfrastructureLabels(t *testing.T) {
 	envcfg, ns := envtest.Setup(t, ctx, scheme, envtest.WithInstallGatewayCRDs(true))
 	mgr, logs := envtest.NewManager(t, ctx, envcfg, scheme)
 	c := mgr.GetClient()
+	// Used to seed objects before StartReconcilers starts the manager. Only the
+	// manager's own client has read-your-own-writes consistency, and using it
+	// that early deadlocks: the consistency handler waits for an informer that is
+	// never started.
+	seedClient := envtest.NewControllerClient(t, scheme, envcfg)
 
 	// Create the cluster CA secret required by the DataPlane reconciler.
 	cert, key := certhelper.MustGenerateCertPEMFormat(
@@ -160,8 +165,8 @@ func TestGatewayInfrastructureLabels(t *testing.T) {
 			corev1.TLSPrivateKeyKey: key,
 		},
 	}
-	require.NoError(t, c.Create(ctx, caSecret))
-	t.Cleanup(func() { _ = c.Delete(ctx, caSecret) })
+	require.NoError(t, seedClient.Create(ctx, caSecret))
+	t.Cleanup(func() { _ = seedClient.Delete(ctx, caSecret) })
 
 	// Start KO Gateway and DataPlane reconcilers.
 	envtest.StartReconcilers(ctx, t, mgr, logs,

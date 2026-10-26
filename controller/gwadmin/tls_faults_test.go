@@ -8,6 +8,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	k8stesting "k8s.io/client-go/testing"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -91,7 +93,11 @@ func runFaulted(t *testing.T, scenario faultScenario, k, n int) (calls int, reac
 	}()
 	now := time.Now()
 	f := &faults{}
-	r := reconcilerWith(interceptor.NewClient(fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build(), f.funcs()), &now)
+	// A plain object tracker skips client-go's per-call static REST mapper rebuild, which
+	// dominates the cost of the exhaustive fault sweep.
+	sm := managerscheme.Get()
+	ot := k8stesting.NewObjectTracker(sm, serializer.NewCodecFactory(sm).UniversalDecoder())
+	r := reconcilerWith(interceptor.NewClient(fake.NewClientBuilder().WithScheme(sm).WithObjectTracker(ot).Build(), f.funcs()), &now)
 	passes := 0
 	scenario(t, r, &now, func(gw *operatorv1alpha1.GWAdmin, d *appsv1.Deployment) *tlsMaterial {
 		if passes++; passes < k {

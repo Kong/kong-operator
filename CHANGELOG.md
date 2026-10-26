@@ -81,6 +81,14 @@
   new `--konnect-server-url-domains` flag, which defaults to
   `konghq.com,konghq.tech` and cannot be emptied.
   [#6222](https://github.com/Kong/kong-operator/pull/6222)
+- A `KonnectAPIAuthConfiguration` with a private `serverURL` that carries a path
+  (for example `https://us.svc.konghq.tech/api`) now authenticates. The identity
+  request behind `APIAuthValid` keeps the configured host instead of being sent
+  to the public global one, which answered 404 for a private entry point and left
+  every resource that depends on the credentials unprogrammed. A `serverURL`
+  without a path keeps the previous behaviour, and a development host with an
+  explicit port no longer lands on the production global host.
+  [#6108](https://github.com/Kong/kong-operator/issues/6108)
 - Konnect: a DataPlane attached to a `KonnectExtension` now renders control
   plane and telemetry endpoints that carry a path, as Konnect returns them
   over PrivateLink, in the form Kong Gateway accepts: the port no longer lands
@@ -94,6 +102,23 @@
   `KonnectExtensionApplied=False` condition on the resource, where the
   condition was previously not written.
   [#6104](https://github.com/Kong/kong-operator/issues/6104)
+- A rate limited response from Konnect no longer marks a
+  `KonnectAPIAuthConfiguration` as invalid. The credentials are unchanged by a
+  429, so the last known status is kept and the controller retries after the
+  `Retry-After` delay Konnect asks for. Before, a single 429 flipped
+  `APIAuthValid` to `False` on the auth configuration, which cascaded to every
+  resource that uses it (`KonnectGatewayControlPlane`, `KonnectExtension`, the
+  `DataPlane` and finally the `Gateway`), leaving them unprogrammed while the
+  controller retried every 3 seconds and kept the organization rate limited.
+  [#6217](https://github.com/Kong/kong-operator/issues/6217)
+- An `OnPremAIGateway` with no configuration entities (no `AIGatewayModel`,
+  `AIGatewayModelProvider`, `AIGatewayConsumer`, ...) no longer leaves its
+  `AIGatewayDataPlane` stuck in `Ready=False`: the control plane pushes a stub
+  upstream when the rendered configuration would otherwise be empty, because a
+  DB-less Kong Gateway does not report ready while its applied configuration is
+  empty. Deleting the last entity consequently no longer takes a ready data plane
+  out of service.
+  [#6187](https://github.com/Kong/kong-operator/pull/6187)
 - HybridGateway root-object controllers (e.g. HTTPRoute) no longer spend several
   seconds per reconcile scanning every managed Kong resource during orphan
   cleanup and status computation. Ownership of child resources is now resolved
@@ -108,6 +133,16 @@
   an otherwise healthy entity as unprogrammed. Existing entities establish an
   unverified baseline on upgrade.
   [#6142](https://github.com/Kong/kong-operator/pull/6142)
+- The operator's cached client now provides read-your-own-writes consistency. A
+  read that follows one of the operator's own successful writes waits for the
+  informer cache to observe that write instead of returning a stale object. This
+  removes the class of duplicate-create failures where a reconcile that ran
+  immediately after a `.status` patch still saw an empty Konnect ID, created the
+  entity in Konnect a second time, and got `409 Conflict` back. This is enabled
+  by default; set `--enable-read-your-own-writes-consistency=false` (or the
+  `KONG_OPERATOR_ENABLE_READ_YOUR_OWN_WRITES_CONSISTENCY` environment variable)
+  to disable it.
+  [#733](https://github.com/Kong/kong-operator/issues/733)
 - Konnect entities that resolve API authentication through a parent chain,
   including EventGateway policies and AI Gateway consumer credentials, no longer
   get stuck terminating when an ancestor has already been deleted. Their cleanup
@@ -192,6 +227,10 @@
 
 ### Added
 
+- Added the `EventGatewayVirtualClusterPolicyChain` CRD to declare the execution
+  order of cluster-level policies within an Event Gateway virtual cluster.
+  The API requires an explicit policy list and an immutable virtual-cluster CR
+  reference; it has no independent Konnect ID.
 - OnPremAIGateway spec: added a `dataplaneSync` field with optional
   `intervalSeconds` and `timeoutSeconds` (non-negative integers, in seconds) to
   tune the cadence of and the timeout for pushing configuration to the data
@@ -226,10 +265,14 @@
   is not affected.
   [#6097](https://github.com/Kong/kong-operator/pull/6097)
 - Added `OnPremEventGateway` CRD: an Event Gateway whose control plane is
-  gw-admin, running in the cluster, instead of Konnect. `spec.gwAdmin` names
-  the Service and port of the gw-admin pods Kong Operator pushes the
-  configuration to. This change only adds the CRD; it is not reconciled yet.
+  gw-admin, running in the cluster, instead of Konnect. `spec.gwAdminRef`
+  references the `GWAdmin` that serves the gateway, and can't be changed. A
+  `GWAdmin` in another namespace is used only when a `KongReferenceGrant` in
+  its namespace allows the `OnPremEventGateway`s of the namespace of the
+  gateway to reference it. This change only adds the CRD; it is not reconciled
+  yet.
   [#6114](https://github.com/Kong/kong-operator/pull/6114)
+  [#6213](https://github.com/Kong/kong-operator/pull/6213)
 - Event Gateway: `spec.parentRef` of `EventGatewayBackendCluster`,
   `EventGatewayDataPlaneCertificate`, `EventGatewayListener`,
   `EventGatewaySchemaRegistry`, `EventGatewayStaticKey` and
@@ -281,11 +324,13 @@
   at most `--gwadmin-ca-ttl`.
   [#6170](https://github.com/Kong/kong-operator/pull/6170)
 - `--enable-controller-onpremeventgateway` flag (default `false`): enables the
-  `OnPremEventGateway` controller. A change to a gateway, or to an Event
-  Gateway entity attached to it directly or through its parent entities,
-  reconciles that gateway. The controller doesn't push any configuration to
-  gw-admin yet: the gateway reports `Programmed` `False` with reason `Pending`.
+  `OnPremEventGateway` controller. The `GWAdminResolved` condition tells
+  whether the gateway's `GWAdmin` can serve it: reason `NotFound`,
+  `RefNotPermitted` (no `KongReferenceGrant` allows the cross-namespace
+  reference) or `NotReady` (being deleted, API not published, or no gw-admin
+  pod). No configuration is pushed to gw-admin yet: `Programmed` stays `False`.
   [#6132](https://github.com/Kong/kong-operator/pull/6132)
+  [#6218](https://github.com/Kong/kong-operator/pull/6218)
 - `--konnect-list-page-size` flag (default and maximum `100`): the page size
   the operator requests when listing Konnect entities to find the Konnect
   entity of an object, e.g. one whose Konnect ID was lost. It is a fallback in

@@ -189,6 +189,15 @@ spec:
                             required:
                             - allow
                             type: object
+                          allowWhen:
+                            properties:
+                              allowWhen:
+                                items:
+                                  type: string
+                                type: array
+                            required:
+                            - allowWhen
+                            type: object
                           deny:
                             properties:
                               deny:
@@ -211,10 +220,21 @@ spec:
                             required:
                             - deny
                             type: object
+                          denyWhen:
+                            properties:
+                              denyWhen:
+                                items:
+                                  type: string
+                                type: array
+                            required:
+                            - denyWhen
+                            type: object
                           type:
                             enum:
                             - allow
                             - deny
+                            - allowWhen
+                            - denyWhen
                             minLength: 1
                             type: string
                         required:
@@ -10677,6 +10697,15 @@ spec:
                                 required:
                                 - allow
                                 type: object
+                              allowWhen:
+                                properties:
+                                  allowWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - allowWhen
+                                type: object
                               deny:
                                 properties:
                                   deny:
@@ -10699,10 +10728,21 @@ spec:
                                 required:
                                 - deny
                                 type: object
+                              denyWhen:
+                                properties:
+                                  denyWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - denyWhen
+                                type: object
                               type:
                                 enum:
                                 - allow
                                 - deny
+                                - allowWhen
+                                - denyWhen
                                 minLength: 1
                                 type: string
                             required:
@@ -14721,6 +14761,15 @@ spec:
                                 required:
                                 - allow
                                 type: object
+                              allowWhen:
+                                properties:
+                                  allowWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - allowWhen
+                                type: object
                               deny:
                                 properties:
                                   deny:
@@ -14743,10 +14792,21 @@ spec:
                                 required:
                                 - deny
                                 type: object
+                              denyWhen:
+                                properties:
+                                  denyWhen:
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - denyWhen
+                                type: object
                               type:
                                 enum:
                                 - allow
                                 - deny
+                                - allowWhen
+                                - denyWhen
                                 minLength: 1
                                 type: string
                             required:
@@ -22932,15 +22992,19 @@ spec:
                             items:
                               properties:
                                 name:
+                                  minLength: 1
                                   type: string
                                 priority:
                                   format: int32
+                                  maximum: 100000
+                                  minimum: 0
                                   type: integer
                               required:
                               - name
                               - priority
                               type: object
                               x-kubernetes-map-type: atomic
+                            maxItems: 10
                             type: array
                             x-kubernetes-list-map-keys:
                             - name
@@ -28966,6 +29030,199 @@ spec:
         - fieldPath: .spec.eventGatewayVirtualClusterRef
           message: spec.eventGatewayVirtualClusterRef is immutable once the entity has been created in Konnect
           rule: '!has(oldSelf.status) || !has(oldSelf.status.id) || self.spec.eventGatewayVirtualClusterRef == oldSelf.spec.eventGatewayVirtualClusterRef'
+    served: true
+    storage: true
+    subresources:
+      status: {}
+---
+# Source: kong-operator/charts/ko-crds/templates/ko-crds-configuration.konghq.com_eventgatewayvirtualclusterpolicychains.yaml
+# This file is auto-generated by KO's hack/generators/conversion-webhook/main.go generator.
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+    kubernetes-configuration.konghq.com/channels: kong-operator
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.2.0
+  name: eventgatewayvirtualclusterpolicychains.configuration.konghq.com
+spec:
+  group: configuration.konghq.com
+  names:
+    categories:
+    - kong
+    kind: EventGatewayVirtualClusterPolicyChain
+    listKind: EventGatewayVirtualClusterPolicyChainList
+    plural: eventgatewayvirtualclusterpolicychains
+    singular: eventgatewayvirtualclusterpolicychain
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: The Resource is Programmed on Konnect
+      jsonPath: .status.conditions[?(@.type=='Programmed')].status
+      name: Programmed
+      type: string
+    - description: Konnect Organization ID this resource belongs to.
+      jsonPath: .status.organizationID
+      name: OrgID
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              apiSpec:
+                properties:
+                  policies:
+                    items:
+                      properties:
+                        kind:
+                          default: EventGatewayVirtualClusterPolicy
+                          enum:
+                          - EventGatewayVirtualClusterPolicy
+                          type: string
+                        name:
+                          minLength: 1
+                          type: string
+                        namespace:
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                    x-kubernetes-list-type: atomic
+                required:
+                - policies
+                type: object
+              eventGatewayVirtualClusterRef:
+                properties:
+                  konnectID:
+                    maxLength: 36
+                    type: string
+                  namespacedRef:
+                    properties:
+                      name:
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                      namespace:
+                        maxLength: 253
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  type:
+                    enum:
+                    - konnectID
+                    - namespacedRef
+                    type: string
+                required:
+                - type
+                type: object
+                x-kubernetes-validations:
+                - message: when type is namespacedRef, namespacedRef must be set
+                  rule: 'self.type == ''namespacedRef'' ? has(self.namespacedRef) : true'
+                - message: when type is namespacedRef, konnectID must not be set
+                  rule: 'self.type == ''namespacedRef'' ? !has(self.konnectID) : true'
+                - message: when type is konnectID, konnectID must be set
+                  rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
+                - message: when type is konnectID, namespacedRef must not be set
+                  rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
+            required:
+            - apiSpec
+            - eventGatewayVirtualClusterRef
+            type: object
+          status:
+            properties:
+              conditions:
+                items:
+                  properties:
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                maxItems: 8
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              gatewayID:
+                properties:
+                  id:
+                    maxLength: 256
+                    type: string
+                type: object
+              id:
+                maxLength: 256
+                type: string
+              observedGeneration:
+                format: int64
+                type: integer
+              organizationID:
+                maxLength: 256
+                type: string
+              serverURL:
+                maxLength: 512
+                type: string
+              virtualClusterID:
+                properties:
+                  id:
+                    maxLength: 256
+                    type: string
+                type: object
+            type: object
+        required:
+        - spec
+        type: object
+        x-kubernetes-validations:
+        - message: spec.eventGatewayVirtualClusterRef is immutable when an entity is already Programmed
+          rule: '!has(self.spec.eventGatewayVirtualClusterRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.eventGatewayVirtualClusterRef == self.spec.eventGatewayVirtualClusterRef'
+        - fieldPath: .spec.eventGatewayVirtualClusterRef
+          message: spec.eventGatewayVirtualClusterRef is immutable
+          rule: self.spec.eventGatewayVirtualClusterRef == oldSelf.spec.eventGatewayVirtualClusterRef
+        - fieldPath: .spec.eventGatewayVirtualClusterRef
+          message: spec.eventGatewayVirtualClusterRef must use namespacedRef
+          rule: self.spec.eventGatewayVirtualClusterRef.type == 'namespacedRef'
+        - fieldPath: .status.id
+          message: status.id must be unset because policy chains have no independent Konnect ID
+          rule: '!has(self.status) || !has(self.status.id) || size(self.status.id) == 0'
     served: true
     storage: true
     subresources:
@@ -37928,15 +38185,19 @@ spec:
                             items:
                               properties:
                                 name:
+                                  minLength: 1
                                   type: string
                                 priority:
                                   format: int32
+                                  maximum: 100000
+                                  minimum: 0
                                   type: integer
                               required:
                               - name
                               - priority
                               type: object
                               x-kubernetes-map-type: atomic
+                            maxItems: 10
                             type: array
                             x-kubernetes-list-map-keys:
                             - name
@@ -40433,9 +40694,9 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
-    - description: The gw-admin Service
-      jsonPath: .spec.gwAdmin.service.name
-      name: Service
+    - description: The GWAdmin serving the gateway
+      jsonPath: .spec.gwAdminRef.name
+      name: GWAdmin
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -40452,33 +40713,26 @@ spec:
             type: object
           spec:
             properties:
-              gwAdmin:
+              gwAdminRef:
                 properties:
-                  service:
-                    properties:
-                      name:
-                        maxLength: 63
-                        minLength: 1
-                        type: string
-                        x-kubernetes-validations:
-                        - message: 'name must be a valid DNS-1035 label: lowercase alphanumeric characters or ''-'', starting with a letter and ending with an alphanumeric character'
-                          rule: self.matches('^[a-z]([-a-z0-9]*[a-z0-9])?$')
-                      portName:
-                        maxLength: 63
-                        minLength: 1
-                        type: string
-                        x-kubernetes-validations:
-                        - message: 'portName must be a valid DNS-1123 label: lowercase alphanumeric characters or ''-'', starting and ending with an alphanumeric character'
-                          rule: self.matches('^[a-z0-9]([-a-z0-9]*[a-z0-9])?$')
-                    required:
-                    - name
-                    - portName
-                    type: object
+                  name:
+                    maxLength: 253
+                    minLength: 1
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                    type: string
+                  namespace:
+                    maxLength: 63
+                    minLength: 1
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                    type: string
                 required:
-                - service
+                - name
                 type: object
+                x-kubernetes-validations:
+                - message: gwAdminRef is immutable
+                  rule: self == oldSelf
             required:
-            - gwAdmin
+            - gwAdminRef
             type: object
           status:
             properties:
@@ -42950,15 +43204,19 @@ spec:
                             items:
                               properties:
                                 name:
+                                  minLength: 1
                                   type: string
                                 priority:
                                   format: int32
+                                  maximum: 100000
+                                  minimum: 0
                                   type: integer
                               required:
                               - name
                               - priority
                               type: object
                               x-kubernetes-map-type: atomic
+                            maxItems: 10
                             type: array
                             x-kubernetes-list-map-keys:
                             - name
@@ -47807,15 +48065,19 @@ spec:
                             items:
                               properties:
                                 name:
+                                  minLength: 1
                                   type: string
                                 priority:
                                   format: int32
+                                  maximum: 100000
+                                  minimum: 0
                                   type: integer
                               required:
                               - name
                               - priority
                               type: object
                               x-kubernetes-map-type: atomic
+                            maxItems: 10
                             type: array
                             x-kubernetes-list-map-keys:
                             - name
@@ -52986,6 +53248,13 @@ spec:
                         - Enabled
                         - Disabled
                         type: string
+                      tryItUiAudience:
+                        enum:
+                        - all
+                        - authenticated
+                        - registered
+                        maxLength: 253
+                        type: string
                     type: object
                   theme:
                     properties:
@@ -56952,15 +57221,19 @@ spec:
                             items:
                               properties:
                                 name:
+                                  minLength: 1
                                   type: string
                                 priority:
                                   format: int32
+                                  maximum: 100000
+                                  minimum: 0
                                   type: integer
                               required:
                               - name
                               - priority
                               type: object
                               x-kubernetes-map-type: atomic
+                            maxItems: 10
                             type: array
                             x-kubernetes-list-map-keys:
                             - name
@@ -61463,15 +61736,19 @@ spec:
                                 items:
                                   properties:
                                     name:
+                                      minLength: 1
                                       type: string
                                     priority:
                                       format: int32
+                                      maximum: 100000
+                                      minimum: 0
                                       type: integer
                                   required:
                                   - name
                                   - priority
                                   type: object
                                   x-kubernetes-map-type: atomic
+                                maxItems: 10
                                 type: array
                                 x-kubernetes-list-map-keys:
                                 - name
@@ -65479,15 +65756,19 @@ spec:
                                 items:
                                   properties:
                                     name:
+                                      minLength: 1
                                       type: string
                                     priority:
                                       format: int32
+                                      maximum: 100000
+                                      minimum: 0
                                       type: integer
                                   required:
                                   - name
                                   - priority
                                   type: object
                                   x-kubernetes-map-type: atomic
+                                maxItems: 10
                                 type: array
                                 x-kubernetes-list-map-keys:
                                 - name
@@ -70303,15 +70584,19 @@ spec:
                                 items:
                                   properties:
                                     name:
+                                      minLength: 1
                                       type: string
                                     priority:
                                       format: int32
+                                      maximum: 100000
+                                      minimum: 0
                                       type: integer
                                   required:
                                   - name
                                   - priority
                                   type: object
                                   x-kubernetes-map-type: atomic
+                                maxItems: 10
                                 type: array
                                 x-kubernetes-list-map-keys:
                                 - name

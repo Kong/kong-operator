@@ -259,7 +259,7 @@ func kongCertificateToCertificateInput(
 		keyAltData = cert.Spec.KeyAlt
 	}
 
-	input := sdkkonnectcomp.CertificateRequest2{
+	input := sdkkonnectcomp.CertificateWithCertAndKey{
 		Cert: certData,
 		Key:  keyData,
 		Tags: GenerateTagsForObject(cert, cert.Spec.Tags...),
@@ -271,7 +271,7 @@ func kongCertificateToCertificateInput(
 		input.KeyAlt = new(keyAltData)
 	}
 
-	return sdkkonnectcomp.CreateCertificateRequestCertificateRequest2(input), nil
+	return sdkkonnectcomp.CreateCertificateRequestCertificateWithCertAndKey(input), nil
 }
 
 func getKongCertificateForUID(

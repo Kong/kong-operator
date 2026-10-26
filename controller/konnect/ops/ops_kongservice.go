@@ -30,7 +30,7 @@ func createService(
 		resp, err := sdk.UpsertService(ctx, sdkkonnectops.UpsertServiceRequest{
 			ControlPlaneID: cpID,
 			ServiceID:      serviceID,
-			Service:        kongServiceToSDKServiceInput(svc),
+			ServiceRequest: kongServiceToSDKServiceInput(svc),
 		})
 
 		if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, svc); errWrap != nil {
@@ -78,7 +78,7 @@ func updateService(
 		sdkkonnectops.UpsertServiceRequest{
 			ControlPlaneID: svc.GetControlPlaneID(),
 			ServiceID:      id,
-			Service:        kongServiceToSDKServiceInput(svc),
+			ServiceRequest: kongServiceToSDKServiceInput(svc),
 		},
 	)
 
@@ -161,8 +161,10 @@ func adoptService(
 
 func kongServiceToSDKServiceInput(
 	svc *configurationv1alpha1.KongService,
-) sdkkonnectcomp.Service {
-	s := sdkkonnectcomp.Service{
+) sdkkonnectcomp.ServiceRequest {
+	// The request is a union of the host and the URL form of a Service. The host
+	// form carries an optional `url` too, so it holds both shapes of the spec.
+	s := sdkkonnectcomp.ServiceWithHost{
 		ID:             svc.Spec.ID,
 		URL:            svc.Spec.URL,
 		ConnectTimeout: svc.Spec.ConnectTimeout,
@@ -181,18 +183,18 @@ func kongServiceToSDKServiceInput(
 		s.Port = new(svc.Spec.Port)
 	}
 	if svc.Spec.Protocol != "" {
-		s.Protocol = (*sdkkonnectcomp.ServiceProtocol)(&svc.Spec.Protocol)
+		s.Protocol = (*sdkkonnectcomp.ServiceRequestProtocol)(&svc.Spec.Protocol)
 	}
 	if svc.Status.Konnect != nil {
 		if svc.Status.Konnect.CertificateID != "" {
 			certID := svc.Status.Konnect.CertificateID
-			s.ClientCertificate = &sdkkonnectcomp.ClientCertificate{ID: &certID}
+			s.ClientCertificate = &sdkkonnectcomp.ServiceRequestClientCertificate{ID: &certID}
 		}
 		if len(svc.Status.Konnect.CACertificateIDs) > 0 {
 			s.CaCertificates = slices.Clone(svc.Status.Konnect.CACertificateIDs)
 		}
 	}
-	return s
+	return sdkkonnectcomp.CreateServiceRequestServiceWithHost(s)
 }
 
 // getKongServiceForUID returns the Konnect ID of the KongService
@@ -224,7 +226,7 @@ func getKongServiceForUID(
 
 // serviceMatch compares the existing service fetched from Konnect and the spec of the KongService
 // for adopting in match mode.
-func serviceMatch(konnectService *sdkkonnectcomp.ServiceOutput, svc *configurationv1alpha1.KongService) bool {
+func serviceMatch(konnectService *sdkkonnectcomp.Service, svc *configurationv1alpha1.KongService) bool {
 	spec := svc.Spec
 	specProtocol := sdkkonnectcomp.ServiceProtocol(spec.Protocol)
 	if spec.URL != nil {

@@ -1,0 +1,7 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: public-ca
+status:
+  (conditions[?type == 'Ready']):
+    - status: "True"

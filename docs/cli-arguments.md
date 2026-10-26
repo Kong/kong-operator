@@ -149,6 +149,10 @@ rows:
     type: '`bool`'
     description: "Enable the Gateway API experimental features."
     default: '`false`'
+  - flag: '`--enable-read-your-own-writes-consistency`'
+    type: '`bool`'
+    description: "Make cached reads wait until the cache has observed the operator's own preceding writes. Disable only if the cache does not watch every object the operator writes to."
+    default: '`true`'
   - flag: '`--enable-validating-webhook`'
     type: '`bool`'
     description: "Enable the validating webhook."

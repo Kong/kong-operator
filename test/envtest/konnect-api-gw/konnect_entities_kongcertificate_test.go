@@ -67,9 +67,9 @@ func TestKongCertificate(t *testing.T) {
 		sdk.CertificatesSDK.EXPECT().
 			CreateCertificate(mock.Anything, cpID,
 				mock.MatchedBy(func(input sdkkonnectcomp.CertificateRequest) bool {
-					return input.CertificateRequest2.Cert == deploy.TestValidCertPEM &&
-						input.CertificateRequest2.Key == deploy.TestValidCertKeyPEM &&
-						slices.Contains(input.CertificateRequest2.Tags, "tag1")
+					return input.CertificateWithCertAndKey.Cert == deploy.TestValidCertPEM &&
+						input.CertificateWithCertAndKey.Key == deploy.TestValidCertKeyPEM &&
+						slices.Contains(input.CertificateWithCertAndKey.Tags, "tag1")
 				}),
 			).
 			Return(&sdkkonnectops.CreateCertificateResponse{
@@ -115,7 +115,7 @@ func TestKongCertificate(t *testing.T) {
 		t.Log("Setting up SDK expectations on KongCertificate update")
 		sdk.CertificatesSDK.EXPECT().UpsertCertificate(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertCertificateRequest) bool {
 			return r.CertificateID == "cert-12345" &&
-				slices.Contains(r.CertificateRequest.CertificateRequest2.Tags, "addedTag")
+				slices.Contains(r.CertificateRequest.CertificateWithCertAndKey.Tags, "addedTag")
 		})).Return(&sdkkonnectops.UpsertCertificateResponse{}, nil)
 
 		t.Log("Patching KongCertificate")
@@ -215,7 +215,7 @@ func TestKongCertificate(t *testing.T) {
 				mock.Anything,
 				cp.GetKonnectID(),
 				mock.MatchedBy(func(req sdkkonnectcomp.CertificateRequest) bool {
-					return slices.Contains(req.CertificateRequest2.Tags, "tag3")
+					return slices.Contains(req.CertificateWithCertAndKey.Tags, "tag3")
 				}),
 			).
 			Return(
@@ -384,8 +384,8 @@ func TestKongCertificate(t *testing.T) {
 		sdk.CertificatesSDK.EXPECT().
 			CreateCertificate(mock.Anything, cpID,
 				mock.MatchedBy(func(input sdkkonnectcomp.CertificateRequest) bool {
-					return input.CertificateRequest2.Cert == deploy.TestValidCertPEM &&
-						input.CertificateRequest2.Key == deploy.TestValidCertKeyPEM
+					return input.CertificateWithCertAndKey.Cert == deploy.TestValidCertPEM &&
+						input.CertificateWithCertAndKey.Key == deploy.TestValidCertKeyPEM
 				}),
 			).
 			Return(&sdkkonnectops.CreateCertificateResponse{
@@ -481,8 +481,8 @@ func TestKongCertificate(t *testing.T) {
 		sdk.CertificatesSDK.EXPECT().
 			CreateCertificate(mock.Anything, cpID,
 				mock.MatchedBy(func(input sdkkonnectcomp.CertificateRequest) bool {
-					return input.CertificateRequest2.Cert == deploy.TestValidCertPEM &&
-						input.CertificateRequest2.Key == deploy.TestValidCertKeyPEM
+					return input.CertificateWithCertAndKey.Cert == deploy.TestValidCertPEM &&
+						input.CertificateWithCertAndKey.Key == deploy.TestValidCertKeyPEM
 				}),
 			).
 			Return(&sdkkonnectops.CreateCertificateResponse{

@@ -37,6 +37,19 @@ type konnectEntityReconcilerTestCase struct {
 	eventuallyPredicate func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace)
 }
 
+// seedClient returns a namespaced, uncached client for creating objects before
+// StartReconcilers starts the manager.
+//
+// The manager's client must not be used that early: it serves read-your-own-writes
+// consistency, and the first call through it registers a consistency handler that
+// waits for the informer to sync. Before the manager starts the informer is never
+// started, so that call blocks until its context is cancelled - which for a test
+// context means forever.
+func seedClient(t *testing.T, cfg *rest.Config, namespace string) client.Client {
+	t.Helper()
+	return client.NewNamespacedClient(envtest.NewControllerClient(t, scheme.Get(), cfg), namespace)
+}
+
 // testNewKonnectEntityReconciler is a helper function to test Konnect entity reconcilers.
 // It creates a new namespace for each test case and starts a new controller manager.
 // The provided rest.Config designates the Kubernetes API server to use for the tests.
@@ -61,7 +74,10 @@ func testNewKonnectEntityReconciler[
 		ns := &corev1.Namespace{
 			GenerateName: envtest.NameFromT(t),
 		}
-		require.NoError(t, mgr.GetClient().Create(ctx, ns))
+		// Seeded before StartReconcilers starts the manager, so it must not go
+		// through the manager's client: with read-your-own-writes consistency that
+		// early it deadlocks waiting for an informer that is never started.
+		require.NoError(t, envtest.NewControllerClient(t, scheme.Get(), cfg).Create(ctx, ns))
 
 		cl := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 		factory := sdkmocks.NewMockSDKFactory(t)

@@ -1,0 +1,22 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigned
+spec:
+  selfSigned: {}
+---
+# A CA standing in for a public one, issuing the cp server certificate.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: public-ca
+spec:
+  isCA: true
+  commonName: public-ca
+  secretName: public-ca
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    kind: Issuer
+    name: selfsigned

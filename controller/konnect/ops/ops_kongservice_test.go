@@ -52,7 +52,7 @@ func TestCreateKongService(t *testing.T) {
 					CreateService(ctx, "123456789", kongServiceToSDKServiceInput(svc)).
 					Return(
 						&sdkkonnectops.CreateServiceResponse{
-							Service: &sdkkonnectcomp.ServiceOutput{
+							Service: &sdkkonnectcomp.Service{
 								ID:   new("12345"),
 								Host: "example.com",
 								Name: new("svc-1"),
@@ -94,7 +94,7 @@ func TestCreateKongService(t *testing.T) {
 					})).
 					Return(
 						&sdkkonnectops.UpsertServiceResponse{
-							Service: &sdkkonnectcomp.ServiceOutput{
+							Service: &sdkkonnectcomp.Service{
 								ID: new("abcd-1234"),
 							},
 						},
@@ -394,13 +394,13 @@ func TestUpdateKongService(t *testing.T) {
 						sdkkonnectops.UpsertServiceRequest{
 							ControlPlaneID: "12345",
 							ServiceID:      "123456789",
-							Service:        kongServiceToSDKServiceInput(svc),
+							ServiceRequest: kongServiceToSDKServiceInput(svc),
 						},
 					).
 					Return(
 						&sdkkonnectops.UpsertServiceResponse{
 							StatusCode: 200,
-							Service: &sdkkonnectcomp.ServiceOutput{
+							Service: &sdkkonnectcomp.Service{
 								ID:   new("123456789"),
 								Name: new("svc-1"),
 							},
@@ -439,7 +439,7 @@ func TestUpdateKongService(t *testing.T) {
 						sdkkonnectops.UpsertServiceRequest{
 							ControlPlaneID: "12345",
 							ServiceID:      "123456789",
-							Service:        kongServiceToSDKServiceInput(svc),
+							ServiceRequest: kongServiceToSDKServiceInput(svc),
 						},
 					).
 					Return(
@@ -517,7 +517,7 @@ func TestCreateAndUpdateKongService_KubernetesMetadataConsistency(t *testing.T) 
 		"tag4",
 		"duplicate-tag",
 	}
-	require.ElementsMatch(t, expectedTags, output.Tags)
+	require.ElementsMatch(t, expectedTags, output.ServiceWithHost.Tags)
 }
 
 func TestAdoptKongServiceOverride(t *testing.T) {
@@ -535,7 +535,7 @@ func TestAdoptKongServiceOverride(t *testing.T) {
 				sdk := mocks.NewMockServicesSDK(t)
 				sdk.EXPECT().GetService(mock.Anything, "1234", "123456789").Return(
 					&sdkkonnectops.GetServiceResponse{
-						Service: &sdkkonnectcomp.ServiceOutput{},
+						Service: &sdkkonnectcomp.Service{},
 					},
 					nil,
 				)
@@ -579,7 +579,7 @@ func TestAdoptKongServiceOverride(t *testing.T) {
 				sdk := mocks.NewMockServicesSDK(t)
 				sdk.EXPECT().GetService(mock.Anything, "1234", "123456789").Return(
 					&sdkkonnectops.GetServiceResponse{
-						Service: &sdkkonnectcomp.ServiceOutput{},
+						Service: &sdkkonnectcomp.Service{},
 					},
 					&sdkkonnecterrs.NotFoundError{},
 				)
@@ -622,7 +622,7 @@ func TestAdoptKongServiceOverride(t *testing.T) {
 				sdk := mocks.NewMockServicesSDK(t)
 				sdk.EXPECT().GetService(mock.Anything, "1234", "123456789").Return(
 					&sdkkonnectops.GetServiceResponse{
-						Service: &sdkkonnectcomp.ServiceOutput{
+						Service: &sdkkonnectcomp.Service{
 							// different UID in tag
 							Tags: []string{"k8s-uid:abcd-0000"},
 						},
@@ -681,7 +681,7 @@ func TestKongServiceToSDKServiceInputCertificateMapping(t *testing.T) {
 	testCases := []struct {
 		name                    string
 		svc                     *configurationv1alpha1.KongService
-		expectClientCertificate *sdkkonnectcomp.ClientCertificate
+		expectClientCertificate *sdkkonnectcomp.ServiceRequestClientCertificate
 		expectCaCertificates    []string
 	}{
 		{
@@ -710,7 +710,7 @@ func TestKongServiceToSDKServiceInputCertificateMapping(t *testing.T) {
 					},
 				},
 			},
-			expectClientCertificate: &sdkkonnectcomp.ClientCertificate{ID: new("cert-abc")},
+			expectClientCertificate: &sdkkonnectcomp.ServiceRequestClientCertificate{ID: new("cert-abc")},
 			expectCaCertificates:    nil,
 		},
 		{
@@ -745,7 +745,7 @@ func TestKongServiceToSDKServiceInputCertificateMapping(t *testing.T) {
 					},
 				},
 			},
-			expectClientCertificate: &sdkkonnectcomp.ClientCertificate{ID: new("cert-xyz")},
+			expectClientCertificate: &sdkkonnectcomp.ServiceRequestClientCertificate{ID: new("cert-xyz")},
 			expectCaCertificates:    []string{"ca-1"},
 		},
 		{
@@ -770,15 +770,15 @@ func TestKongServiceToSDKServiceInputCertificateMapping(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			output := kongServiceToSDKServiceInput(tc.svc)
-			assert.Equal(t, tc.expectClientCertificate, output.ClientCertificate)
-			assert.Equal(t, tc.expectCaCertificates, output.CaCertificates)
+			assert.Equal(t, tc.expectClientCertificate, output.ServiceWithHost.ClientCertificate)
+			assert.Equal(t, tc.expectCaCertificates, output.ServiceWithHost.CaCertificates)
 
 			// For the defensive-copy test, mutate the original slice after calling the
 			// function and verify the returned slice is not affected.
 			if tc.name == "CaCertificates is a defensive copy" {
 				originalIDs := tc.svc.Status.Konnect.CACertificateIDs
 				originalIDs[0] = "mutated"
-				assert.Equal(t, []string{"ca-original"}, output.CaCertificates,
+				assert.Equal(t, []string{"ca-original"}, output.ServiceWithHost.CaCertificates,
 					"mutating the source slice must not affect the returned CaCertificates")
 			}
 		})

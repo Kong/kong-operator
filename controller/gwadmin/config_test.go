@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/managedfields"
 
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
+	"github.com/kong/kong-operator/v2/internal/gwadmin/published"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
@@ -154,7 +155,9 @@ func TestChecksums(t *testing.T) {
 
 func TestServicesAndStatus(t *testing.T) {
 	gw := newGWAdmin(nil)
-	assert.True(t, generateAPIService(gw).Spec.PublishNotReadyAddresses, "pods are reachable before they are Ready")
+	api := generateAPIService(gw)
+	assert.True(t, api.Spec.PublishNotReadyAddresses, "pods are reachable before they are Ready")
+	assert.Equal(t, published.APIServiceLabels(gw.Name), api.Labels, "the API Service tells its GWAdmin and its role")
 
 	setStatus(gw, "cluster.local")
 	assert.Equal(t, "https://gw-cp.ns.svc.cluster.local:8099", gw.Status.CP.ServerURL)

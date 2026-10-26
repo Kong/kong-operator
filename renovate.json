@@ -215,6 +215,23 @@
       "groupSlug": "aws-sdk-go-v2"
     },
     {
+      "description": "Group the Go toolchain version in go.mod with the golang image version and digest in the Dockerfiles: they must move together in one PR",
+      "matchManagers": ["gomod", "dockerfile"],
+      "matchDepNames": ["go", "golang"],
+      "groupName": "golang",
+      "groupSlug": "golang"
+    },
+    {
+      "description": "Group the Kubernetes Testing Framework (KTF) bump in go.mod with the ktf CLI pin in .mise.toml: they must move together in one PR",
+      "matchManagers": ["gomod", "custom.regex"],
+      "matchDepNames": [
+        "github.com/kong/kubernetes-testing-framework",
+        "Kong/kubernetes-testing-framework"
+      ],
+      "groupName": "kubernetes-testing-framework",
+      "groupSlug": "kubernetes-testing-framework"
+    },
+    {
       "description": "Strip kustomize/ version prefix",
       "matchBaseBranches": ["$default"],
       "matchPackageNames": ["kubernetes-sigs/kustomize"],

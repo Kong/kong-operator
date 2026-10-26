@@ -59,6 +59,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstance"
 	"github.com/kong/kong-operator/v2/internal/metrics"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -226,6 +227,11 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 		indexOptions = slices.Concat(indexOptions,
 			gwadmin.IndexOptions(),
 		)
+	}
+
+	// The OnPremEventGateway controller looks the gateways of a GWAdmin up.
+	if cfg.OnPremEventGatewayControllerEnabled {
+		indexOptions = slices.Concat(indexOptions, gwadminref.IndexOptions())
 	}
 
 	if cfg.FeatureGates.Enabled(FeatureGateMCPServer) {
@@ -405,15 +411,21 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 			},
 		},
 		{
-			// The OnPremEventGateway controller watches the gateways and every
-			// Event Gateway entity that can belong to one.
+			// The OnPremEventGateway controller watches the gateways, every
+			// Event Gateway entity that can belong to one, the GWAdmins serving
+			// them, and the KongReferenceGrants allowing a gateway to use a
+			// GWAdmin in another namespace.
 			condition: c.OnPremEventGatewayControllerEnabled,
 			gvrs: slices.Concat(
-				[]schema.GroupVersionResource{{
-					Group:    eventgatewayv1alpha1.SchemeGroupVersion.Group,
-					Version:  eventgatewayv1alpha1.SchemeGroupVersion.Version,
-					Resource: "onpremeventgateways",
-				}},
+				[]schema.GroupVersionResource{
+					{
+						Group:    eventgatewayv1alpha1.SchemeGroupVersion.Group,
+						Version:  eventgatewayv1alpha1.SchemeGroupVersion.Version,
+						Resource: "onpremeventgateways",
+					},
+					operatorv1alpha1.GWAdminGVR(),
+					configurationv1alpha1.SchemeGroupVersion.WithResource("kongreferencegrants"),
+				},
 				egonprem.EntityGroupVersionResources(),
 			),
 		},
