@@ -895,6 +895,71 @@ func TestBuildDocument_VaultDuplicatePrefix(t *testing.T) {
 	require.Equal(t, 1, failed)
 }
 
+// TestBuildDocument_ModelDuplicateAlias covers two models sharing a selector alias: the
+// converter renders one ai_models entity per alias, named after it, so two identically
+// named rows would make the data plane's declarative import reject the whole payload
+// (uniqueness violation). The later model in namespace/name order is excluded from the
+// document and reported per-entity instead; the first claimant programs normally.
+func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	modelA := aiGatewayModelFixture("model-a")
+	modelA.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
+		Values: []string{"shared-alias"},
+	}
+	modelB := aiGatewayModelFixture("model-b")
+	modelB.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
+		Values: []string{"shared-alias"},
+	}
+
+	builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gw, modelA, modelB)
+	// BuildDocument lists every configuration-entity kind, so every kind's index is needed.
+	for _, opts := range [][]index.Option{
+		index.OptionsForAIGatewayModel(),
+		index.OptionsForAIGatewayModelProvider(),
+		index.OptionsForAIGatewayPolicy(),
+		index.OptionsForAIGatewayConsumerGroup(),
+		index.OptionsForAIGatewayConsumer(),
+		index.OptionsForAIGatewayConsumerCredential(),
+		index.OptionsForAIGatewayAuthStrategy(),
+		index.OptionsForAIGatewayCACertificate(),
+		index.OptionsForAIGatewayCertificate(),
+		index.OptionsForAIGatewaySNI(),
+		index.OptionsForAIGatewayCustomPolicy(),
+		index.OptionsForAIGatewayAgent(),
+		index.OptionsForAIGatewayMCPServer(),
+		index.OptionsForAIGatewayVault(),
+	} {
+		for _, opt := range opts {
+			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+		}
+	}
+	cl := builder.Build()
+
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	require.NoError(t, err)
+
+	require.Len(t, doc.Models, 1)
+	require.Equal(t, "model-a", doc.Models[0].Name)
+
+	require.Len(t, statuses, 2)
+	failed := 0
+	for _, s := range statuses {
+		if s.Err != nil {
+			failed++
+			require.Equal(t, "model-b", s.Obj.GetName())
+			require.ErrorContains(t, s.Err, `duplicate model alias "shared-alias"`)
+			require.ErrorContains(t, s.Err, `"model-a"`)
+		}
+	}
+	require.Equal(t, 1, failed)
+}
+
 // TestBuildDocument_SNIFailsWhenReferencedCertificateFails covers the cross-entity dependency:
 // a certificate that fails its own translation is excluded from the document, and the SNI
 // referencing it must fail too (instead of reporting success while the converter drops it from

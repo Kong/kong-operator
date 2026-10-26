@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
+	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/translator"
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
@@ -312,6 +313,24 @@ func (i *Instance) reportTranslationStatus(
 	entityFailures []EntityFailure,
 	warnings []string,
 ) {
+	// Entity failures carrying a translator conflict marker (the model-alias
+	// routing conflict) are surfaced as warnings instead of failures: the
+	// offending entity is excluded from the document and reports the conflict on
+	// its own status, but the rest of the configuration translated and pushed
+	// fine, so the gateway's aggregated ConfigurationTranslated condition stays
+	// True and the gateway — and its data planes — become Ready
+	// (see ai-deck-converter#248).
+	realFailures := make([]EntityFailure, 0, len(entityFailures))
+	for _, f := range entityFailures {
+		var conflict *translator.ModelAliasConflictError
+		if errors.As(f.Err, &conflict) {
+			warnings = append(warnings, i.entityFailureDesc(f))
+			continue
+		}
+		realFailures = append(realFailures, f)
+	}
+	entityFailures = realFailures
+
 	failureMessages := make([]string, 0, len(entityFailures)+1)
 	if renderErr != nil {
 		failureMessages = append(failureMessages, renderErr.Error())
