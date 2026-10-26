@@ -109,12 +109,15 @@ jobs:
           REF: ${{ github.ref_name }}
           JOB_INDEX: ${{ strategy.job-index }}
           JOB_TOTAL: ${{ strategy.job-total }}
+        # Use `gh` command to dispatch the validation workflow for the current tag instead of calling a nested workflow
+        # for each tag in the matrix to dispatch them sequentially with a 10 minute interval.
         run: |
           set -euo pipefail
           echo "Triggering validation for ${AIGATEWAY_IMAGE_REPO}:${TAG}"
           gh workflow run validate_aigateway_dp_image.yaml --ref "${REF}" \
             -f aigateway-image-repo="${AIGATEWAY_IMAGE_REPO}" \
-            -f aigateway-image-tag="${TAG}"
+            -f aigateway-image-tag="${TAG}" \
+            -f send-slack-notification=true
 
           if (( JOB_INDEX + 1 < JOB_TOTAL )); then
             echo "Waiting ${DISPATCH_INTERVAL_SECONDS}s before triggering the next validation..."
