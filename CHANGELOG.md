@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.4.0-rapid.2.1](#v240-rapid21)
 - [v2.4.0-rapid.2.0](#v240-rapid20)
 - [v2.4.0-rapid.1](#v240-rapid1)
 - [v2.3.2](#v232)
@@ -67,7 +68,9 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## Unreleased
+## [v2.4.0-rapid.2.1]
+
+> Release date: 2026-10-26
 
 ### Fixes
 
@@ -89,6 +92,11 @@
   The extension remains unready until its current certificate is programmed.
   [#5982](https://github.com/Kong/kong-operator/pull/5982),
   [#6095](https://github.com/Kong/kong-operator/pull/6095)
+
+### Changed
+
+- Bump golang to 1.27.3.
+  [#6264](https://github.com/Kong/kong-operator/pull/6264)
 
 ## [v2.4.0-rapid.2.0]
 
@@ -3612,6 +3620,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.4.0-rapid.2.1]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.2.1..v2.4.0-rapid.2.0
 [v2.4.0-rapid.2.0]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.1..v2.4.0-rapid.2.0
 [v2.4.0-rapid.1]: https://github.com/Kong/kong-operator/compare/v2.3.1..v2.4.0-rapid.1
 [v2.3.2]: https://github.com/Kong/kong-operator/compare/v2.3.1..v2.3.2
