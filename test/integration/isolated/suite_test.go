@@ -3,7 +3,6 @@ package isolated
 import (
 	"context"
 	"fmt"
-	"maps"
 	"net/url"
 	"os"
 	"sync"
@@ -139,30 +138,12 @@ func TestMain(m *testing.M) {
 // -----------------------------------------------------------------------------
 
 type featureSetupCfg struct {
-	controlPlaneFeatureGates map[string]string
-	useLastValidConfig       bool
-	kongRouterFlavor         dpconf.RouterFlavor
-	gatewayListeners         []gatewayapi.Listener
-	skipGateway              bool
+	kongRouterFlavor dpconf.RouterFlavor
+	gatewayListeners []gatewayapi.Listener
+	skipGateway      bool
 }
 
 type featureSetupOpt func(*featureSetupCfg)
-
-// withControlPlaneFeatureGates sets feature gates (name => "true"/"false") of the
-// ControlPlane created for the test's Gateway, on top of the defaults.
-func withControlPlaneFeatureGates(gates map[string]string) featureSetupOpt {
-	return func(o *featureSetupCfg) {
-		o.controlPlaneFeatureGates = gates
-	}
-}
-
-// withUseLastValidConfigForFallback makes the ControlPlane use the last valid configuration
-// to fill in the entities excluded by the fallback configuration.
-func withUseLastValidConfigForFallback() featureSetupOpt {
-	return func(o *featureSetupCfg) {
-		o.useLastValidConfig = true
-	}
-}
 
 // withKongRouterFlavor sets the router flavor of the DataPlane, regardless of TEST_KONG_ROUTER_FLAVOR.
 func withKongRouterFlavor(flavor dpconf.RouterFlavor) featureSetupOpt {
@@ -341,7 +322,6 @@ func deployGateway(
 			managercfg.KongServiceFacadeFeature: "true",
 			managercfg.KongCustomEntityFeature:  "true",
 		}
-		maps.Copy(featureGates, setupCfg.controlPlaneFeatureGates)
 		cpOpts := operatorv2beta1.ControlPlaneOptions{
 			IngressClass: new(ingressClass),
 			FeatureGates: lo.MapToSlice(featureGates, func(name, value string) operatorv2beta1.ControlPlaneFeatureGate {
@@ -355,13 +335,6 @@ func deployGateway(
 				State:         operatorv2beta1.ConfigDumpStateEnabled,
 				DumpSensitive: operatorv2beta1.ConfigDumpStateEnabled,
 			},
-		}
-		if setupCfg.useLastValidConfig {
-			cpOpts.Translation = &operatorv2beta1.ControlPlaneTranslationOptions{
-				FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
-					UseLastValidConfig: new(operatorv2beta1.ControlPlaneFallbackConfigurationStateEnabled),
-				},
-			}
 		}
 		gc.Spec.ControlPlaneOptions = &operatorv2beta1.GatewayConfigControlPlaneOptions{ControlPlaneOptions: cpOpts}
 	})

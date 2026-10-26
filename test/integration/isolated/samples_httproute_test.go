@@ -20,7 +20,6 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
-	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/annotations"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/dataplane"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/diagnostics"
@@ -37,9 +36,11 @@ func TestHTTPRouteExample(t *testing.T) {
 		WithLabel(testlabels.Example, testlabels.ExampleTrue).
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyGatewayAPI).
 		WithLabel(testlabels.Kind, testlabels.KindHTTPRoute).
-		WithSetup("deploy Gateway managed by Kong Operator", featureSetup()).
+		WithSetup("create test namespace", featureSetup(withoutGateway())).
 		Assess("deploying to cluster works and HTTP requests are routed properly",
-			runHTTPRouteExampleTestScenario,
+			func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+				return runHTTPRouteExampleTestScenario(ctx, t, samplesManifestPath("gateway-httproute.yaml"))
+			},
 		).
 		Teardown(featureTeardown())
 
@@ -175,12 +176,9 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyGatewayAPI).
 		WithLabel(testlabels.Kind, testlabels.KindHTTPRoute).
 		WithSetup("skip as the broken KongPlugin is rejected by the webhook", SkipBrokenKongPluginsRejectedByWebhook).
-		WithSetup("deploy Gateway managed by Kong Operator", featureSetup(
-			withControlPlaneFeatureGates(map[string]string{managercfg.FallbackConfigurationFeature: "true"}),
-			withUseLastValidConfigForFallback(),
-		)).
-		Assess("deploying to cluster works and HTTP requests are routed properly", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
-			runHTTPRouteExampleTestScenario(ctx, t, c)
+		WithSetup("create test namespace", featureSetup(withoutGateway())).
+		Assess("deploying to cluster works and HTTP requests are routed properly", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+			ctx = runHTTPRouteExampleTestScenario(ctx, t, samplesManifestPath("feature-gated/gateway-httproute-use-last-valid-config.yaml"))
 
 			namespace := GetNamespaceForT(ctx, t)
 			gateway := GetFromCtxForT[*gatewayapi.Gateway](ctx, t)
@@ -351,16 +349,17 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 	tenv.Test(t, f.Feature())
 }
 
-// runHTTPRouteExampleTestScenario deploys two echo backends and an HTTPRoute load balancing between them,
-// attached to the HTTPS listener of the test's Gateway, and verifies the traffic is routed properly.
-func runHTTPRouteExampleTestScenario(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-	gateway := GetFromCtxForT[*gatewayapi.Gateway](ctx, t)
+// runHTTPRouteExampleTestScenario applies the sample, which deploys a Gateway, two echo backends and an HTTPRoute
+// load balancing between them, attached to the HTTPS listener of the Gateway, and verifies the traffic is routed
+// properly. The manifest is the sample at manifestPath, which must deploy Gateway `kong`.
+func runHTTPRouteExampleTestScenario(ctx context.Context, t *testing.T, manifestPath string) context.Context {
+	applyManifest(ctx, t, manifestPath)
+	ctx = waitForGateway(ctx, t, k8stypes.NamespacedName{Namespace: GetNamespaceForT(ctx, t), Name: "kong"})
+
 	var (
 		proxyURLHTTP  = GetHTTPURLFromCtx(ctx)
 		proxyURLHTTPS = GetHTTPSURLFromCtx(ctx)
 	)
-
-	applyManifest(ctx, t, samplesManifestPath("gateway-httproute.yaml"), "GATEWAY_NAME", gateway.Name)
 
 	t.Logf("verifying that traffic is routed properly")
 
