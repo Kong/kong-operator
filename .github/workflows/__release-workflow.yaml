@@ -93,9 +93,6 @@ jobs:
       minor: ${{ steps.semver_parser.outputs.minor }}
       patch: ${{ steps.semver_parser.outputs.patch }}
       prerelease: ${{ steps.semver_parser.outputs.prerelease }}
-      # NOTE: true for N.M.P with P != 0 and for rapid patches (e.g. 2.4.0-rapid.2.1).
-      # The first release of a rapid line (e.g. 2.4.0-rapid.2.0) is not a patch.
-      is-patch: ${{ steps.release-kind.outputs.is-patch }}
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
@@ -111,7 +108,6 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: |
             kong-operator
-            developer.konghq.com
       - uses: mukunku/tag-exists-action@5c39604fe8aef7e65acb6fbcf96ec580f7680313 # v1.7.0
         id: check-tag
         name: Check if tag already exists
@@ -153,6 +149,8 @@ jobs:
             exit 1
           fi
 
+      # NOTE: true for N.M.P with P != 0 and for rapid patches (e.g. 2.4.0-rapid.2.1).
+      # The first release of a rapid line (e.g. 2.4.0-rapid.2.0) is not a patch.
       - name: Determine whether this is a patch release
         id: release-kind
         env:
@@ -164,6 +162,28 @@ jobs:
           else
             echo "is-patch=false" >> "$GITHUB_OUTPUT"
           fi
+
+      # NOTE: these checks run here, not in create-release-pr, so that a release
+      # triggered from the wrong branch fails before images are built and pushed.
+      - name: Check if we're not trying to trigger a major/minor release from non main
+        if: ${{ inputs.base != 'main' && steps.release-kind.outputs.is-patch != 'true' }}
+        env:
+          FULLVERSION: ${{ steps.semver_parser.outputs.fullversion }}
+          BASE: ${{ inputs.base }}
+        run: |
+          echo "Trying to release: $FULLVERSION from $BASE"
+          echo "Major/minor releases can only be triggered from main branch"
+          exit 1
+
+      - name: Check if we're not trying to trigger a patch release from main
+        if: ${{ inputs.base == 'main' && steps.release-kind.outputs.is-patch == 'true' }}
+        env:
+          FULLVERSION: ${{ steps.semver_parser.outputs.fullversion }}
+          BASE: ${{ inputs.base }}
+        run: |
+          echo "Trying to release: $FULLVERSION from $BASE"
+          echo "Patch releases can only be triggered from non main, release branch"
+          exit 1
 
   build-push-images:
     permissions:
@@ -181,6 +201,7 @@ jobs:
       username: ${{ inputs.dockerhub-push-username }}
       image-name: ${{ inputs.image-name }}
       additional-build-contexts: ${{ inputs.additional-build-contexts }}
+      ref: ${{ inputs.base }}
       push: true
       slack-send: true
       latest: ${{ inputs.latest }}
@@ -195,26 +216,11 @@ jobs:
         uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
         with:
           egress-policy: audit
-      # Mint the token in the same job that uses it: app tokens do not survive
-      # being passed between jobs or through reusable-workflow boundaries.
-      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
-        id: app-token
-        with:
-          client-id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
-          private-key: ${{ secrets.gh-app-private-key }}
-          owner: ${{ github.repository_owner }}
-          repositories: |
-            kong-operator
-            developer.konghq.com
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-
-      - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
-        env:
-          GH_PAT: ${{ steps.app-token.outputs.token }}
-        run: git config --global url."https://x-access-token:${GH_PAT}@github.com".insteadOf "https://github.com"
+          ref: ${{ inputs.base }}
 
       - name: Setup golang
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -276,6 +282,7 @@ jobs:
     uses: ./.github/workflows/falco-analyzed-e2e.yaml
     with:
       test-image: ${{ needs.build-push-images.outputs.full_tag }}
+      ref: ${{ inputs.base }}
     secrets:
       konnect-pat: ${{ secrets.konnect-pat }}
       op-service-account-token: ${{ secrets.op-service-account-token }}
@@ -305,27 +312,8 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: |
             kong-operator
-            developer.konghq.com
-      - name: Check if we're not trying to trigger a major/minor release from non main
-        if: ${{ inputs.base != 'main' && needs.semver.outputs.is-patch != 'true' }}
-        env:
-          FULLVERSION: ${{ needs.semver.outputs.fullversion }}
-          BASE: ${{ inputs.base }}
-        run: |
-          echo "Trying to release: $FULLVERSION from $BASE"
-          echo "Major/minor releases can only be triggered from main branch"
-          exit 1
-
-      - name: Check if we're not trying to trigger a patch release from main
-        if: ${{ inputs.base == 'main' && needs.semver.outputs.is-patch == 'true' }}
-        env:
-          FULLVERSION: ${{ needs.semver.outputs.fullversion }}
-          BASE: ${{ inputs.base }}
-        run: |
-          echo "Trying to release: $FULLVERSION from $BASE"
-          echo "Patch releases can only be triggered from non main, release branch"
-          exit 1
-
+      # NOTE: the branch/version checks run in the semver job so that a wrong
+      # branch fails before images are built and pushed.
       # Use the branch set via inputs as a base for the release.
       # If anything needs to be fixed before the release, it should be done on the base branch
       # before the release workflow is triggered.
@@ -333,11 +321,6 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ inputs.base }}
-
-      - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
-        env:
-          GH_PAT: ${{ steps.app-token.outputs.token }}
-        run: git config --global url."https://x-access-token:${GH_PAT}@github.com".insteadOf "https://github.com"
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
