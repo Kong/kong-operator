@@ -404,8 +404,6 @@ func BuildDocument(
 					if first, ok := translatedModelAliases[alias]; ok {
 						return nil, &ModelAliasConflictError{Alias: alias, First: first}
 					}
-				}
-				for _, alias := range aliases {
 					translatedModelAliases[alias] = m.Name
 				}
 				return model, nil
