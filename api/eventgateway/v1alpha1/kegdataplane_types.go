@@ -503,7 +503,9 @@ type RuntimeOptions struct {
 	// The termination grace period of the keg pods is raised to cover the drain
 	// and the shutdown timeout, unless the PodTemplateSpec sets it. A
 	// KEG__RUNTIME__DRAIN_DURATION env var of the keg container in the
-	// PodTemplateSpec wins over this field, for keg and the grace period.
+	// PodTemplateSpec wins over this field, for keg and the grace period. An
+	// env var the operator cannot read, from valueFrom or not a duration, is
+	// skipped: the grace period then covers this field or keg's default.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
@@ -514,7 +516,9 @@ type RuntimeOptions struct {
 	// The termination grace period of the keg pods is raised to cover the drain
 	// and the shutdown timeout, unless the PodTemplateSpec sets it. A
 	// KEG__RUNTIME__SHUTDOWN_TIMEOUT env var of the keg container in the
-	// PodTemplateSpec wins over this field, for keg and the grace period.
+	// PodTemplateSpec wins over this field, for keg and the grace period. An
+	// env var the operator cannot read, from valueFrom or not a duration, is
+	// skipped: the grace period then covers this field or keg's default.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1

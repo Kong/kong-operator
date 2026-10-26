@@ -87,7 +87,9 @@
   with: `KEG__RUNTIME__DRAIN_DURATION` and `KEG__RUNTIME__SHUTDOWN_TIMEOUT` in
   the keg container of `spec.deployment.podTemplateSpec`, else
   `spec.config.runtime.drainDurationSeconds` and `shutdownTimeoutSeconds`,
-  else keg's defaults of 5s and 10s. A grace period set in
+  else keg's defaults of 5s and 10s. An env var from `valueFrom`, or not a
+  duration, can't be read by the operator and is skipped: set the grace period
+  in `spec.deployment.podTemplateSpec` then. A grace period set in
   `spec.deployment.podTemplateSpec` still wins, and data planes whose timeouts
   fit in the default are unchanged.
   [#6305](https://github.com/Kong/kong-operator/pull/6305)

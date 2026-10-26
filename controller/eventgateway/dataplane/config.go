@@ -214,7 +214,6 @@ func runtimeTimeoutSeconds(kegContainer *corev1.Container, envName string, spec 
 		}
 	}
 	if spec != nil {
-		// The API fields are int32, the grace period of a pod int64.
 		return int64(*spec)
 	}
 	return def
