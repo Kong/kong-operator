@@ -22,9 +22,11 @@ const policyChainOwnerAnnotation = "gateway-operator.konghq.com/cluster-policy-c
 
 type policyChainReferenceResolver struct {
 	*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain
+
 	policyIDs []string
 }
 
+// ResolveKonnectReferences validates references and captures their ordered IDs for this reconciliation.
 func (r *policyChainReferenceResolver) ResolveKonnectReferences(ctx context.Context, cl client.Client) error {
 	var err error
 	r.policyIDs, err = r.ResolveValidatedPolicyIDs(ctx, cl)
