@@ -232,6 +232,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 			),
 			onprem,
 		)
+		setReadySkippingLicenseCondition(onprem)
+		// A gateway that narrows the operator's options (e.g. spec.watchNamespaces wider
+		// than --watch-namespaces) must not keep serving the configuration it built from
+		// them, and data planes gate on Ready.
+		if err := r.InstancesManager.StopInstance(mgrID); err != nil {
+			if _, ok := errors.AsType[instances.InstanceNotFoundError](err); !ok {
+				return ctrl.Result{}, fmt.Errorf("failed to stop instance: %w", err)
+			}
+		}
 		return ctrl.Result{}, r.applyStatus(ctx, logger, onprem)
 	}
 	k8sutils.SetCondition(
@@ -454,8 +463,9 @@ func (r *Reconciler) validateOnPremAIGatewayOptions(onprem *aigatewayv1alpha1.On
 //
 // The instance runs its own controller-runtime manager hosting the configuration-entity
 // controllers and the SecretReconciler Secret watcher (controller/aigateway/onpremconfig),
-// with a Secret cache scoped to the gateway's namespace and mirroring the operator's
-// --secret-label-selector, so only Secrets carrying that selector label are read there
+// with a Secret cache scoped to the gateway's watch namespaces (cluster-wide for type: all)
+// and mirroring the operator's --secret-label-selector, so only Secrets carrying that
+// selector label are read there
 // (user Secrets must carry it to be ingestible; the Admin API client certificate Secret
 // gets it from ensureAdminClientCertificateSecret).
 func (r *Reconciler) scheduleInstance(

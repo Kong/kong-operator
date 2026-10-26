@@ -294,9 +294,9 @@ func (i *Instance) AdminAPIs() sets.Set[adminapi.DiscoveredAdminAPI] {
 
 // newCtrlManager builds the instance's own lightweight controller-runtime manager.
 func (i *Instance) newCtrlManager() (ctrl.Manager, error) {
-	// ponytail: every instance watches all AIGatewayModels with its own informers, unscoped.
-	// Scope the cache once the gateway ref carries namespace/kind semantics and N instances
-	// ever becomes a real cost.
+	// ponytail: every instance runs its own informer set over its watch namespaces (the
+	// entity caches are scoped, see cacheOpts). Share the informers across instances once
+	// N instances ever becomes a real cost.
 	return ctrl.NewManager(i.env.RestConfig, ctrl.Options{
 		Scheme: i.env.Scheme,
 		Logger: i.logger,

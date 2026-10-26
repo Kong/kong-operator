@@ -807,5 +807,9 @@ func TestOnPremAIGatewayReconciler_WatchNamespacesRequireGrant(t *testing.T) {
 			assert.Equal(ct, metav1.ConditionFalse, readyCond.Status)
 		}
 	}, waitTime, tickTime)
-	require.ErrorIs(t, instancesMgr.IsInstanceReady(mgrID), instances.NewInstanceNotFoundError(mgrID))
+	// StopInstance only closes the stop channel; the registry drops the entry from its run
+	// goroutine, so poll for the removal instead of racing it.
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		assert.ErrorIs(ct, instancesMgr.IsInstanceReady(mgrID), instances.NewInstanceNotFoundError(mgrID))
+	}, waitTime, tickTime)
 }
