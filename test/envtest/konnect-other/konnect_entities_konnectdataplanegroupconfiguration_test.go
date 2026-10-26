@@ -88,6 +88,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 				return req.ControlPlaneID == cp.GetKonnectID() &&
 					req.ControlPlaneGeo == expectedCPGeo
 			}),
+			mock.Anything,
 		).Return(&sdkkonnectops.CreateConfigurationResponse{
 			ConfigurationManifest: &sdkkonnectcomp.ConfigurationManifest{
 				ID:             id,
@@ -95,9 +96,20 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 			},
 		}, nil)
 
+		// The network ref lookup must target the global endpoint, not the regional one.
+		wantServerURL := sdk.GetServer().GlobalURL()
 		sdk.CloudGatewaysSDK.EXPECT().GetNetwork(
 			mock.Anything,
 			networkID,
+			mock.MatchedBy(func(opts []sdkkonnectops.Option) bool {
+				var o sdkkonnectops.Options
+				for _, opt := range opts {
+					if err := opt(&o); err != nil {
+						return false
+					}
+				}
+				return o.ServerURL != nil && *o.ServerURL == wantServerURL
+			}),
 		).Return(
 			&sdkkonnectops.GetNetworkResponse{
 				StatusCode: 200,
@@ -137,6 +149,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 					req.ControlPlaneGeo == expectedCPGeo &&
 					len(req.DataplaneGroups) == 0
 			}),
+			mock.Anything,
 		).Return(&sdkkonnectops.CreateConfigurationResponse{
 			ConfigurationManifest: &sdkkonnectcomp.ConfigurationManifest{
 				ID:             id,
@@ -174,6 +187,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 				return req.ControlPlaneID == cp.GetKonnectID() &&
 					req.ControlPlaneGeo == expectedCPGeo
 			}),
+			mock.Anything,
 		).Return(&sdkkonnectops.CreateConfigurationResponse{
 			ConfigurationManifest: &sdkkonnectcomp.ConfigurationManifest{
 				ID:             id,
@@ -218,6 +232,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 					req.ControlPlaneGeo == expectedCPGeo &&
 					len(req.DataplaneGroups) == 0
 			}),
+			mock.Anything,
 		).Return(&sdkkonnectops.CreateConfigurationResponse{
 			ConfigurationManifest: &sdkkonnectcomp.ConfigurationManifest{
 				ID:             id,

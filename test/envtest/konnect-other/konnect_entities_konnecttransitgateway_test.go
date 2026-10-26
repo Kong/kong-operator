@@ -126,7 +126,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 		}, "Did not see KonnectCloudGatewayTransitGateway get Programmed and Konnect ID set.")
 
 		t.Log("Setting up SDK expctations on updating/get")
-		sdk.CloudGatewaysSDK.EXPECT().GetTransitGateway(mock.Anything, networkID, id).Return(
+		sdk.CloudGatewaysSDK.EXPECT().GetTransitGateway(mock.Anything, networkID, id, mock.Anything).Return(
 			&sdkkonnectops.GetTransitGatewayResponse{
 				TransitGatewayResponse: &sdkkonnectcomp.TransitGatewayResponse{
 					Type: sdkkonnectcomp.TransitGatewayResponseTypeAwsTransitGatewayResponse,
@@ -189,7 +189,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 				req.Filter != nil && req.Filter.Name != nil &&
 				req.Filter.Name.Eq != nil &&
 				*req.Filter.Name.Eq == transitGatewayName
-		})).Return(
+		}), mock.Anything).Return(
 			&sdkkonnectops.ListTransitGatewaysResponse{
 				ListTransitGatewaysResponse: &sdkkonnectcomp.ListTransitGatewaysResponse{
 					Data: []sdkkonnectcomp.TransitGatewayResponse{

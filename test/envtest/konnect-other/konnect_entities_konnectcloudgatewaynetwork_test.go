@@ -68,6 +68,7 @@ func TestKonnectCloudGatewayNetwork(t *testing.T) {
 			mock.MatchedBy(func(req sdkkonnectcomp.CreateNetworkRequest) bool {
 				return req.Name == networkName
 			}),
+			mock.Anything,
 		).Return(&sdkkonnectops.CreateNetworkResponse{
 			Network: &sdkkonnectcomp.Network{
 				ID:    networkID,
@@ -80,7 +81,7 @@ func TestKonnectCloudGatewayNetwork(t *testing.T) {
 		// the network back via GetNetwork. Whether this read fires before the delete
 		// is reconcile-timing dependent, so allow it optionally with .Maybe() to keep
 		// the test from flaking on a benign, idempotent call.
-		sdk.CloudGatewaysSDK.EXPECT().GetNetwork(mock.Anything, networkID).Return(
+		sdk.CloudGatewaysSDK.EXPECT().GetNetwork(mock.Anything, networkID, mock.Anything).Return(
 			&sdkkonnectops.GetNetworkResponse{
 				Network: &sdkkonnectcomp.Network{
 					ID:    networkID,
@@ -108,7 +109,7 @@ func TestKonnectCloudGatewayNetwork(t *testing.T) {
 		}, "Did not see KonnectCloudGatewayNetwork get Programmed and Konnect ID set.")
 
 		t.Log("Allowing SDK get calls from update reconciliations")
-		sdk.CloudGatewaysSDK.EXPECT().GetNetwork(mock.Anything, networkID).Return(
+		sdk.CloudGatewaysSDK.EXPECT().GetNetwork(mock.Anything, networkID, mock.Anything).Return(
 			&sdkkonnectops.GetNetworkResponse{
 				Network: &sdkkonnectcomp.Network{
 					ID:    networkID,
@@ -142,6 +143,7 @@ func TestKonnectCloudGatewayNetwork(t *testing.T) {
 			mock.MatchedBy(func(req sdkkonnectcomp.CreateNetworkRequest) bool {
 				return req.Name == networkName
 			}),
+			mock.Anything,
 		).Return(nil, &sdkkonnecterrs.ForbiddenError{
 			Status:   403,
 			Title:    "Quota Exceeded",
@@ -178,7 +180,7 @@ func TestKonnectCloudGatewayNetwork(t *testing.T) {
 		networkID := uuid.NewString()
 
 		t.Log("Setting up SDK expectation on getting")
-		sdk.CloudGatewaysSDK.EXPECT().GetNetwork(mock.Anything, networkID).Return(
+		sdk.CloudGatewaysSDK.EXPECT().GetNetwork(mock.Anything, networkID, mock.Anything).Return(
 			&sdkkonnectops.GetNetworkResponse{
 				Network: &sdkkonnectcomp.Network{
 					ID:                            networkID,
@@ -239,7 +241,7 @@ func TestKonnectCloudGatewayNetwork(t *testing.T) {
 		networkID := uuid.NewString()
 
 		t.Log("Setting up SDK expectation on getting")
-		sdk.CloudGatewaysSDK.EXPECT().GetNetwork(mock.Anything, networkID).Return(
+		sdk.CloudGatewaysSDK.EXPECT().GetNetwork(mock.Anything, networkID, mock.Anything).Return(
 			&sdkkonnectops.GetNetworkResponse{
 				Network: &sdkkonnectcomp.Network{
 					ID:                            networkID,
