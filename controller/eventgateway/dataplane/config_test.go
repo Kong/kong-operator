@@ -139,8 +139,6 @@ func TestTerminationGracePeriodSeconds(t *testing.T) {
 			Spec: eventgatewayv1alpha1.KegDataPlaneSpec{Config: &eventgatewayv1alpha1.KegDataPlaneConfiguration{Runtime: rt}},
 		}
 	}
-	// withEnv adds to egdp a PodTemplateSpec whose container named container
-	// sets env.
 	withEnv := func(egdp *eventgatewayv1alpha1.KegDataPlane, container string, env ...corev1.EnvVar) *eventgatewayv1alpha1.KegDataPlane {
 		egdp.Spec.Deployment = &eventgatewayv1alpha1.DeploymentOptions{
 			PodTemplateSpec: &corev1.PodTemplateSpec{
@@ -228,6 +226,14 @@ func TestTerminationGracePeriodSeconds(t *testing.T) {
 		{
 			name: "the env of another container is ignored",
 			egdp: withEnv(&eventgatewayv1alpha1.KegDataPlane{}, "sidecar", drainEnv("60s")),
+		},
+		{
+			name: "a negative env duration falls back to the runtime options",
+			egdp: withEnv(
+				withRuntime(&eventgatewayv1alpha1.RuntimeOptions{DrainDurationSeconds: new(int32(60))}),
+				consts.KEGContainerName, drainEnv("-5s"),
+			),
+			want: new(int64(60 + 10 + 5)),
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
