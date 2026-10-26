@@ -3,9 +3,13 @@
 package onprem
 
 import (
-	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	"slices"
+
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
 // The entities that can belong to an OnPremEventGateway.
@@ -43,6 +47,24 @@ var entityGroupKinds = map[schema.GroupKind]struct{}{
 	{Group: "configuration.konghq.com", Kind: "EventGatewayVirtualClusterConsumePolicy"}: {},
 	{Group: "configuration.konghq.com", Kind: "EventGatewayVirtualClusterPolicy"}:        {},
 	{Group: "configuration.konghq.com", Kind: "EventGatewayVirtualClusterProducePolicy"}: {},
+}
+
+// IndexOptions returns the cache indexes of the entity kinds that can belong
+// to an OnPremEventGateway.
+func IndexOptions() []index.Option {
+	return slices.Concat(
+		index.OptionsForEventGatewayBackendCluster(),
+		index.OptionsForEventGatewayDataPlaneCertificate(),
+		index.OptionsForEventGatewayListener(),
+		index.OptionsForEventGatewayListenerPolicy(),
+		index.OptionsForEventGatewaySchemaRegistry(),
+		index.OptionsForEventGatewayStaticKey(),
+		index.OptionsForEventGatewayTLSTrustBundle(),
+		index.OptionsForEventGatewayVirtualCluster(),
+		index.OptionsForEventGatewayVirtualClusterConsumePolicy(),
+		index.OptionsForEventGatewayVirtualClusterPolicy(),
+		index.OptionsForEventGatewayVirtualClusterProducePolicy(),
+	)
 }
 
 // EntityGroupVersionResources returns the resources of the entity kinds that

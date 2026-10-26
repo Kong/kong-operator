@@ -126,11 +126,13 @@ jobs:
       env:
         SUITE: ${{ matrix.suite }}
       run: |
-        # Only the gwadmin suite runs the GWAdmin controller: a fault in it
-        # must not fail the other suites.
+        # Only the gwadmin suite runs the GWAdmin controller, and the
+        # OnPremEventGateway one pushing to its gw-admin pods: a fault in
+        # them must not fail the other suites.
         GWADMIN_FLAGS=()
         if [ "$SUITE" = gwadmin ]; then
           GWADMIN_FLAGS=(--set env.enable_controller_gwadmin=true
+            --set env.enable_controller_onpremeventgateway=true
             --set-string customEnv.RELATED_IMAGE_GW_ADMIN="$GW_ADMIN_IMAGE")
         fi
         helm install kong-operator charts/kong-operator \

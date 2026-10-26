@@ -9,6 +9,33 @@ import (
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/parser"
 )
 
+func TestApplyValidationOverrides_Requiredness(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name     string
+		original string
+		override string
+	}{
+		{"required replaces optional", "+optional", "+required"},
+		{"optional replaces required", "+required", "+optional"},
+		{"long required replaces optional", "+optional", "+kubebuilder:validation:Required"},
+		{"long optional replaces required", "+required", "+kubebuilder:validation:Optional"},
+		{"short required replaces long optional", "+kubebuilder:validation:Optional", "+required"},
+		{"short optional replaces long required", "+kubebuilder:validation:Required", "+optional"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := applyValidationOverrides(
+				[]string{tt.original, "+listType=atomic"},
+				&config.FieldConfig{Validations: []string{tt.override}},
+			)
+			assert.Equal(t, []string{"+listType=atomic", tt.override}, got)
+		})
+	}
+}
+
 func TestKubebuilderTags(t *testing.T) {
 	tests := []struct {
 		name     string

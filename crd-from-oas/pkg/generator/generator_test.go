@@ -628,6 +628,82 @@ func TestGenerateCRDType_ReferenceFieldTypeSwap(t *testing.T) {
 	require.Contains(t, content, "+kubebuilder:validation:MaxItems=50")
 }
 
+func TestGenerateCRDType_RequiredOrderedReferenceArray(t *testing.T) {
+	t.Parallel()
+
+	schema := &parser.Schema{
+		Name: "CreateEventGatewayVirtualClusterPolicyChain",
+		Properties: []*parser.Property{{
+			Name:     "policies",
+			Type:     "array",
+			Required: true,
+			Items:    &parser.Property{Type: "string", Format: "uuid"},
+		}},
+	}
+	g := NewGenerator(Config{
+		APIGroup:   "configuration.konghq.com",
+		APIVersion: "v1alpha1",
+		References: map[string][]config.ReferenceConfig{
+			"EventGatewayVirtualClusterPolicyChain": {{
+				Path:       "spec.apiSpec.policies",
+				Kinds:      []string{"EventGatewayVirtualClusterPolicy"},
+				ResolvesTo: "id",
+			}},
+		},
+		FieldConfig: &config.Config{
+			Entities: map[string]*config.EntityConfig{
+				"EventGatewayVirtualClusterPolicyChain": {
+					Fields: map[string]*config.FieldConfig{
+						"spec": {Fields: map[string]*config.FieldConfig{
+							"apiSpec": {Fields: map[string]*config.FieldConfig{
+								"policies": {Validations: []string{"+listType=atomic"}},
+							}},
+						}},
+					},
+				},
+			},
+		},
+	})
+	content, err := g.generateCRDType(schema.Name, schema)
+	require.NoError(t, err)
+	require.Contains(t, content, "// +required\n\t// +listType=atomic\n\tPolicies []EventGatewayVirtualClusterPolicyRef `json:\"policies,omitzero\"`")
+}
+
+func TestGenerateCRDType_ContainerRequiredness(t *testing.T) {
+	t.Parallel()
+
+	for _, required := range []bool{false, true} {
+		t.Run(fmt.Sprintf("required=%t", required), func(t *testing.T) {
+			t.Parallel()
+
+			g := NewGenerator(Config{APIVersion: "v1alpha1"})
+			marker := "+optional"
+			if required {
+				marker = "+required"
+				g.config.FieldConfig = &config.Config{
+					Entities: map[string]*config.EntityConfig{
+						"EventGatewayVirtualClusterPolicyChain": {
+							Fields: map[string]*config.FieldConfig{
+								"spec": {
+									Validations: []string{marker},
+									Fields: map[string]*config.FieldConfig{
+										"apiSpec": {Validations: []string{marker}},
+									},
+								},
+							},
+						},
+					},
+				}
+			}
+			content, err := g.generateCRDType("CreateEventGatewayVirtualClusterPolicyChain", &parser.Schema{})
+			require.NoError(t, err)
+			require.Contains(t, content, "// "+marker+"\n\tSpec EventGatewayVirtualClusterPolicyChainSpec")
+			require.Contains(t, content, "// "+marker+"\n\tAPISpec EventGatewayVirtualClusterPolicyChainAPISpec")
+			require.NotContains(t, content, "// +optional\n\t// +required")
+		})
+	}
+}
+
 func TestGenerateCRDType_Association(t *testing.T) {
 	schema := &parser.Schema{
 		Name:       "CreateAIGatewayConsumer",
@@ -4292,6 +4368,8 @@ func TestGenerateOnPremEventGatewayEntitiesDispatcher(t *testing.T) {
 			`// +kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaybackendclusters;eventgatewaylistenerpolicies;eventgatewaylisteners;eventgatewayvirtualclusterproducepolicies;eventgatewayvirtualclusters,verbs=get;list;watch`)
 		assert.Contains(t, file.Content, `configurationv1alpha1.GroupVersion.WithResource("eventgatewaylistenerpolicies"),`)
 		assert.Contains(t, file.Content, `configurationv1alpha1.GroupVersion.WithResource("eventgatewayvirtualclusterproducepolicies"),`)
+		assert.Contains(t, file.Content, "index.OptionsForEventGatewayBackendCluster(),")
+		assert.Contains(t, file.Content, "index.OptionsForEventGatewayVirtualClusterProducePolicy(),")
 
 		formatted, err := format.Source([]byte(file.Content))
 		require.NoError(t, err)
@@ -4302,6 +4380,35 @@ func TestGenerateOnPremEventGatewayEntitiesDispatcher(t *testing.T) {
 		file, err := GenerateOnPremEventGatewayEntitiesDispatcher([]*WatchFileInfo{
 			entity("KonnectOnlyRoot", "KonnectEventGateway", nil),
 		})
+		require.NoError(t, err)
+		assert.Nil(t, file)
+	})
+
+	t.Run("explicit opt out excludes roots and descendants but keeps siblings", func(t *testing.T) {
+		skippedRoot := entity("SkippedRoot", "KonnectEventGateway", onPrem)
+		skippedRoot.SkipOnPremEventGateway = true
+		skippedChild := entity("SkippedChild", "EventGatewayBackendCluster", nil)
+		skippedChild.SkipOnPremEventGateway = true
+		file, err := GenerateOnPremEventGatewayEntitiesDispatcher([]*WatchFileInfo{
+			skippedRoot,
+			entity("ChildOfSkippedRoot", "SkippedRoot", nil),
+			skippedChild,
+			entity("ChildOfSkippedChild", "SkippedChild", nil),
+			entity("EventGatewayBackendCluster", "KonnectEventGateway", onPrem),
+			entity("EventGatewayVirtualCluster", "EventGatewayBackendCluster", nil),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, file)
+		for _, kind := range []string{"SkippedRoot", "ChildOfSkippedRoot", "SkippedChild", "ChildOfSkippedChild"} {
+			assert.NotContains(t, file.Content, kind)
+			assert.NotContains(t, file.Content, strings.ToLower(kind))
+		}
+		assert.Contains(t, file.Content, "&configurationv1alpha1.EventGatewayBackendCluster{},")
+		assert.Contains(t, file.Content, "&configurationv1alpha1.EventGatewayVirtualCluster{},")
+		assert.Contains(t, file.Content, "index.OptionsForEventGatewayBackendCluster(),")
+		assert.Contains(t, file.Content, "index.OptionsForEventGatewayVirtualCluster(),")
+
+		file, err = GenerateOnPremEventGatewayEntitiesDispatcher([]*WatchFileInfo{skippedRoot})
 		require.NoError(t, err)
 		assert.Nil(t, file)
 	})
@@ -4707,6 +4814,38 @@ func TestGenerateReconcilerFiles_IncludesRBAC(t *testing.T) {
 	require.NotNil(t, rbacFile, "expected RBAC file in generated files")
 	assert.Equal(t, "controller/konnect", rbacFile.RelativeDir)
 	assert.Contains(t, rbacFile.Content, "//+kubebuilder:rbac:groups=x-konnect.konghq.com,resources=portals,verbs=get;list;watch;update;patch")
+}
+
+func TestGenerateReconcilerFiles_SkipOnPremEventGateway(t *testing.T) {
+	for _, skip := range []bool{false, true} {
+		t.Run(fmt.Sprintf("skip=%t", skip), func(t *testing.T) {
+			g := NewGenerator(Config{
+				APIGroup:             "konnect.konghq.com",
+				APIVersion:           "v1alpha1",
+				APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+				APIGroupPackageAlias: "konnectv1alpha1",
+				ReconcilerConfig: map[string]*config.ReconcilerConfig{
+					"Portal": {IsRoot: new(true), SkipOnPremEventGateway: skip},
+				},
+			})
+			_, err := g.generateReconcilerFiles(
+				[]string{"Portal"}, map[string]*parser.Schema{"Portal": {Name: "CreatePortal"}},
+			)
+			require.NoError(t, err)
+			require.Len(t, g.watchInfos, 1)
+			assert.Equal(t, skip, g.watchInfos[0].SkipOnPremEventGateway)
+
+			controllers, err := GenerateKonnectControllerSetupDispatcher(g.watchInfos)
+			require.NoError(t, err)
+			assert.Contains(t, controllers.Content, "newKonnectEntityController[konnectv1alpha1.Portal]")
+			indexes, err := GenerateKonnectIndexOptionsDispatcher(g.watchInfos)
+			require.NoError(t, err)
+			assert.Contains(t, indexes.Content, "index.OptionsForPortal()")
+			watches, err := GenerateWatchDispatcher(g.watchInfos)
+			require.NoError(t, err)
+			assert.Contains(t, watches.Content, "PortalReconciliationWatchOptions")
+		})
+	}
 }
 
 func TestGenerateOpsCreate_RootEntity(t *testing.T) {
@@ -6142,6 +6281,7 @@ func TestGenerateSDKOps_ClientRequestMethodsResolveReferences(t *testing.T) {
 	require.NotContains(t, content, "func (s *AIGatewayAgentAPISpec) ToCreateAIGatewayAgentRequest()")
 	require.NotContains(t, content, "func (s *AIGatewayAgentAPISpec) ToUpdateAIGatewayAgentRequest()")
 	require.Contains(t, content, "resolvedPolicies, err := resolveAIGatewayAgentPolicies(ctx, cl, obj)")
+	require.Contains(t, content, "// Always include the resolved list, including an explicit empty list.")
 	require.Contains(t, content, `payload["policies"] = resolvedPolicies`)
 }
 
@@ -6174,6 +6314,51 @@ func TestGenerateSDKOps_EmitsResolveKonnectReferences(t *testing.T) {
 	require.Contains(t, content, "func (obj *AIGatewayAgent) ResolveKonnectReferences(ctx context.Context, cl client.Client) error {")
 	require.Contains(t, content, "if _, err := resolveAIGatewayAgentPolicies(ctx, cl, obj); err != nil {")
 	require.Contains(t, content, "return errors.Join(errs...)")
+}
+
+func TestGenerateSDKOps_CustomReferenceResolver(t *testing.T) {
+	for _, mixed := range []bool{false, true} {
+		t.Run(fmt.Sprintf("mixed=%t", mixed), func(t *testing.T) {
+			refs := []config.ReferenceConfig{{
+				Path: "spec.apiSpec.policies", Kinds: []string{"AIGatewayPolicy"},
+				ResolvesTo: "id", ResolverMethod: "ResolveValidatedPolicyIDs",
+			}}
+			if mixed {
+				refs = append(refs, config.ReferenceConfig{
+					Path: "spec.apiSpec.consumerGroups", Kinds: []string{"AIGatewayConsumerGroup"}, ResolvesTo: "id",
+				})
+			}
+			g := NewGenerator(Config{
+				APIVersion: "v1alpha1",
+				References: map[string][]config.ReferenceConfig{"AIGatewayAgent": refs},
+			})
+			schema := &parser.Schema{Properties: []*parser.Property{
+				{Name: "policies", Type: "array"}, {Name: "consumerGroups", Type: "array"},
+			}}
+			content, err := g.generateSDKOps("AIGatewayAgent", schema, &config.EntityOpsConfig{
+				Ops: map[string]*config.OpConfig{
+					"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayAgentRequest"},
+					"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayAgentRequest"},
+				},
+			})
+			require.NoError(t, err)
+			_, err = format.Source([]byte(content))
+			require.NoError(t, err)
+			require.Contains(t, content, "return obj.ResolveValidatedPolicyIDs(ctx, cl)")
+			require.NotContains(t, content, "var referenced AIGatewayPolicy")
+			require.NotContains(t, content, "for _, ref := range obj.Spec.APISpec.Policies")
+			require.Equal(t, 3, strings.Count(content, "resolveAIGatewayAgentPolicies(ctx, cl, obj)"),
+				"both converters and ResolveKonnectReferences must use the same helper")
+			require.Contains(t, content, "// Always include the resolved list, including an explicit empty list.")
+			if mixed {
+				require.Contains(t, content, `apierrors "k8s.io/apimachinery/pkg/api/errors"`)
+				require.Contains(t, content, "var referenced AIGatewayConsumerGroup")
+			} else {
+				require.NotContains(t, content, `"k8s.io/apimachinery/pkg/api/errors"`)
+				require.NotContains(t, content, "cl.Get(")
+			}
+		})
+	}
 }
 
 func TestGenerateSDKOps_CrossNamespaceSiblingReferences(t *testing.T) {
@@ -6992,6 +7177,8 @@ func TestGenerateReferencesFile(t *testing.T) {
 	require.Contains(t, out, `Kind string `+"`"+`json:"kind,omitempty"`+"`")
 	require.Contains(t, out, `Name string `+"`"+`json:"name"`+"`")
 	require.Contains(t, out, `Namespace string `+"`"+`json:"namespace,omitempty"`+"`")
+	require.Contains(t, out, "Namespace defaults to the referrer's namespace. If set, it must be")
+	require.NotContains(t, out, "reserved for future cross-namespace support")
 	require.Contains(t, out, "KonnectReferencesResolvedConditionType")
 	require.Contains(t, out, "KonnectReferencesResolvedReasonInvalid")
 	require.Contains(t, out, "KonnectReferencesResolvedReasonResolutionFailed")
@@ -7399,6 +7586,40 @@ func TestGenerateSchemaTypes_AllOfCompositeEmitsPlainStruct(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestGenerateSchemaTypes_FreeformObjectEmitsJSONAlias(t *testing.T) {
+	// A named free-form object schema (additionalProperties: true, no declared
+	// properties) must alias apiextensionsv1.JSON: a defined type does not
+	// inherit its Marshal/UnmarshalJSON and would marshal as {}.
+	// Fields referencing it need an explicit object type, because the alias
+	// alone yields only x-kubernetes-preserve-unknown-fields, which accepts any
+	// JSON value. A _description override on such a field must be applied.
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+
+	content := g.generateSchemaTypes(
+		map[string]bool{"Freeform": true, "Parent": true},
+		&parser.ParsedSpec{
+			Schemas: map[string]*parser.Schema{
+				"Freeform": {Name: "Freeform", Type: "object"},
+				"Parent": {Name: "Parent", Type: "object", Properties: []*parser.Property{
+					{Name: "body", RefName: "Freeform"},
+				}},
+			},
+		},
+		map[string]*config.FieldConfig{
+			"Parent": {Fields: map[string]*config.FieldConfig{
+				"body": {Description: "Object form example."},
+			}},
+		},
+	)
+
+	assert.Contains(t, content, "type Freeform = apiextensionsv1.JSON")
+	assert.Contains(t, content, "// Object form example.")
+	assert.Contains(t, content, "// +kubebuilder:validation:Type=object\n\tBody Freeform")
+
+	_, err := format.Source([]byte(content))
+	require.NoError(t, err)
+}
+
 func TestGenerateSDKOps_AllOfCompositeRefCollectsBoolAndFreeformFields(t *testing.T) {
 	// Bools and free-form maps nested behind $ref chains (here: listener
 	// variant -> config -> route, where route was flattened from a composite
@@ -7564,6 +7785,53 @@ func TestGenerateSDKOps_ReferenceToKindNotManagedByKonnect(t *testing.T) {
 			} else {
 				require.NotContains(t, content, "SkipKonnectReconciliation")
 			}
+		})
+	}
+}
+
+// TestGenerateIndex_SecretRefIndex verifies that the entities reading Secrets
+// through their sensitive data sources get an index of those Secrets, and
+// the others don't.
+func TestGenerateIndex_SecretRefIndex(t *testing.T) {
+	metadata := reconcilerEntityMetadata{
+		EntityName:           "EventGatewayBackendCluster",
+		EntityNameLowerCamel: "eventGatewayBackendCluster",
+		ParentEntityName:     "KonnectEventGateway",
+		ParentRefFieldName:   "GatewayRef",
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/configuration/v1alpha1",
+		APIGroupPackageAlias: "configurationv1alpha1",
+	}
+	generate := func(t *testing.T, dataSources map[string][]config.DataSourceConfig, rc *config.ReconcilerConfig) string {
+		t.Helper()
+		g := NewGenerator(Config{
+			APIGroupPackagePath:  metadata.APIGroupPackagePath,
+			APIGroupPackageAlias: metadata.APIGroupPackageAlias,
+			DataSources:          dataSources,
+		})
+		content, err := g.generateIndex(metadata, rc)
+		require.NoError(t, err)
+		_, err = format.Source([]byte(content))
+		require.NoError(t, err, "generated code must be valid Go")
+		return content
+	}
+	secretSources := map[string][]config.DataSourceConfig{
+		"EventGatewayBackendCluster": {{Path: "spec.apiSpec.tls.clientIdentity.key", Type: "Secret"}},
+	}
+
+	for name, rc := range map[string]*config.ReconcilerConfig{"child": {}, "root": {IsRoot: new(true)}} {
+		t.Run(name+" with Secret sources", func(t *testing.T) {
+			content := generate(t, secretSources, rc)
+			assert.Contains(t, content, `IndexFieldEventGatewayBackendClusterOnSecretRef = "eventGatewayBackendClusterOnSecretRef"`)
+			assert.Contains(t, content, "Field:          IndexFieldEventGatewayBackendClusterOnSecretRef,")
+			assert.Contains(t, content, "refs := ent.GetSensitiveDataSecretRefs()")
+			assert.Contains(t, content, `out = append(out, ns+"/"+ref.Name)`)
+		})
+		t.Run(name+" without Secret sources", func(t *testing.T) {
+			configMapSources := map[string][]config.DataSourceConfig{
+				"EventGatewayBackendCluster": {{Path: "spec.apiSpec.tls.caBundle", Type: "ConfigMap"}},
+			}
+			assert.NotContains(t, generate(t, configMapSources, rc), "OnSecretRef")
+			assert.NotContains(t, generate(t, nil, rc), "OnSecretRef")
 		})
 	}
 }

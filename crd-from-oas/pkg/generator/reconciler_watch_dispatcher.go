@@ -14,6 +14,8 @@ type WatchFileInfo struct {
 	ParentGroup    string // API group of the parent entity
 	// Gateway kinds the entity's gatewayRef accepts besides the parent kind, e.g. OnPremEventGateway
 	GatewayKinds []config.EntityGVKConfig
+	// Exclude this entity from on-prem Event Gateway registration only.
+	SkipOnPremEventGateway bool
 }
 
 // GenerateWatchDispatcher emits controller/konnect/zz_generated_watch.go with

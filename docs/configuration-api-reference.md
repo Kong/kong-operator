@@ -282,6 +282,7 @@ Package v1alpha1 contains API Schema definitions for the configuration.konghq.co
 - [EventGatewayVirtualCluster](#configuration-konghq-com-v1alpha1-eventgatewayvirtualcluster)
 - [EventGatewayVirtualClusterConsumePolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterconsumepolicy)
 - [EventGatewayVirtualClusterPolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterpolicy)
+- [EventGatewayVirtualClusterPolicyChain](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterpolicychain)
 - [EventGatewayVirtualClusterProducePolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterproducepolicy)
 - [IngressClassParameters](#configuration-konghq-com-v1alpha1-ingressclassparameters)
 - [KongCACertificate](#configuration-konghq-com-v1alpha1-kongcacertificate)
@@ -454,6 +455,21 @@ EventGatewayVirtualClusterPolicy is the Schema for the eventgatewayvirtualcluste
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[EventGatewayVirtualClusterPolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyspec)_ |  |
 | `status` _[EventGatewayVirtualClusterPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicystatus)_ |  |
+
+### EventGatewayVirtualClusterPolicyChain
+
+
+EventGatewayVirtualClusterPolicyChain is the Schema for the eventgatewayvirtualclusterpolicychains API.
+
+<!-- event_gateway_virtual_cluster_policy_chain description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `EventGatewayVirtualClusterPolicyChain`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EventGatewayVirtualClusterPolicyChainSpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicychainspec)_ |  |
+| `status` _[EventGatewayVirtualClusterPolicyChainStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicychainstatus)_ |  |
 
 ### EventGatewayVirtualClusterProducePolicy
 
@@ -2679,6 +2695,8 @@ _Appears in:_
 - [EventGatewayParsedRecordDecryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselectorpaths)
 - [EventGatewayParsedRecordEncryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorpaths)
 
+
+
 #### EventGatewayProduceRequestRules
 
 
@@ -3142,7 +3160,7 @@ object's Konnect name is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -3233,7 +3251,7 @@ object's Konnect id is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -3377,7 +3395,7 @@ object's Konnect id is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -3543,7 +3561,7 @@ object's Konnect id is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -3597,6 +3615,55 @@ _Appears in:_
 
 - [EventGatewayVirtualClusterPolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyspec)
 
+#### EventGatewayVirtualClusterPolicyChainAPISpec
+
+
+EventGatewayVirtualClusterPolicyChainAPISpec defines the API spec fields for EventGatewayVirtualClusterPolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `policies` _[][EventGatewayVirtualClusterPolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyref)_ | Policies lists distinct EventGatewayVirtualClusterPolicy references in execution order. Each policy must belong to the referenced EventGatewayVirtualCluster and be in the same namespace as this chain. Namespace defaults to this chain's namespace and may be set explicitly to that same namespace; cross-namespace references are not supported. List every cluster-level policy exactly once. An explicit empty list is valid only when the remote chain has no policies; it does not clear an existing chain. When a policy is created or deleted, update this list to match the complete remote set. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterPolicyChainSpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicychainspec)
+
+#### EventGatewayVirtualClusterPolicyChainSpec
+
+
+EventGatewayVirtualClusterPolicyChainSpec defines the desired state of EventGatewayVirtualClusterPolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `eventGatewayVirtualClusterRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | EventGatewayVirtualClusterRef is the reference to the parent EventGatewayVirtualCluster object. |
+| `apiSpec` _[EventGatewayVirtualClusterPolicyChainAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicychainapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterPolicyChain](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterpolicychain)
+
+#### EventGatewayVirtualClusterPolicyChainStatus
+
+
+EventGatewayVirtualClusterPolicyChainStatus defines the observed state of EventGatewayVirtualClusterPolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `virtualClusterID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | VirtualClusterID is the Konnect ID of the parent VirtualCluster. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterPolicyChain](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterpolicychain)
+
 #### EventGatewayVirtualClusterPolicyConfig
 
 
@@ -3634,6 +3701,24 @@ Allowed values:
 | --- | --- |
 | `acls` |  |
 | `requestRuleValidator` |  |
+
+#### EventGatewayVirtualClusterPolicyRef
+
+
+EventGatewayVirtualClusterPolicyRef references an EventGatewayVirtualClusterPolicy in the cluster. The referenced
+object's Konnect id is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterPolicyChainAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicychainapispec)
 
 
 
@@ -3740,7 +3825,7 @@ object's Konnect id is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -5317,6 +5402,7 @@ _Appears in:_
 - [EventGatewayStaticKeyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaystatickeystatus)
 - [EventGatewayTLSTrustBundleStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundlestatus)
 - [EventGatewayVirtualClusterConsumePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicystatus)
+- [EventGatewayVirtualClusterPolicyChainStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicychainstatus)
 - [EventGatewayVirtualClusterPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicystatus)
 - [EventGatewayVirtualClusterProducePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicystatus)
 - [EventGatewayVirtualClusterStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterstatus)

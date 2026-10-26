@@ -109,6 +109,9 @@ func (g *OnPremEventGateway) GWAdminKey() types.NamespacedName {
 }
 
 // OnPremEventGatewayStatus defines the observed state of OnPremEventGateway.
+//
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.configRevision) || (has(self.configRevision) && self.configRevision >= oldSelf.configRevision)",message="configRevision may not decrease"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.configHash) || (has(self.configHash) && (self.configHash == oldSelf.configHash || (has(self.configRevision) && has(oldSelf.configRevision) && self.configRevision > oldSelf.configRevision)))",message="configHash may only change along with a new configRevision"
 type OnPremEventGatewayStatus struct {
 	// Conditions describe the status of the OnPremEventGateway.
 	//
@@ -134,4 +137,20 @@ type OnPremEventGatewayStatus struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// ConfigRevision is the revision of the configuration of the gateway
+	// that Kong Operator pushes to gw-admin. It increases by one every time
+	// that configuration changes, and never decreases.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	ConfigRevision int64 `json:"configRevision,omitempty"`
+
+	// ConfigHash identifies the configuration that ConfigRevision stands
+	// for: it changes only along with a new revision.
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	ConfigHash string `json:"configHash,omitempty"`
 }

@@ -1216,10 +1216,7 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 	return files, nil
 }
 
-// getAPISpecCursor returns the *config.FieldConfig cursor narrowed to the
-// spec.apiSpec level for the given CRD root entity name. Returns nil when no
-// CEL config is defined for the entity or when the spec/apiSpec path is absent.
-func (g *Generator) getAPISpecCursor(entityName string) *config.FieldConfig {
+func (g *Generator) getSpecCursor(entityName string) *config.FieldConfig {
 	if g.config.FieldConfig == nil {
 		return nil
 	}
@@ -1228,7 +1225,12 @@ func (g *Generator) getAPISpecCursor(entityName string) *config.FieldConfig {
 		return nil
 	}
 	root := &config.FieldConfig{Fields: entityCfg.Fields}
-	return root.Sub("spec").Sub("apiSpec")
+	return root.Sub("spec")
+}
+
+// getAPISpecCursor returns the field configuration at spec.apiSpec, if any.
+func (g *Generator) getAPISpecCursor(entityName string) *config.FieldConfig {
+	return g.getSpecCursor(entityName).Sub("apiSpec")
 }
 
 // buildSchemaCursors walks each entity's CEL config from the spec.apiSpec cursor
@@ -1296,13 +1298,14 @@ func fieldConfigsEqual(a, b *config.FieldConfig) bool {
 	return reflect.DeepEqual(a, b)
 }
 
-// isEmptyFieldConfig reports whether a field config carries no validations and
-// no non-empty descendants, which makes it equivalent to an absent cursor.
+// isEmptyFieldConfig reports whether a field config carries no validations,
+// no description and no non-empty descendants, which makes it equivalent to an
+// absent cursor.
 func isEmptyFieldConfig(fc *config.FieldConfig) bool {
 	if fc == nil {
 		return true
 	}
-	if len(fc.Validations) > 0 {
+	if len(fc.Validations) > 0 || fc.Description != "" {
 		return false
 	}
 	for _, child := range fc.Fields {
@@ -1313,13 +1316,8 @@ func isEmptyFieldConfig(fc *config.FieldConfig) bool {
 	return true
 }
 
-// apiSpecCursorValidations returns the validations configured directly on the
-// spec.apiSpec cursor, or nil when there are none.
-func apiSpecCursorValidations(apiSpecCursor *config.FieldConfig) []string {
-	if apiSpecCursor == nil || len(apiSpecCursor.Validations) == 0 {
-		return nil
-	}
-	return append([]string(nil), apiSpecCursor.Validations...)
+func optionalFieldValidations(cursor *config.FieldConfig) []string {
+	return applyValidationOverrides([]string{markerOptional()}, cursor)
 }
 
 // childFieldConfig returns a deep copy of fc containing only descendant field
@@ -1367,6 +1365,7 @@ func cloneFieldConfig(fc *config.FieldConfig) *config.FieldConfig {
 	if len(fc.Validations) > 0 {
 		clone.Validations = append([]string(nil), fc.Validations...)
 	}
+	clone.Description = fc.Description
 	if len(fc.Fields) > 0 {
 		clone.Fields = cloneFieldConfigMap(fc.Fields)
 	}
@@ -2132,6 +2131,7 @@ func shouldSkipUnionMemberDiscriminator(refName string, prop *parser.Property, u
 // schemaCursors maps each schema's Go type name to the *config.FieldConfig cursor
 // at that schema's level, used to apply custom kubebuilder validation markers.
 func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.ParsedSpec, schemaCursors map[string]*config.FieldConfig) string {
+	g.parsed = parsed
 	g.ensureInlineTypeNames(parsed)
 	unionMemberDiscriminators := collectUnionMemberDiscriminators(parsed)
 
@@ -2291,7 +2291,14 @@ func (g *Generator) generateSchemaTypes(refs map[string]bool, parsed *parser.Par
 				// Generate based on the schema's actual type
 				body.WriteString(comment)
 				goType := schemaToGoType(schema)
-				fmt.Fprintf(&body, "type %s %s\n\n", goName, goType)
+				if goType == "apiextensionsv1.JSON" {
+					// Alias, not a named type: a defined type does not inherit
+					// apiextensionsv1.JSON's Marshal/UnmarshalJSON and would silently
+					// serialize as an empty object.
+					fmt.Fprintf(&body, "type %s = %s\n\n", goName, goType)
+				} else {
+					fmt.Fprintf(&body, "type %s %s\n\n", goName, goType)
+				}
 			}
 		} else {
 			panic("Schema not found for reference: " + refName)
@@ -2373,7 +2380,11 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 	// the per-CRD cost budget), and swap the element type for the ref struct.
 	refTypeName := g.schemaTypeRefFields()[typeName][jsonFieldName]
 
-	buf.WriteString(formatComment(prop.Description))
+	description := prop.Description
+	if c := fieldCursor.Sub(jsonTagForProperty(prop)); c != nil && c.Description != "" {
+		description = c.Description
+	}
+	buf.WriteString(formatComment(description))
 	buf.WriteString("\n")
 	buf.WriteString("\t//\n")
 	switch {
@@ -2395,7 +2406,11 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 			fmt.Fprintf(buf, "\t// %s\n", markerOptional())
 		}
 	default:
-		for _, tag := range KubebuilderTags(prop, fieldCursor) {
+		tags := KubebuilderTags(prop, fieldCursor)
+		if freeformObjectRef(g.parsed, prop) {
+			tags = append(tags, markerValidationTypeObject())
+		}
+		for _, tag := range tags {
 			fmt.Fprintf(buf, "\t// %s\n", tag)
 		}
 	}
@@ -2427,6 +2442,24 @@ func (g *Generator) writeSchemaTypeField(buf *strings.Builder, prop *parser.Prop
 		goType = g.inlineTypeName("", typeName, prop.Name)
 	}
 	fmt.Fprintf(buf, "\t%s %s `json:\"%s\"`\n", goFieldName(prop.Name), goType, jsonTag(prop, goType))
+}
+
+// freeformObjectRef reports whether prop references a free-form object schema,
+// i.e. one generateSchemaTypes emits as an apiextensionsv1.JSON alias. Such a
+// field needs an explicit Type=object marker: the alias alone yields only
+// x-kubernetes-preserve-unknown-fields, which accepts any JSON value (a
+// string, an array) instead of an object.
+func freeformObjectRef(parsed *parser.ParsedSpec, prop *parser.Property) bool {
+	if parsed == nil || prop.RefName == "" {
+		return false
+	}
+	schema, ok := parsed.Schemas[prop.RefName]
+	if !ok {
+		return false
+	}
+	// Only a plain object without declared properties or a map value type is
+	// emitted as an apiextensionsv1.JSON alias (see generateSchemaTypes).
+	return schema.Type == "object" && len(schema.Properties) == 0 && schema.AdditionalProperties == nil
 }
 
 // writeDedicatedSensitiveTypesForSchema appends dedicated union type
@@ -2618,8 +2651,11 @@ func schemaToGoType(schema *parser.Schema) string {
 			}
 		}
 		return "[]any"
+	case "object":
+		// A free-form object (additionalProperties: true, no declared properties) must
+		// accept arbitrary JSON, matching goType's fallback for such properties.
+		return "apiextensionsv1.JSON"
 	default:
-		// For object types without properties or unknown types, default to map[string]string
 		return "map[string]string"
 	}
 }
@@ -2723,7 +2759,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 			if prop.Type == "array" && prop.MaxItems != nil {
 				tags = append(tags, markerValidationMaxItems(int(*prop.MaxItems)))
 			}
-			return tags
+			return applyValidationOverrides(tags, apiSpecCursor.Sub(jsonName(prop.Name)))
 		}
 		if g.isEntityAPISpecFieldSensitiveLeaf(entityName, jsonName(prop.Name)) {
 			if prop.Required && !prop.Nullable {
@@ -2993,6 +3029,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ResponseStatusFields      []config.ResponseStatusFieldConfig
 		TrackCreateInputs         bool
 		TypeXValidations          []string
+		SpecValidations           []string
 		// APISpecValidations are the markers configured directly on
 		// spec.apiSpec (cel.spec.apiSpec._validations), emitted on the APISpec
 		// field, e.g. transition rules spanning a root union's discriminator.
@@ -3024,7 +3061,8 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ResponseStatusFields:      responseStatusFields,
 		TrackCreateInputs:         trackCreateInputs,
 		TypeXValidations:          typeXValidations,
-		APISpecValidations:        apiSpecCursorValidations(apiSpecCursor),
+		SpecValidations:           optionalFieldValidations(g.getSpecCursor(entityName)),
+		APISpecValidations:        optionalFieldValidations(apiSpecCursor),
 		SupportsMirror:            g.entitySupportsMirror(entityName),
 		NeedsCommonV1Alpha1Import: g.needsCommonV1Alpha1Import(entityName, objectRefImport),
 	}
@@ -5232,6 +5270,12 @@ func referencesNeedCrossNamespaceCheck(refs []TemplateReferenceConfig) bool {
 	return false
 }
 
+func referencesNeedLookup(refs []TemplateReferenceConfig) bool {
+	return slices.ContainsFunc(refs, func(ref TemplateReferenceConfig) bool {
+		return ref.ResolverMethod == ""
+	})
+}
+
 // TemplateRefParentNav is one sibling-preserving navigation hop from the SDK
 // payload root down to the map holding the value being written.
 type TemplateRefParentNav struct {
@@ -7114,6 +7158,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		HasReferences            bool
 		References               []TemplateReferenceConfig
 		NeedsCrossNamespaceCheck bool
+		NeedsReferenceLookup     bool
 		RefInjections            []TemplateRefInjection
 		HasParentRefReplacement  bool
 		ParentRefReplacesField   string
@@ -7136,6 +7181,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		HasReferences:            g.entityHasReferences(entityName),
 		References:               references,
 		NeedsCrossNamespaceCheck: referencesNeedCrossNamespaceCheck(references),
+		NeedsReferenceLookup:     referencesNeedLookup(references),
 		RefInjections:            injections,
 		HasParentRefReplacement:  hasParentRefReplacement,
 		ParentRefReplacesField:   parentRefReplacesField,
@@ -7438,6 +7484,7 @@ func (g *Generator) generateRootUnionSDKOps(
 		NeedsSecretFetchImport   bool
 		References               []TemplateReferenceConfig
 		NeedsCrossNamespaceCheck bool
+		NeedsReferenceLookup     bool
 		RefInjections            []TemplateRefInjection
 		ObjectRefTypePrefix      string
 		// UpdateUsesPayloadTarget is true when at least one variant rebuilds the
@@ -7466,6 +7513,7 @@ func (g *Generator) generateRootUnionSDKOps(
 		NeedsSecretFetchImport:   dataSourcesNeedCoreV1Import(dataSources),
 		References:               references,
 		NeedsCrossNamespaceCheck: referencesNeedCrossNamespaceCheck(references),
+		NeedsReferenceLookup:     referencesNeedLookup(references),
 		RefInjections:            injections,
 		ObjectRefTypePrefix:      objectRefTypePrefix,
 	}

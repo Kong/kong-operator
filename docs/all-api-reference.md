@@ -1271,7 +1271,7 @@ object's Konnect name is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -1478,7 +1478,7 @@ object's Konnect name is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -1792,7 +1792,7 @@ object's Konnect name is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -2137,8 +2137,8 @@ AIGatewayMCPConversionTool A tool exposed by an MCP Server in
 | `parameters` _[][AIGatewayMCPToolParameter](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolparameter)_ |  |
 | `path` _string_ | The path of the exported API. Always treated as relative to the path component of `config.url` and simply concatenated onto it — a leading `/` has no special "absolute path" meaning. If this tool's `host` or `scheme` overrides the source's URL, `path` is instead relative to the root of that overridden host, since there is no URL path from a different host to append to. By default, Kong will extract the path from API configuration. |
 | `query` _[AIGatewayMCPToolQuery](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolquery)_ | The query arguments of the exported API. If the generated query arguments are not exactly matched, this field is required. |
-| `requestBody` _[AIGatewayMCPToolRequestBody](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolrequestbody)_ | The API requestBody specification defined in OpenAPI JSON format. For example, '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'. See https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/ for more details. Note that `$ref` is not supported. |
-| `responses` _[AIGatewayMCPToolResponses](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolresponses)_ | The API responses specification defined in OpenAPI JSON format. This specification will be used to validate the upstream response and map it back to the structuredOutput. For example, '{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'. See https://swagger.io/docs/specification/v3_0/describing-responses/ for more details. Only one non-error (status code < 400) response is supported. Note that `$ref` is not supported. |
+| `requestBody` _[AIGatewayMCPToolRequestBody](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolrequestbody)_ | The API requestBody specification defined in OpenAPI JSON format. For example, {"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}. See https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/ for more details. Note that `$ref` is not supported. |
+| `responses` _[AIGatewayMCPToolResponses](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolresponses)_ | The API responses specification defined in OpenAPI JSON format. This specification will be used to validate the upstream response and map it back to the structuredOutput. For example, {"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}. See https://swagger.io/docs/specification/v3_0/describing-responses/ for more details. Only one non-error (status code < 400) response is supported. Note that `$ref` is not supported. |
 | `scheme` _string_ | The scheme of the exported API. By default, Kong will extract the scheme from API configuration. If the configured scheme is not expected, this field can be used to override it. |
 
 _Appears in:_
@@ -2638,7 +2638,7 @@ object's Konnect name is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -3162,20 +3162,7 @@ _Appears in:_
 - [AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
 - [AIGatewayMCPUpstreamTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpupstreamtool)
 
-#### AIGatewayMCPToolHeaders
 
-_Underlying type:_ `object`
-
-AIGatewayMCPToolHeaders The headers of the exported API.
-By default, Kong will extract the headers from API configuration.
-If the configured headers are not exactly matched, this field is required.
-
-
-
-
-_Appears in:_
-
-- [AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
 
 #### AIGatewayMCPToolParameter
 
@@ -3202,62 +3189,11 @@ _Appears in:_
 
 - [AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
 
-#### AIGatewayMCPToolQuery
-
-_Underlying type:_ `object`
-
-AIGatewayMCPToolQuery The query arguments of the exported API.
-If the generated query arguments are not exactly matched, this field is
-required.
 
 
 
 
-_Appears in:_
 
-- [AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
-
-#### AIGatewayMCPToolRequestBody
-
-_Underlying type:_ `object`
-
-AIGatewayMCPToolRequestBody The API requestBody specification defined in
-OpenAPI JSON format.
-For example,
-'{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
-See
-https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/
-for more details.
-Note that `$ref` is not supported.
-
-
-
-
-_Appears in:_
-
-- [AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
-
-#### AIGatewayMCPToolResponses
-
-_Underlying type:_ `object`
-
-AIGatewayMCPToolResponses The API responses specification defined in OpenAPI
-JSON format.
-This specification will be used to validate the upstream response and map it
-back to the structuredOutput.
-For example,
-'{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'.
-See https://swagger.io/docs/specification/v3_0/describing-responses/ for more
-details.
-Only one non-error (status code < 400) response is supported.
-Note that `$ref` is not supported.
-
-
-
-
-_Appears in:_
-
-- [AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
 
 #### AIGatewayMCPUpstreamTool
 
@@ -4881,7 +4817,7 @@ object's Konnect name is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -5613,7 +5549,7 @@ object's Konnect name is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -8968,6 +8904,7 @@ _Appears in:_
 - [EventGatewayStaticKeySpec](#configuration-konghq-com-v1alpha1-types-eventgatewaystatickeyspec)
 - [EventGatewayTLSTrustBundleSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundlespec)
 - [EventGatewayVirtualClusterConsumePolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyspec)
+- [EventGatewayVirtualClusterPolicyChainSpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicychainspec)
 - [EventGatewayVirtualClusterPolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyspec)
 - [EventGatewayVirtualClusterProducePolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyspec)
 - [EventGatewayVirtualClusterSpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterspec)
@@ -9326,6 +9263,7 @@ Package v1alpha1 contains API Schema definitions for the configuration.konghq.co
 - [EventGatewayVirtualCluster](#configuration-konghq-com-v1alpha1-eventgatewayvirtualcluster)
 - [EventGatewayVirtualClusterConsumePolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterconsumepolicy)
 - [EventGatewayVirtualClusterPolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterpolicy)
+- [EventGatewayVirtualClusterPolicyChain](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterpolicychain)
 - [EventGatewayVirtualClusterProducePolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterproducepolicy)
 - [IngressClassParameters](#configuration-konghq-com-v1alpha1-ingressclassparameters)
 - [KongCACertificate](#configuration-konghq-com-v1alpha1-kongcacertificate)
@@ -9498,6 +9436,21 @@ EventGatewayVirtualClusterPolicy is the Schema for the eventgatewayvirtualcluste
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[EventGatewayVirtualClusterPolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyspec)_ |  |
 | `status` _[EventGatewayVirtualClusterPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicystatus)_ |  |
+
+### EventGatewayVirtualClusterPolicyChain
+
+
+EventGatewayVirtualClusterPolicyChain is the Schema for the eventgatewayvirtualclusterpolicychains API.
+
+<!-- event_gateway_virtual_cluster_policy_chain description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `EventGatewayVirtualClusterPolicyChain`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EventGatewayVirtualClusterPolicyChainSpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicychainspec)_ |  |
+| `status` _[EventGatewayVirtualClusterPolicyChainStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicychainstatus)_ |  |
 
 ### EventGatewayVirtualClusterProducePolicy
 
@@ -11723,6 +11676,8 @@ _Appears in:_
 - [EventGatewayParsedRecordDecryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselectorpaths)
 - [EventGatewayParsedRecordEncryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorpaths)
 
+
+
 #### EventGatewayProduceRequestRules
 
 
@@ -12186,7 +12141,7 @@ object's Konnect name is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -12277,7 +12232,7 @@ object's Konnect id is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -12421,7 +12376,7 @@ object's Konnect id is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -12587,7 +12542,7 @@ object's Konnect id is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -12641,6 +12596,55 @@ _Appears in:_
 
 - [EventGatewayVirtualClusterPolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyspec)
 
+#### EventGatewayVirtualClusterPolicyChainAPISpec
+
+
+EventGatewayVirtualClusterPolicyChainAPISpec defines the API spec fields for EventGatewayVirtualClusterPolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `policies` _[][EventGatewayVirtualClusterPolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyref)_ | Policies lists distinct EventGatewayVirtualClusterPolicy references in execution order. Each policy must belong to the referenced EventGatewayVirtualCluster and be in the same namespace as this chain. Namespace defaults to this chain's namespace and may be set explicitly to that same namespace; cross-namespace references are not supported. List every cluster-level policy exactly once. An explicit empty list is valid only when the remote chain has no policies; it does not clear an existing chain. When a policy is created or deleted, update this list to match the complete remote set. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterPolicyChainSpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicychainspec)
+
+#### EventGatewayVirtualClusterPolicyChainSpec
+
+
+EventGatewayVirtualClusterPolicyChainSpec defines the desired state of EventGatewayVirtualClusterPolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `eventGatewayVirtualClusterRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | EventGatewayVirtualClusterRef is the reference to the parent EventGatewayVirtualCluster object. |
+| `apiSpec` _[EventGatewayVirtualClusterPolicyChainAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicychainapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterPolicyChain](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterpolicychain)
+
+#### EventGatewayVirtualClusterPolicyChainStatus
+
+
+EventGatewayVirtualClusterPolicyChainStatus defines the observed state of EventGatewayVirtualClusterPolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `virtualClusterID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | VirtualClusterID is the Konnect ID of the parent VirtualCluster. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterPolicyChain](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterpolicychain)
+
 #### EventGatewayVirtualClusterPolicyConfig
 
 
@@ -12678,6 +12682,24 @@ Allowed values:
 | --- | --- |
 | `acls` |  |
 | `requestRuleValidator` |  |
+
+#### EventGatewayVirtualClusterPolicyRef
+
+
+EventGatewayVirtualClusterPolicyRef references an EventGatewayVirtualClusterPolicy in the cluster. The referenced
+object's Konnect id is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterPolicyChainAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicychainapispec)
 
 
 
@@ -12784,7 +12806,7 @@ object's Konnect id is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -14361,6 +14383,7 @@ _Appears in:_
 - [EventGatewayStaticKeyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaystatickeystatus)
 - [EventGatewayTLSTrustBundleStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundlestatus)
 - [EventGatewayVirtualClusterConsumePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicystatus)
+- [EventGatewayVirtualClusterPolicyChainStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicychainstatus)
 - [EventGatewayVirtualClusterPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicystatus)
 - [EventGatewayVirtualClusterProducePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicystatus)
 - [EventGatewayVirtualClusterStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterstatus)
@@ -16069,6 +16092,8 @@ OnPremEventGatewayStatus defines the observed state of OnPremEventGateway.
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the OnPremEventGateway. |
 | `serverURL` _string_ | ServerURL is the address the data planes of this gateway use to reach gw-admin: the cp endpoint of its GWAdmin. |
 | `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed. |
+| `configRevision` _int64_ | ConfigRevision is the revision of the configuration of the gateway that Kong Operator pushes to gw-admin. It increases by one every time that configuration changes, and never decreases. |
+| `configHash` _string_ | ConfigHash identifies the configuration that ConfigRevision stands for: it changes only along with a new revision. |
 
 _Appears in:_
 

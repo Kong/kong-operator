@@ -13,6 +13,8 @@ const (
 	IndexFieldEventGatewayTLSTrustBundleOnKonnectEventGatewayRef = "eventGatewayTLSTrustBundleOnKonnectEventGatewayRef"
 	// IndexFieldEventGatewayTLSTrustBundleOnOnPremEventGatewayRef is the index field for EventGatewayTLSTrustBundle -> OnPremEventGateway.
 	IndexFieldEventGatewayTLSTrustBundleOnOnPremEventGatewayRef = "eventGatewayTLSTrustBundleOnOnPremEventGatewayRef"
+	// IndexFieldEventGatewayTLSTrustBundleOnSecretRef is the index field for EventGatewayTLSTrustBundle -> the Secrets it reads.
+	IndexFieldEventGatewayTLSTrustBundleOnSecretRef = "eventGatewayTLSTrustBundleOnSecretRef"
 )
 
 // OptionsForEventGatewayTLSTrustBundle returns required Index options for EventGatewayTLSTrustBundle reconciler.
@@ -27,6 +29,11 @@ func OptionsForEventGatewayTLSTrustBundle() []Option {
 			Object:         &configurationv1alpha1.EventGatewayTLSTrustBundle{},
 			Field:          IndexFieldEventGatewayTLSTrustBundleOnOnPremEventGatewayRef,
 			ExtractValueFn: eventGatewayTLSTrustBundleOnOnPremEventGatewayRef,
+		},
+		{
+			Object:         &configurationv1alpha1.EventGatewayTLSTrustBundle{},
+			Field:          IndexFieldEventGatewayTLSTrustBundleOnSecretRef,
+			ExtractValueFn: eventGatewayTLSTrustBundleOnSecretRef,
 		},
 	}
 }
@@ -71,4 +78,21 @@ func eventGatewayTLSTrustBundleOnOnPremEventGatewayRef(object client.Object) []s
 	}
 
 	return []string{refNamespace + "/" + ref.Name}
+}
+
+func eventGatewayTLSTrustBundleOnSecretRef(object client.Object) []string {
+	ent, ok := object.(*configurationv1alpha1.EventGatewayTLSTrustBundle)
+	if !ok {
+		return nil
+	}
+	refs := ent.GetSensitiveDataSecretRefs()
+	out := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		ns := ent.GetNamespace()
+		if ref.Namespace != nil && *ref.Namespace != "" {
+			ns = *ref.Namespace
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
 }

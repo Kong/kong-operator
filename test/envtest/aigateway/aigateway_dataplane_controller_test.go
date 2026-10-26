@@ -67,7 +67,10 @@ func TestAIGatewayDataPlaneReconciler_SelectorStability(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := create.ClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "aigw-cluster-ca")
+	// Uncached client: the Secret is seeded before StartReconcilers starts the
+	// manager, and going through the manager's client that early deadlocks under
+	// read-your-own-writes consistency.
+	clusterCA := create.ClusterCASecret(t, ctx, envtest.NewControllerClient(t, scheme.Get(), cfg), ns.Name, "aigw-cluster-ca")
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
 	require.NoError(t, err)
@@ -155,7 +158,7 @@ func TestAIGatewayDataPlaneReconciler_NoControlPlaneRef(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := create.ClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "aigw-cluster-ca-no-cp")
+	clusterCA := create.ClusterCASecret(t, ctx, envtest.NewControllerClient(t, scheme.Get(), cfg), ns.Name, "aigw-cluster-ca-no-cp")
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
 	require.NoError(t, err)
@@ -518,7 +521,7 @@ func TestAIGatewayDataPlaneReconciler_HPA(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := create.ClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "aigw-cluster-ca-hpa")
+	clusterCA := create.ClusterCASecret(t, ctx, envtest.NewControllerClient(t, scheme.Get(), cfg), ns.Name, "aigw-cluster-ca-hpa")
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
 	require.NoError(t, err)
@@ -715,7 +718,7 @@ func TestAIGatewayDataPlaneReconciler_OnPremAIGatewayAdminAPI(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := create.ClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "aigw-cluster-ca-onprem")
+	clusterCA := create.ClusterCASecret(t, ctx, envtest.NewControllerClient(t, scheme.Get(), cfg), ns.Name, "aigw-cluster-ca-onprem")
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
 	require.NoError(t, err)

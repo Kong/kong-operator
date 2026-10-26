@@ -64,7 +64,7 @@ func AIGatewayAuthStrategyReconciliationWatchOptions(
 			return b.Watches(
 				&corev1.Secret{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectsForSecretRef[aiconfigurationv1alpha1.AIGatewayAuthStrategyList](cl),
+					enqueueObjectsForSecretRef[aiconfigurationv1alpha1.AIGatewayAuthStrategyList](cl, index.IndexFieldAIGatewayAuthStrategyOnSecretRef),
 				),
 			)
 		},

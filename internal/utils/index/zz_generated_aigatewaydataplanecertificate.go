@@ -13,6 +13,8 @@ const (
 	IndexFieldAIGatewayDataPlaneCertificateOnKonnectAIGatewayRef = "aiGatewayDataPlaneCertificateOnKonnectAIGatewayRef"
 	// IndexFieldAIGatewayDataPlaneCertificateOnOnPremAIGatewayRef is the index field for AIGatewayDataPlaneCertificate -> OnPremAIGateway.
 	IndexFieldAIGatewayDataPlaneCertificateOnOnPremAIGatewayRef = "aiGatewayDataPlaneCertificateOnOnPremAIGatewayRef"
+	// IndexFieldAIGatewayDataPlaneCertificateOnSecretRef is the index field for AIGatewayDataPlaneCertificate -> the Secrets it reads.
+	IndexFieldAIGatewayDataPlaneCertificateOnSecretRef = "aiGatewayDataPlaneCertificateOnSecretRef"
 )
 
 // OptionsForAIGatewayDataPlaneCertificate returns required Index options for AIGatewayDataPlaneCertificate reconciler.
@@ -27,6 +29,11 @@ func OptionsForAIGatewayDataPlaneCertificate() []Option {
 			Object:         &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{},
 			Field:          IndexFieldAIGatewayDataPlaneCertificateOnOnPremAIGatewayRef,
 			ExtractValueFn: aiGatewayDataPlaneCertificateOnOnPremAIGatewayRef,
+		},
+		{
+			Object:         &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{},
+			Field:          IndexFieldAIGatewayDataPlaneCertificateOnSecretRef,
+			ExtractValueFn: aiGatewayDataPlaneCertificateOnSecretRef,
 		},
 	}
 }
@@ -72,4 +79,21 @@ func aiGatewayDataPlaneCertificateOnOnPremAIGatewayRef(object client.Object) []s
 	}
 
 	return []string{refNamespace + "/" + ent.Spec.AIGatewayRef.NamespacedRef.Name}
+}
+
+func aiGatewayDataPlaneCertificateOnSecretRef(object client.Object) []string {
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate)
+	if !ok {
+		return nil
+	}
+	refs := ent.GetSensitiveDataSecretRefs()
+	out := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		ns := ent.GetNamespace()
+		if ref.Namespace != nil && *ref.Namespace != "" {
+			ns = *ref.Namespace
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
 }

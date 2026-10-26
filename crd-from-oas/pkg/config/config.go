@@ -2,9 +2,9 @@ package config
 
 import (
 	"fmt"
+	"go/token"
 	"os"
 	"regexp"
-	"slices"
 	"sort"
 	"strings"
 
@@ -96,6 +96,12 @@ type ReferenceConfig struct {
 	// ResolvesTo selects what is pushed to Konnect for each reference:
 	// "id" (the referenced CR's Konnect ID) or "name" (its Konnect name).
 	ResolvesTo string `yaml:"resolvesTo"`
+	// ResolverMethod optionally delegates resolution to a hand-written method on
+	// the referring CR. It takes (context.Context, client.Client) and returns the
+	// generated resolver's result shape ([]string, or [][]string for nested
+	// reference lists) and an error. It must validate all references and preserve
+	// order and explicit empty lists. Used by validation and both SDK converters.
+	ResolverMethod string `yaml:"resolverMethod,omitempty"`
 	// RefTypeName names the generated ref struct. Required when Kinds has more
 	// than one entry (the name cannot be derived); must be empty otherwise
 	// (single-kind names derive as "<Kind>Ref").
@@ -416,6 +422,10 @@ type ReconcilerConfig struct {
 	// GatewayRef, when set, adds a GatewayRef typed parent reference field next
 	// to the OpenAPI-derived one. See GatewayRefConfig.
 	GatewayRef *GatewayRefConfig `yaml:"gatewayRef,omitempty"`
+	// SkipOnPremEventGateway excludes this entity from the generated on-prem
+	// Event Gateway watches, indexes, CRD checks and RBAC. It does not affect Konnect
+	// wiring. By default, entities inherit on-prem registration from their parent.
+	SkipOnPremEventGateway bool `yaml:"skipOnPremEventGateway,omitempty"`
 	// AncestorEntityGVKs lists the ancestor entity kinds and optional API groups
 	// for each OpenAPI-derived path-parameter dependency in URL order
 	// (outermost first). Only the Kind values are used by current ancestor-ID
@@ -1054,32 +1064,9 @@ func equalKinds(a, b []string) bool {
 // unionMemberNameRegex matches a lowerCamelCase JSON field name.
 var unionMemberNameRegex = regexp.MustCompile(`^[a-z][a-zA-Z0-9]*$`)
 
-// validateFieldDescriptions checks _description is only set on spec.apiSpec's
-// direct fields, the only ones the generator applies it to.
-func validateFieldDescriptions(fields map[string]*FieldConfig, path []string) error {
-	for name, fc := range fields {
-		if fc == nil {
-			continue
-		}
-		p := append(slices.Clone(path), name)
-		if fc.Description != "" && (len(p) != 3 || p[0] != "spec" || p[1] != "apiSpec") {
-			return fmt.Errorf("cel.%s: _description is only supported on spec.apiSpec's direct fields", strings.Join(p, "."))
-		}
-		if err := validateFieldDescriptions(fc.Fields, p); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func (tc *TypeConfig) validate() error {
 	if rc := tc.Reconciler; rc != nil && rc.GatewayRef != nil {
 		if err := rc.GatewayRef.validate(rc); err != nil {
-			return err
-		}
-	}
-	if tc.CEL != nil {
-		if err := validateFieldDescriptions(tc.CEL.Fields, nil); err != nil {
 			return err
 		}
 	}
@@ -1089,6 +1076,9 @@ func (tc *TypeConfig) validate() error {
 		}
 		if len(ref.Kinds) == 0 {
 			return fmt.Errorf("reference %q: kinds must not be empty", ref.Path)
+		}
+		if ref.ResolverMethod != "" && (!token.IsIdentifier(ref.ResolverMethod) || ref.ResolverMethod == "_") {
+			return fmt.Errorf("reference %q: resolverMethod must be a Go method name, got %q", ref.Path, ref.ResolverMethod)
 		}
 		switch ref.ResolvesTo {
 		case "id", "name":
@@ -1285,8 +1275,7 @@ type FieldConfig struct {
 	// Validations are additional kubebuilder markers to add to the field.
 	Validations []string `yaml:"_validations,omitempty"`
 	// Description replaces the field's OpenAPI description in the CRD, e.g.
-	// when it describes Konnect behavior that doesn't hold for the CR. Only
-	// supported on spec.apiSpec's direct fields.
+	// when it describes Konnect behavior that doesn't hold for the CR.
 	Description string `yaml:"_description,omitempty"`
 	// Fields maps child field names to their own FieldConfig, allowing
 	// multi-segment CEL paths that traverse referenced schema types.

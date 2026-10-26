@@ -16,17 +16,17 @@ import (
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	ctrl "sigs.k8s.io/controller-runtime"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/yaml"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	egonprem "github.com/kong/kong-operator/v2/controller/eventgateway/onprem"
+	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminsync"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 	"github.com/kong/kong-operator/v2/test/envtest"
 	"github.com/kong/kong-operator/v2/test/helpers/asserts"
 )
@@ -52,6 +52,19 @@ func onPremEventGatewayParentRef(gateway string) string {
   parentRef: {group: eventgateway.konghq.com, kind: OnPremEventGateway, name: ` + gateway + `}`
 }
 
+// newManagerWithoutResync is NewManager without its short resync period: a
+// resync reconciles every object, which hides what triggered a reconcile.
+func newManagerWithoutResync(t *testing.T, ctx context.Context, cfg *rest.Config) (manager.Manager, envtest.LogsObserver) {
+	t.Helper()
+	return envtest.NewManager(t, ctx, cfg, scheme.Get(), envtest.WithManagerOptions(func(o *manager.Options) {
+		o.Cache.SyncPeriod = nil
+	}))
+}
+
+// onPremControllerConfig enables the opt in OnPremEventGateway controller,
+// and so the cache indices it needs.
+var onPremControllerConfig = []testutils.ControllerConfigOption{testutils.WithOnPremEventGatewayController(true)}
+
 // onPremEventGatewayReconciledMessage is logged at the end of each reconcile
 // of an OnPremEventGateway, with the gateway's name.
 const onPremEventGatewayReconciledMessage = "reconciliation complete for OnPremEventGateway resource"
@@ -67,20 +80,15 @@ func TestOnPremEventGatewayReconciler(t *testing.T) {
 	ctx := t.Context()
 	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 
-	// Like envtest.NewManager, without its short resync period: a resync reconciles
-	// every gateway, which would hide which gateways a change reconciled.
-	_, logger, logs := envtest.CreateTestLogger(ctx)
-	mgr, err := ctrl.NewManager(cfg, manager.Options{
-		Logger:     logger,
-		Scheme:     scheme.Get(),
-		Metrics:    metricsserver.Options{BindAddress: "0"},
-		Controller: config.Controller{RecoverPanic: new(false), SkipNameValidation: new(true)},
-	})
-	require.NoError(t, err)
+	// A resync reconciles every gateway, which would hide which gateways a
+	// change reconciled.
+	mgr, logs := newManagerWithoutResync(t, ctx, cfg)
 
-	envtest.StartReconcilers(ctx, t, mgr, logs,
+	envtest.StartReconcilersWithConfig(ctx, t, mgr, logs, onPremControllerConfig,
 		&egonprem.Reconciler{
-			Client: mgr.GetClient(),
+			Client:        mgr.GetClient(),
+			GWAdminSync:   &gwadminsync.Syncer{Client: mgr.GetClient(), OperatorNamespace: ns.Name},
+			TypeConverter: newOnPremTypeConverter(ctx, t, mgr),
 		},
 	)
 
@@ -359,9 +367,14 @@ spec:
 
 	t.Run("a status changed by someone else is set back", func(t *testing.T) {
 		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(gatewayA), gatewayA))
+		revision := gatewayA.Status.ConfigRevision
 		gatewayA.Status = eventgatewayv1alpha1.OnPremEventGatewayStatus{
 			ObservedGeneration: gatewayA.Generation + 10,
 			ServerURL:          "https://set-by-someone-else.example.com",
+			// The CRD refuses a status that sets the revision back, or changes
+			// the hash without a new revision.
+			ConfigRevision: revision,
+			ConfigHash:     gatewayA.Status.ConfigHash,
 			Conditions: []metav1.Condition{
 				{
 					Type: string(eventgatewayv1alpha1.OnPremEventGatewayProgrammedType), Status: metav1.ConditionTrue,
@@ -394,11 +407,18 @@ spec:
 				assert.Equal(ct, string(eventgatewayv1alpha1.OnPremEventGatewayGWAdminNotFoundReason), resolved.Reason)
 				assert.Contains(ct, resolved.Message, "does not exist")
 			}
-			// The controller owns the whole status: what it doesn't set is
-			// removed.
-			assert.Nil(ct, apimeta.FindStatusCondition(gateway.Status.Conditions, "SetBySomeoneElse"))
-			assert.Len(ct, gateway.Status.Conditions, 2)
+			// The controller applies its status with Server-Side Apply: what
+			// someone else adds, and it doesn't set, stays. It owns the cp
+			// endpoint, which data planes would use: the gateway has no
+			// GWAdmin, so there is none.
+			assert.NotNil(ct, apimeta.FindStatusCondition(gateway.Status.Conditions, "SetBySomeoneElse"))
+			assert.Len(ct, gateway.Status.Conditions, 4, "GWAdminResolved, ConfigurationPushed, Programmed and the one of someone else")
 			assert.Empty(ct, gateway.Status.ServerURL)
+			// The revision is recorded even while the GWAdmin can't be pushed
+			// to, one for each change of the entities of the gateway, and the
+			// status the controller applies leaves it as it is.
+			assert.Positive(ct, revision)
+			assert.Equal(ct, revision, gateway.Status.ConfigRevision)
 		}, waitTime, tickTime)
 	})
 

@@ -131,7 +131,7 @@ rows:
     default: '`false`'
   - flag: '`--enable-controller-onpremeventgateway`'
     type: '`bool`'
-    description: "Enable the on-prem Event Gateway controller (alpha, no configuration is pushed to gw-admin yet)."
+    description: "Enable the on-prem Event Gateway controller (alpha), pushing the OnPremEventGateways to gw-admin."
     default: '`false`'
   - flag: '`--enable-controlplane-config-dump`'
     type: '`bool`'
@@ -149,6 +149,10 @@ rows:
     type: '`bool`'
     description: "Enable the Gateway API experimental features."
     default: '`false`'
+  - flag: '`--enable-read-your-own-writes-consistency`'
+    type: '`bool`'
+    description: "Make cached reads wait until the cache has observed the operator's own preceding writes. Disable only if the cache does not watch every object the operator writes to."
+    default: '`true`'
   - flag: '`--enable-validating-webhook`'
     type: '`bool`'
     description: "Enable the validating webhook."

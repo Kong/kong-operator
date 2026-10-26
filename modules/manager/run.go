@@ -89,6 +89,11 @@ type Config struct {
 	ClusterDomain            string
 	FQDNModeEnabled          bool
 	EmitKubernetesEvents     bool
+
+	// ReadYourOwnWritesConsistencyEnabled makes reads through the cached client
+	// wait for the cache to observe the operator's own preceding writes.
+	ReadYourOwnWritesConsistencyEnabled bool
+
 	// IPFamily is the cluster's IP family, used to decide which IP family
 	// (or families) DataPlanes' Kong listens bind to. Defaults to
 	// ipfamily.Auto, in which case Run resolves it to a concrete family by
@@ -189,33 +194,34 @@ func DefaultConfig() Config {
 	)
 
 	return Config{
-		MetricsAddr:                   ":8080",
-		MetricsAccessFilter:           MetricsAccessFilterOff,
-		ProbeAddr:                     ":8081",
-		LeaderElection:                true,
-		LeaderElectionNamespace:       defaultLeaderElectionNamespace,
-		LeaderElectionLeaseDuration:   mgrconfig.DefaultLeaderElectionLeaseDuration,
-		LeaderElectionRenewDeadline:   mgrconfig.DefaultLeaderElectionRenewDeadline,
-		LeaderElectionRetryPeriod:     mgrconfig.DefaultLeaderElectionRetryPeriod,
-		ClusterCASecretName:           "kong-operator-ca",
-		ClusterCASecretNamespace:      defaultNamespace,
-		ControllerNamespace:           defaultNamespace,
-		SecretLabelSelector:           mgrconfig.DefaultSecretLabelSelector,
-		ConfigMapLabelSelector:        mgrconfig.DefaultConfigMapLabelSelector,
-		LoggerOpts:                    &zap.Options{},
-		IPFamily:                      ipfamily.Auto,
-		GatewayControllerEnabled:      true,
-		ControlPlaneControllerEnabled: true,
-		DataPlaneControllerEnabled:    true,
-		ConversionWebhookEnabled:      true,
-		ValidatingWebhookEnabled:      true,
-		KonnectSyncPeriod:             consts.DefaultKonnectSyncPeriod,
-		KonnectRequestTimeout:         consts.DefaultKonnectRequestTimeout,
-		KonnectListPageSize:           consts.DefaultKonnectListPageSize,
-		CertTTL:                       consts.DefaultCertTTL,
-		CertExpirationMargin:          consts.DefaultCertExpirationMargin,
-		GWAdminCATTL:                  consts.GWAdminCATTL,
-		GWAdminCertTTL:                consts.GWAdminLeafTTL,
+		MetricsAddr:                         ":8080",
+		MetricsAccessFilter:                 MetricsAccessFilterOff,
+		ProbeAddr:                           ":8081",
+		LeaderElection:                      true,
+		LeaderElectionNamespace:             defaultLeaderElectionNamespace,
+		LeaderElectionLeaseDuration:         mgrconfig.DefaultLeaderElectionLeaseDuration,
+		LeaderElectionRenewDeadline:         mgrconfig.DefaultLeaderElectionRenewDeadline,
+		LeaderElectionRetryPeriod:           mgrconfig.DefaultLeaderElectionRetryPeriod,
+		ClusterCASecretName:                 "kong-operator-ca",
+		ClusterCASecretNamespace:            defaultNamespace,
+		ControllerNamespace:                 defaultNamespace,
+		SecretLabelSelector:                 mgrconfig.DefaultSecretLabelSelector,
+		ConfigMapLabelSelector:              mgrconfig.DefaultConfigMapLabelSelector,
+		LoggerOpts:                          &zap.Options{},
+		IPFamily:                            ipfamily.Auto,
+		GatewayControllerEnabled:            true,
+		ControlPlaneControllerEnabled:       true,
+		DataPlaneControllerEnabled:          true,
+		ConversionWebhookEnabled:            true,
+		ValidatingWebhookEnabled:            true,
+		KonnectSyncPeriod:                   consts.DefaultKonnectSyncPeriod,
+		KonnectRequestTimeout:               consts.DefaultKonnectRequestTimeout,
+		KonnectListPageSize:                 consts.DefaultKonnectListPageSize,
+		CertTTL:                             consts.DefaultCertTTL,
+		CertExpirationMargin:                consts.DefaultCertExpirationMargin,
+		GWAdminCATTL:                        consts.GWAdminCATTL,
+		GWAdminCertTTL:                      consts.GWAdminLeafTTL,
+		ReadYourOwnWritesConsistencyEnabled: true,
 	}
 }
 
@@ -320,6 +326,21 @@ func Run(
 		RenewDeadline:           &cfg.LeaderElectionRenewDeadline,
 		RetryPeriod:             &cfg.LeaderElectionRetryPeriod,
 		Cache:                   cacheOptions,
+		// Reads through mgr.GetClient() are served by the informer cache, so by default a
+		// read that follows one of our own writes can still observe the pre-write object.
+		// Read-your-own-writes consistency makes such a read wait until the cache has
+		// observed the write, which removes the "reconcile ran immediately after a status
+		// patch and still saw an empty Konnect ID" class of duplicate creates.
+		//
+		// This only holds while every object we write can actually be observed by the
+		// cache: Secret/ConfigMap writers have to stamp the --secret-label-selector /
+		// --config-map-label-selector label, and --watch-namespaces has to cover every
+		// namespace we write into. See docs/internal/read-your-own-writes-consistency.md.
+		Client: client.Options{
+			Cache: &client.CacheOptions{
+				EnableReadYourWritesConsistency: &cfg.ReadYourOwnWritesConsistencyEnabled,
+			},
+		},
 	}
 
 	mgr, err := ctrl.NewManager(restCfg, managerOpts)

@@ -36,6 +36,7 @@ import (
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/gwadmin"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
+	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
 	kgomanager "github.com/kong/kong-operator/v2/modules/manager"
 	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -139,7 +140,7 @@ func TestGWAdminReconciler(t *testing.T) {
 		// Three certificate authorities, all in the operator namespace: the
 		// published cp client CA, the API CA and the cp server CA.
 		apiCA, cpServerCA := gwadmin.APICASecretName(gw), gwadmin.CPServerCASecretName(gw)
-		operatorClient := gwadmin.OperatorClientTLSSecretName(gw)
+		operatorClient := gwadminref.OperatorClientTLSSecretName(gw)
 		clientCA := gwadmin.CPClientCASecretName(gw)
 		signers := map[string]*x509.Certificate{
 			clientCA:   firstCertificate(t, getSecret(t, ctx, cl, operatorNamespace, clientCA).Data[corev1.TLSCertKey]),
@@ -457,13 +458,16 @@ func TestGWAdminReconciler(t *testing.T) {
 		t.Parallel()
 
 		// Invisible to the operator's Secret cache: only the Create of the
-		// operator's own Secret runs into it.
+		// operator's own Secret runs into it. Both writes opt out of
+		// read-your-own-writes consistency: the cache never observes this
+		// Secret, so the resource version they would record would make every
+		// later read of that name wait for an event that never comes.
 		foreign := &corev1.Secret{
 			Name:       "gw-conflict-unlabeled-api-tls",
 			Namespace:  namespace,
 			StringData: map[string]string{"owner": "someone-else"},
 		}
-		require.NoError(t, cl.Create(ctx, foreign))
+		require.NoError(t, cl.Create(ctx, foreign, client.DisableReadYourWritesConsistency))
 		gw := &operatorv1alpha1.GWAdmin{Name: "gw-conflict-unlabeled", Namespace: namespace}
 		require.NoError(t, cl.Create(ctx, gw))
 
@@ -476,7 +480,7 @@ func TestGWAdminReconciler(t *testing.T) {
 		assert.Empty(t, foreign.Labels, "the foreign Secret is left alone")
 		assert.Equal(t, "someone-else", string(foreign.Data["owner"]), "the foreign Secret is left alone")
 
-		require.NoError(t, cl.Delete(ctx, foreign))
+		require.NoError(t, cl.Delete(ctx, foreign, client.DisableReadYourWritesConsistency))
 		requireCondition(t, gw, operatorv1alpha1.GWAdminConditionTypeCertificateProvisioned,
 			metav1.ConditionTrue, operatorv1alpha1.GWAdminReasonCertificateProvisioned, gwAdminRecoverWait)
 		s := getSecret(t, ctx, cl, namespace, foreign.Name)
@@ -1242,7 +1246,7 @@ func TestGWAdminReconcilerCARotationBlocked(t *testing.T) {
 // them: the data planes of dpNamespace count for their rotations.
 func grantDataPlanes(ctx context.Context, t *testing.T, cl client.Client, gwNamespace, dpNamespace string) {
 	t.Helper()
-	require.NoError(t, cl.Create(ctx, &configurationv1alpha1.KongReferenceGrant{
+	grant := &configurationv1alpha1.KongReferenceGrant{
 		GenerateName: "gwadmin-data-planes-", Namespace: gwNamespace,
 		Spec: configurationv1alpha1.KongReferenceGrantSpec{
 			From: []configurationv1alpha1.ReferenceGrantFrom{{
@@ -1253,7 +1257,14 @@ func grantDataPlanes(ctx context.Context, t *testing.T, cl client.Client, gwName
 				Group: configurationv1alpha1.Group(operatorv1alpha1.SchemeGroupVersion.Group), Kind: operatorv1alpha1.GWAdminKind,
 			}},
 		},
-	}))
+	}
+	require.NoError(t, cl.Create(ctx, grant))
+	// The reconciler lists the grants from the manager cache, which cl reads
+	// too: wait for it to hold this one, or a reconcile racing the cache
+	// doesn't count the data planes in dpNamespace.
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(grant), &configurationv1alpha1.KongReferenceGrant{}))
+	}, waitTime, tickTime)
 }
 
 // requireGWAdminConditionMessage waits for the CertificateProvisioned

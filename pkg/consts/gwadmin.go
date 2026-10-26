@@ -26,6 +26,13 @@ const (
 	// GWAdminManagedByLabelValue is the managed-by label value for GWAdmin owned resources.
 	GWAdminManagedByLabelValue = "gw-admin"
 
+	// GWAdminServiceRoleLabel labels a Service of a GWAdmin with its role:
+	// only the API Service carries it, with GWAdminServiceRoleAPI.
+	GWAdminServiceRoleLabel = OperatorLabelPrefix + "gwadmin-service-role"
+	// GWAdminServiceRoleAPI is the value of GWAdminServiceRoleLabel on the API
+	// Service of a GWAdmin.
+	GWAdminServiceRoleAPI = "api"
+
 	// GWAdminTLSChecksumAnnotation records a checksum of the TLS material
 	// mounted into the gw-admin pods on the Pod template, so that rotating any
 	// of it rolls the Deployment.

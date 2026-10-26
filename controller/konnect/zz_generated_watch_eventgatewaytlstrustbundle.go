@@ -71,7 +71,7 @@ func EventGatewayTLSTrustBundleReconciliationWatchOptions(
 			return b.Watches(
 				&corev1.Secret{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectsForSecretRef[configurationv1alpha1.EventGatewayTLSTrustBundleList](cl),
+					enqueueObjectsForSecretRef[configurationv1alpha1.EventGatewayTLSTrustBundleList](cl, index.IndexFieldEventGatewayTLSTrustBundleOnSecretRef),
 				),
 			)
 		},

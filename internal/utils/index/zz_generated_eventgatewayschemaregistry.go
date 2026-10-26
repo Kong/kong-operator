@@ -13,6 +13,8 @@ const (
 	IndexFieldEventGatewaySchemaRegistryOnKonnectEventGatewayRef = "eventGatewaySchemaRegistryOnKonnectEventGatewayRef"
 	// IndexFieldEventGatewaySchemaRegistryOnOnPremEventGatewayRef is the index field for EventGatewaySchemaRegistry -> OnPremEventGateway.
 	IndexFieldEventGatewaySchemaRegistryOnOnPremEventGatewayRef = "eventGatewaySchemaRegistryOnOnPremEventGatewayRef"
+	// IndexFieldEventGatewaySchemaRegistryOnSecretRef is the index field for EventGatewaySchemaRegistry -> the Secrets it reads.
+	IndexFieldEventGatewaySchemaRegistryOnSecretRef = "eventGatewaySchemaRegistryOnSecretRef"
 )
 
 // OptionsForEventGatewaySchemaRegistry returns required Index options for EventGatewaySchemaRegistry reconciler.
@@ -27,6 +29,11 @@ func OptionsForEventGatewaySchemaRegistry() []Option {
 			Object:         &configurationv1alpha1.EventGatewaySchemaRegistry{},
 			Field:          IndexFieldEventGatewaySchemaRegistryOnOnPremEventGatewayRef,
 			ExtractValueFn: eventGatewaySchemaRegistryOnOnPremEventGatewayRef,
+		},
+		{
+			Object:         &configurationv1alpha1.EventGatewaySchemaRegistry{},
+			Field:          IndexFieldEventGatewaySchemaRegistryOnSecretRef,
+			ExtractValueFn: eventGatewaySchemaRegistryOnSecretRef,
 		},
 	}
 }
@@ -71,4 +78,21 @@ func eventGatewaySchemaRegistryOnOnPremEventGatewayRef(object client.Object) []s
 	}
 
 	return []string{refNamespace + "/" + ref.Name}
+}
+
+func eventGatewaySchemaRegistryOnSecretRef(object client.Object) []string {
+	ent, ok := object.(*configurationv1alpha1.EventGatewaySchemaRegistry)
+	if !ok {
+		return nil
+	}
+	refs := ent.GetSensitiveDataSecretRefs()
+	out := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		ns := ent.GetNamespace()
+		if ref.Namespace != nil && *ref.Namespace != "" {
+			ns = *ref.Namespace
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
 }

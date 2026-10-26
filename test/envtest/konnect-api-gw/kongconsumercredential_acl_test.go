@@ -46,12 +46,16 @@ func TestKongConsumerCredential_ACL(t *testing.T) {
 	})
 	require.NoError(t, err)
 	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
+	// The objects seeded below are created before StartReconcilers starts the
+	// manager, so they use an uncached client: going through the manager's client
+	// that early deadlocks under read-your-own-writes consistency, see seedClient.
+	seed := seedClient(t, cfg, ns.Name)
 
-	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, seed)
+	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, seed, apiAuth)
 
 	consumerID := uuid.NewString()
-	consumer := deploy.KongConsumerWithProgrammed(t, ctx, clientNamespaced, &configurationv1.KongConsumer{
+	consumer := deploy.KongConsumerWithProgrammed(t, ctx, seed, &configurationv1.KongConsumer{
 		Username: "username1",
 		Spec: configurationv1.KongConsumerSpec{
 			ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
@@ -68,10 +72,10 @@ func TestKongConsumerCredential_ACL(t *testing.T) {
 		ServerURL:      cp.GetKonnectStatus().GetServerURL(),
 		OrgID:          cp.GetKonnectStatus().GetOrgID(),
 	}
-	require.NoError(t, clientNamespaced.Status().Update(ctx, consumer))
+	require.NoError(t, seed.Status().Update(ctx, consumer))
 
 	aclGroup := "acl-group1"
-	kongCredentialACL := deploy.KongCredentialACL(t, ctx, clientNamespaced, consumer.Name, aclGroup)
+	kongCredentialACL := deploy.KongCredentialACL(t, ctx, seed, consumer.Name, aclGroup)
 	aclID := uuid.NewString()
 	tags := []string{
 		"k8s-generation:1",

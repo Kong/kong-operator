@@ -237,6 +237,7 @@ rules:
       - eventgatewaytlstrustbundles
       - eventgatewayvirtualclusterconsumepolicies
       - eventgatewayvirtualclusterpolicies
+      - eventgatewayvirtualclusterpolicychains
       - eventgatewayvirtualclusterproducepolicies
       - eventgatewayvirtualclusters
       - kongcacertificates
@@ -273,6 +274,8 @@ rules:
       - eventgatewayvirtualclusterconsumepolicies/status
       - eventgatewayvirtualclusterpolicies/finalizers
       - eventgatewayvirtualclusterpolicies/status
+      - eventgatewayvirtualclusterpolicychains/finalizers
+      - eventgatewayvirtualclusterpolicychains/status
       - eventgatewayvirtualclusterproducepolicies/finalizers
       - eventgatewayvirtualclusterproducepolicies/status
       - eventgatewayvirtualclusters/finalizers
@@ -412,7 +415,14 @@ rules:
     verbs:
       - get
       - list
+      - patch
       - watch
+  - apiGroups:
+      - eventgateway.konghq.com
+    resources:
+      - onpremeventgateways/finalizers
+    verbs:
+      - update
   - apiGroups:
       - gateway-operator.konghq.com
     resources:

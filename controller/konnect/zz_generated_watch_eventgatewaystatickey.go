@@ -71,7 +71,7 @@ func EventGatewayStaticKeyReconciliationWatchOptions(
 			return b.Watches(
 				&corev1.Secret{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectsForSecretRef[configurationv1alpha1.EventGatewayStaticKeyList](cl),
+					enqueueObjectsForSecretRef[configurationv1alpha1.EventGatewayStaticKeyList](cl, index.IndexFieldEventGatewayStaticKeyOnSecretRef),
 				),
 			)
 		},

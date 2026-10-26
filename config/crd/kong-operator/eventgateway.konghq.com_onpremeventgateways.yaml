@@ -157,6 +157,21 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              configHash:
+                description: |-
+                  ConfigHash identifies the configuration that ConfigRevision stands
+                  for: it changes only along with a new revision.
+                maxLength: 128
+                minLength: 1
+                type: string
+              configRevision:
+                description: |-
+                  ConfigRevision is the revision of the configuration of the gateway
+                  that Kong Operator pushes to gw-admin. It increases by one every time
+                  that configuration changes, and never decreases.
+                format: int64
+                minimum: 1
+                type: integer
               observedGeneration:
                 description: ObservedGeneration is the most recent generation observed.
                 format: int64
@@ -174,6 +189,14 @@ spec:
                   rule: isURL(self) && url(self).getScheme() == 'https' && url(self).getHostname()
                     != ''
             type: object
+            x-kubernetes-validations:
+            - message: configRevision may not decrease
+              rule: '!has(oldSelf.configRevision) || (has(self.configRevision) &&
+                self.configRevision >= oldSelf.configRevision)'
+            - message: configHash may only change along with a new configRevision
+              rule: '!has(oldSelf.configHash) || (has(self.configHash) && (self.configHash
+                == oldSelf.configHash || (has(self.configRevision) && has(oldSelf.configRevision)
+                && self.configRevision > oldSelf.configRevision)))'
         required:
         - spec
         type: object

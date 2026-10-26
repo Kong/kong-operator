@@ -52,6 +52,22 @@ func WithManager(f func(manager.Manager) error) ManagerOption {
 	return ManagerOption{manager: f}
 }
 
+// ReadYourOwnWritesClientOptions mirrors the client options the production manager
+// is built with (modules/manager/run.go), so tests run against the same
+// read-your-own-writes consistency semantics the operator ships with.
+//
+// Consequence for tests: the manager's client must not be used before the manager
+// is started. Its first read or write registers a consistency handler that waits
+// for an informer that is never started until mgr.Start, so the call blocks until
+// its context is cancelled. Seed objects with NewControllerClient instead.
+func ReadYourOwnWritesClientOptions() ctrlclient.Options {
+	return ctrlclient.Options{
+		Cache: &ctrlclient.CacheOptions{
+			EnableReadYourWritesConsistency: new(true),
+		},
+	}
+}
+
 // NewManager returns a manager and a logs observer.
 // The logs observer can be used to dump logs if the test fails.
 // The returned manager can be used with StartReconcilers() to start a list of
@@ -79,6 +95,9 @@ func NewManager(t *testing.T, ctx context.Context, cfg *rest.Config, s *runtime.
 			// Ref: https://github.com/kubernetes-sigs/controller-runtime/pull/2902#issuecomment-2284194683
 			SkipNameValidation: new(true),
 		},
+		// Mirror the production manager (modules/manager/run.go) so the test suites
+		// exercise the same read-your-own-writes client semantics.
+		Client: ReadYourOwnWritesClientOptions(),
 	}
 
 	for _, opt := range opts {
@@ -111,9 +130,24 @@ func StartReconcilers(
 	reconcilers ...Reconciler,
 ) {
 	t.Helper()
+	StartReconcilersWithConfig(ctx, t, mgr, logs, nil, reconcilers...)
+}
+
+// StartReconcilersWithConfig is StartReconcilers, with the cache indices of
+// the controller config the options give, e.g. those of an opt in controller
+// the reconcilers include.
+func StartReconcilersWithConfig(
+	ctx context.Context,
+	t *testing.T,
+	mgr manager.Manager,
+	logs LogsObserver,
+	cfgOpts []testutils.ControllerConfigOption,
+	reconcilers ...Reconciler,
+) {
+	t.Helper()
 
 	// Setup cache indices for all types.
-	cfg := testutils.DefaultControllerConfigForTests(testutils.WithOnPremEventGatewayController(true))
+	cfg := testutils.DefaultControllerConfigForTests(cfgOpts...)
 	require.NoError(t, kgomanager.SetupCacheIndexes(ctx, mgr, cfg))
 
 	for _, r := range reconcilers {
@@ -164,6 +198,9 @@ func StartReconciler(
 			// Ref: https://github.com/kubernetes-sigs/controller-runtime/pull/2902#issuecomment-2284194683
 			SkipNameValidation: new(true),
 		},
+		// Mirror the production manager (modules/manager/run.go) so the test suites
+		// exercise the same read-your-own-writes client semantics.
+		Client: ReadYourOwnWritesClientOptions(),
 	}
 
 	for _, opt := range opts {

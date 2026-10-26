@@ -17,154 +17,248 @@ limitations under the License.
 package onprem
 
 import (
+	"cmp"
 	"context"
+	"errors"
 	"fmt"
-	"maps"
-	"net"
+	"net/http"
 	"slices"
-	"strconv"
 	"strings"
+	"time"
 
-	discoveryv1 "k8s.io/api/discovery/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"github.com/google/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
-	"github.com/kong/kong-operator/v2/internal/gwadmin/published"
+	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminapi"
+	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminsync"
 	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
 )
 
-// endpointSliceControllerName is the value of discoveryv1.LabelManagedBy on
-// the EndpointSlices that the EndpointSlice controller of Kubernetes manages.
-const endpointSliceControllerName = "endpointslice-controller.k8s.io"
-
-// apiEndpointSliceLabels returns the labels of the EndpointSlices of the API
-// Service of the named GWAdmin: those the EndpointSlice controller copies
-// from the Service, and its own. An EndpointSlice someone else manages is
-// left out.
-func apiEndpointSliceLabels(gwAdminName string) map[string]string {
-	labels := published.APIServiceLabels(gwAdminName)
-	labels[discoveryv1.LabelManagedBy] = endpointSliceControllerName
-	return labels
+// gwAdminNotReadyError tells the GWAdmin of a gateway can't be pushed to yet.
+// It is not retried: a change of the GWAdmin, of a KongReferenceGrant of its
+// namespace, of its Secrets or of its pods triggers the gateway again.
+type gwAdminNotReadyError struct {
+	msg string
+	// reason is the reason of the GWAdminResolved condition of the gateway:
+	// NotReady when empty.
+	reason kcfgconsts.ConditionReason
+	// nothingToRemove is true when no gw-admin pod Kong Operator could tell
+	// to stop serving the gateway serves it (see
+	// gwadminsync.NotReadyError.NothingToRemove).
+	nothingToRemove bool
+	// notAllowed is true when the gateway may not use the GWAdmin.
+	notAllowed bool
+	// gwAdmin is the GWAdmin, when it exists.
+	gwAdmin *operatorv1alpha1.GWAdmin
 }
 
-// gwAdminUnresolved tells why the GWAdmin of a gateway can't serve it yet. It
-// is not retried: a change of the GWAdmin, of a KongReferenceGrant of its
-// namespace or of the pods of its API Service triggers the gateway again.
-type gwAdminUnresolved struct {
-	reason  kcfgconsts.ConditionReason
-	message string
+func (e gwAdminNotReadyError) Error() string { return e.msg }
+
+// resolvedReason returns the reason of the GWAdminResolved condition of the
+// gateway.
+func (e gwAdminNotReadyError) resolvedReason() kcfgconsts.ConditionReason {
+	return cmp.Or(e.reason, eventgatewayv1alpha1.OnPremEventGatewayGWAdminNotReadyReason)
 }
 
-// gwAdminPod is a gw-admin pod behind the API Service of a GWAdmin.
-type gwAdminPod struct {
-	// name is the name of the pod.
-	name string
-	// address is the host and port the API listener of the pod is reached on.
-	address string
+// resolveGWAdmin returns the gw-admin of the gateway. forPush tells the
+// configuration is pushed: the gateway must be allowed to use the GWAdmin,
+// and the GWAdmin must not be being deleted. Otherwise the pods are only told
+// to stop serving the gateway, which a GWAdmin being deleted still does.
+func (r *Reconciler) resolveGWAdmin(ctx context.Context, gateway *eventgatewayv1alpha1.OnPremEventGateway, forPush bool) (*gwadminsync.Target, error) {
+	mode := gwadminsync.ForRemoval
+	if forPush {
+		reason, err := gwadminref.NotAllowed(ctx, r.Client, gateway)
+		if err != nil {
+			return nil, err
+		}
+		if reason != "" {
+			return nil, gwAdminNotReadyError{
+				msg:        "The gateway may not use its GWAdmin: " + reason,
+				reason:     eventgatewayv1alpha1.OnPremEventGatewayGWAdminRefNotPermittedReason,
+				notAllowed: true,
+			}
+		}
+		mode = gwadminsync.ForPush
+	}
+	target, err := r.GWAdminSync.Resolve(ctx, gateway.GWAdminKey(), mode)
+	if notReady, ok := errors.AsType[gwadminsync.NotReadyError](err); ok {
+		var reason kcfgconsts.ConditionReason
+		if notReady.Cause == gwadminsync.CauseNotFound {
+			reason = eventgatewayv1alpha1.OnPremEventGatewayGWAdminNotFoundReason
+		}
+		return nil, gwAdminNotReadyError{
+			msg: notReady.Message, reason: reason, nothingToRemove: notReady.NothingToRemove, gwAdmin: notReady.GWAdmin,
+		}
+	}
+	return target, err
 }
 
-// resolveGWAdmin returns the gw-admin pods of the gateway: the pods of the
-// API Service of its GWAdmin. The gateway must be allowed to use the
-// GWAdmin, and the GWAdmin must have published its API and not be being
-// deleted. Otherwise it returns why the GWAdmin can't serve the gateway.
-func (r *Reconciler) resolveGWAdmin(ctx context.Context, gateway *eventgatewayv1alpha1.OnPremEventGateway) ([]gwAdminPod, *gwAdminUnresolved, error) {
-	reason, err := gwadminref.NotAllowed(ctx, r.Client, gateway)
+// itemExpected is the item recording the expected gateways set on a gw-admin
+// pod (gwadminsync.Syncer.Record), as their idsKey: gw-admin can't be asked
+// for them.
+const itemExpected = "expected"
+
+// push makes the gw-admin pod serve the configuration of the gateway: the
+// gateway, its entities, then the gateways gw-admin must serve. It first asks
+// the pod for the entities of the gateway, and only writes what differs from
+// what the pod holds: the entities it returns, and the expected gateways
+// recorded of the pod. A pod that doesn't know the gateway, e.g. one
+// restarted, as gw-admin keeps nothing across a restart, gets it all; one
+// that knows it has it registered already, under its name and creation time,
+// which don't change. Every call is idempotent.
+//
+// The expected gateways come last: a gw-admin pod turns ready once they are
+// set, as long as each has a data plane certificate, so a pod restarted must
+// hold the entities of the gateway by then.
+func (r *Reconciler) push(
+	ctx context.Context,
+	target *gwadminsync.Target,
+	pod gwadminsync.Pod,
+	gwAdmin gwadminapi.ClientInterface,
+	config gatewayConfig,
+	cfg configuration,
+	gatewayID uuid.UUID,
+	expected []uuid.UUID,
+) error {
+	held, found, err := getEntities(ctx, gwAdmin, gatewayID)
 	if err != nil {
-		return nil, nil, err
-	}
-	if reason != "" {
-		return nil, &gwAdminUnresolved{
-			reason:  eventgatewayv1alpha1.OnPremEventGatewayGWAdminRefNotPermittedReason,
-			message: "The gateway may not use its GWAdmin: " + reason,
-		}, nil
+		return err
 	}
 
-	key := gateway.GWAdminKey()
-	notReady := func(format string) *gwAdminUnresolved {
-		return &gwAdminUnresolved{
-			reason:  eventgatewayv1alpha1.OnPremEventGatewayGWAdminNotReadyReason,
-			message: fmt.Sprintf(format, key),
+	if !found {
+		if err := gwadminsync.Call("register the gateway", func() (*http.Response, error) {
+			return gwAdmin.UpdateEventGateway(ctx, gatewayID, config.Gateway)
+		}); err != nil {
+			return err
 		}
 	}
-	var gw operatorv1alpha1.GWAdmin
-	if err := r.Get(ctx, key, &gw); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil, &gwAdminUnresolved{
-				reason:  eventgatewayv1alpha1.OnPremEventGatewayGWAdminNotFoundReason,
-				message: fmt.Sprintf("The GWAdmin %s does not exist", key),
-			}, nil
-		}
-		return nil, nil, fmt.Errorf("failed to get the GWAdmin %s: %w", key, err)
-	}
-	if !gw.DeletionTimestamp.IsZero() {
-		return nil, notReady("The GWAdmin %s is being deleted"), nil
-	}
-	if gw.Status.API == nil {
-		return nil, notReady("The GWAdmin %s hasn't published its API yet"), nil
-	}
-
-	pods, err := gwAdminPods(ctx, r.Client, &gw)
+	same, err := sameEntities(held, cfg.pushedKey)
 	if err != nil {
-		return nil, nil, err
+		return err
 	}
-	if len(pods) == 0 {
-		return nil, notReady("The GWAdmin %s has no gw-admin pod"), nil
-	}
-	return pods, nil, nil
-}
-
-// addressTypeOrder orders the EndpointSlices of a Service by address family:
-// a pod of a dual-stack Service is reached on its IPv4 address.
-var addressTypeOrder = map[discoveryv1.AddressType]int{
-	discoveryv1.AddressTypeIPv4: 0,
-	discoveryv1.AddressTypeIPv6: 1,
-	discoveryv1.AddressTypeFQDN: 2,
-}
-
-// gwAdminPods returns the gw-admin pods behind the API Service of the
-// GWAdmin, sorted by name. The Service publishes the pods before they are
-// Ready: gw-admin keeps nothing across a restart, so a pod only turns Ready
-// once its configuration is pushed to it, on its address. A pod that is
-// shutting down is left out, and so is an endpoint that isn't a pod. A pod of
-// a dual-stack Service is published by one EndpointSlice per address family:
-// it is returned once, on its IPv4 address.
-func gwAdminPods(ctx context.Context, cl client.Client, gw *operatorv1alpha1.GWAdmin) ([]gwAdminPod, error) {
-	api := gw.Status.API
-	labels := apiEndpointSliceLabels(gw.Name)
-	labels[discoveryv1.LabelServiceName] = api.ServiceName
-	var endpointSlices discoveryv1.EndpointSliceList
-	if err := cl.List(ctx, &endpointSlices, client.InNamespace(gw.Namespace), client.MatchingLabels(labels)); err != nil {
-		return nil, fmt.Errorf("failed to list the EndpointSlices of the API Service %s/%s of the GWAdmin: %w", gw.Namespace, api.ServiceName, err)
-	}
-	slices.SortFunc(endpointSlices.Items, func(a, b discoveryv1.EndpointSlice) int {
-		if c := addressTypeOrder[a.AddressType] - addressTypeOrder[b.AddressType]; c != 0 {
-			return c
+	if !found || !same {
+		if err := gwadminsync.CallDescribingFields("push the entities of the gateway", cfg.describeField, func() (*http.Response, error) {
+			return gwAdmin.UpdateEventGatewayEntities(ctx, gatewayID, config.Entities)
+		}); err != nil {
+			return err
 		}
-		return strings.Compare(a.Name, b.Name)
+	}
+	// A pod that doesn't know the gateway may have lost the expected gateways
+	// too.
+	if !found || r.GWAdminSync.Recorded(target, pod, itemExpected) != idsKey(expected) {
+		if err := r.setExpected(ctx, target, pod, gwAdmin, expected); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// getEntities returns the entities gw-admin holds for the gateway, and
+// whether it knows the gateway at all.
+func getEntities(ctx context.Context, gwAdmin gwadminapi.ClientInterface, gatewayID uuid.UUID) (gwadminapi.GatewayEntities, bool, error) {
+	const action = "read the entities of the gateway"
+	resp, err := gwAdmin.GetEventGatewayEntities(ctx, gatewayID)
+	if err != nil {
+		return gwadminapi.GatewayEntities{}, false, fmt.Errorf("failed to %s: %w", action, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		err := gwadminsync.CheckResponse(action, resp, nil)
+		switch {
+		case gwadminsync.IsNotFound(err):
+			return gwadminapi.GatewayEntities{}, false, nil
+		case err == nil:
+			return gwadminapi.GatewayEntities{}, false, fmt.Errorf("failed to %s: gw-admin returned %s, not %d", action, resp.Status, http.StatusOK)
+		}
+		return gwadminapi.GatewayEntities{}, false, err
+	}
+	parsed, err := gwadminapi.ParseGetEventGatewayEntitiesResponse(resp)
+	if err != nil {
+		return gwadminapi.GatewayEntities{}, false, fmt.Errorf("failed to %s: %w", action, err)
+	}
+	if parsed.JSON200 == nil {
+		return gwadminapi.GatewayEntities{}, false, fmt.Errorf("failed to %s: gw-admin returned %s without a JSON body", action, resp.Status)
+	}
+	return *parsed.JSON200, true, nil
+}
+
+// idsKey returns the ids, sorted, as one string, to tell whether the
+// expected gateways changed since they were set.
+func idsKey(ids []uuid.UUID) string {
+	keys := make([]string, 0, len(ids))
+	for _, id := range ids {
+		keys = append(keys, id.String())
+	}
+	slices.Sort(keys)
+	return strings.Join(keys, ",")
+}
+
+// noEntities returns the entities of a gateway that has none: gw-admin
+// requires every list.
+func noEntities() gwadminapi.GatewayEntities {
+	return gwadminapi.GatewayEntities{
+		BackendClusters:  []gwadminapi.EventGatewayBackendClusterOnPrem{},
+		Listeners:        []gwadminapi.EventGatewayListenerOnPrem{},
+		SchemaRegistries: []gwadminapi.EventGatewaySchemaRegistryOnPrem{},
+		StaticKeys:       []gwadminapi.EventGatewayStaticKeyOnPrem{},
+		TlsTrustBundles:  []gwadminapi.EventGatewayTLSTrustBundleOnPrem{},
+		VirtualClusters:  []gwadminapi.EventGatewayVirtualClusterOnPrem{},
+	}
+}
+
+// removeGateway makes the gw-admin pod stop serving the gateway: it is left
+// out of the gateways gw-admin serves, then deleted with its entities. It is
+// sent in full every time: it only runs when the gateway is deleted or may
+// not use its GWAdmin anymore, once.
+func (r *Reconciler) removeGateway(
+	ctx context.Context,
+	target *gwadminsync.Target,
+	pod gwadminsync.Pod,
+	gwAdmin gwadminapi.ClientInterface,
+	gatewayID uuid.UUID,
+	expected []uuid.UUID,
+) error {
+	if err := r.setExpected(ctx, target, pod, gwAdmin, expected); err != nil {
+		return err
+	}
+	err := gwadminsync.Call("delete the gateway", func() (*http.Response, error) {
+		return gwAdmin.DeleteEventGateway(ctx, gatewayID)
 	})
-	pods := map[string]gwAdminPod{}
-	for _, es := range endpointSlices.Items {
-		idx := slices.IndexFunc(es.Ports, func(p discoveryv1.EndpointPort) bool {
-			return p.Name != nil && *p.Name == api.PortName && p.Port != nil
-		})
-		if idx < 0 {
-			continue
-		}
-		port := strconv.Itoa(int(*es.Ports[idx].Port))
-		for _, ep := range es.Endpoints {
-			if len(ep.Addresses) == 0 ||
-				(ep.Conditions.Terminating != nil && *ep.Conditions.Terminating) ||
-				ep.TargetRef == nil || ep.TargetRef.Kind != "Pod" || ep.TargetRef.Name == "" {
-				continue
-			}
-			if _, ok := pods[ep.TargetRef.Name]; ok {
-				continue
-			}
-			pods[ep.TargetRef.Name] = gwAdminPod{name: ep.TargetRef.Name, address: net.JoinHostPort(ep.Addresses[0], port)}
-		}
+	// A gateway gw-admin doesn't know is deleted already.
+	if err != nil && !gwadminsync.IsNotFound(err) {
+		return err
 	}
-	return slices.SortedFunc(maps.Values(pods), func(a, b gwAdminPod) int { return strings.Compare(a.name, b.name) }), nil
+	return nil
+}
+
+// setExpected sets the gateways the gw-admin pod serves, and records them.
+// They are unrecorded first: a call that fails may still be applied, and what
+// was recorded before isn't what the pod holds anymore.
+func (r *Reconciler) setExpected(
+	ctx context.Context, target *gwadminsync.Target, pod gwadminsync.Pod, gwAdmin gwadminapi.ClientInterface, expected []uuid.UUID,
+) error {
+	r.GWAdminSync.Unrecord(target, pod, itemExpected)
+	if err := gwadminsync.Call("set the gateways gw-admin serves", func() (*http.Response, error) {
+		return gwAdmin.SetExpectedEventGateways(ctx, gwadminapi.ExpectedEventGateways{EventGatewayIds: expected})
+	}); err != nil {
+		return err
+	}
+	r.GWAdminSync.Record(target, pod, itemExpected, idsKey(expected))
+	return nil
+}
+
+// uidV4 returns the UID of the object as a version 4 UUID, which gw-admin
+// requires as an id.
+func uidV4(obj client.Object) (uuid.UUID, bool) {
+	id, err := uuid.Parse(string(obj.GetUID()))
+	return id, err == nil && id.Version() == 4
+}
+
+// createdAt returns the creation time of the object, as gw-admin requires it:
+// UTC, whole seconds.
+func createdAt(obj client.Object) time.Time {
+	return obj.GetCreationTimestamp().UTC().Truncate(time.Second)
 }

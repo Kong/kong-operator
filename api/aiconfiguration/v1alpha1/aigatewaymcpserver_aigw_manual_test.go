@@ -145,7 +145,8 @@ func TestAIGatewayMCPServer_ToAIGWMCPServer(t *testing.T) {
 						Method:      "GET",
 						Path:        "/flights",
 						Annotations: AIGatewayMCPToolAnnotations{Title: "Search flights", DestructiveHint: "Disabled"},
-						Headers:     AIGatewayMCPToolHeaders{"x-tenant": "acme"},
+						Headers:     AIGatewayMCPToolHeaders{Raw: []byte(`{"x-tenant":"acme"}`)},
+						RequestBody: AIGatewayMCPToolRequestBody{Raw: []byte(`{"content":{"application/json":{"schema":{"type":"object"}}}}`)},
 						Parameters: []AIGatewayMCPToolParameter{{
 							Name:     "date",
 							In:       "query",
@@ -181,6 +182,7 @@ tools:
   path: /flights
   annotations: {title: Search flights, destructive_hint: false}
   headers: {x-tenant: acme}
+  request_body: {"content": {"application/json": {"schema": {"type": "object"}}}}
   parameters:
   - name: date
     in: query

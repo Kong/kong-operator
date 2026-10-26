@@ -52,6 +52,20 @@ a rule on an optional field is skipped when that field is removed, and a normal
 transition rule is also skipped when it is re-added without an old value.
 `_description` replaces the OAS description of one of `spec.apiSpec`'s direct
 fields, e.g. when it describes Konnect behavior that doesn't hold for the CR.
+Field markers also apply to configured reference arrays: use `+listType=atomic`
+when reference order is significant. Required reference arrays preserve an
+explicit empty list during JSON serialization.
+`cel.spec._validations` and `cel.spec.apiSpec._validations` can include
+`+required` to require those containers instead of their default `+optional`.
+Requiredness overrides replace the opposite marker rather than emitting both.
+
+A `references` entry can set `resolverMethod` to a hand-written CR method taking
+`(context.Context, client.Client)` and returning the generated resolver's result
+shape and an error. For example, `resolverMethod: ResolveValidatedPolicyIDs`
+lets one reference list apply stricter readiness and parent checks consistently
+in `ResolveKonnectReferences` and both SDK converters. The method must validate
+every reference and preserve order and explicit empty lists. Entries without
+this setting retain the default generated resolution.
 
 `dataSources` lets a field be provided inline or read from a Kubernetes
 object in the same (or, for Secrets, a granted) namespace. The field becomes a
@@ -94,6 +108,12 @@ with accessor `Portal`), the heuristic will pick the entity name and emit
 `KongPortalRef*` rather than `PortalRef*`. When that conflicts with an
 existing convention, prefer to align the OAS accessor alias instead of layering
 overrides here.
+
+Entities that accept an `OnPremEventGateway` parent, and transitively their
+children, are registered with the on-prem Event Gateway controller by default.
+Set `reconciler.skipOnPremEventGateway: true` for a Konnect-only entity to omit
+its on-prem watches, indexes, CRD checks and RBAC without affecting Konnect wiring.
+Descendants cannot inherit on-prem registration through an excluded entity.
 
 ### `ops.getForUID`
 

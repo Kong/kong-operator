@@ -94,13 +94,16 @@ spec:
                   - message: Only KongConsumer, KongConsumerGroup, KongRoute, KongCertificate,
                       KongCACertificate, KongDataPlaneClientCertificate, KongService,
                       KongUpstream, KongTarget, KongKey, KongKeySet, KongVault, KongPluginBinding,
-                      KongSNI and EventGatewayStaticKey kinds are supported for 'configuration.konghq.com'
-                      group
+                      KongSNI, EventGatewayStaticKey, EventGatewayBackendCluster,
+                      EventGatewaySchemaRegistry, EventGatewayTLSTrustBundle and EventGatewayListenerPolicy
+                      kinds are supported for 'configuration.konghq.com' group
                     rule: self.group != 'configuration.konghq.com' || self.kind in
                       [ 'KongConsumer', 'KongConsumerGroup', 'KongRoute', 'KongService',
                       'KongCertificate', 'KongCACertificate', 'KongDataPlaneClientCertificate',
                       'KongUpstream', 'KongTarget', 'KongKey', 'KongKeySet', 'KongVault',
-                      'KongPluginBinding', 'KongSNI', 'EventGatewayStaticKey']
+                      'KongPluginBinding', 'KongSNI', 'EventGatewayStaticKey', 'EventGatewayBackendCluster',
+                      'EventGatewaySchemaRegistry', 'EventGatewayTLSTrustBundle',
+                      'EventGatewayListenerPolicy']
                   - message: Only GatewayConfiguration kind is supported for 'gateway-operator.konghq.com'
                       group
                     rule: self.group != 'gateway-operator.konghq.com' || self.kind

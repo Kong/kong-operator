@@ -33,6 +33,19 @@ routes:
       - http
       - https
     strip_path: false
+  - id: 2384fe9d-eacc-5ac2-ae4c-4752cc597f81
+    name: openai-chat-2
+    service:
+      id: 947a4e23-b483-5a65-8165-da9aed24565b
+    paths:
+      - /semantic-chat/chat/completions
+    methods:
+      - POST
+      - OPTIONS
+    protocols:
+      - http
+      - https
+    strip_path: false
   - id: 77e290f3-691b-5947-9fde-2c43467d8624
     name: mock-mcp-server-route
     service:
@@ -145,7 +158,62 @@ plugins:
       id: 8ae36805-da7a-55b9-b056-72bde6bb937d
     model:
       id: 8cbafe44-dc26-57b9-9eb0-37630f9efe9d
-  - id: 9138d02e-1882-5112-9a78-5bf6fb81a761
+  - id: dcebfb31-cc0f-5469-b6d7-9d8807a4e8d2
+    name: ai-model-selector
+    config:
+      max_request_body_size: 8388608
+      sources:
+        - body_path: model
+          source: body
+    route:
+      id: 2384fe9d-eacc-5ac2-ae4c-4752cc597f81
+  - id: 75ff22ed-6245-594b-895f-6a9fa36f4581
+    name: ai-proxy-advanced
+    config:
+      balancer:
+        algorithm: semantic
+        slots: 10000
+      embeddings:
+        auth:
+          allow_override: true
+          header_name: apikey
+          header_value: test-ai-gateway-key
+        model:
+          name: text-embedding-3-small
+          provider: openai
+      genai_category: text/generation
+      llm_format: openai
+      targets:
+        - auth:
+            header_name: apikey
+            header_value: test-ai-gateway-key
+          description: qwen2.5:0.5b
+          logging:
+            log_payloads: false
+            log_statistics: true
+          model:
+            model_alias: mock-semantic-model
+            name: qwen2.5:0.5b
+            options:
+              upstream_url: http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/provider-a
+            provider: openai
+          route_type: llm/v1/chat
+      vectordb:
+        dimensions: 1536
+        distance_metric: cosine
+        pgvector:
+          database: kong-pgvector
+          host: pgvector.example.com
+          password: pgvector-password
+          port: 5432
+          ssl: true
+        strategy: pgvector
+        threshold: 0.7
+    route:
+      id: 2384fe9d-eacc-5ac2-ae4c-4752cc597f81
+    model:
+      id: 714889d8-0b23-5657-9672-0ebbfa7e5574
+  - id: 351b19c1-1c2e-50df-864f-815aac3b5e20
     name: rate-limiting
     config:
       minute: 5
@@ -153,13 +221,13 @@ plugins:
       id: 8ae36805-da7a-55b9-b056-72bde6bb937d
     model:
       id: 8cbafe44-dc26-57b9-9eb0-37630f9efe9d
-  - id: f2f251ef-e7b5-558f-8ef6-c380179a1b8f
+  - id: a65f789a-70c0-5107-9ee9-d927e92b799b
     name: mock-custom-policy
     route:
       id: 8ae36805-da7a-55b9-b056-72bde6bb937d
     model:
       id: 8cbafe44-dc26-57b9-9eb0-37630f9efe9d
-  - id: 2501ef6b-218c-5327-ad93-4df6a2133531
+  - id: 509b86a4-d650-5125-8f69-105b25bd0f9e
     name: acl
     config:
       allow:
@@ -169,10 +237,8 @@ plugins:
       id: 8ae36805-da7a-55b9-b056-72bde6bb937d
     model:
       id: 8cbafe44-dc26-57b9-9eb0-37630f9efe9d
-  - id: e3755ad8-2dec-569d-9f27-e233721c6b8e
+  - id: 14b95fe8-855a-59e8-ac9d-18e05903fca5
     name: key-auth
-    config:
-      anonymous: anonymous
     route:
       id: 8ae36805-da7a-55b9-b056-72bde6bb937d
 custom_plugins:
@@ -227,6 +293,8 @@ snis:
 ai_models:
   - id: 8cbafe44-dc26-57b9-9eb0-37630f9efe9d
     name: mock-model
+  - id: 714889d8-0b23-5657-9672-0ebbfa7e5574
+    name: mock-semantic-model
 keyauth_credentials:
   - id: cc565257-cd08-50a5-8ccd-0701249cc2de
     key: s3cr3t

@@ -20,24 +20,25 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 
-	"k8s.io/apimachinery/pkg/api/equality"
+	"github.com/google/uuid"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
-	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
-	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
 // onPremEventGatewayGVK is the GroupVersionKind of OnPremEventGateway.
@@ -98,13 +99,7 @@ func onPremEventGatewayOf(ctx context.Context, cl client.Client, obj client.Obje
 		if ref.Type != commonv1alpha1.ObjectRefTypeNamespacedRef || ref.NamespacedRef == nil {
 			return types.NamespacedName{}, false, nil
 		}
-		parentNN := types.NamespacedName{
-			Namespace: entity.GetNamespace(),
-			Name:      ref.NamespacedRef.Name,
-		}
-		if ns := ref.NamespacedRef.Namespace; ns != nil && *ns != "" {
-			parentNN.Namespace = *ns
-		}
+		parentNN := refKey(entity, ref.NamespacedRef.Namespace, ref.NamespacedRef.Name)
 
 		parentGVK := entity.GetParentGVK()
 		if parentGVK == onPremEventGatewayGVK {
@@ -165,31 +160,10 @@ func onPremEventGatewaysIn(ctx context.Context, cl client.Client, namespaces ...
 	return requests
 }
 
-// gwAdminServingChanged lets through the changes of a GWAdmin its gateways
-// read: whether it is being deleted, and the API it publishes.
-func gwAdminServingChanged() predicate.Funcs {
-	return predicate.Funcs{UpdateFunc: func(e event.UpdateEvent) bool {
-		oldGW, okOld := e.ObjectOld.(*operatorv1alpha1.GWAdmin)
-		newGW, okNew := e.ObjectNew.(*operatorv1alpha1.GWAdmin)
-		if !okOld || !okNew {
-			return true
-		}
-		return oldGW.DeletionTimestamp.IsZero() != newGW.DeletionTimestamp.IsZero() ||
-			!equality.Semantic.DeepEqual(oldGW.Status.API, newGW.Status.API)
-	}}
-}
-
-// mapGWAdminToOnPremEventGateways returns a MapFunc that enqueues the
-// OnPremEventGateways that reference the GWAdmin.
-func mapGWAdminToOnPremEventGateways(cl client.Client) handler.MapFunc {
-	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		return requestsForGWAdmin(ctx, cl, client.ObjectKeyFromObject(obj))
-	}
-}
-
 // mapKongReferenceGrantToOnPremEventGateways returns a MapFunc that enqueues
-// the OnPremEventGateways the KongReferenceGrant may allow to use their
-// GWAdmin: those of the namespaces it grants that reference a GWAdmin of its
+// the OnPremEventGateways the KongReferenceGrant may concern: those of the
+// namespaces it grants that reference a GWAdmin of its namespace, and those
+// of the namespaces whose entities it allows to read Secrets of its
 // namespace. The other gateways don't depend on it.
 func mapKongReferenceGrantToOnPremEventGateways(cl client.Client) handler.MapFunc {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
@@ -210,38 +184,89 @@ func mapKongReferenceGrantToOnPremEventGateways(cl client.Client) handler.MapFun
 				}
 			}
 		}
+		// An entity is in the namespace of its gateway (see
+		// configuration.entityID).
+		return append(requests, onPremEventGatewaysIn(ctx, cl, namespacesGrantedSecrets(grant)...)...)
+	}
+}
+
+// namespacesGrantedSecrets returns the namespaces whose entities the
+// KongReferenceGrant allows to read Secrets of its namespace.
+func namespacesGrantedSecrets(grant *configurationv1alpha1.KongReferenceGrant) []string {
+	if !slices.ContainsFunc(grant.Spec.To, func(to configurationv1alpha1.ReferenceGrantTo) bool {
+		return to.Group == "core" && to.Kind == "Secret"
+	}) {
+		return nil
+	}
+	var namespaces []string
+	for _, from := range grant.Spec.From {
+		ns := string(from.Namespace)
+		if _, ok := entityGroupKinds[schema.GroupKind{Group: string(from.Group), Kind: string(from.Kind)}]; ok &&
+			ns != grant.Namespace && !slices.Contains(namespaces, ns) {
+			namespaces = append(namespaces, ns)
+		}
+	}
+	return namespaces
+}
+
+// secretReaders are the kinds of entity reading values from Secrets: the
+// index field of the Secrets they read, and a list of the kind.
+var secretReaders = []struct {
+	field string
+	list  func() client.ObjectList
+}{
+	{index.IndexFieldEventGatewayBackendClusterOnSecretRef, func() client.ObjectList { return &configurationv1alpha1.EventGatewayBackendClusterList{} }},
+	{index.IndexFieldEventGatewayListenerPolicyOnSecretRef, func() client.ObjectList { return &configurationv1alpha1.EventGatewayListenerPolicyList{} }},
+	{index.IndexFieldEventGatewaySchemaRegistryOnSecretRef, func() client.ObjectList { return &configurationv1alpha1.EventGatewaySchemaRegistryList{} }},
+	{index.IndexFieldEventGatewayStaticKeyOnSecretRef, func() client.ObjectList { return &configurationv1alpha1.EventGatewayStaticKeyList{} }},
+	{index.IndexFieldEventGatewayTLSTrustBundleOnSecretRef, func() client.ObjectList { return &configurationv1alpha1.EventGatewayTLSTrustBundleList{} }},
+}
+
+// mapSecretToOnPremEventGateways returns a MapFunc that enqueues the
+// OnPremEventGateways of the entities reading the Secret: one created, e.g.
+// one they were left out for, or changed, e.g. a key rotated, is pushed to
+// gw-admin.
+func mapSecretToOnPremEventGateways(cl client.Client) handler.MapFunc {
+	toGateway := mapEntityToOnPremEventGateway(cl)
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		var requests []reconcile.Request
+		for _, reader := range secretReaders {
+			list := reader.list()
+			var items []runtime.Object
+			err := cl.List(ctx, list, client.MatchingFields{reader.field: client.ObjectKeyFromObject(obj).String()})
+			if err == nil {
+				items, err = apimeta.ExtractList(list)
+			}
+			if err != nil {
+				ctrl.LoggerFrom(ctx).Error(err, "failed to list the entities reading a Secret", "secret", client.ObjectKeyFromObject(obj), "type", fmt.Sprintf("%T", list))
+				continue
+			}
+			for _, item := range items {
+				entity, ok := item.(client.Object)
+				if !ok {
+					continue
+				}
+				for _, req := range toGateway(ctx, entity) {
+					if !slices.Contains(requests, req) {
+						requests = append(requests, req)
+					}
+				}
+			}
+		}
 		return requests
 	}
 }
 
-// mapEndpointSliceToOnPremEventGateways returns a MapFunc that enqueues the
-// OnPremEventGateways that reference the GWAdmin whose API Service the
-// EndpointSlice belongs to.
-func mapEndpointSliceToOnPremEventGateways(cl client.Client) handler.MapFunc {
+// mapGatewayToGatewaysOfItsGWAdmin returns a MapFunc that enqueues the
+// OnPremEventGateways that reference the GWAdmin of the gateway.
+func mapGatewayToGatewaysOfItsGWAdmin(cl client.Client) handler.MapFunc {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		gwAdmin, ok := gwAdminOfEndpointSlice(obj)
+		gateway, ok := obj.(*eventgatewayv1alpha1.OnPremEventGateway)
 		if !ok {
 			return nil
 		}
-		return requestsForGWAdmin(ctx, cl, gwAdmin)
+		return requestsForGWAdmin(ctx, cl, gateway.GWAdminKey())
 	}
-}
-
-// gwAdminOfEndpointSlice returns the GWAdmin whose API Service the
-// EndpointSlice belongs to, by its labels, and false when it belongs to no
-// API Service of a GWAdmin.
-func gwAdminOfEndpointSlice(obj client.Object) (client.ObjectKey, bool) {
-	labels := obj.GetLabels()
-	name := labels[consts.GatewayOperatorManagedByNameLabel]
-	if name == "" {
-		return client.ObjectKey{}, false
-	}
-	for k, v := range apiEndpointSliceLabels(name) {
-		if labels[k] != v {
-			return client.ObjectKey{}, false
-		}
-	}
-	return client.ObjectKey{Namespace: obj.GetNamespace(), Name: name}, true
 }
 
 // requestsForGWAdmin returns a request for each OnPremEventGateway that
@@ -257,4 +282,33 @@ func requestsForGWAdmin(ctx context.Context, cl client.Client, gwAdmin client.Ob
 		requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(&gateways[i])})
 	}
 	return requests
+}
+
+// expectedGateways returns the ids of the gateways the gw-admin of the gateway
+// must serve: every OnPremEventGateway allowed to use the GWAdmin, in any
+// namespace, not being deleted, and whose UID is a version 4 UUID. gw-admin
+// replaces the whole set on every call.
+func expectedGateways(ctx context.Context, cl client.Client, gateway *eventgatewayv1alpha1.OnPremEventGateway) ([]uuid.UUID, error) {
+	gateways, err := gwadminref.GatewaysOf(ctx, cl, gateway.GWAdminKey())
+	if err != nil {
+		return nil, err
+	}
+	gateways, err = gwadminref.GatewaysAllowedToUse(ctx, cl, gateway.GWAdminKey(), gateways)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]uuid.UUID, 0, len(gateways))
+	for i := range gateways {
+		g := &gateways[i]
+		if !g.DeletionTimestamp.IsZero() {
+			continue
+		}
+		id, ok := uidV4(g)
+		if !ok {
+			continue
+		}
+		ids = append(ids, id)
+	}
+	slices.SortFunc(ids, func(a, b uuid.UUID) int { return strings.Compare(a.String(), b.String()) })
+	return ids, nil
 }

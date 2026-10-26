@@ -61,7 +61,7 @@ func EventGatewaySchemaRegistryReconciliationWatchOptions(
 			return b.Watches(
 				&corev1.Secret{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectsForSecretRef[configurationv1alpha1.EventGatewaySchemaRegistryList](cl),
+					enqueueObjectsForSecretRef[configurationv1alpha1.EventGatewaySchemaRegistryList](cl, index.IndexFieldEventGatewaySchemaRegistryOnSecretRef),
 				),
 			)
 		},

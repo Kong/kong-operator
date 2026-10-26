@@ -139,3 +139,100 @@ objects reference it. This includes unprogrammed and terminating children.
 Deleting the last child triggers reconciliation and unblocks parent deletion.
 An invalid reference to a policy that is not a schema-validation policy in
 Konnect does not block deletion, since that policy cannot have remote children.
+
+## Cluster policy-chain API
+
+`EventGatewayVirtualClusterPolicyChain` declares the execution order of all
+cluster-level policies in one `EventGatewayVirtualCluster`. A chain corresponds
+to an execution scope, not a policy subtype: the same chain can include ACL
+and request-validation policies.
+The resource defines singleton configuration on its parent, not an independent
+Konnect entity. `spec.eventGatewayVirtualClusterRef` must use `namespacedRef` and
+cannot change, even before programming. To manage another virtual cluster,
+create a new chain CR.
+
+`spec`, `spec.apiSpec`, and `spec.apiSpec.policies` must be supplied explicitly.
+Each list entry references an `EventGatewayVirtualClusterPolicy` CR by `name`,
+with optional `kind` and `namespace`. An omitted namespace defaults to the chain's
+namespace; explicitly specifying the same namespace is allowed. Cross-namespace
+references are not supported, and every policy must reference the same virtual
+cluster as the chain. List order, not resource names or YAML document order,
+determines execution order. See the
+[complete example](../config/samples/konnect_eventgateway_virtualcluster_policy_chain.yaml).
+
+The API models complete-set reordering: reference every existing cluster-level
+policy exactly once. An explicit `policies: []` is meaningful only when there
+are no policies; it is not a request to clear an existing chain. Omitted and
+null lists are invalid. Newly created policies must be added to the declaration,
+and deleted policies must be removed.
+
+Backend validation against `eu.api.konghq.tech` on 2026-10-22 confirmed that
+complete permutations are accepted; partial lists, duplicates, unknown IDs, and
+empty lists for nonempty chains are rejected without changing the remote chain.
+Missing and null policy lists were also rejected. Duplicate and unknown IDs were
+rejected even when the submitted list had the correct number of entries.
+New policies were appended to the existing order, and deleted policies were
+removed without reordering the remaining policies. This is evidence from the
+tested development backend, not a guarantee for every production version.
+The SDK v0.73.1 OAS does not declare a policy-count maximum; successful reordering
+of 16 distinct policies does not establish an upper limit.
+
+A separate probe against `eu.api.konghq.tech` on 2026-10-25 created an isolated
+gateway, backend cluster, and fresh virtual cluster with no policies. Before any
+chain PUT, three consecutive chain GETs returned `200 {"policies":[]}`. An initial
+PUT of `{"policies":[]}` and the subsequent GET also returned `200 {"policies":[]}`.
+A chain GET for a nonexistent virtual cluster returned `404`. All temporary
+resources were deleted and their absence confirmed. This observation is specific
+to the tested development backend: a GET error, including `404`, remains an error
+and must not be interpreted as an empty chain or bypass the complete-set guard.
+
+The shared status structure is retained for compatibility with the operator's
+Konnect interfaces, but `status.id` must remain unset: there is no independent
+chain ID. Conditions, organization/server information, and parent IDs describe
+the observed state instead.
+
+### Konnect reconciliation
+
+Each reference must identify a distinct, programmed cluster-level policy in
+the same namespace and virtual cluster. The declared order is preserved.
+Missing, deleting, unready, wrong-kind, wrong-parent, cross-namespace, or
+duplicate references prevent programming; the controller never skips an
+invalid reference to apply a shortened chain. The parent reference is immutable.
+The validated, ordered policy IDs are reused by the apply operation within the
+same reconciliation, and references are resolved again on the next reconciliation.
+Operations invoked without that result resolve and validate the references
+themselves; the result is not persisted or cached across reconciliations.
+
+The controller deliberately supports **complete-set reordering only**. Before
+each apply, it GETs the remote chain and requires the desired IDs to be a complete
+permutation of that set, then checks that the PUT response matches the requested
+order. It cannot reorder a chain containing policies that cannot be resolved
+from its Kubernetes references.
+These conservative controller restrictions match the development backend
+observations above; they do not depend on every backend version enforcing them.
+GET and PUT are not an atomic transaction: avoid concurrent out-of-band changes
+to the policy set. No policy-count limit is imposed by this controller; the
+backend's actual maximum remains unknown.
+
+The first chain to claim the parent owns it, recorded in the parent annotation
+`gateway-operator.konghq.com/cluster-policy-chain-owner`. A competing chain reports
+`PolicyChainOwnerValid=False` with reason `ConflictingChain`; it does not write
+the remote chain. Delete the owning chain before replacing it.
+Malformed ownership annotations and claims whose owner no longer exists or has
+been recreated with a different UID are treated as stale and can be replaced.
+Conflicting chains retry at the configured Konnect sync period; parent changes
+also enqueue them so ownership can be claimed promptly after release.
+
+Reconciliation runs periodically to correct ordering drift. Policy changes and
+recreation enqueue referencing chains and invalidate unready references; a
+successful chain applies the latest policy IDs on its next configured sync.
+If the remote set and declared references differ, `Programmed=False` explains
+the complete-set restriction until they match.
+
+Deleting the chain CR releases ownership and stops management. It preserves the
+remote chain and all policy objects, even if authentication or referenced policies
+are no longer available; it does not PUT an empty list or delete policies.
+
+This controller supports Konnect only. Policy chains are not registered with
+the on-prem Event Gateway controller; on-prem ordering and gw-admin application
+are outside this layer's scope.

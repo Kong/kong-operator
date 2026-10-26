@@ -178,6 +178,18 @@ linters:
         path: api/common/v1alpha1/references.go
         text: 'optionalorrequired: field .* must be marked as optional or required'
 
+      # NOTE: CredentialTranslation is a plain Go helper type (kubebuilder:object:generate=false),
+      # the result of translating one credential, not a serializable API type: it is never stored
+      # in an API object, so its fields intentionally carry no json tags or optional markers.
+      - linters:
+          - kubeapilinter
+        path: api/aiconfiguration/v1alpha1/aigatewayconsumer_aigw_manual.go
+        text: 'jsontags: field CredentialTranslation\..* is missing json tag'
+      - linters:
+          - kubeapilinter
+        path: api/aiconfiguration/v1alpha1/aigatewayconsumer_aigw_manual.go
+        text: 'optionalorrequired: field CredentialTranslation\..* must be marked as optional or required'
+
       # NOTE: non user facing API types.
       - linters:
           - kubeapilinter

@@ -150,6 +150,12 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 	}
 	ctx = ctrllog.IntoContext(ctx, logger)
 
+	// Retaining a cluster policy chain must not depend on live authentication,
+	// parent readiness, or policy references.
+	if chain, ok := any(ent).(*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain); ok && !chain.DeletionTimestamp.IsZero() {
+		return finalizePolicyChain(ctx, r.Client, chain)
+	}
+
 	// Entities referencing a gateway the Konnect reconciler does not manage,
 	// e.g. an OnPremEventGateway, are kept out of its work queue by the watch
 	// predicates and map functions. This covers any other way they could be
@@ -718,7 +724,8 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 	// Handle type specific operations and stop reconciliation if needed.
 	// This can happen for instance when KongConsumer references credentials Secrets
 	// that do not exist or populate some Status fields based on Konnect API.
-	if stop, res, err := handleTypeSpecific(ctx, sdk, r.Client, ent); err != nil {
+	ctx, stop, res, err = handleTypeSpecific(ctx, sdk, r.SyncPeriod, r.Client, ent)
+	if err != nil {
 		// If the error was a network error, handle it here, there's no need to proceed,
 		// as no state has changed.
 		// Status conditions are updated in handleOpsErr.

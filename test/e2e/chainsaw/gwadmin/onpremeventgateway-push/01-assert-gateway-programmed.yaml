@@ -1,0 +1,25 @@
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: OnPremEventGateway
+metadata:
+  name: ($gateway_name)
+  # Absent until the first reconcile: an empty list keeps the assertion
+  # retrying instead of failing on a missing field.
+  (contains(finalizers || `[]`, 'gateway-operator.konghq.com/onprem-eventgateway-gw-admin-cleanup')): true
+status:
+  # Absent until the first reconcile: an empty string keeps the assertion
+  # retrying instead of failing on a missing field.
+  (starts_with(serverURL || '', join('', ['https://', ($gwadmin_name), '-cp.', ($namespace), '.svc']))): true
+  # The configuration of the gateway, recorded once before its first push,
+  # never changes: its entities aren't pushed yet.
+  configRevision: 1
+  (starts_with(configHash || '', 'sha256:')): true
+  (conditions[?type == 'GWAdminResolved']):
+    - status: "True"
+      reason: Resolved
+  (conditions[?type == 'ConfigurationPushed']):
+    - status: "True"
+      reason: ConfigurationPushed
+      message: Pushed to 1 gw-admin pod
+  (conditions[?type == 'Programmed']):
+    - status: "True"
+      reason: Programmed

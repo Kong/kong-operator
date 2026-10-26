@@ -18,6 +18,7 @@ import (
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	aigwonprem "github.com/kong/kong-operator/v2/controller/aigateway/onprem"
 	"github.com/kong/kong-operator/v2/controller/crdschema"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
@@ -50,7 +51,7 @@ func TestOnPremAIGatewayReconciler_BecomesReady(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := create.ClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "onprem-aigw-cluster-ca")
+	clusterCA := create.ClusterCASecret(t, ctx, envtest.NewControllerClient(t, scheme.Get(), cfg), ns.Name, "onprem-aigw-cluster-ca")
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
 	require.NoError(t, err)
@@ -125,8 +126,8 @@ func TestOnPremAIGatewayReconciler_BecomesReady(t *testing.T) {
 // control plane instance so that it re-renders the gateway's configuration document. It also
 // verifies that deleting the model notifies the instance with the parent gateway reference
 // that the reconciler stored in its cache, and that a change to an AIGatewayConsumerCredential
-// - which has no controller of its own, its rendered form living in the parent consumer's
-// document - is mapped to its parent consumer and notifies the instance through it.
+// - whose rendered form lives in the parent consumer's document, so that the consumer must
+// re-render it - is mapped to its parent consumer and notifies the instance through it.
 func TestOnPremAIGatewayReconciler_ConfigTracksEntities(t *testing.T) {
 	t.Parallel()
 
@@ -140,7 +141,7 @@ func TestOnPremAIGatewayReconciler_ConfigTracksEntities(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := create.ClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "onprem-aigw-models-cluster-ca")
+	clusterCA := create.ClusterCASecret(t, ctx, envtest.NewControllerClient(t, scheme.Get(), cfg), ns.Name, "onprem-aigw-models-cluster-ca")
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
 	require.NoError(t, err)
@@ -320,8 +321,9 @@ func TestOnPremAIGatewayReconciler_ConfigTracksEntities(t *testing.T) {
 		assert.Zero(ct, countSendFailures())
 	}, waitTime, tickTime)
 
-	// The credential has no controller of its own: its rendered form lives in the consumer's
-	// document, so the consumer is what the credential's watch must re-reconcile. The
+	// The credential's own controller only writes its Programmed condition and never feeds
+	// the ChangeNotifier: its rendered form lives in the consumer's document, so the consumer
+	// is what the credential's watch must re-reconcile. The
 	// consumer's own notifications must have stopped by now, otherwise they cannot be told
 	// apart from the credential's. The consumer's burst is a chain of reconciles, each
 	// waiting on a sync or a status update round-trip, so it can outlast the model steps
@@ -378,6 +380,23 @@ func TestOnPremAIGatewayReconciler_ConfigTracksEntities(t *testing.T) {
 		assert.Greater(ct, countConsumerNotifications(), settled)
 		assert.Zero(ct, countSendFailures())
 	}, waitTime, tickTime)
+
+	// The credential reports its own configuration status: its outcome is reported by the
+	// consumer's translation and written onto the credential by its own reconciler, so it is
+	// no longer only visible on the consumer. This gateway has no data plane, so the push is
+	// skipped and the credential is reported as failed, like every other entity here.
+	t.Log("Expecting the credential's own Programmed condition to be reported")
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(credential), credential)) {
+			return
+		}
+		cond := apimeta.FindStatusCondition(credential.Status.Conditions, string(configurationv1.ConditionProgrammed))
+		if !assert.NotNil(ct, cond) {
+			return
+		}
+		assert.Equal(ct, metav1.ConditionFalse, cond.Status)
+		assert.Equal(ct, credential.Generation, cond.ObservedGeneration)
+	}, waitTime, tickTime)
 }
 
 // onPremConsumer returns an AIGatewayConsumer in namespace ns targeting the OnPremAIGateway
@@ -424,7 +443,7 @@ func TestOnPremAIGatewayReconciler_PreservesInstanceOwnedCondition(t *testing.T)
 	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := create.ClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "onprem-aigw-instance-cond-cluster-ca")
+	clusterCA := create.ClusterCASecret(t, ctx, envtest.NewControllerClient(t, scheme.Get(), cfg), ns.Name, "onprem-aigw-instance-cond-cluster-ca")
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
 	require.NoError(t, err)
@@ -604,7 +623,7 @@ func TestOnPremAIGatewayReconciler_ObjectFilters(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := create.ClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "onprem-aigw-cluster-ca")
+	clusterCA := create.ClusterCASecret(t, ctx, envtest.NewControllerClient(t, scheme.Get(), cfg), ns.Name, "onprem-aigw-cluster-ca")
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
 	require.NoError(t, err)
