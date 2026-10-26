@@ -28,6 +28,7 @@ import (
 // handleTypeSpecific handles type-specific logic for Konnect entities.
 // These include e.g.:
 // - checking KongConsumer's credential secret refs.
+// The returned context carries references resolved for this reconciliation.
 func handleTypeSpecific[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
@@ -37,7 +38,7 @@ func handleTypeSpecific[
 	syncPeriod time.Duration,
 	cl client.Client,
 	ent TEnt,
-) (bool, ctrl.Result, error) {
+) (context.Context, bool, ctrl.Result, error) {
 	var (
 		updated   bool
 		isProblem bool
@@ -45,14 +46,23 @@ func handleTypeSpecific[
 		err       error
 	)
 
-	if resolver, ok := any(ent).(konnectReferenceResolver); ok {
+	resolver, hasReferences := any(ent).(konnectReferenceResolver)
+	var chainResolver *policyChainReferenceResolver
+	if chain, ok := any(ent).(*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain); ok {
+		chainResolver = &policyChainReferenceResolver{EventGatewayVirtualClusterPolicyChain: chain}
+		resolver, hasReferences = chainResolver, true
+	}
+	if hasReferences {
 		refUpdated, refProblem, refRes, err := handleKonnectReferences(ctx, cl, ent, resolver)
 		if err != nil {
-			return false, ctrl.Result{}, err
+			return ctx, false, ctrl.Result{}, err
 		}
 		if !refRes.IsZero() {
 			// Requeue before any SDK calls; the cached object is stale.
-			return false, refRes, nil
+			return ctx, false, refRes, nil
+		}
+		if chainResolver != nil && !refProblem {
+			ctx = ops.WithResolvedPolicyChainIDs(ctx, chainResolver.EventGatewayVirtualClusterPolicyChain, chainResolver.policyIDs)
 		}
 		updated = updated || refUpdated
 		isProblem = isProblem || refProblem
@@ -63,7 +73,7 @@ func handleTypeSpecific[
 		if !isProblem {
 			owned, res, err := claimPolicyChain(ctx, cl, e, syncPeriod)
 			if err != nil || !res.IsZero() || !owned {
-				return true, res, err
+				return ctx, true, res, err
 			}
 		}
 	case *configurationv1.KongConsumer:
@@ -73,7 +83,7 @@ func handleTypeSpecific[
 	case *konnectv1alpha2.KonnectGatewayControlPlane:
 		u, err := handleKonnectGatewayControlPlaneSpecific(ctx, sdk, e)
 		if err != nil {
-			return false, ctrl.Result{}, err
+			return ctx, false, ctrl.Result{}, err
 		}
 		updated = updated || u
 	default:
@@ -83,7 +93,7 @@ func handleTypeSpecific[
 		res, err = patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, cl, ent)
 	}
 
-	return isProblem, res, err
+	return ctx, isProblem, res, err
 }
 
 func handleKonnectGatewayControlPlaneSpecific(

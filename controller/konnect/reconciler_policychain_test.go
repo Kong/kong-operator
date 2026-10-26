@@ -3,9 +3,12 @@ package konnect
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -21,6 +24,7 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	"github.com/kong/kong-operator/v2/controller/konnect/ops"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -39,6 +43,124 @@ func testPolicyChain(name string) *configurationv1alpha1.EventGatewayVirtualClus
 			},
 		},
 	}
+}
+
+func TestPolicyChainReconcileResolvesReferencesOnce(t *testing.T) {
+	t.Parallel()
+	ctx := t.Context()
+	chain := testPolicyChain("chain")
+	chain.Spec.APISpec.Policies = []configurationv1alpha1.EventGatewayVirtualClusterPolicyRef{{Name: "second"}, {Name: "first"}}
+	policies := make([]client.Object, 0, 2)
+	for _, name := range []string{"first", "second"} {
+		policy := &configurationv1alpha1.EventGatewayVirtualClusterPolicy{
+			Name: name, Namespace: chain.Namespace, Generation: 1,
+			Spec: configurationv1alpha1.EventGatewayVirtualClusterPolicySpec{
+				EventGatewayVirtualClusterRef: chain.Spec.EventGatewayVirtualClusterRef,
+			},
+		}
+		policy.SetKonnectID(name + "-id")
+		policy.SetGatewayID("gateway-id")
+		policy.SetVirtualClusterID("vc-id")
+		ops.SetKonnectEntityProgrammedConditionTrue(policy)
+		policies = append(policies, policy)
+	}
+	reads := make(map[string]int)
+	mapper := apimeta.NewDefaultRESTMapper([]schema.GroupVersion{configurationv1alpha1.GroupVersion, konnectv1alpha1.GroupVersion})
+	for _, kind := range []string{"EventGatewayVirtualClusterPolicyChain", "EventGatewayVirtualClusterPolicy", "EventGatewayVirtualCluster", "EventGatewayBackendCluster"} {
+		mapper.Add(configurationv1alpha1.GroupVersion.WithKind(kind), apimeta.RESTScopeNamespace)
+	}
+	for _, kind := range []string{"KonnectAPIAuthConfiguration", "KonnectEventGateway"} {
+		mapper.Add(konnectv1alpha1.GroupVersion.WithKind(kind), apimeta.RESTScopeNamespace)
+	}
+	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithRESTMapper(mapper).
+		WithStatusSubresource(chain, &configurationv1alpha1.EventGatewayVirtualClusterPolicy{},
+			&configurationv1alpha1.EventGatewayVirtualCluster{}, &konnectv1alpha1.KonnectAPIAuthConfiguration{}).
+		WithObjects(append(policies, chain)...).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+				if _, ok := obj.(*configurationv1alpha1.EventGatewayVirtualClusterPolicy); ok {
+					reads[key.Name]++
+				}
+				return cl.Get(ctx, key, obj, opts...)
+			},
+		}).Build()
+	nsClient := client.NewNamespacedClient(cl, chain.Namespace)
+	auth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, nsClient)
+	gateway := deploy.KonnectEventGateway(t, ctx, nsClient, auth)
+	backend := deploy.EventGatewayBackendCluster(t, ctx, nsClient, gateway)
+	parent := deploy.EventGatewayVirtualCluster(t, ctx, nsClient, backend, deploy.WithName("vc"))
+	parent.SetKonnectID("vc-id")
+	parent.SetGatewayID("gateway-id")
+	parent.Status.Conditions = []metav1.Condition{{Type: "Programmed", Status: metav1.ConditionTrue}}
+	require.NoError(t, cl.Status().Update(ctx, parent))
+
+	factory := sdkmocks.NewMockSDKFactory(t)
+	remote := []string{"first-id", "second-id"}
+	var applied [][]string
+	policySDK := factory.SDK.EventGatewayVirtualClusterPoliciesSDK
+	policySDK.EXPECT().GetEventGatewayVirtualClusterClusterLevelPolicyChain(mock.Anything, "gateway-id", "vc-id").
+		RunAndReturn(func(context.Context, string, string, ...sdkkonnectops.Option) (*sdkkonnectops.GetEventGatewayVirtualClusterClusterLevelPolicyChainResponse, error) {
+			return &sdkkonnectops.GetEventGatewayVirtualClusterClusterLevelPolicyChainResponse{
+				EventGatewayPolicyChainResponse: &sdkkonnectcomp.EventGatewayPolicyChainResponse{Policies: slices.Clone(remote)},
+			}, nil
+		})
+	policySDK.EXPECT().UpdateEventGatewayVirtualClusterClusterLevelPolicyChain(mock.Anything, mock.Anything).
+		RunAndReturn(func(_ context.Context, req sdkkonnectops.UpdateEventGatewayVirtualClusterClusterLevelPolicyChainRequest, _ ...sdkkonnectops.Option) (*sdkkonnectops.UpdateEventGatewayVirtualClusterClusterLevelPolicyChainResponse, error) {
+			remote = slices.Clone(req.UpdateEventGatewayPolicyChainRequest.Policies)
+			applied = append(applied, slices.Clone(remote))
+			return &sdkkonnectops.UpdateEventGatewayVirtualClusterClusterLevelPolicyChainResponse{
+				EventGatewayPolicyChainResponse: &sdkkonnectcomp.EventGatewayPolicyChainResponse{Policies: slices.Clone(remote)},
+			}, nil
+		})
+	r := NewKonnectEntityReconciler(factory, logging.DevelopmentMode, cl,
+		WithKonnectEntitySyncPeriod[configurationv1alpha1.EventGatewayVirtualClusterPolicyChain](0),
+		WithMetricRecorder[configurationv1alpha1.EventGatewayVirtualClusterPolicyChain](&metricsmocks.MockRecorder{}),
+	)
+	reconcile := func() {
+		t.Helper()
+		reads = make(map[string]int)
+		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(chain), chain))
+		chain.GetObjectKind().SetGroupVersionKind(configurationv1alpha1.GroupVersion.WithKind("EventGatewayVirtualClusterPolicyChain"))
+		_, err := r.Reconcile(ctx, chain)
+		require.NoError(t, err)
+		for name, count := range reads {
+			require.Equal(t, 1, count, "policy %s must be resolved once per reconciliation", name)
+		}
+		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(chain), chain))
+	}
+	reconcileUntilApplied := func(want []string) {
+		t.Helper()
+		before := len(applied)
+		for range 20 {
+			reconcile()
+			if len(applied) > before {
+				require.Equal(t, want, applied[len(applied)-1])
+				require.Equal(t, map[string]int{"first": 1, "second": 1}, reads)
+				require.True(t, entityHasProgrammedStatusTrue(chain))
+				return
+			}
+		}
+		t.Fatal("reconciliation did not apply the policy chain")
+	}
+	reconcileUntilApplied([]string{"second-id", "first-id"})
+
+	first := policies[0].(*configurationv1alpha1.EventGatewayVirtualClusterPolicy)
+	require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(first), first))
+	first.Generation++
+	require.NoError(t, cl.Update(ctx, first))
+	first.Status.Conditions = nil
+	require.NoError(t, cl.Status().Update(ctx, first))
+	before := len(applied)
+	reconcile()
+	require.Len(t, applied, before, "unready policy must prevent applying the chain")
+	require.True(t, apimeta.IsStatusConditionFalse(chain.Status.Conditions, commonv1alpha1.KonnectReferencesResolvedConditionType))
+	require.False(t, entityHasProgrammedStatusTrue(chain))
+
+	first.SetKonnectID("first-new-id")
+	ops.SetKonnectEntityProgrammedConditionTrue(first)
+	require.NoError(t, cl.Status().Update(ctx, first))
+	remote = []string{"first-new-id", "second-id"}
+	reconcileUntilApplied([]string{"second-id", "first-new-id"})
 }
 
 func TestPolicyChainOwnership(t *testing.T) {

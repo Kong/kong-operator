@@ -1,6 +1,7 @@
 package ops
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"testing"
@@ -14,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -35,11 +37,16 @@ func TestPolicyChainGuardedOperations(t *testing.T) {
 			nilGet     bool
 			nilPut     bool
 			invalidRef bool
+			resolved   bool
 			wantPUT    bool
 			wantErr    string
 		}{
 			{name: "reorder complete set", desired: []string{"second", "first"}, remote: []string{"first", "second"}, response: []string{"second", "first"}, wantPUT: true},
 			{name: "explicit empty remote", desired: []string{}, remote: []string{}, response: []string{}, wantPUT: true},
+			{name: "reuse resolved order", desired: []string{"second", "first"}, remote: []string{"first", "second"}, response: []string{"second", "first"}, resolved: true, wantPUT: true},
+			{name: "reuse explicit empty resolution", desired: []string{}, remote: []string{}, response: []string{}, resolved: true, wantPUT: true},
+			{name: "resolved IDs still require complete set", desired: []string{"first"}, remote: []string{"first", "second"}, resolved: true, wantErr: "complete remote cluster policy chain"},
+			{name: "nil resolution must not bypass validation", resolved: true, wantErr: "supplied explicitly"},
 			{name: "omit list", wantErr: "supplied explicitly"},
 			{name: "empty with remote policy", desired: []string{}, remote: []string{"first"}, wantErr: "complete remote cluster policy chain"},
 			{name: "partial list", desired: []string{"first"}, remote: []string{"first", "second"}, wantErr: "complete remote cluster policy chain"},
@@ -83,7 +90,20 @@ func TestPolicyChainGuardedOperations(t *testing.T) {
 					}
 					policies = append(policies, p)
 				}
-				cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(policies...).Build()
+				policyReads := 0
+				cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(policies...).
+					WithInterceptorFuncs(interceptor.Funcs{
+						Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+							if _, ok := obj.(*configurationv1alpha1.EventGatewayVirtualClusterPolicy); ok {
+								policyReads++
+							}
+							return cl.Get(ctx, key, obj, opts...)
+						},
+					}).Build()
+				ctx := t.Context()
+				if tt.resolved {
+					ctx = WithResolvedPolicyChainIDs(ctx, chain, tt.desired)
+				}
 				sdk := sdkmocks.NewMockSDKWrapperWithT(t)
 				policySDK := sdk.EventGatewayVirtualClusterPoliciesSDK
 				if tt.desired != nil && !tt.invalidRef {
@@ -112,9 +132,14 @@ func TestPolicyChainGuardedOperations(t *testing.T) {
 				}
 				var err error
 				if op == CreateOp {
-					_, err = Create(t.Context(), sdk, cl, &metricsmocks.MockRecorder{}, chain)
+					_, err = Create(ctx, sdk, cl, &metricsmocks.MockRecorder{}, chain)
 				} else {
-					_, err = Update(t.Context(), sdk, 0, cl, &metricsmocks.MockRecorder{}, chain)
+					_, err = Update(ctx, sdk, 0, cl, &metricsmocks.MockRecorder{}, chain)
+				}
+				if tt.resolved {
+					require.Zero(t, policyReads, "resolved IDs must not trigger another reference lookup")
+				} else {
+					require.Equal(t, len(tt.desired), policyReads, "standalone operations must resolve their references")
 				}
 				if tt.getErr != nil {
 					require.ErrorIs(t, err, tt.getErr)
@@ -136,6 +161,47 @@ func TestPolicyChainGuardedOperations(t *testing.T) {
 			})
 		}
 	}
+}
+
+func TestResolvedPolicyChainIDsContext(t *testing.T) {
+	t.Parallel()
+	chain := &configurationv1alpha1.EventGatewayVirtualClusterPolicyChain{
+		Name: "chain", Namespace: "default", UID: "chain-uid", Generation: 1,
+	}
+	ctx := t.Context()
+	ids := []string{"second", "first"}
+	resolvedCtx := WithResolvedPolicyChainIDs(ctx, chain, ids)
+	ids[0] = "changed"
+	got, ok := resolvedPolicyChainIDsFromContext(resolvedCtx, chain.DeepCopy())
+	require.True(t, ok)
+	require.Equal(t, []string{"second", "first"}, got)
+	_, ok = resolvedPolicyChainIDsFromContext(ctx, chain)
+	require.False(t, ok, "resolution must not escape into the original context")
+	_, ok = resolvedPolicyChainIDsFromContext(WithResolvedPolicyChainIDs(ctx, chain, nil), chain)
+	require.False(t, ok, "nil IDs are not a validated empty list")
+
+	for _, tt := range []struct {
+		name   string
+		change func(*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain)
+	}{
+		{name: "different name", change: func(c *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain) { c.Name = "other" }},
+		{name: "different namespace", change: func(c *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain) { c.Namespace = "other" }},
+		{name: "recreated chain", change: func(c *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain) { c.UID = "new-uid" }},
+		{name: "different generation", change: func(c *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain) { c.Generation++ }},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			other := chain.DeepCopy()
+			tt.change(other)
+			_, ok := resolvedPolicyChainIDsFromContext(resolvedCtx, other)
+			require.False(t, ok)
+		})
+	}
+
+	emptyCtx := WithResolvedPolicyChainIDs(ctx, chain, []string{})
+	got, ok = resolvedPolicyChainIDsFromContext(emptyCtx, chain)
+	require.True(t, ok, "an empty resolution must be distinguishable from an absent result")
+	require.NotNil(t, got)
+	require.Empty(t, got)
 }
 
 func TestPolicyChainDeleteRetainsRemoteConfiguration(t *testing.T) {

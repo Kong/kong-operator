@@ -198,6 +198,10 @@ the same namespace and virtual cluster. The declared order is preserved.
 Missing, deleting, unready, wrong-kind, wrong-parent, cross-namespace, or
 duplicate references prevent programming; the controller never skips an
 invalid reference to apply a shortened chain. The parent reference is immutable.
+The validated, ordered policy IDs are reused by the apply operation within the
+same reconciliation, and references are resolved again on the next reconciliation.
+Operations invoked without that result resolve and validate the references
+themselves; the result is not persisted or cached across reconciliations.
 
 The controller deliberately supports **complete-set reordering only**. Before
 each apply, it GETs the remote chain and requires the desired IDs to be a complete

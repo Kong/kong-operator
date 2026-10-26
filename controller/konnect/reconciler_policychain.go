@@ -20,6 +20,17 @@ import (
 
 const policyChainOwnerAnnotation = "gateway-operator.konghq.com/cluster-policy-chain-owner"
 
+type policyChainReferenceResolver struct {
+	*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain
+	policyIDs []string
+}
+
+func (r *policyChainReferenceResolver) ResolveKonnectReferences(ctx context.Context, cl client.Client) error {
+	var err error
+	r.policyIDs, err = r.ResolveValidatedPolicyIDs(ctx, cl)
+	return err
+}
+
 func policyChainOwnerClaim(chain *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain) string {
 	return chain.Name + "/" + string(chain.UID)
 }

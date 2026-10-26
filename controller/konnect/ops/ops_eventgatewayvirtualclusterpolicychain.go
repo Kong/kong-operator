@@ -8,10 +8,37 @@ import (
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
+
+type resolvedPolicyChainIDsContextKey struct {
+	key        client.ObjectKey
+	uid        types.UID
+	generation int64
+}
+
+func policyChainIDsContextKey(obj *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain) resolvedPolicyChainIDsContextKey {
+	return resolvedPolicyChainIDsContextKey{
+		key: client.ObjectKeyFromObject(obj), uid: obj.UID, generation: obj.Generation,
+	}
+}
+
+// WithResolvedPolicyChainIDs passes validated, ordered IDs to the chain operation
+// in the same reconciliation. Callers must resolve them again for each reconcile.
+func WithResolvedPolicyChainIDs(ctx context.Context, obj *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain, ids []string) context.Context {
+	if ids == nil {
+		return ctx
+	}
+	return context.WithValue(ctx, policyChainIDsContextKey(obj), slices.Clone(ids))
+}
+
+func resolvedPolicyChainIDsFromContext(ctx context.Context, obj *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain) ([]string, bool) {
+	ids, ok := ctx.Value(policyChainIDsContextKey(obj)).([]string)
+	return ids, ok
+}
 
 // applyEventGatewayVirtualClusterPolicyChain deliberately supports only reordering
 // the complete remote set. Development backend probes confirmed this constraint;
@@ -29,9 +56,13 @@ func applyEventGatewayVirtualClusterPolicyChain(
 	if obj.GetVirtualClusterID() == "" {
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "EventGatewayVirtualCluster", Op: op}
 	}
-	desired, err := obj.ResolveValidatedPolicyIDs(ctx, cl)
-	if err != nil {
-		return err
+	desired, resolved := resolvedPolicyChainIDsFromContext(ctx, obj)
+	if !resolved {
+		var err error
+		desired, err = obj.ResolveValidatedPolicyIDs(ctx, cl)
+		if err != nil {
+			return err
+		}
 	}
 	req := sdkkonnectops.UpdateEventGatewayVirtualClusterClusterLevelPolicyChainRequest{
 		GatewayID: obj.GetGatewayID(), VirtualClusterID: obj.GetVirtualClusterID(),
