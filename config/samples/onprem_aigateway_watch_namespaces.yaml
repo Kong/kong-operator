@@ -1,0 +1,73 @@
+# On-prem AI Gateway control plane that also serves configuration entities from a
+# second namespace.
+#
+# spec.watchNamespaces selects the namespaces the gateway's control plane instance
+# watches for AIGateway* configuration entities and for the Secrets they reference:
+# "own" (the default) watches only the gateway's own namespace, "list" adds the
+# listed namespaces, "all" watches every namespace and needs an operator started
+# with an empty --watch-namespaces.
+#
+# Every watched namespace outside the gateway's own needs a WatchNamespaceGrant.
+# Without it the gateway reports WatchNamespaceGrantValid=False, Ready=False, and
+# its control plane instance does not run.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-gateway-entities
+---
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: OnPremAIGateway
+metadata:
+  name: ai-gw-cp-onprem-xns
+  namespace: default
+spec:
+  # The gateway's own namespace is always watched, so "list" only adds
+  # ai-gateway-entities.
+  watchNamespaces:
+    type: list
+    list:
+      - ai-gateway-entities
+  dataplaneSync:
+    intervalSeconds: 5
+    timeoutSeconds: 3
+---
+# The ai-gateway-entities namespace owners allow OnPremAIGateways from the default
+# namespace to watch it.
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: WatchNamespaceGrant
+metadata:
+  name: ai-gw-cp-onprem-xns
+  namespace: ai-gateway-entities
+spec:
+  from:
+    - group: aigateway.konghq.com
+      kind: OnPremAIGateway
+      namespace: default
+---
+# A configuration entity that lives in the watched namespace and targets the
+# gateway in the default namespace.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayConsumer
+metadata:
+  name: ai-gw-consumer-xns
+  namespace: ai-gateway-entities
+spec:
+  aiGatewayRef:
+    namespacedRef:
+      name: ai-gw-cp-onprem-xns
+      namespace: default
+  apiSpec:
+    name: dev-consumer
+    displayName: Dev Team Consumer
+    type: api-key
+---
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: AIGatewayDataPlane
+metadata:
+  name: ai-gw-dp-onprem-xns
+  namespace: default
+spec:
+  controlPlaneRef:
+    type: onpremNamespacedRef
+    onpremNamespacedRef:
+      name: ai-gw-cp-onprem-xns
