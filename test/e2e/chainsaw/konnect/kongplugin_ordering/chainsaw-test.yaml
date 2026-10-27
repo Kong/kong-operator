@@ -1,0 +1,274 @@
+# KongPlugin dynamic ordering test.
+#
+# Verifies that KongPlugin spec.ordering reaches the Konnect plugin entity created
+# for a KongPluginBinding, that updates and removals are propagated, and that a
+# phase other than access (unsupported by Konnect) is reported on the binding.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: kongplugin-ordering
+spec:
+  description: |
+    Tests KongPlugin spec.ordering propagation to Konnect.
+
+    1. A KongPlugin with ordering before.access is bound globally to a control plane;
+       the Konnect plugin carries the same ordering.
+    2. Changing the ordering updates the Konnect plugin.
+    3. Removing the ordering clears it on the Konnect plugin.
+    4. An ordering using a phase other than access sets Programmed=False on the binding.
+
+  bindings:
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: cp_name
+      value: (join('-', [$namespace, 'cp']))
+    - name: auth_name
+      value: (join('-', [$namespace, 'konnect-api-auth']))
+    - name: plugin_name
+      value: (join('-', [$namespace, 'plugin']))
+    - name: pb_name
+      value: (join('-', [$namespace, 'pb']))
+
+  steps:
+    - name: 1-create-auth-config
+      description: Create KonnectAPIAuthConfiguration.
+      bindings:
+        - name: test_name
+          value: ($namespace)
+        - name: namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: 2-create-control-plane
+      description: Create KonnectGatewayControlPlane.
+      bindings:
+        - name: cp_namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectGatewayControlPlane.yaml
+
+    - name: 3-create-plugin-with-ordering
+      description: Create a KongPlugin that runs before key-auth in the access phase.
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1
+              kind: KongPlugin
+              metadata:
+                name: ($plugin_name)
+                namespace: ($namespace)
+              plugin: request-termination
+              config:
+                status_code: 418
+              ordering:
+                before:
+                  access:
+                    - key-auth
+
+    - name: 4-create-binding
+      description: Bind the KongPlugin globally in the control plane.
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongPluginBinding
+              metadata:
+                name: ($pb_name)
+                namespace: ($namespace)
+              spec:
+                controlPlaneRef:
+                  type: konnectNamespacedRef
+                  konnectNamespacedRef:
+                    name: ($cp_name)
+                pluginRef:
+                  name: ($plugin_name)
+                scope: GlobalInControlPlane
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongPluginBinding
+              metadata:
+                name: ($pb_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (konnect.id != null): true
+
+    - name: 5-verify-konnect-ordering
+      description: Verify the Konnect plugin carries the ordering.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: PLUGIN_REFERENCE_NAME
+                value: ($plugin_name)
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: EXPECTED_ORDERING
+                value: '{"before":{"access":["key-auth"]}}'
+            content: |
+              bash ../../common/scripts/verify_konnect_plugin_ordering.sh
+            check:
+              (json_parse($stdout).success): true
+
+    - name: 6-update-ordering
+      description: Replace the ordering with after.access and verify Konnect is updated.
+      try:
+        - patch:
+            resource:
+              apiVersion: configuration.konghq.com/v1
+              kind: KongPlugin
+              metadata:
+                name: ($plugin_name)
+                namespace: ($namespace)
+              ordering:
+                before: null
+                after:
+                  access:
+                    - rate-limiting
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: PLUGIN_REFERENCE_NAME
+                value: ($plugin_name)
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: EXPECTED_ORDERING
+                value: '{"after":{"access":["rate-limiting"]}}'
+            content: |
+              bash ../../common/scripts/verify_konnect_plugin_ordering.sh
+            check:
+              (json_parse($stdout).success): true
+
+    - name: 7-remove-ordering
+      description: Remove the ordering and verify it is cleared in Konnect.
+      try:
+        - patch:
+            resource:
+              apiVersion: configuration.konghq.com/v1
+              kind: KongPlugin
+              metadata:
+                name: ($plugin_name)
+                namespace: ($namespace)
+              ordering: null
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: PLUGIN_REFERENCE_NAME
+                value: ($plugin_name)
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: EXPECTED_ORDERING
+                value: 'null'
+            content: |
+              bash ../../common/scripts/verify_konnect_plugin_ordering.sh
+            check:
+              (json_parse($stdout).success): true
+
+    - name: 8-unsupported-phase
+      description: Set an ordering in a phase other than access and assert the binding is not Programmed.
+      try:
+        - patch:
+            resource:
+              apiVersion: configuration.konghq.com/v1
+              kind: KongPlugin
+              metadata:
+                name: ($plugin_name)
+                namespace: ($namespace)
+              ordering:
+                before:
+                  header_filter:
+                    - key-auth
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongPluginBinding
+              metadata:
+                name: ($pb_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+
+    - name: 9-restore-valid-plugin
+      description: Remove the unsupported ordering so the binding can be deprovisioned cleanly.
+      try:
+        - patch:
+            resource:
+              apiVersion: configuration.konghq.com/v1
+              kind: KongPlugin
+              metadata:
+                name: ($plugin_name)
+                namespace: ($namespace)
+              ordering: null
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongPluginBinding
+              metadata:
+                name: ($pb_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+
+    - name: 10-cleanup
+      description: Delete binding and CP in order; wait for each to be gone.
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongPluginBinding
+              name: ($pb_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongPluginBinding
+              metadata:
+                name: ($pb_name)
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                name: ($cp_name)
+                namespace: ($namespace)
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: kongplugin-ordering
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
