@@ -21,6 +21,32 @@ import (
 	referencegranthelpers "github.com/kong/kong-operator/v2/test/helpers/referencegrant"
 )
 
+func TestIsTLSPassthroughListener(t *testing.T) {
+	for _, tt := range []struct {
+		name        string
+		listener    gatewayv1.Listener
+		passthrough bool
+	}{
+		{name: "no TLS", listener: gatewayv1.Listener{Protocol: gatewayv1.TLSProtocolType}},
+		{name: "default termination", listener: gatewayv1.Listener{
+			Protocol: gatewayv1.TLSProtocolType, TLS: &gatewayv1.ListenerTLSConfig{},
+		}},
+		{name: "explicit termination", listener: gatewayv1.Listener{
+			Protocol: gatewayv1.TLSProtocolType, TLS: &gatewayv1.ListenerTLSConfig{Mode: new(gatewayv1.TLSModeTerminate)},
+		}},
+		{name: "TLS passthrough", passthrough: true, listener: gatewayv1.Listener{
+			Protocol: gatewayv1.TLSProtocolType, TLS: &gatewayv1.ListenerTLSConfig{Mode: new(gatewayv1.TLSModePassthrough)},
+		}},
+		{name: "HTTPS cannot use passthrough", listener: gatewayv1.Listener{
+			Protocol: gatewayv1.HTTPSProtocolType, TLS: &gatewayv1.ListenerTLSConfig{Mode: new(gatewayv1.TLSModePassthrough)},
+		}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.passthrough, IsTLSPassthroughListener(tt.listener))
+		})
+	}
+}
+
 func TestResolveListenerKongCertificate(t *testing.T) {
 	tests := []struct {
 		name         string

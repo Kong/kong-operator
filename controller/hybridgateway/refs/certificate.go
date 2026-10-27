@@ -32,6 +32,12 @@ func (e *ListenerCertificateRefError) Error() string {
 	return e.Message
 }
 
+// IsTLSPassthroughListener reports whether a Listener ignores certificate references.
+func IsTLSPassthroughListener(listener gatewayv1.Listener) bool {
+	return listener.Protocol == gatewayv1.TLSProtocolType && listener.TLS != nil &&
+		listener.TLS.Mode != nil && *listener.TLS.Mode == gatewayv1.TLSModePassthrough
+}
+
 // IsKongCertificateRef reports whether a Listener reference explicitly selects a KongCertificate.
 func IsKongCertificateRef(ref gatewayv1.SecretObjectReference) bool {
 	return ref.Group != nil && *ref.Group == gatewayv1.Group(configurationv1alpha1.GroupVersion.Group) &&

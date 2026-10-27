@@ -127,9 +127,9 @@ func (c *gatewayConverter) Translate(ctx context.Context, logger logr.Logger) (i
 	for i := range c.gateway.Spec.Listeners {
 		listener := &c.gateway.Spec.Listeners[i]
 
-		// Only process listeners with TLS configuration.
-		if listener.TLS == nil {
-			log.Debug(logger, "Skipping listener without TLS config", "listener", listener)
+		// Passthrough listeners ignore certificateRefs.
+		if listener.TLS == nil || refs.IsTLSPassthroughListener(*listener) {
+			log.Debug(logger, "Skipping listener without TLS termination", "listener", listener)
 			continue
 		}
 		if len(listener.TLS.CertificateRefs) > 1 && slices.ContainsFunc(listener.TLS.CertificateRefs, refs.IsKongCertificateRef) {

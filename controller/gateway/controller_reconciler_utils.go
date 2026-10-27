@@ -1692,7 +1692,7 @@ func getSupportedKindsWithResolvedRefsCondition(
 	}
 
 	message := ""
-	if listener.TLS != nil {
+	if listener.TLS != nil && !hybridgatewayrefs.IsTLSPassthroughListener(listener) {
 		// We only support Terminate for protocols other than TLS.
 		tlsMode := gatewayv1.TLSModeTerminate
 		if listener.TLS.Mode != nil {

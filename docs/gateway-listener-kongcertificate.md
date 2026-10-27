@@ -70,11 +70,13 @@ conditions and Konnect IDs. Its effective remote ControlPlane ID must match the
 Gateway's ControlPlane ID. Different Kubernetes ControlPlane objects may mirror
 the same remote ControlPlane.
 
-Only one certificate reference per Listener is supported. The Listener uses TLS
-termination. `ResolvedRefs=False` reports a missing, unprogrammed, or wrong-
-ControlPlane certificate as `InvalidCertificateRef`, and missing grants as
-`RefNotPermitted`. Listener `Programmed=True` additionally requires its generated
-SNI to be programmed against the referenced certificate.
+For TLS termination, only one certificate reference per Listener is supported.
+TLS Passthrough Listeners ignore `certificateRefs` and do not create or wait for
+certificate bindings. For terminating Listeners, `ResolvedRefs=False` reports a
+missing, unprogrammed, or wrong-ControlPlane certificate as
+`InvalidCertificateRef`, and missing grants as `RefNotPermitted`. Listener
+`Programmed=True` additionally requires its generated SNI to be programmed
+against the referenced certificate.
 
 When the Gateway and certificate share a namespace, neither grant is required
 for the Listener and its generated SNI to reference the certificate.

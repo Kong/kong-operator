@@ -121,6 +121,40 @@ func TestGatewayConverter_ExistingKongCertificate(t *testing.T) {
 	require.Empty(t, current.OwnerReferences)
 	require.Empty(t, current.Annotations)
 
+	t.Run("TLS passthrough ignores certificate references", func(t *testing.T) {
+		for _, tt := range []struct {
+			name string
+			refs []gatewayv1.SecretObjectReference
+		}{
+			{name: "KongCertificate", refs: []gatewayv1.SecretObjectReference{ref}},
+			{name: "Secret", refs: []gatewayv1.SecretObjectReference{{Name: "missing-secret"}}},
+			{name: "multiple references", refs: []gatewayv1.SecretObjectReference{ref, {Name: "missing-secret"}}},
+		} {
+			t.Run(tt.name, func(t *testing.T) {
+				passthrough := gateway.DeepCopy()
+				passthrough.Spec.Listeners = []gatewayv1.Listener{{
+					Name: "tls", Protocol: gatewayv1.TLSProtocolType, Port: 443,
+					TLS: &gatewayv1.ListenerTLSConfig{Mode: new(gatewayv1.TLSModePassthrough), CertificateRefs: tt.refs},
+				}}
+				cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(cp, extension, cert, gatewayClass).
+					WithInterceptorFuncs(interceptor.Funcs{
+						Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+							switch obj.(type) {
+							case *corev1.Secret, *configurationv1alpha1.KongCertificate:
+								t.Errorf("TLS passthrough must not fetch certificate resources: %T", obj)
+							}
+							return cl.Get(ctx, key, obj, opts...)
+						},
+					}).Build()
+				conv := newGatewayConverter(passthrough, cl, testReferenceGrantVersion).(*gatewayConverter)
+				count, err := conv.Translate(ctx, logr.Discard())
+				require.NoError(t, err)
+				require.Zero(t, count)
+				require.Empty(t, conv.outputStore)
+			})
+		}
+	})
+
 	require.NoError(t, cl.Delete(ctx, cert))
 	conv = newGatewayConverter(gateway, cl, testReferenceGrantVersion).(*gatewayConverter)
 	count, err = conv.Translate(ctx, logr.Discard())

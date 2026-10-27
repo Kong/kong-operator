@@ -1,12 +1,14 @@
 package gateway
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -16,8 +18,64 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	referencegranthelpers "github.com/kong/kong-operator/v2/test/helpers/referencegrant"
 )
+
+func TestListenerTLSPassthroughIgnoresCertificateRefs(t *testing.T) {
+	secretRef := gatewayv1.SecretObjectReference{Name: "missing-secret"}
+	certificateRef := gatewayv1.SecretObjectReference{
+		Group: new(gatewayv1.Group(configurationv1alpha1.GroupVersion.Group)), Kind: new(gatewayv1.Kind("KongCertificate")),
+		Name: "missing-certificate", Namespace: new(gatewayv1.Namespace("certificates")),
+	}
+	for _, tt := range []struct {
+		name string
+		refs []gatewayv1.SecretObjectReference
+	}{
+		{name: "no certificate references"},
+		{name: "missing Secret", refs: []gatewayv1.SecretObjectReference{secretRef}},
+		{name: "cross-namespace KongCertificate without grants", refs: []gatewayv1.SecretObjectReference{certificateRef}},
+		{name: "multiple certificate references", refs: []gatewayv1.SecretObjectReference{secretRef, certificateRef}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			gateway := &gwtypes.Gateway{
+				Name: "gateway", Namespace: "gateways", Generation: 3,
+				Spec: gatewayv1.GatewaySpec{Listeners: []gatewayv1.Listener{{
+					Name: "tls", Protocol: gatewayv1.TLSProtocolType, Port: 443,
+					TLS: &gatewayv1.ListenerTLSConfig{Mode: new(gatewayv1.TLSModePassthrough), CertificateRefs: tt.refs},
+				}}},
+			}
+			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithInterceptorFuncs(interceptor.Funcs{
+				Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					t.Errorf("TLS passthrough must not fetch certificate resources: %T", obj)
+					return cl.Get(ctx, key, obj, opts...)
+				},
+				List: func(ctx context.Context, cl client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+					t.Errorf("TLS passthrough must not resolve reference grants: %T", list)
+					return cl.List(ctx, list, opts...)
+				},
+			}).Build()
+			kinds, condition, err := getSupportedKindsWithResolvedRefsCondition(t.Context(), cl, referencegranthelpers.V1(),
+				*gateway, gateway.Generation, gateway.Spec.Listeners[0])
+			require.NoError(t, err)
+			require.Equal(t, []gatewayv1.RouteGroupKind{{Group: new(gatewayv1.Group(gatewayv1.GroupName)), Kind: "TLSRoute"}}, kinds)
+			require.Equal(t, metav1.ConditionTrue, condition.Status)
+			require.Equal(t, string(gatewayv1.ListenerReasonResolvedRefs), condition.Reason)
+			require.Equal(t, gateway.Generation, condition.ObservedGeneration)
+
+			aware := gatewayConditionsAndListenersAware(gateway)
+			aware.initListenersStatus()
+			gateway.Status.Listeners[0].Conditions = []metav1.Condition{condition}
+			aware.setListenersStatus(metav1.ConditionTrue)
+			aware.setProgrammed(metav1.ConditionTrue)
+			status := gateway.DeepCopy().Status
+			require.NoError(t, aware.setKongCertificateListenersStatus(t.Context(), cl))
+			require.Equal(t, status, gateway.Status)
+			require.True(t, k8sutils.IsProgrammed(aware))
+			require.True(t, k8sutils.IsProgrammed(listenerConditionsAware(&gateway.Status.Listeners[0])))
+		})
+	}
+}
 
 func TestKongCertificateListenerProgrammed(t *testing.T) {
 	for _, tt := range []struct {

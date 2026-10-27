@@ -22,7 +22,7 @@ import (
 // setKongCertificateListenersStatus gates explicit certificate bindings on their SNI being programmed.
 func (g *gatewayConditionsAndListenersAwareT) setKongCertificateListenersStatus(ctx context.Context, cl client.Client) error {
 	for i, listener := range g.Spec.Listeners {
-		if listener.TLS == nil || len(listener.TLS.CertificateRefs) != 1 ||
+		if listener.TLS == nil || refs.IsTLSPassthroughListener(listener) || len(listener.TLS.CertificateRefs) != 1 ||
 			!refs.IsKongCertificateRef(listener.TLS.CertificateRefs[0]) {
 			continue
 		}
