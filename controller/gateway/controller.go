@@ -915,7 +915,7 @@ func (r *Reconciler) provisionKonnectGatewayControlPlane(
 	if err != nil {
 		log.Debug(logger, fmt.Sprintf("failed listing associated konnect gateway controlplanes - error: %v", err))
 		k8sutils.SetCondition(
-			createControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
+			createKonnectGatewayControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
 			gatewayConditionsAndListenersAware(gateway),
 		)
 		return nil, false
@@ -934,7 +934,7 @@ func (r *Reconciler) provisionKonnectGatewayControlPlane(
 		} else {
 			log.Debug(logger, "KonnectGatewayControlPlane created")
 			k8sutils.SetCondition(
-				createControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.ResourceCreatedOrUpdatedReason, kcfgdataplane.ResourceCreatedMessage, gateway.Generation),
+				createKonnectGatewayControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.ResourceCreatedOrUpdatedReason, kcfgdataplane.ResourceCreatedMessage, gateway.Generation),
 				gatewayConditionsAndListenersAware(gateway),
 			)
 		}
@@ -942,7 +942,7 @@ func (r *Reconciler) provisionKonnectGatewayControlPlane(
 	case count > 1:
 		err := fmt.Errorf("KonnectGatewayControlPlanes found: %d, expected: 1, requeuing", count)
 		k8sutils.SetCondition(
-			createControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
+			createKonnectGatewayControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
 			gatewayConditionsAndListenersAware(gateway),
 		)
 		log.Debug(logger, "reducing KonnectGatewayControlPlanes", "count", count)
@@ -1208,7 +1208,7 @@ func (r *Reconciler) handleInvalidKonnectLabels(
 	gateway, oldGateway *gwtypes.Gateway,
 	condition metav1.Condition,
 ) (ctrl.Result, error) {
-	log.Info(logger, "invalid Konnect labels annotation, waiting for it to be fixed", "reason", condition.Message)
+	log.Info(logger, "invalid Konnect labels annotation, waiting for it to be fixed", "message", condition.Message)
 	gwConditionAware := gatewayConditionsAndListenersAware(gateway)
 	gwConditionAware.setProgrammed(metav1.ConditionFalse)
 	if err := r.patchStatus(ctx, gateway, oldGateway); err != nil {

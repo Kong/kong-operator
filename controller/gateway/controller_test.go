@@ -1,6 +1,9 @@
 package gateway
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -15,11 +18,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	controllerruntimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	kcfgdataplane "github.com/kong/kong-operator/v2/api/gateway-operator/dataplane"
 	kcfggateway "github.com/kong/kong-operator/v2/api/gateway-operator/gateway"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
@@ -1371,6 +1376,49 @@ func TestProvisionKonnectResources_InvalidKonnectLabels(t *testing.T) {
 		assert.Equal(t, map[string]string{"team": "platform"}, got.Spec.CreateControlPlaneRequest.Labels)
 	})
 
+	t.Run("KonnectGatewayControlPlane recovers once the labels annotation is fixed", func(t *testing.T) {
+		gateway := newGateway(nil)
+		c := newClient(gateway)
+		r := Reconciler{Client: c}
+		provision := func(cpLabels string) *konnectv1alpha2.KonnectGatewayControlPlane {
+			gateway.Annotations = map[string]string{metadata.AnnotationKeyKonnectCPLabels: cpLabels}
+			cp, ready := r.provisionKonnectGatewayControlPlane(t.Context(), logr.Discard(), gateway, nil, gatewayConfig)
+			assert.False(t, ready)
+			return cp
+		}
+		getKGCPs := func() []konnectv1alpha2.KonnectGatewayControlPlane {
+			var kgcps konnectv1alpha2.KonnectGatewayControlPlaneList
+			require.NoError(t, c.List(t.Context(), &kgcps, controllerruntimeclient.InNamespace(testNamespace)))
+			return kgcps.Items
+		}
+
+		t.Log("invalid annotation: the KonnectGatewayControlPlane is not created")
+		assert.Nil(t, provision("bad"))
+		requireCondition(t, gateway, kcfggateway.KonnectGatewayControlPlaneProgrammedType, kcfggateway.InvalidKonnectLabelsReason)
+		assert.Empty(t, getKGCPs())
+
+		t.Log("fixed annotation: the KonnectGatewayControlPlane is created with the labels")
+		assert.Nil(t, provision("team=payments"))
+		requireCondition(t, gateway, kcfggateway.KonnectGatewayControlPlaneProgrammedType, kcfgdataplane.ResourceCreatedOrUpdatedReason)
+		kgcps := getKGCPs()
+		require.Len(t, kgcps, 1)
+		assert.Equal(t, map[string]string{"team": "payments"}, kgcps[0].Spec.CreateControlPlaneRequest.Labels)
+
+		t.Log("invalid annotation again: the labels of the KonnectGatewayControlPlane are left untouched")
+		assert.NotNil(t, provision("a=1,b=2,c=3,d=4,e=5,f=6"))
+		requireCondition(t, gateway, kcfggateway.KonnectGatewayControlPlaneProgrammedType, kcfggateway.InvalidKonnectLabelsReason)
+		kgcps = getKGCPs()
+		require.Len(t, kgcps, 1)
+		assert.Equal(t, map[string]string{"team": "payments"}, kgcps[0].Spec.CreateControlPlaneRequest.Labels)
+
+		t.Log("fixed annotation again: the labels of the KonnectGatewayControlPlane are updated")
+		assert.NotNil(t, provision("team=checkout"))
+		requireCondition(t, gateway, kcfggateway.KonnectGatewayControlPlaneProgrammedType, kcfgconsts.ConditionReason(configurationv1.ReasonPending))
+		kgcps = getKGCPs()
+		require.Len(t, kgcps, 1)
+		assert.Equal(t, map[string]string{"team": "checkout"}, kgcps[0].Spec.CreateControlPlaneRequest.Labels)
+	})
+
 	konnectControlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
 		Name:      "test-kgcp",
 		Namespace: testNamespace,
@@ -1416,6 +1464,135 @@ func TestProvisionKonnectResources_InvalidKonnectLabels(t *testing.T) {
 		require.NoError(t, c.Get(t.Context(), controllerruntimeclient.ObjectKeyFromObject(ext), &stored))
 		assert.Equal(t, map[string]konnectv1alpha2.DataPlaneLabelValue{"team": "platform"}, stored.Spec.Konnect.DataPlane.Labels)
 	})
+
+	t.Run("KonnectExtension recovers once the labels annotation is fixed", func(t *testing.T) {
+		gateway := newGateway(nil)
+		c := newClient(gateway)
+		r := Reconciler{Client: c}
+		provision := func(dpLabels string) *konnectv1alpha2.KonnectExtension {
+			gateway.Annotations = map[string]string{metadata.AnnotationKeyKonnectDPLabels: dpLabels}
+			return r.provisionKonnectExtension(t.Context(), logr.Discard(), gateway, nil, konnectControlPlane)
+		}
+		getExtensions := func() []konnectv1alpha2.KonnectExtension {
+			var exts konnectv1alpha2.KonnectExtensionList
+			require.NoError(t, c.List(t.Context(), &exts, controllerruntimeclient.InNamespace(testNamespace)))
+			return exts.Items
+		}
+
+		t.Log("invalid annotation: the KonnectExtension is not created")
+		assert.Nil(t, provision("bad"))
+		requireCondition(t, gateway, kcfggateway.KonnectExtensionReadyType, kcfggateway.InvalidKonnectLabelsReason)
+		assert.Empty(t, getExtensions())
+
+		t.Log("fixed annotation: the KonnectExtension is created with the labels")
+		assert.Nil(t, provision("team=payments"))
+		requireCondition(t, gateway, kcfggateway.KonnectExtensionReadyType, kcfgdataplane.ResourceCreatedOrUpdatedReason)
+		exts := getExtensions()
+		require.Len(t, exts, 1)
+		require.NotNil(t, exts[0].Spec.Konnect.DataPlane)
+		assert.Equal(t, map[string]konnectv1alpha2.DataPlaneLabelValue{"team": "payments"}, exts[0].Spec.Konnect.DataPlane.Labels)
+
+		t.Log("invalid annotation again: the labels of the KonnectExtension are left untouched")
+		assert.NotNil(t, provision("kong-team=payments"))
+		requireCondition(t, gateway, kcfggateway.KonnectExtensionReadyType, kcfggateway.InvalidKonnectLabelsReason)
+		exts = getExtensions()
+		require.Len(t, exts, 1)
+		require.NotNil(t, exts[0].Spec.Konnect.DataPlane)
+		assert.Equal(t, map[string]konnectv1alpha2.DataPlaneLabelValue{"team": "payments"}, exts[0].Spec.Konnect.DataPlane.Labels)
+
+		t.Log("fixed annotation again: the labels of the KonnectExtension are updated")
+		assert.Nil(t, provision("team=checkout"), "the KonnectExtension is not Ready yet")
+		requireCondition(t, gateway, kcfggateway.KonnectExtensionReadyType, kcfgdataplane.WaitingToBecomeReadyReason)
+		exts = getExtensions()
+		require.Len(t, exts, 1)
+		require.NotNil(t, exts[0].Spec.Konnect.DataPlane)
+		assert.Equal(t, map[string]konnectv1alpha2.DataPlaneLabelValue{"team": "checkout"}, exts[0].Spec.Konnect.DataPlane.Labels)
+	})
+}
+
+// TestProvisionKonnectGatewayControlPlane_ConditionType verifies that every
+// branch of provisionKonnectGatewayControlPlane reports on the
+// KonnectGatewayControlPlaneProgrammed condition, which is the only one the
+// hybrid Gateway reconciliation inspects to decide whether to requeue.
+func TestProvisionKonnectGatewayControlPlane_ConditionType(t *testing.T) {
+	const testNamespace = "test-ns"
+
+	gatewayConfig := &GatewayConfiguration{
+		Spec: operatorv2beta1.GatewayConfigurationSpec{
+			Konnect: &operatorv2beta1.KonnectOptions{},
+		},
+	}
+
+	testCases := []struct {
+		name string
+		// kgcpCount is the number of KonnectGatewayControlPlanes owned by the Gateway before provisioning.
+		kgcpCount int
+		// failList makes listing KonnectGatewayControlPlanes fail.
+		failList       bool
+		expectedReason kcfgconsts.ConditionReason
+	}{
+		{
+			name:           "listing KonnectGatewayControlPlanes fails",
+			failList:       true,
+			expectedReason: kcfgdataplane.UnableToProvisionReason,
+		},
+		{
+			name:           "KonnectGatewayControlPlane created",
+			expectedReason: kcfgdataplane.ResourceCreatedOrUpdatedReason,
+		},
+		{
+			name:           "more than one KonnectGatewayControlPlane found",
+			kgcpCount:      2,
+			expectedReason: kcfgdataplane.UnableToProvisionReason,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			gateway := &gwtypes.Gateway{
+				Name:      "test-gateway",
+				Namespace: testNamespace,
+				UID:       types.UID(uuid.NewString()),
+			}
+			objects := []controllerruntimeclient.Object{gateway}
+			for i := range tc.kgcpCount {
+				kgcp := &konnectv1alpha2.KonnectGatewayControlPlane{
+					Name:      fmt.Sprintf("test-kgcp-%d", i),
+					Namespace: testNamespace,
+				}
+				k8sutils.SetOwnerForObject(kgcp, gateway)
+				gatewayutils.LabelObjectAsGatewayManaged(kgcp, gateway.Name)
+				objects = append(objects, kgcp)
+			}
+
+			builder := fakectrlruntimeclient.NewClientBuilder().
+				WithScheme(scheme.Get()).
+				WithObjects(objects...)
+			if tc.failList {
+				builder = builder.WithInterceptorFuncs(interceptor.Funcs{
+					List: func(ctx context.Context, c controllerruntimeclient.WithWatch, list controllerruntimeclient.ObjectList, opts ...controllerruntimeclient.ListOption) error {
+						if _, ok := list.(*konnectv1alpha2.KonnectGatewayControlPlaneList); ok {
+							return errors.New("list failed")
+						}
+						return c.List(ctx, list, opts...)
+					},
+				})
+			}
+			r := Reconciler{Client: builder.Build()}
+
+			cp, ready := r.provisionKonnectGatewayControlPlane(t.Context(), logr.Discard(), gateway, nil, gatewayConfig)
+			assert.Nil(t, cp)
+			assert.False(t, ready)
+
+			condition, found := k8sutils.GetCondition(kcfggateway.KonnectGatewayControlPlaneProgrammedType, gatewayConditionsAndListenersAware(gateway))
+			require.True(t, found, "KonnectGatewayControlPlaneProgrammed condition not found")
+			assert.Equal(t, metav1.ConditionFalse, condition.Status)
+			assert.Equal(t, string(tc.expectedReason), condition.Reason)
+
+			_, found = k8sutils.GetCondition(kcfggateway.ControlPlaneReadyType, gatewayConditionsAndListenersAware(gateway))
+			assert.False(t, found, "ControlPlaneReady condition must not be set for hybrid Gateways")
+		})
+	}
 }
 
 // TestGatewayReconciler_Reconcile_InvalidKonnectLabels verifies that an invalid
