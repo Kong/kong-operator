@@ -147,13 +147,14 @@ func (r *Reconciler) push(
 			return err
 		}
 	}
-	// Read for a gateway just registered too: gw-admin keeps the
-	// certificates of a gateway it deletes, and trusts them again once the
-	// gateway is registered again under the same id, e.g. once it may use
-	// its GWAdmin again. They are removed before the pod may serve it.
-	certificates, err := getCertificates(ctx, gwAdmin, gatewayID)
-	if err != nil {
-		return err
+	// A gateway just registered holds no certificates: gw-admin deletes
+	// those of a gateway with it, e.g. one that may not use its GWAdmin
+	// anymore, registered again under the same id once it may.
+	var certificates map[uuid.UUID]gwadminapi.EventGatewayDataPlaneCertificateOnPrem
+	if found {
+		if certificates, err = getCertificates(ctx, gwAdmin, gatewayID); err != nil {
+			return err
+		}
 	}
 	if err := pushCertificates(ctx, pod, gwAdmin, gatewayID, cfg, certificates, outcome); err != nil {
 		return err

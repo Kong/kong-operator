@@ -63,10 +63,6 @@ type fakeGWAdmin struct {
 	// rejectCertificate, when it returns true, rejects the data plane
 	// certificate of the gateway with a 400.
 	rejectCertificate func(gateway uuid.UUID, body gwadminapi.UpsertEventGatewayDataPlaneCertificateRequestOnPrem) bool
-	// hidden are the data plane certificates of the gateways deleted, by
-	// gateway: as gw-admin does, the pod keeps them, and holds them again
-	// once the gateway is registered again under the same id.
-	hidden map[uuid.UUID]map[uuid.UUID]gwadminapi.EventGatewayDataPlaneCertificateOnPrem
 }
 
 // fakeGateway is a gateway a gw-admin pod holds.
@@ -92,22 +88,12 @@ func newFakeGWAdmin(t *testing.T, tlsConfig *tls.Config) *fakeGWAdmin {
 		if g, ok := f.gateways[id]; ok {
 			g.name = body.Name
 		} else {
-			certificates := f.hidden[id]
-			delete(f.hidden, id)
-			if certificates == nil {
-				certificates = map[uuid.UUID]gwadminapi.EventGatewayDataPlaneCertificateOnPrem{}
-			}
-			f.gateways[id] = &fakeGateway{name: body.Name, certificates: certificates}
+			f.gateways[id] = &fakeGateway{name: body.Name, certificates: map[uuid.UUID]gwadminapi.EventGatewayDataPlaneCertificateOnPrem{}}
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
-	mux.HandleFunc("DELETE /v1/event-gateways/{id}", f.withGateway(true, func(w http.ResponseWriter, _ *http.Request, id uuid.UUID, g *fakeGateway) {
-		if len(g.certificates) > 0 {
-			if f.hidden == nil {
-				f.hidden = map[uuid.UUID]map[uuid.UUID]gwadminapi.EventGatewayDataPlaneCertificateOnPrem{}
-			}
-			f.hidden[id] = g.certificates
-		}
+	mux.HandleFunc("DELETE /v1/event-gateways/{id}", f.withGateway(true, func(w http.ResponseWriter, _ *http.Request, id uuid.UUID, _ *fakeGateway) {
+		// With its entities and its data plane certificates.
 		delete(f.gateways, id)
 		w.WriteHeader(http.StatusNoContent)
 	}))

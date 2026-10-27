@@ -45,7 +45,7 @@ func TestPush(t *testing.T) {
 	pod := gwadminsync.Pod{Name: "gw-admin-0", UID: "pod-uid", Address: "10.0.0.1:8083"}
 	expected := []uuid.UUID{gatewayID, other}
 	expectedCall := callExpected + " " + gatewayID.String() + "," + other.String()
-	all := []string{callGetEntities, callRegister, callListCertificates, callEntities, expectedCall}
+	all := []string{callGetEntities, callRegister, callEntities, expectedCall}
 
 	t.Run("a pod that doesn't know the gateway gets it all, in order", func(t *testing.T) {
 		r, gwAdmin := newPushReconciler(), &fakeGWAdminClient{}
@@ -142,10 +142,10 @@ func TestPush(t *testing.T) {
 			wantRetry: all},
 		// The pod holds no entities, which is what is pushed: the expected
 		// gateways, never set, are.
-		{name: "pushing the entities fails", respond: failing(callEntities, http.StatusBadRequest), wantCalls: 4,
+		{name: "pushing the entities fails", respond: failing(callEntities, http.StatusBadRequest), wantCalls: 3,
 			wantErr:   "failed to push the entities of the gateway",
 			wantRetry: []string{callGetEntities, callListCertificates, expectedCall}},
-		{name: "setting the expected gateways fails", respond: failing(callExpected, http.StatusBadRequest), wantCalls: 5,
+		{name: "setting the expected gateways fails", respond: failing(callExpected, http.StatusBadRequest), wantCalls: 4,
 			wantErr:   "failed to set the gateways gw-admin serves",
 			wantRetry: []string{callGetEntities, callListCertificates, expectedCall}},
 		{name: "a transport error", respond: func(string) (*reply, error) { return nil, errors.New("connection refused") }, wantCalls: 1,
@@ -186,7 +186,7 @@ func TestPushCertificates(t *testing.T) {
 	t.Run("a pod that doesn't know the gateway gets its certificates before its entities, and isn't asked for them", func(t *testing.T) {
 		r, client := newPushReconciler(), &fakeGWAdminClient{}
 		require.NoError(t, push(t, r, client, first, withCertificate, firstID))
-		assert.Equal(t, []string{callGetEntities, callRegister, callListCertificates, registerOn(firstID), callEntities, callExpected + " " + firstID.String()}, client.recorded())
+		assert.Equal(t, []string{callGetEntities, callRegister, registerOn(firstID), callEntities, callExpected + " " + firstID.String()}, client.recorded())
 	})
 
 	t.Run("a certificate a pod holds as it is isn't registered again", func(t *testing.T) {
@@ -213,18 +213,19 @@ func TestPushCertificates(t *testing.T) {
 		assert.NotContains(t, client.holds(firstID), certID)
 	})
 
-	t.Run("a gateway registered again doesn't keep the certificates it had: gw-admin would trust them again", func(t *testing.T) {
+	t.Run("a gateway registered again gets its certificates again: gw-admin deleted them with it", func(t *testing.T) {
 		r, client := newPushReconciler(), &fakeGWAdminClient{}
 		require.NoError(t, push(t, r, client, first, withCertificate, firstID))
 		// e.g. it may not use its GWAdmin for a while.
 		require.NoError(t, r.removeGateway(t.Context(), target, pod, client, firstID, nil))
-		client.reset()
-		require.NoError(t, push(t, r, client, first, emptyConfiguration(), firstID))
-		assert.Equal(t, []string{
-			callGetEntities, callRegister, callListCertificates, callDeleteCertificate + " " + firstID.String() + "/" + certID.String(),
-			callEntities, callExpected + " " + firstID.String(),
-		}, client.recorded(), "removed before the pod may serve it")
 		assert.Empty(t, client.holds(firstID))
+		client.reset()
+		require.NoError(t, push(t, r, client, first, withCertificate, firstID))
+		assert.Equal(t, []string{
+			callGetEntities, callRegister, callCertificate + " " + firstID.String() + "/" + certID.String(),
+			callEntities, callExpected + " " + firstID.String(),
+		}, client.recorded(), "a gateway just registered holds none: they aren't read")
+		assert.Contains(t, client.holds(firstID), certID)
 	})
 
 	t.Run("the certificates come before the entities: an entity gw-admin rejects doesn't keep them from being trusted", func(t *testing.T) {
@@ -263,7 +264,7 @@ func TestPushCertificates(t *testing.T) {
 	t.Run("a pod failing on a certificate isn't told the expected gateways: it mustn't turn ready without it", func(t *testing.T) {
 		r, client := newPushReconciler(), &fakeGWAdminClient{respond: failing(rejectedCall, http.StatusInternalServerError)}
 		require.ErrorContains(t, push(t, r, client, first, withRejected, firstID), "failed to register the data plane certificate default/rejected")
-		assert.Equal(t, []string{callGetEntities, callRegister, callListCertificates, rejectedCall}, client.recorded())
+		assert.Equal(t, []string{callGetEntities, callRegister, rejectedCall}, client.recorded())
 	})
 
 	t.Run("a pod restarted holds nothing, and gets it all again", func(t *testing.T) {
@@ -272,7 +273,7 @@ func TestPushCertificates(t *testing.T) {
 		client.restart()
 		client.reset()
 		require.NoError(t, push(t, r, client, first, withCertificate, firstID))
-		assert.Equal(t, []string{callGetEntities, callRegister, callListCertificates, registerOn(firstID), callEntities, callExpected + " " + firstID.String()}, client.recorded())
+		assert.Equal(t, []string{callGetEntities, callRegister, registerOn(firstID), callEntities, callExpected + " " + firstID.String()}, client.recorded())
 	})
 
 	t.Run("the entities are pushed again with a new version of the configuration", func(t *testing.T) {

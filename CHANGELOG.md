@@ -438,10 +438,8 @@
   plane uses it: a new certificate in the Secret of an existing one replaces
   it on every gw-admin pod at once, and one whose Secret can't be read
   anymore is no longer trusted. Requires a gw-admin serving version 1.11.0
-  of its API, which lists the data plane certificates. gw-admin keeps the
-  certificates of a gateway it deletes, and trusts them again once it is
-  registered again: the operator reads them after registering it, and
-  removes those the gateway doesn't have.
+  of its API, which lists the data plane certificates and deletes them with
+  their gateway.
   [#6314](https://github.com/Kong/kong-operator/pull/6314)
 - `--konnect-list-page-size` flag (default and maximum `100`): the page size
   the operator requests when listing Konnect entities to find the Konnect

@@ -42,8 +42,8 @@ chainsaw:
     tag: '1.3.0'
   gw-admin:
     # gw-admin has no semver release yet: this is a development image pinned by
-    # digest (the build of its pull request 1500 until merged, then an
+    # digest (the build of its pull request 1502 until merged, then an
     # immutable main-<commit> tag), not tracked by renovate. Bump it by hand,
     # together with consts.DefaultGWAdminTag in pkg/consts/gwadmin.go.
     image: kong/kong-gw-admin-cp-dev
-    tag: 'pr-1500@sha256:036f901009d94edb8ad56f4401f7bb77d35a372f8093a017f88cc9abb4e50f31'
+    tag: 'pr-1502@sha256:eb9db0feab9291065ba185f6fb5841661f39ce93868c311346ae3599d8d0522b'

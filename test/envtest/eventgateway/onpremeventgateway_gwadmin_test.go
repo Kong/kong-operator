@@ -148,8 +148,8 @@ func TestOnPremEventGatewayGWAdmin(t *testing.T) {
 	})
 
 	t.Run("a certificate deleted while the gateway may not use its GWAdmin isn't trusted again once it may", func(t *testing.T) {
-		// gw-admin keeps the certificates of a gateway it deletes, and trusts
-		// them again once the gateway is registered again under the same id.
+		// The gateway is deleted from gw-admin meanwhile, with its
+		// certificates, and registered again under the same id once it may.
 		other := envtest.CreateNamespace(ctx, t, cl)
 		crossNamespace := &eventgatewayv1alpha1.OnPremEventGateway{
 			Name: "gateway", Namespace: other.Name,

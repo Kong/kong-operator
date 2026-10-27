@@ -104,10 +104,11 @@ const (
 	DefaultGWAdminBaseImage = "kong/kong-gw-admin-cp-dev"
 	// DefaultGWAdminTag is the default image tag for the gw-admin container.
 	// gw-admin has no release yet: the tag pins the dev image by digest, the
-	// build of its pull request 1500 serving version 1.11.0 of its API, and
-	// must be bumped by hand, to a main-<commit> build once that is merged.
+	// build of its pull request 1502 serving version 1.11.0 of its API and
+	// deleting the data plane certificates of a gateway with it, and must be
+	// bumped by hand, to a main-<commit> build once that is merged.
 	// TODO: move to a released image with a renovate annotation once gw-admin is released.
-	DefaultGWAdminTag = "pr-1500@sha256:036f901009d94edb8ad56f4401f7bb77d35a372f8093a017f88cc9abb4e50f31"
+	DefaultGWAdminTag = "pr-1502@sha256:eb9db0feab9291065ba185f6fb5841661f39ce93868c311346ae3599d8d0522b"
 	// DefaultGWAdminImage is the full default image reference for the gw-admin container.
 	DefaultGWAdminImage = DefaultGWAdminBaseImage + ":" + DefaultGWAdminTag
 

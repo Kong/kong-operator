@@ -235,24 +235,24 @@ func TestGWAdminContract(t *testing.T) {
 			"any string is a certificate")
 	})
 
-	t.Run("a deleted gateway hides its certificates, and holds them again once registered again under the same id", func(t *testing.T) {
-		// The operator lists the certificates of a gateway it registers, and
-		// deletes those it doesn't have, before the pod may serve it (see
-		// push): a gateway that may not use its GWAdmin anymore is deleted,
-		// and registered again under the same id once it may.
+	t.Run("a deleted gateway takes its certificates and its entities with it: registered again under the same id, it holds none", func(t *testing.T) {
+		// The operator deletes a gateway that may not use its GWAdmin anymore,
+		// and registers it again under the same id once it may: what it held
+		// before mustn't be trusted again, e.g. a certificate deleted
+		// meanwhile (see removeGateway).
 		gwAdmin := contractGWAdmin(t)
 		ctx := t.Context()
 		id := registerContractGateway(t, gwAdmin)
+		require.Less(t, code(t)(gwAdmin.UpdateEventGatewayEntities(ctx, id, contractEntities(contractBackendCluster(t, "kept")))), 300)
+		require.Equal(t, []string{"kept"}, contractBackendClusterNames(t, gwAdmin, id))
 		certID := uuid.New()
 		require.Less(t, code(t)(gwAdmin.UpdateEventGatewayDataPlaneCertificate(ctx, id, certID,
 			gwadminapi.UpsertEventGatewayDataPlaneCertificateRequestOnPrem{Certificate: selfSignedCertificatePEM(t), CreatedAt: time.Now().UTC().Truncate(time.Second)})), 300)
 		require.Equal(t, http.StatusNoContent, code(t)(gwAdmin.DeleteEventGateway(ctx, id)))
 		assert.Equal(t, http.StatusNotFound, code(t)(gwAdmin.ListEventGatewayDataPlaneCertificates(ctx, id)), "the gateway is gone")
 		require.Less(t, code(t)(gwAdmin.UpdateEventGateway(ctx, id, gwadminapi.UpsertGatewayRequestOnPrem{Name: "contract", CreatedAt: time.Now().UTC().Truncate(time.Second)})), 300)
-		got := contractCertificates(t, gwAdmin, id)
-		if assert.Len(t, got, 1, "back once the gateway is registered again") {
-			assert.Equal(t, certID, got[0].Id)
-		}
+		assert.Empty(t, contractCertificates(t, gwAdmin, id))
+		assert.Empty(t, contractBackendClusterNames(t, gwAdmin, id))
 	})
 
 	t.Run("the certificates of a gateway are listed as they were registered", func(t *testing.T) {
@@ -276,9 +276,9 @@ func TestGWAdminContract(t *testing.T) {
 	})
 
 	t.Run("a deleted data plane certificate stays deleted once its gateway is deleted and registered again", func(t *testing.T) {
-		// The operator deletes the certificates of a gateway before the
-		// gateway, so that registering it again under the same id doesn't
-		// trust them again (see removeGateway).
+		// A certificate the operator removed while its gateway was deleted
+		// isn't trusted again once the gateway is registered again under the
+		// same id.
 		gwAdmin := contractGWAdmin(t)
 		ctx := t.Context()
 		id := registerContractGateway(t, gwAdmin)

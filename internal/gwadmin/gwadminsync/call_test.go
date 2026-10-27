@@ -165,7 +165,9 @@ func TestForEachPod(t *testing.T) {
 				if err != nil {
 					return
 				}
-				t.Cleanup(func() { _ = conn.Close() })
+				// Closed once the test ends: a cleanup registered once
+				// the cleanups ran would never run.
+				go func() { <-t.Context().Done(); _ = conn.Close() }()
 			}
 		}()
 		s := &Syncer{

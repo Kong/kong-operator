@@ -140,7 +140,7 @@ func TestPushConfiguration(t *testing.T) {
 		require.NoError(t, pushErr)
 		assert.True(t, result.done)
 		require.NotNil(t, result.target)
-		assert.Equal(t, []string{callGetEntities, callRegister, callListCertificates, callEntities, callExpected + " " + f.gatewayID.String()}, f.pod().recorded())
+		assert.Equal(t, []string{callGetEntities, callRegister, callEntities, callExpected + " " + f.gatewayID.String()}, f.pod().recorded())
 		assert.Equal(t, []string{callListCertificates}, f.terminatingPod().recorded(),
 			"a terminating pod isn't pushed to: it is only told to stop trusting the certificates the configuration doesn't hold")
 	})
@@ -399,7 +399,7 @@ func TestPushConfiguration(t *testing.T) {
 		require.NoError(t, f.cl.Delete(t.Context(), grant))
 		_, _, err = f.r.pushConfiguration(t.Context(), f.gateway, f.gatewayID, deriveConfig(f.gateway, emptyConfiguration()), emptyConfiguration())
 		require.NoError(t, err)
-		pushed := []string{callGetEntities, callRegister, callListCertificates, callEntities, callExpected + " " + f.gatewayID.String()}
+		pushed := []string{callGetEntities, callRegister, callEntities, callExpected + " " + f.gatewayID.String()}
 		assert.Equal(t, slices.Concat(removed, pushed, removed), f.pod().recorded(), "told again once no longer allowed")
 	})
 
@@ -1360,7 +1360,7 @@ func TestReconcileOnlyWritesWhatChanged(t *testing.T) {
 	f.pod().restart()
 	_, err = f.r.Reconcile(t.Context(), read(t, f.cl, f.gateway))
 	require.NoError(t, err)
-	assert.Equal(t, []string{callGetEntities, callRegister, callListCertificates, callEntities, callExpected + " " + f.gatewayID.String()}, f.pod().recorded(),
+	assert.Equal(t, []string{callGetEntities, callRegister, callEntities, callExpected + " " + f.gatewayID.String()}, f.pod().recorded(),
 		"a restarted pod gets it all")
 }
 

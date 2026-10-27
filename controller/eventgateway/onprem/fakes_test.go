@@ -57,9 +57,8 @@ import (
 // answers each with respond, when it returns a reply or an error. Otherwise
 // it behaves as gw-admin does: it holds the gateways registered, with their
 // entities, the version of the configuration they were sent with and their
-// data plane certificates, and answers 404 for a gateway it doesn't know. As
-// gw-admin does, it keeps the certificates of a gateway it deletes, and holds
-// them again once the gateway is registered again under the same id.
+// data plane certificates, and answers 404 for a gateway it doesn't know. A
+// gateway it deletes is deleted with them.
 type fakeGWAdminClient struct {
 	gwadminapi.ClientInterface
 
@@ -275,9 +274,9 @@ func (f *fakeGWAdminClient) DeleteEventGateway(_ context.Context, id uuid.UUID, 
 		if _, ok := f.gateways[id]; !ok {
 			return notFound
 		}
-		// Not its data plane certificates.
 		delete(f.gateways, id)
 		delete(f.versions, id)
+		delete(f.certificates, id)
 		return reply{status: http.StatusNoContent}
 	})
 }
