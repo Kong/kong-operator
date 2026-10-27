@@ -137,6 +137,7 @@ func PluginsForRule(
 			// Copy the tags annotation from the original plugin to the new plugin copy.
 			WithTagsFromAnnotations(plugin).
 			WithTags(plugin.Tags).
+			WithOrdering(plugin.Ordering).
 			Build()
 		if err != nil {
 			return nil, fmt.Errorf("failed to build KongPlugin %s: %w", pluginName, err)
