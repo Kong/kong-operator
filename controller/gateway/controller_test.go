@@ -3,6 +3,7 @@ package gateway
 import (
 	"testing"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -22,11 +23,13 @@ import (
 	kcfgdataplane "github.com/kong/kong-operator/v2/api/gateway-operator/dataplane"
 	kcfggateway "github.com/kong/kong-operator/v2/api/gateway-operator/gateway"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/metadata"
 	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
@@ -1282,6 +1285,303 @@ func TestReconciler_dataPlaneAdminAPIDisabled(t *testing.T) {
 			got, err := r.dataPlaneAdminAPIDisabled(t.Context(), tt.dp)
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestProvisionKonnectResources_InvalidKonnectLabels(t *testing.T) {
+	const testNamespace = "test-ns"
+
+	newGateway := func(annotations map[string]string) *gwtypes.Gateway {
+		return &gwtypes.Gateway{
+			Name:        "test-gateway",
+			Namespace:   testNamespace,
+			UID:         types.UID(uuid.NewString()),
+			Annotations: annotations,
+		}
+	}
+	newClient := func(objects ...controllerruntimeclient.Object) controllerruntimeclient.Client {
+		return fakectrlruntimeclient.NewClientBuilder().
+			WithScheme(scheme.Get()).
+			WithObjects(objects...).
+			Build()
+	}
+	gatewayConfig := &GatewayConfiguration{
+		Spec: operatorv2beta1.GatewayConfigurationSpec{
+			Konnect: &operatorv2beta1.KonnectOptions{},
+		},
+	}
+	requireCondition := func(t *testing.T, gateway *gwtypes.Gateway, conditionType kcfgconsts.ConditionType, reason kcfgconsts.ConditionReason) {
+		t.Helper()
+		condition, found := k8sutils.GetCondition(conditionType, gatewayConditionsAndListenersAware(gateway))
+		require.True(t, found, "condition %s not found", conditionType)
+		assert.Equal(t, metav1.ConditionFalse, condition.Status)
+		assert.Equal(t, string(reason), condition.Reason)
+	}
+
+	t.Run("KonnectGatewayControlPlane creation with invalid labels", func(t *testing.T) {
+		gateway := newGateway(map[string]string{metadata.AnnotationKeyKonnectCPLabels: "bad"})
+		c := newClient(gateway)
+		r := Reconciler{Client: c}
+
+		cp, ready := r.provisionKonnectGatewayControlPlane(t.Context(), logr.Discard(), gateway, nil, gatewayConfig)
+		assert.Nil(t, cp)
+		assert.False(t, ready)
+		requireCondition(t, gateway, kcfggateway.KonnectGatewayControlPlaneProgrammedType, kcfggateway.InvalidKonnectLabelsReason)
+
+		var kgcps konnectv1alpha2.KonnectGatewayControlPlaneList
+		require.NoError(t, c.List(t.Context(), &kgcps, controllerruntimeclient.InNamespace(testNamespace)))
+		assert.Empty(t, kgcps.Items)
+	})
+
+	t.Run("KonnectGatewayControlPlane creation with other errors is reported on the KonnectGatewayControlPlaneProgrammed condition", func(t *testing.T) {
+		gateway := newGateway(nil)
+		r := Reconciler{Client: newClient(gateway)}
+
+		cp, ready := r.provisionKonnectGatewayControlPlane(t.Context(), logr.Discard(), gateway, nil, &GatewayConfiguration{})
+		assert.Nil(t, cp)
+		assert.False(t, ready)
+		requireCondition(t, gateway, kcfggateway.KonnectGatewayControlPlaneProgrammedType, kcfgdataplane.UnableToProvisionReason)
+	})
+
+	t.Run("KonnectGatewayControlPlane update with invalid labels", func(t *testing.T) {
+		gateway := newGateway(map[string]string{metadata.AnnotationKeyKonnectCPLabels: "a=1,b=2,c=3,d=4,e=5,f=6"})
+		kgcp := &konnectv1alpha2.KonnectGatewayControlPlane{
+			Name:      "test-kgcp",
+			Namespace: testNamespace,
+			Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
+				CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
+					Name:   "test-kgcp",
+					Labels: map[string]string{"team": "platform"},
+				},
+			},
+		}
+		k8sutils.SetOwnerForObject(kgcp, gateway)
+		gatewayutils.LabelObjectAsGatewayManaged(kgcp, gateway.Name)
+		c := newClient(gateway, kgcp)
+		r := Reconciler{Client: c}
+
+		cp, ready := r.provisionKonnectGatewayControlPlane(t.Context(), logr.Discard(), gateway, nil, gatewayConfig)
+		assert.NotNil(t, cp)
+		assert.False(t, ready)
+		requireCondition(t, gateway, kcfggateway.KonnectGatewayControlPlaneProgrammedType, kcfggateway.InvalidKonnectLabelsReason)
+
+		var got konnectv1alpha2.KonnectGatewayControlPlane
+		require.NoError(t, c.Get(t.Context(), controllerruntimeclient.ObjectKeyFromObject(kgcp), &got))
+		assert.Equal(t, map[string]string{"team": "platform"}, got.Spec.CreateControlPlaneRequest.Labels)
+	})
+
+	konnectControlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
+		Name:      "test-kgcp",
+		Namespace: testNamespace,
+	}
+
+	t.Run("KonnectExtension creation with invalid labels", func(t *testing.T) {
+		gateway := newGateway(map[string]string{metadata.AnnotationKeyKonnectDPLabels: "team=pay ments"})
+		c := newClient(gateway)
+		r := Reconciler{Client: c}
+
+		ext := r.provisionKonnectExtension(t.Context(), logr.Discard(), gateway, nil, konnectControlPlane)
+		assert.Nil(t, ext)
+		requireCondition(t, gateway, kcfggateway.KonnectExtensionReadyType, kcfggateway.InvalidKonnectLabelsReason)
+
+		var exts konnectv1alpha2.KonnectExtensionList
+		require.NoError(t, c.List(t.Context(), &exts, controllerruntimeclient.InNamespace(testNamespace)))
+		assert.Empty(t, exts.Items)
+	})
+
+	t.Run("KonnectExtension update with invalid labels", func(t *testing.T) {
+		gateway := newGateway(map[string]string{metadata.AnnotationKeyKonnectDPLabels: "kong-team=payments"})
+		ext := &konnectv1alpha2.KonnectExtension{
+			Name:      "test-ext",
+			Namespace: testNamespace,
+			Spec: konnectv1alpha2.KonnectExtensionSpec{
+				Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+					DataPlane: &konnectv1alpha2.KonnectExtensionDataPlane{
+						Labels: map[string]konnectv1alpha2.DataPlaneLabelValue{"team": "platform"},
+					},
+				},
+			},
+		}
+		k8sutils.SetOwnerForObject(ext, gateway)
+		gatewayutils.LabelObjectAsGatewayManaged(ext, gateway.Name)
+		c := newClient(gateway, ext)
+		r := Reconciler{Client: c}
+
+		got := r.provisionKonnectExtension(t.Context(), logr.Discard(), gateway, nil, konnectControlPlane)
+		assert.NotNil(t, got)
+		requireCondition(t, gateway, kcfggateway.KonnectExtensionReadyType, kcfggateway.InvalidKonnectLabelsReason)
+
+		var stored konnectv1alpha2.KonnectExtension
+		require.NoError(t, c.Get(t.Context(), controllerruntimeclient.ObjectKeyFromObject(ext), &stored))
+		assert.Equal(t, map[string]konnectv1alpha2.DataPlaneLabelValue{"team": "platform"}, stored.Spec.Konnect.DataPlane.Labels)
+	})
+}
+
+// TestGatewayReconciler_Reconcile_InvalidKonnectLabels verifies that an invalid
+// Konnect labels annotation is reported in the Gateway status and that the
+// Gateway is not requeued, so that it waits for the annotation to be fixed.
+func TestGatewayReconciler_Reconcile_InvalidKonnectLabels(t *testing.T) {
+	const (
+		testNamespace = "test-namespace"
+		gwcName       = "test-gatewayclass"
+		gwConfigName  = "test-gatewayconfig"
+	)
+
+	testCases := []struct {
+		name string
+		// annotations set on the Gateway.
+		annotations map[string]string
+		// existingKGCP indicates whether a Programmed KonnectGatewayControlPlane
+		// owned by the Gateway exists before reconciling.
+		existingKGCP bool
+		// expectedConditionType is the Gateway condition expected to carry the
+		// InvalidKonnectLabels reason.
+		expectedConditionType kcfgconsts.ConditionType
+	}{
+		{
+			name:                  "invalid control plane labels",
+			annotations:           map[string]string{metadata.AnnotationKeyKonnectCPLabels: "a=1,b=2,c=3,d=4,e=5,f=6"},
+			expectedConditionType: kcfggateway.KonnectGatewayControlPlaneProgrammedType,
+		},
+		{
+			name:                  "invalid DataPlane labels",
+			annotations:           map[string]string{metadata.AnnotationKeyKonnectDPLabels: "bad"},
+			existingKGCP:          true,
+			expectedConditionType: kcfggateway.KonnectExtensionReadyType,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := t.Context()
+
+			gatewayClass := &gatewayv1.GatewayClass{
+				Name: gwcName,
+				Spec: gatewayv1.GatewayClassSpec{
+					ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
+					ParametersRef: &gatewayv1.ParametersReference{
+						Group:     gatewayv1.Group(operatorv2beta1.SchemeGroupVersion.Group),
+						Kind:      "GatewayConfiguration",
+						Name:      gwConfigName,
+						Namespace: new(gatewayv1.Namespace(testNamespace)),
+					},
+				},
+				Status: gatewayv1.GatewayClassStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:               string(gatewayv1.GatewayClassConditionStatusAccepted),
+							Status:             metav1.ConditionTrue,
+							LastTransitionTime: metav1.Now(),
+							Reason:             string(gatewayv1.GatewayClassReasonAccepted),
+						},
+					},
+				},
+			}
+			gatewayConfig := &operatorv2beta1.GatewayConfiguration{
+				Name:      gwConfigName,
+				Namespace: testNamespace,
+				Spec: operatorv2beta1.GatewayConfigurationSpec{
+					Konnect: &operatorv2beta1.KonnectOptions{
+						APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+							Name: "test-auth",
+						},
+					},
+				},
+			}
+			gateway := &gwtypes.Gateway{
+				Name:        "test-gateway",
+				Namespace:   testNamespace,
+				UID:         types.UID(uuid.NewString()),
+				Annotations: tc.annotations,
+				Spec: gatewayv1.GatewaySpec{
+					GatewayClassName: gwcName,
+					Listeners: []gatewayv1.Listener{
+						{
+							Name:     "http",
+							Protocol: gatewayv1.HTTPProtocolType,
+							Port:     gatewayv1.PortNumber(80),
+							AllowedRoutes: &gatewayv1.AllowedRoutes{
+								Namespaces: &gatewayv1.RouteNamespaces{
+									From: new(gatewayv1.NamespacesFromSame),
+								},
+							},
+						},
+					},
+				},
+			}
+			objects := []controllerruntimeclient.Object{gatewayClass, gatewayConfig, gateway}
+			if tc.existingKGCP {
+				kgcp := &konnectv1alpha2.KonnectGatewayControlPlane{
+					Name:       "test-kgcp",
+					Namespace:  testNamespace,
+					Finalizers: []string{KonnectGatewayControlPlaneFinalizer},
+					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
+						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
+							Name: "test-kgcp",
+						},
+						KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectConfiguration{
+							APIAuthConfigurationRef: *gatewayConfig.Spec.Konnect.APIAuthConfigurationRef,
+						},
+					},
+					Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
+						Conditions: []metav1.Condition{
+							{
+								Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
+								Status:             metav1.ConditionTrue,
+								Reason:             konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed,
+								LastTransitionTime: metav1.Now(),
+							},
+						},
+					},
+				}
+				k8sutils.SetOwnerForObject(kgcp, gateway)
+				gatewayutils.LabelObjectAsGatewayManaged(kgcp, gateway.Name)
+				objects = append(objects, kgcp)
+			}
+
+			fakeClient := fakectrlruntimeclient.NewClientBuilder().
+				WithScheme(scheme.Get()).
+				WithObjects(objects...).
+				WithStatusSubresource(objects...).
+				Build()
+			r := Reconciler{Client: fakeClient}
+			nn := controllerruntimeclient.ObjectKeyFromObject(gateway)
+
+			reconcileOnce := func() (reconcile.Result, error) {
+				var gw gwtypes.Gateway
+				require.NoError(t, fakeClient.Get(ctx, nn, &gw))
+				return r.Reconcile(ctx, &gw)
+			}
+			invalidLabelsConditionStored := func() bool {
+				var gw gwtypes.Gateway
+				require.NoError(t, fakeClient.Get(ctx, nn, &gw))
+				c, ok := k8sutils.GetCondition(tc.expectedConditionType, gatewayConditionsAndListenersAware(&gw))
+				return ok && c.Reason == string(kcfggateway.InvalidKonnectLabelsReason)
+			}
+
+			// The first reconciliations set finalizers and the Accepted condition.
+			// Each of them returns early, so reconcile until the invalid labels
+			// condition is persisted in the Gateway status.
+			for i := 0; !invalidLabelsConditionStored(); i++ {
+				require.Less(t, i, 10, "InvalidKonnectLabels condition was never persisted")
+				_, err := reconcileOnce()
+				require.NoError(t, err)
+			}
+
+			var gw gwtypes.Gateway
+			require.NoError(t, fakeClient.Get(ctx, nn, &gw))
+			assert.False(t, k8sutils.IsProgrammed(gatewayConditionsAndListenersAware(&gw)))
+			statusBefore := gw.Status.DeepCopy()
+
+			// Reconciling again must not requeue nor return an error, and must
+			// leave the status untouched so no new event is triggered.
+			res, err := reconcileOnce()
+			require.NoError(t, err)
+			assert.Equal(t, reconcile.Result{}, res)
+
+			require.NoError(t, fakeClient.Get(ctx, nn, &gw))
+			assert.Equal(t, *statusBefore, gw.Status)
 		})
 	}
 }

@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -403,6 +404,118 @@ func TestResolveKonnectLabels(t *testing.T) {
 			got, err := resolveKonnectLabels(tc.gateway, tc.gatewayClass, annotationKey)
 			if tc.expectErr {
 				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.expected, got)
+		})
+	}
+}
+
+func TestResolveKonnectCPAndDPLabels(t *testing.T) {
+	testcases := []struct {
+		name          string
+		resolve       func(*gwtypes.Gateway, *gatewayv1.GatewayClass) (map[string]string, error)
+		annotationKey string
+		gateway       string
+		gatewayClass  string
+		expected      map[string]string
+		expectErr     bool
+	}{
+		{
+			name:          "CP: valid labels from gateway and gatewayclass",
+			resolve:       resolveKonnectCPLabels,
+			annotationKey: metadata.AnnotationKeyKonnectCPLabels,
+			gateway:       "team=payments",
+			gatewayClass:  "env=prod",
+			expected:      map[string]string{"team": "payments", "env": "prod"},
+		},
+		{
+			name:          "CP: malformed annotation",
+			resolve:       resolveKonnectCPLabels,
+			annotationKey: metadata.AnnotationKeyKonnectCPLabels,
+			gateway:       "bad",
+			expectErr:     true,
+		},
+		{
+			name:          "CP: too many labels on gateway",
+			resolve:       resolveKonnectCPLabels,
+			annotationKey: metadata.AnnotationKeyKonnectCPLabels,
+			gateway:       "a=1,b=2,c=3,d=4,e=5,f=6",
+			expectErr:     true,
+		},
+		{
+			name:          "CP: too many labels on gatewayclass",
+			resolve:       resolveKonnectCPLabels,
+			annotationKey: metadata.AnnotationKeyKonnectCPLabels,
+			gatewayClass:  "a=1,b=2,c=3,d=4,e=5,f=6",
+			expectErr:     true,
+		},
+		{
+			name:          "CP: too many labels after merging",
+			resolve:       resolveKonnectCPLabels,
+			annotationKey: metadata.AnnotationKeyKonnectCPLabels,
+			gateway:       "a=1,b=2,c=3",
+			gatewayClass:  "d=4,e=5,f=6",
+			expectErr:     true,
+		},
+		{
+			name:          "CP: reserved key prefix",
+			resolve:       resolveKonnectCPLabels,
+			annotationKey: metadata.AnnotationKeyKonnectCPLabels,
+			gateway:       "konnect-team=payments",
+			expectErr:     true,
+		},
+		{
+			name:          "CP: empty value",
+			resolve:       resolveKonnectCPLabels,
+			annotationKey: metadata.AnnotationKeyKonnectCPLabels,
+			gateway:       "team=",
+			expectErr:     true,
+		},
+		{
+			name:          "DP: valid labels",
+			resolve:       resolveKonnectDPLabels,
+			annotationKey: metadata.AnnotationKeyKonnectDPLabels,
+			gateway:       "team=payments",
+			expected:      map[string]string{"team": "payments"},
+		},
+		{
+			name:          "DP: value not matching the pattern",
+			resolve:       resolveKonnectDPLabels,
+			annotationKey: metadata.AnnotationKeyKonnectDPLabels,
+			gateway:       "team=pay ments",
+			expectErr:     true,
+		},
+		{
+			name:          "DP: too many labels after merging",
+			resolve:       resolveKonnectDPLabels,
+			annotationKey: metadata.AnnotationKeyKonnectDPLabels,
+			gateway:       "a=1,b=2,c=3",
+			gatewayClass:  "d=4,e=5,f=6",
+			expectErr:     true,
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			gateway := &gwtypes.Gateway{
+				Namespace:   "default",
+				Name:        "gw",
+				Annotations: map[string]string{tc.annotationKey: tc.gateway},
+			}
+			gatewayClass := &gatewayv1.GatewayClass{
+				Name:        "gwc",
+				Annotations: map[string]string{tc.annotationKey: tc.gatewayClass},
+			}
+
+			got, err := tc.resolve(gateway, gatewayClass)
+			if tc.expectErr {
+				require.Error(t, err)
+				invalidErr, ok := errors.AsType[invalidKonnectLabelsError](err)
+				require.True(t, ok, "expected invalidKonnectLabelsError, got %T: %v", err, err)
+				assert.Equal(t, tc.annotationKey, invalidErr.annotationKey)
+				assert.Contains(t, err.Error(), tc.annotationKey)
 				return
 			}
 			require.NoError(t, err)
