@@ -73,6 +73,13 @@
 
 ### Fixed
 
+- `KongPlugin` `spec.ordering` is now sent to Konnect. It was dropped for every
+  `KongPluginBinding`, and for `KongPlugin`s referenced from `HTTPRoute` and
+  `GRPCRoute` `ExtensionRef` filters in hybrid gateways, so dynamic plugin
+  ordering only worked with the ingress controller. Konnect supports the
+  `access` phase only: an ordering in another phase is reported on the
+  `KongPluginBinding` as `Programmed=False` instead of being dropped.
+  [#1682](https://github.com/Kong/kong-operator/issues/1682)
 - `KonnectAPIAuthConfiguration` `spec.serverURL` is now checked against the
   domains Kong serves Konnect from. A host outside the list is refused before
   any request is made and reported with an `APIAuthValid=False` condition that
