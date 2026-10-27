@@ -476,6 +476,13 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 					Resource: "onpremaigateways",
 				},
 				{
+					// Watched by the OnPremAIGateway controller to validate and watch
+					// spec.watchNamespaces grants.
+					Group:    operatorv1alpha1.SchemeGroupVersion.Group,
+					Version:  operatorv1alpha1.SchemeGroupVersion.Version,
+					Resource: "watchnamespacegrants",
+				},
+				{
 					// Watched by the configuration-entity controllers that each instance's
 					// own manager registers; without it they would crash-loop per instance.
 					Group:    aiconfigurationv1alpha1.SchemeGroupVersion.Group,

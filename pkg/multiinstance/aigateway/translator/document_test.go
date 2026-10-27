@@ -1005,7 +1005,7 @@ func TestBuildDocument_CrossNamespaceEntityTranslated(t *testing.T) {
 
 	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
 	// An AuthStrategy in another namespace explicitly targeting the gateway in "default":
-	// the field index matches it, so the translation must reject it explicitly.
+	// the field index matches it, and the instance's cache decides whether it is listed.
 	crossNamespace := aiGatewayAuthStrategyFixture("cross-ns")
 	crossNamespace.Namespace = "other"
 	crossNamespace.Spec.AIGatewayRef.NamespacedRef = &commonv1alpha1.NamespacedRef{

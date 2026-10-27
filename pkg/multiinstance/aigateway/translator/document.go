@@ -490,11 +490,11 @@ func BuildDocument(
 		statuses = append(statuses, s...)
 	}
 
-	// A consumer living in another namespace is rejected by translateKind before its
-	// conversion runs, so the credentials it embeds never reach the closure above: report
-	// them with the consumer's error here, for the same reason - they are rendered through
-	// the consumer and must not keep a stale Programmed condition. A consumer that reached
-	// its conversion lives in the gateway's namespace, so it is not reported twice.
+	// A consumer whose conversion failed before it produced credential translations
+	// left its credentials unreported: report them with the consumer's error here, for
+	// the same reason - they are rendered through the consumer and must not keep a
+	// stale Programmed condition. A consumer that failed after resolving its
+	// credentials already reported them, so this post-pass repeats that status.
 	for _, s := range statuses {
 		consumer, ok := s.Obj.(*aiconfigurationv1alpha1.AIGatewayConsumer)
 		if !ok || s.Err == nil || consumer.Namespace == gw.Namespace {

@@ -232,6 +232,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 			),
 			onprem,
 		)
+		// The grants cannot be validated while the options are invalid, e.g. when
+		// spec.watchNamespaces asks for namespaces the operator does not watch:
+		// refresh the condition so a True value does not outlive the change.
+		k8sutils.SetCondition(
+			k8sutils.NewCondition(
+				aigatewayv1alpha1.OnPremAIGatewayWatchNamespaceGrantValidType,
+				metav1.ConditionFalse,
+				aigatewayv1alpha1.OnPremAIGatewayWatchNamespaceGrantInvalidReason,
+				"WatchNamespaceGrants are not evaluated: the OnPremAIGateway's options are invalid",
+			),
+			onprem,
+		)
 		setReadySkippingLicenseCondition(onprem)
 		// A gateway that narrows the operator's options (e.g. spec.watchNamespaces wider
 		// than --watch-namespaces) must not keep serving the configuration it built from
@@ -258,6 +270,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 	watchNamespaces, err := resolveWatchNamespaces(onprem)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("resolving watch namespaces: %w", err)
+	}
+
+	// A narrowed watch set leaves the entities of the dropped namespaces out of
+	// the instance's caches: nothing reports them any more, so clear their status
+	// here before the instance restarts with the new set.
+	if err := r.syncWatchedNamespaces(ctx, logger, mgrID, onprem, watchNamespaces); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	// Watching namespaces outside the gateway's own requires permission from the
