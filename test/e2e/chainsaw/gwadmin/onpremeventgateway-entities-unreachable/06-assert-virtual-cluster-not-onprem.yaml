@@ -1,0 +1,18 @@
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualCluster
+metadata:
+  name: virtual-cluster
+spec:
+  eventGatewayBackendClusterRef:
+    namespacedRef:
+      name: konnect-backend-cluster
+status:
+  # The Konnect controllers set the Programmed condition: its backend cluster
+  # isn't programmed in Konnect, as its KonnectEventGateway doesn't exist.
+  (conditions[?type == 'EventGatewayBackendClusterRefValid']):
+    - status: "False"
+  (conditions[?type == 'Programmed']):
+    - status: "False"
+      # None of the reasons, or messages, of the OnPremEventGateway controller.
+      (contains(['GatewayNotFound', 'Detached', 'GatewayNotProgrammed', 'Invalid', 'RefNotPermitted', 'Programmed'], reason)): false
+      (contains(message, 'OnPremEventGateway')): false

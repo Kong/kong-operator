@@ -239,6 +239,11 @@ func pushedMessage(pods int) string {
 	return fmt.Sprintf("Pushed to %d gw-admin pods", pods)
 }
 
+// inConfigurationOfPrefix starts the message of the Programmed condition the
+// controller sets True on an entity: the Konnect controllers use the same
+// reason (see setForOnPremEventGateway).
+const inConfigurationOfPrefix = "In the configuration of the OnPremEventGateway "
+
 // reportEntities sets the Programmed condition of the entities of the
 // gateway, from its configuration, its own Programmed condition and the
 // outcome of the push: an entity in the configuration is programmed along
@@ -282,7 +287,7 @@ func (r *Reconciler) reportEntities(ctx context.Context, gateway *eventgatewayv1
 			continue
 		}
 		cond := entityCondition(e.obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType, metav1.ConditionTrue, eventgatewayv1alpha1.OnPremEntityProgrammedReason,
-			fmt.Sprintf("In the configuration of the OnPremEventGateway %s, pushed to its gw-admin pods", gatewayKey)+keptMessage(e))
+			fmt.Sprintf(inConfigurationOfPrefix+"%s, pushed to its gw-admin pods", gatewayKey)+keptMessage(e))
 		if programmed == nil || programmed.Status != metav1.ConditionTrue {
 			message := fmt.Sprintf("In the configuration of the OnPremEventGateway %s, which is not programmed", gatewayKey)
 			if programmed != nil {
@@ -309,7 +314,7 @@ func certificateCondition(e entityStatus, gatewayKey client.ObjectKey, result pu
 	held, missing, unconfirmed, rejected := result.certificates.held(result.target, result.pending, cert)
 	if held {
 		return entityCondition(e.obj, eventgatewayv1alpha1.OnPremEventGatewayProgrammedType, metav1.ConditionTrue, eventgatewayv1alpha1.OnPremEntityProgrammedReason,
-			fmt.Sprintf("In the configuration of the OnPremEventGateway %s, registered on every gw-admin pod serving it", gatewayKey))
+			fmt.Sprintf(inConfigurationOfPrefix+"%s, registered on every gw-admin pod serving it", gatewayKey))
 	}
 	if len(rejected) > 0 {
 		reasons := make([]string, 0, len(rejected))

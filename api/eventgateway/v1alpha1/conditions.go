@@ -271,4 +271,7 @@ const (
 	// in the configuration of its OnPremEventGateway, and not registered yet
 	// on every gw-admin pod serving it: the message names those it isn't.
 	OnPremEntityNotRegisteredReason consts.ConditionReason = "NotRegistered"
+	// OnPremEntityGatewayNotFoundReason indicates the OnPremEventGateway of
+	// the entity, directly or through its parent entities, doesn't exist.
+	OnPremEntityGatewayNotFoundReason consts.ConditionReason = "GatewayNotFound"
 )
