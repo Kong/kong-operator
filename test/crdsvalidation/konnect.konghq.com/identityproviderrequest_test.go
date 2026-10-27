@@ -33,7 +33,7 @@ func TestIdentityProviderRequest(t *testing.T) {
 					Type: konnectv1alpha1.IdentityProviderType("oidc"),
 					Config: &konnectv1alpha1.PortalIdentityProviderRequestConfig{
 						Type: konnectv1alpha1.PortalIdentityProviderRequestConfigTypeOIDC,
-						OIDC: &konnectv1alpha1.OIDCIdentityProviderConfig{
+						OIDC: &konnectv1alpha1.PortalOIDCIdentityProviderConfig{
 							ClientID:  "client-id",
 							IssuerURL: "https://issuer.example.com",
 						},

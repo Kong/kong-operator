@@ -163,7 +163,7 @@ type EventGatewayVirtualClusterProducePolicyConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=encrypt;encryptFields;modifyHeaders;schemaValidation
+	// +kubebuilder:validation:Enum=encrypt;encryptFields;maskFields;modifyHeaders;schemaValidation;transcode
 	Type EventGatewayVirtualClusterProducePolicyConfigType `json:"type,omitempty"`
 
 	// EncryptPolicy configuration.
@@ -174,6 +174,10 @@ type EventGatewayVirtualClusterProducePolicyConfig struct {
 	//
 	// +optional
 	ParsedRecordEncryptFieldsPolicyCreate *EventGatewayParsedRecordEncryptFieldsPolicyCreate `json:"encryptFields,omitempty"`
+	// ParsedRecordMaskFieldsProducePolicyCreate configuration.
+	//
+	// +optional
+	ParsedRecordMaskFieldsProducePolicyCreate *EventGatewayParsedRecordMaskFieldsProducePolicyCreate `json:"maskFields,omitempty"`
 	// ModifyHeadersPolicyCreate configuration.
 	//
 	// +optional
@@ -182,6 +186,10 @@ type EventGatewayVirtualClusterProducePolicyConfig struct {
 	//
 	// +optional
 	ProduceSchemaValidationPolicy *EventGatewayProduceSchemaValidationPolicy `json:"schemaValidation,omitempty"`
+	// ParsedRecordTranscodeProducePolicyCreate configuration.
+	//
+	// +optional
+	ParsedRecordTranscodeProducePolicyCreate *EventGatewayParsedRecordTranscodeProducePolicyCreate `json:"transcode,omitempty"`
 }
 
 // EventGatewayVirtualClusterProducePolicyConfigType represents the type of EventGatewayVirtualClusterProducePolicyConfig.
@@ -189,10 +197,12 @@ type EventGatewayVirtualClusterProducePolicyConfigType string
 
 // EventGatewayVirtualClusterProducePolicyConfigType values.
 const (
-	EventGatewayVirtualClusterProducePolicyConfigTypeEncryptPolicy                         EventGatewayVirtualClusterProducePolicyConfigType = "encrypt"
-	EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordEncryptFieldsPolicyCreate EventGatewayVirtualClusterProducePolicyConfigType = "encryptFields"
-	EventGatewayVirtualClusterProducePolicyConfigTypeModifyHeadersPolicyCreate             EventGatewayVirtualClusterProducePolicyConfigType = "modifyHeaders"
-	EventGatewayVirtualClusterProducePolicyConfigTypeProduceSchemaValidationPolicy         EventGatewayVirtualClusterProducePolicyConfigType = "schemaValidation"
+	EventGatewayVirtualClusterProducePolicyConfigTypeEncryptPolicy                             EventGatewayVirtualClusterProducePolicyConfigType = "encrypt"
+	EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordEncryptFieldsPolicyCreate     EventGatewayVirtualClusterProducePolicyConfigType = "encryptFields"
+	EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordMaskFieldsProducePolicyCreate EventGatewayVirtualClusterProducePolicyConfigType = "maskFields"
+	EventGatewayVirtualClusterProducePolicyConfigTypeModifyHeadersPolicyCreate                 EventGatewayVirtualClusterProducePolicyConfigType = "modifyHeaders"
+	EventGatewayVirtualClusterProducePolicyConfigTypeProduceSchemaValidationPolicy             EventGatewayVirtualClusterProducePolicyConfigType = "schemaValidation"
+	EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordTranscodeProducePolicyCreate  EventGatewayVirtualClusterProducePolicyConfigType = "transcode"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -220,6 +230,14 @@ func (u EventGatewayVirtualClusterProducePolicyConfig) MarshalJSON() ([]byte, er
 			}
 			m["encryptFields"] = raw
 		}
+	case EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordMaskFieldsProducePolicyCreate:
+		if u.ParsedRecordMaskFieldsProducePolicyCreate != nil {
+			raw, err := json.Marshal(u.ParsedRecordMaskFieldsProducePolicyCreate)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayVirtualClusterProducePolicyConfig mask_fields: %w", err)
+			}
+			m["maskFields"] = raw
+		}
 	case EventGatewayVirtualClusterProducePolicyConfigTypeModifyHeadersPolicyCreate:
 		if u.ModifyHeadersPolicyCreate != nil {
 			raw, err := json.Marshal(u.ModifyHeadersPolicyCreate)
@@ -235,6 +253,14 @@ func (u EventGatewayVirtualClusterProducePolicyConfig) MarshalJSON() ([]byte, er
 				return nil, fmt.Errorf("marshaling EventGatewayVirtualClusterProducePolicyConfig schema_validation: %w", err)
 			}
 			m["schemaValidation"] = raw
+		}
+	case EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordTranscodeProducePolicyCreate:
+		if u.ParsedRecordTranscodeProducePolicyCreate != nil {
+			raw, err := json.Marshal(u.ParsedRecordTranscodeProducePolicyCreate)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayVirtualClusterProducePolicyConfig transcode: %w", err)
+			}
+			m["transcode"] = raw
 		}
 	}
 	return json.Marshal(m)
@@ -277,6 +303,16 @@ func (u *EventGatewayVirtualClusterProducePolicyConfig) UnmarshalJSON(data []byt
 			return fmt.Errorf("unmarshaling EventGatewayVirtualClusterProducePolicyConfig encrypt_fields: %w", err)
 		}
 		u.ParsedRecordEncryptFieldsPolicyCreate = &val
+	case "maskFields":
+		payload, ok := raw["maskFields"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordMaskFieldsProducePolicyCreate
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayVirtualClusterProducePolicyConfig mask_fields: %w", err)
+		}
+		u.ParsedRecordMaskFieldsProducePolicyCreate = &val
 	case "modifyHeaders":
 		payload, ok := raw["modifyHeaders"]
 		if !ok || len(payload) == 0 {
@@ -297,6 +333,16 @@ func (u *EventGatewayVirtualClusterProducePolicyConfig) UnmarshalJSON(data []byt
 			return fmt.Errorf("unmarshaling EventGatewayVirtualClusterProducePolicyConfig schema_validation: %w", err)
 		}
 		u.ProduceSchemaValidationPolicy = &val
+	case "transcode":
+		payload, ok := raw["transcode"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeProducePolicyCreate
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayVirtualClusterProducePolicyConfig transcode: %w", err)
+		}
+		u.ParsedRecordTranscodeProducePolicyCreate = &val
 	}
 	return nil
 }

@@ -1126,6 +1126,10 @@ apiGroupVersions:
             - parentPolicyID
           EventGatewayParsedRecordEncryptFieldsPolicyCreate:
             - parentPolicyID
+          EventGatewayParsedRecordMaskFieldsProducePolicyCreate:
+            - parentPolicyID
+          EventGatewayParsedRecordTranscodeProducePolicyCreate:
+            - parentPolicyID
         cel:
           _validations:
             # The parent reference is immutable once the entity has been created
@@ -1180,6 +1184,10 @@ apiGroupVersions:
           EventGatewayModifyHeadersPolicyCreate:
             - parentPolicyID
           EventGatewayParsedRecordDecryptFieldsPolicyCreate:
+            - parentPolicyID
+          EventGatewayParsedRecordTranscodeConsumePolicyCreate:
+            - parentPolicyID
+          EventGatewayParsedRecordMaskFieldsConsumePolicyCreate:
             - parentPolicyID
           EventGatewaySkipRecordPolicyCreate:
             - parentPolicyID
@@ -1390,14 +1398,14 @@ apiGroupVersions:
                 - typeValue: oIDC
                   variantField: OIDC
                   responseTypeValue: oidc
-                  responseVariantField: OIDCIdentityProviderConfigOutput
+                  responseVariantField: PortalOIDCIdentityProviderConfigOutput
                   matchFields:
                     - objectField: IssuerURL
                       responseField: GetIssuerURL()
                     - objectField: ClientID
                       responseField: GetClientID()
-                - typeValue: portalSAML
-                  variantField: PortalSAML
+                - typeValue: sAML
+                  variantField: SAML
                   responseTypeValue: saml
                   responseVariantField: PortalSAMLIdentityProviderConfig
                   # Both SAML metadata fields are optional and only one is

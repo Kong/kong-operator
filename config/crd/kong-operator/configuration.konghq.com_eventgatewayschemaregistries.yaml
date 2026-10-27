@@ -167,10 +167,14 @@ spec:
                             minLength: 1
                             type: string
                           schemaType:
-                            description: The format of the message.
+                            description: |-
+                              The format of the message.
+
+                              **`any` requires a minimum runtime version of `1.3`**.
                             enum:
                             - avro
                             - json
+                            - any
                             maxLength: 253
                             minLength: 1
                             type: string

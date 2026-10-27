@@ -7500,6 +7500,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       maxLength: 253
@@ -7540,6 +7541,7 @@ spec:
                                       - message: value required when type=inline; secretRef required when type=secretRef
                                         rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -7688,6 +7690,7 @@ spec:
                                           - body
                                           - query
                                           maxLength: 253
+                                          minLength: 1
                                           type: string
                                         name:
                                           maxLength: 253
@@ -7728,6 +7731,7 @@ spec:
                                           - message: value required when type=inline; secretRef required when type=secretRef
                                             rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                                       required:
+                                      - location
                                       - name
                                       type: object
                                     maxItems: 1
@@ -7913,6 +7917,7 @@ spec:
                                           - body
                                           - query
                                           maxLength: 253
+                                          minLength: 1
                                           type: string
                                         name:
                                           maxLength: 253
@@ -7953,6 +7958,7 @@ spec:
                                           - message: value required when type=inline; secretRef required when type=secretRef
                                             rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                                       required:
+                                      - location
                                       - name
                                       type: object
                                     maxItems: 1
@@ -8060,6 +8066,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       maxLength: 253
@@ -8100,6 +8107,7 @@ spec:
                                       - message: value required when type=inline; secretRef required when type=secretRef
                                         rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -8198,6 +8206,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       maxLength: 253
@@ -8238,6 +8247,7 @@ spec:
                                       - message: value required when type=inline; secretRef required when type=secretRef
                                         rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -8336,6 +8346,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       maxLength: 253
@@ -8376,6 +8387,7 @@ spec:
                                       - message: value required when type=inline; secretRef required when type=secretRef
                                         rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -8474,6 +8486,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       maxLength: 253
@@ -8514,6 +8527,7 @@ spec:
                                       - message: value required when type=inline; secretRef required when type=secretRef
                                         rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -8612,6 +8626,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       maxLength: 253
@@ -8652,6 +8667,7 @@ spec:
                                       - message: value required when type=inline; secretRef required when type=secretRef
                                         rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -8752,6 +8768,7 @@ spec:
                                           - body
                                           - query
                                           maxLength: 253
+                                          minLength: 1
                                           type: string
                                         name:
                                           maxLength: 253
@@ -8792,6 +8809,7 @@ spec:
                                           - message: value required when type=inline; secretRef required when type=secretRef
                                             rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                                       required:
+                                      - location
                                       - name
                                       type: object
                                     maxItems: 1
@@ -8987,6 +9005,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       maxLength: 253
@@ -9027,6 +9046,7 @@ spec:
                                       - message: value required when type=inline; secretRef required when type=secretRef
                                         rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -9125,6 +9145,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       maxLength: 253
@@ -9165,6 +9186,7 @@ spec:
                                       - message: value required when type=inline; secretRef required when type=secretRef
                                         rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -9263,6 +9285,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       maxLength: 253
@@ -9303,6 +9326,7 @@ spec:
                                       - message: value required when type=inline; secretRef required when type=secretRef
                                         rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -9401,6 +9425,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       maxLength: 253
@@ -9441,6 +9466,7 @@ spec:
                                       - message: value required when type=inline; secretRef required when type=secretRef
                                         rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -9539,6 +9565,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       maxLength: 253
@@ -9579,6 +9606,7 @@ spec:
                                       - message: value required when type=inline; secretRef required when type=secretRef
                                         rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -9677,6 +9705,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       maxLength: 253
@@ -9717,6 +9746,7 @@ spec:
                                       - message: value required when type=inline; secretRef required when type=secretRef
                                         rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -9817,6 +9847,7 @@ spec:
                                           - body
                                           - query
                                           maxLength: 253
+                                          minLength: 1
                                           type: string
                                         name:
                                           maxLength: 253
@@ -9857,6 +9888,7 @@ spec:
                                           - message: value required when type=inline; secretRef required when type=secretRef
                                             rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                                       required:
+                                      - location
                                       - name
                                       type: object
                                     maxItems: 1
@@ -10003,6 +10035,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       maxLength: 253
@@ -10043,6 +10076,7 @@ spec:
                                       - message: value required when type=inline; secretRef required when type=secretRef
                                         rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -10141,6 +10175,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       maxLength: 253
@@ -10181,6 +10216,7 @@ spec:
                                       - message: value required when type=inline; secretRef required when type=secretRef
                                         rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -10279,6 +10315,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       maxLength: 253
@@ -10319,6 +10356,7 @@ spec:
                                       - message: value required when type=inline; secretRef required when type=secretRef
                                         rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -10417,6 +10455,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       maxLength: 253
@@ -10457,6 +10496,7 @@ spec:
                                       - message: value required when type=inline; secretRef required when type=secretRef
                                         rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -25650,6 +25690,37 @@ spec:
                     properties:
                       anonymous:
                         type: object
+                      saslAwsIam:
+                        properties:
+                          saslAwsIam:
+                            properties:
+                              assumeRole:
+                                properties:
+                                  arn:
+                                    maxLength: 2048
+                                    minLength: 10
+                                    pattern: ^arn:aws(-[a-z-]+)?:iam:.+
+                                    type: string
+                                  sessionName:
+                                    maxLength: 253
+                                    type: string
+                                required:
+                                - arn
+                                type: object
+                              defaultProviderChain:
+                                type: object
+                              type:
+                                enum:
+                                - assumeRole
+                                - defaultProviderChain
+                                minLength: 1
+                                type: string
+                            required:
+                            - type
+                            type: object
+                        required:
+                        - saslAwsIam
+                        type: object
                       saslPlain:
                         properties:
                           password:
@@ -25689,6 +25760,7 @@ spec:
                       type:
                         enum:
                         - anonymous
+                        - saslAwsIam
                         - saslPlain
                         - saslScram
                         minLength: 1
@@ -26973,6 +27045,7 @@ spec:
                             enum:
                             - avro
                             - json
+                            - any
                             maxLength: 253
                             minLength: 1
                             type: string
@@ -27864,6 +27937,196 @@ spec:
                     required:
                     - config
                     type: object
+                  maskFields:
+                    properties:
+                      condition:
+                        maxLength: 1000
+                        type: string
+                      config:
+                        properties:
+                          failureMode:
+                            enum:
+                            - error
+                            - skip
+                            - passthrough
+                            - mark
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          maskFields:
+                            items:
+                              properties:
+                                paths:
+                                  properties:
+                                    array:
+                                      items:
+                                        properties:
+                                          match:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - match
+                                        type: object
+                                      type: array
+                                    expression:
+                                      type: string
+                                    type:
+                                      enum:
+                                      - array
+                                      - expression
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - type
+                                  type: object
+                                strategy:
+                                  properties:
+                                    email:
+                                      properties:
+                                        domain:
+                                          properties:
+                                            keepAll:
+                                              type: object
+                                            keepChars:
+                                              properties:
+                                                first:
+                                                  minimum: 0
+                                                  type: integer
+                                                last:
+                                                  minimum: 0
+                                                  type: integer
+                                                phrase:
+                                                  maxLength: 255
+                                                  minLength: 1
+                                                  type: string
+                                              required:
+                                              - phrase
+                                              type: object
+                                            replace:
+                                              properties:
+                                                phrase:
+                                                  maxLength: 255
+                                                  minLength: 1
+                                                  type: string
+                                              required:
+                                              - phrase
+                                              type: object
+                                            type:
+                                              enum:
+                                              - keepAll
+                                              - keepChars
+                                              - replace
+                                              minLength: 1
+                                              type: string
+                                          required:
+                                          - type
+                                          type: object
+                                        localPart:
+                                          properties:
+                                            keepChars:
+                                              properties:
+                                                first:
+                                                  minimum: 0
+                                                  type: integer
+                                                last:
+                                                  minimum: 0
+                                                  type: integer
+                                                phrase:
+                                                  maxLength: 255
+                                                  minLength: 1
+                                                  type: string
+                                              required:
+                                              - phrase
+                                              type: object
+                                            replace:
+                                              properties:
+                                                phrase:
+                                                  maxLength: 255
+                                                  minLength: 1
+                                                  type: string
+                                              required:
+                                              - phrase
+                                              type: object
+                                            type:
+                                              enum:
+                                              - keepChars
+                                              - replace
+                                              minLength: 1
+                                              type: string
+                                          required:
+                                          - type
+                                          type: object
+                                      required:
+                                      - domain
+                                      - localPart
+                                      type: object
+                                    keepChars:
+                                      properties:
+                                        first:
+                                          minimum: 0
+                                          type: integer
+                                        last:
+                                          minimum: 0
+                                          type: integer
+                                        phrase:
+                                          maxLength: 255
+                                          minLength: 1
+                                          type: string
+                                      required:
+                                      - phrase
+                                      type: object
+                                    replace:
+                                      properties:
+                                        phrase:
+                                          maxLength: 255
+                                          minLength: 1
+                                          type: string
+                                      required:
+                                      - phrase
+                                      type: object
+                                    type:
+                                      enum:
+                                      - email
+                                      - keepChars
+                                      - replace
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - type
+                                  type: object
+                              required:
+                              - paths
+                              - strategy
+                              type: object
+                            maxItems: 256
+                            type: array
+                        required:
+                        - failureMode
+                        - maskFields
+                        type: object
+                      description:
+                        maxLength: 512
+                        type: string
+                      enabled:
+                        enum:
+                        - Enabled
+                        - Disabled
+                        type: string
+                      labels:
+                        additionalProperties:
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        maxProperties: 50
+                        type: object
+                      name:
+                        maxLength: 255
+                        type: string
+                    required:
+                    - config
+                    type: object
                   modifyHeaders:
                     properties:
                       condition:
@@ -28010,34 +28273,41 @@ spec:
                                 - mark
                                 maxLength: 253
                                 type: string
+                              key:
+                                properties:
+                                  avro:
+                                    properties:
+                                      schema:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - schema
+                                    type: object
+                                  json:
+                                    properties:
+                                      schema:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - schema
+                                    type: object
+                                  schemaType:
+                                    enum:
+                                    - avro
+                                    - json
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - schemaType
+                                type: object
                               keyValidationAction:
                                 enum:
                                 - mark
                                 - skip
                                 maxLength: 253
                                 type: string
-                              schemaRegistry:
-                                properties:
-                                  id:
-                                    type: object
-                                  name:
-                                    properties:
-                                      name:
-                                        maxLength: 255
-                                        minLength: 1
-                                        type: string
-                                    required:
-                                    - name
-                                    type: object
-                                  type:
-                                    enum:
-                                    - id
-                                    - name
-                                    minLength: 1
-                                    type: string
-                                required:
-                                - type
-                                type: object
                               validateKey:
                                 enum:
                                 - Enabled
@@ -28048,6 +28318,35 @@ spec:
                                 - Enabled
                                 - Disabled
                                 type: string
+                              value:
+                                properties:
+                                  avro:
+                                    properties:
+                                      schema:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - schema
+                                    type: object
+                                  json:
+                                    properties:
+                                      schema:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - schema
+                                    type: object
+                                  schemaType:
+                                    enum:
+                                    - avro
+                                    - json
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - schemaType
+                                type: object
                               valueValidationAction:
                                 enum:
                                 - mark
@@ -28160,13 +28459,256 @@ spec:
                         maxLength: 255
                         type: string
                     type: object
+                  transcode:
+                    properties:
+                      condition:
+                        maxLength: 1000
+                        type: string
+                      config:
+                        properties:
+                          avro:
+                            properties:
+                              failureMode:
+                                enum:
+                                - error
+                                - skip
+                                - passthrough
+                                - mark
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              onUnknownField:
+                                enum:
+                                - fail
+                                - drop
+                                maxLength: 253
+                                type: string
+                              schemaSource:
+                                properties:
+                                  inline:
+                                    properties:
+                                      inline:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - inline
+                                    type: object
+                                  reference:
+                                    properties:
+                                      schemaRefDestination:
+                                        properties:
+                                          confluentFormat:
+                                            type: object
+                                          none:
+                                            type: object
+                                          recordHeader:
+                                            properties:
+                                              name:
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                            type: object
+                                          type:
+                                            enum:
+                                            - confluentFormat
+                                            - none
+                                            - recordHeader
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - type
+                                        type: object
+                                      schemaRegistry:
+                                        properties:
+                                          id:
+                                            type: object
+                                          name:
+                                            properties:
+                                              name:
+                                                maxLength: 255
+                                                minLength: 1
+                                                type: string
+                                            required:
+                                            - name
+                                            type: object
+                                          type:
+                                            enum:
+                                            - id
+                                            - name
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - type
+                                        type: object
+                                      subject:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      version:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - schemaRefDestination
+                                    - schemaRegistry
+                                    - subject
+                                    - version
+                                    type: object
+                                  type:
+                                    enum:
+                                    - inline
+                                    - reference
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                            required:
+                            - failureMode
+                            - schemaSource
+                            type: object
+                          json:
+                            properties:
+                              failureMode:
+                                enum:
+                                - error
+                                - skip
+                                - passthrough
+                                - mark
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              onUnknownField:
+                                enum:
+                                - fail
+                                - drop
+                                maxLength: 253
+                                type: string
+                              schemaSource:
+                                properties:
+                                  inline:
+                                    properties:
+                                      inline:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - inline
+                                    type: object
+                                  reference:
+                                    properties:
+                                      schemaRefDestination:
+                                        properties:
+                                          confluentFormat:
+                                            type: object
+                                          none:
+                                            type: object
+                                          recordHeader:
+                                            properties:
+                                              name:
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                            type: object
+                                          type:
+                                            enum:
+                                            - confluentFormat
+                                            - none
+                                            - recordHeader
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - type
+                                        type: object
+                                      schemaRegistry:
+                                        properties:
+                                          id:
+                                            type: object
+                                          name:
+                                            properties:
+                                              name:
+                                                maxLength: 255
+                                                minLength: 1
+                                                type: string
+                                            required:
+                                            - name
+                                            type: object
+                                          type:
+                                            enum:
+                                            - id
+                                            - name
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - type
+                                        type: object
+                                      subject:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      version:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - schemaRefDestination
+                                    - schemaRegistry
+                                    - subject
+                                    - version
+                                    type: object
+                                  type:
+                                    enum:
+                                    - inline
+                                    - reference
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                            required:
+                            - failureMode
+                            type: object
+                          outputFormat:
+                            enum:
+                            - avro
+                            - json
+                            minLength: 1
+                            type: string
+                        required:
+                        - outputFormat
+                        type: object
+                      description:
+                        maxLength: 512
+                        type: string
+                      enabled:
+                        enum:
+                        - Enabled
+                        - Disabled
+                        type: string
+                      labels:
+                        additionalProperties:
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        maxProperties: 50
+                        type: object
+                      name:
+                        maxLength: 255
+                        type: string
+                    required:
+                    - config
+                    type: object
                   type:
                     enum:
                     - decrypt
                     - decryptFields
+                    - maskFields
                     - modifyHeaders
                     - schemaValidation
                     - skipRecord
+                    - transcode
                     minLength: 1
                     type: string
                 required:
@@ -29495,6 +30037,195 @@ spec:
                     required:
                     - config
                     type: object
+                  maskFields:
+                    properties:
+                      condition:
+                        maxLength: 1000
+                        type: string
+                      config:
+                        properties:
+                          failureMode:
+                            enum:
+                            - reject
+                            - passthrough
+                            - mark
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          maskFields:
+                            items:
+                              properties:
+                                paths:
+                                  properties:
+                                    array:
+                                      items:
+                                        properties:
+                                          match:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - match
+                                        type: object
+                                      type: array
+                                    expression:
+                                      type: string
+                                    type:
+                                      enum:
+                                      - array
+                                      - expression
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - type
+                                  type: object
+                                strategy:
+                                  properties:
+                                    email:
+                                      properties:
+                                        domain:
+                                          properties:
+                                            keepAll:
+                                              type: object
+                                            keepChars:
+                                              properties:
+                                                first:
+                                                  minimum: 0
+                                                  type: integer
+                                                last:
+                                                  minimum: 0
+                                                  type: integer
+                                                phrase:
+                                                  maxLength: 255
+                                                  minLength: 1
+                                                  type: string
+                                              required:
+                                              - phrase
+                                              type: object
+                                            replace:
+                                              properties:
+                                                phrase:
+                                                  maxLength: 255
+                                                  minLength: 1
+                                                  type: string
+                                              required:
+                                              - phrase
+                                              type: object
+                                            type:
+                                              enum:
+                                              - keepAll
+                                              - keepChars
+                                              - replace
+                                              minLength: 1
+                                              type: string
+                                          required:
+                                          - type
+                                          type: object
+                                        localPart:
+                                          properties:
+                                            keepChars:
+                                              properties:
+                                                first:
+                                                  minimum: 0
+                                                  type: integer
+                                                last:
+                                                  minimum: 0
+                                                  type: integer
+                                                phrase:
+                                                  maxLength: 255
+                                                  minLength: 1
+                                                  type: string
+                                              required:
+                                              - phrase
+                                              type: object
+                                            replace:
+                                              properties:
+                                                phrase:
+                                                  maxLength: 255
+                                                  minLength: 1
+                                                  type: string
+                                              required:
+                                              - phrase
+                                              type: object
+                                            type:
+                                              enum:
+                                              - keepChars
+                                              - replace
+                                              minLength: 1
+                                              type: string
+                                          required:
+                                          - type
+                                          type: object
+                                      required:
+                                      - domain
+                                      - localPart
+                                      type: object
+                                    keepChars:
+                                      properties:
+                                        first:
+                                          minimum: 0
+                                          type: integer
+                                        last:
+                                          minimum: 0
+                                          type: integer
+                                        phrase:
+                                          maxLength: 255
+                                          minLength: 1
+                                          type: string
+                                      required:
+                                      - phrase
+                                      type: object
+                                    replace:
+                                      properties:
+                                        phrase:
+                                          maxLength: 255
+                                          minLength: 1
+                                          type: string
+                                      required:
+                                      - phrase
+                                      type: object
+                                    type:
+                                      enum:
+                                      - email
+                                      - keepChars
+                                      - replace
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - type
+                                  type: object
+                              required:
+                              - paths
+                              - strategy
+                              type: object
+                            maxItems: 256
+                            type: array
+                        required:
+                        - failureMode
+                        - maskFields
+                        type: object
+                      description:
+                        maxLength: 512
+                        type: string
+                      enabled:
+                        enum:
+                        - Enabled
+                        - Disabled
+                        type: string
+                      labels:
+                        additionalProperties:
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        maxProperties: 50
+                        type: object
+                      name:
+                        maxLength: 255
+                        type: string
+                    required:
+                    - config
+                    type: object
                   modifyHeaders:
                     properties:
                       condition:
@@ -29646,34 +30377,41 @@ spec:
                                 - mark
                                 maxLength: 253
                                 type: string
+                              key:
+                                properties:
+                                  avro:
+                                    properties:
+                                      schema:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - schema
+                                    type: object
+                                  json:
+                                    properties:
+                                      schema:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - schema
+                                    type: object
+                                  schemaType:
+                                    enum:
+                                    - avro
+                                    - json
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - schemaType
+                                type: object
                               keyValidationAction:
                                 enum:
                                 - reject
                                 - mark
                                 maxLength: 253
                                 type: string
-                              schemaRegistry:
-                                properties:
-                                  id:
-                                    type: object
-                                  name:
-                                    properties:
-                                      name:
-                                        maxLength: 255
-                                        minLength: 1
-                                        type: string
-                                    required:
-                                    - name
-                                    type: object
-                                  type:
-                                    enum:
-                                    - id
-                                    - name
-                                    minLength: 1
-                                    type: string
-                                required:
-                                - type
-                                type: object
                               validateKey:
                                 enum:
                                 - Enabled
@@ -29684,6 +30422,35 @@ spec:
                                 - Enabled
                                 - Disabled
                                 type: string
+                              value:
+                                properties:
+                                  avro:
+                                    properties:
+                                      schema:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - schema
+                                    type: object
+                                  json:
+                                    properties:
+                                      schema:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - schema
+                                    type: object
+                                  schemaType:
+                                    enum:
+                                    - avro
+                                    - json
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - schemaType
+                                type: object
                               valueValidationAction:
                                 enum:
                                 - reject
@@ -29777,12 +30544,152 @@ spec:
                     required:
                     - config
                     type: object
+                  transcode:
+                    properties:
+                      condition:
+                        maxLength: 1000
+                        type: string
+                      config:
+                        properties:
+                          avro:
+                            properties:
+                              failureMode:
+                                enum:
+                                - reject
+                                - passthrough
+                                - mark
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              onUnknownField:
+                                enum:
+                                - fail
+                                - drop
+                                maxLength: 253
+                                type: string
+                              schemaSource:
+                                properties:
+                                  inline:
+                                    properties:
+                                      inline:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - inline
+                                    type: object
+                                  reference:
+                                    properties:
+                                      schemaRefDestination:
+                                        properties:
+                                          confluentFormat:
+                                            type: object
+                                          none:
+                                            type: object
+                                          recordHeader:
+                                            properties:
+                                              name:
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                            type: object
+                                          type:
+                                            enum:
+                                            - confluentFormat
+                                            - none
+                                            - recordHeader
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - type
+                                        type: object
+                                      schemaRegistry:
+                                        properties:
+                                          id:
+                                            type: object
+                                          name:
+                                            properties:
+                                              name:
+                                                maxLength: 255
+                                                minLength: 1
+                                                type: string
+                                            required:
+                                            - name
+                                            type: object
+                                          type:
+                                            enum:
+                                            - id
+                                            - name
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - type
+                                        type: object
+                                      subject:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      version:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - schemaRefDestination
+                                    - schemaRegistry
+                                    - subject
+                                    - version
+                                    type: object
+                                  type:
+                                    enum:
+                                    - inline
+                                    - reference
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                            required:
+                            - failureMode
+                            - schemaSource
+                            type: object
+                          outputFormat:
+                            enum:
+                            - avro
+                            minLength: 1
+                            type: string
+                        required:
+                        - outputFormat
+                        type: object
+                      description:
+                        maxLength: 512
+                        type: string
+                      enabled:
+                        enum:
+                        - Enabled
+                        - Disabled
+                        type: string
+                      labels:
+                        additionalProperties:
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        maxProperties: 50
+                        type: object
+                      name:
+                        maxLength: 255
+                        type: string
+                    required:
+                    - config
+                    type: object
                   type:
                     enum:
                     - encrypt
                     - encryptFields
+                    - maskFields
                     - modifyHeaders
                     - schemaValidation
+                    - transcode
                     minLength: 1
                     type: string
                 required:
@@ -30309,8 +31216,9 @@ spec:
                         minLength: 1
                         type: string
                       prefix:
-                        maxLength: 253
+                        maxLength: 100
                         minLength: 1
+                        pattern: ^[A-Za-z0-9._-]*[A-Za-z0-9_-][A-Za-z0-9._-]*$
                         type: string
                     required:
                     - mode
@@ -53669,7 +54577,7 @@ spec:
                         - clientID
                         - issuerURL
                         type: object
-                      portalSAML:
+                      sAML:
                         properties:
                           idpMetadataURL:
                             maxLength: 253
@@ -53681,7 +54589,7 @@ spec:
                       type:
                         enum:
                         - oIDC
-                        - portalSAML
+                        - sAML
                         minLength: 1
                         type: string
                     required:
