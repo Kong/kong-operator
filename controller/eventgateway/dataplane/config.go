@@ -79,10 +79,10 @@ var config = shareddataplane.Config[
 	ControlPlaneRef: func(egdp *eventgatewayv1alpha1.KegDataPlane) shareddataplane.ControlPlaneRef {
 		ref := egdp.Spec.ControlPlaneRef.KonnectNamespacedRef
 		if ref == nil {
-			// The CRD schema requires konnectNamespacedRef, so this shouldn't
-			// happen. Returning an empty ref skips control plane resolution;
-			// buildContainer then refuses to build a Deployment without a
-			// resolved KonnectEventGateway, instead of panicking.
+			// An onpremNamespacedRef isn't supported by the controller yet.
+			// Returning an empty ref skips control plane resolution;
+			// resolveCertificateSecret then refuses it before provisioning a
+			// certificate, instead of panicking.
 			return shareddataplane.ControlPlaneRef{}
 		}
 		return shareddataplane.ControlPlaneRef{
@@ -250,6 +250,16 @@ func konnectEventGatewayFromResolved(cp shareddataplane.ResolvedControlPlane) *k
 	return keg
 }
 
+// onPremNotSupported returns an error for a KegDataPlane that references an
+// OnPremEventGateway, which the controller doesn't support yet, and nil
+// otherwise.
+func onPremNotSupported(egdp *eventgatewayv1alpha1.KegDataPlane) error {
+	if egdp.Spec.ControlPlaneRef.Type != eventgatewayv1alpha1.ControlPlaneRefTypeOnPremNamespacedRef {
+		return nil
+	}
+	return fmt.Errorf("KegDataPlane %s/%s references an OnPremEventGateway: an onpremNamespacedRef is not supported by the controller yet", egdp.Namespace, egdp.Name)
+}
+
 // buildContainer builds the keg container and the additional volumes it
 // requires.
 func buildContainer(
@@ -262,8 +272,11 @@ func buildContainer(
 	keg := konnectEventGatewayFromResolved(cp)
 	if keg == nil {
 		// keg needs its KonnectEventGateway's region and cluster ID to start, so
-		// there is no Deployment to build without one. The CRD schema requires
-		// spec.controlPlaneRef.konnectNamespacedRef, so this shouldn't happen.
+		// there is no Deployment to build without one. resolveCertificateSecret
+		// already refuses an onpremNamespacedRef; this is a backstop.
+		if err := onPremNotSupported(egdp); err != nil {
+			return corev1.Container{}, nil, err
+		}
 		return corev1.Container{}, nil, fmt.Errorf("KegDataPlane %s/%s has no resolved KonnectEventGateway", egdp.Namespace, egdp.Name)
 	}
 	envVars, err := buildKEGEnvVars(egdp, keg)

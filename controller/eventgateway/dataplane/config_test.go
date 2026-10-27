@@ -24,6 +24,7 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	shareddataplane "github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 )
 
@@ -40,12 +41,34 @@ func TestControlPlaneRef(t *testing.T) {
 		egdp.Spec.ControlPlaneRef.KonnectNamespacedRef = nil
 		assert.Equal(t, shareddataplane.ControlPlaneRef{}, config.ControlPlaneRef(egdp))
 	})
+
+	t.Run("onpremNamespacedRef: empty ref, it isn't supported yet", func(t *testing.T) {
+		assert.Equal(t, shareddataplane.ControlPlaneRef{}, config.ControlPlaneRef(newOnPremEGDP()))
+	})
 }
 
 func TestBuildContainerWithoutControlPlane(t *testing.T) {
-	_, _, err := buildContainer(newReconcileEGDP(), shareddataplane.ResolvedControlPlane{}, "image", "cert", "")
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "has no resolved KonnectEventGateway")
+	t.Run("konnectNamespacedRef", func(t *testing.T) {
+		_, _, err := buildContainer(newReconcileEGDP(), shareddataplane.ResolvedControlPlane{}, "image", "cert", "")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "has no resolved KonnectEventGateway")
+	})
+
+	t.Run("onpremNamespacedRef", func(t *testing.T) {
+		_, _, err := buildContainer(newOnPremEGDP(), shareddataplane.ResolvedControlPlane{}, "image", "cert", "")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "an onpremNamespacedRef is not supported by the controller yet")
+	})
+}
+
+// newOnPremEGDP returns a KegDataPlane that references an OnPremEventGateway.
+func newOnPremEGDP() *eventgatewayv1alpha1.KegDataPlane {
+	egdp := newReconcileEGDP()
+	egdp.Spec.ControlPlaneRef = eventgatewayv1alpha1.ControlPlaneRef{
+		Type:                eventgatewayv1alpha1.ControlPlaneRefTypeOnPremNamespacedRef,
+		OnPremNamespacedRef: &eventgatewayv1alpha1.OnPremNamespacedRef{Name: "my-onprem-gateway"},
+	}
+	return egdp
 }
 
 func TestBuildEventGatewayDataPlaneCertificate(t *testing.T) {

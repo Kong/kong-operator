@@ -63,11 +63,13 @@ type KegDataPlaneList struct {
 }
 
 // KegDataPlaneSpec defines the desired state of KegDataPlane.
+// +kubebuilder:validation:XValidation:rule="self.controlPlaneRef.type != 'onpremNamespacedRef' || !has(self.config) || !has(self.config.konnect) || !has(self.config.konnect.domain)",message="config.konnect.domain can't be set with an onpremNamespacedRef: the data plane reaches gw-admin on the address of the OnPremEventGateway"
 type KegDataPlaneSpec struct {
 	// ControlPlaneRef references the control plane this KegDataPlane connects to.
-	// The type field identifies which kind of control plane is being referenced.
-	// Currently only konnectNamespacedRef is supported, which references a
-	// KonnectEventGateway resource in the same namespace.
+	// The type field identifies which kind of control plane is being referenced:
+	// konnectNamespacedRef references a KonnectEventGateway resource in the
+	// same namespace, onpremNamespacedRef an OnPremEventGateway resource in
+	// the same namespace.
 	//
 	// +required
 	ControlPlaneRef ControlPlaneRef `json:"controlPlaneRef,omitzero"`
@@ -91,7 +93,9 @@ type KegDataPlaneSpec struct {
 	Config *KegDataPlaneConfiguration `json:"config,omitempty"`
 
 	// CertificateSecret configures how the mTLS client certificate Secret used
-	// by this KegDataPlane to connect to Konnect is provisioned.
+	// by this KegDataPlane to connect to its control plane is provisioned:
+	// Konnect with a konnectNamespacedRef, the gw-admin of the
+	// OnPremEventGateway with an onpremNamespacedRef.
 	// If left unset, it defaults to Automatic (operator-managed).
 	//
 	// When Provisioning is Manual, SecretRef must point to an existing Secret
@@ -114,6 +118,13 @@ type KegDataPlaneSpec struct {
 	// SecretRefOperatorManaged. Deleting the referenced Secret while it is in
 	// use leaves running Pods untouched but prevents new ones from starting
 	// until the Secret is recreated or the reference is changed.
+	//
+	// With an onpremNamespacedRef and Manual provisioning, the certificate must
+	// be issued by the cp client CA of the GWAdmin of the OnPremEventGateway,
+	// so that GWAdmin needs a Manual clientCA: an Automatic one keeps its key
+	// in the namespace of Kong Operator. During a rotation of that CA, a
+	// certificate from the previous one stays trusted until every data plane
+	// runs a certificate from the new one; reissue it from the new CA.
 	//
 	// +optional
 	CertificateSecret *CertificateSecret `json:"certificateSecret,omitempty"`
