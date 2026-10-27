@@ -176,10 +176,14 @@ spec:
                 value: ($konnect_token)
               - name: KONNECT_URL
                 value: ($konnect_url)
-              - name: EXPECTED_TAGS
-                value: "team-payments,env-e2e"
+              - name: FIELD
+                value: .tags
+              - name: MATCH
+                value: includes
+              - name: EXPECTED
+                value: '["team-payments","env-e2e"]'
             content: |
-              bash ../../common/scripts/verify_konnect_plugin_tags.sh
+              bash ../../common/scripts/verify_konnect_plugin_field.sh
             check:
               (json_parse($stdout).success): true
 
@@ -197,10 +201,12 @@ spec:
                 value: ($konnect_token)
               - name: KONNECT_URL
                 value: ($konnect_url)
-              - name: EXPECTED_ORDERING
+              - name: FIELD
+                value: .ordering
+              - name: EXPECTED
                 value: '{"before":{"access":["key-auth"]}}'
             content: |
-              bash ../../common/scripts/verify_konnect_plugin_ordering.sh
+              bash ../../common/scripts/verify_konnect_plugin_field.sh
             check:
               (json_parse($stdout).success): true
 

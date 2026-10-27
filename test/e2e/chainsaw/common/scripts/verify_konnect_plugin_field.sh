@@ -4,7 +4,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-# Verifies that the ordering configured on a KongPlugin propagated all the way to the
+# Verifies that a field configured on a KongPlugin propagated all the way to the
 # real Konnect-side plugin entity, by resolving the KongPluginBinding generated for
 # it and querying the Konnect Admin API directly.
 #
@@ -14,8 +14,12 @@ set -o pipefail
 #     (substring match on spec.pluginRef.name).
 #   KONNECT_TOKEN: Bearer token for the Konnect Admin API.
 #   KONNECT_URL: Konnect server host, e.g. eu.api.konghq.tech.
-#   EXPECTED_ORDERING: JSON of the expected Konnect plugin ordering, e.g.
-#     {"before":{"access":["key-auth"]}}, or null when no ordering is expected.
+#   FIELD: Path of the Konnect plugin field to check, e.g. .tags or .ordering.
+#   EXPECTED: JSON value the field is compared with, e.g. ["a","b"] or null.
+#   MATCH: (Optional) How the field is compared with EXPECTED. Default: equals.
+#     equals: the values are equal once nulls, empty arrays and empty objects
+#       are pruned on both sides, so {} or [] from Konnect equal null.
+#     includes: EXPECTED is an array whose elements must all be in the field.
 #   RETRY_COUNT: (Optional) Number of retries. Default: 180.
 #   RETRY_DELAY: (Optional) Delay between retries in seconds. Default: 1.
 
@@ -23,21 +27,39 @@ NAMESPACE="${NAMESPACE}"
 PLUGIN_REFERENCE_NAME="${PLUGIN_REFERENCE_NAME}"
 KONNECT_TOKEN="${KONNECT_TOKEN}"
 KONNECT_URL="${KONNECT_URL}"
-EXPECTED_ORDERING="${EXPECTED_ORDERING}"
+FIELD="${FIELD}"
+EXPECTED="${EXPECTED}"
+MATCH="${MATCH:-equals}"
 RETRY_COUNT="${RETRY_COUNT:-180}"
 RETRY_DELAY="${RETRY_DELAY:-1}"
 
-# Drops empty phase lists and empty before/after objects so that Konnect returning
-# {} or empty lists compares equal to null.
-NORMALIZE='def norm:
-  if . == null then null
-  else
-    with_entries(.value |= ((. // {}) | with_entries(select((.value // []) | length > 0))))
-    | with_entries(select(.value | length > 0))
-    | if length == 0 then null else . end
-  end;'
+# FIELD is spliced into a jq program, so only plain object paths are accepted.
+if ! [[ "$FIELD" =~ ^(\.[a-z_]+)+$ ]]; then
+  echo "FIELD must be a plain jq object path such as .tags, got: ${FIELD}" >&2
+  exit 1
+fi
 
-EXPECTED_NORMALIZED=$(echo "$EXPECTED_ORDERING" | jq -c "${NORMALIZE} norm")
+PRUNE='def prune:
+  if type == "object" then
+    map_values(prune) | with_entries(select(.value != null)) | if length == 0 then null else . end
+  elif type == "array" then
+    map(prune) | map(select(. != null)) | if length == 0 then null else . end
+  else . end;'
+
+case "$MATCH" in
+  equals)
+    MATCHES="${PRUNE} (${FIELD} | prune) == (\$expected | prune)"
+    ;;
+  includes)
+    MATCHES="(\$expected - (${FIELD} // [])) | length == 0"
+    ;;
+  *)
+    echo "MATCH must be equals or includes, got: ${MATCH}" >&2
+    exit 1
+    ;;
+esac
+
+EXPECTED_JSON=$(echo "$EXPECTED" | jq -c '.')
 RESPONSE_FILE=$(mktemp)
 trap 'rm -f "$RESPONSE_FILE"' EXIT
 
@@ -75,30 +97,27 @@ while [[ $ATTEMPT -lt $RETRY_COUNT ]]; do
   HTTP_STATUS=$(curl -s -o "$RESPONSE_FILE" -w '%{http_code}' \
     -H "Authorization: Bearer ${KONNECT_TOKEN}" \
     "https://${KONNECT_URL}/v2/control-planes/${CONTROL_PLANE_ID}/core-entities/plugins/${PLUGIN_ID}") || true
-  RESPONSE_BODY=$(cat "$RESPONSE_FILE")
 
   if [[ "$HTTP_STATUS" != "200" ]]; then
-    LAST_ERROR="Konnect API returned HTTP ${HTTP_STATUS}: ${RESPONSE_BODY}"
+    LAST_ERROR="Konnect API returned HTTP ${HTTP_STATUS}: $(cat "$RESPONSE_FILE")"
     sleep "$RETRY_DELAY"
     continue
   fi
 
-  ACTUAL_NORMALIZED=$(echo "$RESPONSE_BODY" | jq -c "${NORMALIZE} .ordering | norm")
+  ACTUAL_JSON=$(jq -c "${FIELD}" "$RESPONSE_FILE")
 
-  if [[ "$ACTUAL_NORMALIZED" == "$EXPECTED_NORMALIZED" ]]; then
-    cat <<EOF
-{
-  "success": true,
-  "plugin_id": "$PLUGIN_ID",
-  "control_plane_id": "$CONTROL_PLANE_ID",
-  "ordering": $ACTUAL_NORMALIZED,
-  "retry_attempt": $ATTEMPT
-}
-EOF
+  if jq -e --argjson expected "$EXPECTED_JSON" "$MATCHES" "$RESPONSE_FILE" > /dev/null; then
+    jq -n \
+      --arg plugin_id "$PLUGIN_ID" \
+      --arg control_plane_id "$CONTROL_PLANE_ID" \
+      --arg field "$FIELD" \
+      --argjson value "$ACTUAL_JSON" \
+      --argjson retry_attempt "$ATTEMPT" \
+      '{success: true, plugin_id: $plugin_id, control_plane_id: $control_plane_id, field: $field, value: $value, retry_attempt: $retry_attempt}'
     exit 0
   fi
 
-  LAST_ERROR="Konnect plugin ${PLUGIN_ID} ordering is ${ACTUAL_NORMALIZED}, expected ${EXPECTED_NORMALIZED}"
+  LAST_ERROR="Konnect plugin ${PLUGIN_ID} field ${FIELD} is ${ACTUAL_JSON}, expected (${MATCH}) ${EXPECTED_JSON}"
   sleep "$RETRY_DELAY"
 done
 
@@ -106,7 +125,9 @@ jq -n \
   --arg error "$LAST_ERROR" \
   --arg namespace "$NAMESPACE" \
   --arg plugin_reference_name "$PLUGIN_REFERENCE_NAME" \
-  --argjson expected_ordering "$EXPECTED_NORMALIZED" \
+  --arg field "$FIELD" \
+  --arg match "$MATCH" \
+  --argjson expected "$EXPECTED_JSON" \
   --argjson retry_count "$RETRY_COUNT" \
-  '{error: $error, namespace: $namespace, plugin_reference_name: $plugin_reference_name, expected_ordering: $expected_ordering, retry_count: $retry_count}'
+  '{error: $error, namespace: $namespace, plugin_reference_name: $plugin_reference_name, field: $field, match: $match, expected: $expected, retry_count: $retry_count}'
 exit 1
