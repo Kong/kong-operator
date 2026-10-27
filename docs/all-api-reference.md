@@ -16126,8 +16126,8 @@ RuntimeOptions configures graceful shutdown and health endpoint behaviour for ke
 | Field | Description |
 | --- | --- |
 | `healthListenerAddressPort` _*string_ | HealthListenerAddressPort sets the address:port for the health endpoint. Corresponds to runtime.health_listener_address_port / KEG__RUNTIME__HEALTH_LISTENER_ADDRESS_PORT. |
-| `drainDurationSeconds` _*int32_ | DrainDurationSeconds sets how long keg drains existing connections on shutdown, in seconds. Corresponds to runtime.drain_duration / KEG__RUNTIME__DRAIN_DURATION. |
-| `shutdownTimeoutSeconds` _*int32_ | ShutdownTimeoutSeconds sets the graceful shutdown timeout, in seconds. Corresponds to runtime.shutdown_timeout / KEG__RUNTIME__SHUTDOWN_TIMEOUT. |
+| `drainDurationSeconds` _*int32_ | DrainDurationSeconds sets how long keg drains existing connections on shutdown, in seconds. Corresponds to runtime.drain_duration / KEG__RUNTIME__DRAIN_DURATION. The termination grace period of the keg pods is raised to cover the drain and the shutdown timeout, unless the PodTemplateSpec sets it. A KEG__RUNTIME__DRAIN_DURATION env var of the keg container in the PodTemplateSpec wins over this field, for keg and the grace period. An env var the operator cannot read, from valueFrom or not a duration, is skipped: the grace period then covers this field or keg's default. |
+| `shutdownTimeoutSeconds` _*int32_ | ShutdownTimeoutSeconds sets the graceful shutdown timeout, in seconds. Corresponds to runtime.shutdown_timeout / KEG__RUNTIME__SHUTDOWN_TIMEOUT. The termination grace period of the keg pods is raised to cover the drain and the shutdown timeout, unless the PodTemplateSpec sets it. A KEG__RUNTIME__SHUTDOWN_TIMEOUT env var of the keg container in the PodTemplateSpec wins over this field, for keg and the grace period. An env var the operator cannot read, from valueFrom or not a duration, is skipped: the grace period then covers this field or keg's default. |
 
 _Appears in:_
 

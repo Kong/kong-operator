@@ -21,11 +21,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	shareddataplane "github.com/kong/kong-operator/v2/controller/pkg/dataplane"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 func TestControlPlaneRef(t *testing.T) {
@@ -129,4 +131,118 @@ func TestKeepEventGatewayDataPlaneCertificateRefField(t *testing.T) {
 		assert.Equal(t, parentRef, desired.Spec.ParentRef)
 		assert.Zero(t, desired.Spec.GatewayRef)
 	})
+}
+
+func TestTerminationGracePeriodSeconds(t *testing.T) {
+	withRuntime := func(rt *eventgatewayv1alpha1.RuntimeOptions) *eventgatewayv1alpha1.KegDataPlane {
+		return &eventgatewayv1alpha1.KegDataPlane{
+			Spec: eventgatewayv1alpha1.KegDataPlaneSpec{Config: &eventgatewayv1alpha1.KegDataPlaneConfiguration{Runtime: rt}},
+		}
+	}
+	withEnv := func(egdp *eventgatewayv1alpha1.KegDataPlane, container string, env ...corev1.EnvVar) *eventgatewayv1alpha1.KegDataPlane {
+		egdp.Spec.Deployment = &eventgatewayv1alpha1.DeploymentOptions{
+			PodTemplateSpec: &corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{Containers: []corev1.Container{{Name: container, Env: env}}},
+			},
+		}
+		return egdp
+	}
+	drainEnv := func(v string) corev1.EnvVar { return corev1.EnvVar{Name: EnvRuntimeDrainDuration, Value: v} }
+	shutdownEnv := func(v string) corev1.EnvVar { return corev1.EnvVar{Name: EnvRuntimeShutdownTimeout, Value: v} }
+	for _, tc := range []struct {
+		name string
+		egdp *eventgatewayv1alpha1.KegDataPlane
+		want *int64
+	}{
+		{name: "no configuration keeps the Kubernetes default", egdp: &eventgatewayv1alpha1.KegDataPlane{}},
+		{name: "no runtime options keep the Kubernetes default", egdp: withRuntime(nil)},
+		{name: "keg's defaults fit in the Kubernetes default", egdp: withRuntime(&eventgatewayv1alpha1.RuntimeOptions{})},
+		{
+			name: "a raised drain that still fits keeps the Kubernetes default",
+			egdp: withRuntime(&eventgatewayv1alpha1.RuntimeOptions{DrainDurationSeconds: new(int32(15))}),
+		},
+		{
+			name: "a drain past the default: drain, keg's default shutdown and the margin",
+			egdp: withRuntime(&eventgatewayv1alpha1.RuntimeOptions{DrainDurationSeconds: new(int32(60))}),
+			want: new(int64(60 + 10 + 5)),
+		},
+		{
+			name: "a shutdown past the default: keg's default drain, shutdown and the margin",
+			egdp: withRuntime(&eventgatewayv1alpha1.RuntimeOptions{ShutdownTimeoutSeconds: new(int32(40))}),
+			want: new(int64(5 + 40 + 5)),
+		},
+		{
+			name: "both set",
+			egdp: withRuntime(&eventgatewayv1alpha1.RuntimeOptions{DrainDurationSeconds: new(int32(20)), ShutdownTimeoutSeconds: new(int32(20))}),
+			want: new(int64(20 + 20 + 5)),
+		},
+		{
+			name: "a drain of 0, the shutdown alone past the default",
+			egdp: withRuntime(&eventgatewayv1alpha1.RuntimeOptions{DrainDurationSeconds: new(int32(0)), ShutdownTimeoutSeconds: new(int32(30))}),
+			want: new(int64(0 + 30 + 5)),
+		},
+		{
+			name: "a drain set by the keg container env, without runtime options",
+			egdp: withEnv(&eventgatewayv1alpha1.KegDataPlane{}, consts.KEGContainerName, drainEnv("60s")),
+			want: new(int64(60 + 10 + 5)),
+		},
+		{
+			name: "the keg container env wins over the runtime options",
+			egdp: withEnv(
+				withRuntime(&eventgatewayv1alpha1.RuntimeOptions{DrainDurationSeconds: new(int32(60)), ShutdownTimeoutSeconds: new(int32(40))}),
+				consts.KEGContainerName, drainEnv("2m"), shutdownEnv("5s"),
+			),
+			want: new(int64(120 + 5 + 5)),
+		},
+		{
+			name: "an env lowering the runtime options under the default keeps the Kubernetes default",
+			egdp: withEnv(
+				withRuntime(&eventgatewayv1alpha1.RuntimeOptions{DrainDurationSeconds: new(int32(60))}),
+				consts.KEGContainerName, drainEnv("1s"),
+			),
+		},
+		{
+			name: "env durations are rounded up to the second",
+			egdp: withEnv(&eventgatewayv1alpha1.KegDataPlane{}, consts.KEGContainerName, drainEnv("1h30m"), shutdownEnv("1500ms")),
+			want: new(int64(5400 + 2 + 5)),
+		},
+		{
+			name: "the longest env duration is rounded up without overflowing",
+			egdp: withEnv(&eventgatewayv1alpha1.KegDataPlane{}, consts.KEGContainerName, drainEnv("2562047h47m16.854775807s")),
+			want: new(int64(9223372037 + 10 + 5)),
+		},
+		{
+			name: "an env that isn't a duration falls back to the runtime options",
+			egdp: withEnv(
+				withRuntime(&eventgatewayv1alpha1.RuntimeOptions{DrainDurationSeconds: new(int32(60))}),
+				consts.KEGContainerName, drainEnv("a minute"),
+			),
+			want: new(int64(60 + 10 + 5)),
+		},
+		{
+			name: "an env from valueFrom falls back to keg's default",
+			egdp: withEnv(&eventgatewayv1alpha1.KegDataPlane{}, consts.KEGContainerName, corev1.EnvVar{
+				Name: EnvRuntimeDrainDuration,
+				ValueFrom: &corev1.EnvVarSource{ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+					Name: "keg", Key: "drain",
+				}},
+			}),
+		},
+		{
+			name: "the env of another container is ignored",
+			egdp: withEnv(&eventgatewayv1alpha1.KegDataPlane{}, "sidecar", drainEnv("60s")),
+		},
+		{
+			name: "a negative env duration falls back to the runtime options",
+			egdp: withEnv(
+				withRuntime(&eventgatewayv1alpha1.RuntimeOptions{DrainDurationSeconds: new(int32(60))}),
+				consts.KEGContainerName, drainEnv("-5s"),
+			),
+			want: new(int64(60 + 10 + 5)),
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, terminationGracePeriodSeconds(tc.egdp))
+		})
+	}
 }

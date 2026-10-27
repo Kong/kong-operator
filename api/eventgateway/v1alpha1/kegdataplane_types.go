@@ -500,6 +500,12 @@ type RuntimeOptions struct {
 
 	// DrainDurationSeconds sets how long keg drains existing connections on shutdown, in seconds.
 	// Corresponds to runtime.drain_duration / KEG__RUNTIME__DRAIN_DURATION.
+	// The termination grace period of the keg pods is raised to cover the drain
+	// and the shutdown timeout, unless the PodTemplateSpec sets it. A
+	// KEG__RUNTIME__DRAIN_DURATION env var of the keg container in the
+	// PodTemplateSpec wins over this field, for keg and the grace period. An
+	// env var the operator cannot read, from valueFrom or not a duration, is
+	// skipped: the grace period then covers this field or keg's default.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
@@ -507,6 +513,12 @@ type RuntimeOptions struct {
 
 	// ShutdownTimeoutSeconds sets the graceful shutdown timeout, in seconds.
 	// Corresponds to runtime.shutdown_timeout / KEG__RUNTIME__SHUTDOWN_TIMEOUT.
+	// The termination grace period of the keg pods is raised to cover the drain
+	// and the shutdown timeout, unless the PodTemplateSpec sets it. A
+	// KEG__RUNTIME__SHUTDOWN_TIMEOUT env var of the keg container in the
+	// PodTemplateSpec wins over this field, for keg and the grace period. An
+	// env var the operator cannot read, from valueFrom or not a duration, is
+	// skipped: the grace period then covers this field or keg's default.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1

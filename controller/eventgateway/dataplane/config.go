@@ -19,7 +19,9 @@ package dataplane
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
+	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -36,6 +38,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
 
@@ -143,6 +146,8 @@ var config = shareddataplane.Config[
 		DeploymentLabels:      deploymentLabels,
 		DeploymentAnnotations: deploymentAnnotations,
 		BuildContainer:        buildContainer,
+
+		TerminationGracePeriodSeconds: terminationGracePeriodSeconds,
 	},
 
 	Service: shareddataplane.ServiceConfig[*eventgatewayv1alpha1.KegDataPlane]{
@@ -164,6 +169,58 @@ func podTemplateSpec(egdp *eventgatewayv1alpha1.KegDataPlane) *corev1.PodTemplat
 		return nil
 	}
 	return egdp.Spec.Deployment.PodTemplateSpec
+}
+
+// terminationGracePeriodSeconds returns the termination grace period of the
+// keg pods: long enough for keg to drain its connections and shut down, plus
+// a margin. Each timeout is the one keg runs with: the env var of the keg
+// container in the PodTemplateSpec, which wins over the operator's, else
+// spec.config.runtime, else keg's default. It returns nil, keeping the
+// Kubernetes default, when the default is long enough: a data plane that
+// doesn't raise the timeouts isn't rolled out for it.
+func terminationGracePeriodSeconds(egdp *eventgatewayv1alpha1.KegDataPlane) *int64 {
+	var specDrain, specShutdown *int32
+	if egdp.Spec.Config != nil && egdp.Spec.Config.Runtime != nil {
+		specDrain = egdp.Spec.Config.Runtime.DrainDurationSeconds
+		specShutdown = egdp.Spec.Config.Runtime.ShutdownTimeoutSeconds
+	}
+	var kegContainer *corev1.Container
+	if pts := podTemplateSpec(egdp); pts != nil {
+		kegContainer = k8sutils.GetPodContainerByName(&pts.Spec, consts.KEGContainerName)
+	}
+
+	drain := runtimeTimeoutSeconds(kegContainer, EnvRuntimeDrainDuration, specDrain, DefaultDrainDurationSeconds)
+	shutdown := runtimeTimeoutSeconds(kegContainer, EnvRuntimeShutdownTimeout, specShutdown, DefaultShutdownTimeoutSeconds)
+
+	grace := drain + shutdown + TerminationGracePeriodMarginSeconds
+	if grace <= DefaultTerminationGracePeriodSeconds {
+		return nil
+	}
+	return &grace
+}
+
+// runtimeTimeoutSeconds returns, in whole seconds rounded up, the keg timeout
+// set by the env var envName of the user keg container, else by the spec
+// field, else def. An env var whose value can't be read here, from valueFrom
+// or not a duration, is skipped.
+func runtimeTimeoutSeconds(kegContainer *corev1.Container, envName string, spec *int32, def int64) int64 {
+	if kegContainer != nil {
+		if i := slices.IndexFunc(kegContainer.Env, func(e corev1.EnvVar) bool { return e.Name == envName }); i >= 0 {
+			if e := kegContainer.Env[i]; e.ValueFrom == nil {
+				if d, err := time.ParseDuration(e.Value); err == nil && d >= 0 {
+					s := d / time.Second
+					if d%time.Second != 0 {
+						s++
+					}
+					return int64(s)
+				}
+			}
+		}
+	}
+	if spec != nil {
+		return int64(*spec)
+	}
+	return def
 }
 
 func deploymentLabels(egdp *eventgatewayv1alpha1.KegDataPlane) map[string]string {

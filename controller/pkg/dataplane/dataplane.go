@@ -196,6 +196,11 @@ type DeploymentConfig[T Object] struct {
 	// LabelManaged, when non-nil, marks the Deployment and its pod template as
 	// managed (e.g. k8sresources.LabelObjectAsAIGatewayDataPlaneManaged).
 	LabelManaged func(metav1.Object)
+	// TerminationGracePeriodSeconds, when non-nil, returns the termination
+	// grace period of the DataPlane pods, e.g. long enough for the DataPlane
+	// to drain its connections, or nil to keep the Kubernetes default. A
+	// value the user pod template overlay sets wins.
+	TerminationGracePeriodSeconds func(T) *int64
 }
 
 // ServiceConfig carries the type specific bits of an owned Service.
