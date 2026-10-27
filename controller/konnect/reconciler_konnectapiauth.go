@@ -196,9 +196,12 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 
 	server, err := server.NewServer[konnectv1alpha1.KonnectAPIAuthConfiguration](apiAuth.Spec.ServerURL)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to parse server URL: %w", err)
+		return r.reportUnusableServerURL(ctx, apiAuth, fmt.Errorf("failed to parse server URL: %w", err))
 	}
-	sdk := r.sdkFactory.NewKonnectSDK(server, sdkops.SDKToken(token))
+	sdk, err := r.sdkFactory.NewKonnectSDK(server, sdkops.SDKToken(token))
+	if err != nil {
+		return r.reportUnusableServerURL(ctx, apiAuth, err)
+	}
 
 	// TODO(pmalek): check if api auth config has a valid status condition
 	// If not then return an error.
@@ -393,6 +396,27 @@ func (r *KonnectAPIAuthConfigurationReconciler) reconcileSecretRefResolvedRefs(
 		)
 	}
 	return patch.StatusWithoutCondition(ctx, r.client, apiAuth, configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs)
+}
+
+// reportUnusableServerURL puts the object in the same state the token check
+// uses when it fails: APIAuthValid=False with the reason in the message. There
+// is no retry, because serverURL is immutable: changing it means replacing the
+// object, which reconciles it again.
+func (r *KonnectAPIAuthConfigurationReconciler) reportUnusableServerURL(
+	ctx context.Context,
+	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
+	serverURLErr error,
+) (ctrl.Result, error) {
+	if res, errStatus := patch.StatusWithCondition(
+		ctx, r.client, apiAuth,
+		konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
+		metav1.ConditionFalse,
+		konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonInvalid,
+		serverURLErr.Error(),
+	); errStatus != nil || !res.IsZero() {
+		return res, errStatus
+	}
+	return ctrl.Result{}, nil
 }
 
 // EnsureFinalizerOnKonnectAPIAuthConfiguration ensures that the KonnectAPIAuthConfiguration

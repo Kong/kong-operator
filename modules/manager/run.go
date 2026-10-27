@@ -43,6 +43,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/kong/kong-operator/v2/controller/konnect/ops"
+	konnectserver "github.com/kong/kong-operator/v2/controller/konnect/server"
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstance"
@@ -132,6 +133,10 @@ type Config struct {
 	// entities page by page, e.g. to find an entity by its Kubernetes UID.
 	// 0 means consts.DefaultKonnectListPageSize.
 	KonnectListPageSize int64
+	// KonnectServerURLDomains are the domains a KonnectAPIAuthConfiguration
+	// serverURL host must belong to. A host outside the list is refused before
+	// any request is made. Defaults to konnectserver.DefaultDomains.
+	KonnectServerURLDomains konnectserver.Domains
 	// TODO: remove this a couple of versions after 2.1 release
 	// TODO: https://github.com/Kong/kong-operator/issues/2768
 	KonnectControllerMaxConcurrentReconciles uint
@@ -217,6 +222,7 @@ func DefaultConfig() Config {
 		KonnectSyncPeriod:                   consts.DefaultKonnectSyncPeriod,
 		KonnectRequestTimeout:               consts.DefaultKonnectRequestTimeout,
 		KonnectListPageSize:                 consts.DefaultKonnectListPageSize,
+		KonnectServerURLDomains:             konnectserver.DefaultDomains,
 		CertTTL:                             consts.DefaultCertTTL,
 		CertExpirationMargin:                consts.DefaultCertExpirationMargin,
 		GWAdminCATTL:                        consts.GWAdminCATTL,

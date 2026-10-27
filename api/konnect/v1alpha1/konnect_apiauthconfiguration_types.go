@@ -70,6 +70,10 @@ type KonnectAPIAuthConfigurationSpec struct {
 
 	// ServerURL is the URL of the Konnect server.
 	// It can be either a full URL with an HTTPs scheme or just a hostname.
+	// The host must belong to one of the domains the operator is allowed to call
+	// (--konnect-server-url-domains, konghq.com and konghq.tech by default): a
+	// value outside the list is reported with an APIAuthValid=False condition
+	// and the operator sends no request to it.
 	// Please refer to https://docs.konghq.com/konnect/network/ for the list of supported hostnames.
 	//
 	// +required

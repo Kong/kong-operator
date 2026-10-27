@@ -20024,7 +20024,7 @@ KonnectAPIAuthConfigurationSpec is the specification of the KonnectAPIAuthConfig
 | `type` _[KonnectAPIAuthType](#konnect-konghq-com-v1alpha1-types-konnectapiauthtype)_ |  |
 | `token` _string_ | Token is the Konnect token used to authenticate with the Konnect API. |
 | `secretRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#secretreference-v1-core)_ | SecretRef is a reference to a Kubernetes Secret containing the Konnect token. This secret is required to have the konghq.com/credential label set to "konnect". |
-| `serverURL` _string_ | ServerURL is the URL of the Konnect server. It can be either a full URL with an HTTPs scheme or just a hostname. Please refer to https://docs.konghq.com/konnect/network/ for the list of supported hostnames. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server. It can be either a full URL with an HTTPs scheme or just a hostname. The host must belong to one of the domains the operator is allowed to call (--konnect-server-url-domains, konghq.com and konghq.tech by default): a value outside the list is reported with an APIAuthValid=False condition and the operator sends no request to it. Please refer to https://docs.konghq.com/konnect/network/ for the list of supported hostnames. |
 
 _Appears in:_
 

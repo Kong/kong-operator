@@ -73,6 +73,14 @@
 
 ### Fixed
 
+- `KonnectAPIAuthConfiguration` `spec.serverURL` is now checked against the
+  domains Kong serves Konnect from. A host outside the list is refused before
+  any request is made and reported with an `APIAuthValid=False` condition that
+  names the allowed domains, instead of being called and surfacing as an
+  authentication error. A deployment pointed at another domain sets it with the
+  new `--konnect-server-url-domains` flag, which defaults to
+  `konghq.com,konghq.tech` and cannot be emptied.
+  [#6222](https://github.com/Kong/kong-operator/pull/6222)
 - An `AIGatewayMCPServer` tool now accepts the OpenAPI `requestBody` and
   `responses` objects, with `content` keyed by media type. The CRD typed these
   fields as `map[string]string`, so a nested object was rejected at apply time
