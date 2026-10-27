@@ -815,8 +815,8 @@ type certificateEntity struct {
 	ID string `json:"id"`
 }
 
-// validateCertificates checks that data holds PEM certificates only, and at
-// least one.
+// validateCertificates checks that data holds at least one PEM certificate,
+// and no PEM block of another type: text around the blocks is ignored.
 func validateCertificates(data string) error {
 	rest := []byte(data)
 	var found int
