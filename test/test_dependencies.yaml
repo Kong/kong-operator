@@ -39,7 +39,7 @@ chainsaw:
   keg-dp:
     image: kong/kong-event-gateway
     # renovate: datasource=docker depName=kong/kong-event-gateway versioning=docker
-    tag: '1.2.1'
+    tag: '1.3.0'
   gw-admin:
     # gw-admin has no semver release yet: this is a development image pinned to
     # an immutable commit tag (main-<commit>), not tracked by renovate. Bump it
