@@ -17,6 +17,8 @@ limitations under the License.
 package onprem
 
 import (
+	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -28,6 +30,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -463,6 +466,21 @@ func TestValidateWatchNamespaceGrants(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+
+	t.Run("a list failure is reported as a distinct error", func(t *testing.T) {
+		r := &Reconciler{Client: fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithInterceptorFuncs(interceptor.Funcs{
+				List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
+					return errors.New("api unavailable")
+				},
+			}).
+			Build()}
+		err := r.validateWatchNamespaceGrants(t.Context(), onprem, []string{"default", "team-a"})
+		require.ErrorContains(t, err, "api unavailable")
+		_, ok := errors.AsType[watchNamespaceGrantListError](err)
+		require.True(t, ok, "a list failure must be distinguishable from a missing grant")
+	})
 }
 
 func TestMapWatchNamespaceGrantToOnPremAIGateways(t *testing.T) {

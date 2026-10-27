@@ -104,6 +104,17 @@ func requiresWatchNamespaceGrants(watchNamespaces []string, ownNamespace string)
 		(len(watchNamespaces) != 1 || watchNamespaces[0] != ownNamespace)
 }
 
+// watchNamespaceGrantListError marks a failure to read the WatchNamespaceGrants.
+// The caller must not treat it as a revoked grant: a transient API error would
+// otherwise stop a healthy instance and report it as a policy violation.
+type watchNamespaceGrantListError struct {
+	err error
+}
+
+func (e watchNamespaceGrantListError) Error() string { return e.err.Error() }
+
+func (e watchNamespaceGrantListError) Unwrap() error { return e.err }
+
 // validateWatchNamespaceGrants makes sure that every namespace the gateway
 // watches outside its own namespace grants it permission with a
 // WatchNamespaceGrant.
@@ -118,7 +129,7 @@ func (r *Reconciler) validateWatchNamespaceGrants(
 		}
 		var grants operatorv1alpha1.WatchNamespaceGrantList
 		if err := r.List(ctx, &grants, client.InNamespace(ns)); err != nil {
-			return fmt.Errorf("listing WatchNamespaceGrants in namespace %s: %w", ns, err)
+			return watchNamespaceGrantListError{err: fmt.Errorf("listing WatchNamespaceGrants in namespace %s: %w", ns, err)}
 		}
 		if !hasGrantForOnPremAIGateway(grants.Items, onprem.Namespace) {
 			return fmt.Errorf(

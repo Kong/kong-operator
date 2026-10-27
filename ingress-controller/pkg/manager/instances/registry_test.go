@@ -73,6 +73,13 @@ func TestRegistry_Scheduling(t *testing.T) {
 		require.EventuallyWithT(t, func(t *assert.CollectT) {
 			assert.True(t, mockInstance1.wasContextCanceled.Load())
 		}, waitTime, tickTime)
+
+		// A stopping instance is not ready: it is still registered until its
+		// goroutine reaps it, and callers must not skip rescheduling it.
+		require.ErrorIs(t,
+			registry.IsInstanceReady(mockInstance1.ID()),
+			instances.NewInstanceNotFoundError(mockInstance1.ID()),
+		)
 	})
 
 	t.Run("can inspect instance readiness", func(t *testing.T) {

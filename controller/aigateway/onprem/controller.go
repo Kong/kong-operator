@@ -265,6 +265,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 	// grants exist, so a running instance is stopped and the gateway is not ready
 	// until the grants are back.
 	if err := r.validateWatchNamespaceGrants(ctx, onprem, watchNamespaces); err != nil {
+		// A list failure says nothing about the grants: requeue and keep the
+		// running instance, which a missing grant must stop.
+		if _, ok := errors.AsType[watchNamespaceGrantListError](err); ok {
+			return ctrl.Result{}, err
+		}
 		k8sutils.SetCondition(
 			k8sutils.NewCondition(
 				aigatewayv1alpha1.OnPremAIGatewayWatchNamespaceGrantValidType,
@@ -326,7 +331,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 		if _, ok := errors.AsType[instances.InstanceNotFoundError](err); ok {
 			log.Debug(logger, "control plane instance not found, creating new instance")
 			if err := r.scheduleInstance(logger, mgrID, cfg, client.ObjectKeyFromObject(onprem), client.ObjectKeyFromObject(adminClientCertSecret)); err != nil {
-				return ctrl.Result{}, err
+				// The stopped instance is removed from the manager asynchronously, so it can still be
+				// registered here. Requeue and reschedule once it's gone.
+				if _, ok := errors.AsType[instances.InstanceWithIDAlreadyScheduledError](err); !ok {
+					return ctrl.Result{}, err
+				}
+				log.Debug(logger, "stopped instance not reaped yet, retrying")
 			}
 		}
 		return r.initStatusToWaitingToBecomeReady(ctx, logger, onprem)
