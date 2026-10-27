@@ -4,7 +4,7 @@ go 1.27.3
 
 require (
 	github.com/caarlos0/env/v11 v11.4.1
-	github.com/getkin/kin-openapi v0.149.0
+	github.com/getkin/kin-openapi v0.152.0
 	github.com/gobuffalo/flect v1.0.3
 	github.com/stretchr/testify v1.12.1
 	golang.org/x/mod v0.42.0
