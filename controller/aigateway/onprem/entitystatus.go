@@ -94,6 +94,12 @@ func (r *Reconciler) syncWatchedNamespaces(
 				return fmt.Errorf("failed to stop instance: %w", err)
 			}
 		}
+		// StopInstance only signals the instance. Wait until its controllers
+		// stopped, or an in-flight status write could restore Programmed=True
+		// after the sweep below.
+		if err := r.InstancesManager.WaitForInstanceStop(ctx, mgrID); err != nil {
+			return fmt.Errorf("failed to wait for the instance to stop: %w", err)
+		}
 		// The set is recorded only once the statuses are cleared: a failed sweep
 		// leaves the record untouched, so the next reconcile retries it.
 		if err := r.clearOutOfScopeEntityStatus(ctx, client.ObjectKeyFromObject(onprem), watchNamespaces); err != nil {
@@ -121,8 +127,8 @@ func (r *Reconciler) syncWatchedNamespaces(
 // entities are listed through the cache: those namespaces are exactly the ones
 // the instance's caches leave out, and they stay inside the operator's own
 // --watch-namespaces scope, which a gateway's watch set cannot exceed. The
-// informers of the entity kinds start on the first list, that is, when a gateway
-// first narrows its watch set.
+// informers of the entity kinds start on the first list: a missing record counts as
+// watching every namespace, so every gateway with a concrete watch set sweeps once.
 func (r *Reconciler) clearOutOfScopeEntityStatus(
 	ctx context.Context,
 	gwNN k8stypes.NamespacedName,

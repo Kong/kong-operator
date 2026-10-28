@@ -712,3 +712,18 @@ func TestCacheOpts(t *testing.T) {
 	// No gateway namespace: no per-object cache configuration at all.
 	require.Empty(t, (&Instance{}).cacheOpts().ByObject)
 }
+
+func TestHashWatchNamespaces(t *testing.T) {
+	all, err := Hash(Config{})
+	require.NoError(t, err)
+	one, err := Hash(Config{
+		WatchNamespaces: []string{"ns"},
+	})
+	require.NoError(t, err)
+	two, err := Hash(Config{
+		WatchNamespaces: []string{"ns", "team-a"},
+	})
+	require.NoError(t, err)
+	require.NotEqual(t, all, one, "narrowing to a concrete watch set must drift the hash")
+	require.NotEqual(t, one, two, "a widened watch set must drift the hash so the instance restarts with the new caches")
+}

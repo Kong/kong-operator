@@ -197,6 +197,16 @@ type Instance struct {
 	// (translation and push) and serves it to the configuration-entity
 	// reconcilers, which turn it into the entities' Programmed conditions.
 	statusReporter *EntityStatusReporter
+
+	// stateMu guards running and stopped, so Run and markStopped agree on which of
+	// them closes done.
+	stateMu sync.Mutex
+	running bool
+	stopped bool
+	// done is closed once the instance can no longer write: after Run returned,
+	// or on markStopped when Run never started.
+	done     chan struct{}
+	doneOnce sync.Once
 }
 
 var _ instances.Instance = &Instance{}
@@ -216,7 +226,29 @@ func NewInstance(
 		cn:             changenotifier.New(),
 		newPushClient:  newMTLSClientAdapter,
 		statusReporter: NewEntityStatusReporter(env.Scheme),
+		done:           make(chan struct{}),
 	}
+}
+
+// Done returns a channel closed once the instance stopped: its controllers no
+// longer write to the cluster.
+func (i *Instance) Done() <-chan struct{} {
+	return i.done
+}
+
+// markStopped records that the instance was stopped. If Run has not started, it
+// never will, so done is closed here.
+func (i *Instance) markStopped() {
+	i.stateMu.Lock()
+	defer i.stateMu.Unlock()
+	i.stopped = true
+	if !i.running {
+		i.closeDone()
+	}
+}
+
+func (i *Instance) closeDone() {
+	i.doneOnce.Do(func() { close(i.done) })
 }
 
 // ID returns the unique identifier of the instance.
@@ -665,6 +697,15 @@ func (i *Instance) syncPending(
 
 // Run runs the instance. It blocks until the passed context is cancelled.
 func (i *Instance) Run(ctx context.Context) error {
+	i.stateMu.Lock()
+	if i.stopped {
+		i.stateMu.Unlock()
+		return nil
+	}
+	i.running = true
+	i.stateMu.Unlock()
+	defer i.closeDone()
+
 	i.logger.Info("Running on-prem AI Gateway control plane instance")
 	defer i.cn.Close()
 
@@ -749,17 +790,11 @@ func (i *Instance) Run(ctx context.Context) error {
 		close(mgrErrCh)
 	}()
 	defer func() {
-		// Drain the manager result so its goroutine never leaks.
-		select {
-		case err, ok := <-mgrErrCh:
-			if !ok {
-				return
-			}
-			if err != nil {
-				i.logger.Error(err, "Instance controller manager failed when draining")
-			}
-
-		default:
+		// Wait for the manager to stop: done must not close while its controllers
+		// can still write. The manager shares ctx, so it stops once Run returns on
+		// ctx.Done; on the other paths it already returned.
+		if err, ok := <-mgrErrCh; ok && err != nil {
+			i.logger.Error(err, "Instance controller manager failed when draining")
 		}
 	}()
 
