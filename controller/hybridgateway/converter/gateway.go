@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 
 	"github.com/go-logr/logr"
@@ -19,6 +20,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/builder"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
 	secretref "github.com/kong/kong-operator/v2/controller/pkg/secrets/ref"
@@ -58,8 +60,8 @@ func newGatewayConverter(
 		referenceGrantVersion: referenceGrantVersion,
 		outputStore:           []client.Object{},
 		expectedGVKs: []schema.GroupVersionKind{
-			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongCertificate"},
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongSNI"},
+			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongCertificate"},
 		},
 	}
 }
@@ -77,7 +79,7 @@ func (c *gatewayConverter) GetRootObject() gwtypes.Gateway {
 // This is the main entry point for the conversion process.
 //
 // For each TLS listener in the Gateway:
-//   - Creates a KongCertificate from the referenced Secret
+//   - Creates a KongCertificate from a Secret, or references an existing KongCertificate
 //   - Creates a KongSNI resource for the listener's hostname
 //
 // If errors occur while processing individual listeners, they are accumulated and
@@ -94,6 +96,8 @@ func (c *gatewayConverter) GetRootObject() gwtypes.Gateway {
 func (c *gatewayConverter) Translate(ctx context.Context, logger logr.Logger) (int, error) {
 	logger = logger.WithValues("phase", "gateway-translate")
 	log.Debug(logger, "Starting Gateway translation")
+
+	ctx = utils.WithTagCache(ctx)
 
 	// Check if the gateway is handled by this controller.
 	// It could happen when the GatewayClass is changed to an unsupported one.
@@ -123,9 +127,13 @@ func (c *gatewayConverter) Translate(ctx context.Context, logger logr.Logger) (i
 	for i := range c.gateway.Spec.Listeners {
 		listener := &c.gateway.Spec.Listeners[i]
 
-		// Only process listeners with TLS configuration.
-		if listener.TLS == nil {
-			log.Debug(logger, "Skipping listener without TLS config", "listener", listener)
+		// Passthrough listeners ignore certificateRefs.
+		if listener.TLS == nil || refs.IsTLSPassthroughListener(*listener) {
+			log.Debug(logger, "Skipping listener without TLS termination", "listener", listener)
+			continue
+		}
+		if len(listener.TLS.CertificateRefs) > 1 && slices.ContainsFunc(listener.TLS.CertificateRefs, refs.IsKongCertificateRef) {
+			log.Info(logger, "Only one certificate per listener is supported", "listener", listener.Name)
 			continue
 		}
 
@@ -186,6 +194,21 @@ func (c *gatewayConverter) UpdateRootObjectStatus(ctx context.Context, logger lo
 //   - skipDelete: true if the resource should be preserved, false if it should be deleted
 //   - err: any error encountered during evaluation
 func (c *gatewayConverter) HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (skipDelete bool, err error) {
+	if resource.GetKind() == "KongCertificate" {
+		for _, desired := range c.outputStore {
+			sni, ok := desired.(*configurationv1alpha1.KongSNI)
+			if !ok {
+				continue
+			}
+			namespace := sni.Namespace
+			if sni.Spec.CertificateRef.Namespace != nil {
+				namespace = *sni.Spec.CertificateRef.Namespace
+			}
+			if namespace == resource.GetNamespace() && sni.Spec.CertificateRef.Name == resource.GetName() {
+				return true, nil
+			}
+		}
+	}
 	// Check if the resource is owned by this gateway.
 	if k8sutils.IsOwnedByRefUID(resource, c.gateway.UID) {
 		// Resource is owned by this gateway, allow deletion.
@@ -212,6 +235,34 @@ func (c *gatewayConverter) processListenerCertificate(
 	listener *gwtypes.Listener,
 	certRef gatewayv1.SecretObjectReference,
 ) error {
+	if refs.IsKongCertificateRef(certRef) {
+		if listener.TLS != nil && listener.TLS.Mode != nil && *listener.TLS.Mode != gatewayv1.TLSModeTerminate {
+			log.Info(logger, "KongCertificate references require TLS termination", "listener", listener.Name)
+			return nil
+		}
+		cert, err := refs.ResolveListenerKongCertificate(ctx, c.Client, c.referenceGrantVersion, c.gateway, certRef)
+		if err != nil {
+			if invalid, ok := errors.AsType[*refs.ListenerCertificateRefError](err); ok {
+				log.Info(logger, "Listener KongCertificate reference is not resolved",
+					"listener", listener.Name, "reason", invalid.Reason, "message", invalid.Message)
+				// Omit invalid bindings so orphan cleanup also revokes previously programmed SNIs.
+				return nil
+			}
+			return err
+		}
+		sniTags := utils.MergeTags(logger,
+			cert.Spec.Tags,
+			metadata.ExtractTags(c.gateway),
+			utils.TagsForGatewayClassOf(ctx, logger, c.Client, c.gateway),
+		)
+		sni, err := c.buildKongSNI(listener, cert, sniTags)
+		if err != nil {
+			return fmt.Errorf("failed to build KongSNI: %w", err)
+		}
+		c.outputStore = append(c.outputStore, &sni)
+		return nil
+	}
+
 	// Validate that the certificate reference is for a core/v1 Secret.
 	if certRef.Group != nil && string(*certRef.Group) != corev1.GroupName && string(*certRef.Group) != "" {
 		log.Debug(logger, "Skipping certificate reference with unsupported group",
@@ -270,9 +321,14 @@ func (c *gatewayConverter) processListenerCertificate(
 		return fmt.Errorf("invalid TLS secret %s/%s for listener %+v", secretNamespace, certRef.Name, listener)
 	}
 
-	// KongCertificate/KongSNI tags come solely from the TLS Secret's konghq.com/tags
-	// annotation. Tags on the Gateway or backend Service must not leak here.
-	certTags := metadata.ExtractTags(secret)
+	// KongCertificate/KongSNI tags come from the TLS Secret's konghq.com/tags annotation, plus the
+	// tags inherited from the Gateway that owns the listener and from its GatewayClass. Tags on
+	// the backend Service must still not leak here.
+	certTags := utils.MergeTags(logger,
+		metadata.ExtractTags(secret),
+		metadata.ExtractTags(c.gateway),
+		utils.TagsForGatewayClassOf(ctx, logger, c.Client, c.gateway),
+	)
 
 	// Create the KongCertificate resource.
 	kongCert, err := c.buildKongCertificate(listener, certRef, secretNamespace, certTags)
@@ -339,11 +395,15 @@ func (c *gatewayConverter) buildKongSNI(
 		hostname = string(*listener.Hostname)
 	}
 
+	certificateRef := commonv1alpha1.NamespacedRef{Name: kongCert.Name}
+	if kongCert.Namespace != c.gateway.Namespace {
+		certificateRef.Namespace = new(kongCert.Namespace)
+	}
 	sni, err := builder.NewKongSNI().
-		WithName(kongCert.Name).
+		WithName(namegen.NewKongCertificateName(c.gateway.Name, strconv.Itoa(int(listener.Port)), string(listener.Name))).
 		WithNamespace(c.gateway.Namespace).
 		WithSNIName(hostname).
-		WithCertificateRef(kongCert.Name).
+		WithCertificateRef(certificateRef).
 		WithLabels(c.gateway, listener).
 		WithAnnotations(c.gateway).
 		WithSpecTags(tags).

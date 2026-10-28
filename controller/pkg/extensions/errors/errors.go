@@ -15,6 +15,8 @@ var (
 	ErrKonnectExtensionNotReady = errors.New("konnect extension is not ready")
 	// ErrInvalidExtensions is returned when an invalid extension is referenced.
 	ErrInvalidExtensions = errors.New("invalid extensions")
+	// ErrInvalidEndpoint is returned when a Konnect endpoint value is unusable.
+	ErrInvalidEndpoint = errors.New("konnect endpoint value is not usable")
 
 	// ErrKonnectGatewayControlPlaneNotProgrammed is returned when a control plane is not programmed.
 	ErrKonnectGatewayControlPlaneNotProgrammed = errors.New("konnect control plane is not programmed yet")
@@ -26,5 +28,6 @@ func IsKonnectExtensionError(err error) bool {
 		errors.Is(err, ErrKonnectExtensionNotFound) ||
 		errors.Is(err, ErrClusterCertificateNotFound) ||
 		errors.Is(err, ErrKonnectExtensionNotReady) ||
-		errors.Is(err, ErrInvalidExtensions)
+		errors.Is(err, ErrInvalidExtensions) ||
+		errors.Is(err, ErrInvalidEndpoint)
 }

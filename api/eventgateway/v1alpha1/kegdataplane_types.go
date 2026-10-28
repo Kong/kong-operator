@@ -63,11 +63,13 @@ type KegDataPlaneList struct {
 }
 
 // KegDataPlaneSpec defines the desired state of KegDataPlane.
+// +kubebuilder:validation:XValidation:rule="self.controlPlaneRef.type != 'onpremNamespacedRef' || !has(self.config) || !has(self.config.konnect) || !has(self.config.konnect.domain)",message="config.konnect.domain can't be set with an onpremNamespacedRef: the data plane reaches gw-admin on the address of the OnPremEventGateway"
 type KegDataPlaneSpec struct {
 	// ControlPlaneRef references the control plane this KegDataPlane connects to.
-	// The type field identifies which kind of control plane is being referenced.
-	// Currently only konnectNamespacedRef is supported, which references a
-	// KonnectEventGateway resource in the same namespace.
+	// The type field identifies which kind of control plane is being referenced:
+	// konnectNamespacedRef references a KonnectEventGateway resource in the
+	// same namespace, onpremNamespacedRef an OnPremEventGateway resource in
+	// the same namespace.
 	//
 	// +required
 	ControlPlaneRef ControlPlaneRef `json:"controlPlaneRef,omitzero"`
@@ -91,7 +93,9 @@ type KegDataPlaneSpec struct {
 	Config *KegDataPlaneConfiguration `json:"config,omitempty"`
 
 	// CertificateSecret configures how the mTLS client certificate Secret used
-	// by this KegDataPlane to connect to Konnect is provisioned.
+	// by this KegDataPlane to connect to its control plane is provisioned:
+	// Konnect with a konnectNamespacedRef, the gw-admin of the
+	// OnPremEventGateway with an onpremNamespacedRef.
 	// If left unset, it defaults to Automatic (operator-managed).
 	//
 	// When Provisioning is Manual, SecretRef must point to an existing Secret
@@ -114,6 +118,13 @@ type KegDataPlaneSpec struct {
 	// SecretRefOperatorManaged. Deleting the referenced Secret while it is in
 	// use leaves running Pods untouched but prevents new ones from starting
 	// until the Secret is recreated or the reference is changed.
+	//
+	// With an onpremNamespacedRef and Manual provisioning, the certificate must
+	// be issued by the cp client CA of the GWAdmin of the OnPremEventGateway,
+	// so that GWAdmin needs a Manual clientCA: an Automatic one keeps its key
+	// in the namespace of Kong Operator. During a rotation of that CA, a
+	// certificate from the previous one stays trusted until every data plane
+	// runs a certificate from the new one; reissue it from the new CA.
 	//
 	// +optional
 	CertificateSecret *CertificateSecret `json:"certificateSecret,omitempty"`
@@ -489,6 +500,12 @@ type RuntimeOptions struct {
 
 	// DrainDurationSeconds sets how long keg drains existing connections on shutdown, in seconds.
 	// Corresponds to runtime.drain_duration / KEG__RUNTIME__DRAIN_DURATION.
+	// The termination grace period of the keg pods is raised to cover the drain
+	// and the shutdown timeout, unless the PodTemplateSpec sets it. A
+	// KEG__RUNTIME__DRAIN_DURATION env var of the keg container in the
+	// PodTemplateSpec wins over this field, for keg and the grace period. An
+	// env var the operator cannot read, from valueFrom or not a duration, is
+	// skipped: the grace period then covers this field or keg's default.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
@@ -496,6 +513,12 @@ type RuntimeOptions struct {
 
 	// ShutdownTimeoutSeconds sets the graceful shutdown timeout, in seconds.
 	// Corresponds to runtime.shutdown_timeout / KEG__RUNTIME__SHUTDOWN_TIMEOUT.
+	// The termination grace period of the keg pods is raised to cover the drain
+	// and the shutdown timeout, unless the PodTemplateSpec sets it. A
+	// KEG__RUNTIME__SHUTDOWN_TIMEOUT env var of the keg container in the
+	// PodTemplateSpec wins over this field, for keg and the grace period. An
+	// env var the operator cannot read, from valueFrom or not a duration, is
+	// skipped: the grace period then covers this field or keg's default.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
@@ -603,6 +626,15 @@ func (e *KegDataPlane) GetConditions() []metav1.Condition {
 // SetConditions sets the KegDataPlane Status Conditions.
 func (e *KegDataPlane) SetConditions(conditions []metav1.Condition) {
 	e.Status.Conditions = conditions
+}
+
+// GetReplicas returns the KegDataPlane static replica count, or nil when it is
+// not set.
+func (e *KegDataPlane) GetReplicas() *int32 {
+	if e.Spec.Deployment == nil {
+		return nil
+	}
+	return e.Spec.Deployment.Replicas
 }
 
 // GetHorizontalScaling returns the KegDataPlane horizontal scaling options, or nil

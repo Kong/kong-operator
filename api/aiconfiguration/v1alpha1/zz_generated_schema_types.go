@@ -2311,12 +2311,13 @@ type AIGWOpenIDConnectGeneratedConfigUpstreamHeaders struct {
 }
 
 // AIGatewayACLS Access control rules.
-// Configure exactly one of `allow` or `deny`.
+// Configure exactly one of `allow`, `deny`, `allow_when`, or `deny_when`.
 type AIGatewayACLS map[string]string
 
 // AIGatewayAgentAccess Access control configuration for an agent.
 type AIGatewayAgentAccess struct {
-	// Access control rules. Configure exactly one of `allow` or `deny`.
+	// Access control rules.
+	// Configure exactly one of `allow`, `deny`, `allow_when`, or `deny_when`.
 	//
 	// +optional
 	Acls *AIGatewayAgentAccessAcls `json:"acls,omitempty"`
@@ -2346,7 +2347,7 @@ type AIGatewayAgentAccessAcls struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=allow;deny
+	// +kubebuilder:validation:Enum=allow;deny;allowWhen;denyWhen
 	Type AIGatewayAgentAccessAclsType `json:"type,omitempty"`
 
 	// Allow configuration.
@@ -2357,6 +2358,14 @@ type AIGatewayAgentAccessAcls struct {
 	//
 	// +optional
 	Deny *AIGatewayDenyACL `json:"deny,omitempty"`
+	// AllowWhen configuration.
+	//
+	// +optional
+	AllowWhen *AIGatewayAllowWhenACL `json:"allowWhen,omitempty"`
+	// DenyWhen configuration.
+	//
+	// +optional
+	DenyWhen *AIGatewayDenyWhenACL `json:"denyWhen,omitempty"`
 }
 
 // AIGatewayAgentAccessAclsType represents the type of acls.
@@ -2364,8 +2373,10 @@ type AIGatewayAgentAccessAclsType string
 
 // AIGatewayAgentAccessAclsType values.
 const (
-	AIGatewayAgentAccessAclsTypeAllow AIGatewayAgentAccessAclsType = "allow"
-	AIGatewayAgentAccessAclsTypeDeny  AIGatewayAgentAccessAclsType = "deny"
+	AIGatewayAgentAccessAclsTypeAllow     AIGatewayAgentAccessAclsType = "allow"
+	AIGatewayAgentAccessAclsTypeDeny      AIGatewayAgentAccessAclsType = "deny"
+	AIGatewayAgentAccessAclsTypeAllowWhen AIGatewayAgentAccessAclsType = "allowWhen"
+	AIGatewayAgentAccessAclsTypeDenyWhen  AIGatewayAgentAccessAclsType = "denyWhen"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -2392,6 +2403,22 @@ func (u AIGatewayAgentAccessAcls) MarshalJSON() ([]byte, error) {
 				return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls Deny: %w", err)
 			}
 			m["deny"] = raw
+		}
+	case AIGatewayAgentAccessAclsTypeAllowWhen:
+		if u.AllowWhen != nil {
+			raw, err := json.Marshal(u.AllowWhen)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls AllowWhen: %w", err)
+			}
+			m["allowWhen"] = raw
+		}
+	case AIGatewayAgentAccessAclsTypeDenyWhen:
+		if u.DenyWhen != nil {
+			raw, err := json.Marshal(u.DenyWhen)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls DenyWhen: %w", err)
+			}
+			m["denyWhen"] = raw
 		}
 	}
 	return json.Marshal(m)
@@ -2434,6 +2461,26 @@ func (u *AIGatewayAgentAccessAcls) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling AIGatewayAgentAccessAcls Deny: %w", err)
 		}
 		u.Deny = &val
+	case "allowWhen":
+		payload, ok := raw["allowWhen"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayAllowWhenACL
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayAgentAccessAcls AllowWhen: %w", err)
+		}
+		u.AllowWhen = &val
+	case "denyWhen":
+		payload, ok := raw["denyWhen"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayDenyWhenACL
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayAgentAccessAcls DenyWhen: %w", err)
+		}
+		u.DenyWhen = &val
 	}
 	return nil
 }
@@ -2449,7 +2496,7 @@ func (s *AIGatewayAgentAccess) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling AIGatewayAgentAccess: %w", err)
 	}
-	if aux.Acls != nil && aux.Acls.Type == "" && aux.Acls.Allow == nil && aux.Acls.Deny == nil {
+	if aux.Acls != nil && aux.Acls.Type == "" && aux.Acls.Allow == nil && aux.Acls.Deny == nil && aux.Acls.AllowWhen == nil && aux.Acls.DenyWhen == nil {
 		aux.Acls = nil
 	}
 	*s = AIGatewayAgentAccess(aux)
@@ -2463,6 +2510,20 @@ type AIGatewayAllowACL struct {
 	//
 	// +required
 	Allow []AIGatewayACLRef `json:"allow,omitempty"`
+}
+
+// AIGatewayAllowWhenACL is a type alias.
+type AIGatewayAllowWhenACL struct {
+	// Allow the request if it matches any of these CEL boolean expressions
+	// evaluated against the request context (consumer, principal, HTTP attributes,
+	// consumer groups, etc.).
+	// Exactly one of `allow`, `deny`, `allow_when`, or `deny_when` must be
+	// specified.
+	//
+	// **Requires a minimum runtime version of `2.2`**.
+	//
+	// +required
+	AllowWhen []string `json:"allowWhen,omitempty"`
 }
 
 // AIGatewayAuthStrategyKeyAuth Configuration for an auth strategy.
@@ -2659,6 +2720,20 @@ type AIGatewayDenyACL struct {
 	//
 	// +required
 	Deny []AIGatewayACLRef `json:"deny,omitempty"`
+}
+
+// AIGatewayDenyWhenACL is a type alias.
+type AIGatewayDenyWhenACL struct {
+	// Deny the request if it matches any of these CEL boolean expressions
+	// evaluated against the request context (consumer, principal, HTTP attributes,
+	// consumer groups, etc.).
+	// Exactly one of `allow`, `deny`, `allow_when`, or `deny_when` must be
+	// specified.
+	//
+	// **Requires a minimum runtime version of `2.2`**.
+	//
+	// +required
+	DenyWhen []string `json:"denyWhen,omitempty"`
 }
 
 // AIGatewayEmbeddingsModelConfig represents a union type for AIGatewayEmbeddingsModelConfig.
@@ -2967,6 +3042,7 @@ type AIGatewayMCPConversionTool struct {
 	// If the configured headers are not exactly matched, this field is required.
 	//
 	// +optional
+	// +kubebuilder:validation:Type=object
 	Headers AIGatewayMCPToolHeaders `json:"headers,omitzero"`
 	// The host used when forwarding the request to the upstream API.
 	// By default, Kong will extract the host from API configuration.
@@ -3016,28 +3092,31 @@ type AIGatewayMCPConversionTool struct {
 	// required.
 	//
 	// +optional
+	// +kubebuilder:validation:Type=object
 	Query AIGatewayMCPToolQuery `json:"query,omitzero"`
 	// The API requestBody specification defined in OpenAPI JSON format.
 	// For example,
-	// '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
+	// {"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}.
 	// See
 	// https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/
 	// for more details.
 	// Note that `$ref` is not supported.
 	//
 	// +optional
+	// +kubebuilder:validation:Type=object
 	RequestBody AIGatewayMCPToolRequestBody `json:"requestBody,omitzero"`
 	// The API responses specification defined in OpenAPI JSON format.
 	// This specification will be used to validate the upstream response and map it
 	// back to the structuredOutput.
 	// For example,
-	// '{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'.
+	// {"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}.
 	// See https://swagger.io/docs/specification/v3_0/describing-responses/ for
 	// more details.
 	// Only one non-error (status code < 400) response is supported.
 	// Note that `$ref` is not supported.
 	//
 	// +optional
+	// +kubebuilder:validation:Type=object
 	Responses AIGatewayMCPToolResponses `json:"responses,omitzero"`
 	// The scheme of the exported API.
 	// By default, Kong will extract the scheme from API configuration.
@@ -4942,7 +5021,7 @@ type AIGatewayMCPToolAnnotations struct {
 // AIGatewayMCPToolHeaders The headers of the exported API.
 // By default, Kong will extract the headers from API configuration.
 // If the configured headers are not exactly matched, this field is required.
-type AIGatewayMCPToolHeaders map[string]string
+type AIGatewayMCPToolHeaders = apiextensionsv1.JSON
 
 // AIGatewayMCPToolParameter An API parameter specification defined in OpenAPI
 // JSON format.
@@ -4987,7 +5066,7 @@ type AIGatewayMCPToolParameter struct {
 // AIGatewayMCPToolQuery The query arguments of the exported API.
 // If the generated query arguments are not exactly matched, this field is
 // required.
-type AIGatewayMCPToolQuery map[string]string
+type AIGatewayMCPToolQuery = apiextensionsv1.JSON
 
 // AIGatewayMCPToolRequestBody The API requestBody specification defined in
 // OpenAPI JSON format.
@@ -4997,7 +5076,7 @@ type AIGatewayMCPToolQuery map[string]string
 // https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/
 // for more details.
 // Note that `$ref` is not supported.
-type AIGatewayMCPToolRequestBody map[string]string
+type AIGatewayMCPToolRequestBody = apiextensionsv1.JSON
 
 // AIGatewayMCPToolResponses The API responses specification defined in OpenAPI
 // JSON format.
@@ -5009,7 +5088,7 @@ type AIGatewayMCPToolRequestBody map[string]string
 // details.
 // Only one non-error (status code < 400) response is supported.
 // Note that `$ref` is not supported.
-type AIGatewayMCPToolResponses map[string]string
+type AIGatewayMCPToolResponses = apiextensionsv1.JSON
 
 // AIGatewayMCPUpstreamTool A tool exposed by an MCP Server in `upstream-server`
 // mode.
@@ -5422,7 +5501,8 @@ func (s *AIGatewayModelAPIConfig) UnmarshalJSON(data []byte) error {
 
 // AIGatewayModelAccess Access control configuration for a model.
 type AIGatewayModelAccess struct {
-	// Access control rules. Configure exactly one of `allow` or `deny`.
+	// Access control rules.
+	// Configure exactly one of `allow`, `deny`, `allow_when`, or `deny_when`.
 	//
 	// +optional
 	Acls *AIGatewayModelAccessAcls `json:"acls,omitempty"`
@@ -5450,7 +5530,7 @@ type AIGatewayModelAccessAcls struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=allow;deny
+	// +kubebuilder:validation:Enum=allow;deny;allowWhen;denyWhen
 	Type AIGatewayModelAccessAclsType `json:"type,omitempty"`
 
 	// Allow configuration.
@@ -5461,6 +5541,14 @@ type AIGatewayModelAccessAcls struct {
 	//
 	// +optional
 	Deny *AIGatewayDenyACL `json:"deny,omitempty"`
+	// AllowWhen configuration.
+	//
+	// +optional
+	AllowWhen *AIGatewayAllowWhenACL `json:"allowWhen,omitempty"`
+	// DenyWhen configuration.
+	//
+	// +optional
+	DenyWhen *AIGatewayDenyWhenACL `json:"denyWhen,omitempty"`
 }
 
 // AIGatewayModelAccessAclsType represents the type of acls.
@@ -5468,8 +5556,10 @@ type AIGatewayModelAccessAclsType string
 
 // AIGatewayModelAccessAclsType values.
 const (
-	AIGatewayModelAccessAclsTypeAllow AIGatewayModelAccessAclsType = "allow"
-	AIGatewayModelAccessAclsTypeDeny  AIGatewayModelAccessAclsType = "deny"
+	AIGatewayModelAccessAclsTypeAllow     AIGatewayModelAccessAclsType = "allow"
+	AIGatewayModelAccessAclsTypeDeny      AIGatewayModelAccessAclsType = "deny"
+	AIGatewayModelAccessAclsTypeAllowWhen AIGatewayModelAccessAclsType = "allowWhen"
+	AIGatewayModelAccessAclsTypeDenyWhen  AIGatewayModelAccessAclsType = "denyWhen"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -5496,6 +5586,22 @@ func (u AIGatewayModelAccessAcls) MarshalJSON() ([]byte, error) {
 				return nil, fmt.Errorf("marshaling AIGatewayModelAccessAcls Deny: %w", err)
 			}
 			m["deny"] = raw
+		}
+	case AIGatewayModelAccessAclsTypeAllowWhen:
+		if u.AllowWhen != nil {
+			raw, err := json.Marshal(u.AllowWhen)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelAccessAcls AllowWhen: %w", err)
+			}
+			m["allowWhen"] = raw
+		}
+	case AIGatewayModelAccessAclsTypeDenyWhen:
+		if u.DenyWhen != nil {
+			raw, err := json.Marshal(u.DenyWhen)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelAccessAcls DenyWhen: %w", err)
+			}
+			m["denyWhen"] = raw
 		}
 	}
 	return json.Marshal(m)
@@ -5538,6 +5644,26 @@ func (u *AIGatewayModelAccessAcls) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling AIGatewayModelAccessAcls Deny: %w", err)
 		}
 		u.Deny = &val
+	case "allowWhen":
+		payload, ok := raw["allowWhen"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayAllowWhenACL
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelAccessAcls AllowWhen: %w", err)
+		}
+		u.AllowWhen = &val
+	case "denyWhen":
+		payload, ok := raw["denyWhen"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayDenyWhenACL
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelAccessAcls DenyWhen: %w", err)
+		}
+		u.DenyWhen = &val
 	}
 	return nil
 }
@@ -5553,7 +5679,7 @@ func (s *AIGatewayModelAccess) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling AIGatewayModelAccess: %w", err)
 	}
-	if aux.Acls != nil && aux.Acls.Type == "" && aux.Acls.Allow == nil && aux.Acls.Deny == nil {
+	if aux.Acls != nil && aux.Acls.Type == "" && aux.Acls.Allow == nil && aux.Acls.Deny == nil && aux.Acls.AllowWhen == nil && aux.Acls.DenyWhen == nil {
 		aux.Acls = nil
 	}
 	*s = AIGatewayModelAccess(aux)

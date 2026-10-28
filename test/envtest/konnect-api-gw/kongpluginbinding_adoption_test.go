@@ -42,9 +42,13 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 	})
 	require.NoError(t, err)
 	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
+	// The objects seeded below are created before StartReconcilers starts the
+	// manager, so they use an uncached client: going through the manager's client
+	// that early deadlocks under read-your-own-writes consistency, see seedClient.
+	seed := seedClient(t, cfg, ns.Name)
 
-	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, seed)
+	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, seed, apiAuth)
 
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK

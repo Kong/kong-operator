@@ -117,7 +117,9 @@ type AIGatewayAuthStrategyRef struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Namespace is reserved for future cross-namespace support.
+	// Namespace defaults to the referrer's namespace. If set, it must be
+	// the same as the referrer's namespace; cross-namespace references are
+	// not supported.
 	//
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
@@ -139,7 +141,9 @@ type AIGatewayCertificateRef struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Namespace is reserved for future cross-namespace support.
+	// Namespace defaults to the referrer's namespace. If set, it must be
+	// the same as the referrer's namespace; cross-namespace references are
+	// not supported.
 	//
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
@@ -161,7 +165,9 @@ type AIGatewayCustomPolicyRef struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Namespace is reserved for future cross-namespace support.
+	// Namespace defaults to the referrer's namespace. If set, it must be
+	// the same as the referrer's namespace; cross-namespace references are
+	// not supported.
 	//
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
@@ -206,7 +212,9 @@ type AIGatewayMCPServerRef struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Namespace is reserved for future cross-namespace support.
+	// Namespace defaults to the referrer's namespace. If set, it must be
+	// the same as the referrer's namespace; cross-namespace references are
+	// not supported.
 	//
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
@@ -228,7 +236,9 @@ type AIGatewayModelProviderRef struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Namespace is reserved for future cross-namespace support.
+	// Namespace defaults to the referrer's namespace. If set, it must be
+	// the same as the referrer's namespace; cross-namespace references are
+	// not supported.
 	//
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
@@ -250,7 +260,9 @@ type AIGatewayPolicyRef struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Namespace is reserved for future cross-namespace support.
+	// Namespace defaults to the referrer's namespace. If set, it must be
+	// the same as the referrer's namespace; cross-namespace references are
+	// not supported.
 	//
 	// +optional
 	Namespace string `json:"namespace,omitempty"`

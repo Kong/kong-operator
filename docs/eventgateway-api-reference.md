@@ -157,8 +157,9 @@ The Type field determines which sub-field is active.
 
 | Field | Description |
 | --- | --- |
-| `type` _[ControlPlaneRefType](#eventgateway-konghq-com-v1alpha1-types-controlplanereftype)_ | Type indicates the type of the control plane being referenced. Currently only konnectNamespacedRef is supported. |
+| `type` _[ControlPlaneRefType](#eventgateway-konghq-com-v1alpha1-types-controlplanereftype)_ | Type indicates the type of the control plane being referenced: a KonnectEventGateway (konnectNamespacedRef) or an OnPremEventGateway (onpremNamespacedRef). It can't be changed, and neither can an onpremNamespacedRef. |
 | `konnectNamespacedRef` _[KonnectNamespacedRef](#eventgateway-konghq-com-v1alpha1-types-konnectnamespacedref)_ | KonnectNamespacedRef references a KonnectEventGateway resource in the same namespace. Must be set when type is konnectNamespacedRef; validated by CEL rules on this struct. |
+| `onpremNamespacedRef` _[OnPremNamespacedRef](#eventgateway-konghq-com-v1alpha1-types-onpremnamespacedref)_ | OnPremNamespacedRef references an OnPremEventGateway resource in the same namespace. The data plane pulls its configuration from the gw-admin pods of the GWAdmin of that gateway, and authenticates with a client certificate trusted by the cp client CA of the GWAdmin. Must be set when type is onpremNamespacedRef; validated by CEL rules on this struct. |
 
 _Appears in:_
 
@@ -182,6 +183,7 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `konnectNamespacedRef` | ControlPlaneRefTypeKonnectNamespacedRef references a KonnectEventGateway<br />resource in the same namespace as the DataPlane.<br /> |
+| `onpremNamespacedRef` | ControlPlaneRefTypeOnPremNamespacedRef references an OnPremEventGateway<br />resource in the same namespace as the DataPlane.<br /> |
 
 #### DebugEndpointsState
 
@@ -222,36 +224,21 @@ _Appears in:_
 
 - [KegDataPlaneSpec](#eventgateway-konghq-com-v1alpha1-types-kegdataplanespec)
 
-#### GWAdmin
+#### GWAdminRef
 
 
-GWAdmin configures how Kong Operator reaches gw-admin.
+GWAdminRef references a GWAdmin.
 
 
 
 | Field | Description |
 | --- | --- |
-| `service` _[GWAdminService](#eventgateway-konghq-com-v1alpha1-types-gwadminservice)_ | Service is the Service in front of the gw-admin pods, in the namespace of the OnPremEventGateway. Kong Operator pushes the configuration to each pod of this Service. |
+| `name` _string_ | Name is the name of the GWAdmin. |
+| `namespace` _*string_ | Namespace is the namespace of the GWAdmin. It defaults to the namespace of the referencing object. |
 
 _Appears in:_
 
 - [OnPremEventGatewaySpec](#eventgateway-konghq-com-v1alpha1-types-onpremeventgatewayspec)
-
-#### GWAdminService
-
-
-GWAdminService identifies the gw-admin Service and its port.
-
-
-
-| Field | Description |
-| --- | --- |
-| `name` _string_ | Name is the name of the Service. |
-| `portName` _string_ | PortName is the name of the Service port gw-admin serves its API on. Service port names are DNS-1123 labels. |
-
-_Appears in:_
-
-- [GWAdmin](#eventgateway-konghq-com-v1alpha1-types-gwadmin)
 
 
 
@@ -284,11 +271,11 @@ KegDataPlaneSpec defines the desired state of KegDataPlane.
 
 | Field | Description |
 | --- | --- |
-| `controlPlaneRef` _[ControlPlaneRef](#eventgateway-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef references the control plane this KegDataPlane connects to. The type field identifies which kind of control plane is being referenced. Currently only konnectNamespacedRef is supported, which references a KonnectEventGateway resource in the same namespace. |
+| `controlPlaneRef` _[ControlPlaneRef](#eventgateway-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef references the control plane this KegDataPlane connects to. The type field identifies which kind of control plane is being referenced: konnectNamespacedRef references a KonnectEventGateway resource in the same namespace, onpremNamespacedRef an OnPremEventGateway resource in the same namespace. |
 | `deployment` _[DeploymentOptions](#eventgateway-konghq-com-v1alpha1-types-deploymentoptions)_ | Deployment configures the keg Deployment: image, replicas, resources, extra env vars, volume mounts, etc. |
 | `network` _[NetworkOptions](#eventgateway-konghq-com-v1alpha1-types-networkoptions)_ | Network configures how the keg pod is exposed to Kafka clients. |
 | `config` _[KegDataPlaneConfiguration](#eventgateway-konghq-com-v1alpha1-types-kegdataplaneconfiguration)_ | Config provides optional overrides for keg runtime settings. When omitted, the keg built-in defaults are used. https://developer.konghq.com/event-gateway/configuration/#applying-configuration |
-| `certificateSecret` _[CertificateSecret](#eventgateway-konghq-com-v1alpha1-types-certificatesecret)_ | CertificateSecret configures how the mTLS client certificate Secret used by this KegDataPlane to connect to Konnect is provisioned. If left unset, it defaults to Automatic (operator-managed).<br /><br />When Provisioning is Manual, SecretRef must point to an existing Secret holding tls.crt and tls.key (typically of type kubernetes.io/tls, but the type isn't enforced) that the operator will use as-is: it will never create, modify, rotate, or delete it. The Secret must live in this KegDataPlane's own namespace and must carry the operator's secret label selector (default "konghq.com/secret: \"true\"", configurable via --secret-label-selector on the operator), or the operator cannot see it at all. Switching Provisioning from Automatic to Manual deletes the previously operator-provisioned Secret once the Deployment has rolled onto the Manual one; switching back to Automatic later provisions a new one rather than reusing the deleted one.<br /><br />The referenced Secret must hold a matching certificate and key that are currently valid (a NotBefore up to 5 minutes in the future is tolerated for clock skew), and must not be an operator-provisioned Secret (one labeled "gateway.konghq.com/secret-provisioning: automatic"); otherwise CertificateProvisioned goes False with reason InvalidSecret or SecretRefOperatorManaged. Deleting the referenced Secret while it is in use leaves running Pods untouched but prevents new ones from starting until the Secret is recreated or the reference is changed. |
+| `certificateSecret` _[CertificateSecret](#eventgateway-konghq-com-v1alpha1-types-certificatesecret)_ | CertificateSecret configures how the mTLS client certificate Secret used by this KegDataPlane to connect to its control plane is provisioned: Konnect with a konnectNamespacedRef, the gw-admin of the OnPremEventGateway with an onpremNamespacedRef. If left unset, it defaults to Automatic (operator-managed).<br /><br />When Provisioning is Manual, SecretRef must point to an existing Secret holding tls.crt and tls.key (typically of type kubernetes.io/tls, but the type isn't enforced) that the operator will use as-is: it will never create, modify, rotate, or delete it. The Secret must live in this KegDataPlane's own namespace and must carry the operator's secret label selector (default "konghq.com/secret: \"true\"", configurable via --secret-label-selector on the operator), or the operator cannot see it at all. Switching Provisioning from Automatic to Manual deletes the previously operator-provisioned Secret once the Deployment has rolled onto the Manual one; switching back to Automatic later provisions a new one rather than reusing the deleted one.<br /><br />The referenced Secret must hold a matching certificate and key that are currently valid (a NotBefore up to 5 minutes in the future is tolerated for clock skew), and must not be an operator-provisioned Secret (one labeled "gateway.konghq.com/secret-provisioning: automatic"); otherwise CertificateProvisioned goes False with reason InvalidSecret or SecretRefOperatorManaged. Deleting the referenced Secret while it is in use leaves running Pods untouched but prevents new ones from starting until the Secret is recreated or the reference is changed.<br /><br />With an onpremNamespacedRef and Manual provisioning, the certificate must be issued by the cp client CA of the GWAdmin of the OnPremEventGateway, so that GWAdmin needs a Manual clientCA: an Automatic one keeps its key in the namespace of Kong Operator. During a rotation of that CA, a certificate from the previous one stays trusted until every data plane runs a certificate from the new one; reissue it from the new CA. |
 
 _Appears in:_
 
@@ -413,7 +400,7 @@ OnPremEventGatewaySpec defines the desired state of OnPremEventGateway.
 
 | Field | Description |
 | --- | --- |
-| `gwAdmin` _[GWAdmin](#eventgateway-konghq-com-v1alpha1-types-gwadmin)_ | GWAdmin configures how Kong Operator reaches the gw-admin of this gateway. |
+| `gwAdminRef` _[GWAdminRef](#eventgateway-konghq-com-v1alpha1-types-gwadminref)_ | GWAdminRef references the GWAdmin that serves this gateway. Kong Operator pushes the configuration of the gateway to every gw-admin pod of it, and the data planes of the gateway pull it from there. A GWAdmin in another namespace is used only when a KongReferenceGrant in its namespace allows OnPremEventGateways of the namespace of the gateway to reference it. It can't be changed. |
 
 _Appears in:_
 
@@ -429,12 +416,29 @@ OnPremEventGatewayStatus defines the observed state of OnPremEventGateway.
 | Field | Description |
 | --- | --- |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the OnPremEventGateway. |
-| `serverURL` _string_ | ServerURL is the address the data planes of this gateway use to reach gw-admin. |
+| `serverURL` _string_ | ServerURL is the address the data planes of this gateway use to reach gw-admin: the cp endpoint of its GWAdmin. |
 | `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed. |
+| `configRevision` _int64_ | ConfigRevision is the revision of the configuration of the gateway that Kong Operator pushes to gw-admin. It increases by one every time that configuration changes, and never decreases. |
+| `configHash` _string_ | ConfigHash identifies the configuration that ConfigRevision stands for: it changes only along with a new revision. |
 
 _Appears in:_
 
 - [OnPremEventGateway](#eventgateway-konghq-com-v1alpha1-onpremeventgateway)
+
+#### OnPremNamespacedRef
+
+
+OnPremNamespacedRef is a reference to an OnPremEventGateway resource in the same namespace.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the name of the OnPremEventGateway resource. |
+
+_Appears in:_
+
+- [ControlPlaneRef](#eventgateway-konghq-com-v1alpha1-types-controlplaneref)
 
 #### RuntimeOptions
 
@@ -446,8 +450,8 @@ RuntimeOptions configures graceful shutdown and health endpoint behaviour for ke
 | Field | Description |
 | --- | --- |
 | `healthListenerAddressPort` _*string_ | HealthListenerAddressPort sets the address:port for the health endpoint. Corresponds to runtime.health_listener_address_port / KEG__RUNTIME__HEALTH_LISTENER_ADDRESS_PORT. |
-| `drainDurationSeconds` _*int32_ | DrainDurationSeconds sets how long keg drains existing connections on shutdown, in seconds. Corresponds to runtime.drain_duration / KEG__RUNTIME__DRAIN_DURATION. |
-| `shutdownTimeoutSeconds` _*int32_ | ShutdownTimeoutSeconds sets the graceful shutdown timeout, in seconds. Corresponds to runtime.shutdown_timeout / KEG__RUNTIME__SHUTDOWN_TIMEOUT. |
+| `drainDurationSeconds` _*int32_ | DrainDurationSeconds sets how long keg drains existing connections on shutdown, in seconds. Corresponds to runtime.drain_duration / KEG__RUNTIME__DRAIN_DURATION. The termination grace period of the keg pods is raised to cover the drain and the shutdown timeout, unless the PodTemplateSpec sets it. A KEG__RUNTIME__DRAIN_DURATION env var of the keg container in the PodTemplateSpec wins over this field, for keg and the grace period. An env var the operator cannot read, from valueFrom or not a duration, is skipped: the grace period then covers this field or keg's default. |
+| `shutdownTimeoutSeconds` _*int32_ | ShutdownTimeoutSeconds sets the graceful shutdown timeout, in seconds. Corresponds to runtime.shutdown_timeout / KEG__RUNTIME__SHUTDOWN_TIMEOUT. The termination grace period of the keg pods is raised to cover the drain and the shutdown timeout, unless the PodTemplateSpec sets it. A KEG__RUNTIME__SHUTDOWN_TIMEOUT env var of the keg container in the PodTemplateSpec wins over this field, for keg and the grace period. An env var the operator cannot read, from valueFrom or not a duration, is skipped: the grace period then covers this field or keg's default. |
 
 _Appears in:_
 

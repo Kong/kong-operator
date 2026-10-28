@@ -190,7 +190,6 @@ var config = shareddataplane.Config[
 		PodTemplateSpec:       podTemplateSpec,
 		DeploymentLabels:      deploymentLabels,
 		DeploymentAnnotations: deploymentAnnotations,
-		Replicas:              replicas,
 		BuildContainer:        buildContainer,
 		LabelManaged:          k8sresources.LabelObjectAsAIGatewayDataPlaneManaged,
 		// KONG_LICENSE_DATA is injected by withLicenseEnvVar below and must
@@ -247,13 +246,6 @@ func deploymentAnnotations(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) map[str
 		return nil
 	}
 	return aigwdp.Spec.Deployment.Annotations
-}
-
-func replicas(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *int32 {
-	if aigwdp.Spec.Deployment == nil {
-		return nil
-	}
-	return aigwdp.Spec.Deployment.Replicas
 }
 
 func setStatusReplicas(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane, replicas, readyReplicas int32) {

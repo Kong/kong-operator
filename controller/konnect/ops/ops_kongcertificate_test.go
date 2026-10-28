@@ -379,27 +379,27 @@ func TestKongCertificateToCertificateInput(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			require.Equal(t, tt.wantCert, input.CertificateRequest2.Cert)
-			require.Equal(t, tt.wantKey, input.CertificateRequest2.Key)
+			require.Equal(t, tt.wantCert, input.CertificateWithCertAndKey.Cert)
+			require.Equal(t, tt.wantKey, input.CertificateWithCertAndKey.Key)
 
 			if tt.wantCertAlt != "" {
-				require.NotNil(t, input.CertificateRequest2.CertAlt)
-				require.Equal(t, tt.wantCertAlt, *input.CertificateRequest2.CertAlt)
-			} else if input.CertificateRequest2.CertAlt != nil {
-				require.Empty(t, *input.CertificateRequest2.CertAlt)
+				require.NotNil(t, input.CertificateWithCertAndKey.CertAlt)
+				require.Equal(t, tt.wantCertAlt, *input.CertificateWithCertAndKey.CertAlt)
+			} else if input.CertificateWithCertAndKey.CertAlt != nil {
+				require.Empty(t, *input.CertificateWithCertAndKey.CertAlt)
 			}
 
 			if tt.wantKeyAlt != "" {
-				require.NotNil(t, input.CertificateRequest2.KeyAlt)
-				require.Equal(t, tt.wantKeyAlt, *input.CertificateRequest2.KeyAlt)
-			} else if input.CertificateRequest2.KeyAlt != nil {
-				require.Empty(t, *input.CertificateRequest2.KeyAlt)
+				require.NotNil(t, input.CertificateWithCertAndKey.KeyAlt)
+				require.Equal(t, tt.wantKeyAlt, *input.CertificateWithCertAndKey.KeyAlt)
+			} else if input.CertificateWithCertAndKey.KeyAlt != nil {
+				require.Empty(t, *input.CertificateWithCertAndKey.KeyAlt)
 			}
 
 			// Verify tags are generated.
-			require.NotEmpty(t, input.CertificateRequest2.Tags)
+			require.NotEmpty(t, input.CertificateWithCertAndKey.Tags)
 			if len(tt.wantTags) > 0 {
-				require.ElementsMatch(t, tt.wantTags, input.CertificateRequest2.Tags)
+				require.ElementsMatch(t, tt.wantTags, input.CertificateWithCertAndKey.Tags)
 			}
 		})
 	}
@@ -651,9 +651,9 @@ func TestUpdateCertificate(t *testing.T) {
 				sdk.EXPECT().UpsertCertificate(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.UpsertCertificateRequest) bool {
 					return req.ControlPlaneID == "cp-1" &&
 						req.CertificateID == "konnect-cert-id" &&
-						req.CertificateRequest.CertificateRequest2 != nil &&
-						req.CertificateRequest.CertificateRequest2.Cert == "cert-data" &&
-						req.CertificateRequest.CertificateRequest2.Key == "key-data"
+						req.CertificateRequest.CertificateWithCertAndKey != nil &&
+						req.CertificateRequest.CertificateWithCertAndKey.Cert == "cert-data" &&
+						req.CertificateRequest.CertificateWithCertAndKey.Key == "key-data"
 				})).Return(&sdkkonnectops.UpsertCertificateResponse{}, nil)
 			},
 		},
@@ -690,9 +690,9 @@ func TestUpdateCertificate(t *testing.T) {
 				sdk.EXPECT().UpsertCertificate(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.UpsertCertificateRequest) bool {
 					return req.ControlPlaneID == "cp-1" &&
 						req.CertificateID == "konnect-cert-id" &&
-						req.CertificateRequest.CertificateRequest2 != nil &&
-						req.CertificateRequest.CertificateRequest2.Cert == "secret-cert-data" &&
-						req.CertificateRequest.CertificateRequest2.Key == "secret-key-data"
+						req.CertificateRequest.CertificateWithCertAndKey != nil &&
+						req.CertificateRequest.CertificateWithCertAndKey.Cert == "secret-cert-data" &&
+						req.CertificateRequest.CertificateWithCertAndKey.Key == "secret-key-data"
 				})).Return(&sdkkonnectops.UpsertCertificateResponse{}, nil)
 			},
 		},
@@ -837,9 +837,9 @@ func TestCreateCertificate(t *testing.T) {
 					nil,
 				)
 				sdk.EXPECT().CreateCertificate(mock.Anything, "cp-1", mock.MatchedBy(func(cert sdkkonnectcomp.CertificateRequest) bool {
-					return cert.CertificateRequest2 != nil &&
-						cert.CertificateRequest2.Cert == "cert-data" &&
-						cert.CertificateRequest2.Key == "key-data"
+					return cert.CertificateWithCertAndKey != nil &&
+						cert.CertificateWithCertAndKey.Cert == "cert-data" &&
+						cert.CertificateWithCertAndKey.Key == "key-data"
 				})).Return(&sdkkonnectops.CreateCertificateResponse{
 					Certificate: &sdkkonnectcomp.Certificate{
 						ID: new("new-cert-id"),
@@ -886,9 +886,9 @@ func TestCreateCertificate(t *testing.T) {
 					nil,
 				)
 				sdk.EXPECT().CreateCertificate(mock.Anything, "cp-1", mock.MatchedBy(func(cert sdkkonnectcomp.CertificateRequest) bool {
-					return cert.CertificateRequest2 != nil &&
-						cert.CertificateRequest2.Cert == "secret-cert-data" &&
-						cert.CertificateRequest2.Key == "secret-key-data"
+					return cert.CertificateWithCertAndKey != nil &&
+						cert.CertificateWithCertAndKey.Cert == "secret-cert-data" &&
+						cert.CertificateWithCertAndKey.Key == "secret-key-data"
 				})).Return(&sdkkonnectops.CreateCertificateResponse{
 					Certificate: &sdkkonnectcomp.Certificate{
 						ID: new("new-cert-id-from-secret"),
@@ -1163,9 +1163,9 @@ func TestAdoptKongCertificateOverride(t *testing.T) {
 	sdk.EXPECT().UpsertCertificate(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.UpsertCertificateRequest) bool {
 		return req.ControlPlaneID == "cp-1" &&
 			req.CertificateID == "konnect-cert-id" &&
-			req.CertificateRequest.CertificateRequest2 != nil &&
-			req.CertificateRequest.CertificateRequest2.Cert == "cert-data" &&
-			req.CertificateRequest.CertificateRequest2.Key == "key-data"
+			req.CertificateRequest.CertificateWithCertAndKey != nil &&
+			req.CertificateRequest.CertificateWithCertAndKey.Cert == "cert-data" &&
+			req.CertificateRequest.CertificateWithCertAndKey.Key == "key-data"
 	})).Return(&sdkkonnectops.UpsertCertificateResponse{}, nil)
 
 	cert := &configurationv1alpha1.KongCertificate{

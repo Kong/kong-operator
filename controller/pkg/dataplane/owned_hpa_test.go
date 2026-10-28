@@ -47,26 +47,27 @@ func TestGenerateBaseDeployment_ReplicaGuard(t *testing.T) {
 		aigwdp := newReconcileAIGWDP()
 		aigwdp.Spec.Deployment = &aigatewayv1alpha1.DeploymentOptions{Replicas: &replicas}
 
-		d, err := GenerateBaseDeployment(logr.Discard(), aigwdp, resolvedTestCP(aigatewaycp), "kong/aigw:latest", "cert-secret", "", "", testConfig)
+		d, err := GenerateBaseDeployment(logr.Discard(), aigwdp, resolvedTestCP(aigatewaycp), "kong/aigw:latest", "cert-secret", "", "", testConfig.Deployment, testConfig.Certificate.ChecksumAnnotation)
 		require.NoError(t, err)
 		require.NotNil(t, d.Spec.Replicas)
 		assert.Equal(t, replicas, *d.Spec.Replicas)
 	})
 
-	t.Run("omits replicas when HPA is active", func(t *testing.T) {
+	t.Run("seeds HPA default of 1 when HPA is active without minReplicas", func(t *testing.T) {
 		aigwdp := newHPAAIGWDP()
 		aigwdp.Spec.Deployment.Replicas = new(int32(3))
 
-		d, err := GenerateBaseDeployment(logr.Discard(), aigwdp, resolvedTestCP(aigatewaycp), "kong/aigw:latest", "cert-secret", "", "", testConfig)
+		d, err := GenerateBaseDeployment(logr.Discard(), aigwdp, resolvedTestCP(aigatewaycp), "kong/aigw:latest", "cert-secret", "", "", testConfig.Deployment, testConfig.Certificate.ChecksumAnnotation)
 		require.NoError(t, err)
-		assert.Nil(t, d.Spec.Replicas, "spec.replicas must be nil when HPA is active so HPA owns the field")
+		require.NotNil(t, d.Spec.Replicas)
+		assert.Equal(t, int32(1), *d.Spec.Replicas)
 	})
 
 	t.Run("seeds replicas from minReplicas when HPA is active and minReplicas is set", func(t *testing.T) {
 		aigwdp := newHPAAIGWDP()
 		aigwdp.Spec.Deployment.Scaling.HorizontalScaling.MinReplicas = new(int32(2))
 
-		d, err := GenerateBaseDeployment(logr.Discard(), aigwdp, resolvedTestCP(aigatewaycp), "kong/aigw:latest", "cert-secret", "", "", testConfig)
+		d, err := GenerateBaseDeployment(logr.Discard(), aigwdp, resolvedTestCP(aigatewaycp), "kong/aigw:latest", "cert-secret", "", "", testConfig.Deployment, testConfig.Certificate.ChecksumAnnotation)
 		require.NoError(t, err)
 		require.NotNil(t, d.Spec.Replicas)
 		assert.Equal(t, int32(2), *d.Spec.Replicas)

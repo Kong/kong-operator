@@ -88,6 +88,11 @@ func (r *AIGatewayConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			),
 		)
 	}
+	// Watch AIGatewayConsumerCredential and map each of its events back to the entities that render it.
+	blder.Watches(
+		&aiconfigurationv1alpha1.AIGatewayConsumerCredential{},
+		handler.EnqueueRequestsFromMapFunc(r.mapCredentialToConsumer),
+	)
 	return blder.
 		For(
 			&aiconfigurationv1alpha1.AIGatewayConsumer{},

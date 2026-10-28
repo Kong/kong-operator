@@ -23,8 +23,9 @@ import (
 )
 
 const (
-	aigwAdminPort = "8001"
-	aigwProxyPort = "8000"
+	aigwAdminPort  = "8001"
+	aigwProxyPort  = "8000"
+	aigwStatusPort = "8100"
 )
 
 // MockCustomPolicyName is the streaming custom policy the representative
@@ -80,7 +81,7 @@ func NewAIGateway(ctx context.Context, t *testing.T) AIGateway {
 				"KONG_DATABASE":      "off",
 				"KONG_ADMIN_LISTEN":  fmt.Sprintf("0.0.0.0:%s", aigwAdminPort),
 				"KONG_PROXY_LISTEN":  fmt.Sprintf("0.0.0.0:%s", aigwProxyPort),
-				"KONG_STATUS_LISTEN": "0.0.0.0:8100",
+				"KONG_STATUS_LISTEN": fmt.Sprintf("0.0.0.0:%s", aigwStatusPort),
 				"KONG_VITALS":        "off",
 				"KONG_LICENSE_DATA":  test.KongLicenseData(),
 				// The representative document carries a plugin instance of the
@@ -96,6 +97,10 @@ func NewAIGateway(ctx context.Context, t *testing.T) AIGateway {
 		}
 		kongcontainers.BindLocalPort(t, &req, aigwAdminPort)
 		kongcontainers.BindLocalPort(t, &req, aigwProxyPort)
+		// The status listener is what serves /status/ready; the Admin API does
+		// not. It must be reachable from the host for the readiness contract
+		// test.
+		kongcontainers.BindLocalPort(t, &req, aigwStatusPort)
 		return req
 	}
 
@@ -160,6 +165,18 @@ func (a AIGateway) AdminURL(ctx context.Context, t *testing.T) string {
 	require.NoError(t, err)
 
 	port, err := a.container.MappedPort(ctx, aigwAdminPort)
+	require.NoError(t, err)
+	return fmt.Sprintf("http://%s", net.JoinHostPort(host, port.Port()))
+}
+
+// StatusURL returns the URL of the AI Gateway container's status listener,
+// which serves the /status/ready endpoint the operator's data plane readiness
+// probe hits, reachable from the host machine.
+func (a AIGateway) StatusURL(ctx context.Context, t *testing.T) string {
+	host, err := a.container.Host(ctx)
+	require.NoError(t, err)
+
+	port, err := a.container.MappedPort(ctx, aigwStatusPort)
 	require.NoError(t, err)
 	return fmt.Sprintf("http://%s", net.JoinHostPort(host, port.Port()))
 }

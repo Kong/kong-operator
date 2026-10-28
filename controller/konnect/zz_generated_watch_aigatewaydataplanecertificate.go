@@ -64,7 +64,7 @@ func AIGatewayDataPlaneCertificateReconciliationWatchOptions(
 			return b.Watches(
 				&corev1.Secret{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectsForSecretRef[aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateList](cl),
+					enqueueObjectsForSecretRef[aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateList](cl, index.IndexFieldAIGatewayDataPlaneCertificateOnSecretRef),
 				),
 			)
 		},

@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/Kong/ai-deck-converter/aigw"
 	"github.com/Kong/ai-deck-converter/convert"
@@ -139,6 +140,40 @@ func translateKind[
 	}
 }
 
+// credentialEntityStatuses turns the per-credential outcome of a consumer's translation into
+// document entity statuses. Credentials are nested in their parent consumer, so their status
+// carries no document entity of its own: a credential whose own translation failed is
+// reported on the credential (its Err) instead of failing the consumer, and the consumer
+// keeps rendering its healthy credentials.
+//
+// consumer is the consumer the credentials belong to, and consumerErr its failure, nil when it
+// made it into the document: credentials are rendered through their consumer, so a consumer
+// left out leaves them out of the pushed configuration too. Reporting them failed is what
+// keeps their status fresh - the reporter only notifies the entities of the current sync, so
+// a credential dropped from the status set keeps whatever condition it had (often
+// Programmed=True).
+//
+// The status scheme has one failure reason, so the message carries the cause: a credential
+// that translates fine but is left out with its consumer reports the consumer's failure.
+func credentialEntityStatuses(
+	translations []aiconfigurationv1alpha1.CredentialTranslation,
+	consumer *aiconfigurationv1alpha1.AIGatewayConsumer,
+	consumerErr error,
+) []EntityStatus {
+	statuses := make([]EntityStatus, 0, len(translations))
+	for _, t := range translations {
+		status := EntityStatus{Obj: t.Obj}
+		switch {
+		case t.Err != nil:
+			status.Err = fmt.Errorf("converting %T %s: %w", t.Obj, client.ObjectKeyFromObject(t.Obj), t.Err)
+		case consumerErr != nil:
+			status.Err = fmt.Errorf("its AIGatewayConsumer %s failed: %w", client.ObjectKeyFromObject(consumer), consumerErr)
+		}
+		statuses = append(statuses, status)
+	}
+	return statuses
+}
+
 // checkTranslatedRefs fails the referencing entity when any referenced name is missing from
 // the set of entities of that kind that translated successfully: resolveEntityNames only
 // checks the referenced entity's existence, so without this a referenced entity excluded for
@@ -169,6 +204,10 @@ func checkTranslatedACLs(translated map[string]struct{}, acls aigw.ACLs) error {
 // aiconfiguration entity kind pointing at it. Alongside the document it returns the per-entity
 // translation status (see EntityStatus), so that the caller can report each entity's outcome on
 // the entity's status.
+//
+// The statuses cover the AIGatewayConsumerCredentials embedded in the translated consumers as
+// well: they have no document entity of their own (aigw.Consumer nests them), so the consumer's
+// own translation reports them, and one broken credential does not fail its consumer.
 //
 // Entity kinds join here as they gain their own ToAIGW* conversion; until then the rendered
 // Document (and the dbless payload built from it) has dangling references, which
@@ -206,6 +245,11 @@ func BuildDocument(
 	// whose EntityStatus already reported success (the maps store the same pointers
 	// translateKind put into the statuses).
 	translatedMCPCRByName := make(map[string]client.Object)
+
+	// credentialStatuses holds the per-credential outcome collected while translating the
+	// consumers: credentials are not a document kind of their own (they are nested in their
+	// parent consumer), so no translateKind call reports them.
+	credentialStatuses := []EntityStatus{}
 
 	// CA cert PEMs already claimed by a translated AIGatewayCACertificate, mapped to the
 	// claiming CR's name: ai-deck-converter derives the rendered entity ID from the cert
@@ -300,6 +344,18 @@ func BuildDocument(
 						return nil, err
 					}
 				}
+				// ToAIGWModel resolves the semantic balancer's embeddings provider to the
+				// referenced provider's entity name; check it made it into the document.
+				var embeddingsProvider []string
+				if b := model.Config.Balancer; b != nil {
+					embeddings, _ := b.Fields["embeddings"].(map[string]any)
+					if p, _ := embeddings["provider"].(string); p != "" {
+						embeddingsProvider = []string{p}
+					}
+				}
+				if err := checkTranslatedRefs(translatedModelProviders, "AIGatewayModelProvider", embeddingsProvider); err != nil {
+					return nil, err
+				}
 				return model, nil
 			},
 			&doc.Models),
@@ -309,14 +365,18 @@ func BuildDocument(
 			// AIGatewayConsumerCredential -> AIGatewayConsumer: the field name is passed in
 			// because the api package cannot import internal/utils/index without a cycle.
 			func(c *aiconfigurationv1alpha1.AIGatewayConsumer, ctx context.Context, cl client.Client) (*aigw.Consumer, error) {
-				consumer, err := c.ToAIGWConsumer(ctx, cl, index.IndexFieldAIGatewayConsumerCredentialOnAIGatewayConsumerRef)
-				if err != nil {
-					return nil, err
+				consumer, credentialTranslations, err := c.ToAIGWConsumer(ctx, cl, index.IndexFieldAIGatewayConsumerCredentialOnAIGatewayConsumerRef)
+				if err == nil {
+					err = cmp.Or(
+						checkTranslatedRefs(translatedPolicies, "AIGatewayPolicy", consumer.Policies),
+						checkTranslatedRefs(translatedConsumerGroups, "AIGatewayConsumerGroup", consumer.ConsumerGroups),
+					)
 				}
-				if err := cmp.Or(
-					checkTranslatedRefs(translatedPolicies, "AIGatewayPolicy", consumer.Policies),
-					checkTranslatedRefs(translatedConsumerGroups, "AIGatewayConsumerGroup", consumer.ConsumerGroups),
-				); err != nil {
+				// Reported before the early return below: credentials are rendered through
+				// their consumer, so one that fails or is excluded leaves them out of the
+				// pushed configuration as well and they must be reported failed.
+				credentialStatuses = append(credentialStatuses, credentialEntityStatuses(credentialTranslations, c, err)...)
+				if err != nil {
 					return nil, err
 				}
 				return consumer, nil
@@ -444,6 +504,37 @@ func BuildDocument(
 		statuses = append(statuses, s...)
 	}
 
+	// A consumer living in another namespace is rejected by translateKind before its
+	// conversion runs, so the credentials it embeds never reach the closure above: report
+	// them with the consumer's error here, for the same reason - they are rendered through
+	// the consumer and must not keep a stale Programmed condition. A consumer that reached
+	// its conversion lives in the gateway's namespace, so it is not reported twice.
+	for _, s := range statuses {
+		consumer, ok := s.Obj.(*aiconfigurationv1alpha1.AIGatewayConsumer)
+		if !ok || s.Err == nil || consumer.Namespace == gw.Namespace {
+			continue
+		}
+		var creds aiconfigurationv1alpha1.AIGatewayConsumerCredentialList
+		// The same listing the consumer's own translation does. A failure here cannot be
+		// reported on the credentials it failed to read: the consumer's error is already
+		// reported, and the next sync retries.
+		if err := cl.List(ctx, &creds,
+			client.InNamespace(consumer.Namespace),
+			client.MatchingFields{
+				index.IndexFieldAIGatewayConsumerCredentialOnAIGatewayConsumerRef: consumer.Namespace + "/" + consumer.Name,
+			},
+		); err != nil {
+			continue
+		}
+		for i := range creds.Items {
+			credentialStatuses = append(credentialStatuses, EntityStatus{
+				Obj: &creds.Items[i],
+				Err: fmt.Errorf("its AIGatewayConsumer %s failed: %w", client.ObjectKeyFromObject(consumer), s.Err),
+			})
+		}
+	}
+	statuses = append(statuses, credentialStatuses...)
+
 	// MCPServer sources reference the same kind, so a translate-time check would wrongly
 	// reject a listener whose source is sorted later in the kind (its own translation may
 	// not have happened yet): validate after all MCP servers translated, dropping listeners
@@ -489,6 +580,12 @@ func BuildDocument(
 	return doc, statuses, nil
 }
 
+// stubUpstreamName is the name of the inert upstream that is pushed as the only
+// entity when the configuration is otherwise empty. It mirrors the ingress
+// controller's deckgen.StubUpstreamName, declared again here because that one
+// lives under ingress-controller/internal and is not importable.
+const stubUpstreamName = "kong"
+
 // RenderDBLessYAML converts the translated AI Gateway document into the flattened
 // db-less YAML payload understood by Kong data planes. Alongside the payload it
 // returns the typed conversion issues reported by the converter: a Warning issue
@@ -496,6 +593,8 @@ func BuildDocument(
 // fully match the intent), while an Error issue means the offending entity was
 // left out of the output entirely - the caller is expected to attribute those
 // back to the entities' CRs (see the aigateway package's attributeConversionIssues).
+//
+// The payload is never empty: see ensureNonEmptyConfig.
 func RenderDBLessYAML(doc *aigw.Document, opts convert.Options) ([]byte, []convert.ConversionIssue, error) {
 	if opts.MinRuntimeVersion == "" {
 		// Pinned minimum; see defaultMinRuntimeVersion.
@@ -519,5 +618,48 @@ func RenderDBLessYAML(doc *aigw.Document, opts convert.Options) ([]byte, []conve
 		return nil, nil, err
 	}
 	payload, err := result.Output.ToDBLess().ToYAML()
+	if err != nil {
+		return nil, result.Issues, err
+	}
+	payload, err = ensureNonEmptyConfig(payload)
 	return payload, result.Issues, err
+}
+
+// ensureNonEmptyConfig appends the stub upstream when the rendered payload holds no
+// entities, and returns the payload unchanged otherwise.
+//
+// A Kong data plane does not report ready (GET /status/ready never returns 200) while
+// its applied configuration is empty, so a gateway with no configuration entities yet
+// would never become ready. This is the same workaround the ingress controller applies
+// in db-less mode.
+//
+// Emptiness is decided on the rendered payload rather than on the document, so a
+// document whose entities were all dropped by the converter is covered too. Only
+// metadata keys are prefixed with an underscore (_format_version, _transform), so any
+// other top-level key means the payload carries entities.
+func ensureNonEmptyConfig(payload []byte) ([]byte, error) {
+	var content map[string]any
+	if err := yaml.Unmarshal(payload, &content); err != nil {
+		return nil, fmt.Errorf("parsing rendered dbless configuration: %w", err)
+	}
+	for key := range content {
+		if !strings.HasPrefix(key, "_") {
+			return payload, nil
+		}
+	}
+	if content == nil {
+		// An empty or null payload decodes to a nil map, which cannot be written
+		// to. Seed the format version: Kong rejects a payload without one.
+		content = map[string]any{"_format_version": "3.0"}
+	}
+	// The stub carries no id, unlike every entity the converter renders: the AI
+	// Gateway accepts an id-less upstream and assigns one itself even under the
+	// payload's _transform: false, so no id has to be synthesized here (verified
+	// by TestEmptyDBLessPayloadKeepsAIGatewayReady against a real data plane).
+	content["upstreams"] = []any{map[string]any{"name": stubUpstreamName}}
+	out, err := yaml.Marshal(content)
+	if err != nil {
+		return nil, fmt.Errorf("marshaling dbless configuration with the stub upstream: %w", err)
+	}
+	return out, nil
 }

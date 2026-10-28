@@ -24,7 +24,8 @@ package v1alpha1
 //     aigw.Parse. Eleven methods from one template edit.
 //   - What survives hand-written even after that: the name-only resolver below (until the
 //     generator grows an on-prem resolve mode that skips the Konnect-ID gate described on
-//     resolveEntityName), the "managed_by" drop, and the model-selector re-nesting.
+//     resolveEntityName), the "managed_by" drop, the model-selector re-nesting, and the
+//     semantic balancer lowering (see lowerSemanticBalancer).
 //   - Two generator bugs worth fixing while in there, filed separately rather than fixed here:
 //     the missing "model"-variant access.acls resolvers (only the "api" variant has
 //     RefsAtAIGatewayModelAPIAccessAcls*), and the Konnect-ID gate itself.
@@ -40,6 +41,7 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/Kong/ai-deck-converter/aigw"
 	"gopkg.in/yaml.v3"
@@ -55,9 +57,10 @@ func (obj *AIGatewayModel) ToAIGWModel(ctx context.Context, cl client.Client) (*
 	}
 
 	var (
-		policies []AIGatewayPolicyRef
-		targets  []AIGatewayTarget
-		access   AIGatewayModelAccess
+		policies           []AIGatewayPolicyRef
+		targets            []AIGatewayTarget
+		access             AIGatewayModelAccess
+		embeddingsProvider string
 	)
 	switch spec.Type {
 	case AIGatewayModelConfigTypeAPI:
@@ -67,6 +70,9 @@ func (obj *AIGatewayModel) ToAIGWModel(ctx context.Context, cl client.Client) (*
 		policies = spec.API.Policies
 		targets = spec.API.Targets
 		access = spec.API.Access
+		if b := spec.API.Config.Balancer; b != nil && b.Semantic != nil {
+			embeddingsProvider = string(b.Semantic.Embeddings.Provider)
+		}
 	case AIGatewayModelConfigTypeModel:
 		if spec.Model == nil {
 			return nil, fmt.Errorf("AIGatewayModel %s/%s: spec.apiSpec.model is required for type model", obj.Namespace, obj.Name)
@@ -74,6 +80,9 @@ func (obj *AIGatewayModel) ToAIGWModel(ctx context.Context, cl client.Client) (*
 		policies = spec.Model.Policies
 		targets = spec.Model.Targets
 		access = spec.Model.Access
+		if b := spec.Model.Config.Balancer; b != nil && b.Semantic != nil {
+			embeddingsProvider = string(b.Semantic.Embeddings.Provider)
+		}
 	default:
 		return nil, fmt.Errorf("AIGatewayModel %s/%s: unsupported spec.apiSpec.type %q", obj.Namespace, obj.Name, spec.Type)
 	}
@@ -115,11 +124,23 @@ func (obj *AIGatewayModel) ToAIGWModel(ctx context.Context, cl client.Client) (*
 				aclRefs = access.Acls.Deny.Deny
 			}
 			target = &model.Access.ACLs.Deny
+		// allowWhen and denyWhen carry CEL expressions, not consumer group
+		// references, so they go through unresolved.
+		case AIGatewayModelAccessAclsTypeAllowWhen:
+			if access.Acls.AllowWhen != nil {
+				model.Access.ACLs.AllowWhen = slices.Clone(access.Acls.AllowWhen.AllowWhen)
+			}
+		case AIGatewayModelAccessAclsTypeDenyWhen:
+			if access.Acls.DenyWhen != nil {
+				model.Access.ACLs.DenyWhen = slices.Clone(access.Acls.DenyWhen.DenyWhen)
+			}
 		default:
 			return nil, fmt.Errorf("AIGatewayModel %s/%s: unsupported access.acls.type %q", obj.Namespace, obj.Name, access.Acls.Type)
 		}
-		if *target, err = resolveEntityNames[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, consumerGroupRefs(aclRefs)); err != nil {
-			return nil, fmt.Errorf("resolving AIGatewayModel %s/%s access.acls: %w", obj.Namespace, obj.Name, err)
+		if target != nil {
+			if *target, err = resolveEntityNames[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, consumerGroupRefs(aclRefs)); err != nil {
+				return nil, fmt.Errorf("resolving AIGatewayModel %s/%s access.acls: %w", obj.Namespace, obj.Name, err)
+			}
 		}
 	}
 
@@ -132,6 +153,20 @@ func (obj *AIGatewayModel) ToAIGWModel(ctx context.Context, cl client.Client) (*
 			return nil, fmt.Errorf("resolving AIGatewayModel %s/%s targets[%d].provider: %w", obj.Namespace, obj.Name, i, err)
 		}
 		model.TargetModels[i].Provider = name
+	}
+
+	// The semantic balancer's embeddings provider is a bare string in the CRD, so it names the
+	// referenced AIGatewayModelProvider by metadata.name; the document wants its entity name.
+	// The payload strip that keeps it away from the union flattening means it is resolved from
+	// the typed spec, not from the decoded model.
+	if b := model.Config.Balancer; b != nil && embeddingsProvider != "" {
+		if embeddings, ok := b.Fields["embeddings"].(map[string]any); ok {
+			name, err := resolveEntityName[AIGatewayModelProvider](ctx, cl, obj.Namespace, "", embeddingsProvider)
+			if err != nil {
+				return nil, fmt.Errorf("resolving AIGatewayModel %s/%s config.balancer.semantic.embeddings.provider: %w", obj.Namespace, obj.Name, err)
+			}
+			embeddings["provider"] = name
+		}
 	}
 
 	return &model, nil
@@ -172,9 +207,87 @@ func (spec *AIGatewayModelAPISpec) marshalAIGWPayload() ([]byte, error) {
 	}
 
 	renestModelSelector(cfg)
+	lowerSemanticBalancer(cfg)
 
 	data, _, err := spec.selectedSDKOpsPayload(payload)
 	return data, err
+}
+
+// lowerSemanticBalancer reshapes config.balancer's semantic block in place.
+//
+// The CRD (like the Konnect API it mirrors) and the ai-deck-converter document
+// name two things differently, and the converter passes unknown keys through
+// verbatim, so without this the data plane rejects the whole pushed
+// configuration with "unknown field"/"required field missing" errors:
+//
+//   - the vector database strategy discriminator is `type` in the CRD and
+//     `strategy` in the ai-deck-converter document. Only that key changes: the
+//     union flattening that runs after this edit lifts the selected member's
+//     settings (dimensions, host, ssl, ...) next to it either way;
+//   - the embeddings model is flat in the CRD (`name`, `config`) and nested
+//     under `model` in the ai-deck-converter document, which is also where the
+//     converter resolves the embeddings' provider auth from;
+//   - the CRD's `allow_auth_override` sits at the embeddings level, while the
+//     plugin (and so the converter) carries it as `auth.allow_override`.
+//
+// `provider` is stripped here and re-attached resolved by ToAIGWModel, like
+// targets' provider: it is a bare string in the CRD (not a {kind,name} object)
+// that names the referenced AIGatewayModelProvider by metadata.name, and left in
+// place it would be read by selectedSDKOpsPayload's union flattening as a
+// discriminator: a provider CR named "model" (or "auth") points at the sibling
+// map created below, which the flattening would delete and hoist.
+//
+// See https://github.com/Kong/kong-operator/issues/6231.
+func lowerSemanticBalancer(cfg map[string]any) {
+	modelConfig, ok := cfg["config"].(map[string]any)
+	if !ok {
+		return
+	}
+	balancer, ok := modelConfig["balancer"].(map[string]any)
+	if !ok {
+		return
+	}
+	// The algorithm's settings still sit under a member named by the algorithm
+	// itself; selectedSDKOpsPayload flattens that member into the balancer block
+	// afterwards, which keeps the two edits below independent of each other.
+	algorithm, _ := balancer["algorithm"].(string)
+	if algorithm != "semantic" {
+		return
+	}
+	semantic, ok := balancer[algorithm].(map[string]any)
+	if !ok {
+		return
+	}
+	if vectordb, ok := semantic["vectordb"].(map[string]any); ok {
+		if strategy, ok := vectordb["type"]; ok {
+			delete(vectordb, "type")
+			vectordb["strategy"] = strategy
+		}
+	}
+	embeddings, ok := semantic["embeddings"].(map[string]any)
+	if !ok {
+		return
+	}
+	delete(embeddings, "provider")
+	model := map[string]any{}
+	for _, field := range []string{"name", "config"} {
+		if v, ok := embeddings[field]; ok {
+			model[field] = v
+			delete(embeddings, field)
+		}
+	}
+	if len(model) > 0 {
+		embeddings["model"] = model
+	}
+	if allow, ok := embeddings["allow_auth_override"]; ok {
+		delete(embeddings, "allow_auth_override")
+		auth, _ := embeddings["auth"].(map[string]any)
+		if auth == nil {
+			auth = map[string]any{}
+			embeddings["auth"] = auth
+		}
+		auth["allow_override"] = allow
+	}
 }
 
 // renestModelSelector fixes up config.route.model in place.

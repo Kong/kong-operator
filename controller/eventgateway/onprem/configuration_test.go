@@ -1,0 +1,754 @@
+/*
+Copyright 2026 Kong, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package onprem
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"slices"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	"sigs.k8s.io/yaml"
+
+	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
+	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminapi"
+)
+
+// emptyConfiguration returns the configuration of a gateway without entities.
+func emptyConfiguration() configuration {
+	key, err := comparisonKey(noEntities())
+	if err != nil {
+		panic(err)
+	}
+	return configuration{entities: noEntities(), objects: map[string]string{}, pushedKey: key}
+}
+
+// fromYAML returns an object of type T from its manifest, with a version 4
+// UID and a creation time, as the API server sets them.
+func fromYAML[T any, TPtr interface {
+	*T
+	client.Object
+}](t *testing.T, created time.Time, manifest string) TPtr {
+	t.Helper()
+	var obj T
+	require.NoError(t, yaml.UnmarshalStrict([]byte(manifest), &obj))
+	ptr := TPtr(&obj)
+	if ptr.GetNamespace() == "" {
+		ptr.SetNamespace(ns)
+	}
+	ptr.SetUID(types.UID(uuid.NewString()))
+	ptr.SetCreationTimestamp(metav1.NewTime(created))
+	return ptr
+}
+
+func TestBuildConfiguration(t *testing.T) {
+	gateway := &eventgatewayv1alpha1.OnPremEventGateway{Name: "gateway", Namespace: ns}
+	gateway.SetUID(types.UID(uuid.NewString()))
+	// Not on whole seconds: gw-admin requires them.
+	created := time.Date(2026, 10, 16, 10, 0, 0, 500_000_000, time.UTC)
+
+	backendCluster := fromYAML[configurationv1alpha1.EventGatewayBackendCluster](t, created, `
+metadata: {name: backend-cluster}
+spec:
+  parentRef: {group: eventgateway.konghq.com, kind: OnPremEventGateway, name: gateway}
+  apiSpec:
+    name: backend-cluster
+    description: Backend cluster
+    authentication: {type: anonymous, anonymous: {}}
+    bootstrapServers: ["kafka1:9092", "kafka2:9092"]
+    insecureAllowAnonymousVirtualClusterAuth: Enabled
+    labels: {app: test}
+    metadataUpdateIntervalSeconds: 30
+    tls:
+      enabled: Enabled
+      tlsVersions: [tls13]
+      caBundle: ca-bundle
+      clientIdentity:
+        certificate: {type: secretRef, secretRef: {name: backend-cluster-tls, key: tls.crt}}
+        key: {type: secretRef, secretRef: {name: backend-cluster-tls, key: tls.key}}
+`)
+	backendClusterSecret := &corev1.Secret{
+		Name: "backend-cluster-tls", Namespace: ns,
+		Data: map[string][]byte{"tls.crt": []byte("client-cert"), "tls.key": []byte("client-key")},
+	}
+	newBackendCluster := func(name, apiName string) *configurationv1alpha1.EventGatewayBackendCluster {
+		return fromYAML[configurationv1alpha1.EventGatewayBackendCluster](t, created, `
+metadata: {name: `+name+`}
+spec:
+  parentRef: {group: eventgateway.konghq.com, kind: OnPremEventGateway, name: gateway}
+  apiSpec:
+    name: `+apiName+`
+    authentication: {type: anonymous, anonymous: {}}
+    bootstrapServers: ["kafka:9092"]
+    tls: {enabled: Disabled}
+`)
+	}
+
+	// The same name as backendCluster, created later: left out.
+	duplicate := newBackendCluster("duplicate", "backend-cluster")
+	duplicate.SetCreationTimestamp(metav1.NewTime(created.Add(time.Minute)))
+	// In another namespace than the gateway: left out.
+	otherNamespace := newBackendCluster("other-namespace", "other-namespace")
+	otherNamespace.SetNamespace("other")
+	otherNamespace.Spec.ParentRef.Namespace = new(ns)
+	// With a UID gw-admin doesn't accept: left out.
+	notV4 := newBackendCluster("not-v4", "not-v4")
+	notV4.SetUID("11111111-1111-1111-1111-111111111111")
+	// With a missing Secret: left out.
+	missingSecret := newBackendCluster("missing-secret", "missing-secret")
+	missingSecret.Spec.APISpec.TLS.ClientIdentity = backendCluster.Spec.APISpec.TLS.ClientIdentity
+	missingSecret.Spec.APISpec.TLS.ClientIdentity.Certificate.SecretRef = &configurationv1alpha1.SensitiveDataSecretRef{Name: "missing", Key: "tls.crt"}
+	// Being deleted: neither sent nor reported.
+	deleting := newBackendCluster("deleting", "deleting")
+	deleting.SetDeletionTimestamp(new(metav1.Now()))
+	deleting.SetFinalizers([]string{"example.com/hold"})
+	// Of a KonnectEventGateway: not part of the gateway.
+	konnect := newBackendCluster("konnect", "konnect")
+	konnect.Spec.ParentRef = konnectGatewayRef("konnect-gw")
+
+	// Reading a Secret of another namespace, which no KongReferenceGrant
+	// allows: left out.
+	notGranted := newBackendCluster("not-granted", "not-granted")
+	notGranted.Spec.APISpec.TLS.ClientIdentity = backendCluster.Spec.APISpec.TLS.ClientIdentity
+	notGranted.Spec.APISpec.TLS.ClientIdentity.Certificate.SecretRef = &configurationv1alpha1.SensitiveDataSecretRef{Name: "tls", Namespace: new("secrets"), Key: "tls.crt"}
+
+	cl := newFakeClient(t, backendCluster, backendClusterSecret, duplicate, otherNamespace, notV4, missingSecret, deleting, konnect, notGranted)
+
+	cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
+	require.NoError(t, err)
+
+	t.Run("the backend cluster is converted", func(t *testing.T) {
+		require.Len(t, cfg.entities.BackendClusters, 1)
+		got, err := json.Marshal(cfg.entities.BackendClusters[0])
+		require.NoError(t, err)
+		assert.JSONEq(t, `{
+			"id": "`+string(backendCluster.UID)+`",
+			"created_at": "2026-10-16T10:00:00Z",
+			"name": "backend-cluster",
+			"description": "Backend cluster",
+			"authentication": {"type": "anonymous"},
+			"bootstrap_servers": ["kafka1:9092", "kafka2:9092"],
+			"insecure_allow_anonymous_virtual_cluster_auth": true,
+			"labels": {"app": "test"},
+			"metadata_update_interval_seconds": 30,
+			"tls": {
+				"enabled": true,
+				"insecure_skip_verify": false,
+				"tls_versions": ["tls13"],
+				"ca_bundle": "ca-bundle",
+				"client_identity": {"certificate": "client-cert", "key": "client-key"}
+			}
+		}`, string(got))
+		assert.Equal(t, map[string]string{
+			"backend_clusters.0": "EventGatewayBackendCluster " + client.ObjectKeyFromObject(backendCluster).String(),
+		}, cfg.objects)
+	})
+
+	t.Run("the entities are encoded once to compare them with gw-admin", func(t *testing.T) {
+		key, err := comparisonKey(withGWAdminDefaults(cfg.entities))
+		require.NoError(t, err)
+		assert.Equal(t, key, cfg.pushedKey)
+	})
+
+	t.Run("the other kinds are empty lists, not null", func(t *testing.T) {
+		got, err := json.Marshal(cfg.entities)
+		require.NoError(t, err)
+		var lists map[string]json.RawMessage
+		require.NoError(t, json.Unmarshal(got, &lists))
+		for _, key := range []string{"listeners", "schema_registries", "static_keys", "tls_trust_bundles", "virtual_clusters"} {
+			assert.JSONEq(t, `[]`, string(lists[key]), key)
+		}
+	})
+
+	t.Run("entities that can't be sent are left out with a reason", func(t *testing.T) {
+		type outcome struct {
+			reason  kcfgconsts.ConditionReason
+			message string
+		}
+		excluded := make(map[string]outcome, len(cfg.excluded))
+		for _, e := range cfg.excluded {
+			excluded[client.ObjectKeyFromObject(e.obj).String()] = outcome{e.reason, e.message}
+		}
+		assert.Len(t, excluded, 5, "excluded: %v", cfg.excluded)
+		invalid := eventgatewayv1alpha1.OnPremEntityInvalidReason
+		assert.Equal(t, invalid, excluded["default/duplicate"].reason)
+		assert.Contains(t, excluded["default/duplicate"].message, `another backend cluster of the gateway is named "backend-cluster"`)
+		assert.Equal(t, invalid, excluded["other/other-namespace"].reason)
+		assert.Contains(t, excluded["other/other-namespace"].message, "must be in the namespace of the OnPremEventGateway, default")
+		assert.Equal(t, invalid, excluded["default/not-v4"].reason)
+		assert.Contains(t, excluded["default/not-v4"].message, "is not a version 4 UUID")
+		assert.Equal(t, invalid, excluded["default/missing-secret"].reason)
+		assert.Contains(t, excluded["default/missing-secret"].message, "default/missing")
+		assert.Equal(t, eventgatewayv1alpha1.OnPremEntityRefNotPermittedReason, excluded["default/not-granted"].reason)
+		assert.Equal(t, "no KongReferenceGrant allows it to read the Secret secrets/tls", excluded["default/not-granted"].message)
+
+		require.Len(t, cfg.included, 1)
+		assert.Equal(t, client.ObjectKeyFromObject(backendCluster), client.ObjectKeyFromObject(cfg.included[0].obj))
+		assertSecretRefValid(t, cfg.included[0], metav1.ConditionTrue, "The Secrets it reads are resolved")
+		assert.False(t, cfg.included[0].kept)
+		assert.Equal(t, map[types.UID]any{backendCluster.UID: cfg.entities.BackendClusters[0]}, cfg.built)
+		missing := slices.IndexFunc(cfg.excluded, func(e excludedEntity) bool { return e.obj.GetName() == "missing-secret" })
+		require.GreaterOrEqual(t, missing, 0)
+		assertSecretRefValid(t, cfg.excluded[missing].entityStatus, metav1.ConditionFalse, "the Secret default/missing doesn't exist")
+		notGrantedAt := slices.IndexFunc(cfg.excluded, func(e excludedEntity) bool { return e.obj.GetName() == "not-granted" })
+		require.GreaterOrEqual(t, notGrantedAt, 0)
+		assertSecretRefValid(t, cfg.excluded[notGrantedAt].entityStatus, metav1.ConditionFalse,
+			"The Secrets it reads aren't read: no KongReferenceGrant allows it to read the Secret secrets/tls")
+	})
+
+	t.Run("the same entities produce the same configuration", func(t *testing.T) {
+		again, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
+		require.NoError(t, err)
+		a, err := json.Marshal(cfg.entities)
+		require.NoError(t, err)
+		b, err := json.Marshal(again.entities)
+		require.NoError(t, err)
+		assert.JSONEq(t, string(a), string(b))
+		assert.Equal(t, cfg.excluded, again.excluded)
+	})
+
+	t.Run("a Secret that doesn't exist tells how to make it visible", func(t *testing.T) {
+		cfg, err := buildConfiguration(t.Context(), newFakeClient(t, missingSecret), gateway, " (hint)", nil)
+		require.NoError(t, err)
+		require.Len(t, cfg.excluded, 1)
+		assert.True(t, strings.HasSuffix(cfg.excluded[0].message, " (hint)"), cfg.excluded[0].message)
+	})
+
+	t.Run("an entity whose Secret is gone is sent as it was last", func(t *testing.T) {
+		withSecret, err := buildConfiguration(t.Context(), newFakeClient(t, backendCluster, backendClusterSecret), gateway, "", nil)
+		require.NoError(t, err)
+		require.Len(t, withSecret.entities.BackendClusters, 1)
+
+		gone, err := buildConfiguration(t.Context(), newFakeClient(t, backendCluster), gateway, " (hint)", withSecret.built)
+		require.NoError(t, err)
+		assert.Empty(t, gone.excluded)
+		assert.Equal(t, withSecret.entities.BackendClusters, gone.entities.BackendClusters)
+		assert.Equal(t, withSecret.built, gone.built, "kept for the next configuration too")
+		require.Len(t, gone.included, 1)
+		assert.True(t, gone.included[0].kept)
+		assertSecretRefValid(t, gone.included[0], metav1.ConditionFalse, "the Secret default/backend-cluster-tls doesn't exist (hint)")
+	})
+
+	t.Run("a Secret lacking the key read is reported, the entity kept as it was last", func(t *testing.T) {
+		withSecret, err := buildConfiguration(t.Context(), newFakeClient(t, backendCluster, backendClusterSecret), gateway, "", nil)
+		require.NoError(t, err)
+		noKey := backendClusterSecret.DeepCopy()
+		delete(noKey.Data, "tls.key")
+
+		withoutLast, err := buildConfiguration(t.Context(), newFakeClient(t, backendCluster, noKey), gateway, " (hint)", nil)
+		require.NoError(t, err)
+		require.Len(t, withoutLast.excluded, 1)
+		assert.Equal(t, `the Secret default/backend-cluster-tls has no key "tls.key"`, withoutLast.excluded[0].message)
+		assertSecretRefValid(t, withoutLast.excluded[0].entityStatus, metav1.ConditionFalse, `the Secret default/backend-cluster-tls has no key "tls.key"`)
+
+		kept, err := buildConfiguration(t.Context(), newFakeClient(t, backendCluster, noKey), gateway, "", withSecret.built)
+		require.NoError(t, err)
+		assert.Empty(t, kept.excluded)
+		assert.Equal(t, withSecret.entities.BackendClusters, kept.entities.BackendClusters)
+		require.Len(t, kept.included, 1)
+		assert.True(t, kept.included[0].kept)
+		assertSecretRefValid(t, kept.included[0], metav1.ConditionFalse, `the Secret default/backend-cluster-tls has no key "tls.key"`)
+	})
+
+	t.Run("a Secret of another namespace a KongReferenceGrant allows is read", func(t *testing.T) {
+		grant := &configurationv1alpha1.KongReferenceGrant{
+			Name: "grant", Namespace: "secrets",
+			Spec: configurationv1alpha1.KongReferenceGrantSpec{
+				From: []configurationv1alpha1.ReferenceGrantFrom{{Group: "configuration.konghq.com", Kind: "EventGatewayBackendCluster", Namespace: ns}},
+				To:   []configurationv1alpha1.ReferenceGrantTo{{Group: "core", Kind: "Secret"}},
+			},
+		}
+		secret := backendClusterSecret.DeepCopy()
+		secret.Name, secret.Namespace = "tls", "secrets"
+		// The certificate and the key of the same Secret: one check.
+		bothFromSecret := notGranted.DeepCopy()
+		bothFromSecret.Spec.APISpec.TLS.ClientIdentity.Key.SecretRef = &configurationv1alpha1.SensitiveDataSecretRef{Name: "tls", Namespace: new("secrets"), Key: "tls.key"}
+		var grantLists int
+		cl := newFakeClientWithInterceptor(t, interceptor.Funcs{
+			List: func(ctx context.Context, cl client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+				if _, ok := list.(*configurationv1alpha1.KongReferenceGrantList); ok {
+					grantLists++
+				}
+				return cl.List(ctx, list, opts...)
+			},
+		}, bothFromSecret, grant, secret)
+		cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
+		require.NoError(t, err)
+		assert.Equal(t, 1, grantLists)
+		assert.Empty(t, cfg.excluded)
+		require.Len(t, cfg.entities.BackendClusters, 1)
+		assert.Equal(t, "client-cert", cfg.entities.BackendClusters[0].Tls.ClientIdentity.Certificate)
+	})
+
+	t.Run("a Secret that can't be read is returned, not left out", func(t *testing.T) {
+		cl := newFakeClientWithInterceptor(t, interceptor.Funcs{
+			Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+				if _, ok := obj.(*corev1.Secret); ok {
+					return apierrors.NewServiceUnavailable("cache not synced")
+				}
+				return cl.Get(ctx, key, obj, opts...)
+			},
+		}, backendCluster, backendClusterSecret)
+		_, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
+		require.ErrorContains(t, err, "failed to read a reference of EventGatewayBackendCluster default/backend-cluster")
+		require.True(t, apierrors.IsServiceUnavailable(err))
+	})
+
+	t.Run("a list that fails is returned", func(t *testing.T) {
+		cl := newFakeClientWithInterceptor(t, interceptor.Funcs{
+			List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
+				return errors.New("list failed")
+			},
+		})
+		_, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
+		require.ErrorContains(t, err, "failed to list the EventGatewayBackendClusters of the gateway: list failed")
+	})
+}
+
+// assertSecretRefValid asserts the SecretRefValid condition of the entity has
+// that status and message.
+func assertSecretRefValid(t *testing.T, e entityStatus, status metav1.ConditionStatus, message string) {
+	t.Helper()
+	if assert.NotNil(t, e.secretRefValid) {
+		assert.Equal(t, status, e.secretRefValid.Status)
+		assert.Equal(t, message, e.secretRefValid.Message)
+	}
+}
+
+func TestBuildConfigurationGatewayEntities(t *testing.T) {
+	gateway := &eventgatewayv1alpha1.OnPremEventGateway{Name: "gateway", Namespace: ns}
+	gateway.SetUID(types.UID(uuid.NewString()))
+	created := time.Date(2026, 10, 16, 10, 0, 0, 0, time.UTC)
+
+	bundle := fromYAML[configurationv1alpha1.EventGatewayTLSTrustBundle](t, created, `
+metadata: {name: bundle}
+spec:
+  parentRef: {group: eventgateway.konghq.com, kind: OnPremEventGateway, name: gateway}
+  apiSpec:
+    name: bundle
+    config: {trustedCa: {type: inline, value: ca-pem}}
+`)
+	registry := fromYAML[configurationv1alpha1.EventGatewaySchemaRegistry](t, created, `
+metadata: {name: registry}
+spec:
+  parentRef: {group: eventgateway.konghq.com, kind: OnPremEventGateway, name: gateway}
+  apiSpec:
+    type: confluent
+    confluent:
+      name: registry
+      config: {endpoint: "https://registry.example.com", schemaType: json}
+`)
+	key := fromYAML[configurationv1alpha1.EventGatewayStaticKey](t, created, `
+metadata: {name: key}
+spec:
+  parentRef: {group: eventgateway.konghq.com, kind: OnPremEventGateway, name: gateway}
+  apiSpec:
+    name: key
+    value: {type: secretRef, secretRef: {name: key-secret, key: key}}
+`)
+	keySecret := &corev1.Secret{Name: "key-secret", Namespace: ns, Data: map[string][]byte{"key": []byte("c2VjcmV0LWtleS0xMjM0NTY3ODkwMTIzNDU2")}}
+	// The same name as registry, created later: left out.
+	duplicateRegistry := fromYAML[configurationv1alpha1.EventGatewaySchemaRegistry](t, created.Add(time.Minute), `
+metadata: {name: duplicate-registry}
+spec:
+  parentRef: {group: eventgateway.konghq.com, kind: OnPremEventGateway, name: gateway}
+  apiSpec:
+    type: confluent
+    confluent:
+      name: registry
+      config: {endpoint: "https://other.example.com", schemaType: json}
+`)
+	// Its Secret doesn't exist, and nothing was built for it before: left out.
+	missingSecret := fromYAML[configurationv1alpha1.EventGatewayStaticKey](t, created, `
+metadata: {name: missing-secret}
+spec:
+  parentRef: {group: eventgateway.konghq.com, kind: OnPremEventGateway, name: gateway}
+  apiSpec:
+    name: missing-secret
+    value: {type: secretRef, secretRef: {name: missing, key: key}}
+`)
+
+	cl := newFakeClient(t, bundle, registry, key, keySecret, duplicateRegistry, missingSecret)
+	cfg, err := buildConfiguration(t.Context(), cl, gateway, "", nil)
+	require.NoError(t, err)
+
+	t.Run("each kind is converted, under the UID of its object", func(t *testing.T) {
+		require.Len(t, cfg.entities.TlsTrustBundles, 1)
+		assert.Equal(t, string(bundle.UID), cfg.entities.TlsTrustBundles[0].Id.String())
+		assert.Equal(t, "bundle", cfg.entities.TlsTrustBundles[0].Name)
+
+		require.Len(t, cfg.entities.SchemaRegistries, 1)
+		assert.Equal(t, "registry", schemaRegistryName(cfg.entities.SchemaRegistries[0]))
+		got, err := json.Marshal(cfg.entities.SchemaRegistries[0])
+		require.NoError(t, err)
+		assert.Contains(t, string(got), `"id":"`+string(registry.UID)+`"`)
+		assert.Contains(t, string(got), `"endpoint":"https://registry.example.com"`)
+
+		require.Len(t, cfg.entities.StaticKeys, 1)
+		assert.Equal(t, string(key.UID), cfg.entities.StaticKeys[0].Id.String())
+		assert.Equal(t, "key", cfg.entities.StaticKeys[0].Name)
+
+		assert.Equal(t, map[string]string{
+			"tls_trust_bundles.0": "EventGatewayTLSTrustBundle " + client.ObjectKeyFromObject(bundle).String(),
+			"schema_registries.0": "EventGatewaySchemaRegistry " + client.ObjectKeyFromObject(registry).String(),
+			"static_keys.0":       "EventGatewayStaticKey " + client.ObjectKeyFromObject(key).String(),
+		}, cfg.objects)
+	})
+
+	t.Run("those that can't be sent are left out with a reason", func(t *testing.T) {
+		reasons := map[string]string{}
+		for _, e := range cfg.excluded {
+			reasons[e.obj.GetName()] = e.message
+		}
+		assert.Len(t, reasons, 2, "excluded: %v", cfg.excluded)
+		assert.Contains(t, reasons["duplicate-registry"], `another schema registry of the gateway is named "registry"`)
+		assert.Contains(t, reasons["missing-secret"], "the Secret default/missing doesn't exist")
+	})
+
+	t.Run("the static key reading a Secret reports it", func(t *testing.T) {
+		statuses := map[string]entityStatus{}
+		for _, e := range cfg.included {
+			statuses[e.obj.GetName()] = e
+		}
+		assertSecretRefValid(t, statuses["key"], metav1.ConditionTrue, "The Secrets it reads are resolved")
+		assert.Nil(t, statuses["bundle"].secretRefValid, "an inline value is no Secret")
+	})
+}
+
+func TestDescribeField(t *testing.T) {
+	cfg := configuration{objects: map[string]string{"backend_clusters.0": "EventGatewayBackendCluster ns/bc"}}
+	assert.Equal(t, "EventGatewayBackendCluster ns/bc (backend_clusters.0.tls.ca_bundle)", cfg.describeField("backend_clusters.0.tls.ca_bundle"))
+	assert.Equal(t, "EventGatewayBackendCluster ns/bc (backend_clusters.0)", cfg.describeField("backend_clusters.0"))
+	assert.Equal(t, "backend_clusters.1.name", cfg.describeField("backend_clusters.1.name"), "no object at that path")
+	assert.Equal(t, "listeners", cfg.describeField("listeners"))
+	assert.Equal(t, "EventGatewayBackendCluster ns/bc (entities.backend_clusters.0.name)", cfg.describeField("entities.backend_clusters.0.name"),
+		"under entities, as they are sent")
+}
+
+func TestConvertEntity(t *testing.T) {
+	obj := &configurationv1alpha1.EventGatewayStaticKey{}
+	obj.SetCreationTimestamp(metav1.NewTime(time.Date(2026, 10, 16, 10, 0, 0, 500_000_000, time.UTC)))
+	id := uuid.New()
+	convert := func(from string) (gwadminapi.EventGatewayStaticKeyOnPrem, error) {
+		var payload map[string]any
+		require.NoError(t, json.Unmarshal([]byte(from), &payload))
+		var entity gwadminapi.EventGatewayStaticKeyOnPrem
+		return entity, convertEntity(payload, obj, id, &entity, nil)
+	}
+
+	t.Run("the id and the creation time are set, a null field left out", func(t *testing.T) {
+		entity, err := convert(`{"name": "key", "value": "v", "description": null, "labels": {"a": null}}`)
+		require.NoError(t, err)
+		assert.Equal(t, "key", entity.Name)
+		assert.Equal(t, id, entity.Id)
+		assert.Equal(t, time.Date(2026, 10, 16, 10, 0, 0, 0, time.UTC), entity.CreatedAt)
+		assert.Nil(t, entity.Description)
+	})
+	t.Run("a field gw-admin doesn't know is refused, naming it", func(t *testing.T) {
+		_, err := convert(`{"name": "key", "value": "v", "rotation": {"days": 30}}`)
+		require.EqualError(t, err, "it sets the field rotation, which gw-admin doesn't support")
+	})
+	t.Run("a field gw-admin doesn't know set to its zero value is left out", func(t *testing.T) {
+		_, err := convert(`{"name": "key", "value": "v", "rotation": {}, "enabled": false}`)
+		require.NoError(t, err)
+	})
+	t.Run("a value of the wrong type", func(t *testing.T) {
+		_, err := convert(`{"name": 1, "value": "v"}`)
+		require.ErrorContains(t, err, "failed to convert to *gwadminapi.EventGatewayStaticKeyOnPrem")
+	})
+}
+
+func TestUnknownField(t *testing.T) {
+	sent := map[string]any{
+		"a": map[string]any{"b": "x", "c": "y"},
+		"l": []any{map[string]any{"d": "x"}, map[string]any{"d": "x", "e": json.Number("1")}},
+	}
+	assert.Equal(t, "a.c", unknownField(sent, map[string]any{"a": map[string]any{"b": "x"}, "l": sent["l"]}, ""))
+	assert.Equal(t, "l.1.e", unknownField(sent, map[string]any{"a": sent["a"], "l": []any{map[string]any{"d": "x"}, map[string]any{"d": "x"}}}, ""))
+	assert.Empty(t, unknownField(sent, sent, ""))
+}
+
+func TestWithoutNulls(t *testing.T) {
+	v := map[string]any{"a": map[string]any{"x": nil}, "b": []any{nil, map[string]any{"c": 1.0, "d": nil}}, "e": nil}
+	withoutNulls(v)
+	assert.Equal(t,
+		map[string]any{"a": map[string]any{}, "b": []any{nil, map[string]any{"c": 1.0}}}, v,
+		"a null item of a list is kept: it isn't a field")
+}
+
+// TestSemanticDeepEqualPanicsOnEntities pins why sameEntities compares the
+// JSON encoding of the entities: equality.Semantic.DeepEqual panics on the
+// unexported fields of the times they hold.
+func TestSemanticDeepEqualPanicsOnEntities(t *testing.T) {
+	created := time.Now()
+	held := gwadminapi.GatewayEntitySet{BackendClusters: []gwadminapi.EventGatewayBackendClusterOnPrem{{CreatedAt: created}}}
+	pushed := gwadminapi.GatewayEntitySet{BackendClusters: []gwadminapi.EventGatewayBackendClusterOnPrem{{CreatedAt: created}}}
+	assert.Panics(t, func() { equality.Semantic.DeepEqual(held, pushed) })
+}
+
+func TestSameEntities(t *testing.T) {
+	created := time.Date(2026, 10, 16, 10, 0, 0, 0, time.UTC)
+	bc := gwadminapi.EventGatewayBackendClusterOnPrem{Id: uuid.New(), Name: "bc", CreatedAt: created}
+	pushed := noEntities()
+	pushed.BackendClusters = []gwadminapi.EventGatewayBackendClusterOnPrem{bc}
+	same := func(held, pushed gwadminapi.GatewayEntitySet) bool {
+		t.Helper()
+		key, err := comparisonKey(withGWAdminDefaults(pushed))
+		require.NoError(t, err)
+		ok, err := sameEntities(held, key)
+		require.NoError(t, err)
+		return ok
+	}
+
+	// gw-admin returns the TLS versions it defaults to when they are left
+	// out.
+	heldBC := bc
+	heldBC.Tls.TlsVersions = &[]gwadminapi.BackendClusterTLSTlsVersions{gwadminapi.Tls12, gwadminapi.Tls13}
+	held := gwadminapi.GatewayEntitySet{BackendClusters: []gwadminapi.EventGatewayBackendClusterOnPrem{heldBC}}
+	assert.True(t, same(held, pushed), "a missing list and an empty one are the same, and so are a field left out and its default")
+	assert.Nil(t, pushed.BackendClusters[0].Tls.TlsVersions, "the entities pushed are left as they are")
+
+	held.BackendClusters[0].Tls.TlsVersions = &[]gwadminapi.BackendClusterTLSTlsVersions{gwadminapi.Tls13}
+	assert.False(t, same(held, pushed), "TLS versions other than the default")
+
+	held.BackendClusters[0] = heldBC
+	held.BackendClusters[0].CreatedAt = created.Add(time.Second)
+	assert.False(t, same(held, pushed))
+	assert.False(t, same(noEntities(), pushed))
+
+	other := gwadminapi.EventGatewayBackendClusterOnPrem{Id: uuid.New(), Name: "other", CreatedAt: created}
+	pushed.BackendClusters = []gwadminapi.EventGatewayBackendClusterOnPrem{bc, other}
+	heldOther := other
+	heldOther.Tls.TlsVersions = heldBC.Tls.TlsVersions
+	held.BackendClusters = []gwadminapi.EventGatewayBackendClusterOnPrem{heldOther, heldBC}
+	assert.True(t, same(held, pushed), "in another order")
+	assert.Equal(t, []gwadminapi.EventGatewayBackendClusterOnPrem{bc, other}, pushed.BackendClusters, "the entities pushed are left as they are")
+
+	// gw-admin drops the empty description of a TLS trust bundle and of a
+	// static key.
+	bundle := gwadminapi.EventGatewayTLSTrustBundleOnPrem{Id: uuid.New(), Name: "bundle", CreatedAt: created, Description: new("")}
+	key := gwadminapi.EventGatewayStaticKeyOnPrem{Id: uuid.New(), Name: "key", CreatedAt: created, Description: new("")}
+	otherKey := gwadminapi.EventGatewayStaticKeyOnPrem{Id: uuid.New(), Name: "other-key", CreatedAt: created}
+	pushed = noEntities()
+	pushed.TlsTrustBundles = []gwadminapi.EventGatewayTLSTrustBundleOnPrem{bundle}
+	pushed.StaticKeys = []gwadminapi.EventGatewayStaticKeyOnPrem{key, otherKey}
+	heldBundle, heldKey := bundle, key
+	heldBundle.Description, heldKey.Description = nil, nil
+	held = gwadminapi.GatewayEntitySet{
+		TlsTrustBundles: []gwadminapi.EventGatewayTLSTrustBundleOnPrem{heldBundle},
+		StaticKeys:      []gwadminapi.EventGatewayStaticKeyOnPrem{otherKey, heldKey},
+	}
+	assert.True(t, same(held, pushed), "an empty description left out, in another order")
+	assert.Equal(t, new(""), pushed.StaticKeys[0].Description, "the entities pushed are left as they are")
+
+	// A schema registry keeps its fields as gw-admin sends them, in any
+	// order, nested ones included.
+	id := uuid.New()
+	registry := func(data string) gwadminapi.EventGatewaySchemaRegistryOnPrem {
+		t.Helper()
+		var r gwadminapi.EventGatewaySchemaRegistryOnPrem
+		require.NoError(t, json.Unmarshal([]byte(data), &r))
+		return r
+	}
+	pushed = noEntities()
+	pushed.SchemaRegistries = []gwadminapi.EventGatewaySchemaRegistryOnPrem{registry(`{
+		"config": {"authentication": {"password": "p", "type": "basic", "username": "u"}, "endpoint": "http://registry", "schema_type": "avro"},
+		"created_at": "2026-10-16T10:00:00Z", "id": "` + id.String() + `", "name": "registry", "type": "confluent"}`)}
+	held = gwadminapi.GatewayEntitySet{SchemaRegistries: []gwadminapi.EventGatewaySchemaRegistryOnPrem{registry(`{
+		"id": "` + id.String() + `", "name": "registry", "type": "confluent", "created_at": "2026-10-16T10:00:00Z",
+		"config": {"schema_type": "avro", "endpoint": "http://registry", "authentication": {"type": "basic", "username": "u", "password": "p"}}}`)}}
+	assert.True(t, same(held, pushed), "nested fields in another order")
+	held.SchemaRegistries[0] = registry(`{
+		"id": "` + id.String() + `", "name": "registry", "type": "confluent", "created_at": "2026-10-16T10:00:00Z",
+		"config": {"schema_type": "avro", "endpoint": "http://other", "authentication": {"type": "basic", "username": "u", "password": "p"}}}`)
+	assert.False(t, same(held, pushed), "another endpoint")
+
+	// gw-admin names the destination of a virtual cluster, and returns a
+	// child policy right after its parent.
+	virtualCluster := func(destination string, policies ...string) gwadminapi.EventGatewayVirtualClusterOnPrem {
+		t.Helper()
+		var vc gwadminapi.EventGatewayVirtualClusterOnPrem
+		require.NoError(t, json.Unmarshal([]byte(`{"id": "6f1f6d1e-0f5e-4a8e-9a39-2b5c0c3f6c01", "name": "vc",
+			"created_at": "2026-10-16T10:00:00Z", "destination": `+destination+`,
+			"consume_policies": [`+strings.Join(policies, ",")+`]}`), &vc))
+		return vc
+	}
+	parent := `{"id": "0b6e2f0a-3a51-4c43-8f39-3c1c2a7e8d01", "type": "schema_validation", "created_at": "2026-10-16T10:00:00Z"}`
+	child := `{"id": "9c0f5a3e-7d4b-4e1a-9b1c-5e2d3f4a6b02", "type": "modify_headers", "parent_policy_id": "0b6e2f0a-3a51-4c43-8f39-3c1c2a7e8d01", "created_at": "2026-10-16T10:00:00Z"}`
+	sibling := `{"id": "1d2e3f4a-5b6c-4d7e-8f90-a1b2c3d4e5f6", "type": "schema_validation", "created_at": "2026-10-16T10:00:00Z"}`
+	pushed = noEntities()
+	pushed.VirtualClusters = []gwadminapi.EventGatewayVirtualClusterOnPrem{virtualCluster(`{"id": "`+bc.Id.String()+`"}`, parent, sibling, child)}
+	held = gwadminapi.GatewayEntitySet{VirtualClusters: []gwadminapi.EventGatewayVirtualClusterOnPrem{
+		virtualCluster(`{"id": "`+bc.Id.String()+`", "name": ""}`, parent, child, sibling),
+	}}
+	assert.True(t, same(held, pushed), "a destination named by gw-admin, policies in another order")
+
+	// gw-admin returns the parent policy of a policy that can have one, and
+	// the configuration of one that has none, as null.
+	skip := `{"id": "2e3f4a5b-6c7d-4e8f-9a0b-c1d2e3f4a5b6", "type": "skip_record", "created_at": "2026-10-16T10:00:00Z"}`
+	skipHeld := `{"id": "2e3f4a5b-6c7d-4e8f-9a0b-c1d2e3f4a5b6", "type": "skip_record", "created_at": "2026-10-16T10:00:00Z",
+		"config": null, "parent_policy_id": null}`
+	pushed.VirtualClusters = []gwadminapi.EventGatewayVirtualClusterOnPrem{virtualCluster(`{"id": "`+bc.Id.String()+`"}`, skip)}
+	held.VirtualClusters = []gwadminapi.EventGatewayVirtualClusterOnPrem{virtualCluster(`{"id": "`+bc.Id.String()+`", "name": ""}`, skipHeld)}
+	assert.True(t, same(held, pushed), "the null fields of a policy left out")
+
+	// gw-admin may return the fields of an object in any order, those of a
+	// union, e.g. a destination or the configuration of a policy, included.
+	headers := `{"id": "3f4a5b6c-7d8e-4f9a-8b0c-d1e2f3a4b5c6", "type": "modify_headers", "created_at": "2026-10-16T10:00:00Z",
+		"config": {"actions": [{"op": "remove", "key": "k"}]}}`
+	headersHeld := `{"parent_policy_id": null, "created_at": "2026-10-16T10:00:00Z", "type": "modify_headers",
+		"config": {"actions": [{"key": "k", "op": "remove"}]}, "id": "3f4a5b6c-7d8e-4f9a-8b0c-d1e2f3a4b5c6"}`
+	pushed.VirtualClusters = []gwadminapi.EventGatewayVirtualClusterOnPrem{virtualCluster(`{"id": "`+bc.Id.String()+`"}`, headers)}
+	held.VirtualClusters = []gwadminapi.EventGatewayVirtualClusterOnPrem{virtualCluster(`{"name": "", "id": "`+bc.Id.String()+`"}`, headersHeld)}
+	assert.True(t, same(held, pushed), "the fields of the unions in another order")
+	destination, err := pushed.VirtualClusters[0].Destination.MarshalJSON()
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"id": "`+bc.Id.String()+`"}`, string(destination), "the entities pushed are left as they are")
+
+	// gw-admin may leave out the empty lists of policies of a virtual
+	// cluster, which are pushed empty.
+	pushed.VirtualClusters = []gwadminapi.EventGatewayVirtualClusterOnPrem{virtualCluster(`{"id": "` + bc.Id.String() + `"}`)}
+	pushed.VirtualClusters[0].ClusterPolicies = []gwadminapi.EventGatewayClusterPolicyOnPrem{}
+	pushed.VirtualClusters[0].ConsumePolicies = []gwadminapi.EventGatewayConsumePolicyOnPrem{}
+	pushed.VirtualClusters[0].ProducePolicies = []gwadminapi.EventGatewayProducePolicyOnPrem{}
+	held.VirtualClusters = []gwadminapi.EventGatewayVirtualClusterOnPrem{virtualCluster(`{"id": "` + bc.Id.String() + `", "name": ""}`)}
+	held.VirtualClusters[0].ConsumePolicies = nil
+	assert.True(t, same(held, pushed), "a list of policies left out and an empty one are the same")
+	assert.Nil(t, held.VirtualClusters[0].ClusterPolicies, "the entities compared are left as they are")
+	encoded, err := comparisonKey(held)
+	require.NoError(t, err)
+	assert.Contains(t, string(encoded), `"cluster_policies":[]`, "a missing list is empty, not null")
+
+	// gw-admin returns the single ports of a listener as strings, an empty
+	// condition for a policy that has none, and the TLS versions of a TLS
+	// server it defaults to, each one, when they are left out.
+	listener := func(ports string, policies ...string) gwadminapi.EventGatewayListenerOnPrem {
+		t.Helper()
+		var l gwadminapi.EventGatewayListenerOnPrem
+		require.NoError(t, json.Unmarshal([]byte(`{"id": "3f4a5b6c-7d8e-4f90-a1b2-c3d4e5f6a7b8", "name": "listener",
+			"created_at": "2026-10-16T10:00:00Z", "addresses": ["0.0.0.0"], "ports": `+ports+`,
+			"policies": [`+strings.Join(policies, ",")+`]}`), &l))
+		return l
+	}
+	tlsServer := func(fields string) string {
+		return `{"id": "4a5b6c7d-8e9f-4a0b-b1c2-d3e4f5a6b7c8", "type": "tls_server", "created_at": "2026-10-16T10:00:00Z", "config": {"certificates": []` + fields + `}}`
+	}
+	pushed = noEntities()
+	pushed.Listeners = []gwadminapi.EventGatewayListenerOnPrem{listener(`[9092, "9093-9095"]`, tlsServer(`, "versions": {"min": "TLSv1.3"}`))}
+	held = gwadminapi.GatewayEntitySet{Listeners: []gwadminapi.EventGatewayListenerOnPrem{
+		listener(`["9092", "9093-9095"]`, `{"id": "4a5b6c7d-8e9f-4a0b-b1c2-d3e4f5a6b7c8", "type": "tls_server", "condition": "",
+			"created_at": "2026-10-16T10:00:00Z", "config": {"certificates": [], "versions": {"min": "TLSv1.3", "max": "TLSv1.3"}}}`),
+	}}
+	assert.True(t, same(held, pushed), "ports as strings, the defaults of a TLS server")
+	ports, err := json.Marshal(pushed.Listeners[0].Ports)
+	require.NoError(t, err)
+	assert.JSONEq(t, `[9092, "9093-9095"]`, string(ports), "the entities pushed are left as they are")
+
+	pushed.Listeners = []gwadminapi.EventGatewayListenerOnPrem{listener(`[9092]`, tlsServer(``))}
+	held.Listeners = []gwadminapi.EventGatewayListenerOnPrem{listener(`["9092"]`, tlsServer(`, "versions": {"min": "TLSv1.2", "max": "TLSv1.3"}`))}
+	assert.False(t, same(held, pushed), "a policy held without the condition gw-admin sets")
+	held.Listeners = []gwadminapi.EventGatewayListenerOnPrem{listener(`["9092"]`, strings.Replace(
+		tlsServer(`, "versions": {"min": "TLSv1.2", "max": "TLSv1.3"}`), `"type"`, `"condition": "", "type"`, 1))}
+	assert.True(t, same(held, pushed), "both TLS versions left out")
+
+	// gw-admin returns an empty condition for a policy forwarding to a
+	// virtual cluster too.
+	forward := func(condition string) string {
+		return `{"id": "5b6c7d8e-9f0a-4b1c-82d3-e4f5a6b7c8d9", "type": "forward_to_virtual_cluster", "name": "forward",
+			"description": "", "enabled": true, "created_at": "2026-10-16T10:00:00Z",` + condition + `
+			"config": {"type": "port_mapping", "advertised_host": "localhost", "bootstrap_port": "at_start", "min_broker_id": 0,
+				"destination": {"id": "6f1f6d1e-0f5e-4a8e-9a39-2b5c0c3f6c01"}}}`
+	}
+	pushed.Listeners = []gwadminapi.EventGatewayListenerOnPrem{listener(`[9092]`, forward(``))}
+	held.Listeners = []gwadminapi.EventGatewayListenerOnPrem{listener(`["9092"]`, forward(`"condition": "",`))}
+	assert.True(t, same(held, pushed), "the condition of a forwarding policy left out")
+	held.Listeners = []gwadminapi.EventGatewayListenerOnPrem{listener(`["9092"]`, forward(``))}
+	assert.False(t, same(held, pushed), "a forwarding policy held without the condition gw-admin sets")
+
+	// gw-admin may leave out the empty list of policies of a listener,
+	// which is pushed empty.
+	pushed.Listeners = []gwadminapi.EventGatewayListenerOnPrem{listener(`["9092"]`)}
+	held.Listeners = []gwadminapi.EventGatewayListenerOnPrem{listener(`["9092"]`)}
+	held.Listeners[0].Policies = nil
+	assert.True(t, same(held, pushed), "a list of policies left out and an empty one are the same")
+	assert.Nil(t, held.Listeners[0].Policies, "the entities compared are left as they are")
+	encoded, err = comparisonKey(held)
+	require.NoError(t, err)
+	assert.Contains(t, string(encoded), `"policies":[]`, "a missing list is empty, not null")
+}
+
+func TestSameEntitiesDestinationNames(t *testing.T) {
+	bcID, vcID, other := uuid.NewString(), uuid.NewString(), uuid.NewString()
+	// entities returns the entities with a virtual cluster and a listener
+	// policy forwarding to it, whose destinations are those given.
+	entities := func(vcDestination, policyDestination string) gwadminapi.GatewayEntitySet {
+		t.Helper()
+		var e gwadminapi.GatewayEntitySet
+		require.NoError(t, json.Unmarshal([]byte(`{
+			"backend_clusters": [], "schema_registries": [], "static_keys": [], "tls_trust_bundles": [],
+			"virtual_clusters": [{"id": "`+vcID+`", "created_at": "2026-10-19T10:00:00Z", "name": "vc", "dns_label": "vc",
+				"destination": `+vcDestination+`, "acl_mode": "passthrough", "authentication": [{"type": "anonymous"}],
+				"cluster_policies": [], "consume_policies": [], "produce_policies": []}],
+			"listeners": [{"id": "`+uuid.NewString()+`", "created_at": "2026-10-19T10:00:00Z", "name": "listener", "addresses": ["0.0.0.0"], "ports": ["19092"],
+				"policies": [{"id": "`+uuid.NewString()+`", "created_at": "2026-10-19T10:00:00Z", "type": "forward_to_virtual_cluster", "condition": "",
+					"config": {"type": "port_mapping", "advertised_host": "localhost", "bootstrap_port": "at_start", "destination": `+policyDestination+`}}]}]
+		}`), &e))
+		return e
+	}
+	same := func(held, pushed gwadminapi.GatewayEntitySet) bool {
+		t.Helper()
+		pushed.Listeners[0].Id, pushed.Listeners[0].Policies = held.Listeners[0].Id, slices.Clone(pushed.Listeners[0].Policies)
+		policy := editedJSON(pushed.Listeners[0].Policies[0], func(fields map[string]any) { fields["id"] = mustPolicyID(t, held) })
+		pushed.Listeners[0].Policies[0] = policy
+		key, err := comparisonKey(withGWAdminDefaults(pushed))
+		require.NoError(t, err)
+		ok, err := sameEntities(held, key)
+		require.NoError(t, err)
+		return ok
+	}
+	pushed := entities(`{"id": "`+bcID+`"}`, `{"id": "`+vcID+`"}`)
+
+	assert.True(t, same(entities(`{"id": "`+bcID+`", "name": ""}`, `{"id": "`+vcID+`"}`), pushed), "as gw-admin returned them: names empty")
+	assert.True(t, same(entities(`{"id": "`+bcID+`", "name": "bc"}`, `{"id": "`+vcID+`", "name": "vc"}`), pushed),
+		"as gw-admin returns them now: names resolved from the ids")
+	assert.False(t, same(entities(`{"id": "`+other+`", "name": "bc"}`, `{"id": "`+vcID+`", "name": "vc"}`), pushed), "another backend cluster")
+	assert.False(t, same(entities(`{"id": "`+bcID+`", "name": "bc"}`, `{"id": "`+other+`", "name": "vc"}`), pushed), "another virtual cluster")
+}
+
+// mustPolicyID returns the id of the policy of the listener of the entities.
+func mustPolicyID(t *testing.T, e gwadminapi.GatewayEntitySet) string {
+	t.Helper()
+	var id string
+	editedJSON(e.Listeners[0].Policies[0], func(fields map[string]any) { id, _ = fields["id"].(string) })
+	require.NotEmpty(t, id)
+	return id
+}

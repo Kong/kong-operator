@@ -20,6 +20,13 @@ on:
         required: false
         type: string
         default: ""
+      ref:
+        description: |
+          The git ref to test.
+          Defaults to the caller's ref when empty.
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -34,7 +41,7 @@ jobs:
       falco_result: ${{ steps.falco_result.outcome }}
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+      uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
       with:
         egress-policy: audit
 
@@ -42,6 +49,7 @@ jobs:
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         fetch-depth: 0
+        ref: ${{ inputs.ref }}
 
     - name: start falco
       continue-on-error: true
@@ -117,12 +125,14 @@ jobs:
       actions: read
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
         with:
           egress-policy: audit
 
       - name: Checkout Source Code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
 
       - name: Analyze Falco Results
         uses: falcosecurity/falco-actions/analyze@4a4ff48cca452b3b03f06073d1ae0ff564503fc9

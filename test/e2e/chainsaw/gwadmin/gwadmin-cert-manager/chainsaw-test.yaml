@@ -1,0 +1,207 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: gwadmin-cert-manager
+spec:
+  description: |
+    cert-manager provides the cp client CA of a GWAdmin and the server
+    certificate of its cp listener (from another, "public" CA), and renews
+    both in place:
+    1. The cp listener trusts the data plane client certificates issued from
+       the cert-manager CA, and is served with the cert-manager certificate,
+       copied with its ca.crt into a Secret it owns. The public CA joins the
+       cp server bundle (status.tls.cpServerCABundleSecretName), next to the
+       cp server CA Kong Operator keeps. The API listener has a certificate
+       authority of its own, which Kong Operator creates.
+    2. cert-manager reissues the cp client CA with a new key: the cp listener
+       rotates to it in phases, the API listener doesn't notice. The new CA
+       is published once the pods trust it, and the previous one stays
+       trusted until the data plane gwadmin-dp rolled out with a
+       certificate from the new one.
+    3. cert-manager renews the cp certificate from the same public CA: Kong
+       Operator copies it right away, the data plane already runs a bundle
+       trusting its issuer.
+    Peers provision the pods and check both listeners throughout, verifying
+    the cp listener with the cp server bundle.
+  bindings:
+    - name: gwadmin_name
+      value: gw-cm
+    - name: work_dir
+      value: (join('', ['/tmp/gwadmin-e2e-', ($namespace)]))
+  steps:
+    - name: 1-Create-cert-manager-certificates-and-gwadmin
+      try:
+        # public-ca settles before it issues cp-cert.
+        - apply:
+            file: 01-public-ca.yaml
+        - assert:
+            file: 01-assert-public-ca-ready.yaml
+        - apply:
+            file: 01-cert-manager.yaml
+            bindings:
+              - name: ca_organization
+                value: first
+        - assert:
+            file: 01-assert-certificates-ready.yaml
+        - apply:
+            file: 01-gwadmin.yaml
+        # The scripts the peers and gwadmin-dp run, from gwadmin-shared.
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+            content: ../gwadmin-shared/gwadmin.sh peers-scripts
+        - apply:
+            file: ../gwadmin-shared/peers.yaml
+        - assert:
+            timeout: 4m
+            file: ../gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 1}
+        - script:
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+              - name: WORK_DIR
+                value: ($work_dir)
+            timeout: 1m
+            content: ../gwadmin-shared/gwadmin.sh save-ca gw-cm-user-ca "$WORK_DIR/first"
+        - script:
+            env: *env
+            timeout: 1m
+            content: ../gwadmin-shared/gwadmin.sh save-private-ca "$GWADMIN" api-ca "$WORK_DIR/api-ca"
+        - script:
+            env: *env
+            timeout: 1m
+            content: ../gwadmin-shared/gwadmin.sh wait-leaves-on "$GWADMIN" "$WORK_DIR/api-ca/tls.crt" 30 api operator-client
+        - assert:
+            timeout: 30s
+            file: 01-assert-cp-certificate-copied.yaml
+        # The cp server CA and the public CA.
+        - assert:
+            timeout: 30s
+            file: ../gwadmin-shared/assert-server-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 2}
+        - assert:
+            timeout: 30s
+            file: ../gwadmin-shared/assert-event.yaml
+            bindings:
+              - {name: event_type, value: Normal}
+              - {name: event_reason, value: ManualCertificateCopied}
+      cleanup:
+        - script:
+            env: *env
+            content: ../gwadmin-shared/gwadmin.sh clean-work-dir
+    - name: 2-cert-manager-reissues-the-ca
+      try:
+        # The data plane is paused until the new CA is published, so that
+        # the phase trusting both CAs can't be skipped.
+        - script:
+            env: *env
+            timeout: 2m
+            content: ../gwadmin-shared/gwadmin.sh dp-pause
+        - apply:
+            file: 01-cert-manager.yaml
+            bindings:
+              - name: ca_organization
+                value: second
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../gwadmin-shared/gwadmin.sh wait-new-ca gw-cm-user-ca "$WORK_DIR/first/tls.crt" "$WORK_DIR/second" 120
+        - assert:
+            timeout: 1m
+            file: ../gwadmin-shared/assert-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 2}
+        # Kong Operator issues no certificate from the cert-manager CA: it is
+        # published once the pods trust it, the data plane gets a certificate
+        # from it, and the previous one is dropped once it rolled out.
+        - script:
+            env: *env
+            timeout: 6m
+            content: ../gwadmin-shared/gwadmin.sh wait-published "$GWADMIN" "$WORK_DIR/second/tls.crt" 300
+        - assert:
+            timeout: 5s
+            file: ../gwadmin-shared/assert-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 2}
+        - script:
+            env: *env
+            content: ../gwadmin-shared/gwadmin.sh dp-resume
+        - assert:
+            timeout: 2m
+            file: ../gwadmin-shared/assert-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 1}
+        - assert:
+            timeout: 5s
+            file: ../gwadmin-shared/assert-api-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 1}
+        - script:
+            env: *env
+            content: ../gwadmin-shared/gwadmin.sh assert-leaves-on "$GWADMIN" "$WORK_DIR/api-ca/tls.crt" api operator-client
+        - assert:
+            timeout: 3m
+            file: ../gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 1}
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../gwadmin-shared/gwadmin.sh wait-dp-current "$GWADMIN" 180
+    - name: 3-cert-manager-renews-the-cp-certificate
+      try:
+        - patch:
+            file: 03-cp-certificate-renewed.yaml
+        # cert-manager issued the second revision: only then is the copy
+        # compared with the renewed certificate.
+        - assert:
+            timeout: 2m
+            resource:
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: cp-cert
+              status:
+                revision: 2
+                (conditions[?type == 'Ready']):
+                  - status: "True"
+        - assert:
+            timeout: 30s
+            file: 01-assert-cp-certificate-copied.yaml
+        - assert:
+            timeout: 5s
+            file: ../gwadmin-shared/assert-server-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 2}
+        - assert:
+            timeout: 3m
+            file: ../gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 1}
+        # A few more rounds of handshakes against the final state.
+        - script:
+            env: *env
+            timeout: 2m
+            content: ../gwadmin-shared/gwadmin.sh wait-rounds 3 60
+        - script:
+            env: *env
+            timeout: 2m
+            content: ../gwadmin-shared/gwadmin.sh assert-no-failures
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

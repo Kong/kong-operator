@@ -13,6 +13,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/translator"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
@@ -60,6 +61,10 @@ func BindingForPluginAndRoute(
 		WithAnnotations(httpRoute, pRef).
 		WithPluginRef(pluginName).
 		WithControlPlaneRef(*cp).
+		// This binding is named after its KongRoute, and a KongRoute is named per parentRef
+		// whenever a route has several supported parents, so it inherits the tags of the parent
+		// Gateway it was generated for alone.
+		WithSpecTags(utils.MergeTags(logger, utils.InheritedTagsForParentRef(ctx, logger, cl, httpRoute, pRef))).
 		WithRouteRef(routeName).
 		Build()
 	if err != nil {
@@ -105,6 +110,18 @@ func BindingForPluginAndService(
 
 	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &binding, httpRoute, true); err != nil {
 		return nil, err
+	}
+
+	// Unlike the per-KongRoute binding, this one is NOT scoped to a parentRef: it is named after
+	// the backend-not-found KongService, whose name covers the route, the ControlPlane and the rule
+	// but not the parentRef. A route attached to several Gateways on the same ControlPlane
+	// therefore builds this same binding once per parent, and the converter keeps only the first.
+	// Resolving the tags per parentRef would keep one Gateway's tags and silently drop the rest,
+	// so resolve them over every parent this controller accepted - the same tags the
+	// request-termination plugin it binds carries.
+	if tags := utils.MergeTags(logger,
+		utils.InheritedTagsForKongObject(ctx, logger, cl, httpRoute, &binding)); len(tags) > 0 {
+		binding.Spec.Tags = commonv1alpha1.Tags(tags)
 	}
 
 	return &binding, nil

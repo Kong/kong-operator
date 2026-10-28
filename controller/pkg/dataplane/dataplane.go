@@ -178,9 +178,6 @@ type DeploymentConfig[T Object] struct {
 	DeploymentLabels func(T) map[string]string
 	// DeploymentAnnotations returns the user-provided Deployment annotations, or nil.
 	DeploymentAnnotations func(T) map[string]string
-	// Replicas returns the user-provided static replica count, or nil. It is
-	// ignored when horizontal scaling is configured.
-	Replicas func(T) *int32
 
 	// BuildContainer builds the DataPlane container and the additional volumes
 	// it requires. The Konnect certificate volume itself is managed by the
@@ -199,6 +196,11 @@ type DeploymentConfig[T Object] struct {
 	// LabelManaged, when non-nil, marks the Deployment and its pod template as
 	// managed (e.g. k8sresources.LabelObjectAsAIGatewayDataPlaneManaged).
 	LabelManaged func(metav1.Object)
+	// TerminationGracePeriodSeconds, when non-nil, returns the termination
+	// grace period of the DataPlane pods, e.g. long enough for the DataPlane
+	// to drain its connections, or nil to keep the Kubernetes default. A
+	// value the user pod template overlay sets wins.
+	TerminationGracePeriodSeconds func(T) *int64
 }
 
 // ServiceConfig carries the type specific bits of an owned Service.

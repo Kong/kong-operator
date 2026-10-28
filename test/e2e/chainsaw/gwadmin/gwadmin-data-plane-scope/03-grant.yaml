@@ -1,0 +1,14 @@
+# The owner of the GWAdmin's namespace allows the OnPremEventGateways of the
+# other namespace to reference its GWAdmins: the data planes there count.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: other-data-planes
+spec:
+  from:
+    - group: eventgateway.konghq.com
+      kind: OnPremEventGateway
+      namespace: ($other_namespace)
+  to:
+    - group: gateway-operator.konghq.com
+      kind: GWAdmin

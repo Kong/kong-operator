@@ -15,10 +15,10 @@ spec:
        new path and the old path stops being served — the re-rendered
        configuration replaced the pushed payload wholesale.
     4. The model is deleted: with the provider alone there is nothing
-       routable, the control plane pushes an empty configuration, and the
-       DB-less data plane reports not-ready (empty configuration).
-    5. The model is recreated: it becomes Programmed again, the data plane
-       returns to Ready, and traffic works again.
+       routable, so the control plane pushes a configuration with a single
+       stub upstream and the data plane stays Ready.
+    5. The model is recreated: it becomes Programmed again and traffic works
+       again.
 
     The update's Programmed transition itself is deliberately not asserted:
     the entity's condition stays True until the re-push completes, making a
@@ -154,7 +154,7 @@ spec:
               kind: AIGatewayModel
               name: ($model_name)
               namespace: ($namespace)
-    - name: Assert-dataplane-not-ready-on-empty-configuration
+    - name: Assert-dataplane-stays-ready-on-empty-configuration
       try:
         - assert:
             resource:
@@ -164,8 +164,12 @@ spec:
                 name: ($aigw_dp_name)
                 namespace: ($namespace)
               status:
+                # Deleting the last routable entity leaves only the stub
+                # upstream in the pushed configuration, so the data plane
+                # never loses readiness: no pod restart, no not-ready window.
                 (conditions[?type == 'Ready']):
-                  - status: 'False'
+                  - status: 'True'
+                (readyReplicas > `0`): true
     - name: Recreate-model
       try:
         - apply:

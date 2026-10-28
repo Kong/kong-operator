@@ -1017,7 +1017,7 @@ AIGatewayAgentAccess Access control configuration for an agent.
 
 | Field | Description |
 | --- | --- |
-| `acls` _[AIGatewayAgentAccessAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentaccessacls)_ | Access control rules. Configure exactly one of `allow` or `deny`. |
+| `acls` _[AIGatewayAgentAccessAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentaccessacls)_ | Access control rules. Configure exactly one of `allow`, `deny`, `allow_when`, or `deny_when`. |
 | `authStrategies` _[][AIGatewayAuthStrategyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyref)_ | List of auth strategies for granting access to the agent. At most 1 auth strategy of each auth strategy type can be referenced. |
 | `identityProviders` _[][AIGatewayIdentityProviderReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the agent. At most 1 identity provider of each identity provider type can be referenced.<br /><br />Deprecated: use `auth_strategies` instead. The two are mutually exclusive. |
 
@@ -1038,6 +1038,8 @@ Only one of the fields should be set based on the Type.
 | `type` _[AIGatewayAgentAccessAclsType](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentaccessaclstype)_ | Type designates the type of configuration. |
 | `allow` _[AIGatewayAllowACL](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayallowacl)_ | Allow configuration. |
 | `deny` _[AIGatewayDenyACL](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydenyacl)_ | Deny configuration. |
+| `allowWhen` _[AIGatewayAllowWhenACL](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayallowwhenacl)_ | AllowWhen configuration. |
+| `denyWhen` _[AIGatewayDenyWhenACL](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydenywhenacl)_ | DenyWhen configuration. |
 
 _Appears in:_
 
@@ -1062,6 +1064,8 @@ Allowed values:
 | --- | --- |
 | `allow` |  |
 | `deny` |  |
+| `allowWhen` |  |
+| `denyWhen` |  |
 
 #### AIGatewayAgentConfig
 
@@ -1145,6 +1149,22 @@ AIGatewayAllowACL is a type alias.
 | Field | Description |
 | --- | --- |
 | `allow` _[][AIGatewayACLRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayaclref)_ | List of Consumer Groups Names, or Authenticated Groups Names that are permitted access. |
+
+_Appears in:_
+
+- [AIGatewayAgentAccessAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentaccessacls)
+- [AIGatewayModelAccessAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelaccessacls)
+
+#### AIGatewayAllowWhenACL
+
+
+AIGatewayAllowWhenACL is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `allowWhen` _[]string_ | Allow the request if it matches any of these CEL boolean expressions evaluated against the request context (consumer, principal, HTTP attributes, consumer groups, etc.). Exactly one of `allow`, `deny`, `allow_when`, or `deny_when` must be specified.<br /><br />**Requires a minimum runtime version of `2.2`**. |
 
 _Appears in:_
 
@@ -1251,7 +1271,7 @@ object's Konnect name is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -1458,7 +1478,7 @@ object's Konnect name is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -1567,6 +1587,7 @@ AIGatewayConsumerCredentialStatus defines the observed state of AIGatewayConsume
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
 | `gatewayID` _[KonnectEntityRef](#aiconfiguration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
 | `consumerID` _[KonnectEntityRef](#aiconfiguration-konghq-com-v1alpha1-types-konnectentityref)_ | ConsumerID is the Konnect ID of the parent Consumer. |
+| `createInputsHash` _string_ | CreateInputsHash fingerprints the resolved user-supplied request body last successfully created in Konnect, before operator metadata is added. For entities predating this field, it is initialized from current inputs as a baseline, which cannot verify the values already stored in Konnect. Readers of this resource can use the fingerprint to verify guesses of low-entropy Secret values offline. Use high-entropy secret material. |
 | `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
 
 _Appears in:_
@@ -1771,7 +1792,7 @@ object's Konnect name is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -1856,6 +1877,7 @@ AIGatewayDataPlaneCertificateStatus defines the observed state of AIGatewayDataP
 | --- | --- |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
 | `gatewayID` _[KonnectEntityRef](#aiconfiguration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `createInputsHash` _string_ | CreateInputsHash fingerprints the resolved user-supplied request body last successfully created in Konnect, before operator metadata is added. For entities predating this field, it is initialized from current inputs as a baseline, which cannot verify the values already stored in Konnect. Readers of this resource can use the fingerprint to verify guesses of low-entropy Secret values offline. Use high-entropy secret material. |
 | `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
 
 _Appears in:_
@@ -1872,6 +1894,22 @@ AIGatewayDenyACL is a type alias.
 | Field | Description |
 | --- | --- |
 | `deny` _[][AIGatewayACLRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayaclref)_ | List of Consumer Groups Names, or Authenticated Groups Names that are denied access. |
+
+_Appears in:_
+
+- [AIGatewayAgentAccessAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentaccessacls)
+- [AIGatewayModelAccessAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelaccessacls)
+
+#### AIGatewayDenyWhenACL
+
+
+AIGatewayDenyWhenACL is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `denyWhen` _[]string_ | Deny the request if it matches any of these CEL boolean expressions evaluated against the request context (consumer, principal, HTTP attributes, consumer groups, etc.). Exactly one of `allow`, `deny`, `allow_when`, or `deny_when` must be specified.<br /><br />**Requires a minimum runtime version of `2.2`**. |
 
 _Appears in:_
 
@@ -2099,8 +2137,8 @@ AIGatewayMCPConversionTool A tool exposed by an MCP Server in
 | `parameters` _[][AIGatewayMCPToolParameter](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolparameter)_ |  |
 | `path` _string_ | The path of the exported API. Always treated as relative to the path component of `config.url` and simply concatenated onto it — a leading `/` has no special "absolute path" meaning. If this tool's `host` or `scheme` overrides the source's URL, `path` is instead relative to the root of that overridden host, since there is no URL path from a different host to append to. By default, Kong will extract the path from API configuration. |
 | `query` _[AIGatewayMCPToolQuery](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolquery)_ | The query arguments of the exported API. If the generated query arguments are not exactly matched, this field is required. |
-| `requestBody` _[AIGatewayMCPToolRequestBody](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolrequestbody)_ | The API requestBody specification defined in OpenAPI JSON format. For example, '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'. See https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/ for more details. Note that `$ref` is not supported. |
-| `responses` _[AIGatewayMCPToolResponses](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolresponses)_ | The API responses specification defined in OpenAPI JSON format. This specification will be used to validate the upstream response and map it back to the structuredOutput. For example, '{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'. See https://swagger.io/docs/specification/v3_0/describing-responses/ for more details. Only one non-error (status code < 400) response is supported. Note that `$ref` is not supported. |
+| `requestBody` _[AIGatewayMCPToolRequestBody](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolrequestbody)_ | The API requestBody specification defined in OpenAPI JSON format. For example, {"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}. See https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/ for more details. Note that `$ref` is not supported. |
+| `responses` _[AIGatewayMCPToolResponses](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolresponses)_ | The API responses specification defined in OpenAPI JSON format. This specification will be used to validate the upstream response and map it back to the structuredOutput. For example, {"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}. See https://swagger.io/docs/specification/v3_0/describing-responses/ for more details. Only one non-error (status code < 400) response is supported. Note that `$ref` is not supported. |
 | `scheme` _string_ | The scheme of the exported API. By default, Kong will extract the scheme from API configuration. If the configured scheme is not expected, this field can be used to override it. |
 
 _Appears in:_
@@ -2600,7 +2638,7 @@ object's Konnect name is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -3124,20 +3162,7 @@ _Appears in:_
 - [AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
 - [AIGatewayMCPUpstreamTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpupstreamtool)
 
-#### AIGatewayMCPToolHeaders
 
-_Underlying type:_ `object`
-
-AIGatewayMCPToolHeaders The headers of the exported API.
-By default, Kong will extract the headers from API configuration.
-If the configured headers are not exactly matched, this field is required.
-
-
-
-
-_Appears in:_
-
-- [AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
 
 #### AIGatewayMCPToolParameter
 
@@ -3164,62 +3189,11 @@ _Appears in:_
 
 - [AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
 
-#### AIGatewayMCPToolQuery
-
-_Underlying type:_ `object`
-
-AIGatewayMCPToolQuery The query arguments of the exported API.
-If the generated query arguments are not exactly matched, this field is
-required.
 
 
 
 
-_Appears in:_
 
-- [AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
-
-#### AIGatewayMCPToolRequestBody
-
-_Underlying type:_ `object`
-
-AIGatewayMCPToolRequestBody The API requestBody specification defined in
-OpenAPI JSON format.
-For example,
-'{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
-See
-https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/
-for more details.
-Note that `$ref` is not supported.
-
-
-
-
-_Appears in:_
-
-- [AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
-
-#### AIGatewayMCPToolResponses
-
-_Underlying type:_ `object`
-
-AIGatewayMCPToolResponses The API responses specification defined in OpenAPI
-JSON format.
-This specification will be used to validate the upstream response and map it
-back to the structuredOutput.
-For example,
-'{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'.
-See https://swagger.io/docs/specification/v3_0/describing-responses/ for more
-details.
-Only one non-error (status code < 400) response is supported.
-Note that `$ref` is not supported.
-
-
-
-
-_Appears in:_
-
-- [AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
 
 #### AIGatewayMCPUpstreamTool
 
@@ -3380,7 +3354,7 @@ AIGatewayModelAccess Access control configuration for a model.
 
 | Field | Description |
 | --- | --- |
-| `acls` _[AIGatewayModelAccessAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelaccessacls)_ | Access control rules. Configure exactly one of `allow` or `deny`. |
+| `acls` _[AIGatewayModelAccessAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelaccessacls)_ | Access control rules. Configure exactly one of `allow`, `deny`, `allow_when`, or `deny_when`. |
 | `authStrategies` _[][AIGatewayAuthStrategyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyref)_ | List of auth strategies for granting access to the model. At most 1 auth strategy of each auth strategy type can be referenced. |
 | `identityProviders` _[][AIGatewayIdentityProviderReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the model. At most 1 identity provider of each identity provider type can be referenced.<br /><br />Deprecated: use `auth_strategies` instead. The two are mutually exclusive. |
 
@@ -3402,6 +3376,8 @@ Only one of the fields should be set based on the Type.
 | `type` _[AIGatewayModelAccessAclsType](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelaccessaclstype)_ | Type designates the type of configuration. |
 | `allow` _[AIGatewayAllowACL](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayallowacl)_ | Allow configuration. |
 | `deny` _[AIGatewayDenyACL](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydenyacl)_ | Deny configuration. |
+| `allowWhen` _[AIGatewayAllowWhenACL](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayallowwhenacl)_ | AllowWhen configuration. |
+| `denyWhen` _[AIGatewayDenyWhenACL](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydenywhenacl)_ | DenyWhen configuration. |
 
 _Appears in:_
 
@@ -3426,6 +3402,8 @@ Allowed values:
 | --- | --- |
 | `allow` |  |
 | `deny` |  |
+| `allowWhen` |  |
+| `denyWhen` |  |
 
 
 
@@ -4839,7 +4817,7 @@ object's Konnect name is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -5571,7 +5549,7 @@ object's Konnect name is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -8926,6 +8904,7 @@ _Appears in:_
 - [EventGatewayStaticKeySpec](#configuration-konghq-com-v1alpha1-types-eventgatewaystatickeyspec)
 - [EventGatewayTLSTrustBundleSpec](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundlespec)
 - [EventGatewayVirtualClusterConsumePolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicyspec)
+- [EventGatewayVirtualClusterPolicyChainSpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicychainspec)
 - [EventGatewayVirtualClusterPolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyspec)
 - [EventGatewayVirtualClusterProducePolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyspec)
 - [EventGatewayVirtualClusterSpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterspec)
@@ -9284,6 +9263,7 @@ Package v1alpha1 contains API Schema definitions for the configuration.konghq.co
 - [EventGatewayVirtualCluster](#configuration-konghq-com-v1alpha1-eventgatewayvirtualcluster)
 - [EventGatewayVirtualClusterConsumePolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterconsumepolicy)
 - [EventGatewayVirtualClusterPolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterpolicy)
+- [EventGatewayVirtualClusterPolicyChain](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterpolicychain)
 - [EventGatewayVirtualClusterProducePolicy](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterproducepolicy)
 - [IngressClassParameters](#configuration-konghq-com-v1alpha1-ingressclassparameters)
 - [KongCACertificate](#configuration-konghq-com-v1alpha1-kongcacertificate)
@@ -9456,6 +9436,21 @@ EventGatewayVirtualClusterPolicy is the Schema for the eventgatewayvirtualcluste
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[EventGatewayVirtualClusterPolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyspec)_ |  |
 | `status` _[EventGatewayVirtualClusterPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicystatus)_ |  |
+
+### EventGatewayVirtualClusterPolicyChain
+
+
+EventGatewayVirtualClusterPolicyChain is the Schema for the eventgatewayvirtualclusterpolicychains API.
+
+<!-- event_gateway_virtual_cluster_policy_chain description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `EventGatewayVirtualClusterPolicyChain`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[EventGatewayVirtualClusterPolicyChainSpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicychainspec)_ |  |
+| `status` _[EventGatewayVirtualClusterPolicyChainStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicychainstatus)_ |  |
 
 ### EventGatewayVirtualClusterProducePolicy
 
@@ -11681,6 +11676,8 @@ _Appears in:_
 - [EventGatewayParsedRecordDecryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselectorpaths)
 - [EventGatewayParsedRecordEncryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorpaths)
 
+
+
 #### EventGatewayProduceRequestRules
 
 
@@ -12144,7 +12141,7 @@ object's Konnect name is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -12235,7 +12232,7 @@ object's Konnect id is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -12281,6 +12278,7 @@ EventGatewayStaticKeyStatus defines the observed state of EventGatewayStaticKey.
 | --- | --- |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
 | `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `createInputsHash` _string_ | CreateInputsHash fingerprints the resolved user-supplied request body last successfully created in Konnect, before operator metadata is added. For entities predating this field, it is initialized from current inputs as a baseline, which cannot verify the values already stored in Konnect. Readers of this resource can use the fingerprint to verify guesses of low-entropy Secret values offline. Use high-entropy secret material. |
 | `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
 
 _Appears in:_
@@ -12378,7 +12376,7 @@ object's Konnect id is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -12544,7 +12542,7 @@ object's Konnect id is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -12598,6 +12596,55 @@ _Appears in:_
 
 - [EventGatewayVirtualClusterPolicySpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyspec)
 
+#### EventGatewayVirtualClusterPolicyChainAPISpec
+
+
+EventGatewayVirtualClusterPolicyChainAPISpec defines the API spec fields for EventGatewayVirtualClusterPolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `policies` _[][EventGatewayVirtualClusterPolicyRef](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyref)_ | Policies lists distinct EventGatewayVirtualClusterPolicy references in execution order. Each policy must belong to the referenced EventGatewayVirtualCluster and be in the same namespace as this chain. Namespace defaults to this chain's namespace and may be set explicitly to that same namespace; cross-namespace references are not supported. List every cluster-level policy exactly once. An explicit empty list is valid only when the remote chain has no policies; it does not clear an existing chain. When a policy is created or deleted, update this list to match the complete remote set. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterPolicyChainSpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicychainspec)
+
+#### EventGatewayVirtualClusterPolicyChainSpec
+
+
+EventGatewayVirtualClusterPolicyChainSpec defines the desired state of EventGatewayVirtualClusterPolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `eventGatewayVirtualClusterRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | EventGatewayVirtualClusterRef is the reference to the parent EventGatewayVirtualCluster object. |
+| `apiSpec` _[EventGatewayVirtualClusterPolicyChainAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicychainapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterPolicyChain](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterpolicychain)
+
+#### EventGatewayVirtualClusterPolicyChainStatus
+
+
+EventGatewayVirtualClusterPolicyChainStatus defines the observed state of EventGatewayVirtualClusterPolicyChain.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `virtualClusterID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | VirtualClusterID is the Konnect ID of the parent VirtualCluster. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterPolicyChain](#configuration-konghq-com-v1alpha1-eventgatewayvirtualclusterpolicychain)
+
 #### EventGatewayVirtualClusterPolicyConfig
 
 
@@ -12635,6 +12682,24 @@ Allowed values:
 | --- | --- |
 | `acls` |  |
 | `requestRuleValidator` |  |
+
+#### EventGatewayVirtualClusterPolicyRef
+
+
+EventGatewayVirtualClusterPolicyRef references an EventGatewayVirtualClusterPolicy in the cluster. The referenced
+object's Konnect id is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterPolicyChainAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicychainapispec)
 
 
 
@@ -12741,7 +12806,7 @@ object's Konnect id is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace defaults to the referrer's namespace. If set, it must be the same as the referrer's namespace; cross-namespace references are not supported. |
 
 _Appears in:_
 
@@ -14318,6 +14383,7 @@ _Appears in:_
 - [EventGatewayStaticKeyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaystatickeystatus)
 - [EventGatewayTLSTrustBundleStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaytlstrustbundlestatus)
 - [EventGatewayVirtualClusterConsumePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterconsumepolicystatus)
+- [EventGatewayVirtualClusterPolicyChainStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicychainstatus)
 - [EventGatewayVirtualClusterPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicystatus)
 - [EventGatewayVirtualClusterProducePolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicystatus)
 - [EventGatewayVirtualClusterStatus](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterstatus)
@@ -15767,8 +15833,9 @@ The Type field determines which sub-field is active.
 
 | Field | Description |
 | --- | --- |
-| `type` _[ControlPlaneRefType](#eventgateway-konghq-com-v1alpha1-types-controlplanereftype)_ | Type indicates the type of the control plane being referenced. Currently only konnectNamespacedRef is supported. |
+| `type` _[ControlPlaneRefType](#eventgateway-konghq-com-v1alpha1-types-controlplanereftype)_ | Type indicates the type of the control plane being referenced: a KonnectEventGateway (konnectNamespacedRef) or an OnPremEventGateway (onpremNamespacedRef). It can't be changed, and neither can an onpremNamespacedRef. |
 | `konnectNamespacedRef` _[KonnectNamespacedRef](#eventgateway-konghq-com-v1alpha1-types-konnectnamespacedref)_ | KonnectNamespacedRef references a KonnectEventGateway resource in the same namespace. Must be set when type is konnectNamespacedRef; validated by CEL rules on this struct. |
+| `onpremNamespacedRef` _[OnPremNamespacedRef](#eventgateway-konghq-com-v1alpha1-types-onpremnamespacedref)_ | OnPremNamespacedRef references an OnPremEventGateway resource in the same namespace. The data plane pulls its configuration from the gw-admin pods of the GWAdmin of that gateway, and authenticates with a client certificate trusted by the cp client CA of the GWAdmin. Must be set when type is onpremNamespacedRef; validated by CEL rules on this struct. |
 
 _Appears in:_
 
@@ -15792,6 +15859,7 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `konnectNamespacedRef` | ControlPlaneRefTypeKonnectNamespacedRef references a KonnectEventGateway<br />resource in the same namespace as the DataPlane.<br /> |
+| `onpremNamespacedRef` | ControlPlaneRefTypeOnPremNamespacedRef references an OnPremEventGateway<br />resource in the same namespace as the DataPlane.<br /> |
 
 #### DebugEndpointsState
 
@@ -15832,36 +15900,21 @@ _Appears in:_
 
 - [KegDataPlaneSpec](#eventgateway-konghq-com-v1alpha1-types-kegdataplanespec)
 
-#### GWAdmin
+#### GWAdminRef
 
 
-GWAdmin configures how Kong Operator reaches gw-admin.
+GWAdminRef references a GWAdmin.
 
 
 
 | Field | Description |
 | --- | --- |
-| `service` _[GWAdminService](#eventgateway-konghq-com-v1alpha1-types-gwadminservice)_ | Service is the Service in front of the gw-admin pods, in the namespace of the OnPremEventGateway. Kong Operator pushes the configuration to each pod of this Service. |
+| `name` _string_ | Name is the name of the GWAdmin. |
+| `namespace` _*string_ | Namespace is the namespace of the GWAdmin. It defaults to the namespace of the referencing object. |
 
 _Appears in:_
 
 - [OnPremEventGatewaySpec](#eventgateway-konghq-com-v1alpha1-types-onpremeventgatewayspec)
-
-#### GWAdminService
-
-
-GWAdminService identifies the gw-admin Service and its port.
-
-
-
-| Field | Description |
-| --- | --- |
-| `name` _string_ | Name is the name of the Service. |
-| `portName` _string_ | PortName is the name of the Service port gw-admin serves its API on. Service port names are DNS-1123 labels. |
-
-_Appears in:_
-
-- [GWAdmin](#eventgateway-konghq-com-v1alpha1-types-gwadmin)
 
 
 
@@ -15894,11 +15947,11 @@ KegDataPlaneSpec defines the desired state of KegDataPlane.
 
 | Field | Description |
 | --- | --- |
-| `controlPlaneRef` _[ControlPlaneRef](#eventgateway-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef references the control plane this KegDataPlane connects to. The type field identifies which kind of control plane is being referenced. Currently only konnectNamespacedRef is supported, which references a KonnectEventGateway resource in the same namespace. |
+| `controlPlaneRef` _[ControlPlaneRef](#eventgateway-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef references the control plane this KegDataPlane connects to. The type field identifies which kind of control plane is being referenced: konnectNamespacedRef references a KonnectEventGateway resource in the same namespace, onpremNamespacedRef an OnPremEventGateway resource in the same namespace. |
 | `deployment` _[DeploymentOptions](#eventgateway-konghq-com-v1alpha1-types-deploymentoptions)_ | Deployment configures the keg Deployment: image, replicas, resources, extra env vars, volume mounts, etc. |
 | `network` _[NetworkOptions](#eventgateway-konghq-com-v1alpha1-types-networkoptions)_ | Network configures how the keg pod is exposed to Kafka clients. |
 | `config` _[KegDataPlaneConfiguration](#eventgateway-konghq-com-v1alpha1-types-kegdataplaneconfiguration)_ | Config provides optional overrides for keg runtime settings. When omitted, the keg built-in defaults are used. https://developer.konghq.com/event-gateway/configuration/#applying-configuration |
-| `certificateSecret` _[CertificateSecret](#eventgateway-konghq-com-v1alpha1-types-certificatesecret)_ | CertificateSecret configures how the mTLS client certificate Secret used by this KegDataPlane to connect to Konnect is provisioned. If left unset, it defaults to Automatic (operator-managed).<br /><br />When Provisioning is Manual, SecretRef must point to an existing Secret holding tls.crt and tls.key (typically of type kubernetes.io/tls, but the type isn't enforced) that the operator will use as-is: it will never create, modify, rotate, or delete it. The Secret must live in this KegDataPlane's own namespace and must carry the operator's secret label selector (default "konghq.com/secret: \"true\"", configurable via --secret-label-selector on the operator), or the operator cannot see it at all. Switching Provisioning from Automatic to Manual deletes the previously operator-provisioned Secret once the Deployment has rolled onto the Manual one; switching back to Automatic later provisions a new one rather than reusing the deleted one.<br /><br />The referenced Secret must hold a matching certificate and key that are currently valid (a NotBefore up to 5 minutes in the future is tolerated for clock skew), and must not be an operator-provisioned Secret (one labeled "gateway.konghq.com/secret-provisioning: automatic"); otherwise CertificateProvisioned goes False with reason InvalidSecret or SecretRefOperatorManaged. Deleting the referenced Secret while it is in use leaves running Pods untouched but prevents new ones from starting until the Secret is recreated or the reference is changed. |
+| `certificateSecret` _[CertificateSecret](#eventgateway-konghq-com-v1alpha1-types-certificatesecret)_ | CertificateSecret configures how the mTLS client certificate Secret used by this KegDataPlane to connect to its control plane is provisioned: Konnect with a konnectNamespacedRef, the gw-admin of the OnPremEventGateway with an onpremNamespacedRef. If left unset, it defaults to Automatic (operator-managed).<br /><br />When Provisioning is Manual, SecretRef must point to an existing Secret holding tls.crt and tls.key (typically of type kubernetes.io/tls, but the type isn't enforced) that the operator will use as-is: it will never create, modify, rotate, or delete it. The Secret must live in this KegDataPlane's own namespace and must carry the operator's secret label selector (default "konghq.com/secret: \"true\"", configurable via --secret-label-selector on the operator), or the operator cannot see it at all. Switching Provisioning from Automatic to Manual deletes the previously operator-provisioned Secret once the Deployment has rolled onto the Manual one; switching back to Automatic later provisions a new one rather than reusing the deleted one.<br /><br />The referenced Secret must hold a matching certificate and key that are currently valid (a NotBefore up to 5 minutes in the future is tolerated for clock skew), and must not be an operator-provisioned Secret (one labeled "gateway.konghq.com/secret-provisioning: automatic"); otherwise CertificateProvisioned goes False with reason InvalidSecret or SecretRefOperatorManaged. Deleting the referenced Secret while it is in use leaves running Pods untouched but prevents new ones from starting until the Secret is recreated or the reference is changed.<br /><br />With an onpremNamespacedRef and Manual provisioning, the certificate must be issued by the cp client CA of the GWAdmin of the OnPremEventGateway, so that GWAdmin needs a Manual clientCA: an Automatic one keeps its key in the namespace of Kong Operator. During a rotation of that CA, a certificate from the previous one stays trusted until every data plane runs a certificate from the new one; reissue it from the new CA. |
 
 _Appears in:_
 
@@ -16023,7 +16076,7 @@ OnPremEventGatewaySpec defines the desired state of OnPremEventGateway.
 
 | Field | Description |
 | --- | --- |
-| `gwAdmin` _[GWAdmin](#eventgateway-konghq-com-v1alpha1-types-gwadmin)_ | GWAdmin configures how Kong Operator reaches the gw-admin of this gateway. |
+| `gwAdminRef` _[GWAdminRef](#eventgateway-konghq-com-v1alpha1-types-gwadminref)_ | GWAdminRef references the GWAdmin that serves this gateway. Kong Operator pushes the configuration of the gateway to every gw-admin pod of it, and the data planes of the gateway pull it from there. A GWAdmin in another namespace is used only when a KongReferenceGrant in its namespace allows OnPremEventGateways of the namespace of the gateway to reference it. It can't be changed. |
 
 _Appears in:_
 
@@ -16039,12 +16092,29 @@ OnPremEventGatewayStatus defines the observed state of OnPremEventGateway.
 | Field | Description |
 | --- | --- |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the OnPremEventGateway. |
-| `serverURL` _string_ | ServerURL is the address the data planes of this gateway use to reach gw-admin. |
+| `serverURL` _string_ | ServerURL is the address the data planes of this gateway use to reach gw-admin: the cp endpoint of its GWAdmin. |
 | `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed. |
+| `configRevision` _int64_ | ConfigRevision is the revision of the configuration of the gateway that Kong Operator pushes to gw-admin. It increases by one every time that configuration changes, and never decreases. |
+| `configHash` _string_ | ConfigHash identifies the configuration that ConfigRevision stands for: it changes only along with a new revision. |
 
 _Appears in:_
 
 - [OnPremEventGateway](#eventgateway-konghq-com-v1alpha1-onpremeventgateway)
+
+#### OnPremNamespacedRef
+
+
+OnPremNamespacedRef is a reference to an OnPremEventGateway resource in the same namespace.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the name of the OnPremEventGateway resource. |
+
+_Appears in:_
+
+- [ControlPlaneRef](#eventgateway-konghq-com-v1alpha1-types-controlplaneref)
 
 #### RuntimeOptions
 
@@ -16056,8 +16126,8 @@ RuntimeOptions configures graceful shutdown and health endpoint behaviour for ke
 | Field | Description |
 | --- | --- |
 | `healthListenerAddressPort` _*string_ | HealthListenerAddressPort sets the address:port for the health endpoint. Corresponds to runtime.health_listener_address_port / KEG__RUNTIME__HEALTH_LISTENER_ADDRESS_PORT. |
-| `drainDurationSeconds` _*int32_ | DrainDurationSeconds sets how long keg drains existing connections on shutdown, in seconds. Corresponds to runtime.drain_duration / KEG__RUNTIME__DRAIN_DURATION. |
-| `shutdownTimeoutSeconds` _*int32_ | ShutdownTimeoutSeconds sets the graceful shutdown timeout, in seconds. Corresponds to runtime.shutdown_timeout / KEG__RUNTIME__SHUTDOWN_TIMEOUT. |
+| `drainDurationSeconds` _*int32_ | DrainDurationSeconds sets how long keg drains existing connections on shutdown, in seconds. Corresponds to runtime.drain_duration / KEG__RUNTIME__DRAIN_DURATION. The termination grace period of the keg pods is raised to cover the drain and the shutdown timeout, unless the PodTemplateSpec sets it. A KEG__RUNTIME__DRAIN_DURATION env var of the keg container in the PodTemplateSpec wins over this field, for keg and the grace period. An env var the operator cannot read, from valueFrom or not a duration, is skipped: the grace period then covers this field or keg's default. |
+| `shutdownTimeoutSeconds` _*int32_ | ShutdownTimeoutSeconds sets the graceful shutdown timeout, in seconds. Corresponds to runtime.shutdown_timeout / KEG__RUNTIME__SHUTDOWN_TIMEOUT. The termination grace period of the keg pods is raised to cover the drain and the shutdown timeout, unless the PodTemplateSpec sets it. A KEG__RUNTIME__SHUTDOWN_TIMEOUT env var of the keg container in the PodTemplateSpec wins over this field, for keg and the grace period. An env var the operator cannot read, from valueFrom or not a duration, is skipped: the grace period then covers this field or keg's default. |
 
 _Appears in:_
 
@@ -19971,7 +20041,7 @@ KonnectAPIAuthConfigurationSpec is the specification of the KonnectAPIAuthConfig
 | `type` _[KonnectAPIAuthType](#konnect-konghq-com-v1alpha1-types-konnectapiauthtype)_ |  |
 | `token` _string_ | Token is the Konnect token used to authenticate with the Konnect API. |
 | `secretRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#secretreference-v1-core)_ | SecretRef is a reference to a Kubernetes Secret containing the Konnect token. This secret is required to have the konghq.com/credential label set to "konnect". |
-| `serverURL` _string_ | ServerURL is the URL of the Konnect server. It can be either a full URL with an HTTPs scheme or just a hostname. Please refer to https://docs.konghq.com/konnect/network/ for the list of supported hostnames. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server. It can be either a full URL with an HTTPs scheme or just a hostname. The host must belong to one of the domains the operator is allowed to call (--konnect-server-url-domains, konghq.com and konghq.tech by default): a value outside the list is reported with an APIAuthValid=False condition and the operator sends no request to it. Please refer to https://docs.konghq.com/konnect/network/ for the list of supported hostnames. |
 
 _Appears in:_
 
@@ -20411,8 +20481,8 @@ KonnectEndpoints defines the Konnect endpoints for the control plane.
 
 | Field | Description |
 | --- | --- |
-| `telemetry` _string_ | TelemetryEndpoint is the endpoint for telemetry. |
-| `controlPlane` _string_ | ControlPlaneEndpoint is the endpoint for the control plane. |
+| `telemetry` _string_ | TelemetryEndpoint is the telemetry endpoint of the Konnect control plane, as returned by Konnect: it may carry a path, e.g. reached over PrivateLink. |
+| `controlPlane` _string_ | ControlPlaneEndpoint is the control plane endpoint, as returned by Konnect: it may carry a path, e.g. reached over PrivateLink. |
 
 _Appears in:_
 
@@ -21691,6 +21761,7 @@ SpecRenderer The spec renderer settings of this portal
 | `showSchemas` _string_ | Control whether schemas are visible in your API specs. When enabled, schemas appear in the side navigation below the endpoints. |
 | `tryItInsomnia` _string_ | Enables users to open API specifications in Insomnia to explore and send requests with the native client. Only public API specifications are supported. |
 | `tryItUi` _string_ | Enable in-browser testing for your APIs. All linked gateways must have the CORS plugin configured. |
+| `tryItUiAudience` _string_ | The audience for the Try It UI feature.<br /><br />`all` means that the Try It UI will be available to all users, including unauthenticated users.<br /><br />`authenticated` means that the Try It UI will only be available to authenticated users.<br /><br />`registered` means that the Try It UI will only be available to users who have registered for the API. |
 
 _Appears in:_
 
@@ -21707,7 +21778,7 @@ Theme The theme settings for this portal.
 | --- | --- |
 | `colors` _[Colors](#konnect-konghq-com-v1alpha1-types-colors)_ |  |
 | `mode` _string_ |  |
-| `name` _string_ | The theme name to apply to this portal. Supported names are 'ocean' and 'glacier'. If another name is provided or this property is omitted, the portal uses the default 'ocean' theme. |
+| `name` _string_ | The theme name to apply to this portal. Supported names are 'ocean', 'mesa', and 'grove'. If another name is provided or this property is omitted, the portal uses the default 'ocean' theme. |
 
 _Appears in:_
 
@@ -21916,8 +21987,8 @@ KonnectEndpoints defines the Konnect endpoints for the control plane.
 
 | Field | Description |
 | --- | --- |
-| `telemetry` _string_ | TelemetryEndpoint is the endpoint for telemetry. |
-| `controlPlane` _string_ | ControlPlaneEndpoint is the endpoint for the control plane. |
+| `telemetry` _string_ | TelemetryEndpoint is the telemetry endpoint of the Konnect control plane, as returned by Konnect: it may carry a path, e.g. reached over PrivateLink. |
+| `controlPlane` _string_ | ControlPlaneEndpoint is the control plane endpoint, as returned by Konnect: it may carry a path, e.g. reached over PrivateLink. |
 
 _Appears in:_
 

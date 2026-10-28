@@ -23,7 +23,7 @@ func createAIGatewayDataPlaneCertificate(
 	if parentID == "" {
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: CreateOp}
 	}
-	req, err := obj.ToCreateAIGatewayDataPlaneCertificateRequest(ctx, cl)
+	req, createInputsHash, err := obj.ToCreateRequestWithInputsHash(ctx, cl)
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
@@ -38,6 +38,8 @@ func createAIGatewayDataPlaneCertificate(
 	}
 
 	obj.SetKonnectID(resp.AIGatewayDataPlaneClientCertificate.ID)
+	obj.SetCreateInputsHash(createInputsHash)
+	SetKonnectEntityCreateInputsAppliedConditionTrue(obj)
 	return nil
 }
 

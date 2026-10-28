@@ -10,6 +10,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	konnectserver "github.com/kong/kong-operator/v2/controller/konnect/server"
 	ingressmgrconfig "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/v2/modules/manager"
 	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
@@ -63,6 +64,7 @@ func New(m metadata.Info) *CLI {
 	flagSet.BoolVar(&cfg.FQDNModeEnabled, "enable-fqdn-mode", ingressmgrconfig.DefaultFQDNModeEnabled, "Enable FQDN mode for the operator. FQDNMode indicates whether to use FQDN endpoints for service discovery.")
 	flagSet.Var(newValidatedValue(&cfg.IPFamily, ipfamily.New, withDefault(ipfamily.Auto)), "ip-family", "IP family of the cluster, used e.g. to decide which IP family (or families) DataPlanes' Kong listens bind to. Possible values: auto, ipv4, ipv6, dual. When 'auto' (default), the operator detects the cluster's IP family at startup and exits with an error if detection fails.")
 	flagSet.DurationVar(&cfg.CacheSyncPeriod, "cache-sync-period", 0, "Sets the minimum frequency for reconciling watched resources. Defaults to the controller-runtime value if unspecified or set to 0s.")
+	flagSet.BoolVar(&cfg.ReadYourOwnWritesConsistencyEnabled, "enable-read-your-own-writes-consistency", true, "Make cached reads wait until the cache has observed the operator's own preceding writes. Disable only if the cache does not watch every object the operator writes to.")
 	flagSet.BoolVar(&cfg.EmitKubernetesEvents, "emit-kubernetes-events", ingressmgrconfig.DefaultEmitKubernetesEvents, "Emit Kubernetes events for successful configuration applies, translation failures and configuration apply failures on managed objects.")
 	flagSet.Var(newValidatedValue(&cfg.WatchNamespaces, manager.NewWatchNamespaces), "watch-namespaces", "Comma-separated list of namespaces to watch. If empty (default), all namespaces are watched.")
 
@@ -87,7 +89,12 @@ func New(m metadata.Info) *CLI {
 
 	// controllers for Event Gateway APIs
 	flagSet.BoolVar(&cfg.KEGDataPlaneControllerEnabled, "enable-controller-kegdataplane", false, "Enable the KEG (Kong Event Gateway) DataPlane controller.")
-	flagSet.BoolVar(&cfg.OnPremEventGatewayControllerEnabled, "enable-controller-onpremeventgateway", false, "Enable the on-prem Event Gateway controller (alpha, no configuration is pushed to gw-admin yet).")
+	flagSet.BoolVar(&cfg.OnPremEventGatewayControllerEnabled, "enable-controller-onpremeventgateway", false, "Enable the on-prem Event Gateway controller (alpha), pushing the OnPremEventGateways to gw-admin.")
+
+	// controller for gw-admin, the on-prem control plane of the data planes that do not use Konnect
+	flagSet.BoolVar(&cfg.GWAdminControllerEnabled, "enable-controller-gwadmin", false, "Enable the GWAdmin controller, deploying gw-admin and managing its certificates.")
+	flagSet.DurationVar(&cfg.GWAdminCATTL, "gwadmin-ca-ttl", consts.GWAdminCATTL, "Validity of the certificate authorities created for a GWAdmin, renewed once two thirds of it have elapsed (e.g. '8760h'). At least 10m.")
+	flagSet.DurationVar(&cfg.GWAdminCertTTL, "gwadmin-cert-ttl", consts.GWAdminLeafTTL, "Validity of the certificates issued for a GWAdmin, renewed once two thirds of it have elapsed, and capped at the expiry of their certificate authority (e.g. '2160h'). At least 10m, and at most gwadmin-ca-ttl.")
 
 	// controllers for AI Gateway APIs
 	flagSet.BoolVar(&cfg.AIGatewayDataPlaneControllerEnabled, "enable-controller-aigatewaydataplane", false, "Enable the AI Gateway DataPlane controller.")
@@ -98,6 +105,7 @@ func New(m metadata.Info) *CLI {
 	flagSet.DurationVar(&cfg.KonnectSyncPeriod, "konnect-sync-period", consts.DefaultKonnectSyncPeriod, "Sync period for Konnect entities. Must be greater than 0. After a successful reconciliation of Konnect entities the controller will wait this duration before enforcing configuration on Konnect once again.")
 	flagSet.DurationVar(&cfg.KonnectRequestTimeout, "konnect-request-timeout", consts.DefaultKonnectRequestTimeout, "Timeout for Konnect API requests.")
 	flagSet.Int64Var(&cfg.KonnectListPageSize, "konnect-list-page-size", consts.DefaultKonnectListPageSize, fmt.Sprintf("Page size requested when listing Konnect entities to find the Konnect entity of an object, e.g. one whose Konnect ID was lost or that is deleted without one. Must be between 1 and %d. Only lower it if Konnect rejects the default: a lower value means more requests.", consts.MaxKonnectListPageSize))
+	flagSet.Var(newValidatedValue(&cfg.KonnectServerURLDomains, konnectserver.NewDomains, withDefault(konnectserver.DefaultDomains)), "konnect-server-url-domains", "Comma-separated list of domains a KonnectAPIAuthConfiguration serverURL host must belong to. A host outside the list is refused and reported with an APIAuthValid=False condition. Must not be empty: a deployment that needs another domain adds it here. Default: konghq.com,konghq.tech.")
 	flagSet.UintVar(&cfg.KonnectControllerMaxConcurrentReconciles, "konnect-controller-max-concurrent-reconciles", consts.DefaultMaxConcurrentReconcilesKonnect, "Deprecated: Please use '--max-concurrent-reconciles-konnect-controller' instead.")
 	flagSet.UintVar(&cfg.MaxConcurrentReconcilesKonnect, "max-concurrent-reconciles-konnect-controller", consts.DefaultMaxConcurrentReconcilesKonnect, "Maximum number of concurrent reconciles for Konnect controllers.")
 	flagSet.UintVar(&cfg.MaxConcurrentReconcilesDataPlane, "max-concurrent-reconciles-dataplane-controller", consts.DefaultMaxConcurrentReconcilesDataPlane, "Maximum number of concurrent reconciles for DataPlane controllers.")
@@ -139,6 +147,19 @@ func validateKonnectListPageSize(size int64) error {
 func validateKonnectSyncPeriod(duration time.Duration) error {
 	if duration <= 0 {
 		return fmt.Errorf("must be greater than 0")
+	}
+	return nil
+}
+
+// validateGWAdminTTLs checks --gwadmin-ca-ttl and --gwadmin-cert-ttl.
+func validateGWAdminTTLs(caTTL, certTTL time.Duration) error {
+	switch {
+	case caTTL < consts.GWAdminMinTTL:
+		return fmt.Errorf("--gwadmin-ca-ttl (%s) must be at least %s", caTTL, consts.GWAdminMinTTL)
+	case certTTL < consts.GWAdminMinTTL:
+		return fmt.Errorf("--gwadmin-cert-ttl (%s) must be at least %s", certTTL, consts.GWAdminMinTTL)
+	case certTTL > caTTL:
+		return fmt.Errorf("--gwadmin-cert-ttl (%s) must not exceed --gwadmin-ca-ttl (%s)", certTTL, caTTL)
 	}
 	return nil
 }
@@ -306,6 +327,11 @@ func (c *CLI) Parse(arguments []string) manager.Config {
 
 	if c.cfg.CertExpirationMargin >= c.cfg.CertTTL {
 		fmt.Printf("ERROR: --cert-expiration-margin (%s) must be lower than --cert-ttl (%s)\n", c.cfg.CertExpirationMargin, c.cfg.CertTTL)
+		os.Exit(1)
+	}
+
+	if err := validateGWAdminTTLs(c.cfg.GWAdminCATTL, c.cfg.GWAdminCertTTL); err != nil {
+		fmt.Printf("ERROR: %s\n", err)
 		os.Exit(1)
 	}
 

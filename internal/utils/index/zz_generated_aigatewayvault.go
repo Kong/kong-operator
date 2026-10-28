@@ -13,6 +13,8 @@ const (
 	IndexFieldAIGatewayVaultOnKonnectAIGatewayRef = "aiGatewayVaultOnKonnectAIGatewayRef"
 	// IndexFieldAIGatewayVaultOnOnPremAIGatewayRef is the index field for AIGatewayVault -> OnPremAIGateway.
 	IndexFieldAIGatewayVaultOnOnPremAIGatewayRef = "aiGatewayVaultOnOnPremAIGatewayRef"
+	// IndexFieldAIGatewayVaultOnSecretRef is the index field for AIGatewayVault -> the Secrets it reads.
+	IndexFieldAIGatewayVaultOnSecretRef = "aiGatewayVaultOnSecretRef"
 )
 
 // OptionsForAIGatewayVault returns required Index options for AIGatewayVault reconciler.
@@ -27,6 +29,11 @@ func OptionsForAIGatewayVault() []Option {
 			Object:         &aiconfigurationv1alpha1.AIGatewayVault{},
 			Field:          IndexFieldAIGatewayVaultOnOnPremAIGatewayRef,
 			ExtractValueFn: aiGatewayVaultOnOnPremAIGatewayRef,
+		},
+		{
+			Object:         &aiconfigurationv1alpha1.AIGatewayVault{},
+			Field:          IndexFieldAIGatewayVaultOnSecretRef,
+			ExtractValueFn: aiGatewayVaultOnSecretRef,
 		},
 	}
 }
@@ -72,4 +79,21 @@ func aiGatewayVaultOnOnPremAIGatewayRef(object client.Object) []string {
 	}
 
 	return []string{refNamespace + "/" + ent.Spec.AIGatewayRef.NamespacedRef.Name}
+}
+
+func aiGatewayVaultOnSecretRef(object client.Object) []string {
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayVault)
+	if !ok {
+		return nil
+	}
+	refs := ent.GetSensitiveDataSecretRefs()
+	out := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		ns := ent.GetNamespace()
+		if ref.Namespace != nil && *ref.Namespace != "" {
+			ns = *ref.Namespace
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
 }

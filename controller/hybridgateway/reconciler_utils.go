@@ -7,7 +7,9 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8smanagedfields "k8s.io/apimachinery/pkg/util/managedfields"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -301,6 +303,30 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 			objectsSkipped++
 			stopAtKind = existing.GetKind()
 			continue
+		}
+
+		// A programmed SNI's certificateRef is immutable. Recreate our binding when
+		// switching a Listener between certificates, including Secret-backed ones.
+		if err == nil && desired.GetKind() == "KongSNI" {
+			owner := metav1.GetControllerOf(&desired)
+			if owner != nil && owner.Kind == "Gateway" && k8sutils.IsOwnedByRefUID(existing, owner.UID) {
+				currentRef, _, err := unstructured.NestedMap(existing.Object, "spec", "certificateRef")
+				if err != nil {
+					return false, false, fmt.Errorf("failed to read existing KongSNI certificateRef: %w", err)
+				}
+				desiredRef, _, err := unstructured.NestedMap(desired.Object, "spec", "certificateRef")
+				if err != nil {
+					return false, false, fmt.Errorf("failed to read desired KongSNI certificateRef: %w", err)
+				}
+				if !apiequality.Semantic.DeepEqual(currentRef, desiredRef) {
+					if err := cl.Delete(ctx, existing, client.Preconditions{UID: new(existing.GetUID())}); err != nil && !apierrors.IsNotFound(err) {
+						return false, false, fmt.Errorf("failed to replace Listener KongSNI: %w", err)
+					}
+					objectsSkipped++
+					stopAtKind = desired.GetKind()
+					continue
+				}
+			}
 		}
 
 		// Diff-before-apply against the shared SSA TypeConverter: this fetches the current object

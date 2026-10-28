@@ -43,6 +43,7 @@ import (
 	egonprem "github.com/kong/kong-operator/v2/controller/eventgateway/onprem"
 	"github.com/kong/kong-operator/v2/controller/gateway"
 	"github.com/kong/kong-operator/v2/controller/gatewayclass"
+	"github.com/kong/kong-operator/v2/controller/gwadmin"
 	hybridgateway "github.com/kong/kong-operator/v2/controller/hybridgateway"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/converter"
 	"github.com/kong/kong-operator/v2/controller/kongplugininstallation"
@@ -56,8 +57,10 @@ import (
 	"github.com/kong/kong-operator/v2/controller/specialized"
 	kiccontrollers "github.com/kong/kong-operator/v2/ingress-controller/pkg/controllers"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstance"
+	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminsync"
 	"github.com/kong/kong-operator/v2/internal/metrics"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -219,6 +222,22 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 		indexOptions = slices.Concat(indexOptions,
 			index.OptionsForAIGatewayDataPlane(),
 		)
+	}
+
+	if cfg.GWAdminControllerEnabled {
+		indexOptions = slices.Concat(indexOptions,
+			gwadmin.IndexOptions(),
+		)
+	}
+
+	// The OnPremEventGateway controller looks the gateways of a GWAdmin up.
+	if cfg.OnPremEventGatewayControllerEnabled {
+		indexOptions = slices.Concat(indexOptions, gwadminref.IndexOptions())
+	}
+	// The OnPremEventGateway controller finds the entities of a gateway by the
+	// indexes the Konnect controllers register too.
+	if cfg.OnPremEventGatewayControllerEnabled && !cfg.KonnectControllersEnabled {
+		indexOptions = slices.Concat(indexOptions, egonprem.IndexOptions())
 	}
 
 	if cfg.FeatureGates.Enabled(FeatureGateMCPServer) {
@@ -398,17 +417,35 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 			},
 		},
 		{
-			// The OnPremEventGateway controller watches the gateways and every
-			// Event Gateway entity that can belong to one.
+			// The OnPremEventGateway controller watches the gateways, every
+			// Event Gateway entity that can belong to one, the GWAdmins serving
+			// them, and the KongReferenceGrants allowing a gateway to use a
+			// GWAdmin in another namespace.
 			condition: c.OnPremEventGatewayControllerEnabled,
 			gvrs: slices.Concat(
-				[]schema.GroupVersionResource{{
-					Group:    eventgatewayv1alpha1.SchemeGroupVersion.Group,
-					Version:  eventgatewayv1alpha1.SchemeGroupVersion.Version,
-					Resource: "onpremeventgateways",
-				}},
+				[]schema.GroupVersionResource{
+					{
+						Group:    eventgatewayv1alpha1.SchemeGroupVersion.Group,
+						Version:  eventgatewayv1alpha1.SchemeGroupVersion.Version,
+						Resource: "onpremeventgateways",
+					},
+					operatorv1alpha1.GWAdminGVR(),
+					configurationv1alpha1.SchemeGroupVersion.WithResource("kongreferencegrants"),
+				},
 				egonprem.EntityGroupVersionResources(),
 			),
+		},
+		{
+			condition: c.GWAdminControllerEnabled,
+			gvrs: []schema.GroupVersionResource{
+				operatorv1alpha1.GWAdminGVR(),
+				// The grants allowing data planes in other namespaces.
+				{
+					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "kongreferencegrants",
+				},
+			},
 		},
 		{
 			condition: c.AIGatewayDataPlaneControllerEnabled,
@@ -934,6 +971,28 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			Controller: &egonprem.Reconciler{
 				Client:      mgr.GetClient(),
 				LoggingMode: c.LoggingMode,
+				GWAdminSync: &gwadminsync.Syncer{
+					Client: mgr.GetClient(),
+					// Where the GWAdmin controller keeps the operator client
+					// certificates.
+					OperatorNamespace:   c.ControllerNamespace,
+					SecretLabelSelector: c.SecretLabelSelector,
+				},
+				TypeConverter: ssaProvider,
+			},
+		},
+		// GWAdmin controller
+		{
+			Enabled: c.GWAdminControllerEnabled,
+			Controller: &gwadmin.Reconciler{
+				Client:              mgr.GetClient(),
+				LoggingMode:         c.LoggingMode,
+				ClusterDomain:       c.ClusterDomain,
+				SecretLabelSelector: c.SecretLabelSelector,
+				OperatorNamespace:   c.ControllerNamespace,
+				CATTL:               c.GWAdminCATTL,
+				CertTTL:             c.GWAdminCertTTL,
+				TypeConverter:       ssaProvider,
 			},
 		},
 		// AIGateway DataPlane controller
@@ -1006,7 +1065,10 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 
 	// Konnect controllers
 	if c.KonnectControllersEnabled {
-		sdkFactory := sdkops.NewSDKFactory(sdkops.WithHTTPClient(httpClientForKonnect(c)))
+		sdkFactory := sdkops.NewSDKFactory(
+			sdkops.WithHTTPClient(httpClientForKonnect(c)),
+			sdkops.WithAllowedServerURLDomains(c.KonnectServerURLDomains),
+		)
 		ctrlOpts := controllerOptions(ctrlOpts, withMaxConcurrentReconciles(int(c.MaxConcurrentReconcilesKonnect)))
 
 		controllerFactory := konnectControllerFactory{
@@ -1249,8 +1311,8 @@ func newMCPServerControllers(
 	var (
 		reconcileEventCh     = make(chan event.GenericEvent, mcpserver.TriggerChannelBufSize)
 		sm                   = mcpserver.NewSignalManager(c.LoggingMode, mgr.GetClient(), mgr.GetScheme(), reconcileEventCh)
-		sdkFactory           = sdkops.NewSDKFactory(sdkops.WithHTTPClient(httpClientForKonnect(c)))
-		sdkFactoryForPolling = sdkops.NewSDKFactory(sdkops.WithHTTPClient(httpClientForKonnectLongPolling()))
+		sdkFactory           = sdkops.NewSDKFactory(sdkops.WithHTTPClient(httpClientForKonnect(c)), sdkops.WithAllowedServerURLDomains(c.KonnectServerURLDomains))
+		sdkFactoryForPolling = sdkops.NewSDKFactory(sdkops.WithHTTPClient(httpClientForKonnectLongPolling()), sdkops.WithAllowedServerURLDomains(c.KonnectServerURLDomains))
 		controllerFactory    = konnectControllerFactory{
 			sdkFactory:        sdkFactory,
 			metricRecorder:    metricsRecorder,

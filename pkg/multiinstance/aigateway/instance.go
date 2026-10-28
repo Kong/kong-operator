@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/config"
 	ctrlmetricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	aigwonpremconfig "github.com/kong/kong-operator/v2/controller/aigateway/onpremconfig"
 	adminapi "github.com/kong/kong-operator/v2/internal/adminapi"
@@ -481,6 +482,10 @@ var conversionIssueKindToCRTypeName = map[string]string{
 // the issue's Source.Kind and Source.Name match the CR's type name (GetTypeName)
 // and AI Gateway name (GetKonnectName). The remaining payload is still pushed.
 //
+// A dropped consumer takes its embedded credentials with it: they are nested in
+// the consumer's document entity, so a credential whose consumer is dropped is
+// failed with its consumer's issue as well.
+//
 // It returns the warning texts to report as events: every WARNING-severity issue
 // (the converter worked around the problem), plus - defensively, since today
 // every issue Source.Kind is a kind translated into the document and a dropped
@@ -511,6 +516,9 @@ func (i *Instance) attributeConversionIssues(
 	}
 
 	dropped := make(map[client.Object]struct{})
+	// droppedConsumers maps a dropped AIGatewayConsumer's key to the issue that dropped
+	// it, so that the pass below fails its embedded credentials.
+	droppedConsumers := make(map[types.NamespacedName]string)
 	warnings = make([]string, 0, len(issues))
 	for _, issue := range issues {
 		if issue.Severity != convert.Error {
@@ -538,7 +546,36 @@ func (i *Instance) attributeConversionIssues(
 				Obj: obj,
 				Err: fmt.Errorf("the converter dropped the entity from the rendered configuration: %s", issue),
 			})
+			if consumer, ok := obj.(*aiconfigurationv1alpha1.AIGatewayConsumer); ok {
+				droppedConsumers[client.ObjectKeyFromObject(consumer)] = issue.String()
+			}
 		}
+	}
+	// Cascade the drop to the credentials embedded in the dropped consumers: their own
+	// translation reported success above, but the pushed payload no longer carries them.
+	// Failing them is what keeps their status fresh (the reporter only notifies the
+	// entities of the current sync), otherwise they keep a stale Programmed=True.
+	for _, obj := range included {
+		cred, ok := obj.(*aiconfigurationv1alpha1.AIGatewayConsumerCredential)
+		if !ok {
+			continue
+		}
+		consumerNN, ok := cred.ConsumerNamespacedName()
+		if !ok {
+			continue
+		}
+		issue, ok := droppedConsumers[consumerNN]
+		if !ok {
+			continue
+		}
+		dropped[obj] = struct{}{}
+		failures = append(failures, EntityFailure{
+			Obj: obj,
+			Err: fmt.Errorf(
+				"the converter dropped its AIGatewayConsumer %s from the rendered configuration: %s",
+				consumerNN, issue,
+			),
+		})
 	}
 	if len(dropped) == 0 {
 		return included, failures, warnings
@@ -683,7 +720,14 @@ func (i *Instance) Run(ctx context.Context) error {
 	defer func() {
 		// Drain the manager result so its goroutine never leaks.
 		select {
-		case <-mgrErrCh:
+		case err, ok := <-mgrErrCh:
+			if !ok {
+				return
+			}
+			if err != nil {
+				i.logger.Error(err, "Instance controller manager failed when draining")
+			}
+
 		default:
 		}
 	}()

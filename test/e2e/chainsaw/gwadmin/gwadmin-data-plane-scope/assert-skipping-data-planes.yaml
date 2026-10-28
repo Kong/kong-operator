@@ -1,0 +1,9 @@
+# The condition warns that the rotations don't wait for the data planes.
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: GWAdmin
+metadata:
+  name: ($gwadmin_name)
+status:
+  (conditions[?type == 'CertificateProvisioned']):
+    - status: "True"
+      (contains(message, 'wait for the data planes (gateway-operator.konghq.com/rotation-skip-data-planes)')): true

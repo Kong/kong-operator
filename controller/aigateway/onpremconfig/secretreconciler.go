@@ -113,9 +113,10 @@ var secretRefNotifierFuncs = []func(
 
 // notifyConsumersForCredentialSecrets notifies the parent AIGatewayConsumer of every
 // AIGatewayConsumerCredential in the Secret's namespace whose secretRefs reference the
-// Secret. The credential itself has no aiGatewayRef and no reconciler: its rendered
-// form is embedded in the parent consumer's document, so the consumer is what must
-// re-render and report the resolved (or dangling) credential Secret on its status.
+// Secret. The credential itself has no aiGatewayRef, and the reconciler it has only
+// writes its own Programmed condition: its rendered form is embedded in the parent
+// consumer's document, so the consumer is what must re-render and report the resolved
+// (or dangling) credential Secret on its status.
 //
 // Like the SecretReconciler itself, cross-namespace secretRefs are not resolved here
 // beyond the refNamespace matching rule: they are rejected by the on-prem translation,

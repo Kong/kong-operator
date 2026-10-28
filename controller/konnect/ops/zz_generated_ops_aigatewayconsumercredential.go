@@ -27,7 +27,7 @@ func createAIGatewayConsumerCredential(
 	if consumerID == "" {
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "AIGatewayConsumer", Op: CreateOp}
 	}
-	req, err := obj.ToCreateAiGatewayConsumerCredentialRequest(ctx, cl)
+	req, createInputsHash, err := obj.ToCreateRequestWithInputsHash(ctx, cl)
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
@@ -44,6 +44,8 @@ func createAIGatewayConsumerCredential(
 	}
 
 	obj.SetKonnectID(resp.AIGatewayConsumerCredentialWithKey.ID)
+	obj.SetCreateInputsHash(createInputsHash)
+	SetKonnectEntityCreateInputsAppliedConditionTrue(obj)
 	return nil
 }
 

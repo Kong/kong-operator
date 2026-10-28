@@ -1,0 +1,77 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: onprem-semantic-balancer
+spec:
+  description: |
+    A Model whose balancer is semantic (pgvector vector database) is accepted by
+    the data plane: the operator pushes the gateway's whole configuration in one
+    POST /config, so a shape the data plane rejects leaves every entity on the
+    gateway with Programmed=False, not just this model.
+
+    Regression test for https://github.com/Kong/kong-operator/issues/6231. The
+    CRD mirrors the Konnect API there (a `type`-discriminated vector database
+    union with the strategy's settings nested under its member, and a flat
+    embeddings model), while ai-deck-converter's document format wants `strategy`
+    with flat settings and the embeddings model nested under `model`. The
+    converter reports nothing for the wrong shape, so only a real data plane can
+    catch it (the runtime contract test covers the rendered payload; this covers
+    the entity status a user sees).
+
+    No traffic is driven: serving a semantic request needs a reachable
+    embeddings model and vector database, which are out of scope for a config
+    push test.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'onprem-cp']))
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+    - name: model_name
+      value: (join('-', [($test_name), 'semantic-model']))
+    - name: provider_name
+      value: (join('-', [($test_name), 'provider']))
+    - name: provider_credentials_name
+      value: (join('-', [($provider_name), 'credentials']))
+  steps:
+    - name: Create-onprem-aigateway
+      use:
+        template: ../../common/_step_templates/apply-assert-onpremAIGateway.yaml
+    - name: Create-provider-and-semantic-model
+      try:
+        - apply:
+            file: 01-provider-and-model.yaml
+    - name: Create-aigateway-dataplane
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+        with:
+          bindings:
+            - name: control_plane_ref
+              value: "({type: 'onpremNamespacedRef', onpremNamespacedRef: {name: ($aigw_cp_name)}})"
+    - name: Assert-semantic-model-pushed-to-dataplane
+      try:
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayModel
+              metadata:
+                name: ($model_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: onprem-semantic-balancer
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

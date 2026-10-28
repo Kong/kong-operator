@@ -12,10 +12,12 @@ import (
 
 // IsSSAProviderNeeded reports whether cfg requires the shared SSA
 // TypeConverterProvider, i.e. whether any SSA-using controller
-// (EventGatewayDataPlane, AIGatewayDataPlane, OnPremAIGateway, MCPServer, or
-// the hybridgateway Gateway API controllers) is enabled.
+// (EventGatewayDataPlane, AIGatewayDataPlane, OnPremAIGateway, GWAdmin,
+// MCPServer, or the hybridgateway Gateway API controllers) is enabled.
 func IsSSAProviderNeeded(cfg Config) bool {
 	return cfg.KEGDataPlaneControllerEnabled ||
+		cfg.OnPremEventGatewayControllerEnabled ||
+		cfg.GWAdminControllerEnabled ||
 		cfg.AIGatewayDataPlaneControllerEnabled ||
 		cfg.OnPremAIGatewayControllerEnabled ||
 		cfg.FeatureGates.Enabled(FeatureGateMCPServer) ||
@@ -25,7 +27,8 @@ func IsSSAProviderNeeded(cfg Config) bool {
 // ssaCRDGroups are the CRD groups whose types are passed to ApplyIfChanged /
 // ApplyStatusIfChanged by an SSA-using controller: KegDataPlane itself, the
 // EventGatewayDataPlaneCertificate it creates, and the KonnectEventGateway it
-// references (all owned by the EventGateway DataPlane controller). MCPServer,
+// references (all owned by the EventGateway DataPlane controller), and the
+// OnPremEventGateway, whose status its controller applies. MCPServer,
 // the only other SSA-using controller, needs no CRD-group schemas at all
 // (only the core/apps built-ins), so no other groups belong here.
 // AIGatewayDataPlane adds aigateway.konghq.com for its own status patches and

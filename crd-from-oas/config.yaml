@@ -18,6 +18,7 @@ apiGroupVersions:
           - path: spec.apiSpec.cert
             type: Secret
         ops:
+          trackCreateInputs: true
           sdk:
           # AIGatewayDataPlaneClientCertificate is named struct in SDK
             interface: github.com/Kong/sdk-konnect-go.AIGatewayDataPlaneCertificatesSDK
@@ -471,6 +472,44 @@ apiGroupVersions:
             resolvesTo: name
             refTypeName: AIGatewayMCPACLRef
             supportCrossNamespaceReference: true
+        # The OpenAPI examples quote the value as a JSON string, which the
+        # object-typed requestBody/responses fields reject at apply time. The
+        # descriptions below show the same shapes in their object form.
+        cel:
+          spec:
+            apiSpec:
+              conversion-only:
+                tools:
+                  requestBody:
+                    _description: |-
+                      The API requestBody specification defined in OpenAPI JSON format.
+                      For example, {"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}.
+                      See https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/ for more details.
+                      Note that `$ref` is not supported.
+                  responses:
+                    _description: |-
+                      The API responses specification defined in OpenAPI JSON format.
+                      This specification will be used to validate the upstream response and map it back to the structuredOutput.
+                      For example, {"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}.
+                      See https://swagger.io/docs/specification/v3_0/describing-responses/ for more details.
+                      Only one non-error (status code < 400) response is supported.
+                      Note that `$ref` is not supported.
+              conversion-listener:
+                tools:
+                  requestBody:
+                    _description: |-
+                      The API requestBody specification defined in OpenAPI JSON format.
+                      For example, {"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}.
+                      See https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/ for more details.
+                      Note that `$ref` is not supported.
+                  responses:
+                    _description: |-
+                      The API responses specification defined in OpenAPI JSON format.
+                      This specification will be used to validate the upstream response and map it back to the structuredOutput.
+                      For example, {"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}.
+                      See https://swagger.io/docs/specification/v3_0/describing-responses/ for more details.
+                      Only one non-error (status code < 400) response is supported.
+                      Note that `$ref` is not supported.
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayMCPServersSDK
@@ -500,6 +539,7 @@ apiGroupVersions:
           - path: spec.apiSpec.apiKey
             type: Secret
         ops:
+          trackCreateInputs: true
           sdk:
           # AIGatewayConsumerCredential shares the AIGatewayConsumersSDK interface
           # with AIGatewayConsumer; the SDK exposes credential ops on it directly.
@@ -887,6 +927,7 @@ apiGroupVersions:
                   text in the EventGatewayStaticKey and readable by anyone allowed to
                   read it.
         ops:
+          trackCreateInputs: true
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewayStaticKeysSDK
             fieldName: EventGatewayStaticKeys
@@ -1194,6 +1235,55 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayVirtualClusterClusterLevelPolicyRequest
           delete: {}
         reconciler:
+          parentEntityGVK:
+            kind: EventGatewayVirtualCluster
+          ancestorEntityGVKs:
+            - kind: KonnectEventGateway
+              group: konnect.konghq.com
+          parentRef:
+            fieldName: eventGatewayVirtualClusterRef
+
+      - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/cluster-policy-chain
+        name: EventGatewayVirtualClusterPolicyChain
+        references:
+          - path: spec.apiSpec.policies
+            kinds: [EventGatewayVirtualClusterPolicy]
+            resolvesTo: id
+            resolverMethod: ResolveValidatedPolicyIDs
+        cel:
+          _validations:
+            - '+kubebuilder:validation:XValidation:rule="self.spec.eventGatewayVirtualClusterRef == oldSelf.spec.eventGatewayVirtualClusterRef",message="spec.eventGatewayVirtualClusterRef is immutable",fieldPath=".spec.eventGatewayVirtualClusterRef"'
+            - '+kubebuilder:validation:XValidation:rule="self.spec.eventGatewayVirtualClusterRef.type == ''namespacedRef''",message="spec.eventGatewayVirtualClusterRef must use namespacedRef",fieldPath=".spec.eventGatewayVirtualClusterRef"'
+            - '+kubebuilder:validation:XValidation:rule="!has(self.status) || !has(self.status.id) || size(self.status.id) == 0",message="status.id must be unset because policy chains have no independent Konnect ID",fieldPath=".status.id"'
+          spec:
+            _validations:
+              - "+required"
+            apiSpec:
+              _validations:
+                - "+required"
+              policies:
+                _description: >-
+                  Policies lists distinct EventGatewayVirtualClusterPolicy references in execution order.
+                  Each policy must belong to the referenced EventGatewayVirtualCluster
+                  and be in the same namespace as this chain.
+                  Namespace defaults to this chain's namespace and may be set explicitly
+                  to that same namespace; cross-namespace references are not supported.
+                  List every cluster-level policy exactly once. An explicit empty list
+                  is valid only when the remote chain has no policies; it does not clear
+                  an existing chain. When a policy is created or deleted, update this
+                  list to match the complete remote set.
+                _validations:
+                  - "+listType=atomic"
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.EventGatewayVirtualClusterPoliciesSDK
+            fieldName: EventGatewayVirtualClusterPolicies
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayVirtualClusterClusterLevelPolicyChainRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayVirtualClusterClusterLevelPolicyChainRequest
+        reconciler:
+          skipOnPremEventGateway: true
           parentEntityGVK:
             kind: EventGatewayVirtualCluster
           ancestorEntityGVKs:

@@ -32,7 +32,7 @@ func TestIsSSAProviderNeeded(t *testing.T) {
 		{
 			name: "OnPremEventGateway controller enabled",
 			cfg:  Config{OnPremEventGatewayControllerEnabled: true},
-			want: false,
+			want: true,
 		},
 		{
 			name: "MCPServer feature gate enabled",
@@ -55,6 +55,11 @@ func TestIsSSAProviderNeeded(t *testing.T) {
 				KEGDataPlaneControllerEnabled: true,
 				FeatureGates:                  FeatureGates{FeatureGateMCPServer: {}},
 			},
+			want: true,
+		},
+		{
+			name: "GWAdmin controller enabled",
+			cfg:  Config{GWAdminControllerEnabled: true},
 			want: true,
 		},
 		{

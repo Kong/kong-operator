@@ -24,9 +24,9 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
-    - description: The gw-admin Service
-      jsonPath: .spec.gwAdmin.service.name
-      name: Service
+    - description: The GWAdmin serving the gateway
+      jsonPath: .spec.gwAdminRef.name
+      name: GWAdmin
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -61,47 +61,37 @@ spec:
           spec:
             description: Spec defines the desired state of OnPremEventGateway.
             properties:
-              gwAdmin:
-                description: GWAdmin configures how Kong Operator reaches the gw-admin
-                  of this gateway.
+              gwAdminRef:
+                description: |-
+                  GWAdminRef references the GWAdmin that serves this gateway. Kong
+                  Operator pushes the configuration of the gateway to every gw-admin pod of
+                  it, and the data planes of the gateway pull it from there. A GWAdmin in
+                  another namespace is used only when a KongReferenceGrant in its
+                  namespace allows OnPremEventGateways of the namespace of the gateway to
+                  reference it. It can't be changed.
                 properties:
-                  service:
+                  name:
+                    description: Name is the name of the GWAdmin.
+                    maxLength: 253
+                    minLength: 1
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                    type: string
+                  namespace:
                     description: |-
-                      Service is the Service in front of the gw-admin pods, in the namespace
-                      of the OnPremEventGateway. Kong Operator pushes the configuration to
-                      each pod of this Service.
-                    properties:
-                      name:
-                        description: Name is the name of the Service.
-                        maxLength: 63
-                        minLength: 1
-                        type: string
-                        x-kubernetes-validations:
-                        - message: 'name must be a valid DNS-1035 label: lowercase
-                            alphanumeric characters or ''-'', starting with a letter
-                            and ending with an alphanumeric character'
-                          rule: self.matches('^[a-z]([-a-z0-9]*[a-z0-9])?$')
-                      portName:
-                        description: |-
-                          PortName is the name of the Service port gw-admin serves its API on.
-                          Service port names are DNS-1123 labels.
-                        maxLength: 63
-                        minLength: 1
-                        type: string
-                        x-kubernetes-validations:
-                        - message: 'portName must be a valid DNS-1123 label: lowercase
-                            alphanumeric characters or ''-'', starting and ending
-                            with an alphanumeric character'
-                          rule: self.matches('^[a-z0-9]([-a-z0-9]*[a-z0-9])?$')
-                    required:
-                    - name
-                    - portName
-                    type: object
+                      Namespace is the namespace of the GWAdmin. It defaults to the namespace
+                      of the referencing object.
+                    maxLength: 63
+                    minLength: 1
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                    type: string
                 required:
-                - service
+                - name
                 type: object
+                x-kubernetes-validations:
+                - message: gwAdminRef is immutable
+                  rule: self == oldSelf
             required:
-            - gwAdmin
+            - gwAdminRef
             type: object
           status:
             description: Status defines the observed state of OnPremEventGateway.
@@ -167,6 +157,21 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              configHash:
+                description: |-
+                  ConfigHash identifies the configuration that ConfigRevision stands
+                  for: it changes only along with a new revision.
+                maxLength: 128
+                minLength: 1
+                type: string
+              configRevision:
+                description: |-
+                  ConfigRevision is the revision of the configuration of the gateway
+                  that Kong Operator pushes to gw-admin. It increases by one every time
+                  that configuration changes, and never decreases.
+                format: int64
+                minimum: 1
+                type: integer
               observedGeneration:
                 description: ObservedGeneration is the most recent generation observed.
                 format: int64
@@ -175,7 +180,7 @@ spec:
               serverURL:
                 description: |-
                   ServerURL is the address the data planes of this gateway use to reach
-                  gw-admin.
+                  gw-admin: the cp endpoint of its GWAdmin.
                 maxLength: 2048
                 minLength: 1
                 type: string
@@ -184,6 +189,14 @@ spec:
                   rule: isURL(self) && url(self).getScheme() == 'https' && url(self).getHostname()
                     != ''
             type: object
+            x-kubernetes-validations:
+            - message: configRevision may not decrease
+              rule: '!has(oldSelf.configRevision) || (has(self.configRevision) &&
+                self.configRevision >= oldSelf.configRevision)'
+            - message: configHash may only change along with a new configRevision
+              rule: '!has(oldSelf.configHash) || (has(self.configHash) && (self.configHash
+                == oldSelf.configHash || (has(self.configRevision) && has(oldSelf.configRevision)
+                && self.configRevision > oldSelf.configRevision)))'
         required:
         - spec
         type: object

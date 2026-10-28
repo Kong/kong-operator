@@ -2,6 +2,8 @@ package kubernetes
 
 import (
 	"fmt"
+	"slices"
+	"unicode/utf8"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -257,9 +259,12 @@ func SetAcceptedConditionOnGateway(resource ConditionsAndListenerConditionsAndGe
 
 // AreAllConditionsHaveTrueStatus checks if all the conditions on the resource are in the True state.
 // It skips the Programmed condition as that particular condition will be set based on
-// the return value of this function.
-func AreAllConditionsHaveTrueStatus(resource ConditionsAware) bool {
+// the return value of this function, and any additional informational conditions.
+func AreAllConditionsHaveTrueStatus(resource ConditionsAware, ignoredTypes ...string) bool {
 	for _, condition := range resource.GetConditions() {
+		if slices.Contains(ignoredTypes, condition.Type) {
+			continue
+		}
 		switch condition.Type {
 		case string(kcfgdataplane.ReadyType), string(gatewayv1.GatewayConditionProgrammed):
 			continue
@@ -363,4 +368,27 @@ func UpdatedConditionPreservingLastTransitionTime(conditions []metav1.Condition,
 		}
 	}
 	return updated, true
+}
+
+// TruncateMessage truncates s to maxLen bytes, cutting on a rune boundary and
+// appending an ellipsis when truncated. Condition messages aggregating errors
+// could otherwise grow past what the API server accepts. A maxLen too small
+// to hold the ellipsis, below 4, truncates without it, and a negative one
+// truncates to "".
+func TruncateMessage(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	ellipsis := "..."
+	if maxLen < len(ellipsis)+1 {
+		ellipsis = ""
+	}
+	cut := max(maxLen-len(ellipsis), 0)
+	// The cut > 0 guard keeps the loop on rune boundaries of malformed input:
+	// valid UTF-8 runs at most 3 continuation bytes in a row, but arbitrary
+	// (non-UTF-8) bytes do not have to.
+	for cut > 0 && !utf8.RuneStart(s[cut]) {
+		cut--
+	}
+	return s[:cut] + ellipsis
 }

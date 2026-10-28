@@ -1,0 +1,215 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: onprem-auth-strategy-keyauth
+spec:
+  description: |
+    Dedicated coverage for the key-auth AIGatewayAuthStrategy on-prem,
+    mirroring the Konnect suite's `auth-strategy-keyauth` test: stands up an
+    OnPremAIGateway, a key-auth AIGatewayAuthStrategy, an AIGatewayConsumer +
+    AIGatewayConsumerCredential (api-key), and an AIGatewayAgent HTTP route
+    (backed by the shared go-echo backend) requiring the strategy via
+    `access.authStrategies`. Verifies the auth strategy actually enforces
+    authentication end-to-end against a real in-cluster AIGatewayDataPlane:
+
+      1. Requests without a credential are rejected (401).
+      2. Requests with a valid api-key credential succeed (200).
+      3. After the credential is deleted, the same request is rejected again
+         (401) — the credential watch re-renders and re-pushes the config.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'onprem-cp']))
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+    - name: keyauth_auth_strategy_name
+      value: (join('-', [($test_name), 'key-auth-strategy']))
+    - name: consumer_name
+      value: (join('-', [($test_name), 'consumer']))
+    - name: credential_name
+      value: (join('-', [($test_name), 'credential']))
+    - name: credential_secret_name
+      value: (join('-', [($test_name), 'credential-secret']))
+    - name: api_key_value
+      value: e2e-test-api-key-value
+    - name: http_agent_name
+      value: (join('-', [($test_name), 'http-agent']))
+    - name: http_agent_route_path
+      value: /http-agent
+    - name: echo_deployment_name
+      value: echo
+    - name: echo_deployment_namespace
+      value: ($namespace)
+    - name: echo_deployment_replicas
+      value: 1
+    # Defaults for verify-aigw-agent-request-from-cluster optional bindings.
+    # Steps below only need to override what differs from these.
+    - name: request_headers
+      value: ''
+    - name: request_body
+      value: ''
+    - name: content_type
+      value: application/json
+    - name: expected_status
+      value: "200"
+    - name: expected_status_not
+      value: ''
+    - name: expected_body
+      value: ''
+    - name: unexpected_body
+      value: ''
+    - name: expected_jsonrpc
+      value: ''
+    - name: expected_json_id
+      value: ''
+    - name: expected_json_result_text
+      value: ''
+    - name: oidc_token_url
+      value: ''
+    - name: oidc_client_id
+      value: ''
+    - name: oidc_client_secret
+      value: ''
+    - name: oidc_scope
+      value: ''
+    - name: expected_success
+      value: 'true'
+  steps:
+    - name: Create-onprem-aigateway
+      use:
+        template: ../../common/_step_templates/apply-assert-onpremAIGateway.yaml
+    - name: Create-keyauth-auth-strategy
+      try:
+        - apply:
+            file: 01-keyauth-strategy.yaml
+    - name: Create-consumer-and-credential
+      try:
+        - apply:
+            file: 02-consumer-and-credential.yaml
+    - name: Start-echo-agent-backend
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
+    - name: Create-aigateway-agent
+      try:
+        - apply:
+            file: 03-agent.yaml
+    - name: Create-aigateway-dataplane
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+        with:
+          bindings:
+            - name: control_plane_ref
+              value: "({type: 'onpremNamespacedRef', onpremNamespacedRef: {name: ($aigw_cp_name)}})"
+    # Entities report Programmed=False before the data plane exists (the render
+    # that drives their translation only runs once it does), so assert here,
+    # after the data plane step. The credential reports its own Programmed
+    # condition too.
+    - name: Assert-entities-programmed
+      try:
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayAuthStrategy
+              metadata:
+                name: ($keyauth_auth_strategy_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumer
+              metadata:
+                name: ($consumer_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayAgent
+              metadata:
+                name: ($http_agent_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumerCredential
+              metadata:
+                name: ($credential_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+    - name: Reject-request-without-credential
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+        with:
+          bindings:
+            - name: method
+              value: GET
+            - name: route_path
+              value: ($http_agent_route_path)
+            - name: expected_status
+              value: "401"
+    - name: Accept-request-with-valid-credential
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+        with:
+          bindings:
+            - name: method
+              value: GET
+            - name: route_path
+              value: ($http_agent_route_path)
+            - name: request_headers
+              value: (join('', ['apikey:', ($api_key_value)]))
+            - name: expected_body
+              value: Running on Pod
+    - name: Delete-credential-and-revoke-access
+      try:
+        - delete:
+            ref:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumerCredential
+              name: ($credential_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumerCredential
+              metadata:
+                name: ($credential_name)
+                namespace: ($namespace)
+    - name: Reject-request-after-credential-revoked
+      use:
+        template: ../../common/_step_templates/verify-aigw-agent-request-from-cluster.yaml
+        with:
+          bindings:
+            - name: method
+              value: GET
+            - name: route_path
+              value: ($http_agent_route_path)
+            - name: request_headers
+              value: (join('', ['apikey:', ($api_key_value)]))
+            - name: expected_status
+              value: "401"
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: onprem-auth-strategy-keyauth
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

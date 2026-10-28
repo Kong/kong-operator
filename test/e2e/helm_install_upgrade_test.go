@@ -60,7 +60,7 @@ func TestHelmUpgrade(t *testing.T) {
 	// This is the latest Chart available publicly (used by actual users) that we can upgrade from.
 	const (
 		lastReleasedChart        = "oci://docker.io/kong/kong-operator-chart"
-		lastReleasedChartVersion = "1.4.2" // renovate: datasource=docker depName=kong/kong-operator-chart versioning=docker
+		lastReleasedChartVersion = "1.4.3" // renovate: datasource=docker depName=kong/kong-operator-chart versioning=docker
 	)
 	// This is the Chart and image from current state of the repository that we want to upgrade to.
 	// Image has to be loaded into the cluster beforehand and specified via KONG_TEST_KONG_OPERATOR_IMAGE_LOAD
@@ -86,6 +86,15 @@ func TestHelmUpgrade(t *testing.T) {
 				Objects                []client.Object
 				AssertionsAfterInstall []assertion
 				AssertionsAfterUpgrade []assertion
+				// AssertTimeout overrides waitTime for this suite's assertions.
+				// Suites that wait on the Konnect API need a bigger budget.
+				AssertTimeout time.Duration
+			}
+			// timeout is the budget for this suite's assertions and for deleting its
+			// objects: deleting a hybrid Gateway waits for the Konnect control plane
+			// it owns to be deleted too, which is rate limited like the assertions.
+			timeout := func(s suite) time.Duration {
+				return lo.Ternary(s.AssertTimeout > 0, s.AssertTimeout, waitTime)
 			}
 
 			// This is the place to add steps that should be performed before the upgrade.
@@ -170,19 +179,23 @@ func TestHelmUpgrade(t *testing.T) {
 			if testenv.KonnectAccessToken() != "" && testenv.KonnectServerURL() != "" {
 				hybridObjects, hybridGatewayLabelSelector := objectsToDeployForMode(t, e, gatewayModeHybrid)
 				suitesToRun = append(suitesToRun, suite{
-					Name:    "hybrid",
-					Objects: hybridObjects,
+					Name:          "hybrid",
+					Objects:       hybridObjects,
+					AssertTimeout: konnectWaitTime,
+					// Assert the Konnect upstream before the Gateway: the Gateway's
+					// Programmed condition depends on the control plane being programmed,
+					// so asserting it first charges the Konnect wait to the wrong check.
 					AssertionsAfterInstall: []assertion{
-						{
-							Name: "Gateway is programmed",
-							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-								gatewayAndItsListenersAreProgrammedAssertion(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
-							},
-						},
 						{
 							Name: "KonnectGatewayControlPlane is programmed",
 							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
 								konnectGatewayControlPlaneOwnedByGatewayProgrammed(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
+							},
+						},
+						{
+							Name: "Gateway is programmed",
+							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+								gatewayAndItsListenersAreProgrammedAssertion(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
 							},
 						},
 						{
@@ -206,15 +219,15 @@ func TestHelmUpgrade(t *testing.T) {
 					},
 					AssertionsAfterUpgrade: []assertion{
 						{
-							Name: "Gateway is programmed",
-							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-								gatewayAndItsListenersAreProgrammedAssertion(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
-							},
-						},
-						{
 							Name: "KonnectGatewayControlPlane is programmed",
 							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
 								konnectGatewayControlPlaneOwnedByGatewayProgrammed(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
+							},
+						},
+						{
+							Name: "Gateway is programmed",
+							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
+								gatewayAndItsListenersAreProgrammedAssertion(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
 							},
 						},
 						{
@@ -301,16 +314,17 @@ func TestHelmUpgrade(t *testing.T) {
 			cl := client.NewNamespacedClient(e.Clients.MgrClient, e.Namespace.Name)
 			for _, suite := range suitesToRun {
 				t.Logf("Deploying objects for suite %q...", suite.Name)
+				budget := timeout(suite)
 				for _, obj := range suite.Objects {
 					obj := obj.DeepCopyObject().(client.Object)
 					require.NoError(t, cl.Create(ctx, obj))
 					t.Cleanup(func() {
 						// Ensure that every object is properly deleted (the finalizer must
 						// be executed, it requires some time) before the Helm chart is uninstalled.
-						ctx, cancel := context.WithTimeout(context.Background(), waitTime)
+						ctx, cancel := context.WithTimeout(context.Background(), budget)
 						defer cancel()
 						require.NoError(t, client.IgnoreNotFound(cl.Delete(ctx, obj)))
-						eventually.WaitForObjectToNotExist(t, ctx, cl, obj, waitTime, time.Second)
+						eventually.WaitForObjectToNotExist(t, ctx, cl, obj, budget, time.Second)
 					})
 				}
 			}
@@ -321,7 +335,7 @@ func TestHelmUpgrade(t *testing.T) {
 					t.Run(suite.Name+"/after_install/"+assertion.Name, func(t *testing.T) {
 						require.EventuallyWithT(t, func(c *assert.CollectT) {
 							assertion.Func(c, e.Clients)
-						}, waitTime, 500*time.Millisecond)
+						}, timeout(suite), 500*time.Millisecond)
 					})
 				}
 			}
@@ -354,7 +368,7 @@ func TestHelmUpgrade(t *testing.T) {
 					t.Run(suite.Name+"/after_upgrade/"+assertion.Name, func(t *testing.T) {
 						require.EventuallyWithT(t, func(c *assert.CollectT) {
 							assertion.Func(c, e.Clients)
-						}, waitTime, 500*time.Millisecond)
+						}, timeout(suite), 500*time.Millisecond)
 					})
 				}
 			}
@@ -695,6 +709,6 @@ func dataPlaneOwnedByGatewayReady(gatewayLabelSelector string) func(ctx context.
 		ready := lo.ContainsBy(dp.Status.Conditions, func(condition metav1.Condition) bool {
 			return condition.Type == "Ready" && condition.Status == metav1.ConditionTrue
 		})
-		require.True(c, ready, "DataPlane is not ready")
+		require.True(c, ready, "DataPlane %q is not ready: %s", client.ObjectKeyFromObject(&dp), pretty.Sprint(dp))
 	}
 }

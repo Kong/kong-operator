@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -16,6 +18,7 @@ import (
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -48,7 +51,7 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := createKEGClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "keg-cluster-ca")
+	clusterCA := createKEGClusterCASecret(t, ctx, cfg, ns.Name, "keg-cluster-ca")
 
 	// Builds the shared TypeConverter from the CRDs envtest already installed
 	// (in-process, apiserver-style; no OpenAPI publication lag to wait out).
@@ -679,6 +682,99 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 		assert.True(t, kegHasEnvVar(keg.Env, egdataplane.EnvRuntimeHealthAddr))
 	})
 
+	t.Run("Deployment: the termination grace period covers keg's drain and shutdown", func(t *testing.T) {
+		t.Parallel()
+
+		drain := int32(45)
+		egdp := setupProgrammedKEGDP(t, ctx, cl, ns.Name,
+			"kep-grace", "konnect-id-grace", "egdp-grace",
+			eventgatewayv1alpha1.KegDataPlaneSpec{
+				Config: &eventgatewayv1alpha1.KegDataPlaneConfiguration{
+					Runtime: &eventgatewayv1alpha1.RuntimeOptions{DrainDurationSeconds: &drain},
+				},
+			},
+		)
+
+		deploy := waitForKEGDeployment(t, ctx, cl, ns.Name, egdp.Name)
+		require.NotNil(t, deploy.Spec.Template.Spec.TerminationGracePeriodSeconds)
+		assert.EqualValues(t, 45+egdataplane.DefaultShutdownTimeoutSeconds+egdataplane.TerminationGracePeriodMarginSeconds,
+			*deploy.Spec.Template.Spec.TerminationGracePeriodSeconds, "the drain, keg's default shutdown timeout and the margin")
+	})
+
+	t.Run("Deployment: a termination grace period set in the PodTemplateSpec wins", func(t *testing.T) {
+		t.Parallel()
+
+		drain := int32(45)
+		grace := int64(20)
+		egdp := setupProgrammedKEGDP(t, ctx, cl, ns.Name,
+			"kep-grace-overlay", "konnect-id-grace-overlay", "egdp-grace-overlay",
+			eventgatewayv1alpha1.KegDataPlaneSpec{
+				Config: &eventgatewayv1alpha1.KegDataPlaneConfiguration{
+					Runtime: &eventgatewayv1alpha1.RuntimeOptions{DrainDurationSeconds: &drain},
+				},
+				Deployment: &eventgatewayv1alpha1.DeploymentOptions{
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							// The CRD requires the containers: the keg one, by
+							// name, is merged with the operator's.
+							Containers:                    []corev1.Container{{Name: consts.KEGContainerName}},
+							TerminationGracePeriodSeconds: &grace,
+						},
+					},
+				},
+			},
+		)
+
+		deploy := waitForKEGDeployment(t, ctx, cl, ns.Name, egdp.Name)
+		require.NotNil(t, deploy.Spec.Template.Spec.TerminationGracePeriodSeconds)
+		assert.EqualValues(t, 20, *deploy.Spec.Template.Spec.TerminationGracePeriodSeconds)
+	})
+
+	t.Run("Deployment: the termination grace period covers a drain the keg container env sets", func(t *testing.T) {
+		t.Parallel()
+
+		drain := int32(45)
+		egdp := setupProgrammedKEGDP(t, ctx, cl, ns.Name,
+			"kep-grace-env", "konnect-id-grace-env", "egdp-grace-env",
+			eventgatewayv1alpha1.KegDataPlaneSpec{
+				Config: &eventgatewayv1alpha1.KegDataPlaneConfiguration{
+					Runtime: &eventgatewayv1alpha1.RuntimeOptions{DrainDurationSeconds: &drain},
+				},
+				Deployment: &eventgatewayv1alpha1.DeploymentOptions{
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{{
+								Name: consts.KEGContainerName,
+								Env:  []corev1.EnvVar{{Name: egdataplane.EnvRuntimeDrainDuration, Value: "2m"}},
+							}},
+						},
+					},
+				},
+			},
+		)
+
+		deploy := waitForKEGDeployment(t, ctx, cl, ns.Name, egdp.Name)
+		keg := getKEGContainer(t, deploy)
+		assert.Contains(t, keg.Env, corev1.EnvVar{Name: egdataplane.EnvRuntimeDrainDuration, Value: "2m"}, "keg runs with the env of the PodTemplateSpec")
+		require.NotNil(t, deploy.Spec.Template.Spec.TerminationGracePeriodSeconds)
+		assert.EqualValues(t, 120+egdataplane.DefaultShutdownTimeoutSeconds+egdataplane.TerminationGracePeriodMarginSeconds,
+			*deploy.Spec.Template.Spec.TerminationGracePeriodSeconds, "the drain of the env, keg's default shutdown timeout and the margin")
+	})
+
+	t.Run("Deployment: without runtime timeouts, the Kubernetes default grace period is kept", func(t *testing.T) {
+		t.Parallel()
+
+		egdp := setupProgrammedKEGDP(t, ctx, cl, ns.Name,
+			"kep-grace-default", "konnect-id-grace-default", "egdp-grace-default",
+			eventgatewayv1alpha1.KegDataPlaneSpec{},
+		)
+
+		deploy := waitForKEGDeployment(t, ctx, cl, ns.Name, egdp.Name)
+		// The API server defaults the field the operator leaves unset.
+		require.NotNil(t, deploy.Spec.Template.Spec.TerminationGracePeriodSeconds)
+		assert.EqualValues(t, egdataplane.DefaultTerminationGracePeriodSeconds, *deploy.Spec.Template.Spec.TerminationGracePeriodSeconds)
+	})
+
 	t.Run("Deployment: spec.deployment.replicas change is propagated to Deployment", func(t *testing.T) {
 		t.Parallel()
 
@@ -1108,8 +1204,13 @@ func kegGetEnvValue(t *testing.T, envVars []corev1.EnvVar, name string) string {
 
 // createKEGClusterCASecret creates a self-signed CA Secret for use as the cluster CA
 // in KEG DataPlane controller tests.
-func createKEGClusterCASecret(t *testing.T, ctx context.Context, cl client.Client, namespace, name string) *corev1.Secret {
+func createKEGClusterCASecret(t *testing.T, ctx context.Context, cfg *rest.Config, namespace, name string) *corev1.Secret {
 	t.Helper()
+
+	// Uncached client: the Secret is seeded before StartReconcilers starts the
+	// manager, and going through the manager's client that early deadlocks under
+	// read-your-own-writes consistency.
+	cl := envtest.NewControllerClient(t, scheme.Get(), cfg)
 
 	cert, key := certificate.MustGenerateCertPEMFormat(
 		certificate.WithCommonName(fmt.Sprintf("%s-ca", name)),
@@ -1164,7 +1265,7 @@ func TestKEGDataPlaneReconciler_HPA(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := createKEGClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "keg-cluster-ca-hpa")
+	clusterCA := createKEGClusterCASecret(t, ctx, cfg, ns.Name, "keg-cluster-ca-hpa")
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, kegCRDGroups)
 	require.NoError(t, err)
@@ -1275,6 +1376,74 @@ func TestKEGDataPlaneReconciler_HPA(t *testing.T) {
 			assert.Equal(ct, int32(10), hpa.Spec.MaxReplicas)
 		}, waitTime, tickTime)
 	})
+
+	t.Run("HPA can scale the Deployment above minReplicas", func(t *testing.T) {
+		t.Parallel()
+
+		const (
+			minReplicas    = int32(2)
+			scaledReplicas = int32(4)
+		)
+
+		egdp := setupProgrammedKEGDP(t, ctx, cl, ns.Name,
+			"keg-hpa-scale-up", "konnect-id-hpa-scale-up", "egdp-hpa-scale-up",
+			eventgatewayv1alpha1.KegDataPlaneSpec{
+				Deployment: &eventgatewayv1alpha1.DeploymentOptions{
+					Scaling: &eventgatewayv1alpha1.Scaling{
+						HorizontalScaling: &eventgatewayv1alpha1.HorizontalScaling{
+							MinReplicas: new(minReplicas),
+							MaxReplicas: maxReplicas,
+						},
+					},
+				},
+			},
+		)
+		_ = waitForKEGHPA(t, ctx, cl, ns.Name, egdp.Name)
+		deploy := waitForKEGDeployment(t, ctx, cl, ns.Name, egdp.Name)
+
+		// envtest runs no kube-controller-manager, so act as the HPA controller:
+		// scale the Deployment through its scale subresource. Like the HPA,
+		// which re-asserts its count on every sync, scale it again when it has
+		// been reverted: a reconcile working from a cache that has not observed
+		// the scale yet may revert it once.
+		var scaledAt time.Time
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			scale := &autoscalingv1.Scale{}
+			if !assert.NoError(ct, cl.SubResource("scale").Get(ctx, &deploy, scale)) {
+				return
+			}
+			if scale.Spec.Replicas != scaledReplicas {
+				scale.Spec.Replicas = scaledReplicas
+				assert.NoError(ct, cl.SubResource("scale").Update(ctx, &deploy,
+					client.WithSubResourceBody(scale),
+					client.FieldOwner("horizontal-pod-autoscaler"),
+				))
+				scaledAt = time.Now()
+				ct.Errorf("Deployment scaled to %d replicas, waiting for the count to stay", scaledReplicas)
+				return
+			}
+			assert.GreaterOrEqual(ct, time.Since(scaledAt), 10*time.Second,
+				"Deployment replicas set by the HPA must stay for 10s")
+		}, waitTime, tickTime)
+
+		// An unrelated change applies the Deployment again, now without
+		// spec.replicas, which the HPA scale took over: the scale must stay.
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(egdp), egdp)) {
+				return
+			}
+			egdp.Spec.Deployment.Labels = map[string]string{"hpa-test": "true"}
+			assert.NoError(ct, cl.Update(ctx, egdp))
+		}, waitTime, tickTime)
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			var d appsv1.Deployment
+			if !assert.NoError(ct, mgr.GetAPIReader().Get(ctx, client.ObjectKeyFromObject(&deploy), &d)) {
+				return
+			}
+			assert.Equal(ct, "true", d.Labels["hpa-test"])
+			assert.Equal(ct, new(scaledReplicas), d.Spec.Replicas, "operator reverted the Deployment replicas set by the HPA")
+		}, waitTime, tickTime)
+	})
 }
 
 // TestKEGDataPlaneReconciler_ManualCertificateSecret verifies manual mTLS
@@ -1290,7 +1459,7 @@ func TestKEGDataPlaneReconciler_ManualCertificateSecret(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := createKEGClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "keg-cluster-ca")
+	clusterCA := createKEGClusterCASecret(t, ctx, cfg, ns.Name, "keg-cluster-ca")
 
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, kegCRDGroups)
 	require.NoError(t, err)

@@ -18,8 +18,9 @@ spec:
     - deleting a CR that lost its status.id leaves no orphan entity.
 
     Data plane certificates are identified by their title. They cannot be
-    updated (the operator has no update operation for them), so there is no
-    update step.
+    updated in Konnect. Changing either the referenced certificate or the
+    description reports unapplied inputs without replacing the entity; reverting
+    either change clears the warning.
 
     Certificates created by releases that did not label them never get a
     k8s-uid label, so the operator also matches unlabeled certificates by
@@ -182,6 +183,124 @@ spec:
           value: chainsaw
       use:
         template: ../../common/_step_templates/konnect-ownership-assert-labels.yaml
+    - name: Changed-certificate-and-description-report-unapplied-inputs
+      try:
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: ($cr_resource)
+              - name: RESOURCE_NAME
+                value: ($cr_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: COLLECTION_PATH_JQ
+                value: ($collection_path_jq)
+            content: |
+              bash ../../common/scripts/konnect_entity_of_resource.sh
+            outputs:
+              - name: original_certificate
+                value: (json_parse($stdout))
+        - patch:
+            resource:
+              apiVersion: ($cr_api_version)
+              kind: ($cr_kind)
+              metadata:
+                name: ($cr_name)
+                namespace: ($namespace)
+              spec:
+                apiSpec:
+                  cert:
+                    secretRef:
+                      name: ownership-tls-foreign
+        - assert:
+            resource:
+              apiVersion: ($cr_api_version)
+              kind: ($cr_kind)
+              metadata:
+                name: ($cr_name)
+                namespace: ($namespace)
+              status:
+                id: ($original_certificate.id)
+                (conditions[?type == 'CreateInputsApplied']):
+                  - status: 'False'
+                    reason: ValueChanged
+                    (contains(message, 'Recreate the Kubernetes object')): true
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - patch:
+            resource:
+              apiVersion: ($cr_api_version)
+              kind: ($cr_kind)
+              metadata:
+                name: ($cr_name)
+                namespace: ($namespace)
+              spec:
+                apiSpec:
+                  cert:
+                    secretRef:
+                      name: ownership-tls
+        - assert:
+            resource:
+              apiVersion: ($cr_api_version)
+              kind: ($cr_kind)
+              metadata:
+                name: ($cr_name)
+                namespace: ($namespace)
+              status:
+                id: ($original_certificate.id)
+                (conditions[?type == 'CreateInputsApplied']):
+                  - status: 'True'
+                    reason: Unchanged
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - patch:
+            resource:
+              apiVersion: ($cr_api_version)
+              kind: ($cr_kind)
+              metadata:
+                name: ($cr_name)
+                namespace: ($namespace)
+              spec:
+                apiSpec:
+                  description: revised-description
+        - assert:
+            resource:
+              apiVersion: ($cr_api_version)
+              kind: ($cr_kind)
+              metadata:
+                name: ($cr_name)
+                namespace: ($namespace)
+              status:
+                id: ($original_certificate.id)
+                (conditions[?type == 'CreateInputsApplied']):
+                  - status: 'False'
+                    reason: ValueChanged
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - patch:
+            resource:
+              apiVersion: ($cr_api_version)
+              kind: ($cr_kind)
+              metadata:
+                name: ($cr_name)
+                namespace: ($namespace)
+              spec:
+                apiSpec:
+                  description: null
+        - assert:
+            resource:
+              apiVersion: ($cr_api_version)
+              kind: ($cr_kind)
+              metadata:
+                name: ($cr_name)
+                namespace: ($namespace)
+              status:
+                id: ($original_certificate.id)
+                (conditions[?type == 'CreateInputsApplied']):
+                  - status: 'True'
+                    reason: Unchanged
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
     - name: Recover-lost-Konnect-ID
       use:
         template: ../../common/_step_templates/konnect-ownership-recover-lost-id.yaml

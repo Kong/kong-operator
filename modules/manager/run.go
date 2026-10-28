@@ -43,6 +43,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/kong/kong-operator/v2/controller/konnect/ops"
+	konnectserver "github.com/kong/kong-operator/v2/controller/konnect/server"
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstance"
@@ -89,6 +90,11 @@ type Config struct {
 	ClusterDomain            string
 	FQDNModeEnabled          bool
 	EmitKubernetesEvents     bool
+
+	// ReadYourOwnWritesConsistencyEnabled makes reads through the cached client
+	// wait for the cache to observe the operator's own preceding writes.
+	ReadYourOwnWritesConsistencyEnabled bool
+
 	// IPFamily is the cluster's IP family, used to decide which IP family
 	// (or families) DataPlanes' Kong listens bind to. Defaults to
 	// ipfamily.Auto, in which case Run resolves it to a concrete family by
@@ -127,6 +133,10 @@ type Config struct {
 	// entities page by page, e.g. to find an entity by its Kubernetes UID.
 	// 0 means consts.DefaultKonnectListPageSize.
 	KonnectListPageSize int64
+	// KonnectServerURLDomains are the domains a KonnectAPIAuthConfiguration
+	// serverURL host must belong to. A host outside the list is refused before
+	// any request is made. Defaults to konnectserver.DefaultDomains.
+	KonnectServerURLDomains konnectserver.Domains
 	// TODO: remove this a couple of versions after 2.1 release
 	// TODO: https://github.com/Kong/kong-operator/issues/2768
 	KonnectControllerMaxConcurrentReconciles uint
@@ -143,6 +153,16 @@ type Config struct {
 	// Controllers for Event Gateway APIs.
 	KEGDataPlaneControllerEnabled       bool
 	OnPremEventGatewayControllerEnabled bool
+
+	// Controller for gw-admin, the on-prem control plane of the data planes
+	// that do not use Konnect.
+	GWAdminControllerEnabled bool
+	// GWAdminCATTL is the validity of the certificate authorities created
+	// for a GWAdmin.
+	GWAdminCATTL time.Duration
+	// GWAdminCertTTL is the validity of the certificates issued for a
+	// GWAdmin.
+	GWAdminCertTTL time.Duration
 
 	// Controllers for AI Gateway APIs.
 	AIGatewayDataPlaneControllerEnabled bool
@@ -179,31 +199,35 @@ func DefaultConfig() Config {
 	)
 
 	return Config{
-		MetricsAddr:                   ":8080",
-		MetricsAccessFilter:           MetricsAccessFilterOff,
-		ProbeAddr:                     ":8081",
-		LeaderElection:                true,
-		LeaderElectionNamespace:       defaultLeaderElectionNamespace,
-		LeaderElectionLeaseDuration:   mgrconfig.DefaultLeaderElectionLeaseDuration,
-		LeaderElectionRenewDeadline:   mgrconfig.DefaultLeaderElectionRenewDeadline,
-		LeaderElectionRetryPeriod:     mgrconfig.DefaultLeaderElectionRetryPeriod,
-		ClusterCASecretName:           "kong-operator-ca",
-		ClusterCASecretNamespace:      defaultNamespace,
-		ControllerNamespace:           defaultNamespace,
-		SecretLabelSelector:           mgrconfig.DefaultSecretLabelSelector,
-		ConfigMapLabelSelector:        mgrconfig.DefaultConfigMapLabelSelector,
-		LoggerOpts:                    &zap.Options{},
-		IPFamily:                      ipfamily.Auto,
-		GatewayControllerEnabled:      true,
-		ControlPlaneControllerEnabled: true,
-		DataPlaneControllerEnabled:    true,
-		ConversionWebhookEnabled:      true,
-		ValidatingWebhookEnabled:      true,
-		KonnectSyncPeriod:             consts.DefaultKonnectSyncPeriod,
-		KonnectRequestTimeout:         consts.DefaultKonnectRequestTimeout,
-		KonnectListPageSize:           consts.DefaultKonnectListPageSize,
-		CertTTL:                       consts.DefaultCertTTL,
-		CertExpirationMargin:          consts.DefaultCertExpirationMargin,
+		MetricsAddr:                         ":8080",
+		MetricsAccessFilter:                 MetricsAccessFilterOff,
+		ProbeAddr:                           ":8081",
+		LeaderElection:                      true,
+		LeaderElectionNamespace:             defaultLeaderElectionNamespace,
+		LeaderElectionLeaseDuration:         mgrconfig.DefaultLeaderElectionLeaseDuration,
+		LeaderElectionRenewDeadline:         mgrconfig.DefaultLeaderElectionRenewDeadline,
+		LeaderElectionRetryPeriod:           mgrconfig.DefaultLeaderElectionRetryPeriod,
+		ClusterCASecretName:                 "kong-operator-ca",
+		ClusterCASecretNamespace:            defaultNamespace,
+		ControllerNamespace:                 defaultNamespace,
+		SecretLabelSelector:                 mgrconfig.DefaultSecretLabelSelector,
+		ConfigMapLabelSelector:              mgrconfig.DefaultConfigMapLabelSelector,
+		LoggerOpts:                          &zap.Options{},
+		IPFamily:                            ipfamily.Auto,
+		GatewayControllerEnabled:            true,
+		ControlPlaneControllerEnabled:       true,
+		DataPlaneControllerEnabled:          true,
+		ConversionWebhookEnabled:            true,
+		ValidatingWebhookEnabled:            true,
+		KonnectSyncPeriod:                   consts.DefaultKonnectSyncPeriod,
+		KonnectRequestTimeout:               consts.DefaultKonnectRequestTimeout,
+		KonnectListPageSize:                 consts.DefaultKonnectListPageSize,
+		KonnectServerURLDomains:             konnectserver.DefaultDomains,
+		CertTTL:                             consts.DefaultCertTTL,
+		CertExpirationMargin:                consts.DefaultCertExpirationMargin,
+		GWAdminCATTL:                        consts.GWAdminCATTL,
+		GWAdminCertTTL:                      consts.GWAdminLeafTTL,
+		ReadYourOwnWritesConsistencyEnabled: true,
 	}
 }
 
@@ -308,6 +332,21 @@ func Run(
 		RenewDeadline:           &cfg.LeaderElectionRenewDeadline,
 		RetryPeriod:             &cfg.LeaderElectionRetryPeriod,
 		Cache:                   cacheOptions,
+		// Reads through mgr.GetClient() are served by the informer cache, so by default a
+		// read that follows one of our own writes can still observe the pre-write object.
+		// Read-your-own-writes consistency makes such a read wait until the cache has
+		// observed the write, which removes the "reconcile ran immediately after a status
+		// patch and still saw an empty Konnect ID" class of duplicate creates.
+		//
+		// This only holds while every object we write can actually be observed by the
+		// cache: Secret/ConfigMap writers have to stamp the --secret-label-selector /
+		// --config-map-label-selector label, and --watch-namespaces has to cover every
+		// namespace we write into. See docs/internal/read-your-own-writes-consistency.md.
+		Client: client.Options{
+			Cache: &client.CacheOptions{
+				EnableReadYourWritesConsistency: &cfg.ReadYourOwnWritesConsistencyEnabled,
+			},
+		},
 	}
 
 	mgr, err := ctrl.NewManager(restCfg, managerOpts)
@@ -529,6 +568,17 @@ func setupAnonymousReports(
 	}
 
 	return tMgr.Stop, nil
+}
+
+// SecretCacheByObject returns the cache options the manager uses to only cache
+// the Secrets whose selector label is set to "true" or "internal". It lets
+// tests run a manager whose Secret cache is filtered as in production.
+func SecretCacheByObject(selector string) (map[client.Object]cache.ByObject, error) {
+	byObject := map[client.Object]cache.ByObject{}
+	if err := setByObjectFor[corev1.Secret](selector, byObject); err != nil {
+		return nil, err
+	}
+	return byObject, nil
 }
 
 func setByObjectFor[

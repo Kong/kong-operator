@@ -1,0 +1,203 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: onprem-consumer-groups
+spec:
+  description: |
+    Stands up an OnPremAIGateway with an AIGatewayPolicy, an AIGatewayConsumerGroup
+    attaching that policy, and an AIGatewayConsumer enrolled in the group. Mirrors the
+    Konnect suite's `consumer-groups` test. Verifies:
+      1. The group and consumer both reach Programmed=True with the group's policy
+         attached.
+      2. A second policy can be added to the group's policies list in place.
+      3. Deleting the group affects the consumer: on Konnect the consumer keeps its
+         Konnect-side Programmed=True, but on-prem the consumer's translation resolves
+         its group membership through resolveEntityName, which errors on the now-missing
+         group — so the consumer is excluded from the rendered document and its
+         Programmed condition flips to False. This test asserts that on-prem behavior
+         (dangling consumer->group references failing translation) until dangling
+         references get on-prem semantics of their own.
+    Unlike the Konnect-side test, a bare AIGatewayDataPlane is created before the
+    assertions: on-prem an entity only becomes Programmed once its configuration is
+    pushed to a data plane's Admin API (with no Admin API endpoints discovered the push
+    is skipped and every entity is reported as failed).
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'onprem-cp']))
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+    - name: policy_one_name
+      value: (join('-', [($test_name), 'policy-one']))
+    - name: policy_two_name
+      value: (join('-', [($test_name), 'policy-two']))
+    - name: consumer_group_name
+      value: (join('-', [($test_name), 'consumer-group']))
+    - name: consumer_name
+      value: (join('-', [($test_name), 'consumer']))
+  steps:
+    - name: Create-onprem-aigateway
+      use:
+        template: ../../common/_step_templates/apply-assert-onpremAIGateway.yaml
+    - name: Create-policy-one
+      try:
+        - apply:
+            file: 01-aigateway-policy-inline-config.yaml
+            bindings:
+              - name: aigw_policy_name
+                value: ($policy_one_name)
+              - name: response_header
+                value: "Policy-One:Applied"
+    - name: Create-consumer-group-with-policy-one
+      try:
+        - apply:
+            file: 02-consumer-group.yaml
+    - name: Create-consumer-enrolled-in-group
+      try:
+        - apply:
+            file: 03-consumer.yaml
+    - name: Create-aigateway-dataplane
+      description: |
+        On-prem, an entity only becomes Programmed once its configuration is pushed to a
+        data plane's Admin API, so a bare data plane is created before the assertions
+        (the Konnect-side test needs none of the sort). No traffic is exercised here.
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+        with:
+          bindings:
+            - name: control_plane_ref
+              value: "({type: 'onpremNamespacedRef', onpremNamespacedRef: {name: ($aigw_cp_name)}})"
+    - name: Assert-entities-programmed
+      try:
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                name: ($policy_one_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumerGroup
+              metadata:
+                name: ($consumer_group_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumer
+              metadata:
+                name: ($consumer_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+    - name: Create-policy-two
+      try:
+        - apply:
+            file: 01-aigateway-policy-inline-config.yaml
+            bindings:
+              - name: aigw_policy_name
+                value: ($policy_two_name)
+              - name: response_header
+                value: "Policy-Two:Applied"
+    - name: Add-policy-two-to-consumer-group
+      description: Patch the group's policies list in place (no delete/recreate) and assert it stays Programmed.
+      try:
+        - apply:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumerGroup
+              metadata:
+                name: ($consumer_group_name)
+                namespace: ($namespace)
+              spec:
+                aiGatewayRef:
+                  group: aigateway.konghq.com
+                  kind: OnPremAIGateway
+                  namespacedRef:
+                    name: ($aigw_cp_name)
+                apiSpec:
+                  name: ($consumer_group_name)
+                  displayName: ($consumer_group_name)
+                  policies:
+                    - name: ($policy_one_name)
+                    - name: ($policy_two_name)
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumerGroup
+              metadata:
+                name: ($consumer_group_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              metadata:
+                name: ($policy_two_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+    - name: Delete-consumer-group-and-verify-consumer-affected
+      description: On-prem, deleting the group leaves a dangling consumer->group reference whose translation fails, so the consumer flips to Programmed=False (unlike Konnect, where it stays Programmed).
+      try:
+        - delete:
+            ref:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumerGroup
+              name: ($consumer_group_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumerGroup
+              metadata:
+                name: ($consumer_group_name)
+                namespace: ($namespace)
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayConsumer
+              metadata:
+                name: ($consumer_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+    - name: Delete-consumer
+      bindings:
+        - name: resource_type
+          value: aigatewayconsumer
+        - name: resource_name
+          value: ($consumer_name)
+        - name: resource_namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/delete-resource-non-blocking.yaml
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: onprem-consumer-groups
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

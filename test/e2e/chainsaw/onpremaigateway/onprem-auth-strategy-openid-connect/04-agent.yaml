@@ -1,0 +1,34 @@
+# An HTTP AIGatewayAgent routing /http-agent to the go-echo backend, guarded by
+# the openid-connect auth strategy. No ACLs: bare token validation, so failed
+# authentication is rejected by openid-connect itself (401), not by an ACL.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayAgent
+metadata:
+  name: ($http_agent_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    name: ($http_agent_name)
+    displayName: ($http_agent_name)
+    type: http
+    enabled: Enabled
+    config:
+      url: (join('', ['http://', ($echo_deployment_name), '.', ($namespace), '.svc.cluster.local:1027']))
+      route:
+        paths:
+          - ($http_agent_route_path)
+        methods:
+          - GET
+          - POST
+        protocols:
+          - http
+          - https
+        stripPath: Enabled
+    access:
+      authStrategies:
+        - name: ($oidc_auth_strategy_name)

@@ -1,0 +1,24 @@
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: GWAdmin
+metadata:
+  name: ($gwadmin_name)
+  # Deletes the Secrets Kong Operator keeps in its own namespace. Absent
+  # until the first reconciliation: an empty list keeps the assertion
+  # retrying instead of failing on a missing field.
+  (contains(finalizers || `[]`, 'gateway-operator.konghq.com/gwadmin-cleanup')): true
+status:
+  (conditions[?type == 'CertificateProvisioned']):
+    - status: "True"
+      reason: CertificateProvisioned
+  api:
+    serviceName: (join('-', [($gwadmin_name), 'api']))
+    portName: api
+    port: 8083
+  cp:
+    (starts_with(serverURL, join('', ['https://', ($gwadmin_name), '-cp.', ($namespace), '.svc']))): true
+  tls:
+    # The cp client CA, holding its key, is never named in the status: only
+    # Kong Operator issues from it, in its own namespace.
+    (cpClientCASecretName == null): true
+    cpServerCABundleSecretName: (join('-', [($gwadmin_name), 'cp-server-ca-bundle']))
+    apiCABundleSecretName: (join('-', [($gwadmin_name), 'api-ca-bundle']))

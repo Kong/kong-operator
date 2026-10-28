@@ -787,7 +787,7 @@ KonnectAPIAuthConfigurationSpec is the specification of the KonnectAPIAuthConfig
 | `type` _[KonnectAPIAuthType](#konnect-konghq-com-v1alpha1-types-konnectapiauthtype)_ |  |
 | `token` _string_ | Token is the Konnect token used to authenticate with the Konnect API. |
 | `secretRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#secretreference-v1-core)_ | SecretRef is a reference to a Kubernetes Secret containing the Konnect token. This secret is required to have the konghq.com/credential label set to "konnect". |
-| `serverURL` _string_ | ServerURL is the URL of the Konnect server. It can be either a full URL with an HTTPs scheme or just a hostname. Please refer to https://docs.konghq.com/konnect/network/ for the list of supported hostnames. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server. It can be either a full URL with an HTTPs scheme or just a hostname. The host must belong to one of the domains the operator is allowed to call (--konnect-server-url-domains, konghq.com and konghq.tech by default): a value outside the list is reported with an APIAuthValid=False condition and the operator sends no request to it. Please refer to https://docs.konghq.com/konnect/network/ for the list of supported hostnames. |
 
 _Appears in:_
 
@@ -1227,8 +1227,8 @@ KonnectEndpoints defines the Konnect endpoints for the control plane.
 
 | Field | Description |
 | --- | --- |
-| `telemetry` _string_ | TelemetryEndpoint is the endpoint for telemetry. |
-| `controlPlane` _string_ | ControlPlaneEndpoint is the endpoint for the control plane. |
+| `telemetry` _string_ | TelemetryEndpoint is the telemetry endpoint of the Konnect control plane, as returned by Konnect: it may carry a path, e.g. reached over PrivateLink. |
+| `controlPlane` _string_ | ControlPlaneEndpoint is the control plane endpoint, as returned by Konnect: it may carry a path, e.g. reached over PrivateLink. |
 
 _Appears in:_
 
@@ -2506,6 +2506,7 @@ SpecRenderer The spec renderer settings of this portal
 | `showSchemas` _string_ | Control whether schemas are visible in your API specs. When enabled, schemas appear in the side navigation below the endpoints. |
 | `tryItInsomnia` _string_ | Enables users to open API specifications in Insomnia to explore and send requests with the native client. Only public API specifications are supported. |
 | `tryItUi` _string_ | Enable in-browser testing for your APIs. All linked gateways must have the CORS plugin configured. |
+| `tryItUiAudience` _string_ | The audience for the Try It UI feature.<br /><br />`all` means that the Try It UI will be available to all users, including unauthenticated users.<br /><br />`authenticated` means that the Try It UI will only be available to authenticated users.<br /><br />`registered` means that the Try It UI will only be available to users who have registered for the API. |
 
 _Appears in:_
 
@@ -2522,7 +2523,7 @@ Theme The theme settings for this portal.
 | --- | --- |
 | `colors` _[Colors](#konnect-konghq-com-v1alpha1-types-colors)_ |  |
 | `mode` _string_ |  |
-| `name` _string_ | The theme name to apply to this portal. Supported names are 'ocean' and 'glacier'. If another name is provided or this property is omitted, the portal uses the default 'ocean' theme. |
+| `name` _string_ | The theme name to apply to this portal. Supported names are 'ocean', 'mesa', and 'grove'. If another name is provided or this property is omitted, the portal uses the default 'ocean' theme. |
 
 _Appears in:_
 
@@ -2730,8 +2731,8 @@ KonnectEndpoints defines the Konnect endpoints for the control plane.
 
 | Field | Description |
 | --- | --- |
-| `telemetry` _string_ | TelemetryEndpoint is the endpoint for telemetry. |
-| `controlPlane` _string_ | ControlPlaneEndpoint is the endpoint for the control plane. |
+| `telemetry` _string_ | TelemetryEndpoint is the telemetry endpoint of the Konnect control plane, as returned by Konnect: it may carry a path, e.g. reached over PrivateLink. |
+| `controlPlane` _string_ | ControlPlaneEndpoint is the control plane endpoint, as returned by Konnect: it may carry a path, e.g. reached over PrivateLink. |
 
 _Appears in:_
 

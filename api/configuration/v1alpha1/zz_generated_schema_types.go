@@ -2853,6 +2853,9 @@ type EventGatewayParsedRecordFieldPathsArray []EventGatewayParsedRecordFieldPath
 // equivalent to the `match` values in the array variant.
 type EventGatewayParsedRecordFieldPathsExpression string
 
+// EventGatewayPolicyReference The unique identifier of the policy.
+type EventGatewayPolicyReference string
+
 // EventGatewayProduceRequestRules The rules to apply to Kafka `Produce`
 // requests.
 type EventGatewayProduceRequestRules struct {

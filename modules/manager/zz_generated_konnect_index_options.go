@@ -39,6 +39,7 @@ func generatedIndexOptionsForKonnectEntities(
 		index.OptionsForEventGatewayVirtualCluster(),
 		index.OptionsForEventGatewayVirtualClusterConsumePolicy(),
 		index.OptionsForEventGatewayVirtualClusterPolicy(),
+		index.OptionsForEventGatewayVirtualClusterPolicyChain(),
 		index.OptionsForEventGatewayVirtualClusterProducePolicy(),
 		index.OptionsForKonnectAIGateway(),
 		index.OptionsForKonnectConfigStore(),

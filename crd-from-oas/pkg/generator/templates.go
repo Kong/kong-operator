@@ -49,8 +49,8 @@ type {{.EntityName}} struct {
 	metav1.TypeMeta   ` + "`" + `json:",inline"` + "`" + `
 	metav1.ObjectMeta ` + "`" + `json:"metadata,omitzero"` + "`" + `
 
-	// +optional
-	Spec {{.EntityName}}Spec ` + "`" + `json:"spec,omitzero"` + "`" + `
+{{range .SpecValidations}}	// {{.}}
+{{end}}	Spec {{.EntityName}}Spec ` + "`" + `json:"spec,omitzero"` + "`" + `
 
 	// +optional
 	Status {{.EntityName}}Status ` + "`" + `json:"status,omitzero"` + "`" + `
@@ -136,7 +136,6 @@ type {{.EntityName}}Spec struct {
 
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
-	// +optional
 {{- range .APISpecValidations}}
 	// {{.}}
 {{- end}}
@@ -185,7 +184,7 @@ type {{.EntityName}}APISpec struct {
 {{- end}}
 {{- if isRefConfigField $prop}}
 {{- if eq $prop.Type "array"}}
-	{{goFieldName $prop.Name}} []{{refTypeNameForField $prop}} ` + "`" + `json:"{{jsonPropName $prop}},omitempty"` + "`" + `
+	{{goFieldName $prop.Name}} []{{refTypeNameForField $prop}} ` + "`" + `json:"{{jsonPropName $prop}},{{if $prop.Required}}omitzero{{else}}omitempty{{end}}"` + "`" + `
 {{- else}}
 	{{goFieldName $prop.Name}} {{refTypeNameForField $prop}} ` + "`" + `json:"{{jsonPropName $prop}},omitzero"` + "`" + `
 {{- end}}
@@ -305,6 +304,19 @@ type {{.EntityName}}Status struct {
 {{- else}}
 	{{.StatusField}} *{{$.EntityName}}{{.StatusField}} ` + "`" + `json:"{{.StatusJSON}},omitempty"` + "`" + `
 {{- end}}
+{{- end}}
+{{- if .TrackCreateInputs}}
+
+	// CreateInputsHash fingerprints the resolved user-supplied request body last
+	// successfully created in Konnect, before operator metadata is added.
+	// For entities predating this field, it is initialized from current inputs
+	// as a baseline, which cannot verify the values already stored in Konnect.
+	// Readers of this resource can use the fingerprint to verify guesses of
+	// low-entropy Secret values offline. Use high-entropy secret material.
+	//
+	// +optional
+	// +kubebuilder:validation:Pattern=` + "`" + `^sha256:[0-9a-f]{64}$` + "`" + `
+	CreateInputsHash string ` + "`" + `json:"createInputsHash,omitempty"` + "`" + `
 {{- end}}
 	// ObservedGeneration is the most recent generation observed
 	//
@@ -726,12 +738,59 @@ import (
 
 {{if .NeedsSecretFetchImport}}	corev1 "k8s.io/api/core/v1"
 {{end}}{{if .NeedsCrossNamespaceCheck}}	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-{{end}}{{if .References}}	apierrors "k8s.io/apimachinery/pkg/api/errors"
+{{end}}{{if .NeedsReferenceLookup}}	apierrors "k8s.io/apimachinery/pkg/api/errors"
 {{end}}	"sigs.k8s.io/controller-runtime/pkg/client"
 {{- end}}
 
 {{range .Imports}}	{{.Alias}} "{{.Path}}"
-{{end}})
+{{end}}
+{{- if .TrackCreateInputs}}
+	"github.com/kong/kong-operator/v2/internal/utils/createinputs"
+{{- end}}
+)
+{{- if .TrackCreateInputs}}
+
+// GetCreateInputsHash returns the fingerprint recorded at creation or baselining.
+func (obj *{{.EntityName}}) GetCreateInputsHash() string {
+	return obj.Status.CreateInputsHash
+}
+
+// SetCreateInputsHash records a fingerprint without storing sensitive values.
+func (obj *{{.EntityName}}) SetCreateInputsHash(hash string) {
+	obj.Status.CreateInputsHash = hash
+}
+
+{{- range .Methods}}
+{{- if eq .OpName "create"}}
+// CalculateCreateInputsHash resolves and fingerprints the current create inputs.
+func (obj *{{$.EntityName}}) CalculateCreateInputsHash(ctx context.Context, cl client.Client) (string, error) {
+	_, hash, err := obj.ToCreateRequestWithInputsHash(ctx, cl)
+	return hash, err
+}
+
+// ToCreateRequestWithInputsHash resolves the inputs once for both the SDK request and its fingerprint.
+func (obj *{{$.EntityName}}) ToCreateRequestWithInputsHash(ctx context.Context, cl client.Client) (*{{.ImportAlias}}.{{.TypeName}}, string, error) {
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
+	if err != nil {
+		return nil, "", err
+	}
+	data, err := spec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, "", err
+	}
+	req, err := spec.{{.MethodName}}()
+	if err != nil {
+		return nil, "", err
+	}
+	hash, err := createinputs.Hash(json.RawMessage(data))
+	if err != nil {
+		return nil, "", err
+	}
+	return req, hash, nil
+}
+{{- end}}
+{{- end}}
+{{- end}}
 {{- if .BoolFields}}
 
 // {{$.EntityName}}SDKOpsBoolField describes a boolean enum field that must be normalized for SDK payloads.
@@ -989,7 +1048,7 @@ func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Clie
 {{- else if .DirectScalarRef}}
 	payload["{{.SDKJSONFieldName}}"] = resolved{{.GoResolverName}}[0]
 {{- else}}
-	// Always set: an empty list must explicitly clear the field in Konnect.
+	// Always include the resolved list, including an explicit empty list.
 	payload["{{.SDKJSONFieldName}}"] = resolved{{.GoResolverName}}
 {{- end}}
 {{- end}}
@@ -1282,6 +1341,9 @@ func (obj *{{$.EntityName}}) GetConfigMapDataSourceRefs() []ConfigMapDataSourceR
 // resolve{{$.EntityName}}{{.GoResolverName}} resolves the ObjectRef at {{.Path}}
 // to a Konnect {{if .ResolvesToName}}name{{else}}ID{{end}}.
 func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.Client, obj *{{$.EntityName}}) ([]string, error) {
+{{- if .ResolverMethod}}
+	return obj.{{.ResolverMethod}}(ctx, cl)
+{{- else}}
 	ref := obj.Spec.APISpec.{{.GoFieldName}}
 	if ref == nil {
 		return nil, nil
@@ -1357,6 +1419,7 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 	default:
 		return nil, fmt.Errorf("unsupported reference type %q at {{.Path}}", ref.Type)
 	}
+{{- end}}
 }
 {{- else}}
 {{- if or .NestedRef .OptionalRef}}
@@ -1465,6 +1528,9 @@ func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) {{if .Nest
 // resolve{{$.EntityName}}{{.GoResolverName}} resolves the CR references in {{.Path}}
 // to Konnect {{if .ResolvesToName}}names{{else}}IDs{{end}}.
 func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.Client, obj *{{$.EntityName}}) ({{if .NestedArrayList}}[][]{{else}}[]{{end}}string, error) {
+{{- if .ResolverMethod}}
+	return obj.{{.ResolverMethod}}(ctx, cl)
+{{- else}}
 {{- $collect := "resolved"}}
 {{- if .NestedArrayList}}
 	groups := {{.RefsExpr}}
@@ -1630,6 +1696,7 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 		return nil, err
 	}
 	return resolved, nil
+{{- end}}
 }
 {{- end}}
 {{- end}}
@@ -1937,7 +2004,7 @@ import (
 
 {{if .NeedsSecretFetchImport}}	corev1 "k8s.io/api/core/v1"
 {{end}}{{if .NeedsCrossNamespaceCheck}}	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-{{end}}{{if .References}}	apierrors "k8s.io/apimachinery/pkg/api/errors"
+{{end}}{{if .NeedsReferenceLookup}}	apierrors "k8s.io/apimachinery/pkg/api/errors"
 {{end}}	"sigs.k8s.io/controller-runtime/pkg/client"
 {{- end}}
 
@@ -2513,6 +2580,10 @@ func TestCreate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 {{.RootUnion.ExpectedPayloadCheck}}
 {{- end}}
 {{- $reqBody := "expectedRequest"}}{{if and .Create.CreateFullyWrapped .Create.CreateBodyField}}{{$reqBody = printf "expectedRequest.%s" .Create.CreateBodyField}}{{end}}
+{{- if .Create.TrackCreateInputs}}
+	expectedCreateInputsHash, err := obj.CalculateCreateInputsHash(ctx, cl)
+	require.NoError(t, err)
+{{- end}}
 {{- if .AssertsInjectInto}}
 	{
 		// Additive references are resolved to the referenced object's Konnect
@@ -2596,6 +2667,9 @@ func TestCreate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 {{- if not .Create.SingletonNoID}}
 	require.Equal(t, expectedID, obj.GetKonnectID())
 {{- end}}
+{{- if .Create.TrackCreateInputs}}
+	require.Equal(t, expectedCreateInputsHash, obj.GetCreateInputsHash())
+{{- end}}
 }
 
 func TestCreate{{.Entity}}_PropagatesSDKError(t *testing.T) {
@@ -2665,6 +2739,9 @@ func TestCreate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 
 	err = create{{.Entity}}(ctx, {{if .Create.NeedsClient}}cl, {{end}}sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
+{{- if .Create.TrackCreateInputs}}
+	require.Empty(t, obj.GetCreateInputsHash())
+{{- end}}
 }
 {{- if $.SupportsMirror}}
 
@@ -3266,7 +3343,9 @@ func create{{.Entity}}(
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "{{.EntityName}}", Op: CreateOp}
 	}
 {{- end}}
-	{{- if .NeedsClient}}
+	{{- if .TrackCreateInputs}}
+	req, createInputsHash, err := obj.ToCreateRequestWithInputsHash(ctx, cl)
+	{{- else if .NeedsClient}}
 	req, err := obj.{{.CreateReqMethod}}(ctx, cl)
 	{{- else if .HasReferences}}
 	req, err := obj.{{.CreateReqMethod}}()
@@ -3361,6 +3440,10 @@ func create{{.Entity}}(
 
 	obj.SetKonnectID(resp.{{.RespField}}.ID)
 {{- end}}
+{{- if .TrackCreateInputs}}
+	obj.SetCreateInputsHash(createInputsHash)
+	SetKonnectEntityCreateInputsAppliedConditionTrue(obj)
+{{- end}}
 {{- if .HasNestedResponseStatusFields}}
 	const (
 		protocolHTTPS = "https://"
@@ -3453,7 +3536,9 @@ func update{{.Entity}}(
 {{- range .Parents}}
 	req.{{.SDKFieldName}} = {{.VarName}}
 {{- end}}
+{{- if not .UpdateOmitsEntityID}}
 	req.{{.EntityIDField}} = id
+{{- end}}
 
 	{{if .ResponseStatusFields}}resp, err :={{else}}_, err ={{end}} sdk.{{.UpdateSDKMethod}}(ctx, *req)
 {{- else if .UpdateWrapped}}
@@ -4546,7 +4631,9 @@ type {{.TypeName}} struct {
 	// permitted by a KongReferenceGrant in that namespace.
 	//
 	// +optional
-{{else}}	// Namespace is reserved for future cross-namespace support.
+{{else}}	// Namespace defaults to the referrer's namespace. If set, it must be
+	// the same as the referrer's namespace; cross-namespace references are
+	// not supported.
 	//
 	// +optional
 {{end}}	Namespace string ` + "`" + `json:"namespace,omitempty"` + "`" + `

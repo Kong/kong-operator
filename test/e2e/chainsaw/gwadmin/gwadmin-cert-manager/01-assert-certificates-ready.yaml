@@ -1,0 +1,25 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: gw-cm-user-ca
+status:
+  (conditions[?type == 'Ready']):
+    - status: "True"
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: cp-cert
+status:
+  (conditions[?type == 'Ready']):
+    - status: "True"
+---
+# cert-manager may issue public-ca twice on creation, a new key overwriting
+# the first: cp-cert must come from the CA in place, or its renewal moves to
+# a new issuer.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cp-cert
+data:
+  ca.crt: (x_k8s_get($client, 'v1', 'Secret', $namespace, 'public-ca').data."tls.crt")

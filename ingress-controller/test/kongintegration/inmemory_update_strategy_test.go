@@ -23,6 +23,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/sendconfig"
 	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/v2/ingress-controller/test"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/kongintegration/containers"
 )
 
@@ -33,9 +34,12 @@ func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 	t.Parallel()
 
 	const (
-		timeout        = 30 * time.Second
-		period         = 200 * time.Millisecond
-		requestTimeout = 3 * time.Second
+		timeout = time.Minute
+		period  = 200 * time.Millisecond
+		// Kong keeps processing an abandoned config push, so a per-attempt deadline
+		// shorter than a cold config load makes every retry queue behind it and time
+		// out too. Use the shared request timeout, which is sized for that load.
+		requestTimeout = test.RequestTimeout
 	)
 
 	ctx := t.Context()

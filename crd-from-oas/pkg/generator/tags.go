@@ -117,9 +117,11 @@ func KubebuilderTags(prop *parser.Property, fieldCursor *config.FieldConfig) []s
 		// }
 	}
 
-	// Apply custom validations from config, overriding any auto-generated
-	// marker that shares the same key (text before the first '=').
-	propCursor := fieldCursor.Sub(jsonTagForProperty(prop))
+	return applyValidationOverrides(tags, fieldCursor.Sub(jsonTagForProperty(prop)))
+}
+
+// applyValidationOverrides replaces generated markers with field configuration.
+func applyValidationOverrides(tags []string, propCursor *config.FieldConfig) []string {
 	if propCursor != nil && len(propCursor.Validations) > 0 {
 		overrideKeys := make(map[string]struct{}, len(propCursor.Validations))
 		for _, v := range propCursor.Validations {
@@ -136,10 +138,13 @@ func KubebuilderTags(prop *parser.Property, fieldCursor *config.FieldConfig) []s
 }
 
 // markerKey returns the portion of a kubebuilder marker before the first '=',
-// which acts as the unique key for override matching.
-// For markers without '=' the whole string is the key (e.g. "+optional").
+// except that mutually exclusive requiredness markers share an override key.
 func markerKey(marker string) string {
 	key, _, _ := strings.Cut(marker, "=")
+	switch key {
+	case "+required", "+optional", "+kubebuilder:validation:Required", "+kubebuilder:validation:Optional":
+		return "requiredness"
+	}
 	return key
 }
 

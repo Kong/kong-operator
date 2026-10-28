@@ -8,12 +8,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
 func TestOptionsForGateway(t *testing.T) {
 	options := OptionsForGateway()
-	require.Len(t, options, 2)
+	require.Len(t, options, 3)
 
 	opt := options[0]
 	require.IsType(t, &gwtypes.Gateway{}, opt.Object)
@@ -24,6 +25,27 @@ func TestOptionsForGateway(t *testing.T) {
 	require.IsType(t, &gwtypes.Gateway{}, opt2.Object)
 	require.Equal(t, TLSCertificateSecretsOnGatewayIndex, opt2.Field)
 	require.NotNil(t, opt2.ExtractValueFn)
+	require.Equal(t, TLSKongCertificatesOnGatewayIndex, options[2].Field)
+	require.NotNil(t, options[2].ExtractValueFn)
+}
+
+func TestTLSKongCertificatesOnGateway(t *testing.T) {
+	gateway := &gwtypes.Gateway{
+		Namespace: "gateways",
+		Spec: gwtypes.GatewaySpec{Listeners: []gwtypes.Listener{
+			{Name: "http"},
+			{TLS: &gatewayv1.ListenerTLSConfig{CertificateRefs: []gatewayv1.SecretObjectReference{
+				{Name: "secret"},
+				{Group: new(gatewayv1.Group(configurationv1alpha1.GroupVersion.Group)), Kind: new(gatewayv1.Kind("Secret")), Name: "wrong-kind"},
+				{Group: new(gatewayv1.Group(configurationv1alpha1.GroupVersion.Group)), Kind: new(gatewayv1.Kind("KongCertificate")), Name: "same"},
+				{Group: new(gatewayv1.Group(configurationv1alpha1.GroupVersion.Group)), Kind: new(gatewayv1.Kind("KongCertificate")), Name: "same"},
+				{Group: new(gatewayv1.Group(configurationv1alpha1.GroupVersion.Group)), Kind: new(gatewayv1.Kind("KongCertificate")), Name: "other", Namespace: new(gatewayv1.Namespace("certs"))},
+			}}},
+		}},
+	}
+	require.ElementsMatch(t, []string{"gateways/same", "certs/other"}, TLSKongCertificatesOnGateway(gateway))
+	require.Equal(t, []string{"gateways/secret"}, TLSCertificateSecretsOnGateway(gateway))
+	require.Nil(t, TLSKongCertificatesOnGateway(&corev1.Secret{}))
 }
 
 func TestGatewayClassOnGateway(t *testing.T) {

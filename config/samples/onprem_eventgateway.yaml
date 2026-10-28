@@ -1,15 +1,15 @@
 # Sample for the on-prem Event Gateway control plane CRD.
 #
 # The reconciler for OnPremEventGateway is opt in via
-# --enable-controller-onpremeventgateway. It doesn't push any configuration to
-# gw-admin yet: the gateway reports Programmed False with reason Pending.
+# --enable-controller-onpremeventgateway. It pushes the gateway to the gw-admin
+# pods of the GWAdmin gw-admin, without its entities yet: the gateway reports
+# Programmed True once the gw-admin pods serving received it; those still
+# starting get it once they listen.
 apiVersion: eventgateway.konghq.com/v1alpha1
 kind: OnPremEventGateway
 metadata:
   name: event-gateway-onprem-1
   namespace: default
 spec:
-  gwAdmin:
-    service:
-      name: gw-admin
-      portName: admin
+  gwAdminRef:
+    name: gw-admin

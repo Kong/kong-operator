@@ -466,6 +466,15 @@ func (a *AIGatewayDataPlane) SetConditions(conditions []metav1.Condition) {
 	a.Status.Conditions = conditions
 }
 
+// GetReplicas returns the AIGatewayDataPlane static replica count, or nil when it is
+// not set.
+func (a *AIGatewayDataPlane) GetReplicas() *int32 {
+	if a.Spec.Deployment == nil {
+		return nil
+	}
+	return a.Spec.Deployment.Replicas
+}
+
 // GetHorizontalScaling returns the AIGatewayDataPlane horizontal scaling options, or nil
 // when horizontal scaling is not configured.
 func (a *AIGatewayDataPlane) GetHorizontalScaling() *commonv1alpha1.HorizontalScaling {

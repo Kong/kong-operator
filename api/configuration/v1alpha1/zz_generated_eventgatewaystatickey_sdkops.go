@@ -11,7 +11,46 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+
+	"github.com/kong/kong-operator/v2/internal/utils/createinputs"
 )
+
+// GetCreateInputsHash returns the fingerprint recorded at creation or baselining.
+func (obj *EventGatewayStaticKey) GetCreateInputsHash() string {
+	return obj.Status.CreateInputsHash
+}
+
+// SetCreateInputsHash records a fingerprint without storing sensitive values.
+func (obj *EventGatewayStaticKey) SetCreateInputsHash(hash string) {
+	obj.Status.CreateInputsHash = hash
+}
+
+// CalculateCreateInputsHash resolves and fingerprints the current create inputs.
+func (obj *EventGatewayStaticKey) CalculateCreateInputsHash(ctx context.Context, cl client.Client) (string, error) {
+	_, hash, err := obj.ToCreateRequestWithInputsHash(ctx, cl)
+	return hash, err
+}
+
+// ToCreateRequestWithInputsHash resolves the inputs once for both the SDK request and its fingerprint.
+func (obj *EventGatewayStaticKey) ToCreateRequestWithInputsHash(ctx context.Context, cl client.Client) (*sdkkonnectcomp.EventGatewayStaticKeyCreate, string, error) {
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
+	if err != nil {
+		return nil, "", err
+	}
+	data, err := spec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, "", err
+	}
+	req, err := spec.ToEventGatewayStaticKeyCreate()
+	if err != nil {
+		return nil, "", err
+	}
+	hash, err := createinputs.Hash(json.RawMessage(data))
+	if err != nil {
+		return nil, "", err
+	}
+	return req, hash, nil
+}
 
 // EventGatewayStaticKeySDKOpsFreeformKeyFields lists free-form / map data-keyed
 // subtrees whose keys are user data (e.g. an HTTP header name) and must be

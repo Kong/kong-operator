@@ -1,0 +1,210 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: gwadmin-ca-rotation-stalls
+spec:
+  description: |
+    A rotation never gets ahead of the pods it depends on:
+    1. A GWAdmin starts with its Automatic certificate authorities. Nothing
+       provisions its pods, so they never turn Ready.
+    2. It is switched to a Manual cp client CA, and its Automatic certificate
+       authorities are rotated with the rotate-certificate-authorities
+       annotation. The new CAs are trusted right away, but a rolling update
+       can't complete while the new pod isn't Ready:
+       - the Automatic cp client CA stays published until the pods trust the
+         Manual one;
+       - the API certificates stay on the previous API CA: the operator
+         client certificate must be trusted by every gw-admin pod.
+       The cp server certificate doesn't depend on the pods, only on the data
+       planes, and none runs yet: it moves to the new cp server CA right
+       away, rollout or not.
+    3. Once peers provision the pods, and the data plane gwadmin-dp starts,
+       the rollout completes and the rotations finish, without a TLS
+       failure: the Manual CA is published, under the same name, the
+       Automatic one is dropped once gwadmin-dp rolled out with a
+       certificate from the Manual one, and every bundle holds a single CA
+       again.
+  bindings:
+    - name: gwadmin_name
+      value: gw-stall
+    - name: work_dir
+      value: (join('', ['/tmp/gwadmin-e2e-', ($namespace)]))
+  steps:
+    - name: 1-Create-gwadmin-unprovisioned
+      try:
+        - apply:
+            file: 01-gwadmin.yaml
+        - assert:
+            timeout: 1m
+            file: ../gwadmin-shared/assert-condition.yaml
+            bindings:
+              - {name: condition_type, value: CertificateProvisioned}
+              - {name: condition_status, value: "True"}
+              - {name: condition_reason, value: CertificateProvisioned}
+        - assert:
+            timeout: 30s
+            file: ../gwadmin-shared/assert-tls-status.yaml
+        - script:
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+              - name: WORK_DIR
+                value: ($work_dir)
+            timeout: 1m
+            content: ../gwadmin-shared/gwadmin.sh save-private-ca "$GWADMIN" cp-client-ca "$WORK_DIR/auto"
+        - script:
+            env: *env
+            timeout: 1m
+            content: ../gwadmin-shared/gwadmin.sh save-private-ca "$GWADMIN" api-ca "$WORK_DIR/api-ca"
+        - script:
+            env: *env
+            timeout: 1m
+            content: ../gwadmin-shared/gwadmin.sh save-private-ca "$GWADMIN" cp-server-ca "$WORK_DIR/cp-server-ca"
+        - script:
+            env: *env
+            timeout: 1m
+            content: ../gwadmin-shared/gwadmin.sh wait-leaves-on "$GWADMIN" "$WORK_DIR/cp-server-ca/tls.crt" 30 cp
+        - script:
+            env: *env
+            timeout: 1m
+            content: ../gwadmin-shared/gwadmin.sh wait-leaves-on "$GWADMIN" "$WORK_DIR/api-ca/tls.crt" 30 api operator-client
+      cleanup:
+        # Holds CA keys: removed whatever the outcome of the test.
+        - script:
+            env: *env
+            content: ../gwadmin-shared/gwadmin.sh clean-work-dir
+    - name: 2-Rotations-stall-on-the-pods
+      try:
+        - script:
+            env: *env
+            content: ../gwadmin-shared/gwadmin.sh gen-ca manual-ca "$WORK_DIR/manual"
+        - script:
+            env: *env
+            content: ../gwadmin-shared/gwadmin.sh put-tls-secret user-ca "$WORK_DIR/manual"
+        - patch:
+            file: 02-gwadmin-manual-ca.yaml
+        - assert:
+            timeout: 1m
+            file: ../gwadmin-shared/assert-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 2}
+        - assert:
+            timeout: 30s
+            file: ../gwadmin-shared/assert-api-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 2}
+        # Certificates only pass their renewal time (CARotationBlocked)
+        # after weeks: the rotation is merely in progress here.
+        - assert:
+            timeout: 30s
+            file: ../gwadmin-shared/assert-condition.yaml
+            bindings:
+              - {name: condition_type, value: CertificateProvisioned}
+              - {name: condition_status, value: "True"}
+              - {name: condition_reason, value: CARotationInProgress}
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../gwadmin-shared/gwadmin.sh assert-published "$GWADMIN" "$WORK_DIR/auto/tls.crt"
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../gwadmin-shared/gwadmin.sh wait-new-private-ca "$GWADMIN" cp-server-ca "$WORK_DIR/cp-server-ca/tls.crt" "$WORK_DIR/cp-server-ca-2" 30
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../gwadmin-shared/gwadmin.sh wait-new-private-ca "$GWADMIN" api-ca "$WORK_DIR/api-ca/tls.crt" "$WORK_DIR/api-ca-2" 30
+        # No data plane runs yet: the cp server certificate moves to the
+        # new cp server CA right away, though the rollout is stalled:
+        # the gw-admin pods don't verify it. The bundle keeps both
+        # until the pods serve it.
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../gwadmin-shared/gwadmin.sh wait-leaves-on "$GWADMIN" "$WORK_DIR/cp-server-ca-2/tls.crt" 60 cp
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../gwadmin-shared/gwadmin.sh assert-server-bundle-count "$GWADMIN" 2
+        # The rollout can never complete without the peers, so a fixed
+        # observation window is all a negative check can do here.
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../gwadmin-shared/gwadmin.sh expect-leaves-stay-on "$GWADMIN" "$WORK_DIR/api-ca/tls.crt" 60 api operator-client
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../gwadmin-shared/gwadmin.sh assert-published "$GWADMIN" "$WORK_DIR/auto/tls.crt"
+        - assert:
+            timeout: 5s
+            file: ../gwadmin-shared/assert-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 2}
+    - name: 3-Provisioning-unblocks-rotation
+      try:
+        # The scripts the peers and gwadmin-dp run, from gwadmin-shared.
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+            content: ../gwadmin-shared/gwadmin.sh peers-scripts
+        - apply:
+            file: ../gwadmin-shared/peers.yaml
+        - script:
+            env: *env
+            timeout: 11m
+            content: ../gwadmin-shared/gwadmin.sh wait-published "$GWADMIN" "$WORK_DIR/manual/tls.crt" 240
+        - script:
+            env: *env
+            timeout: 11m
+            content: ../gwadmin-shared/gwadmin.sh wait-leaves-on "$GWADMIN" "$WORK_DIR/api-ca-2/tls.crt" 300 api operator-client
+        - assert:
+            timeout: 5s
+            file: ../gwadmin-shared/assert-tls-status.yaml
+        - assert:
+            timeout: 2m
+            file: ../gwadmin-shared/assert-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 1}
+        - assert:
+            timeout: 2m
+            file: ../gwadmin-shared/assert-api-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 1}
+        - assert:
+            timeout: 2m
+            file: ../gwadmin-shared/assert-server-bundle-size.yaml
+            bindings:
+              - {name: bundle_size, value: 1}
+        - assert:
+            timeout: 1m
+            file: ../gwadmin-shared/assert-gwadmin-ready.yaml
+        - assert:
+            timeout: 3m
+            file: ../gwadmin-shared/assert-rolled-out.yaml
+            bindings:
+              - {name: replicas, value: 1}
+        # A few more rounds of handshakes against the final state.
+        - script:
+            env: *env
+            timeout: 2m
+            content: ../gwadmin-shared/gwadmin.sh wait-rounds 3 60
+        - script:
+            env: *env
+            timeout: 2m
+            content: ../gwadmin-shared/gwadmin.sh assert-no-failures
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

@@ -344,7 +344,10 @@ func setupDataPlaneTest(t *testing.T, ctx context.Context, caSecretName string) 
 	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
 	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
-	clusterCA := create.ClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, caSecretName)
+	// Uncached client: the Secret is seeded before StartReconcilers starts the
+	// manager, and going through the manager's client that early deadlocks under
+	// read-your-own-writes consistency.
+	clusterCA := create.ClusterCASecret(t, ctx, envtest.NewControllerClient(t, scheme.Get(), cfg), ns.Name, caSecretName)
 	dpReconciler := &dataplane.Reconciler{
 		DataPlaneIPFamily:        ipfamily.IPv4,
 		Client:                   mgr.GetClient(),

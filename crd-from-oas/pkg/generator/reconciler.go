@@ -92,7 +92,7 @@ func {{.EntityName}}ReconciliationWatchOptions(
 			return b.Watches(
 				&corev1.Secret{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectsForSecretRef[{{.APIGroupPackageAlias}}.{{.EntityName}}List](cl),
+					enqueueObjectsForSecretRef[{{.APIGroupPackageAlias}}.{{.EntityName}}List](cl, index.IndexField{{.EntityName}}OnSecretRef),
 				),
 			)
 		},
@@ -208,6 +208,50 @@ func enqueue{{$.EntityName}}For{{.Referrer}}(
 {{end}}`
 
 // indexTemplate generates cache index for auth ref queries.
+// secretRefIndexTemplates holds the index of the Secrets an entity reads
+// through its sensitive data sources (GetSensitiveDataSecretRefs), by
+// "<namespace>/<name>": the index and child index templates render it for
+// the entities that have such sources, so that a change to a Secret finds the
+// entities reading it.
+//
+//nolint:gosec // A template, not a credential.
+const secretRefIndexTemplates = `
+{{- define "secretRefIndexField"}}
+	{{- if .HasSecretRefs}}
+	// IndexField{{.EntityName}}OnSecretRef is the index field for {{.EntityName}} -> the Secrets it reads.
+	IndexField{{.EntityName}}OnSecretRef = "{{.EntityNameLowerCamel}}OnSecretRef"
+	{{- end}}
+{{- end}}
+{{- define "secretRefIndexOption"}}
+		{{- if .HasSecretRefs}}
+		{
+			Object:         &{{.APIGroupPackageAlias}}.{{.EntityName}}{},
+			Field:          IndexField{{.EntityName}}OnSecretRef,
+			ExtractValueFn: {{.EntityNameLowerCamel}}OnSecretRef,
+		},
+		{{- end}}
+{{- end}}
+{{- define "secretRefIndexFunc"}}
+{{- if .HasSecretRefs}}
+func {{.EntityNameLowerCamel}}OnSecretRef(object client.Object) []string {
+	ent, ok := object.(*{{.APIGroupPackageAlias}}.{{.EntityName}})
+	if !ok {
+		return nil
+	}
+	refs := ent.GetSensitiveDataSecretRefs()
+	out := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		ns := ent.GetNamespace()
+		if ref.Namespace != nil && *ref.Namespace != "" {
+			ns = *ref.Namespace
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
+}
+{{end}}
+{{- end}}`
+
 const indexTemplate = sharedGeneratedFilePreamble + `
 
 package index
@@ -228,6 +272,7 @@ const (
 	// IndexField{{$.EntityName}}On{{.RefKind}}Ref is the index field for {{$.EntityName}} -> {{.RefKind}}.
 	IndexField{{$.EntityName}}On{{.RefKind}}Ref = "{{$.EntityNameLowerCamel}}On{{.RefKind}}Ref"
 	{{- end}}
+	{{- template "secretRefIndexField" .}}
 )
 
 // OptionsFor{{.EntityName}} returns required Index options for {{.EntityName}} reconciler.
@@ -245,6 +290,7 @@ func OptionsFor{{.EntityName}}() []Option {
 			ExtractValueFn: {{$.EntityNameLowerCamel}}On{{.RefKind}}Ref,
 		},
 		{{- end}}
+		{{- template "secretRefIndexOption" .}}
 	}
 }
 
@@ -313,7 +359,8 @@ func {{$.EntityNameLowerCamel}}On{{.RefKind}}Ref(object client.Object) []string 
 	{{- end}}
 	return out
 }
-{{end}}`
+{{end}}{{- template "secretRefIndexFunc" .}}
+`
 
 // rbacEntity holds the data needed to generate RBAC markers for a single entity.
 type rbacEntity struct {
@@ -475,7 +522,7 @@ func {{.EntityName}}ReconciliationWatchOptions(
 			return b.Watches(
 				&corev1.Secret{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectsForSecretRef[{{.APIGroupPackageAlias}}.{{.EntityName}}List](cl),
+					enqueueObjectsForSecretRef[{{.APIGroupPackageAlias}}.{{.EntityName}}List](cl, index.IndexField{{.EntityName}}OnSecretRef),
 				),
 			)
 		},
@@ -630,6 +677,7 @@ const (
 	// "<gatewayID>/<{{.}}>", used to find the objects naming a referenced object literally (injectInto).
 	IndexField{{$.EntityName}}On{{.}} = "{{$.EntityNameLowerCamel}}On{{.}}"
 	{{- end}}
+	{{- template "secretRefIndexField" .}}
 )
 
 // OptionsFor{{.EntityName}} returns required Index options for {{.EntityName}} reconciler.
@@ -677,6 +725,7 @@ func OptionsFor{{.EntityName}}() []Option {
 			ExtractValueFn: {{$.EntityNameLowerCamel}}On{{.}},
 		},
 		{{- end}}
+		{{- template "secretRefIndexOption" .}}
 	}
 }
 
@@ -850,7 +899,8 @@ func {{$.EntityNameLowerCamel}}On{{.}}(object client.Object) []string {
 	}
 	return []string{gatewayID + "/" + value}
 }
-{{end}}`
+{{end}}{{- template "secretRefIndexFunc" .}}
+`
 
 const reconcilerConditionsTemplate = sharedGeneratedFilePreamble + `
 
@@ -999,11 +1049,12 @@ func (g *Generator) generateReconcilerFiles(entityNames []string, entitySchemas 
 			RelativeDir: "controller/konnect",
 		})
 		info := &WatchFileInfo{
-			Entity:         entityName,
-			APIAlias:       g.config.APIGroupPackageAlias,
-			APIPackagePath: g.config.APIGroupPackagePath,
-			IsRoot:         rc.GetIsRoot(),
-			Group:          g.config.APIGroup,
+			Entity:                 entityName,
+			APIAlias:               g.config.APIGroupPackageAlias,
+			APIPackagePath:         g.config.APIGroupPackagePath,
+			IsRoot:                 rc.GetIsRoot(),
+			Group:                  g.config.APIGroup,
+			SkipOnPremEventGateway: rc.SkipOnPremEventGateway,
 		}
 		if dep := rootRefDependency(schema); dep != nil {
 			info.ParentKind = rc.ParentEntityKind()
@@ -1257,9 +1308,9 @@ func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.
 }
 
 func (g *Generator) generateIndex(metadata reconcilerEntityMetadata, rc *config.ReconcilerConfig) (string, error) {
-	tmpl := template.Must(template.New("index").Parse(indexTemplate))
+	tmpl := template.Must(template.New("index").Parse(indexTemplate + secretRefIndexTemplates))
 	if !rc.GetIsRoot() {
-		tmpl = template.Must(template.New("childIndex").Parse(childIndexTemplate))
+		tmpl = template.Must(template.New("childIndex").Parse(childIndexTemplate + secretRefIndexTemplates))
 	}
 
 	crossRefs := g.buildCrossRefWatchData(metadata.EntityName)
@@ -1309,6 +1360,7 @@ func (g *Generator) generateIndex(metadata reconcilerEntityMetadata, rc *config.
 		CrossRefs               []crossRefWatchData
 		KonnectKeyIndexes       []konnectKeyIndex
 		LiteralTargetIndexes    []string
+		HasSecretRefs           bool
 		ObjectRefTypePrefix     string
 		NeedsObjectRefImport    bool
 		ObjectRefImportPath     string
@@ -1330,6 +1382,7 @@ func (g *Generator) generateIndex(metadata reconcilerEntityMetadata, rc *config.
 		CrossRefs:            crossRefs,
 		KonnectKeyIndexes:    konnectKeyIndexes,
 		LiteralTargetIndexes: literalTargetIndexes,
+		HasSecretRefs:        g.hasSecretRefs(metadata.EntityName),
 		ObjectRefTypePrefix:  objectRefTypePrefix,
 		NeedsObjectRefImport: needsObjectRefImport,
 		ObjectRefImportPath:  objectRefImportPath,

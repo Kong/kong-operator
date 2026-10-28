@@ -1,17 +1,24 @@
 package konnect
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
 
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -19,8 +26,298 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
+	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
 )
+
+func TestDeletingUnmanagedSNIRetainsCertificateChecks(t *testing.T) {
+	sni := &configurationv1alpha1.KongSNI{
+		Name: "unmanaged", Namespace: "default", DeletionTimestamp: new(metav1.Now()),
+		Finalizers: []string{KonnectCleanupFinalizer},
+		Spec:       configurationv1alpha1.KongSNISpec{CertificateRef: commonv1alpha1.NamespacedRef{Name: "missing"}},
+	}
+	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(sni).
+		WithStatusSubresource(&configurationv1alpha1.KongSNI{}).Build()
+	_, err := handleKongCertificateRef(t.Context(), cl, sni)
+	_, missing := errors.AsType[ReferencedKongCertificateDoesNotExistError](err)
+	require.True(t, missing, "unmanaged SNIs must retain missing-certificate cleanup behavior")
+}
+
+func TestDeleteGatewaySNIWithInvalidCertificateReference(t *testing.T) {
+	for _, state := range []string{"missing certificate", "revoked grants", "moved ControlPlane", "stale certificate", "deleting Gateway"} {
+		t.Run(state, func(t *testing.T) {
+			cp := testControlPlaneOK.DeepCopy()
+			cp.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name = "gateway-auth"
+			auth := &konnectv1alpha1.KonnectAPIAuthConfiguration{
+				Name: "gateway-auth", Namespace: cp.Namespace,
+				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
+					Type: konnectv1alpha1.KonnectAPIAuthTypeToken, Token: "test-token", ServerURL: sdkmocks.SDKServerURL,
+				},
+				Status: konnectv1alpha1.KonnectAPIAuthConfigurationStatus{Conditions: []metav1.Condition{{
+					Type: konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, Status: metav1.ConditionTrue,
+					Reason: konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid,
+				}}},
+			}
+			gateway := &gwtypes.Gateway{
+				Name: "gateway", Namespace: cp.Namespace, UID: "gateway-uid", Finalizers: []string{"test-gateway-cleanup"},
+			}
+			extension := &konnectv1alpha2.KonnectExtension{
+				Name: "gateway-extension", Namespace: gateway.Namespace,
+				Labels: map[string]string{"gateway-operator.konghq.com/managed-by": "gateway"},
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion: gatewayv1.GroupVersion.String(), Kind: "Gateway", Name: gateway.Name, UID: gateway.UID,
+				}},
+				Spec: konnectv1alpha2.KonnectExtensionSpec{Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+					ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+						Type:                 commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{Name: cp.Name},
+					}},
+				}},
+			}
+			sni := &configurationv1alpha1.KongSNI{
+				Name: "listener-sni", Namespace: gateway.Namespace, Finalizers: []string{KonnectCleanupFinalizer},
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion: gatewayv1.GroupVersion.String(), Kind: "Gateway", Name: gateway.Name, UID: gateway.UID, Controller: new(true),
+				}},
+				Spec: configurationv1alpha1.KongSNISpec{
+					CertificateRef: commonv1alpha1.NamespacedRef{Name: "certificate", Namespace: new("certificates")},
+				},
+				Status: configurationv1alpha1.KongSNIStatus{Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
+					ID: "original-sni-id", CertificateID: "original-certificate-id", ControlPlaneID: cp.Status.ID,
+				}},
+			}
+			objects := []client.Object{cp, auth, gateway, extension, sni}
+			if state != "missing certificate" {
+				cert := testKongCertOK.DeepCopy()
+				cert.Name, cert.Namespace = sni.Spec.CertificateRef.Name, *sni.Spec.CertificateRef.Namespace
+				if state == "moved ControlPlane" {
+					cert.Spec.ControlPlaneRef.KonnectNamespacedRef.Name = "another-controlplane"
+					cert.Status.Konnect.ControlPlaneID = "another-controlplane-id"
+				}
+				if state == "stale certificate" {
+					cert.Generation++
+				}
+				objects = append(objects, cert)
+			}
+			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).
+				WithStatusSubresource(&configurationv1alpha1.KongSNI{}, &konnectv1alpha1.KonnectAPIAuthConfiguration{}).Build()
+			if state == "deleting Gateway" {
+				require.NoError(t, cl.Delete(t.Context(), gateway))
+			}
+			require.NoError(t, cl.Delete(t.Context(), sni))
+
+			factory := sdkmocks.NewMockSDKFactory(t)
+			factory.SDK.SNIsSDK.EXPECT().DeleteSniWithCertificate(mock.Anything,
+				sdkkonnectops.DeleteSniWithCertificateRequest{
+					ControlPlaneID: cp.Status.ID, CertificateID: "original-certificate-id", SNIID: "original-sni-id",
+				},
+			).Return(&sdkkonnectops.DeleteSniWithCertificateResponse{}, nil).Once()
+			reconciler := NewKonnectEntityReconciler[configurationv1alpha1.KongSNI](
+				factory, logging.DevelopmentMode, cl,
+				WithMetricRecorder[configurationv1alpha1.KongSNI](&metricsmocks.MockRecorder{}),
+			)
+			key := client.ObjectKeyFromObject(sni)
+			for range 6 {
+				if err := cl.Get(t.Context(), key, sni); apierrors.IsNotFound(err) {
+					break
+				} else {
+					require.NoError(t, err)
+				}
+				_, err := reconciler.Reconcile(t.Context(), sni)
+				require.NoError(t, err)
+			}
+			require.True(t, apierrors.IsNotFound(cl.Get(t.Context(), key, sni)))
+		})
+	}
+}
+
+func TestDeleteGatewaySNIWithMissingAncestor(t *testing.T) {
+	for _, tt := range []struct {
+		name      string
+		wantError bool
+	}{
+		{name: "missing Gateway"},
+		{name: "recreated Gateway"},
+		{name: "missing KonnectExtension"},
+		{name: "missing ControlPlane"},
+		{name: "Gateway lookup failure", wantError: true},
+		{name: "KonnectExtension lookup failure", wantError: true},
+		{name: "ControlPlane lookup failure", wantError: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cp := testControlPlaneOK.DeepCopy()
+			gateway := &gwtypes.Gateway{Name: "gateway", Namespace: cp.Namespace, UID: "gateway-uid"}
+			extension := &konnectv1alpha2.KonnectExtension{
+				Name: "gateway-extension", Namespace: gateway.Namespace,
+				Labels: map[string]string{"gateway-operator.konghq.com/managed-by": "gateway"},
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion: gatewayv1.GroupVersion.String(), Kind: "Gateway", Name: gateway.Name, UID: gateway.UID,
+				}},
+				Spec: konnectv1alpha2.KonnectExtensionSpec{Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+					ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+						Type:                 commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{Name: cp.Name},
+					}},
+				}},
+			}
+			sni := &configurationv1alpha1.KongSNI{
+				Name: "listener-sni", Namespace: gateway.Namespace,
+				Finalizers: []string{KonnectCleanupFinalizer, "test.example/other-finalizer"},
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion: gatewayv1.GroupVersion.String(), Kind: "Gateway", Name: gateway.Name, UID: gateway.UID, Controller: new(true),
+				}},
+				Spec: configurationv1alpha1.KongSNISpec{
+					CertificateRef: commonv1alpha1.NamespacedRef{Name: "missing-certificate"},
+				},
+				Status: configurationv1alpha1.KongSNIStatus{Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
+					ID: "original-sni-id", CertificateID: "original-certificate-id", ControlPlaneID: cp.Status.ID,
+				}},
+			}
+			objects := []client.Object{sni}
+			if tt.name != "missing Gateway" {
+				if tt.name == "recreated Gateway" {
+					gateway.UID = "replacement-gateway-uid"
+				}
+				objects = append(objects, gateway)
+			}
+			if tt.name != "missing KonnectExtension" {
+				objects = append(objects, extension)
+			}
+			if tt.name != "missing ControlPlane" {
+				objects = append(objects, cp)
+			}
+			lookupErr := apierrors.NewServiceUnavailable("temporary Kubernetes API failure")
+			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).
+				WithStatusSubresource(sni).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+						switch obj.(type) {
+						case *gwtypes.Gateway:
+							if tt.name == "Gateway lookup failure" {
+								return lookupErr
+							}
+						case *konnectv1alpha2.KonnectGatewayControlPlane:
+							if tt.name == "ControlPlane lookup failure" {
+								return lookupErr
+							}
+						}
+						return cl.Get(ctx, key, obj, opts...)
+					},
+					List: func(ctx context.Context, cl client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+						if _, ok := list.(*konnectv1alpha2.KonnectExtensionList); ok && tt.name == "KonnectExtension lookup failure" {
+							return lookupErr
+						}
+						return cl.List(ctx, list, opts...)
+					},
+				}).Build()
+			require.NoError(t, cl.Delete(t.Context(), sni))
+			key := client.ObjectKeyFromObject(sni)
+			require.NoError(t, cl.Get(t.Context(), key, sni))
+			originalStatus := sni.DeepCopy().Status
+			reconciler := NewKonnectEntityReconciler[configurationv1alpha1.KongSNI](nil, logging.DevelopmentMode, cl)
+
+			res, err := reconciler.Reconcile(t.Context(), sni)
+			require.Equal(t, ctrl.Result{}, res)
+			if tt.wantError {
+				require.ErrorIs(t, err, lookupErr)
+			} else {
+				require.NoError(t, err)
+			}
+			require.NoError(t, cl.Get(t.Context(), key, sni))
+			if tt.wantError {
+				require.Contains(t, sni.Finalizers, KonnectCleanupFinalizer)
+			} else {
+				require.NotContains(t, sni.Finalizers, KonnectCleanupFinalizer)
+			}
+			require.Contains(t, sni.Finalizers, "test.example/other-finalizer")
+			require.Equal(t, originalStatus, sni.Status)
+		})
+	}
+}
+
+func TestValidateGatewaySNICertificate(t *testing.T) {
+	for _, tt := range []struct {
+		name          string
+		otherCP       bool
+		stale         bool
+		owned         bool
+		missingOwner  bool
+		replacedOwner bool
+	}{
+		{name: "same ControlPlane", owned: true},
+		{name: "reject moving a Gateway binding to another ControlPlane", owned: true, otherCP: true},
+		{name: "reject stale certificate status", owned: true, stale: true},
+		{name: "reject missing Gateway owner", owned: true, missingOwner: true},
+		{name: "reject recreated Gateway owner", owned: true, replacedOwner: true},
+		{name: "unmanaged SNI retains independent ControlPlane behavior", otherCP: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cp := testControlPlaneOK.DeepCopy()
+			cert := testKongCertOK.DeepCopy()
+			certCP := cp.DeepCopy()
+			certCP.Name = "certificate-cp"
+			cert.Spec.ControlPlaneRef.KonnectNamespacedRef.Name = certCP.Name
+			if tt.otherCP {
+				certCP.Status.ID = "different-cp"
+				cert.Status.Konnect.ControlPlaneID = certCP.Status.ID
+			}
+			if tt.stale {
+				cert.Generation++
+			}
+			gateway := &gwtypes.Gateway{Name: "gateway", Namespace: cp.Namespace, UID: "gateway-uid"}
+			extension := &konnectv1alpha2.KonnectExtension{
+				Name: "gateway-extension", Namespace: gateway.Namespace,
+				Labels: map[string]string{"gateway-operator.konghq.com/managed-by": "gateway"},
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion: gatewayv1.GroupVersion.String(), Kind: "Gateway", Name: gateway.Name, UID: gateway.UID,
+				}},
+				Spec: konnectv1alpha2.KonnectExtensionSpec{Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+					ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+						Type:                 commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{Name: cp.Name},
+					}},
+				}},
+			}
+			sni := &configurationv1alpha1.KongSNI{Namespace: gateway.Namespace}
+			if tt.owned {
+				sni.OwnerReferences = []metav1.OwnerReference{{
+					APIVersion: gatewayv1.GroupVersion.String(), Kind: "Gateway", Name: gateway.Name, UID: gateway.UID, Controller: new(true),
+				}}
+			}
+			objects := []client.Object{cp, certCP, cert, extension}
+			if !tt.missingOwner {
+				if tt.replacedOwner {
+					gateway.UID = "replacement-gateway-uid"
+				}
+				objects = append(objects, gateway)
+			}
+			cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).
+				WithStatusSubresource(&configurationv1alpha1.KongSNI{}).Build()
+			err := validateGatewaySNICertificate(t.Context(), cl, sni, cert)
+			if tt.owned && (tt.otherCP || tt.stale || tt.missingOwner || tt.replacedOwner) {
+				require.Error(t, err)
+				sni.Name = "listener-sni"
+				sni.Spec.CertificateRef = commonv1alpha1.NamespacedRef{Name: cert.Name}
+				sni.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
+					ID: "original-sni-id", ControlPlaneID: cp.Status.ID, CertificateID: "original-certificate-id",
+				}
+				require.NoError(t, cl.Create(t.Context(), sni))
+				res, err := handleKongCertificateRef(t.Context(), cl, sni)
+				require.NoError(t, err)
+				require.Positive(t, res.RequeueAfter)
+				require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(sni), sni))
+				require.Equal(t, "original-sni-id", sni.GetKonnectID(), "retain the original binding for cleanup")
+				require.Equal(t, cp.Status.ID, sni.Status.Konnect.ControlPlaneID)
+				require.Equal(t, "original-certificate-id", sni.Status.Konnect.CertificateID)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
 
 type handleCertRefTestCase[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]] struct {
 	name                string

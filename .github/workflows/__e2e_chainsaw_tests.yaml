@@ -27,6 +27,8 @@ on:
             {"suite": "aigateway"},
             {"suite": "onpremaigateway"},
             {"suite": "eventgateway"},
+            {"suite": "gwadmin"},
+            {"suite": "gwadmin", "ip_family": "ipv6"},
             {"suite": "conversion-webhook"}
           ]
 
@@ -53,7 +55,7 @@ jobs:
         include: ${{ fromJSON(inputs.suites) }}
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+      uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
       with:
         egress-policy: audit
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -106,8 +108,33 @@ jobs:
     - name: Load image to kind cluster
       run: kind load docker-image "$IMG:$TAG" --name "$CLUSTER_NAME"
 
-    - name: Deploy operator with Helm
+    - name: Resolve the gw-admin image
+      # The operator deploys gw-admin itself (RELATED_IMAGE_GW_ADMIN), so the
+      # pinned image must reach the operator, not only the tests (which read
+      # GW_ADMIN_IMAGE through the Makefile to assert it).
+      if: ${{ matrix.suite == 'gwadmin' }}
       run: |
+        IMAGE="$(yq -r '.chainsaw.gw-admin.image // ""' < test/test_dependencies.yaml)"
+        TAG="$(yq -r '.chainsaw.gw-admin.tag // ""' < test/test_dependencies.yaml)"
+        if [ -z "${IMAGE}" ] || [ -z "${TAG}" ]; then
+          echo "chainsaw.gw-admin.image and .tag must be set in test/test_dependencies.yaml" >&2
+          exit 1
+        fi
+        echo "GW_ADMIN_IMAGE=${IMAGE}:${TAG}" >> "$GITHUB_ENV"
+
+    - name: Deploy operator with Helm
+      env:
+        SUITE: ${{ matrix.suite }}
+      run: |
+        # Only the gwadmin suite runs the GWAdmin controller, and the
+        # OnPremEventGateway one pushing to its gw-admin pods: a fault in
+        # them must not fail the other suites.
+        GWADMIN_FLAGS=()
+        if [ "$SUITE" = gwadmin ]; then
+          GWADMIN_FLAGS=(--set env.enable_controller_gwadmin=true
+            --set env.enable_controller_onpremeventgateway=true
+            --set-string customEnv.RELATED_IMAGE_GW_ADMIN="$GW_ADMIN_IMAGE")
+        fi
         helm install kong-operator charts/kong-operator \
           --namespace kong-system \
           --create-namespace \
@@ -117,6 +144,7 @@ jobs:
           --set env.enable_controller_kegdataplane=true \
           --set env.enable_controller_aigatewaydataplane=true \
           --set env.enable_controller_onpremaigateway=true \
+          "${GWADMIN_FLAGS[@]}" \
           --wait
 
     - name: Apply chainsaw suite prerequisites

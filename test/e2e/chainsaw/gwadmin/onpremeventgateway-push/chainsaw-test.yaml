@@ -1,0 +1,116 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: onpremeventgateway-push
+spec:
+  description: |
+    Kong Operator pushes an OnPremEventGateway to the gw-admin pods of its
+    GWAdmin, found through the EndpointSlices the EndpointSlice controller
+    publishes for the API Service, and reached over mutual TLS. Each check
+    reads the entities of the gateway from every gw-admin pod directly, as
+    Kong Operator does: the readiness of a pod doesn't tell, as it only turns
+    Ready once every gateway it serves also has a data plane certificate,
+    which another controller pushes.
+    1. A GWAdmin and an OnPremEventGateway referencing it are created. The
+       gateway turns Programmed, with the cp endpoint of the GWAdmin, and the
+       gw-admin pod serves it.
+    2. The gw-admin pod is deleted. Its replacement keeps nothing, and doesn't
+       listen while it starts: once it does, it is pushed to, and serves the
+       gateway.
+    3. The gateway is deleted: once gw-admin stops serving it, its finalizer
+       is removed, and the gw-admin pod doesn't serve it anymore.
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin-push
+    - name: gateway_name
+      value: gateway
+  steps:
+    - name: 1-Push-the-gateway
+      try:
+        - apply:
+            file: 01-gwadmin-and-gateway.yaml
+        - assert:
+            file: 01-assert-gateway-programmed.yaml
+        # Outputs are kept within their step only.
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            content: kubectl get onpremeventgateway -n "$NAMESPACE" "$GATEWAY" -o 'jsonpath={.metadata.uid}'
+            outputs:
+              - name: gateway_uid
+                value: ($stdout)
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+              - name: GATEWAY_UID
+                value: ($gateway_uid)
+            timeout: 2m
+            content: ./gw-admin-serves.sh "$GWADMIN" "$GATEWAY_UID" 200
+    - name: 2-A-new-gw-admin-pod-is-provisioned
+      try:
+        # Outputs are kept within their step only.
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            content: kubectl get onpremeventgateway -n "$NAMESPACE" "$GATEWAY" -o 'jsonpath={.metadata.uid}'
+            outputs:
+              - name: gateway_uid
+                value: ($stdout)
+        # Waits for the pod to be gone: the only gw-admin pod left running
+        # is its replacement.
+        - delete:
+            ref:
+              apiVersion: v1
+              kind: Pod
+              labels:
+                gateway-operator.konghq.com/managed-by: gw-admin
+                gateway-operator.konghq.com/managed-by-name: ($gwadmin_name)
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+              - name: GATEWAY_UID
+                value: ($gateway_uid)
+            timeout: 2m
+            content: ./gw-admin-serves.sh "$GWADMIN" "$GATEWAY_UID" 200
+    - name: 3-Delete-the-gateway
+      try:
+        # Outputs are kept within their step only.
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY
+                value: ($gateway_name)
+            content: kubectl get onpremeventgateway -n "$NAMESPACE" "$GATEWAY" -o 'jsonpath={.metadata.uid}'
+            outputs:
+              - name: gateway_uid
+                value: ($stdout)
+        - delete:
+            ref:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: OnPremEventGateway
+              name: ($gateway_name)
+        - error:
+            file: 03-error-gateway.yaml
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+              - name: GATEWAY_UID
+                value: ($gateway_uid)
+            timeout: 2m
+            content: ./gw-admin-serves.sh "$GWADMIN" "$GATEWAY_UID" 404

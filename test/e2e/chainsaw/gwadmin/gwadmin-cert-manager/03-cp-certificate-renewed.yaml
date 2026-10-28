@@ -1,0 +1,9 @@
+# A new DNS name makes cert-manager reissue the certificate in place.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: cp-cert
+spec:
+  dnsNames:
+    - (join('', [($gwadmin_name), '-cp.', ($namespace), '.svc']))
+    - (join('', [($gwadmin_name), '-cp.', ($namespace), '.svc.cluster.local']))

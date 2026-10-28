@@ -55,6 +55,8 @@ func TestCreateAIGatewayConsumerCredential_UsesSDKOpsConversion(t *testing.T) {
 	obj.SetConsumerID(consumerID)
 	expectedRequest, err := obj.ToCreateAiGatewayConsumerCredentialRequest(ctx, cl)
 	require.NoError(t, err)
+	expectedCreateInputsHash, err := obj.CalculateCreateInputsHash(ctx, cl)
+	require.NoError(t, err)
 	expectedRequest.CreateAIGatewayConsumerCredentialRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.CreateAIGatewayConsumerCredentialRequest.Labels)
 	expectedRequest.GatewayID = gatewayID
 	expectedRequest.ConsumerID = consumerID
@@ -74,6 +76,7 @@ func TestCreateAIGatewayConsumerCredential_UsesSDKOpsConversion(t *testing.T) {
 
 	require.NoError(t, createAIGatewayConsumerCredential(ctx, cl, sdk, obj))
 	require.Equal(t, expectedID, obj.GetKonnectID())
+	require.Equal(t, expectedCreateInputsHash, obj.GetCreateInputsHash())
 }
 
 func TestCreateAIGatewayConsumerCredential_PropagatesSDKError(t *testing.T) {
@@ -104,6 +107,7 @@ func TestCreateAIGatewayConsumerCredential_PropagatesSDKError(t *testing.T) {
 
 	err = createAIGatewayConsumerCredential(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
+	require.Empty(t, obj.GetCreateInputsHash())
 }
 
 func TestDeleteAIGatewayConsumerCredential_UsesGeneratedSDKOps(t *testing.T) {

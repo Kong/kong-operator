@@ -73,7 +73,7 @@ func TestKongReferenceGrant(t *testing.T) {
 		}.RunWithConfig(t, cfg, scheme)
 	})
 
-	t.Run("EventGatewayStaticKey to Secret reference", func(t *testing.T) {
+	t.Run("Event Gateway entity to Secret reference", func(t *testing.T) {
 		grantFrom := func(kind string) *configurationv1alpha1.KongReferenceGrant {
 			return &configurationv1alpha1.KongReferenceGrant{
 				TypeMeta:   typeMeta,
@@ -101,9 +101,26 @@ func TestKongReferenceGrant(t *testing.T) {
 				TestObject: grantFrom("EventGatewayStaticKey"),
 			},
 			{
-				// Only the static key is supported among Event Gateway kinds.
+				Name:       "from an EventGatewayBackendCluster works",
+				TestObject: grantFrom("EventGatewayBackendCluster"),
+			},
+			{
+				Name:       "from an EventGatewaySchemaRegistry works",
+				TestObject: grantFrom("EventGatewaySchemaRegistry"),
+			},
+			{
+				Name:       "from an EventGatewayTLSTrustBundle works",
+				TestObject: grantFrom("EventGatewayTLSTrustBundle"),
+			},
+			{
+				Name:       "from an EventGatewayListenerPolicy works",
+				TestObject: grantFrom("EventGatewayListenerPolicy"),
+			},
+			{
+				// Only the Event Gateway kinds pushed to gw-admin that read
+				// Secrets are supported.
 				Name:                 "from another Event Gateway kind is rejected",
-				TestObject:           grantFrom("EventGatewayBackendCluster"),
+				TestObject:           grantFrom("EventGatewayListener"),
 				ExpectedErrorMessage: new("kinds are supported for 'configuration.konghq.com' group"),
 			},
 		}.RunWithConfig(t, cfg, scheme)

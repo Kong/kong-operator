@@ -28,9 +28,9 @@ spec:
       jsonPath: .status.conditions[?(@.type=='Programmed')].status
       name: Programmed
       type: string
-    - description: The gw-admin Service
-      jsonPath: .spec.gwAdmin.service.name
-      name: Service
+    - description: The GWAdmin serving the gateway
+      jsonPath: .spec.gwAdminRef.name
+      name: GWAdmin
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age
@@ -47,37 +47,26 @@ spec:
             type: object
           spec:
             properties:
-              gwAdmin:
+              gwAdminRef:
                 properties:
-                  service:
-                    properties:
-                      name:
-                        maxLength: 63
-                        minLength: 1
-                        type: string
-                        x-kubernetes-validations:
-                        - message: 'name must be a valid DNS-1035 label: lowercase
-                            alphanumeric characters or ''-'', starting with a letter
-                            and ending with an alphanumeric character'
-                          rule: self.matches('^[a-z]([-a-z0-9]*[a-z0-9])?$')
-                      portName:
-                        maxLength: 63
-                        minLength: 1
-                        type: string
-                        x-kubernetes-validations:
-                        - message: 'portName must be a valid DNS-1123 label: lowercase
-                            alphanumeric characters or ''-'', starting and ending
-                            with an alphanumeric character'
-                          rule: self.matches('^[a-z0-9]([-a-z0-9]*[a-z0-9])?$')
-                    required:
-                    - name
-                    - portName
-                    type: object
+                  name:
+                    maxLength: 253
+                    minLength: 1
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                    type: string
+                  namespace:
+                    maxLength: 63
+                    minLength: 1
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                    type: string
                 required:
-                - service
+                - name
                 type: object
+                x-kubernetes-validations:
+                - message: gwAdminRef is immutable
+                  rule: self == oldSelf
             required:
-            - gwAdmin
+            - gwAdminRef
             type: object
           status:
             properties:
@@ -121,6 +110,14 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+              configHash:
+                maxLength: 128
+                minLength: 1
+                type: string
+              configRevision:
+                format: int64
+                minimum: 1
+                type: integer
               observedGeneration:
                 format: int64
                 minimum: 0
@@ -134,6 +131,14 @@ spec:
                   rule: isURL(self) && url(self).getScheme() == 'https' && url(self).getHostname()
                     != ''
             type: object
+            x-kubernetes-validations:
+            - message: configRevision may not decrease
+              rule: '!has(oldSelf.configRevision) || (has(self.configRevision) &&
+                self.configRevision >= oldSelf.configRevision)'
+            - message: configHash may only change along with a new configRevision
+              rule: '!has(oldSelf.configHash) || (has(self.configHash) && (self.configHash
+                == oldSelf.configHash || (has(self.configRevision) && has(oldSelf.configRevision)
+                && self.configRevision > oldSelf.configRevision)))'
         required:
         - spec
         type: object

@@ -11,6 +11,8 @@ import (
 const (
 	// IndexFieldAIGatewayConsumerCredentialOnAIGatewayConsumerRef is the index field for AIGatewayConsumerCredential -> AIGatewayConsumer.
 	IndexFieldAIGatewayConsumerCredentialOnAIGatewayConsumerRef = "aiGatewayConsumerCredentialOnAIGatewayConsumerRef"
+	// IndexFieldAIGatewayConsumerCredentialOnSecretRef is the index field for AIGatewayConsumerCredential -> the Secrets it reads.
+	IndexFieldAIGatewayConsumerCredentialOnSecretRef = "aiGatewayConsumerCredentialOnSecretRef"
 )
 
 // OptionsForAIGatewayConsumerCredential returns required Index options for AIGatewayConsumerCredential reconciler.
@@ -20,6 +22,11 @@ func OptionsForAIGatewayConsumerCredential() []Option {
 			Object:         &aiconfigurationv1alpha1.AIGatewayConsumerCredential{},
 			Field:          IndexFieldAIGatewayConsumerCredentialOnAIGatewayConsumerRef,
 			ExtractValueFn: aiGatewayConsumerCredentialOnAIGatewayConsumerRef,
+		},
+		{
+			Object:         &aiconfigurationv1alpha1.AIGatewayConsumerCredential{},
+			Field:          IndexFieldAIGatewayConsumerCredentialOnSecretRef,
+			ExtractValueFn: aiGatewayConsumerCredentialOnSecretRef,
 		},
 	}
 }
@@ -39,4 +46,21 @@ func aiGatewayConsumerCredentialOnAIGatewayConsumerRef(object client.Object) []s
 	}
 
 	return []string{refNamespace + "/" + ent.Spec.AIGatewayConsumerRef.NamespacedRef.Name}
+}
+
+func aiGatewayConsumerCredentialOnSecretRef(object client.Object) []string {
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayConsumerCredential)
+	if !ok {
+		return nil
+	}
+	refs := ent.GetSensitiveDataSecretRefs()
+	out := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		ns := ent.GetNamespace()
+		if ref.Namespace != nil && *ref.Namespace != "" {
+			ns = *ref.Namespace
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
 }

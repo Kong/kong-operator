@@ -20,8 +20,25 @@ package onprem
 // OnPremEventGateway Reconciler - RBAC
 // -----------------------------------------------------------------------------
 
-// +kubebuilder:rbac:groups=eventgateway.konghq.com,resources=onpremeventgateways,verbs=get;list;watch
+// The finalizer of a gateway is added and removed with a patch.
+// +kubebuilder:rbac:groups=eventgateway.konghq.com,resources=onpremeventgateways,verbs=get;list;watch;patch
 // +kubebuilder:rbac:groups=eventgateway.konghq.com,resources=onpremeventgateways/status,verbs=update;patch
+// +kubebuilder:rbac:groups=eventgateway.konghq.com,resources=onpremeventgateways/finalizers,verbs=update
+
+// The GWAdmin of a gateway, the KongReferenceGrants allowing a gateway to use
+// a GWAdmin in another namespace, the Secrets holding its TLS material, and
+// the endpoints of its API Service.
+// +kubebuilder:rbac:groups=gateway-operator.konghq.com,resources=gwadmins,verbs=get;list;watch
+// +kubebuilder:rbac:groups=configuration.konghq.com,resources=kongreferencegrants,verbs=get;list;watch
+// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch
+// +kubebuilder:rbac:groups=discovery.k8s.io,resources=endpointslices,verbs=get;list;watch
+
+// A gateway reports a failed push, and its deletion although gw-admin may
+// still serve it, as events.
+// +kubebuilder:rbac:groups=events.k8s.io,resources=events,verbs=create;patch
+
+// The entities of a gateway report whether they are in its configuration.
+// +kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaybackendclusters/status;eventgatewaydataplanecertificates/status;eventgatewaylistenerpolicies/status;eventgatewaylisteners/status;eventgatewayschemaregistries/status;eventgatewaystatickeys/status;eventgatewaytlstrustbundles/status;eventgatewayvirtualclusterconsumepolicies/status;eventgatewayvirtualclusterpolicies/status;eventgatewayvirtualclusterproducepolicies/status;eventgatewayvirtualclusters/status,verbs=patch
 
 // The RBAC to read the entities that can belong to an OnPremEventGateway is in
 // zz_generated_entities.go.

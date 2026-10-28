@@ -73,6 +73,94 @@
 
 ### Fixed
 
+- `KonnectAPIAuthConfiguration` `spec.serverURL` is now checked against the
+  domains Kong serves Konnect from. A host outside the list is refused before
+  any request is made and reported with an `APIAuthValid=False` condition that
+  names the allowed domains, instead of being called and surfacing as an
+  authentication error. A deployment pointed at another domain sets it with the
+  new `--konnect-server-url-domains` flag, which defaults to
+  `konghq.com,konghq.tech` and cannot be emptied.
+  [#6222](https://github.com/Kong/kong-operator/pull/6222)
+- `KegDataPlane`: the keg pods get a termination grace period covering keg's
+  drain, its shutdown timeout and a 5s margin when that exceeds the default of
+  30s. They were killed mid-drain before. The timeouts are the ones keg runs
+  with: `KEG__RUNTIME__DRAIN_DURATION` and `KEG__RUNTIME__SHUTDOWN_TIMEOUT` in
+  the keg container of `spec.deployment.podTemplateSpec`, else
+  `spec.config.runtime.drainDurationSeconds` and `shutdownTimeoutSeconds`,
+  else keg's defaults of 5s and 10s. An env var from `valueFrom`, or not a
+  duration, can't be read by the operator and is skipped: set the grace period
+  in `spec.deployment.podTemplateSpec` then. A grace period set in
+  `spec.deployment.podTemplateSpec` still wins, and data planes whose timeouts
+  fit in the default are unchanged.
+  [#6305](https://github.com/Kong/kong-operator/pull/6305)
+- An `AIGatewayMCPServer` tool now accepts the OpenAPI `requestBody` and
+  `responses` objects, with `content` keyed by media type. The CRD typed these
+  fields as `map[string]string`, so a nested object was rejected at apply time
+  and the JSON string workaround was rejected by Konnect. A `POST` tool can now
+  send a JSON body.
+  [#6252](https://github.com/Kong/kong-operator/issues/6252)
+- On-prem AI Gateway: an `AIGatewayConsumerCredential` that cannot be
+  translated (for example its `secretRef` points at a missing or unlabelled
+  Secret) now reports that failure on the credential itself, as
+  `Programmed=False` with reason `Invalid`. The failure used to be invisible on
+  the credential and to fail the whole `AIGatewayConsumer` instead, which was
+  excluded from the rendered configuration together with its healthy
+  credentials; the consumer now keeps rendering them. A credential whose
+  consumer cannot be rendered by the gateway that still lists it (for example
+  the consumer references a policy that failed its own translation, the
+  consumer lives in another namespace than the gateway, or the converter drops
+  the consumer from the rendered payload) reports the consumer's failure, so
+  its status cannot keep claiming a configuration it is no longer part of. A
+  credential whose consumer points at an `OnPremAIGateway` that does not exist
+  keeps its last reported status, as every other entity of that gateway does.
+  The status is cleared again when the consumer the credential belongs to is
+  deleted, since nothing renders the credential anymore.
+  [#5963](https://github.com/Kong/kong-operator/issues/5963)
+- A `KonnectAPIAuthConfiguration` with a private `serverURL` that carries a path
+  (for example `https://us.svc.konghq.tech/api`) now authenticates. The identity
+  request behind `APIAuthValid` keeps the configured host instead of being sent
+  to the public global one, which answered 404 for a private entry point and left
+  every resource that depends on the credentials unprogrammed. A `serverURL`
+  without a path keeps the previous behaviour, and a development host with an
+  explicit port no longer lands on the production global host.
+  [#6108](https://github.com/Kong/kong-operator/issues/6108)
+- On-prem AI Gateway: an `AIGatewayModel` with a semantic load balancer is now
+  rendered in the shape `ai-proxy-advanced` accepts, so the data plane no longer
+  rejects the whole pushed configuration with HTTP 400 and every entity on the
+  gateway no longer goes `Programmed=False`. The vector database strategy field
+  and the embeddings model block were passed through in the CRD's (Konnect API)
+  shape, which the data plane does not know.
+  [#6231](https://github.com/Kong/kong-operator/issues/6231)
+- Konnect: a DataPlane attached to a `KonnectExtension` now renders control
+  plane and telemetry endpoints that carry a path, as Konnect returns them
+  over PrivateLink, in the form Kong Gateway accepts: the port no longer lands
+  inside the path. Endpoints that name a DNS host without a port and without a
+  path render exactly as before; a value that carried a port previously had a
+  second port appended, which is fixed. An endpoint value that cannot be used
+  now reports `KonnectExtensionApplied=False` with reason `InvalidEndpoint`
+  instead of receiving a rendered value. The other Konnect extension failures
+  (`RefNotPermitted`, `InvalidExtension`, `InvalidSecret`,
+  `KonnectExtensionNotReady`) now also surface their
+  `KonnectExtensionApplied=False` condition on the resource, where the
+  condition was previously not written.
+  [#6104](https://github.com/Kong/kong-operator/issues/6104)
+- A rate limited response from Konnect no longer marks a
+  `KonnectAPIAuthConfiguration` as invalid. The credentials are unchanged by a
+  429, so the last known status is kept and the controller retries after the
+  `Retry-After` delay Konnect asks for. Before, a single 429 flipped
+  `APIAuthValid` to `False` on the auth configuration, which cascaded to every
+  resource that uses it (`KonnectGatewayControlPlane`, `KonnectExtension`, the
+  `DataPlane` and finally the `Gateway`), leaving them unprogrammed while the
+  controller retried every 3 seconds and kept the organization rate limited.
+  [#6217](https://github.com/Kong/kong-operator/issues/6217)
+- An `OnPremAIGateway` with no configuration entities (no `AIGatewayModel`,
+  `AIGatewayModelProvider`, `AIGatewayConsumer`, ...) no longer leaves its
+  `AIGatewayDataPlane` stuck in `Ready=False`: the control plane pushes a stub
+  upstream when the rendered configuration would otherwise be empty, because a
+  DB-less Kong Gateway does not report ready while its applied configuration is
+  empty. Deleting the last entity consequently no longer takes a ready data plane
+  out of service.
+  [#6187](https://github.com/Kong/kong-operator/pull/6187)
 - HybridGateway root-object controllers (e.g. HTTPRoute) no longer spend several
   seconds per reconcile scanning every managed Kong resource during orphan
   cleanup and status computation. Ownership of child resources is now resolved
@@ -80,6 +168,23 @@
   broad managed-by label listing with per-item live API reads, so configuration
   changes are reconciled promptly at large entity counts.
   [#6141](https://github.com/Kong/kong-operator/pull/6141)
+- Create-only Konnect entities (`EventGatewayStaticKey`,
+  `AIGatewayDataPlaneCertificate`, and `AIGatewayConsumerCredential`) now report
+  changes to Secret values, inline values, and other create inputs through
+  `CreateInputsApplied`, without automatically replacing the entity or marking
+  an otherwise healthy entity as unprogrammed. Existing entities establish an
+  unverified baseline on upgrade.
+  [#6142](https://github.com/Kong/kong-operator/pull/6142)
+- The operator's cached client now provides read-your-own-writes consistency. A
+  read that follows one of the operator's own successful writes waits for the
+  informer cache to observe that write instead of returning a stale object. This
+  removes the class of duplicate-create failures where a reconcile that ran
+  immediately after a `.status` patch still saw an empty Konnect ID, created the
+  entity in Konnect a second time, and got `409 Conflict` back. This is enabled
+  by default; set `--enable-read-your-own-writes-consistency=false` (or the
+  `KONG_OPERATOR_ENABLE_READ_YOUR_OWN_WRITES_CONSISTENCY` environment variable)
+  to disable it.
+  [#733](https://github.com/Kong/kong-operator/issues/733)
 - Konnect entities that resolve API authentication through a parent chain,
   including EventGateway policies and AI Gateway consumer credentials, no longer
   get stuck terminating when an ancestor has already been deleted. Their cleanup
@@ -127,9 +232,49 @@
   and `base64Decode`, `sslVerify`, `useCache` or `international` on AI Gateway
   models, model providers and MCP servers.
   [#6148](https://github.com/Kong/kong-operator/pull/6148)
+- `AIGatewayDataPlane`, `KegDataPlane` and `MCPServerDataPlane`: with
+  horizontal scaling configured (`spec.deployment.scaling.horizontal`), the
+  operator no longer resets the Deployment's replica count to `minReplicas` on
+  every reconcile, which reverted each scale-up done by the
+  `HorizontalPodAutoscaler`. The current replica count is now kept, and only
+  raised to `minReplicas` when it is below it (including for `DataPlane`).
+  Furthermore for autoscaling metrics maximum limit is set to 32 for all
+  aforementioned CRs.
+  [#6083](https://github.com/Kong/kong-operator/pull/6083)
+  [#6084](https://github.com/Kong/kong-operator/pull/6084)
+  [#6102](https://github.com/Kong/kong-operator/pull/6102)
+- On-prem AI Gateway: adding, changing or deleting an
+  `AIGatewayConsumerCredential` now re-renders the configuration of the gateway
+  its parent `AIGatewayConsumer` targets. A credential has no `aiGatewayRef` and
+  no reconciler of its own - its rendered form is embedded in the parent
+  consumer's document - so those changes used to be picked up only when some
+  unrelated event happened to re-render the same gateway, leaving the data plane
+  with stale credentials.
+  [#6185](https://github.com/Kong/kong-operator/pull/6185)
+- Hybrid gateway: KongPlugins autogenerated from HTTPRoute and GRPCRoute
+  filters which requires paths in matches (like `URLRewrite` filter) in their
+  parent rules now include the parent route name and the paths in matches of the
+  rule in their generated name.
+  Previously the name was derived from the filter contents alone, so two
+  routes (or two rules) with identical filters but different match paths
+  collided on a single shared KongPlugin whose configuration flipped back and
+  forth between the two translations on every reconcile, even though nothing
+  changed in the cluster. Existing autogenerated plugins are renamed on
+  upgrade; the stale plugins are cleaned up by the operator.
+  Until the cleanup deletes the old binding, both bindings coexist and Konnect
+  may reject the new binding with a unique-plugin-per-entity error. The affected
+  route may run without plugin in the time window between old plugin deleted and
+  new plugin created.
+  [#6181](https://github.com/Kong/kong-operator/pull/6181)
 
 ### Added
 
+- Added the `EventGatewayVirtualClusterPolicyChain` CRD to declare the execution
+  order of cluster-level policies within an Event Gateway virtual cluster.
+  The API requires an explicit policy list and an immutable virtual-cluster CR
+  reference; it has no independent Konnect ID.
+  [#6188](https://github.com/Kong/kong-operator/pull/6188)
+  [#6200](https://github.com/Kong/kong-operator/pull/6200)
 - OnPremAIGateway spec: added a `dataplaneSync` field with optional
   `intervalSeconds` and `timeoutSeconds` (non-negative integers, in seconds) to
   tune the cadence of and the timeout for pushing configuration to the data
@@ -164,10 +309,15 @@
   is not affected.
   [#6097](https://github.com/Kong/kong-operator/pull/6097)
 - Added `OnPremEventGateway` CRD: an Event Gateway whose control plane is
-  gw-admin, running in the cluster, instead of Konnect. `spec.gwAdmin` names
-  the Service and port of the gw-admin pods Kong Operator pushes the
-  configuration to. This change only adds the CRD; it is not reconciled yet.
+  gw-admin, running in the cluster, instead of Konnect. `spec.gwAdminRef`
+  references the `GWAdmin` that serves the gateway, and can't be changed. A
+  `GWAdmin` in another namespace is used only when a `KongReferenceGrant` in
+  its namespace allows the `OnPremEventGateway`s of the namespace of the
+  gateway to reference it. Its controller is opt in
+  (`--enable-controller-onpremeventgateway`).
   [#6114](https://github.com/Kong/kong-operator/pull/6114)
+  [#6213](https://github.com/Kong/kong-operator/pull/6213)
+  [#6247](https://github.com/Kong/kong-operator/pull/6247)
 - Event Gateway: `spec.parentRef` of `EventGatewayBackendCluster`,
   `EventGatewayDataPlaneCertificate`, `EventGatewayListener`,
   `EventGatewaySchemaRegistry`, `EventGatewayStaticKey` and
@@ -196,12 +346,101 @@
   (`spec.tls.clientCA` and `spec.tls.cp`, created by Kong Operator or taken
   from user Secrets, e.g. from cert-manager).
   [#6168](https://github.com/Kong/kong-operator/pull/6168)
+- `--enable-controller-gwadmin` flag (default `false`, Helm:
+  `env.enable_controller_gwadmin`): enables the `GWAdmin` controller. It
+  deploys gw-admin (Deployment, optional HorizontalPodAutoscaler, a Service
+  per listener) and provisions its mutual TLS from three certificate
+  authorities, whose keys stay in the operator namespace. It renews the
+  certificates before they expire, and changes a certificate authority only
+  once the gw-admin pods and the data planes rolled out with what the change
+  depends on. Data planes are the Deployments labelled
+  `gateway-operator.konghq.com/gwadmin-namespace` and
+  `gateway-operator.konghq.com/gwadmin-name`, in the namespace of the
+  `GWAdmin` or in one a `KongReferenceGrant` grants. The
+  `gateway-operator.konghq.com/rotate-certificate-authorities` annotation
+  rotates the certificate authorities Kong Operator created, and
+  `gateway-operator.konghq.com/rotation-skip-data-planes` stops the rotations
+  from waiting for the data planes.
+  [#6170](https://github.com/Kong/kong-operator/pull/6170)
+- `--gwadmin-ca-ttl` (default `8760h`) and `--gwadmin-cert-ttl` (default
+  `2160h`) flags: the validity of the certificate authorities and of the
+  certificates Kong Operator creates for a `GWAdmin`, each renewed once two
+  thirds of it elapsed. Both are at least `10m`, and `--gwadmin-cert-ttl` is
+  at most `--gwadmin-ca-ttl`.
+  [#6170](https://github.com/Kong/kong-operator/pull/6170)
 - `--enable-controller-onpremeventgateway` flag (default `false`): enables the
-  `OnPremEventGateway` controller. A change to a gateway, or to an Event
-  Gateway entity attached to it directly or through its parent entities,
-  reconciles that gateway. The controller doesn't push any configuration to
-  gw-admin yet: the gateway reports `Programmed` `False` with reason `Pending`.
+  `OnPremEventGateway` controller. The `GWAdminResolved` condition tells
+  whether the gateway's `GWAdmin` can serve it: reason `NotFound`,
+  `RefNotPermitted` (no `KongReferenceGrant` allows the cross-namespace
+  reference) or `NotReady` (being deleted, API or TLS material not published,
+  or no gw-admin pod). While it is `False`, `Programmed` is `False` with
+  reason `DependenciesNotReady`.
   [#6132](https://github.com/Kong/kong-operator/pull/6132)
+  [#6218](https://github.com/Kong/kong-operator/pull/6218)
+  [#6247](https://github.com/Kong/kong-operator/pull/6247)
+- The `OnPremEventGateway` controller pushes each gateway to every gw-admin
+  pod of its `GWAdmin` over mTLS, writing only what changed; a new or
+  restarted pod gets the full configuration.
+  `status.configRevision` and `status.configHash` number the configuration;
+  the revision never decreases. Failures are retried with backoff and
+  reported in the `ConfigurationPushed` and `Programmed` conditions, with a
+  `Warning` event when a pushed gateway stops being pushed.
+  `status.serverURL` publishes the cp endpoint of the `GWAdmin`. The
+  `gateway-operator.konghq.com/onprem-eventgateway-gw-admin-cleanup`
+  finalizer removes a deleted gateway from gw-admin, giving up after 5
+  minutes with a `GWAdminCleanupTimedOut` event; a gateway no longer allowed
+  to use its `GWAdmin` is removed too.
+  [#6247](https://github.com/Kong/kong-operator/pull/6247)
+- The `OnPremEventGateway` controller pushes the gateway's
+  `EventGatewayBackendCluster`s, `EventGatewayTLSTrustBundle`s,
+  `EventGatewaySchemaRegistry`s and `EventGatewayStaticKey`s to gw-admin, the
+  `EventGatewayVirtualCluster`s of its backend clusters with their cluster,
+  consume and produce policies, and its `EventGatewayListener`s with their
+  policies, again when they or their Secrets change. A policy references its
+  parent policy, schema registries, static keys and TLS trust bundles by the
+  UID of their object, and is sent after its parent; a listener policy names
+  the virtual cluster it forwards to, which is sent by its UID. Invalid ones,
+  and those whose parent or reference isn't in the configuration, are left
+  out; one whose Secret is deleted keeps its last configuration while its
+  references stay in the configuration. Their `Programmed`
+  and `SecretRefValid` conditions report the outcome; `Programmed` turns
+  `Detached` for one that no longer belongs to the gateway, e.g. whose parent
+  was deleted. `KongReferenceGrant` now accepts `EventGatewayBackendCluster`,
+  `EventGatewaySchemaRegistry`, `EventGatewayTLSTrustBundle` and
+  `EventGatewayListenerPolicy` in `spec.from`, for Secrets in other
+  namespaces.
+  [#6254](https://github.com/Kong/kong-operator/pull/6254)
+  [#6270](https://github.com/Kong/kong-operator/pull/6270)
+  [#6276](https://github.com/Kong/kong-operator/pull/6276)
+  [#6281](https://github.com/Kong/kong-operator/pull/6281)
+- `KegDataPlane`: `spec.controlPlaneRef` accepts an `OnPremEventGateway` in
+  the same namespace, with `type: onpremNamespacedRef`. The control plane
+  reference can't change type, and an `onpremNamespacedRef` can't change;
+  with one, `spec.config.konnect.domain` can't be set. This adds the API
+  only: the operator doesn't deploy a data plane for an
+  `onpremNamespacedRef` yet.
+  [#6283](https://github.com/Kong/kong-operator/pull/6283)
+- `OnPremEventGateway`: the controller pushes the
+  `EventGatewayDataPlaneCertificate`s attached to a gateway to its gw-admin
+  pods. On every push it reads the certificates each pod holds for the
+  gateway, registers those missing or changed, and deletes those the gateway
+  doesn't have anymore, e.g. deleted, left out or moved to another gateway.
+  The terminating pods, not pushed to, stop trusting those and those whose
+  content changed, as far as they can be reached. A pod that can't be
+  reached is told once it is. A certificate is `Programmed` once every
+  gw-admin pod reached holds it, whatever the rest of the configuration, and
+  reports `NotRegistered` with the pods missing it or whose push failed, or
+  `Invalid` with the reason when gw-admin rejects it: a rejected certificate
+  doesn't fail the push of the gateway. The entities are sent
+  with the version of the configuration, its `status.configRevision`.
+  Rotate a data plane certificate with a new
+  `EventGatewayDataPlaneCertificate`, deleting the previous one once no data
+  plane uses it: a new certificate in the Secret of an existing one replaces
+  it on every gw-admin pod at once, and one whose Secret can't be read
+  anymore is no longer trusted. Requires a gw-admin serving version 1.11.0
+  of its API, which lists the data plane certificates and deletes them with
+  their gateway.
+  [#6314](https://github.com/Kong/kong-operator/pull/6314)
 - `--konnect-list-page-size` flag (default and maximum `100`): the page size
   the operator requests when listing Konnect entities to find the Konnect
   entity of an object, e.g. one whose Konnect ID was lost. It is a fallback in
@@ -318,9 +557,45 @@
   on-prem: a Konnect Config Store has no self-managed gateway equivalent.
   [#6148](https://github.com/Kong/kong-operator/pull/6148)
   [#6159](https://github.com/Kong/kong-operator/pull/6159)
+- Konnect hybrid gateways: Kong entities translated from `HTTPRoute`, `GRPCRoute`,
+  `TLSRoute`, `TCPRoute` and `UDPRoute` now also inherit the `konghq.com/tags`
+  annotation from the route's parent `Gateway` and from that Gateway's
+  `GatewayClass`, so a whole Gateway's worth of traffic can be tagged in one
+  place. Inherited tags are merged after the entity's own tags (the route's, the
+  backend `Service`'s or the referenced `Secret`'s annotation), then the
+  Gateway's, then the GatewayClass's; the merged set is deduplicated and capped
+  at 20 entries (effectively at most 12 user defined tags, because KO adds 8
+  internal tags), dropping from the end, so the least specific tags are lost
+  first. This applies to `KongService`, `KongRoute`, `KongUpstream`,
+  `KongTarget`, `KongCertificate`, `KongSNI`, `KongPlugin` and
+  `KongPluginBinding`. Only parent `Gateway`s that this controller reconciles
+  contribute: a route attached to a `Gateway` owned by another implementation
+  does not pick up that Gateway's tags. Entities that several routes share - a
+  `KongService`, `KongUpstream`, `KongTarget` or generated `KongPlugin` with the
+  same backends and ControlPlane - inherit the union over every attached route's
+  parents, so the value does not depend on which route is reconciled. Known
+  limitation: a route attached to Konnect `Gateway`s on two different
+  ControlPlanes gets the union of both Gateways' tags on each ControlPlane's
+  entities.
+  [#5869](https://github.com/Kong/kong-operator/pull/5869)
+- Konnect-backed Gateway HTTPS Listeners can reference an existing
+  `configuration.konghq.com/KongCertificate` directly through `certificateRefs`.
+  Kong Operator manages the Listener SNI without copying or owning the certificate,
+  allowing Vault-backed certificates and cert-manager rotation without a
+  placeholder TLS Secret or a manually managed KongSNI. Cross-namespace references
+  require both a Gateway API ReferenceGrant and a KongReferenceGrant.
+  TLS Passthrough Listeners ignore certificate references without creating or
+  waiting for certificate bindings.
+  [#6233](https://github.com/Kong/kong-operator/pull/6233)
 
 ### Changed
 
+- On-prem AI Gateway: an `AIGatewayConsumer` with a broken
+  `AIGatewayConsumerCredential` now reports `Programmed=True` while its healthy
+  credentials keep rendering. The failure of the broken credential reports on
+  the credential itself, so the consumer no longer goes `Programmed=False` for
+  it.
+  [#5963](https://github.com/Kong/kong-operator/issues/5963)
 - `BackendTLSPolicy` is now supported in Gateway API `v1` (previously `v1alpha3`)
   and no longer requires the `GatewayAlpha` feature gate. It's enabled by default
   and can be disabled with the `GWAPI_BACKEND_TLS_POLICY` ControlPlane controller.

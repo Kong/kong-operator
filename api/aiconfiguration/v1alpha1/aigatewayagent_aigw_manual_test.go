@@ -162,6 +162,57 @@ func TestAIGatewayAgent_ToAIGWAgent(t *testing.T) {
 			},
 		},
 		{
+			name: "allowWhen ACLs pass through without a consumer group reference",
+			obj: &AIGatewayAgent{
+				Name: "sample-ai-gw-agent-allow-when", Namespace: "default",
+				Spec: AIGatewayAgentSpec{
+					APISpec: AIGatewayAgentAPISpec{
+						Name: "allow-when-agent",
+						Type: "a2a",
+						Access: AIGatewayAgentAccess{
+							Acls: &AIGatewayAgentAccessAcls{
+								Type:      AIGatewayAgentAccessAclsTypeAllowWhen,
+								AllowWhen: &AIGatewayAllowWhenACL{AllowWhen: []string{"http.path == '/allowed'"}},
+							},
+						},
+						Config: AIGatewayAgentConfig{URL: "http://upstream:8080"},
+					},
+				},
+			},
+			// No consumer group object: the CEL expressions are not references.
+			want: func() *aigw.Agent {
+				agent := &aigw.Agent{Name: "allow-when-agent", Type: "a2a"}
+				agent.Access.ACLs = aigw.ACLs{AllowWhen: []string{"http.path == '/allowed'"}}
+				agent.Config.URL = "http://upstream:8080"
+				return agent
+			},
+		},
+		{
+			name: "denyWhen ACLs pass through without a consumer group reference",
+			obj: &AIGatewayAgent{
+				Name: "sample-ai-gw-agent-deny-when", Namespace: "default",
+				Spec: AIGatewayAgentSpec{
+					APISpec: AIGatewayAgentAPISpec{
+						Name: "deny-when-agent",
+						Type: "a2a",
+						Access: AIGatewayAgentAccess{
+							Acls: &AIGatewayAgentAccessAcls{
+								Type:     AIGatewayAgentAccessAclsTypeDenyWhen,
+								DenyWhen: &AIGatewayDenyWhenACL{DenyWhen: []string{"http.path == '/blocked'"}},
+							},
+						},
+						Config: AIGatewayAgentConfig{URL: "http://upstream:8080"},
+					},
+				},
+			},
+			want: func() *aigw.Agent {
+				agent := &aigw.Agent{Name: "deny-when-agent", Type: "a2a"}
+				agent.Access.ACLs = aigw.ACLs{DenyWhen: []string{"http.path == '/blocked'"}}
+				agent.Config.URL = "http://upstream:8080"
+				return agent
+			},
+		},
+		{
 			name: "no refs",
 			obj: &AIGatewayAgent{
 				Name: "sample-ai-gw-agent-empty", Namespace: "default",

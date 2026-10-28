@@ -82,14 +82,16 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 	t.Logf("Create a service by SDK for adoption")
 	server, err := server.NewServer[struct{}](test.KonnectServerURL())
 	require.NoError(t, err, "Should create a server successfully")
-	sdk := sdkops.NewSDKFactory().NewKonnectSDK(server, sdkops.SDKToken(test.KonnectAccessToken()))
+	sdk, err := sdkops.NewSDKFactory().NewKonnectSDK(server, sdkops.SDKToken(test.KonnectAccessToken()))
+	require.NoError(t, err, "Should create an SDK successfully")
 	require.NotNil(t, sdk)
 
-	resp, err := sdk.GetServicesSDK().CreateService(ctx, cpKonnectID, sdkkonnectcomp.Service{
-		Name: new("test-adoption"),
-		URL:  new("http://example.com"),
-		Host: "example.com",
-	})
+	resp, err := sdk.GetServicesSDK().CreateService(ctx, cpKonnectID,
+		sdkkonnectcomp.CreateServiceRequestServiceWithHost(sdkkonnectcomp.ServiceWithHost{
+			Name: new("test-adoption"),
+			URL:  new("http://example.com"),
+			Host: "example.com",
+		}))
 	require.NoError(t, err, "Should create service in Konnect successfully")
 	serviceOutput := resp.GetService()
 	require.NotNil(t, serviceOutput, "Should get a non-nil service in response")
@@ -250,7 +252,8 @@ func TestKonnectEntityAdoption_Plugin(t *testing.T) {
 	t.Logf("Create a global plugin by SDK for adoption")
 	server, err := server.NewServer[struct{}](test.KonnectServerURL())
 	require.NoError(t, err, "Should create a server successfully")
-	sdk := sdkops.NewSDKFactory().NewKonnectSDK(server, sdkops.SDKToken(test.KonnectAccessToken()))
+	sdk, err := sdkops.NewSDKFactory().NewKonnectSDK(server, sdkops.SDKToken(test.KonnectAccessToken()))
+	require.NoError(t, err, "Should create an SDK successfully")
 	require.NotNil(t, sdk)
 
 	resp, err := sdk.GetPluginSDK().CreatePlugin(
@@ -406,7 +409,8 @@ func TestKonnectEntityAdoption_ConsumerWithCredentials(t *testing.T) {
 	t.Log("Create a consumer by SDK for adoption")
 	server, err := server.NewServer[struct{}](test.KonnectServerURL())
 	require.NoError(t, err, "Should create a server successfully")
-	sdk := sdkops.NewSDKFactory().NewKonnectSDK(server, sdkops.SDKToken(test.KonnectAccessToken()))
+	sdk, err := sdkops.NewSDKFactory().NewKonnectSDK(server, sdkops.SDKToken(test.KonnectAccessToken()))
+	require.NoError(t, err, "Should create an SDK successfully")
 	require.NotNil(t, sdk)
 
 	consumerUsername := "test-adoption-consumer-" + testID

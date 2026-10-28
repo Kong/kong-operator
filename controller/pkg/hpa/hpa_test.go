@@ -5,8 +5,10 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -154,4 +156,219 @@ func TestEnsure(t *testing.T) {
 		assert.ErrorContains(t, err, "failed listing HPAs for DataPlane "+testNamespace+"/"+owner.Name+":")
 		assert.Equal(t, op.Noop, res)
 	})
+}
+
+func TestDeploymentReplicas(t *testing.T) {
+	key := client.ObjectKey{Namespace: testNamespace, Name: deploymentName}
+	deploymentWithReplicas := func(replicas int32) *appsv1.Deployment {
+		return &appsv1.Deployment{
+			Namespace: testNamespace, Name: deploymentName,
+			Spec: appsv1.DeploymentSpec{Replicas: new(replicas)},
+		}
+	}
+
+	testCases := []struct {
+		name     string
+		existing *appsv1.Deployment
+		scaling  *commonv1alpha1.HorizontalScaling
+		static   *int32
+		expected *int32
+	}{
+		{
+			name:     "no scaling: static",
+			existing: deploymentWithReplicas(3),
+			static:   new(int32(5)),
+			expected: new(int32(5)),
+		},
+		{
+			name:     "no scaling and no static: defaults to 1",
+			existing: deploymentWithReplicas(3),
+			expected: new(int32(1)),
+		},
+		{
+			name:     "no Deployment yet: minReplicas wins over static",
+			scaling:  &commonv1alpha1.HorizontalScaling{MinReplicas: new(int32(2)), MaxReplicas: 5},
+			static:   new(int32(3)),
+			expected: new(int32(2)),
+		},
+		{
+			name:     "no Deployment yet and no minReplicas: HPA default of 1",
+			scaling:  &commonv1alpha1.HorizontalScaling{MaxReplicas: 5},
+			static:   new(int32(3)),
+			expected: new(int32(1)),
+		},
+		{
+			name:     "HPA scaled above minReplicas: keeps current",
+			existing: deploymentWithReplicas(4),
+			scaling:  &commonv1alpha1.HorizontalScaling{MinReplicas: new(int32(2)), MaxReplicas: 5},
+			static:   new(int32(3)),
+			expected: new(int32(4)),
+		},
+		{
+			name:     "below minReplicas: raised to minReplicas",
+			existing: deploymentWithReplicas(1),
+			scaling:  &commonv1alpha1.HorizontalScaling{MinReplicas: new(int32(2)), MaxReplicas: 5},
+			expected: new(int32(2)),
+		},
+		{
+			name:     "no minReplicas: keeps current",
+			existing: deploymentWithReplicas(3),
+			scaling:  &commonv1alpha1.HorizontalScaling{MaxReplicas: 5},
+			expected: new(int32(3)),
+		},
+		{
+			name:     "no minReplicas and Deployment at 0: raised to HPA default of 1",
+			existing: deploymentWithReplicas(0),
+			scaling:  &commonv1alpha1.HorizontalScaling{MaxReplicas: 5},
+			expected: new(int32(1)),
+		},
+		{
+			name:     "explicit minReplicas 0 and Deployment at 0: keeps 0",
+			existing: deploymentWithReplicas(0),
+			scaling:  &commonv1alpha1.HorizontalScaling{MinReplicas: new(int32(0)), MaxReplicas: 5},
+			expected: new(int32(0)),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var objs []client.Object
+			if tc.existing != nil {
+				objs = append(objs, tc.existing)
+			}
+			owner := newOwner()
+			owner.Spec.Deployment.Replicas = tc.static
+			if tc.scaling != nil {
+				owner.Spec.Deployment.Scaling = &operatorv1beta1.Scaling{HorizontalScaling: tc.scaling}
+			}
+			assert.Equal(t, tc.expected, hpa.DeploymentReplicas(owner, tc.existing))
+
+			replicas, err := hpa.DesiredDeploymentReplicas(t.Context(), newClient(objs...), owner, key)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expected, replicas)
+		})
+	}
+}
+
+func TestDesiredDeploymentReplicas_ScaledThroughScaleSubresource(t *testing.T) {
+	key := client.ObjectKey{Namespace: testNamespace, Name: deploymentName}
+	replicasEntry := func(manager string, operation metav1.ManagedFieldsOperationType, subresource, fields string) metav1.ManagedFieldsEntry {
+		return metav1.ManagedFieldsEntry{
+			Manager:     manager,
+			Operation:   operation,
+			Subresource: subresource,
+			APIVersion:  "apps/v1",
+			FieldsType:  "FieldsV1",
+			FieldsV1:    metav1.NewFieldsV1(fields),
+		}
+	}
+	hpaScale := replicasEntry("kube-controller-manager", metav1.ManagedFieldsOperationUpdate, "scale", `{"f:spec":{"f:replicas":{}}}`)
+	hpaOwner := func() *operatorv1beta1.DataPlane {
+		owner := newOwner()
+		owner.Spec.Deployment.Scaling = &operatorv1beta1.Scaling{
+			HorizontalScaling: &commonv1alpha1.HorizontalScaling{MinReplicas: new(int32(2)), MaxReplicas: 5},
+		}
+		return owner
+	}
+
+	testCases := []struct {
+		name  string
+		owner *operatorv1beta1.DataPlane
+		// current is the Deployment spec.replicas, 4 when nil.
+		current       *int32
+		managedFields []metav1.ManagedFieldsEntry
+		expected      *int32
+		expectedErr   bool
+	}{
+		{
+			name:          "scaled through the scale subresource: left out",
+			owner:         hpaOwner(),
+			managedFields: []metav1.ManagedFieldsEntry{hpaScale},
+			expected:      nil,
+		},
+		{
+			name:          "scaled through the scale subresource to 0: raised to minReplicas",
+			owner:         hpaOwner(),
+			current:       new(int32(0)),
+			managedFields: []metav1.ManagedFieldsEntry{hpaScale},
+			expected:      new(int32(2)),
+		},
+		{
+			name: "scaled through the scale subresource to 0 without minReplicas: raised to HPA default of 1",
+			owner: func() *operatorv1beta1.DataPlane {
+				owner := newOwner()
+				owner.Spec.Deployment.Scaling = &operatorv1beta1.Scaling{
+					HorizontalScaling: &commonv1alpha1.HorizontalScaling{MaxReplicas: 5},
+				}
+				return owner
+			}(),
+			current:       new(int32(0)),
+			managedFields: []metav1.ManagedFieldsEntry{hpaScale},
+			expected:      new(int32(1)),
+		},
+		{
+			name:  "scaled through a regular update: keeps current",
+			owner: hpaOwner(),
+			managedFields: []metav1.ManagedFieldsEntry{
+				replicasEntry("kubectl-edit", metav1.ManagedFieldsOperationUpdate, "", `{"f:spec":{"f:replicas":{}}}`),
+			},
+			expected: new(int32(4)),
+		},
+		{
+			name:  "scale subresource entry without spec.replicas: keeps current",
+			owner: hpaOwner(),
+			managedFields: []metav1.ManagedFieldsEntry{
+				replicasEntry("kube-controller-manager", metav1.ManagedFieldsOperationUpdate, "scale", `{"f:metadata":{}}`),
+			},
+			expected: new(int32(4)),
+		},
+		{
+			name: "horizontal scaling removed: static replicas",
+			owner: func() *operatorv1beta1.DataPlane {
+				owner := newOwner()
+				owner.Spec.Deployment.Replicas = new(int32(3))
+				return owner
+			}(),
+			managedFields: []metav1.ManagedFieldsEntry{hpaScale},
+			expected:      new(int32(3)),
+		},
+		{
+			name:  "malformed managed fields: error",
+			owner: hpaOwner(),
+			managedFields: []metav1.ManagedFieldsEntry{
+				replicasEntry("kube-controller-manager", metav1.ManagedFieldsOperationUpdate, "scale", `{`),
+			},
+			expectedErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// The fake client does not track managed fields of subresource
+			// updates, so they are set on read.
+			cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).
+				WithObjects(&appsv1.Deployment{
+					Namespace: testNamespace, Name: deploymentName,
+					Spec: appsv1.DeploymentSpec{Replicas: lo.CoalesceOrEmpty(tc.current, new(int32(4)))},
+				}).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+						if err := cl.Get(ctx, key, obj, opts...); err != nil {
+							return err
+						}
+						obj.SetManagedFields(tc.managedFields)
+						return nil
+					},
+				}).
+				Build()
+
+			replicas, err := hpa.DesiredDeploymentReplicas(t.Context(), cl, tc.owner, key)
+			if tc.expectedErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.expected, replicas)
+		})
+	}
 }

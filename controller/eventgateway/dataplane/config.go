@@ -19,7 +19,9 @@ package dataplane
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
+	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -36,6 +38,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
 
@@ -79,10 +82,10 @@ var config = shareddataplane.Config[
 	ControlPlaneRef: func(egdp *eventgatewayv1alpha1.KegDataPlane) shareddataplane.ControlPlaneRef {
 		ref := egdp.Spec.ControlPlaneRef.KonnectNamespacedRef
 		if ref == nil {
-			// The CRD schema requires konnectNamespacedRef, so this shouldn't
-			// happen. Returning an empty ref skips control plane resolution;
-			// buildContainer then refuses to build a Deployment without a
-			// resolved KonnectEventGateway, instead of panicking.
+			// An onpremNamespacedRef isn't supported by the controller yet.
+			// Returning an empty ref skips control plane resolution;
+			// resolveCertificateSecret then refuses it before provisioning a
+			// certificate, instead of panicking.
 			return shareddataplane.ControlPlaneRef{}
 		}
 		return shareddataplane.ControlPlaneRef{
@@ -142,8 +145,9 @@ var config = shareddataplane.Config[
 		PodTemplateSpec:       podTemplateSpec,
 		DeploymentLabels:      deploymentLabels,
 		DeploymentAnnotations: deploymentAnnotations,
-		Replicas:              replicas,
 		BuildContainer:        buildContainer,
+
+		TerminationGracePeriodSeconds: terminationGracePeriodSeconds,
 	},
 
 	Service: shareddataplane.ServiceConfig[*eventgatewayv1alpha1.KegDataPlane]{
@@ -167,6 +171,58 @@ func podTemplateSpec(egdp *eventgatewayv1alpha1.KegDataPlane) *corev1.PodTemplat
 	return egdp.Spec.Deployment.PodTemplateSpec
 }
 
+// terminationGracePeriodSeconds returns the termination grace period of the
+// keg pods: long enough for keg to drain its connections and shut down, plus
+// a margin. Each timeout is the one keg runs with: the env var of the keg
+// container in the PodTemplateSpec, which wins over the operator's, else
+// spec.config.runtime, else keg's default. It returns nil, keeping the
+// Kubernetes default, when the default is long enough: a data plane that
+// doesn't raise the timeouts isn't rolled out for it.
+func terminationGracePeriodSeconds(egdp *eventgatewayv1alpha1.KegDataPlane) *int64 {
+	var specDrain, specShutdown *int32
+	if egdp.Spec.Config != nil && egdp.Spec.Config.Runtime != nil {
+		specDrain = egdp.Spec.Config.Runtime.DrainDurationSeconds
+		specShutdown = egdp.Spec.Config.Runtime.ShutdownTimeoutSeconds
+	}
+	var kegContainer *corev1.Container
+	if pts := podTemplateSpec(egdp); pts != nil {
+		kegContainer = k8sutils.GetPodContainerByName(&pts.Spec, consts.KEGContainerName)
+	}
+
+	drain := runtimeTimeoutSeconds(kegContainer, EnvRuntimeDrainDuration, specDrain, DefaultDrainDurationSeconds)
+	shutdown := runtimeTimeoutSeconds(kegContainer, EnvRuntimeShutdownTimeout, specShutdown, DefaultShutdownTimeoutSeconds)
+
+	grace := drain + shutdown + TerminationGracePeriodMarginSeconds
+	if grace <= DefaultTerminationGracePeriodSeconds {
+		return nil
+	}
+	return &grace
+}
+
+// runtimeTimeoutSeconds returns, in whole seconds rounded up, the keg timeout
+// set by the env var envName of the user keg container, else by the spec
+// field, else def. An env var whose value can't be read here, from valueFrom
+// or not a duration, is skipped.
+func runtimeTimeoutSeconds(kegContainer *corev1.Container, envName string, spec *int32, def int64) int64 {
+	if kegContainer != nil {
+		if i := slices.IndexFunc(kegContainer.Env, func(e corev1.EnvVar) bool { return e.Name == envName }); i >= 0 {
+			if e := kegContainer.Env[i]; e.ValueFrom == nil {
+				if d, err := time.ParseDuration(e.Value); err == nil && d >= 0 {
+					s := d / time.Second
+					if d%time.Second != 0 {
+						s++
+					}
+					return int64(s)
+				}
+			}
+		}
+	}
+	if spec != nil {
+		return int64(*spec)
+	}
+	return def
+}
+
 func deploymentLabels(egdp *eventgatewayv1alpha1.KegDataPlane) map[string]string {
 	if egdp.Spec.Deployment == nil {
 		return nil
@@ -179,13 +235,6 @@ func deploymentAnnotations(egdp *eventgatewayv1alpha1.KegDataPlane) map[string]s
 		return nil
 	}
 	return egdp.Spec.Deployment.Annotations
-}
-
-func replicas(egdp *eventgatewayv1alpha1.KegDataPlane) *int32 {
-	if egdp.Spec.Deployment == nil {
-		return nil
-	}
-	return egdp.Spec.Deployment.Replicas
 }
 
 func setStatusReplicas(egdp *eventgatewayv1alpha1.KegDataPlane, replicas, readyReplicas int32) {
@@ -258,6 +307,16 @@ func konnectEventGatewayFromResolved(cp shareddataplane.ResolvedControlPlane) *k
 	return keg
 }
 
+// onPremNotSupported returns an error for a KegDataPlane that references an
+// OnPremEventGateway, which the controller doesn't support yet, and nil
+// otherwise.
+func onPremNotSupported(egdp *eventgatewayv1alpha1.KegDataPlane) error {
+	if egdp.Spec.ControlPlaneRef.Type != eventgatewayv1alpha1.ControlPlaneRefTypeOnPremNamespacedRef {
+		return nil
+	}
+	return fmt.Errorf("KegDataPlane %s/%s references an OnPremEventGateway: an onpremNamespacedRef is not supported by the controller yet", egdp.Namespace, egdp.Name)
+}
+
 // buildContainer builds the keg container and the additional volumes it
 // requires.
 func buildContainer(
@@ -270,8 +329,11 @@ func buildContainer(
 	keg := konnectEventGatewayFromResolved(cp)
 	if keg == nil {
 		// keg needs its KonnectEventGateway's region and cluster ID to start, so
-		// there is no Deployment to build without one. The CRD schema requires
-		// spec.controlPlaneRef.konnectNamespacedRef, so this shouldn't happen.
+		// there is no Deployment to build without one. resolveCertificateSecret
+		// already refuses an onpremNamespacedRef; this is a backstop.
+		if err := onPremNotSupported(egdp); err != nil {
+			return corev1.Container{}, nil, err
+		}
 		return corev1.Container{}, nil, fmt.Errorf("KegDataPlane %s/%s has no resolved KonnectEventGateway", egdp.Namespace, egdp.Name)
 	}
 	envVars, err := buildKEGEnvVars(egdp, keg)
