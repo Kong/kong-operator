@@ -109,6 +109,7 @@ jobs:
           REF: ${{ github.ref_name }}
           JOB_INDEX: ${{ strategy.job-index }}
           JOB_TOTAL: ${{ strategy.job-total }}
+        # Dispatch through gh so each matrix leg spaces its dispatch; a reusable workflow cannot sleep between tags.
         run: |
           set -euo pipefail
           # The effective version is the first 3 parts of the tag, e.g. 3.16.0.1-rc.3 -> 3.16.0.
@@ -117,7 +118,8 @@ jobs:
           gh workflow run validate_kong_image.yaml --ref "${REF}" \
             -f kong-image-repo="${KONG_IMAGE_REPO}" \
             -f kong-image-tag="${TAG}" \
-            -f kong-effective-version="${effective_version}"
+            -f kong-effective-version="${effective_version}" \
+            -f send-slack-notification=true
 
           if (( JOB_INDEX + 1 < JOB_TOTAL )); then
             echo "Waiting ${DISPATCH_INTERVAL_SECONDS}s before triggering the next validation..."

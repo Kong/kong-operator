@@ -15,6 +15,11 @@ on:
         type: string
         required: true
         default: "latest"
+      send-slack-notification:
+        description: Whether to send the result of the validation tests to Slack.
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -77,4 +82,30 @@ jobs:
       node_image_version: ${{ needs.resolve-k8s-version.outputs.latest }}
       aigw-dp-image: ${{ format('{0}:{1}', github.event.inputs.aigateway-image-repo,
         github.event.inputs.aigateway-image-tag) }}
-      suites: '[{"suite": "aigateway"}]'
+      suites: '[{"suite": "aigateway"}, {"suite": "onpremaigateway"}]'
+
+  notify-on-slack:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    needs:
+      - run-aigateway-chainsaw-tests
+    if: ${{ !cancelled() && github.event.inputs.send-slack-notification == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+      - name: Notify on Slack with the result of the validation tests
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          IMAGE: ${{ format('{0}:{1}', github.event.inputs.aigateway-image-repo, github.event.inputs.aigateway-image-tag) }}
+          FAILED: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: |
+          if [[ "${FAILED}" == "true" ]]; then
+            text=":red_circle: Image validation tests for AIGateway dataplane image \`${IMAGE}\` failed: <${RUN_URL}|workflow run>"
+          else
+            text=":white_check_mark: Image validation tests for AIGateway dataplane image \`${IMAGE}\` passed: <${RUN_URL}|workflow run>"
+          fi
+          payload=$(jq -n --arg text "${text}" '{text: $text}')
+          curl -fsS -X POST -H 'Content-type: application/json' --data "${payload}" "${SLACK_WEBHOOK_URL}"
