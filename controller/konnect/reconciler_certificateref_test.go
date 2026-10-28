@@ -529,6 +529,12 @@ func TestHandleCertificateRef(t *testing.T) {
 						return o.Kind == "KongCertificate" && o.Name == "cert-ok"
 					}), "OwnerReference of KongSNI is set but shouldn't"
 				},
+				// The CertificateID must be in the stored status, not only in memory:
+				// deleting the SNI from Konnect addresses it through this ID.
+				func(ks *configurationv1alpha1.KongSNI) (bool, string) {
+					return ks.Status.Konnect != nil && ks.Status.Konnect.CertificateID == "12345",
+						"KongSNI status does not have the referenced KongCertificate ID persisted"
+				},
 			},
 		},
 		{
@@ -830,6 +836,10 @@ func TestHandleCertificateRefKongService(t *testing.T) {
 					return lo.ContainsBy(svc.Status.Conditions, func(c metav1.Condition) bool {
 						return c.Type == konnectv1alpha1.KongCertificateRefValidConditionType && c.Status == metav1.ConditionTrue
 					}), "KongService does not have KongCertificateRefValid condition set to True"
+				},
+				func(svc *configurationv1alpha1.KongService) (bool, string) {
+					return svc.Status.Konnect != nil && svc.Status.Konnect.CertificateID == "12345",
+						"KongService status does not have the referenced KongCertificate ID persisted"
 				},
 			},
 		},
