@@ -114,6 +114,16 @@ func TestMergeTags(t *testing.T) {
 			groups:   [][]string{{longTag}},
 			expected: []string{strings.Repeat("x", maxTagLength)},
 		},
+		{
+			name:     "tags with reserved prefixes are dropped from every group",
+			groups:   [][]string{{"entity", "k8s-uid:1234"}, {" k8s-name:other ", "gateway"}, {"managed-by:someone-else", "class"}},
+			expected: []string{"entity", "gateway", "class"},
+		},
+		{
+			name:     "only reserved tags yield nil",
+			groups:   [][]string{{"k8s-uid:1234"}, {"k8s-kind:Service"}},
+			expected: nil,
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -127,6 +137,16 @@ func TestMergeTags(t *testing.T) {
 			tags = append(tags, fmt.Sprintf("tag-%02d", i))
 		}
 		assert.Equal(t, tags, MergeTags(logr.Discard(), tags))
+	})
+
+	t.Run("reserved tags do not count towards MaxTags", func(t *testing.T) {
+		var tags, withReserved []string
+		for i := range MaxTags {
+			tag := fmt.Sprintf("tag-%02d", i)
+			tags = append(tags, tag)
+			withReserved = append(withReserved, fmt.Sprintf("k8s-uid:%02d", i), tag)
+		}
+		assert.Equal(t, tags, MergeTags(logr.Discard(), withReserved))
 	})
 
 	t.Run("over budget drops from the end, so the least specific group loses first", func(t *testing.T) {
@@ -547,6 +567,17 @@ func TestAppendTagsAnnotation(t *testing.T) {
 			existing: "shared,plugin-tag",
 			tags:     []string{"shared", "gw-tag"},
 			expected: "shared,plugin-tag,gw-tag",
+		},
+		{
+			name:     "tags with reserved prefixes are not appended",
+			existing: "plugin-tag",
+			tags:     []string{"gw-tag", "k8s-uid:1234", "managed-by:someone-else"},
+			expected: "plugin-tag,gw-tag",
+		},
+		{
+			name:     "only reserved tags leave the annotation absent",
+			tags:     []string{"k8s-name:other"},
+			expected: "",
 		},
 	}
 	for _, tc := range tests {

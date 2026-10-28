@@ -20,7 +20,6 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/konnect"
-	"github.com/kong/kong-operator/v2/controller/konnect/ops"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
@@ -94,7 +93,6 @@ func TestKongCertificate(t *testing.T) {
 		createdCert := deploy.KongCertificateAttachedToCP(t, ctx, clientNamespaced, cp,
 			func(obj client.Object) {
 				cert := obj.(*configurationv1alpha1.KongCertificate)
-				cert.Spec.Tags = []string{"tag1", ops.KubernetesUIDLabelKey + ":12345"}
 				cert.UID = "12345"
 			},
 		)

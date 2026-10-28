@@ -719,9 +719,9 @@
   - Existing objects with such tags in `tags` or in the `konghq.com/tags`
     annotation get the `Programmed` condition set to `False` with reason
     `InvalidTags` and are not synced with Konnect until the tags are removed.
-  - Such tags in `konghq.com/tags` annotations of Gateway API routes, `Service`s
-    and `Secret`s are dropped when generating the corresponding Kong entities
-    for hybrid `Gateway`s.
+  - Such tags in `konghq.com/tags` annotations of Gateway API routes, `Service`s,
+    `Secret`s, `Gateway`s and `GatewayClass`es are dropped when generating the
+    corresponding Kong entities for hybrid `Gateway`s.
   [#6042](https://github.com/Kong/kong-operator/pull/6042)
 
 ### Fixes
