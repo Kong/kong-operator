@@ -20,6 +20,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
@@ -32,6 +34,7 @@ import (
 	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminsync/gwadminsynctest"
 	kgomanager "github.com/kong/kong-operator/v2/modules/manager"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/test/envtest"
 )
 
@@ -553,19 +556,23 @@ spec:
 		expectEntityProgrammed(t, forward, metav1.ConditionTrue, "Programmed")
 	})
 
-	t.Run("the entities of a deleted gateway are not programmed", func(t *testing.T) {
+	t.Run("the entities of a deleted gateway report it once it is gone", func(t *testing.T) {
 		require.NoError(t, cl.Delete(ctx, gateway))
-		expectProgrammed(t, "other", metav1.ConditionFalse, "GatewayNotProgrammed")
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			err := cl.Get(ctx, client.ObjectKeyFromObject(gateway), &eventgatewayv1alpha1.OnPremEventGateway{})
+			assert.True(ct, apierrors.IsNotFound(err), "the gateway must be gone: %v", err)
+		}, waitTime, tickTime)
+		expectProgrammed(t, "other", metav1.ConditionFalse, "GatewayNotFound")
 		expectEntityProgrammed(t, &configurationv1alpha1.EventGatewayVirtualCluster{Name: "virtual-cluster", Namespace: ns.Name},
-			metav1.ConditionFalse, "GatewayNotProgrammed")
+			metav1.ConditionFalse, "GatewayNotFound")
 		for _, name := range []string{"parent", "child"} {
 			expectEntityProgrammed(t, &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{Name: name, Namespace: ns.Name},
-				metav1.ConditionFalse, "GatewayNotProgrammed")
+				metav1.ConditionFalse, "GatewayNotFound")
 		}
 		expectEntityProgrammed(t, &configurationv1alpha1.EventGatewayListener{Name: "listener", Namespace: ns.Name},
-			metav1.ConditionFalse, "GatewayNotProgrammed")
+			metav1.ConditionFalse, "GatewayNotFound")
 		expectEntityProgrammed(t, &configurationv1alpha1.EventGatewayListenerPolicy{Name: "forward", Namespace: ns.Name},
-			metav1.ConditionFalse, "GatewayNotProgrammed")
+			metav1.ConditionFalse, "GatewayNotFound")
 	})
 }
 
@@ -929,4 +936,157 @@ spec:`+onPremEventGatewayParentRef(gatewayA.Name)+`
 		})
 	})
 
+}
+
+// TestOnPremEventGatewayEntityStatus verifies the status of an entity
+// through the life of its OnPremEventGateway: the gateway doesn't exist yet,
+// it exists but can't be pushed to, it is pushed, and it is deleted.
+func TestOnPremEventGatewayEntityStatus(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	cfg, ns := envtest.Setup(t, ctx, scheme.Get(), envtest.WithInstallGatewayCRDs(true))
+	mgr, logs := newManagerWithoutResync(t, ctx, cfg)
+	cl := mgr.GetClient()
+	gwAdmin := newTestGWAdmin(t, cl, ns.Name)
+	envtest.StartReconcilersWithConfig(ctx, t, mgr, logs, onPremControllerConfig, gwAdmin.reconciler(ctx, mgr))
+
+	listener := objectFromYAML[configurationv1alpha1.EventGatewayListener](t, ns.Name, `
+metadata: {name: listener}
+spec:`+onPremEventGatewayParentRef("gateway")+`
+  apiSpec:
+    name: listener
+    addresses: ["0.0.0.0"]
+    ports: [19092]
+`)
+	require.NoError(t, cl.Create(ctx, listener))
+	expectStatusOf := func(t *testing.T, obj k8sutils.ConditionsAwareObject, status metav1.ConditionStatus, reason, message string) {
+		t.Helper()
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)) {
+				return
+			}
+			cond := apimeta.FindStatusCondition(obj.GetConditions(), "Programmed")
+			if assert.NotNil(ct, cond) {
+				assert.Equal(ct, status, cond.Status)
+				assert.Equal(ct, reason, cond.Reason)
+				assert.Contains(ct, cond.Message, message)
+				assert.Equal(ct, obj.GetGeneration(), cond.ObservedGeneration)
+			}
+		}, waitTime, tickTime)
+	}
+	expectStatus := func(t *testing.T, status metav1.ConditionStatus, reason, message string) {
+		t.Helper()
+		expectStatusOf(t, &configurationv1alpha1.EventGatewayListener{Namespace: ns.Name, Name: listener.Name}, status, reason, message)
+	}
+
+	t.Run("an entity of a gateway that doesn't exist reports it", func(t *testing.T) {
+		expectStatus(t, metav1.ConditionFalse, "GatewayNotFound", "The OnPremEventGateway "+ns.Name+"/gateway does not exist")
+	})
+
+	gateway := objectFromYAML[eventgatewayv1alpha1.OnPremEventGateway](t, ns.Name, `
+metadata: {name: gateway}
+spec:
+  gwAdminRef: {name: `+testGWAdminName+`}
+`)
+	t.Run("once the gateway exists, the entity reports why it can't be pushed", func(t *testing.T) {
+		require.NoError(t, cl.Create(ctx, gateway))
+		expectStatus(t, metav1.ConditionFalse, "GatewayNotProgrammed", "which is not programmed")
+	})
+
+	t.Run("once pushed, the entity is Programmed", func(t *testing.T) {
+		gwAdmin.provision(ctx)
+		expectStatus(t, metav1.ConditionTrue, "Programmed", "In the configuration of the OnPremEventGateway")
+	})
+
+	t.Run("the policy of a deleted listener reports it", func(t *testing.T) {
+		other := objectFromYAML[configurationv1alpha1.EventGatewayListener](t, ns.Name, `
+metadata: {name: other-listener}
+spec:`+onPremEventGatewayParentRef("gateway")+`
+  apiSpec:
+    name: other-listener
+    addresses: ["0.0.0.0"]
+    ports: [19093]
+`)
+		policy := objectFromYAML[configurationv1alpha1.EventGatewayListenerPolicy](t, ns.Name, `
+metadata: {name: forward}
+spec:
+  eventGatewayListenerRef: {type: namespacedRef, namespacedRef: {name: other-listener}}
+  apiSpec:
+    type: forwardToVirtualCluster
+    forwardToVirtualCluster:
+      name: forward
+      config:
+        type: portMapping
+        portMapping: {advertisedHost: localhost, destination: {name: missing}}
+`)
+		require.NoError(t, cl.Create(ctx, other))
+		require.NoError(t, cl.Create(ctx, policy))
+		expectStatusOf(t, policy, metav1.ConditionFalse, "Invalid", `it forwards to the virtual cluster "missing"`)
+		require.NoError(t, cl.Delete(ctx, other))
+		expectStatusOf(t, policy, metav1.ConditionFalse, "Detached", "its EventGatewayListener "+ns.Name+"/other-listener does not exist")
+	})
+
+	t.Run("the policy of a virtual cluster whose backend cluster is deleted reports it", func(t *testing.T) {
+		backendCluster := objectFromYAML[configurationv1alpha1.EventGatewayBackendCluster](t, ns.Name, `
+metadata: {name: backend-cluster}
+spec:`+onPremEventGatewayParentRef("gateway")+`
+  apiSpec:
+    name: backend-cluster
+    bootstrapServers: ["kafka:9092"]
+    authentication: {type: anonymous, anonymous: {}}
+    tls: {enabled: Disabled}
+`)
+		virtualCluster := objectFromYAML[configurationv1alpha1.EventGatewayVirtualCluster](t, ns.Name, `
+metadata: {name: virtual-cluster}
+spec:
+  eventGatewayBackendClusterRef: {type: namespacedRef, namespacedRef: {name: backend-cluster}}
+  apiSpec:
+    name: virtual-cluster
+    aclMode: passthrough
+    authentication: [{type: anonymous}]
+    dnsLabel: virtual-cluster
+`)
+		policy := objectFromYAML[configurationv1alpha1.EventGatewayVirtualClusterPolicy](t, ns.Name, `
+metadata: {name: acls}
+spec:
+  eventGatewayVirtualClusterRef: {type: namespacedRef, namespacedRef: {name: virtual-cluster}}
+  apiSpec:
+    type: acls
+    acls:
+      name: acls
+      config:
+        rules:
+          - action: allow
+            resourceType: topic
+            operations: [{name: read}]
+            resourceNames: {type: stat, stat: [{match: orders}]}
+`)
+		for _, obj := range []client.Object{backendCluster, virtualCluster, policy} {
+			require.NoError(t, cl.Create(ctx, obj))
+		}
+		expectStatusOf(t, policy, metav1.ConditionTrue, "Programmed", "In the configuration of the OnPremEventGateway")
+		// Neither the policy nor its virtual cluster change: only the
+		// deletion of the backend cluster tells.
+		require.NoError(t, cl.Delete(ctx, backendCluster))
+		missing := "EventGatewayBackendCluster " + ns.Name + "/backend-cluster"
+		expectStatusOf(t, virtualCluster, metav1.ConditionFalse, "Detached", "its "+missing+" does not exist")
+		expectStatusOf(t, policy, metav1.ConditionFalse, "Detached", "the "+missing+" it descends from does not exist")
+	})
+
+	t.Run("the entities of a gateway whose GWAdmin is gone report it", func(t *testing.T) {
+		require.NoError(t, cl.Delete(ctx, gwAdmin.gwAdmin))
+		gwAdmin.updateEndpoints(ctx, func([]discoveryv1.Endpoint) []discoveryv1.Endpoint { return nil })
+		expectStatus(t, metav1.ConditionFalse, "GatewayNotProgrammed", "which is not programmed")
+	})
+
+	t.Run("the entities of a deleted gateway report it once it is gone", func(t *testing.T) {
+		require.NoError(t, cl.Delete(ctx, gateway))
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			err := cl.Get(ctx, client.ObjectKeyFromObject(gateway), &eventgatewayv1alpha1.OnPremEventGateway{})
+			assert.True(ct, apierrors.IsNotFound(err), "the gateway must be gone: %v", err)
+		}, waitTime, tickTime)
+		// The entity doesn't change: the deletion of the gateway triggers it.
+		expectStatus(t, metav1.ConditionFalse, "GatewayNotFound", "The OnPremEventGateway "+ns.Name+"/gateway does not exist")
+	})
 }

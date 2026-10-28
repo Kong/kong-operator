@@ -160,7 +160,10 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 		handler.EnqueueRequestsFromMapFunc(mapGatewayToGatewaysOfItsGWAdmin(mgr.GetClient())),
 		builder.WithPredicates(onlyDeletions()))
 
-	return b.Complete(reconcile.AsReconciler(r.Client, r))
+	if err := b.Complete(reconcile.AsReconciler(r.Client, r)); err != nil {
+		return err
+	}
+	return r.setupUnreachable(mgr)
 }
 
 // Reconcile pushes the configuration of an OnPremEventGateway to its
@@ -267,9 +270,9 @@ func (e invalidUIDError) Error() string {
 	return fmt.Sprintf("the UID %q of the OnPremEventGateway is not a version 4 UUID, which gw-admin requires as the id of a gateway", e.uid)
 }
 
-// reportInvalidUID reports on the gateway that it can't be pushed because of
-// its UID. It is not retried. A gateway being deleted has nothing to clean
-// up: it never got its finalizer.
+// reportInvalidUID reports on the gateway, and on its entities, that it can't
+// be pushed because of its UID. It is not retried. A gateway being deleted
+// has nothing to clean up: it never got its finalizer.
 func (r *Reconciler) reportInvalidUID(ctx context.Context, logger logr.Logger, gateway *eventgatewayv1alpha1.OnPremEventGateway) error {
 	if !gateway.DeletionTimestamp.IsZero() {
 		return nil
@@ -315,7 +318,7 @@ func (r *Reconciler) event(gateway *eventgatewayv1alpha1.OnPremEventGateway, eve
 // the next reconcile reads it again.
 func requeueOnConflict(logger logr.Logger, res ctrl.Result, err error) (ctrl.Result, error) {
 	if err != nil && apierrors.IsConflict(err) {
-		log.Debug(logger, "conflict while reconciling OnPremEventGateway resource, requeueing", "reason", err.Error())
+		log.Debug(logger, "conflict while reconciling, requeueing", "reason", err.Error())
 		return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 	}
 	return res, err

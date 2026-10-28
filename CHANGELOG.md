@@ -405,7 +405,10 @@
   references stay in the configuration. Their `Programmed`
   and `SecretRefValid` conditions report the outcome; `Programmed` turns
   `Detached` for one that no longer belongs to the gateway, e.g. whose parent
-  was deleted. `KongReferenceGrant` now accepts `EventGatewayBackendCluster`,
+  was deleted, and is `False` with the reason `GatewayNotFound` for one whose
+  `OnPremEventGateway` doesn't exist, directly or through its parent
+  entities, e.g. one created before its gateway or whose gateway was deleted.
+  `KongReferenceGrant` now accepts `EventGatewayBackendCluster`,
   `EventGatewaySchemaRegistry`, `EventGatewayTLSTrustBundle` and
   `EventGatewayListenerPolicy` in `spec.from`, for Secrets in other
   namespaces.
@@ -413,6 +416,7 @@
   [#6270](https://github.com/Kong/kong-operator/pull/6270)
   [#6276](https://github.com/Kong/kong-operator/pull/6276)
   [#6281](https://github.com/Kong/kong-operator/pull/6281)
+  [#6322](https://github.com/Kong/kong-operator/pull/6322)
 - `KegDataPlane`: `spec.controlPlaneRef` accepts an `OnPremEventGateway` in
   the same namespace, with `type: onpremNamespacedRef`. The control plane
   reference can't change type, and an `onpremNamespacedRef` can't change;
