@@ -101,6 +101,49 @@ spec:
                           rule: self.all(key,self[key].size() <= 63)
                     type: object
                 type: object
+              watchNamespaces:
+                default:
+                  type: own
+                description: |-
+                  WatchNamespaces defines the namespaces the controllers watch for the
+                  configuration entities pushed to this gateway's data planes, and for the
+                  Secrets they reference.
+
+                  When unset, only the OnPremAIGateway's own namespace is watched.
+                  When set to `list`, every listed namespace plus the OnPremAIGateway's own
+                  namespace is watched. A WatchNamespaceGrant is required in every listed
+                  namespace that is not the OnPremAIGateway's own.
+                  When set to `all`, every namespace is watched. This requires the operator
+                  to run with an empty `--watch-namespaces`, that is, cluster-wide.
+
+                  Changing this field restarts the control plane instance: its caches are
+                  built at start.
+                properties:
+                  list:
+                    description: |-
+                      List is a list of namespaces to watch for resources.
+                      Only used when Type is set to List.
+                    items:
+                      maxLength: 64
+                      type: string
+                    maxItems: 64
+                    type: array
+                  type:
+                    description: Type indicates the type of namespace watching to
+                      be done.
+                    enum:
+                    - all
+                    - list
+                    - own
+                    type: string
+                required:
+                - type
+                type: object
+                x-kubernetes-validations:
+                - message: list is required when type is 'list'
+                  rule: 'self.type == ''list'' ? has(self.list) : true'
+                - message: list must not be specified when type is not 'list'
+                  rule: 'self.type != ''list'' ? !has(self.list) : true'
             type: object
           status:
             description: Status defines the observed state of OnPremAIGateway.
