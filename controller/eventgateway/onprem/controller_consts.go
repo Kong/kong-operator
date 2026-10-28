@@ -50,6 +50,12 @@ const maxConcurrentReconciles = 8
 // them, not the gateways of other GWAdmins.
 const lockRetryInterval = 5 * time.Second
 
+// terminatingPodTimeout bounds the requests to a terminating gw-admin pod,
+// told to stop trusting the data plane certificates the configuration no
+// longer holds: it serves no push, and one that doesn't answer would hold the
+// lock of its GWAdmin as long as a pod pushed to.
+const terminatingPodTimeout = 10 * time.Second
+
 // The retries of the pushes to the gw-admin pods still pending, e.g. starting
 // while their image is pulled: nothing tells once they listen, as a gw-admin
 // pod only turns Ready once provisioned. The wait doubles from

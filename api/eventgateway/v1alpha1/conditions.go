@@ -267,4 +267,8 @@ const (
 	// the configuration of its OnPremEventGateway: it reads a Secret in
 	// another namespace, and no KongReferenceGrant allows it.
 	OnPremEntityRefNotPermittedReason consts.ConditionReason = "RefNotPermitted"
+	// OnPremEntityNotRegisteredReason indicates the data plane certificate is
+	// in the configuration of its OnPremEventGateway, and not registered yet
+	// on every gw-admin pod serving it: the message names those it isn't.
+	OnPremEntityNotRegisteredReason consts.ConditionReason = "NotRegistered"
 )

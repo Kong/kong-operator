@@ -21,12 +21,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
@@ -102,17 +105,26 @@ func (r *Reconciler) resolveGWAdmin(ctx context.Context, gateway *eventgatewayv1
 const itemExpected = "expected"
 
 // push makes the gw-admin pod serve the configuration of the gateway: the
-// gateway, its entities, then the gateways gw-admin must serve. It first asks
-// the pod for the entities of the gateway, and only writes what differs from
-// what the pod holds: the entities it returns, and the expected gateways
-// recorded of the pod. A pod that doesn't know the gateway, e.g. one
-// restarted, as gw-admin keeps nothing across a restart, gets it all; one
-// that knows it has it registered already, under its name and creation time,
-// which don't change. Every call is idempotent.
+// gateway, its data plane certificates, its entities, then the gateways
+// gw-admin must serve. It first asks the pod for the entities and the
+// certificates of the gateway, and only writes what differs from what the pod
+// holds: the entities, along with the version of the configuration, and the
+// certificates it returns, and the expected gateways recorded of it. The
+// certificates it holds that the configuration doesn't, e.g. one deleted,
+// left out or moved to another gateway, or one of a gateway deleted earlier
+// under the same id, are deleted. A pod that doesn't know the gateway, e.g.
+// one restarted, as gw-admin keeps nothing across a restart, gets it all; one that knows it has it registered already, under
+// its name and creation time, which don't change. Every call is idempotent.
+// What the pod holds of each certificate once pushed is told to outcome.
 //
-// The expected gateways come last: a gw-admin pod turns ready once they are
-// set, as long as each has a data plane certificate, so a pod restarted must
-// hold the entities of the gateway by then.
+// The certificates come before the entities: an entity gw-admin rejects
+// doesn't keep them from being trusted, nor reported Programmed. The expected
+// gateways come last: a gw-admin pod turns ready once they are set, as long
+// as each has a data plane certificate, so a pod restarted must hold the
+// entities and the certificates of the gateway by then. A certificate
+// gw-admin rejects is trusted by no pod, and only reported on it (see
+// certificateOutcome): it doesn't fail the push, which the rest of the
+// configuration doesn't depend on.
 func (r *Reconciler) push(
 	ctx context.Context,
 	target *gwadminsync.Target,
@@ -122,12 +134,12 @@ func (r *Reconciler) push(
 	cfg configuration,
 	gatewayID uuid.UUID,
 	expected []uuid.UUID,
+	outcome *certificateOutcome,
 ) error {
 	held, found, err := getEntities(ctx, gwAdmin, gatewayID)
 	if err != nil {
 		return err
 	}
-
 	if !found {
 		if err := gwadminsync.Call("register the gateway", func() (*http.Response, error) {
 			return gwAdmin.UpdateEventGateway(ctx, gatewayID, config.Gateway)
@@ -135,13 +147,25 @@ func (r *Reconciler) push(
 			return err
 		}
 	}
-	same, err := sameEntities(held, cfg.pushedKey)
+	// A gateway just registered holds no certificates: gw-admin deletes
+	// those of a gateway with it, e.g. one that may not use its GWAdmin
+	// anymore, registered again under the same id once it may.
+	var certificates map[uuid.UUID]gwadminapi.EventGatewayDataPlaneCertificateOnPrem
+	if found {
+		if certificates, err = getCertificates(ctx, gwAdmin, gatewayID); err != nil {
+			return err
+		}
+	}
+	if err := pushCertificates(ctx, pod, gwAdmin, gatewayID, cfg, certificates, outcome); err != nil {
+		return err
+	}
+	same, err := sameEntities(held.Entities, cfg.pushedKey)
 	if err != nil {
 		return err
 	}
-	if !found || !same {
+	if !found || !same || held.ConfigVersion != config.Version {
 		if err := gwadminsync.CallDescribingFields("push the entities of the gateway", cfg.describeField, func() (*http.Response, error) {
-			return gwAdmin.UpdateEventGatewayEntities(ctx, gatewayID, config.Entities)
+			return gwAdmin.UpdateEventGatewayEntities(ctx, gatewayID, gwadminapi.GatewayEntities{ConfigVersion: config.Version, Entities: config.Entities})
 		}); err != nil {
 			return err
 		}
@@ -156,8 +180,227 @@ func (r *Reconciler) push(
 	return nil
 }
 
-// getEntities returns the entities gw-admin holds for the gateway, and
-// whether it knows the gateway at all.
+// pushCertificates makes the gw-admin pod hold the data plane certificates
+// of the configuration, as they are, and only them: those it holds
+// otherwise, given, are deleted first, then those it doesn't hold as they
+// are registered, telling outcome which it holds once done, and which it
+// rejects: such a certificate isn't trusted with what it held before either.
+func pushCertificates(
+	ctx context.Context, pod gwadminsync.Pod, gwAdmin gwadminapi.ClientInterface, gatewayID uuid.UUID, cfg configuration,
+	held map[uuid.UUID]gwadminapi.EventGatewayDataPlaneCertificateOnPrem, outcome *certificateOutcome,
+) error {
+	if err := removeUnheld(ctx, gwAdmin, gatewayID, cfg, held, false); err != nil {
+		return err
+	}
+	for _, cert := range cfg.certificates {
+		current, ok := held[cert.id]
+		if ok && sameCertificate(current, cert.body) {
+			outcome.hold(cert, pod)
+			continue
+		}
+		err := gwadminsync.Call(fmt.Sprintf("register the data plane certificate %s", cert.key), func() (*http.Response, error) {
+			return gwAdmin.UpdateEventGatewayDataPlaneCertificate(ctx, gatewayID, cert.id, cert.body)
+		})
+		switch {
+		case err == nil:
+			outcome.hold(cert, pod)
+		case rejectedByGWAdmin(err):
+			if ok {
+				if err := removeCertificate(ctx, gwAdmin, gatewayID, cert.id, cert.key.String()); err != nil {
+					return err
+				}
+			}
+			outcome.reject(cert, pod, err)
+		default:
+			return err
+		}
+	}
+	return nil
+}
+
+// removeUnconfigured makes the gw-admin pod stop trusting the data plane
+// certificates of the gateway the configuration doesn't hold as they are,
+// e.g. a terminating one, which isn't pushed to: a certificate replaced in
+// its Secret, e.g. a compromised one, is removed, not registered again.
+func removeUnconfigured(ctx context.Context, gwAdmin gwadminapi.ClientInterface, gatewayID uuid.UUID, cfg configuration) error {
+	held, err := getCertificates(ctx, gwAdmin, gatewayID)
+	if err != nil {
+		return err
+	}
+	return removeUnheld(ctx, gwAdmin, gatewayID, cfg, held, true)
+}
+
+// removeUnheld deletes those of the data plane certificates the gw-admin pod
+// holds, given, that the configuration doesn't, and, when changed is set,
+// those it holds otherwise than the configuration does.
+func removeUnheld(
+	ctx context.Context, gwAdmin gwadminapi.ClientInterface, gatewayID uuid.UUID, cfg configuration,
+	held map[uuid.UUID]gwadminapi.EventGatewayDataPlaneCertificateOnPrem, changed bool,
+) error {
+	configured := make(map[uuid.UUID]dataPlaneCertificate, len(cfg.certificates))
+	for _, cert := range cfg.certificates {
+		configured[cert.id] = cert
+	}
+	for _, id := range slices.SortedFunc(maps.Keys(held), func(a, b uuid.UUID) int { return strings.Compare(a.String(), b.String()) }) {
+		if cert, ok := configured[id]; ok && (!changed || sameCertificate(held[id], cert.body)) {
+			continue
+		}
+		if err := removeCertificate(ctx, gwAdmin, gatewayID, id, "with id "+id.String()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// sameCertificate tells whether the data plane certificate gw-admin holds is
+// the one the request registers.
+func sameCertificate(held gwadminapi.EventGatewayDataPlaneCertificateOnPrem, body gwadminapi.UpsertEventGatewayDataPlaneCertificateRequestOnPrem) bool {
+	return held.Certificate == body.Certificate && held.CreatedAt.Equal(body.CreatedAt) &&
+		lo.FromPtr(held.Name) == lo.FromPtr(body.Name) && lo.FromPtr(held.Description) == lo.FromPtr(body.Description)
+}
+
+// rejectedByGWAdmin tells gw-admin rejected what the call sent, e.g. a
+// created_at it doesn't accept: sending it again gets the same answer.
+func rejectedByGWAdmin(err error) bool {
+	respErr, ok := errors.AsType[gwadminsync.ResponseError](err)
+	return ok && (respErr.StatusCode == http.StatusBadRequest || respErr.StatusCode == http.StatusUnprocessableEntity)
+}
+
+// removeCertificate makes the gw-admin pod stop trusting the data plane
+// certificate of the gateway, named name in errors. A certificate gw-admin
+// doesn't know is removed already.
+func removeCertificate(ctx context.Context, gwAdmin gwadminapi.ClientInterface, gatewayID, id uuid.UUID, name string) error {
+	err := gwadminsync.Call("remove the data plane certificate "+name, func() (*http.Response, error) {
+		return gwAdmin.DeleteEventGatewayDataPlaneCertificate(ctx, gatewayID, id)
+	})
+	if err != nil && !gwadminsync.IsNotFound(err) {
+		return err
+	}
+	return nil
+}
+
+// getCertificates returns the data plane certificates gw-admin holds for the
+// gateway, by id: none for a gateway it doesn't know.
+func getCertificates(
+	ctx context.Context, gwAdmin gwadminapi.ClientInterface, gatewayID uuid.UUID,
+) (map[uuid.UUID]gwadminapi.EventGatewayDataPlaneCertificateOnPrem, error) {
+	const action = "read the data plane certificates of the gateway"
+	resp, err := gwAdmin.ListEventGatewayDataPlaneCertificates(ctx, gatewayID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to %s: %w", action, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		err := gwadminsync.CheckResponse(action, resp, nil)
+		switch {
+		case gwadminsync.IsNotFound(err):
+			return nil, nil
+		case err == nil:
+			return nil, fmt.Errorf("failed to %s: gw-admin returned %s, not %d", action, resp.Status, http.StatusOK)
+		}
+		return nil, err
+	}
+	parsed, err := gwadminapi.ParseListEventGatewayDataPlaneCertificatesResponse(resp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to %s: %w", action, err)
+	}
+	if parsed.JSON200 == nil {
+		return nil, fmt.Errorf("failed to %s: gw-admin returned %s without a JSON body", action, resp.Status)
+	}
+	held := make(map[uuid.UUID]gwadminapi.EventGatewayDataPlaneCertificateOnPrem, len(parsed.JSON200.Data))
+	for _, cert := range parsed.JSON200.Data {
+		held[cert.Id] = cert
+	}
+	return held, nil
+}
+
+// certificateOutcome is what a push tells of the data plane certificates of
+// the configuration, on each gw-admin pod it reaches: which pods hold each as
+// it is, and which rejected it, with the reason. The pods of a push are
+// pushed to at once. A nil one is told nothing.
+type certificateOutcome struct {
+	mu sync.Mutex
+	// heldBy holds, by certificate id, the keys of the pods holding it.
+	heldBy map[uuid.UUID]map[string]bool
+	// rejectedBy holds, by certificate id, the reason of each pod, by name,
+	// that rejected it.
+	rejectedBy map[uuid.UUID]map[string]string
+	// failedOn holds, by key, the pods whose push failed: one that doesn't
+	// hold a certificate may have failed before it got to it.
+	failedOn map[string]bool
+}
+
+func newCertificateOutcome() *certificateOutcome {
+	return &certificateOutcome{heldBy: map[uuid.UUID]map[string]bool{}, rejectedBy: map[uuid.UUID]map[string]string{}, failedOn: map[string]bool{}}
+}
+
+// fail tells the push to the pod failed.
+func (o *certificateOutcome) fail(pod gwadminsync.Pod) {
+	if o == nil {
+		return
+	}
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	o.failedOn[pod.Key()] = true
+}
+
+// hold tells the pod holds the certificate, as it is.
+func (o *certificateOutcome) hold(cert dataPlaneCertificate, pod gwadminsync.Pod) {
+	if o == nil {
+		return
+	}
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if o.heldBy[cert.id] == nil {
+		o.heldBy[cert.id] = map[string]bool{}
+	}
+	o.heldBy[cert.id][pod.Key()] = true
+}
+
+// reject tells the pod rejected the certificate, with the error.
+func (o *certificateOutcome) reject(cert dataPlaneCertificate, pod gwadminsync.Pod, err error) {
+	if o == nil {
+		return
+	}
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if o.rejectedBy[cert.id] == nil {
+		o.rejectedBy[cert.id] = map[string]string{}
+	}
+	o.rejectedBy[cert.id][pod.Name] = err.Error()
+}
+
+// held reports whether every gw-admin pod of the target the push didn't find
+// pending holds the certificate, and names those that don't, those of them
+// whose push failed apart, as they may hold it still, and those that
+// rejected it, with the reason. A pod pending, e.g. starting, or on a node
+// cut off, serves no data plane: it gets every certificate before it turns
+// ready (see push).
+func (o *certificateOutcome) held(
+	target *gwadminsync.Target, pending []gwadminsync.Pod, cert dataPlaneCertificate,
+) (held bool, missing, unconfirmed []string, rejected map[string]string) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	reached := 0
+	for _, pod := range target.Pods {
+		if slices.Contains(pending, pod) {
+			continue
+		}
+		reached++
+		switch {
+		case o.heldBy[cert.id][pod.Key()]:
+		case o.failedOn[pod.Key()]:
+			unconfirmed = append(unconfirmed, pod.Name)
+		default:
+			missing = append(missing, pod.Name)
+		}
+	}
+	return reached > 0 && len(missing) == 0 && len(unconfirmed) == 0, missing, unconfirmed, o.rejectedBy[cert.id]
+}
+
+// getEntities returns the entities gw-admin holds for the gateway, with the
+// version of the configuration they were sent with, and whether it knows the
+// gateway at all.
 func getEntities(ctx context.Context, gwAdmin gwadminapi.ClientInterface, gatewayID uuid.UUID) (gwadminapi.GatewayEntities, bool, error) {
 	const action = "read the entities of the gateway"
 	resp, err := gwAdmin.GetEventGatewayEntities(ctx, gatewayID)
@@ -198,8 +441,8 @@ func idsKey(ids []uuid.UUID) string {
 
 // noEntities returns the entities of a gateway that has none: gw-admin
 // requires every list.
-func noEntities() gwadminapi.GatewayEntities {
-	return gwadminapi.GatewayEntities{
+func noEntities() gwadminapi.GatewayEntitySet {
+	return gwadminapi.GatewayEntitySet{
 		BackendClusters:  []gwadminapi.EventGatewayBackendClusterOnPrem{},
 		Listeners:        []gwadminapi.EventGatewayListenerOnPrem{},
 		SchemaRegistries: []gwadminapi.EventGatewaySchemaRegistryOnPrem{},
@@ -210,9 +453,9 @@ func noEntities() gwadminapi.GatewayEntities {
 }
 
 // removeGateway makes the gw-admin pod stop serving the gateway: it is left
-// out of the gateways gw-admin serves, then deleted with its entities. It is
-// sent in full every time: it only runs when the gateway is deleted or may
-// not use its GWAdmin anymore, once.
+// out of the gateways gw-admin serves, then deleted with its entities and its
+// data plane certificates. It is sent in full every time: it only runs when
+// the gateway is deleted or may not use its GWAdmin anymore, once.
 func (r *Reconciler) removeGateway(
 	ctx context.Context,
 	target *gwadminsync.Target,

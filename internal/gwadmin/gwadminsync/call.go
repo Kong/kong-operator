@@ -19,6 +19,7 @@ package gwadminsync
 import (
 	"cmp"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -148,17 +149,23 @@ func (s *Syncer) ForEachPod(
 }
 
 // traceConnection returns a context whose requests report, through the
-// returned flag, whether a connection to the pod was made: one dialed, or one
-// reused from an earlier call.
+// returned flag, whether a connection to the pod was made: one whose TLS
+// handshake completed, or one reused from an earlier call, which completed
+// it. A TCP connection alone doesn't tell: the kernel accepts it on a
+// listening socket even when the process never reads it, e.g. one stuck.
 func traceConnection(ctx context.Context) (context.Context, *atomic.Bool) {
 	connected := &atomic.Bool{}
 	return httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
-		ConnectDone: func(_, _ string, err error) {
+		TLSHandshakeDone: func(_ tls.ConnectionState, err error) {
 			if err == nil {
 				connected.Store(true)
 			}
 		},
-		GotConn: func(httptrace.GotConnInfo) { connected.Store(true) },
+		GotConn: func(info httptrace.GotConnInfo) {
+			if info.Reused {
+				connected.Store(true)
+			}
+		},
 	}), connected
 }
 

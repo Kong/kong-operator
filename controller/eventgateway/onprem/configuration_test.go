@@ -450,6 +450,8 @@ func TestDescribeField(t *testing.T) {
 	assert.Equal(t, "EventGatewayBackendCluster ns/bc (backend_clusters.0)", cfg.describeField("backend_clusters.0"))
 	assert.Equal(t, "backend_clusters.1.name", cfg.describeField("backend_clusters.1.name"), "no object at that path")
 	assert.Equal(t, "listeners", cfg.describeField("listeners"))
+	assert.Equal(t, "EventGatewayBackendCluster ns/bc (entities.backend_clusters.0.name)", cfg.describeField("entities.backend_clusters.0.name"),
+		"under entities, as they are sent")
 }
 
 func TestConvertEntity(t *testing.T) {
@@ -508,8 +510,8 @@ func TestWithoutNulls(t *testing.T) {
 // unexported fields of the times they hold.
 func TestSemanticDeepEqualPanicsOnEntities(t *testing.T) {
 	created := time.Now()
-	held := gwadminapi.GatewayEntities{BackendClusters: []gwadminapi.EventGatewayBackendClusterOnPrem{{CreatedAt: created}}}
-	pushed := gwadminapi.GatewayEntities{BackendClusters: []gwadminapi.EventGatewayBackendClusterOnPrem{{CreatedAt: created}}}
+	held := gwadminapi.GatewayEntitySet{BackendClusters: []gwadminapi.EventGatewayBackendClusterOnPrem{{CreatedAt: created}}}
+	pushed := gwadminapi.GatewayEntitySet{BackendClusters: []gwadminapi.EventGatewayBackendClusterOnPrem{{CreatedAt: created}}}
 	assert.Panics(t, func() { equality.Semantic.DeepEqual(held, pushed) })
 }
 
@@ -518,7 +520,7 @@ func TestSameEntities(t *testing.T) {
 	bc := gwadminapi.EventGatewayBackendClusterOnPrem{Id: uuid.New(), Name: "bc", CreatedAt: created}
 	pushed := noEntities()
 	pushed.BackendClusters = []gwadminapi.EventGatewayBackendClusterOnPrem{bc}
-	same := func(held, pushed gwadminapi.GatewayEntities) bool {
+	same := func(held, pushed gwadminapi.GatewayEntitySet) bool {
 		t.Helper()
 		key, err := comparisonKey(withGWAdminDefaults(pushed))
 		require.NoError(t, err)
@@ -531,7 +533,7 @@ func TestSameEntities(t *testing.T) {
 	// out.
 	heldBC := bc
 	heldBC.Tls.TlsVersions = &[]gwadminapi.BackendClusterTLSTlsVersions{gwadminapi.Tls12, gwadminapi.Tls13}
-	held := gwadminapi.GatewayEntities{BackendClusters: []gwadminapi.EventGatewayBackendClusterOnPrem{heldBC}}
+	held := gwadminapi.GatewayEntitySet{BackendClusters: []gwadminapi.EventGatewayBackendClusterOnPrem{heldBC}}
 	assert.True(t, same(held, pushed), "a missing list and an empty one are the same, and so are a field left out and its default")
 	assert.Nil(t, pushed.BackendClusters[0].Tls.TlsVersions, "the entities pushed are left as they are")
 
@@ -561,7 +563,7 @@ func TestSameEntities(t *testing.T) {
 	pushed.StaticKeys = []gwadminapi.EventGatewayStaticKeyOnPrem{key, otherKey}
 	heldBundle, heldKey := bundle, key
 	heldBundle.Description, heldKey.Description = nil, nil
-	held = gwadminapi.GatewayEntities{
+	held = gwadminapi.GatewayEntitySet{
 		TlsTrustBundles: []gwadminapi.EventGatewayTLSTrustBundleOnPrem{heldBundle},
 		StaticKeys:      []gwadminapi.EventGatewayStaticKeyOnPrem{otherKey, heldKey},
 	}
@@ -581,7 +583,7 @@ func TestSameEntities(t *testing.T) {
 	pushed.SchemaRegistries = []gwadminapi.EventGatewaySchemaRegistryOnPrem{registry(`{
 		"config": {"authentication": {"password": "p", "type": "basic", "username": "u"}, "endpoint": "http://registry", "schema_type": "avro"},
 		"created_at": "2026-10-16T10:00:00Z", "id": "` + id.String() + `", "name": "registry", "type": "confluent"}`)}
-	held = gwadminapi.GatewayEntities{SchemaRegistries: []gwadminapi.EventGatewaySchemaRegistryOnPrem{registry(`{
+	held = gwadminapi.GatewayEntitySet{SchemaRegistries: []gwadminapi.EventGatewaySchemaRegistryOnPrem{registry(`{
 		"id": "` + id.String() + `", "name": "registry", "type": "confluent", "created_at": "2026-10-16T10:00:00Z",
 		"config": {"schema_type": "avro", "endpoint": "http://registry", "authentication": {"type": "basic", "username": "u", "password": "p"}}}`)}}
 	assert.True(t, same(held, pushed), "nested fields in another order")
@@ -605,7 +607,7 @@ func TestSameEntities(t *testing.T) {
 	sibling := `{"id": "1d2e3f4a-5b6c-4d7e-8f90-a1b2c3d4e5f6", "type": "schema_validation", "created_at": "2026-10-16T10:00:00Z"}`
 	pushed = noEntities()
 	pushed.VirtualClusters = []gwadminapi.EventGatewayVirtualClusterOnPrem{virtualCluster(`{"id": "`+bc.Id.String()+`"}`, parent, sibling, child)}
-	held = gwadminapi.GatewayEntities{VirtualClusters: []gwadminapi.EventGatewayVirtualClusterOnPrem{
+	held = gwadminapi.GatewayEntitySet{VirtualClusters: []gwadminapi.EventGatewayVirtualClusterOnPrem{
 		virtualCluster(`{"id": "`+bc.Id.String()+`", "name": ""}`, parent, child, sibling),
 	}}
 	assert.True(t, same(held, pushed), "a destination named by gw-admin, policies in another order")
@@ -662,7 +664,7 @@ func TestSameEntities(t *testing.T) {
 	}
 	pushed = noEntities()
 	pushed.Listeners = []gwadminapi.EventGatewayListenerOnPrem{listener(`[9092, "9093-9095"]`, tlsServer(`, "versions": {"min": "TLSv1.3"}`))}
-	held = gwadminapi.GatewayEntities{Listeners: []gwadminapi.EventGatewayListenerOnPrem{
+	held = gwadminapi.GatewayEntitySet{Listeners: []gwadminapi.EventGatewayListenerOnPrem{
 		listener(`["9092", "9093-9095"]`, `{"id": "4a5b6c7d-8e9f-4a0b-b1c2-d3e4f5a6b7c8", "type": "tls_server", "condition": "",
 			"created_at": "2026-10-16T10:00:00Z", "config": {"certificates": [], "versions": {"min": "TLSv1.3", "max": "TLSv1.3"}}}`),
 	}}
@@ -702,4 +704,51 @@ func TestSameEntities(t *testing.T) {
 	encoded, err = comparisonKey(held)
 	require.NoError(t, err)
 	assert.Contains(t, string(encoded), `"policies":[]`, "a missing list is empty, not null")
+}
+
+func TestSameEntitiesDestinationNames(t *testing.T) {
+	bcID, vcID, other := uuid.NewString(), uuid.NewString(), uuid.NewString()
+	// entities returns the entities with a virtual cluster and a listener
+	// policy forwarding to it, whose destinations are those given.
+	entities := func(vcDestination, policyDestination string) gwadminapi.GatewayEntitySet {
+		t.Helper()
+		var e gwadminapi.GatewayEntitySet
+		require.NoError(t, json.Unmarshal([]byte(`{
+			"backend_clusters": [], "schema_registries": [], "static_keys": [], "tls_trust_bundles": [],
+			"virtual_clusters": [{"id": "`+vcID+`", "created_at": "2026-10-19T10:00:00Z", "name": "vc", "dns_label": "vc",
+				"destination": `+vcDestination+`, "acl_mode": "passthrough", "authentication": [{"type": "anonymous"}],
+				"cluster_policies": [], "consume_policies": [], "produce_policies": []}],
+			"listeners": [{"id": "`+uuid.NewString()+`", "created_at": "2026-10-19T10:00:00Z", "name": "listener", "addresses": ["0.0.0.0"], "ports": ["19092"],
+				"policies": [{"id": "`+uuid.NewString()+`", "created_at": "2026-10-19T10:00:00Z", "type": "forward_to_virtual_cluster", "condition": "",
+					"config": {"type": "port_mapping", "advertised_host": "localhost", "bootstrap_port": "at_start", "destination": `+policyDestination+`}}]}]
+		}`), &e))
+		return e
+	}
+	same := func(held, pushed gwadminapi.GatewayEntitySet) bool {
+		t.Helper()
+		pushed.Listeners[0].Id, pushed.Listeners[0].Policies = held.Listeners[0].Id, slices.Clone(pushed.Listeners[0].Policies)
+		policy := editedJSON(pushed.Listeners[0].Policies[0], func(fields map[string]any) { fields["id"] = mustPolicyID(t, held) })
+		pushed.Listeners[0].Policies[0] = policy
+		key, err := comparisonKey(withGWAdminDefaults(pushed))
+		require.NoError(t, err)
+		ok, err := sameEntities(held, key)
+		require.NoError(t, err)
+		return ok
+	}
+	pushed := entities(`{"id": "`+bcID+`"}`, `{"id": "`+vcID+`"}`)
+
+	assert.True(t, same(entities(`{"id": "`+bcID+`", "name": ""}`, `{"id": "`+vcID+`"}`), pushed), "as gw-admin returned them: names empty")
+	assert.True(t, same(entities(`{"id": "`+bcID+`", "name": "bc"}`, `{"id": "`+vcID+`", "name": "vc"}`), pushed),
+		"as gw-admin returns them now: names resolved from the ids")
+	assert.False(t, same(entities(`{"id": "`+other+`", "name": "bc"}`, `{"id": "`+vcID+`", "name": "vc"}`), pushed), "another backend cluster")
+	assert.False(t, same(entities(`{"id": "`+bcID+`", "name": "bc"}`, `{"id": "`+other+`", "name": "vc"}`), pushed), "another virtual cluster")
+}
+
+// mustPolicyID returns the id of the policy of the listener of the entities.
+func mustPolicyID(t *testing.T, e gwadminapi.GatewayEntitySet) string {
+	t.Helper()
+	var id string
+	editedJSON(e.Listeners[0].Policies[0], func(fields map[string]any) { id, _ = fields["id"].(string) })
+	require.NotEmpty(t, id)
+	return id
 }
