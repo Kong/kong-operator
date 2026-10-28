@@ -28,7 +28,7 @@ func TestPortalIdentityProviderRequestConfigUnmarshalJSON_NilReceiver(t *testing
 		payload []byte
 	}{
 		{name: "OIDC", payload: []byte("{\"type\":\"oIDC\",\"oIDC\":{}}")},
-		{name: "PortalSAML", payload: []byte("{\"type\":\"portalSAML\",\"portalSAML\":{}}")},
+		{name: "SAML", payload: []byte("{\"type\":\"sAML\",\"sAML\":{}}")},
 	}
 
 	for _, tt := range tests {
@@ -73,18 +73,18 @@ func TestPortalIdentityProviderRequestAPISpecUnmarshalJSON_DecodesUnionFields(t 
 			},
 		},
 		{
-			name:    "Config/PortalSAML",
-			payload: []byte("{\"config\":{\"type\":\"portalSAML\",\"portalSAML\":{}}}"),
+			name:    "Config/SAML",
+			payload: []byte("{\"config\":{\"type\":\"sAML\",\"sAML\":{}}}"),
 			assert: func(t *testing.T, target PortalIdentityProviderRequestAPISpec) {
 				t.Helper()
 				if target.Config == nil {
 					t.Fatalf("Config should be allocated")
 				}
-				if got, want := target.Config.Type, PortalIdentityProviderRequestConfigTypePortalSAML; got != want {
+				if got, want := target.Config.Type, PortalIdentityProviderRequestConfigTypeSAML; got != want {
 					t.Fatalf("unexpected type: got %q want %q", got, want)
 				}
-				if target.Config.PortalSAML == nil {
-					t.Fatalf("Config.PortalSAML should be allocated")
+				if target.Config.SAML == nil {
+					t.Fatalf("Config.SAML should be allocated")
 				}
 			},
 		},

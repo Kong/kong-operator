@@ -7769,7 +7769,8 @@ type AIGatewayModelProviderConfigAuthBasicParams struct {
 	// Specify whether the param name and value options go in a query string, or
 	// the POST form/JSON body.
 	//
-	// +optional
+	// +required
+	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=body;query
 	Location string `json:"location,omitzero"`

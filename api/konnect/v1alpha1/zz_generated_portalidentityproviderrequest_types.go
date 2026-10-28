@@ -113,17 +113,17 @@ type PortalIdentityProviderRequestConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=oIDC;portalSAML
+	// +kubebuilder:validation:Enum=oIDC;sAML
 	Type PortalIdentityProviderRequestConfigType `json:"type,omitempty"`
 
 	// OIDC configuration.
 	//
 	// +optional
-	OIDC *OIDCIdentityProviderConfig `json:"oIDC,omitempty"`
-	// PortalSAML configuration.
+	OIDC *PortalOIDCIdentityProviderConfig `json:"oIDC,omitempty"`
+	// SAML configuration.
 	//
 	// +optional
-	PortalSAML *PortalSAMLIdentityProviderConfig `json:"portalSAML,omitempty"`
+	SAML *PortalSAMLIdentityProviderConfig `json:"sAML,omitempty"`
 }
 
 // PortalIdentityProviderRequestConfigType represents the type of config.
@@ -131,8 +131,8 @@ type PortalIdentityProviderRequestConfigType string
 
 // PortalIdentityProviderRequestConfigType values.
 const (
-	PortalIdentityProviderRequestConfigTypeOIDC       PortalIdentityProviderRequestConfigType = "oIDC"
-	PortalIdentityProviderRequestConfigTypePortalSAML PortalIdentityProviderRequestConfigType = "portalSAML"
+	PortalIdentityProviderRequestConfigTypeOIDC PortalIdentityProviderRequestConfigType = "oIDC"
+	PortalIdentityProviderRequestConfigTypeSAML PortalIdentityProviderRequestConfigType = "sAML"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -152,13 +152,13 @@ func (u PortalIdentityProviderRequestConfig) MarshalJSON() ([]byte, error) {
 			}
 			m["oIDC"] = raw
 		}
-	case PortalIdentityProviderRequestConfigTypePortalSAML:
-		if u.PortalSAML != nil {
-			raw, err := json.Marshal(u.PortalSAML)
+	case PortalIdentityProviderRequestConfigTypeSAML:
+		if u.SAML != nil {
+			raw, err := json.Marshal(u.SAML)
 			if err != nil {
-				return nil, fmt.Errorf("marshaling PortalIdentityProviderRequestConfig PortalSAML: %w", err)
+				return nil, fmt.Errorf("marshaling PortalIdentityProviderRequestConfig SAML: %w", err)
 			}
-			m["portalSAML"] = raw
+			m["sAML"] = raw
 		}
 	}
 	return json.Marshal(m)
@@ -186,21 +186,21 @@ func (u *PortalIdentityProviderRequestConfig) UnmarshalJSON(data []byte) error {
 		if !ok || len(payload) == 0 {
 			return nil
 		}
-		var val OIDCIdentityProviderConfig
+		var val PortalOIDCIdentityProviderConfig
 		if err := json.Unmarshal(payload, &val); err != nil {
 			return fmt.Errorf("unmarshaling PortalIdentityProviderRequestConfig OIDC: %w", err)
 		}
 		u.OIDC = &val
-	case "portalSAML":
-		payload, ok := raw["portalSAML"]
+	case "sAML":
+		payload, ok := raw["sAML"]
 		if !ok || len(payload) == 0 {
 			return nil
 		}
 		var val PortalSAMLIdentityProviderConfig
 		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling PortalIdentityProviderRequestConfig PortalSAML: %w", err)
+			return fmt.Errorf("unmarshaling PortalIdentityProviderRequestConfig SAML: %w", err)
 		}
-		u.PortalSAML = &val
+		u.SAML = &val
 	}
 	return nil
 }
@@ -216,7 +216,7 @@ func (s *PortalIdentityProviderRequestAPISpec) UnmarshalJSON(data []byte) error 
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling PortalIdentityProviderRequestAPISpec: %w", err)
 	}
-	if aux.Config != nil && aux.Config.Type == "" && aux.Config.OIDC == nil && aux.Config.PortalSAML == nil {
+	if aux.Config != nil && aux.Config.Type == "" && aux.Config.OIDC == nil && aux.Config.SAML == nil {
 		aux.Config = nil
 	}
 	*s = PortalIdentityProviderRequestAPISpec(aux)

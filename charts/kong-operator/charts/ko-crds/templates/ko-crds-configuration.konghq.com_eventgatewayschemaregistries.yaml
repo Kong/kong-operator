@@ -119,6 +119,7 @@ spec:
                             enum:
                             - avro
                             - json
+                            - any
                             maxLength: 253
                             minLength: 1
                             type: string
