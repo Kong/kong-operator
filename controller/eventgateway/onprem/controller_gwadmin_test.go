@@ -18,6 +18,7 @@ package onprem
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"testing"
 	"time"
@@ -30,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminsync/gwadminsynctest"
 )
 
@@ -92,6 +94,31 @@ func TestProvisionGWAdminWithoutGateways(t *testing.T) {
 		assert.Zero(t, provision(t, f))
 		assert.Equal(t, []string{callExpected + " "}, f.pod().recorded())
 		assert.Empty(t, recordedEvents(f.recorder))
+	})
+
+	t.Run("a failure to list the gateways keeps the backoff of a call that failed", func(t *testing.T) {
+		listFails := false
+		f := newPushFixture(t, interceptor.Funcs{
+			List: func(ctx context.Context, cl client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+				if _, ok := list.(*eventgatewayv1alpha1.OnPremEventGatewayList); ok && listFails {
+					return errors.New("cache not synced")
+				}
+				return cl.List(ctx, list, opts...)
+			},
+		}, withoutGateways)
+		f.pod().respond = failing(callExpected, http.StatusInternalServerError)
+		assert.Positive(t, provision(t, f).RequeueAfter)
+		require.Len(t, recordedEvents(f.recorder), 1)
+
+		listFails = true
+		_, err := f.r.provisionGWAdminWithoutGateways(t.Context(), reconcile.Request{NamespacedName: f.gateway.GWAdminKey()})
+		require.Error(t, err)
+
+		listFails = false
+		f.pod().reset()
+		assert.Positive(t, provision(t, f).RequeueAfter, "still waiting")
+		assert.Empty(t, f.pod().recorded())
+		assert.Empty(t, recordedEvents(f.recorder), "not reported again")
 	})
 
 	t.Run("a call cut short by the operator stopping isn't reported", func(t *testing.T) {

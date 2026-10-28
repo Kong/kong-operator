@@ -121,9 +121,14 @@ func (r *Reconciler) provisionGWAdminWithoutGateways(ctx context.Context, req re
 	// Most GWAdmins have gateways: they are left to their reconciles without
 	// taking the lock they wait for. The gateways are read again under the
 	// lock, which the push of a set of gateways must hold.
-	if served, err := gatewaysServedBy(ctx, r.Client, req.NamespacedName); err != nil || len(served) > 0 {
-		r.forgetGWAdmin(key)
+	// A failure to read them says nothing of the pushes: their backoff is kept.
+	served, err := gatewaysServedBy(ctx, r.Client, req.NamespacedName)
+	if err != nil {
 		return ctrl.Result{}, err
+	}
+	if len(served) > 0 {
+		r.forgetGWAdmin(key)
+		return ctrl.Result{}, nil
 	}
 	unlock, locked := r.GWAdminSync.TryLockGWAdmin(req.NamespacedName)
 	if !locked {
@@ -132,10 +137,13 @@ func (r *Reconciler) provisionGWAdminWithoutGateways(ctx context.Context, req re
 	}
 	defer unlock()
 
-	served, err := gatewaysServedBy(ctx, r.Client, req.NamespacedName)
-	if err != nil || len(served) > 0 {
-		r.forgetGWAdmin(key)
+	served, err = gatewaysServedBy(ctx, r.Client, req.NamespacedName)
+	if err != nil {
 		return ctrl.Result{}, err
+	}
+	if len(served) > 0 {
+		r.forgetGWAdmin(key)
+		return ctrl.Result{}, nil
 	}
 	target, err := r.GWAdminSync.Resolve(ctx, req.NamespacedName, gwadminsync.ForPush)
 	if _, notReady := errors.AsType[gwadminsync.NotReadyError](err); notReady {
