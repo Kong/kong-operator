@@ -20,6 +20,7 @@ import (
 	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	hybridgatewaywatch "github.com/kong/kong-operator/v2/controller/hybridgateway/watch"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets/ref"
 	operatorerrors "github.com/kong/kong-operator/v2/internal/errors"
@@ -246,8 +247,13 @@ func (r *Reconciler) listReferenceGrantsForGateway(ctx context.Context, obj clie
 }
 
 // listGatewaysForKongReferenceGrant returns reconcile requests for Gateways that might be affected by
-// a KongReferenceGrant that allows GatewayConfiguration -> KonnectAPIAuthConfiguration references.
+// a KongReferenceGrant allowing authentication or generated Listener certificate references.
 func (r *Reconciler) listGatewaysForKongReferenceGrant(ctx context.Context, obj client.Object) []reconcile.Request {
+	requests := hybridgatewaywatch.MapGatewayForKongReferenceGrant(r.Client)(ctx, obj)
+	return append(requests, r.listGatewaysForKonnectAPIAuthReferenceGrant(ctx, obj)...)
+}
+
+func (r *Reconciler) listGatewaysForKonnectAPIAuthReferenceGrant(ctx context.Context, obj client.Object) []reconcile.Request {
 	logger := ctrllog.FromContext(ctx)
 
 	grant, ok := obj.(*configurationv1alpha1.KongReferenceGrant)

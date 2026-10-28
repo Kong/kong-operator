@@ -1,0 +1,483 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: gateway-kongcertificate
+spec:
+  description: |
+    cert-manager issues and rotates a Listener certificate through ConfigStoreSync.
+    The Listener keeps its hostname and references an externally owned, cross-namespace
+    KongCertificate containing only Vault references. Both grant layers are required;
+    revoking either removes the generated SNI. HTTPS verifies the chain and hostname,
+    including rotation without entity changes or DataPlane restarts.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: konnect-auth
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [$test_name, 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: auth_name
+      value: ($konnect_auth_name)
+    - name: cp_name
+      value: (join('-', [$test_name, 'cp']))
+    - name: cp_namespace
+      value: ($namespace)
+    - name: config_store_name
+      value: serving
+    - name: config_store_namespace
+      value: ($namespace)
+    - name: vault_name
+      value: (join('-', [$test_name, 'vault']))
+    - name: certificate_namespace
+      value: (join('-', [$namespace, 'certs']))
+    - name: gateway_name
+      value: (join('-', [$test_name, 'gateway']))
+    - name: gateway_namespace
+      value: ($namespace)
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE'))
+    - name: hostname
+      value: (join('.', ['api', $test_name, 'example.test']))
+    - name: echo_deployment_name
+      value: echo
+    - name: echo_deployment_namespace
+      value: ($namespace)
+    - name: echo_deployment_replicas
+      value: 1
+
+  steps:
+    - name: certificate-namespace
+      bindings:
+        - name: namespace_name
+          value: ($certificate_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
+    - name: auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: auth-configuration
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: control-plane
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectGatewayControlPlane.yaml
+    - name: material
+      try:
+        - apply:
+            file: 01-material.yaml
+        - assert:
+            resource:
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: serving
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"
+    - name: config-store
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectConfigStore.yaml
+    - name: vault-certificate
+      try:
+        - apply:
+            file: 02-vault.yaml
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectConfigStoreSync
+              metadata:
+                name: serving
+              status:
+                (conditions[?type == 'Synced']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongVault
+              metadata:
+                name: ($vault_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              metadata:
+                name: serving
+                namespace: ($certificate_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+    - name: gateway
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: CP_NAME
+                value: ($cp_name)
+            content: |
+              kubectl -n "$NAMESPACE" get konnectgatewaycontrolplane "$CP_NAME" -o json | jq '{cp_id: .status.id}'
+            outputs:
+              - name: cp_id
+                value: (json_parse($stdout).cp_id)
+        - apply:
+            file: 03-gateway.yaml
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: Gateway
+              metadata:
+                name: ($gateway_name)
+              status:
+                listeners:
+                  - name: https
+                    (conditions[?type == 'ResolvedRefs']):
+                      - status: "False"
+                        reason: RefNotPermitted
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                namespace: ($namespace)
+    - name: gateway-grant-alone-is-insufficient
+      try:
+        - apply:
+            file: 04-gateway-grant.yaml
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: Gateway
+              metadata:
+                name: ($gateway_name)
+              status:
+                listeners:
+                  - name: https
+                    (conditions[?type == 'ResolvedRefs']):
+                      - status: "False"
+                        reason: RefNotPermitted
+                        (contains(message, 'KongReferenceGrant')): true
+    - name: sni-grant
+      try:
+        - apply:
+            file: 05-sni-grant.yaml
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: (join('.', ['cert', $gateway_name, '443', 'https']))
+              spec:
+                name: ($hostname)
+                certificateRef:
+                  name: serving
+                  namespace: ($certificate_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+    - name: echo-backend
+      use:
+        template: ../../common/_step_templates/apply-assert-echoService.yaml
+    - name: route-inherits-listener-hostname
+      try:
+        - apply:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              metadata:
+                name: echo
+              spec:
+                parentRefs:
+                  - name: ($gateway_name)
+                rules:
+                  - backendRefs:
+                      - name: echo
+                        port: 1027
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: Gateway
+              metadata:
+                name: ($gateway_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+                listeners:
+                  - name: https
+                    (conditions[?type == 'ResolvedRefs']):
+                      - status: "True"
+                    (conditions[?type == 'Programmed']):
+                      - status: "True"
+    - name: verified-tls-and-rotation
+      try:
+        - script:
+            env: &tls-env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: CERTIFICATE_NAME
+                value: serving
+              - name: CERTIFICATE_NAMESPACE
+                value: ($certificate_namespace)
+              - name: MATERIAL_SECRET_NAME
+                value: serving
+              - name: CA_SECRET_NAME
+                value: ca
+              - name: CONFIG_STORE_NAME
+                value: ($config_store_name)
+              - name: CONTROL_PLANE_NAME
+                value: ($cp_name)
+              - name: HOSTNAME
+                value: ($hostname)
+              - name: TEST_LABEL
+                value: ($test_name)
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_SERVER_URL
+                value: ($konnect_url)
+            content: |
+              python3 ../../common/scripts/verify_gateway_vault_certificate.py
+            outputs:
+              - name: baseline
+                value: (json_parse($stdout))
+        - script:
+            env:
+              - name: MODE
+                value: rotate
+              - name: BASELINE
+                value: (to_string($baseline))
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: CERTIFICATE_NAME
+                value: serving
+              - name: CERTIFICATE_NAMESPACE
+                value: ($certificate_namespace)
+              - name: MATERIAL_SECRET_NAME
+                value: serving
+              - name: CA_SECRET_NAME
+                value: ca
+              - name: CONFIG_STORE_NAME
+                value: ($config_store_name)
+              - name: CONTROL_PLANE_NAME
+                value: ($cp_name)
+              - name: HOSTNAME
+                value: ($hostname)
+              - name: TEST_LABEL
+                value: ($test_name)
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_SERVER_URL
+                value: ($konnect_url)
+            content: |
+              python3 ../../common/scripts/verify_gateway_vault_certificate.py
+    - name: switch-to-legacy-secret-reference
+      try:
+        - apply:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: Gateway
+              metadata:
+                name: ($gateway_name)
+              spec:
+                gatewayClassName: ($gateway_name)
+                listeners:
+                  - name: https
+                    hostname: ($hostname)
+                    port: 443
+                    protocol: HTTPS
+                    tls:
+                      mode: Terminate
+                      certificateRefs:
+                        - name: serving
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: (join('.', ['cert', $gateway_name, '443', 'https']))
+              spec:
+                certificateRef:
+                  name: (join('.', ['cert', $gateway_name, '443', 'https']))
+                  (namespace == null): true
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: Gateway
+              metadata:
+                name: ($gateway_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+    - name: switch-back-to-external-certificate
+      try:
+        - apply:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: Gateway
+              metadata:
+                name: ($gateway_name)
+              spec:
+                gatewayClassName: ($gateway_name)
+                listeners:
+                  - name: https
+                    hostname: ($hostname)
+                    port: 443
+                    protocol: HTTPS
+                    tls:
+                      mode: Terminate
+                      certificateRefs:
+                        - group: configuration.konghq.com
+                          kind: KongCertificate
+                          name: serving
+                          namespace: ($certificate_namespace)
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: (join('.', ['cert', $gateway_name, '443', 'https']))
+              spec:
+                certificateRef:
+                  name: serving
+                  namespace: ($certificate_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              metadata:
+                namespace: ($namespace)
+        - script:
+            env: *tls-env
+            content: |
+              python3 ../../common/scripts/verify_gateway_vault_certificate.py
+    - name: revoke-gateway-grant
+      try:
+        - delete:
+            ref:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: ReferenceGrant
+              name: gateway-certificate
+              namespace: ($certificate_namespace)
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: Gateway
+              metadata:
+                name: ($gateway_name)
+              status:
+                listeners:
+                  - name: https
+                    (conditions[?type == 'ResolvedRefs']):
+                      - status: "False"
+                        reason: RefNotPermitted
+        - error: &no-sni
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                namespace: ($namespace)
+    - name: restore-gateway-grant
+      try:
+        - apply:
+            file: 04-gateway-grant.yaml
+        - assert: &sni-programmed
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongSNI
+              metadata:
+                name: (join('.', ['cert', $gateway_name, '443', 'https']))
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+    - name: revoke-sni-grant
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: sni-certificate
+              namespace: ($certificate_namespace)
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: Gateway
+              metadata:
+                name: ($gateway_name)
+              status:
+                listeners:
+                  - name: https
+                    (conditions[?type == 'ResolvedRefs']):
+                      - status: "False"
+                        reason: RefNotPermitted
+        - error: *no-sni
+    - name: restore-sni-grant
+      try:
+        - apply:
+            file: 05-sni-grant.yaml
+        - assert: *sni-programmed
+    - name: external-certificate-survives-gateway-deletion
+      try:
+        - delete:
+            ref:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: Gateway
+              name: ($gateway_name)
+        - error: *no-sni
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              metadata:
+                name: serving
+                namespace: ($certificate_namespace)
+                (length(ownerReferences || `[]`)): 0
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+    - name: cleanup-certificate-material
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              name: serving
+              namespace: ($certificate_namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongVault
+              name: ($vault_name)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectConfigStoreSync
+              name: serving
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectConfigStore
+              name: ($config_store_name)
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              name: ($cp_name)

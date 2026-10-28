@@ -557,6 +557,15 @@
   ControlPlanes gets the union of both Gateways' tags on each ControlPlane's
   entities.
   [#5869](https://github.com/Kong/kong-operator/pull/5869)
+- Konnect-backed Gateway HTTPS Listeners can reference an existing
+  `configuration.konghq.com/KongCertificate` directly through `certificateRefs`.
+  Kong Operator manages the Listener SNI without copying or owning the certificate,
+  allowing Vault-backed certificates and cert-manager rotation without a
+  placeholder TLS Secret or a manually managed KongSNI. Cross-namespace references
+  require both a Gateway API ReferenceGrant and a KongReferenceGrant.
+  TLS Passthrough Listeners ignore certificate references without creating or
+  waiting for certificate bindings.
+  [#6233](https://github.com/Kong/kong-operator/pull/6233)
 
 ### Changed
 
