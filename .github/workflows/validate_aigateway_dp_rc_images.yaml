@@ -1,6 +1,6 @@
 name: validate AIGateway dataplane RC images (scheduled)
 
-# Polls kong/kong-ai-gateway-dev for release candidate images (kaigatewayx.x.x-rc.x) and triggers
+# Polls kong/kong-ai-gateway-dev for release candidate images (x.x.x-rc.x) and triggers
 # validate_aigateway_dp_image.yaml for each of them.
 # Scheduled runs cover the fixed window [previous POLL_ANCHOR_TIME, latest POLL_ANCHOR_TIME)
 # so that consecutive runs neither miss nor re-validate images, even if a run is delayed.
@@ -109,8 +109,7 @@ jobs:
           REF: ${{ github.ref_name }}
           JOB_INDEX: ${{ strategy.job-index }}
           JOB_TOTAL: ${{ strategy.job-total }}
-        # Use `gh` command to dispatch the validation workflow for the current tag instead of calling a nested workflow
-        # for each tag in the matrix to dispatch them sequentially with a 10 minute interval.
+        # Dispatch through gh so each matrix leg spaces its dispatch; a reusable workflow cannot sleep between tags.
         run: |
           set -euo pipefail
           echo "Triggering validation for ${AIGATEWAY_IMAGE_REPO}:${TAG}"

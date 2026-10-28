@@ -109,8 +109,7 @@ jobs:
           REF: ${{ github.ref_name }}
           JOB_INDEX: ${{ strategy.job-index }}
           JOB_TOTAL: ${{ strategy.job-total }}
-        # Use `gh` command to dispatch the validation workflow for the current tag instead of calling a nested workflow
-        # for each tag in the matrix to dispatch them sequentially with a 10 minute interval.
+        # Dispatch through gh so each matrix leg spaces its dispatch; a reusable workflow cannot sleep between tags.
         run: |
           set -euo pipefail
           # The effective version is the first 3 parts of the tag, e.g. 3.16.0.1-rc.3 -> 3.16.0.
