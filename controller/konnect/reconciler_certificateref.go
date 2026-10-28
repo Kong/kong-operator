@@ -360,6 +360,7 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 	// Set CertificateID after all patches so the server-response from each merge patch
 	// cannot clobber it (see comment above near certKonnectID declaration).
 	// Status.Konnect is already initialised above so nil-guards are not needed here.
+	old := ent.DeepCopyObject().(TEnt)
 	switch ent := any(ent).(type) {
 	case *configurationv1alpha1.KongSNI:
 		ent.Status.Konnect.CertificateID = certKonnectID
@@ -367,6 +368,16 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 		ent.Status.Konnect.CertificateID = certKonnectID
 	case *configurationv1alpha1.KongUpstream:
 		ent.Status.Konnect.CertificateID = certKonnectID
+	}
+
+	// Persist it now, before the entity is created in Konnect. KongSNI deletion
+	// and the create/update payloads read the ID from the status, so a delete
+	// racing the create would otherwise leave the entity undeletable in Konnect.
+	if _, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old); err != nil {
+		if apierrors.IsConflict(err) {
+			return ctrl.Result{Requeue: true}, nil
+		}
+		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil
 }
