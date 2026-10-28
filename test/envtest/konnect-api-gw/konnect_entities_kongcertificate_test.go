@@ -93,6 +93,7 @@ func TestKongCertificate(t *testing.T) {
 		createdCert := deploy.KongCertificateAttachedToCP(t, ctx, clientNamespaced, cp,
 			func(obj client.Object) {
 				cert := obj.(*configurationv1alpha1.KongCertificate)
+				cert.Spec.Tags = []string{"tag1"}
 				cert.UID = "12345"
 			},
 		)

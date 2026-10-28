@@ -855,8 +855,10 @@ func TestKongService(t *testing.T) {
 			CreateService(
 				mock.Anything,
 				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.Service) bool {
-					return req.Host == host && !slices.Contains(req.Tags, reservedTag)
+				mock.MatchedBy(func(req sdkkonnectcomp.ServiceRequest) bool {
+					return req.ServiceWithHost != nil &&
+						req.ServiceWithHost.Host == host &&
+						!slices.Contains(req.ServiceWithHost.Tags, reservedTag)
 				}),
 			).
 			Return(
