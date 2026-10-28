@@ -83,6 +83,10 @@ type Syncer struct {
 	// wakeups carries the waiters of a lock to wake (see TryLock).
 	wakeups     chan event.GenericEvent
 	wakeupsOnce sync.Once
+	// gwAdminWakeups carries the GWAdmins waiting for their lock to wake (see
+	// TryLockGWAdmin).
+	gwAdminWakeups     chan event.GenericEvent
+	gwAdminWakeupsOnce sync.Once
 }
 
 // Mode tells what a Target is resolved for.
@@ -191,36 +195,61 @@ func (e NotReadyError) Error() string { return e.Message }
 // be requeued, after a while, in case that request is lost, e.g. on a
 // restart.
 func (s *Syncer) TryLock(gwAdmin, waiter types.NamespacedName) (unlock func(), ok bool) {
+	return s.tryLock(gwAdmin, lockWaiter{NamespacedName: waiter})
+}
+
+// TryLockGWAdmin locks the GWAdmin like TryLock, for a controller that
+// reconciles the GWAdmins, set up with WatchGWAdmins: the GWAdmin waits in
+// line for the lock, and the unlock requests a reconcile of it, of that
+// controller, once first in line, and of the next one in line too, as the
+// reconcile of the GWAdmin may return without the lock.
+func (s *Syncer) TryLockGWAdmin(gwAdmin types.NamespacedName) (unlock func(), ok bool) {
+	return s.tryLock(gwAdmin, lockWaiter{NamespacedName: gwAdmin, gwAdmin: true})
+}
+
+func (s *Syncer) tryLock(gwAdmin types.NamespacedName, waiter lockWaiter) (unlock func(), ok bool) {
 	unlockKey, ok := s.locks.tryLock(gwAdmin, waiter)
 	if !ok {
 		return nil, false
 	}
 	return func() {
-		if wake, ok := unlockKey(); ok {
-			s.wake(wake)
+		for _, w := range unlockKey() {
+			s.wake(w)
 		}
 	}, true
 }
 
-// wakeupBuffer is how many waiters of a lock to wake are kept until the
+// wakeupBuffer is how many waiters of a lock to wake are kept until their
 // controller reconciles them: beyond, they are requeued anyway.
 const wakeupBuffer = 1024
 
-// wake requests a reconcile of the object, unless too many are waiting
-// already: it is requeued anyway.
-func (s *Syncer) wake(object types.NamespacedName) {
+// wake requests a reconcile of the waiter, of its controller, unless too
+// many are waiting already: it is requeued anyway.
+func (s *Syncer) wake(waiter lockWaiter) {
+	wakeups := s.wakeupChannel()
+	if waiter.gwAdmin {
+		wakeups = s.gwAdminWakeupChannel()
+	}
 	select {
-	case s.wakeupChannel() <- event.GenericEvent{Object: &metav1.PartialObjectMetadata{
-		Namespace: object.Namespace, Name: object.Name,
+	case wakeups <- event.GenericEvent{Object: &metav1.PartialObjectMetadata{
+		Namespace: waiter.Namespace, Name: waiter.Name,
 	}}:
 	default:
 	}
 }
 
-// wakeupChannel returns the channel of the waiters of a lock to wake.
+// wakeupChannel returns the channel of the waiters of a lock to wake, of the
+// controller set up with Watch.
 func (s *Syncer) wakeupChannel() chan event.GenericEvent {
 	s.wakeupsOnce.Do(func() { s.wakeups = make(chan event.GenericEvent, wakeupBuffer) })
 	return s.wakeups
+}
+
+// gwAdminWakeupChannel returns the channel of the GWAdmins waiting for their
+// lock to wake, of the controller set up with WatchGWAdmins.
+func (s *Syncer) gwAdminWakeupChannel() chan event.GenericEvent {
+	s.gwAdminWakeupsOnce.Do(func() { s.gwAdminWakeups = make(chan event.GenericEvent, wakeupBuffer) })
+	return s.gwAdminWakeups
 }
 
 // Resolve returns the gw-admin of the GWAdmin. Each pod is reached on its

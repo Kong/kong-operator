@@ -25,6 +25,11 @@ import "time"
 // ControllerName is the name used for logging.
 const ControllerName = "onprem-eventgateway"
 
+// gwAdminControllerName is the name of the controller provisioning the
+// gw-admin pods of the GWAdmins no OnPremEventGateway may use (see
+// setupGWAdminsWithoutGateways).
+const gwAdminControllerName = ControllerName + "-gwadmin"
+
 // annotationCleanupStarted records on a deleted gateway when its cleanup
 // started: its grace period counts from then, across restarts of the
 // operator.
@@ -97,13 +102,18 @@ const (
 // OnPremEventGateway - Events
 // -----------------------------------------------------------------------------
 
-// The reasons and actions of the events of a gateway.
+// The reasons and actions of the events of a gateway, and of a GWAdmin.
 const (
 	eventActionPushConfiguration = "PushConfiguration"
 	eventActionDelete            = "Delete"
 	// eventReasonCleanupTimedOut is the reason of the event of a gateway
 	// deleted although some gw-admin pod may still serve it.
 	eventReasonCleanupTimedOut = "GWAdminCleanupTimedOut"
+	// eventActionProvision and eventReasonProvisionFailed are those of the
+	// event of a GWAdmin no OnPremEventGateway may use, whose gw-admin pods
+	// can't be told they serve no gateway.
+	eventActionProvision       = "Provision"
+	eventReasonProvisionFailed = "GWAdminProvisioningFailed"
 )
 
 // maxEventNoteLength bounds the notes of the events: the API server rejects

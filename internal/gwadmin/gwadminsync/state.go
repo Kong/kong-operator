@@ -31,25 +31,37 @@ import (
 // keyedLocks locks GWAdmins one by one: the holders of the lock of a GWAdmin
 // run one at a time, those of different GWAdmins concurrently. Those that
 // don't get the lock of a GWAdmin wait in line for it: each unlock wakes the
-// first of them. The zero value is ready to use.
+// first of them (see tryLock). The zero value is ready to use.
 type keyedLocks struct {
 	mu sync.Mutex
 	// locked holds the GWAdmins locked.
 	locked map[types.NamespacedName]struct{}
 	// lines holds, by GWAdmin, those waiting for its lock, in the order they
 	// tried.
-	lines map[types.NamespacedName][]types.NamespacedName
+	lines map[types.NamespacedName][]lockWaiter
+}
+
+// lockWaiter is a reconcile waiting for the lock of a GWAdmin: that of an
+// object of the controller set up with Watch, or that of the GWAdmin, of the
+// controller set up with WatchGWAdmins (see TryLockGWAdmin).
+type lockWaiter struct {
+	types.NamespacedName
+
+	// gwAdmin tells the waiter is the GWAdmin.
+	gwAdmin bool
 }
 
 // tryLock locks the key, unless it is locked already: then waiter waits in
 // line for it. It returns the function unlocking it, which returns the first
-// in line, if any, to wake.
-func (k *keyedLocks) tryLock(key, waiter types.NamespacedName) (unlock func() (wake types.NamespacedName, ok bool), locked bool) {
+// in line, if any, to wake. When that is a GWAdmin, the next one is woken
+// too: the reconcile of a GWAdmin may return without the lock, e.g. once a
+// gateway may use it, and wake nobody.
+func (k *keyedLocks) tryLock(key types.NamespacedName, waiter lockWaiter) (unlock func() (wake []lockWaiter), locked bool) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	if k.locked == nil {
 		k.locked = map[types.NamespacedName]struct{}{}
-		k.lines = map[types.NamespacedName][]types.NamespacedName{}
+		k.lines = map[types.NamespacedName][]lockWaiter{}
 	}
 	if _, held := k.locked[key]; held {
 		if !slices.Contains(k.lines[key], waiter) {
@@ -59,23 +71,27 @@ func (k *keyedLocks) tryLock(key, waiter types.NamespacedName) (unlock func() (w
 	}
 	k.locked[key] = struct{}{}
 	k.leaveLine(key, waiter)
-	return func() (types.NamespacedName, bool) {
+	return func() []lockWaiter {
 		k.mu.Lock()
 		defer k.mu.Unlock()
 		delete(k.locked, key)
-		line := k.lines[key]
-		if len(line) == 0 {
-			return types.NamespacedName{}, false
+		var wake []lockWaiter
+		for _, w := range k.lines[key] {
+			wake = append(wake, w)
+			if !w.gwAdmin {
+				break
+			}
 		}
-		first := line[0]
-		k.leaveLine(key, first)
-		return first, true
+		for _, w := range wake {
+			k.leaveLine(key, w)
+		}
+		return wake
 	}, true
 }
 
 // leaveLine takes the waiter out of the line of the key. k.mu must be held.
-func (k *keyedLocks) leaveLine(key, waiter types.NamespacedName) {
-	line := slices.DeleteFunc(k.lines[key], func(w types.NamespacedName) bool { return w == waiter })
+func (k *keyedLocks) leaveLine(key types.NamespacedName, waiter lockWaiter) {
+	line := slices.DeleteFunc(k.lines[key], func(w lockWaiter) bool { return w == waiter })
 	if len(line) == 0 {
 		delete(k.lines, key)
 		return

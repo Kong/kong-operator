@@ -5,8 +5,10 @@ metadata:
 spec:
   description: |
     A rotation never gets ahead of the pods it depends on:
-    1. A GWAdmin starts with its Automatic certificate authorities. Nothing
-       provisions its pods, so they never turn Ready.
+    1. A GWAdmin starts with its Automatic certificate authorities. Kong
+       Operator, which would tell its pods they serve no gateway, is cut off
+       from them, and the peers don't run: nothing provisions its pods, so
+       they never turn Ready.
     2. It is switched to a Manual cp client CA, and its Automatic certificate
        authorities are rotated with the rotate-certificate-authorities
        annotation. The new CAs are trusted right away, but a rolling update
@@ -18,7 +20,8 @@ spec:
        The cp server certificate doesn't depend on the pods, only on the data
        planes, and none runs yet: it moves to the new cp server CA right
        away, rollout or not.
-    3. Once peers provision the pods, and the data plane gwadmin-dp starts,
+    3. Once Kong Operator is let through and peers provision the pods, and
+       the data plane gwadmin-dp starts,
        the rollout completes and the rotations finish, without a TLS
        failure: the Manual CA is published, under the same name, the
        Automatic one is dropped once gwadmin-dp rolled out with a
@@ -32,6 +35,16 @@ spec:
   steps:
     - name: 1-Create-gwadmin-unprovisioned
       try:
+        # Before the GWAdmin, so that no pod of it is ever provisioned.
+        - script:
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GWADMIN
+                value: ($gwadmin_name)
+              - name: WORK_DIR
+                value: ($work_dir)
+            content: ../gwadmin-shared/gwadmin.sh block-operator
         - apply:
             file: 01-gwadmin.yaml
         - assert:
@@ -45,13 +58,7 @@ spec:
             timeout: 30s
             file: ../gwadmin-shared/assert-tls-status.yaml
         - script:
-            env: &env
-              - name: NAMESPACE
-                value: ($namespace)
-              - name: GWADMIN
-                value: ($gwadmin_name)
-              - name: WORK_DIR
-                value: ($work_dir)
+            env: *env
             timeout: 1m
             content: ../gwadmin-shared/gwadmin.sh save-private-ca "$GWADMIN" cp-client-ca "$WORK_DIR/auto"
         - script:
@@ -145,6 +152,9 @@ spec:
               - {name: bundle_size, value: 2}
     - name: 3-Provisioning-unblocks-rotation
       try:
+        - script:
+            env: *env
+            content: ../gwadmin-shared/gwadmin.sh unblock-operator
         # The scripts the peers and gwadmin-dp run, from gwadmin-shared.
         - script:
             env:

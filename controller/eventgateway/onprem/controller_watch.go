@@ -303,11 +303,17 @@ func requestsForGWAdmin(ctx context.Context, cl client.Client, gwAdmin client.Ob
 // namespace, not being deleted, and whose UID is a version 4 UUID. gw-admin
 // replaces the whole set on every call.
 func expectedGateways(ctx context.Context, cl client.Client, gateway *eventgatewayv1alpha1.OnPremEventGateway) ([]uuid.UUID, error) {
-	gateways, err := gwadminref.GatewaysOf(ctx, cl, gateway.GWAdminKey())
+	return gatewaysServedBy(ctx, cl, gateway.GWAdminKey())
+}
+
+// gatewaysServedBy returns the ids of the gateways the gw-admin of the
+// GWAdmin must serve (see expectedGateways).
+func gatewaysServedBy(ctx context.Context, cl client.Client, gwAdmin client.ObjectKey) ([]uuid.UUID, error) {
+	gateways, err := gwadminref.GatewaysOf(ctx, cl, gwAdmin)
 	if err != nil {
 		return nil, err
 	}
-	gateways, err = gwadminref.GatewaysAllowedToUse(ctx, cl, gateway.GWAdminKey(), gateways)
+	gateways, err = gwadminref.GatewaysAllowedToUse(ctx, cl, gwAdmin, gateways)
 	if err != nil {
 		return nil, err
 	}

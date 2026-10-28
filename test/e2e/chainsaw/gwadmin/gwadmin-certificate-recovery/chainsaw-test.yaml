@@ -15,8 +15,9 @@ spec:
        Kong Operator rewrites them without it, as it derives them from what
        it keeps in its own namespace, and the cp listener rejects a client
        certificate issued from it.
-    5. The three CA Secrets are deleted while the peers are stopped (so the
-       rollout stalls): the published cp client CA, the API CA and the cp
+    5. The three CA Secrets are deleted while the peers are stopped, and
+       Kong Operator is cut off from the gw-admin pods (so the rollout
+       stalls): the published cp client CA, the API CA and the cp
        server CA, all in the operator namespace. Kong
        Operator creates new CAs and trusts both the old and the new ones:
        - the API certificates stay on the old API CA, carried in their
@@ -214,10 +215,10 @@ spec:
             timeout: 4m
             content: ../gwadmin-shared/gwadmin.sh wait-new-private-ca "$GWADMIN" cp-server-ca "$WORK_DIR/cp-server-ca/tls.crt" "$WORK_DIR/new-cp-server-ca" 60
         # The old CAs stay trusted while certificates signed by them are in
-        # use: the new gw-admin pods can't turn Ready without the peers, so
-        # the rollout stalls, the API certificates stay on the old API CA,
-        # and the data plane certificates issued from the old cp client CA
-        # stay accepted.
+        # use: the new gw-admin pods can't turn Ready without the peers,
+        # Kong Operator blocked (see peers-stop), so the rollout stalls, the
+        # API certificates stay on the old API CA, and the data plane
+        # certificates issued from the old cp client CA stay accepted.
         - assert:
             timeout: 1m
             file: ../gwadmin-shared/assert-bundle-size.yaml

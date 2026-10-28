@@ -163,6 +163,9 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 	if err := b.Complete(reconcile.AsReconciler(r.Client, r)); err != nil {
 		return err
 	}
+	if err := r.setupGWAdminsWithoutGateways(mgr); err != nil {
+		return err
+	}
 	return r.setupUnreachable(mgr)
 }
 
