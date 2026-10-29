@@ -502,18 +502,23 @@ func TestKongServiceBuilder_MultipleErrors(t *testing.T) {
 func TestKongServiceBuilder_WithClientCertificateRef(t *testing.T) {
 	tests := []struct {
 		name        string
-		input       string
+		input       *commonv1alpha1.NamespacedRef
 		expectedRef *commonv1alpha1.NamespacedRef
 	}{
 		{
 			name:        "empty name leaves field nil",
-			input:       "",
+			input:       nil,
 			expectedRef: nil,
 		},
 		{
 			name:        "valid name sets NamespacedRef",
-			input:       "my-cert",
+			input:       &commonv1alpha1.NamespacedRef{Name: "my-cert"},
 			expectedRef: &commonv1alpha1.NamespacedRef{Name: "my-cert"},
+		},
+		{
+			name:        "explicit namespace is preserved",
+			input:       &commonv1alpha1.NamespacedRef{Name: "my-cert", Namespace: new("certificates")},
+			expectedRef: &commonv1alpha1.NamespacedRef{Name: "my-cert", Namespace: new("certificates")},
 		},
 	}
 	for _, tt := range tests {
@@ -524,8 +529,8 @@ func TestKongServiceBuilder_WithClientCertificateRef(t *testing.T) {
 				assert.Nil(t, service.Spec.ClientCertificateRef)
 			} else {
 				require.NotNil(t, service.Spec.ClientCertificateRef)
-				assert.Equal(t, tt.expectedRef.Name, service.Spec.ClientCertificateRef.Name)
-				assert.Nil(t, service.Spec.ClientCertificateRef.Namespace)
+				assert.Equal(t, tt.expectedRef, service.Spec.ClientCertificateRef)
+				assert.NotSame(t, tt.input, service.Spec.ClientCertificateRef)
 			}
 		})
 	}

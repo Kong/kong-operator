@@ -22,6 +22,8 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
+	hybridgatewayerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
+	hybridgatewaymetadata "github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	hybridgatewayrefs "github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/controller/pkg/controlplane"
@@ -90,6 +92,78 @@ func validateGatewaySNICertificate(ctx context.Context, cl client.Client, sni *c
 	return err
 }
 
+func handleHybridGatewayServiceCertificateRef(
+	ctx context.Context,
+	cl client.Client,
+	service *configurationv1alpha1.KongService,
+) (ctrl.Result, error) {
+	// References may have been revoked or moved since translation. Deletion uses
+	// the persisted IDs, never the current certificate's ControlPlane or status.
+	if !service.DeletionTimestamp.IsZero() {
+		return ctrl.Result{}, nil
+	}
+	ref := service.Spec.ClientCertificateRef
+	if ref == nil || ref.Namespace == nil || *ref.Namespace == "" || *ref.Namespace == service.Namespace {
+		if condition, ok := k8sutils.GetCondition(consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs), service); ok &&
+			strings.Contains(condition.Message, "KongCertificate") {
+			if res, err := patch.StatusWithoutCondition(ctx, cl, service, string(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs)); err != nil || !res.IsZero() {
+				return res, err
+			}
+		}
+	}
+	if service.Spec.ClientCertificateRef == nil {
+		if res, err := patch.StatusWithoutCondition(ctx, cl, service, string(konnectv1alpha1.KongCertificateRefValidConditionType)); err != nil || !res.IsZero() {
+			return res, err
+		}
+		if service.Status.Konnect != nil {
+			service.Status.Konnect.CertificateID = ""
+		}
+		return ctrl.Result{}, nil
+	}
+	cert, err := hybridgatewayrefs.ResolveServiceKongCertificate(ctx, cl, service)
+	if invalid, ok := errors.AsType[*hybridgatewayerrors.ClientCertificateRefError](err); ok {
+		if invalid.Reason == string(gatewayv1.RouteReasonRefNotPermitted) {
+			if res, err := patch.StatusWithCondition(ctx, cl, service,
+				consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
+				metav1.ConditionFalse, configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted, invalid.Message,
+			); err != nil || !res.IsZero() {
+				return res, err
+			}
+		}
+		if res, err := patch.StatusWithCondition(ctx, cl, service,
+			konnectv1alpha1.KongCertificateRefValidConditionType, metav1.ConditionFalse,
+			konnectv1alpha1.KongCertificateRefReasonInvalid, invalid.Message,
+		); err != nil || !res.IsZero() {
+			return res, err
+		}
+		return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+	}
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if ref := service.Spec.ClientCertificateRef; ref.Namespace != nil && *ref.Namespace != "" && *ref.Namespace != service.Namespace {
+		if res, err := patch.StatusWithCondition(ctx, cl, service,
+			consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
+			metav1.ConditionTrue, configurationv1alpha1.KongReferenceGrantReasonResolvedRefs,
+			"KongReferenceGrants allow access to KongCertificate",
+		); err != nil || !res.IsZero() {
+			return res, err
+		}
+	}
+	if res, err := patch.StatusWithCondition(ctx, cl, service,
+		konnectv1alpha1.KongCertificateRefValidConditionType, metav1.ConditionTrue,
+		konnectv1alpha1.KongCertificateRefReasonValid, "Referenced KongCertificate is programmed in the KongService ControlPlane",
+	); err != nil || !res.IsZero() {
+		return res, err
+	}
+	if service.Status.Konnect == nil {
+		service.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{}
+	}
+	// Do not derive or overwrite the KongService ControlPlane from a certificate.
+	service.Status.Konnect.CertificateID = cert.GetKonnectID()
+	return ctrl.Result{}, nil
+}
+
 // getKongCertificateRef gets the reference of KongCertificate.
 func getKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
 	e TEnt,
@@ -118,12 +192,16 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 	cl client.Client,
 	ent TEnt,
 ) (ctrl.Result, error) {
+	if service, ok := any(ent).(*configurationv1alpha1.KongService); ok && hybridgatewaymetadata.IsHybridGatewayService(service) {
+		return handleHybridGatewayServiceCertificateRef(ctx, cl, service)
+	}
 	// Revoking a reference must not prevent deleting the existing remote SNI.
 	// Keep its persisted ControlPlane/Certificate IDs for the delete operation.
 	if sni, ok := any(ent).(*configurationv1alpha1.KongSNI); ok &&
 		!sni.DeletionTimestamp.IsZero() && gatewayOwnerForSNI(sni) != nil {
 		return ctrl.Result{}, nil
 	}
+
 	certRef, ok := getKongCertificateRef(ent).Get()
 	if !ok {
 		if svc, ok := any(ent).(*configurationv1alpha1.KongService); ok && svc.Status.Konnect != nil {

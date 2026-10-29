@@ -1,0 +1,108 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: client-selfsigned
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: client-ca
+spec:
+  isCA: true
+  commonName: upstream-client-ca
+  secretName: client-ca
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: client-selfsigned
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: client-ca
+spec:
+  ca:
+    secretName: client-ca
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: client
+spec:
+  secretName: client
+  secretTemplate:
+    labels:
+      konghq.com/secret: "true"
+  commonName: upstream-client
+  usages: [client auth, digital signature]
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+  issuerRef:
+    name: client-ca
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: server-selfsigned
+  namespace: ($backend_namespace)
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: server-ca
+  namespace: ($backend_namespace)
+spec:
+  isCA: true
+  commonName: upstream-server-ca
+  secretName: server-ca
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: server-selfsigned
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: server-ca
+  namespace: ($backend_namespace)
+spec:
+  ca:
+    secretName: server-ca
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: upstream
+  namespace: ($backend_namespace)
+spec:
+  secretName: upstream-server
+  dnsNames: [($upstream_hostname)]
+  usages: [server auth, digital signature]
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: server-ca
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: untrusted-client
+  namespace: ($backend_namespace)
+spec:
+  secretName: untrusted-client
+  commonName: untrusted-client
+  usages: [client auth, digital signature]
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: server-ca

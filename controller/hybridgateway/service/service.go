@@ -189,20 +189,28 @@ func ServiceForRuleWithName[
 
 	backendTags := utils.TagsFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
 
-	// Resolve client certificate from the backend Service annotations (first-wins).
-	certSecretName, certOwnerSvc := resolveClientCertFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
-	kongCertificate = buildClientCertificate(
-		ctx, logger, cl, parentRoute, pRef, cp,
-		serviceName, pRefNamespace, certSecretName, certOwnerSvc, protocol,
-	)
-
-	// When the KongCertificate lives in a different namespace than the Secret it references,
-	// create a KongReferenceGrant in the Secret's namespace to permit the cross-namespace reference.
-	if kongCertificate != nil {
-		kongReferenceGrant = buildClientCertReferenceGrant(
-			ctx, logger, cl, parentRoute, pRef,
-			serviceName, pRefNamespace, certSecretName, certOwnerSvc.Namespace,
+	selection, err := resolveClientCertFromBackendRefs(ctx, cl, namespace, backendRefs)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	clientCertRef := selection.certificateRef
+	if err := validateDirectClientCertificate(ctx, cl, clientCertRef, pRefNamespace, cp, protocol); err != nil {
+		return nil, nil, nil, err
+	}
+	if clientCertRef == nil {
+		kongCertificate = buildClientCertificate(
+			ctx, logger, cl, parentRoute, pRef, cp,
+			serviceName, pRefNamespace, selection.secretName, selection.ownerSvc, protocol,
 		)
+		// These grants only authorize controller-generated Secret-backed certificates.
+		// External KongCertificate access must be authorized by its namespace's owner.
+		if kongCertificate != nil {
+			clientCertRef = &commonv1alpha1.NamespacedRef{Name: kongCertificate.Name}
+			kongReferenceGrant = buildClientCertReferenceGrant(
+				ctx, logger, cl, parentRoute, pRef,
+				serviceName, pRefNamespace, selection.secretName, selection.ownerSvc.Namespace,
+			)
+		}
 	}
 
 	service, err := builder.NewKongService().
@@ -220,7 +228,7 @@ func ServiceForRuleWithName[
 		WithReadTimeout(readTimeout).
 		WithWriteTimeout(writeTimeout).
 		WithRetries(retries).
-		WithClientCertificateRef(clientCertRefName(kongCertificate)).
+		WithClientCertificateRef(clientCertRef).
 		WithControlPlaneRef(*cp).
 		Build()
 	if err != nil {
@@ -253,6 +261,9 @@ func ValidateBackendRefAnnotations(
 	backendRefs []gwtypes.BackendRef,
 	logger logr.Logger,
 ) error {
+	if _, err := resolveClientCertFromBackendRefs(ctx, cl, namespace, backendRefs); err != nil {
+		return err
+	}
 	if _, err := resolveTLSVerifyFromBackendRefs(ctx, cl, namespace, backendRefs, logger); err != nil {
 		return err
 	}
@@ -272,14 +283,6 @@ func ValidateBackendRefAnnotations(
 		return err
 	}
 	return nil
-}
-
-// clientCertRefName returns the cert's metadata.name or "" when cert is nil.
-func clientCertRefName(cert *configurationv1alpha1.KongCertificate) string {
-	if cert == nil {
-		return ""
-	}
-	return cert.Name
 }
 
 // buildClientCertificate creates or updates a KongCertificate for the given service's client-cert annotation.

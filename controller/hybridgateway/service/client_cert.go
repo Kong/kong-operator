@@ -2,14 +2,20 @@ package service
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"slices"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	hgerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/translator"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
@@ -23,22 +29,130 @@ func isNonTLSProtocol(proto string) bool {
 	return slices.Contains(nonTLSProtocols, proto)
 }
 
-// resolveClientCertFromBackendRefs iterates over backendRefs and returns the first Secret name
-// found in the konghq.com/client-cert annotation together with the Service that owned it.
-// Returns empty string + nil when no backend Service carries the annotation.
+type clientCertificateSelection struct {
+	secretName     string
+	ownerSvc       *corev1.Service
+	certificateRef *commonv1alpha1.NamespacedRef
+}
+
+// resolveClientCertFromBackendRefs requires direct references to agree across all
+// backends. Legacy-only selections retain their first-annotated-backend behavior.
 func resolveClientCertFromBackendRefs(
 	ctx context.Context,
 	cl client.Client,
 	namespace string,
 	backendRefs []gwtypes.BackendRef,
-	logger logr.Logger,
-) (secretName string, ownerSvc *corev1.Service) {
-	for _, ref := range backendRefs {
-		if name, svc, ok := extractClientCertFromBackendRef(ctx, cl, logger, namespace, ref); ok {
-			return name, svc
+) (clientCertificateSelection, error) {
+	var selection clientCertificateSelection
+	var selectedKey string
+	var unannotated bool
+	invalid := func(message string) (clientCertificateSelection, error) {
+		return clientCertificateSelection{}, &hgerrors.ClientCertificateRefError{
+			Reason: "InvalidCertificateRef", Message: message,
 		}
 	}
-	return "", nil
+	for _, backendRef := range backendRefs {
+		if !utils.IsBackendRefSupported(backendRef.Group, backendRef.Kind) {
+			continue
+		}
+		refNamespace := namespace
+		if backendRef.Namespace != nil && *backendRef.Namespace != "" {
+			refNamespace = string(*backendRef.Namespace)
+		}
+		var svc corev1.Service
+		key := client.ObjectKey{Namespace: refNamespace, Name: string(backendRef.Name)}
+		if err := cl.Get(ctx, key, &svc); err != nil {
+			if apierrors.IsNotFound(err) {
+				continue // Backend resolution reports missing Services separately.
+			}
+			return clientCertificateSelection{}, fmt.Errorf("failed to get backend Service %s for client certificate selection: %w", key, err)
+		}
+		ref, err := metadata.ExtractClientCertificateRef(svc.Annotations, svc.Namespace)
+		if err != nil {
+			return invalid(fmt.Sprintf("Service %s: %s", key, err))
+		}
+		secretName := metadata.ExtractClientCertificate(svc.Annotations)
+		var certKey string
+		switch {
+		case ref != nil:
+			certKey = "KongCertificate " + *ref.Namespace + "/" + ref.Name
+		case secretName != "":
+			certKey = "Secret " + svc.Namespace + "/" + secretName
+		default:
+			unannotated = true
+			continue
+		}
+		if selectedKey != "" {
+			if selectedKey != certKey && (ref != nil || selection.certificateRef != nil) {
+				return invalid(fmt.Sprintf("Backend Services sharing a KongService select different client certificates: %s and %s", selectedKey, certKey))
+			}
+			continue
+		}
+		selectedKey = certKey
+		selection = clientCertificateSelection{secretName: secretName, ownerSvc: &svc, certificateRef: ref}
+	}
+	if selection.certificateRef != nil && unannotated {
+		return invalid("All backend Services sharing a KongService must select the same konghq.com/client-cert-ref")
+	}
+	return selection, nil
+}
+
+// ValidateClientCertificateRefs performs the same side-effect-free checks as translation,
+// using the Gateway namespace where the generated KongService actually lives.
+func ValidateClientCertificateRefs(
+	ctx context.Context,
+	cl client.Client,
+	routeNamespace string,
+	backendRefs []gwtypes.BackendRef,
+	gateway *gwtypes.Gateway,
+	defaultProtocol string,
+	logger logr.Logger,
+) error {
+	selection, err := resolveClientCertFromBackendRefs(ctx, cl, routeNamespace, backendRefs)
+	if err != nil {
+		return err
+	}
+	if selection.certificateRef == nil {
+		return nil
+	}
+	cp, err := refs.GetControlPlaneRefByGateway(ctx, cl, gateway)
+	if err != nil {
+		if errors.Is(err, hgerrors.ErrGatewayNotReferencingControlPlane) {
+			return &hgerrors.ClientCertificateRefError{
+				Reason: "InvalidCertificateRef", Message: "KongCertificate references require a Konnect-backed Gateway",
+			}
+		}
+		return err
+	}
+	protocol := resolveProtocolFromBackendRefs(ctx, cl, routeNamespace, backendRefs, defaultProtocol, logger)
+	return validateDirectClientCertificate(ctx, cl, selection.certificateRef, gateway.Namespace, cp, protocol)
+}
+
+func validateDirectClientCertificate(
+	ctx context.Context,
+	cl client.Client,
+	ref *commonv1alpha1.NamespacedRef,
+	serviceNamespace string,
+	cp *commonv1alpha1.ControlPlaneRef,
+	protocol string,
+) error {
+	if ref == nil {
+		return nil
+	}
+	if isNonTLSProtocol(protocol) {
+		return &hgerrors.ClientCertificateRefError{
+			Reason: "InvalidCertificateRef",
+			Message: fmt.Sprintf("%s requires a TLS-capable upstream protocol, got %s",
+				metadata.ClientCertificateRefAnnotation, protocol),
+		}
+	}
+	_, err := refs.ResolveServiceKongCertificate(ctx, cl, &configurationv1alpha1.KongService{
+		Namespace: serviceNamespace,
+		Spec: configurationv1alpha1.KongServiceSpec{
+			ClientCertificateRef: ref, ControlPlaneRef: cp,
+		},
+	})
+	return err
 }
 
 // buildClientCertReferenceGrant creates a KongReferenceGrant in secretNamespace that permits the

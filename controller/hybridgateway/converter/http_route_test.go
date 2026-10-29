@@ -9,6 +9,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -100,6 +101,7 @@ func TestHostnamesIntersection(t *testing.T) {
 	require.NoError(t, err)
 	err = operatorv2beta1.AddToScheme(scheme)
 	require.NoError(t, err)
+	require.NoError(t, corev1.AddToScheme(scheme))
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -147,6 +149,7 @@ func TestTranslateHTTPRouteWithMultipleListenerParentRefs(t *testing.T) {
 	require.NoError(t, konnectv1alpha2.AddToScheme(scheme))
 	require.NoError(t, gatewayoperatorv1alpha1.AddToScheme(scheme))
 	require.NoError(t, operatorv2beta1.AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
 
 	route := newHTTPRouteWithHostnames()
 	listener0 := gwtypes.SectionName("listener-0")
