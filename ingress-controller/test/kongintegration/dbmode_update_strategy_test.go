@@ -112,3 +112,77 @@ func TestUpdateStrategyDBMode(t *testing.T) {
 	}, timeout, period)
 	require.NoError(t, err)
 }
+
+func TestUpdateStrategyDBMode_CollectsSyncStats(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+
+	// Create a network for Postgres and Kong containers to communicate over.
+	net, err := network.New(ctx)
+	require.NoError(t, err)
+
+	_ = containers.NewPostgres(ctx, t, net)
+	kongC := containers.NewKong(ctx, t, containers.KongWithDBMode(net.Name))
+
+	kongClient, err := adminapi.NewKongAPIClient(kongC.AdminURL(ctx, t), managercfg.AdminAPIClientConfig{}, "")
+	require.NoError(t, err)
+
+	gatewayTag := trimEnterpriseTagToSemver(testenv.KongTag())
+	sut := sendconfig.NewUpdateStrategyDBMode(
+		kongClient,
+		dump.Config{},
+		semver.MustParse(gatewayTag),
+		concurrency,
+		zapr.NewLogger(zap.NewNop()),
+	)
+
+	content := func(host string) *file.Content {
+		return &file.Content{
+			FormatVersion: "3.0",
+			Services: []file.FService{
+				{
+					ID:   new("2b1a9b7e-7b0e-4a33-9a43-7ef3b1c4d6a1"),
+					Name: new("test-service"),
+					Host: new(host),
+					Routes: []*file.FRoute{
+						{
+							ID:    new("5c3e2d1f-8a4b-4c6d-9e0f-1a2b3c4d5e6f"),
+							Name:  new("test-route"),
+							Paths: []*string{new("/test")},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	testCases := []struct {
+		name          string
+		content       *file.Content
+		expectedStats sendconfig.SyncStats
+	}{
+		{
+			name:          "create service and route",
+			content:       content("konghq.com"),
+			expectedStats: sendconfig.SyncStats{Attempted: true, CreateOps: 2},
+		},
+		{
+			name:          "update service",
+			content:       content("example.com"),
+			expectedStats: sendconfig.SyncStats{Attempted: true, UpdateOps: 1},
+		},
+		{
+			name:          "delete service and route",
+			content:       &file.Content{FormatVersion: "3.0"},
+			expectedStats: sendconfig.SyncStats{Attempted: true, DeleteOps: 2},
+		},
+	}
+	// Test cases are run sequentially as each of them depends on the state left by the previous one.
+	for _, tc := range testCases {
+		syncStats := &sendconfig.SyncStats{}
+		_, err := sut.Update(sendconfig.ContextWithSyncStats(ctx, syncStats), sendconfig.ContentWithHash{Content: tc.content})
+		require.NoError(t, err, tc.name)
+		require.Equal(t, tc.expectedStats, *syncStats, tc.name)
+	}
+}
