@@ -79,6 +79,13 @@
   ordering only worked with the ingress controller. Konnect supports the
   `access` phase only: an ordering in another phase is reported on the
   `KongPluginBinding` as `Programmed=False` instead of being dropped.
+  **On upgrade, existing `access` orderings take effect at the next Konnect
+  sync, which can change how plugins behave (for example `rate-limiting`
+  ordered before `key-auth` limits by IP instead of by consumer). A plugin
+  with an ordering in another phase stops being updated in Konnect, and is no
+  longer created for new bindings: the route it is attached to is still
+  configured without it, so check orderings of authentication plugins before
+  upgrading.**
   [#6321](https://github.com/Kong/kong-operator/pull/6321)
 - `KonnectAPIAuthConfiguration` `spec.serverURL` is now checked against the
   domains Kong serves Konnect from. A host outside the list is refused before
