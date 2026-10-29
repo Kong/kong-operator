@@ -445,6 +445,17 @@
   of its API, which lists the data plane certificates and deletes them with
   their gateway.
   [#6314](https://github.com/Kong/kong-operator/pull/6314)
+- `OnPremEventGateway`: the gw-admin pods of a `GWAdmin` no
+  `OnPremEventGateway` may use, e.g. one without gateways, one whose gateways
+  are all being deleted, or one whose gateways of other namespaces lost their
+  `KongReferenceGrant`, are told they serve no gateway. A gw-admin pod only
+  turns Ready once told the gateways it serves, so a new or restarted pod of
+  such a `GWAdmin` would never turn Ready, and its rollouts, e.g. one rotating
+  its certificate authorities, would stall. A pod still starting is tried
+  again less and less often, up to every 30s, and one that can't be told is
+  tried again with a backoff and reported once, with a
+  `GWAdminProvisioningFailed` Warning event on the `GWAdmin`.
+  [#6332](https://github.com/Kong/kong-operator/pull/6332)
 - `--konnect-list-page-size` flag (default and maximum `100`): the page size
   the operator requests when listing Konnect entities to find the Konnect
   entity of an object, e.g. one whose Konnect ID was lost. It is a fallback in

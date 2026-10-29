@@ -195,6 +195,10 @@ func (f *fakeGWAdminClient) SetExpectedEventGateways(_ context.Context, body gwa
 		ids = append(ids, id.String())
 	}
 	return f.call(callExpected+" "+strings.Join(ids, ","), func() reply {
+		// A nil list is sent as null, which gw-admin rejects.
+		if body.EventGatewayIds == nil {
+			return badRequest("event_gateway_ids", "required and not nullable")
+		}
 		if len(slices.Compact(slices.Sorted(slices.Values(ids)))) != len(ids) {
 			return badRequest("event_gateway_ids", "duplicate items found")
 		}
