@@ -21,8 +21,11 @@ limitations under the License.
 // controller's: e.g. the OnPremEventGateway controller registers gateways.
 //
 // Each controller creates its own Syncer: the state it keeps, e.g. the lock
-// of a GWAdmin or what was written to a pod, is the controller's own. Each
-// gw-admin resource is written by one controller.
+// of a GWAdmin or what was written to a pod, is the controller's own.
+// Controllers writing the same gw-admin resource share one instead, and so
+// its lock: e.g. the OnPremEventGateway controller and the one provisioning
+// the GWAdmins no OnPremEventGateway may use both set the gateways a pod
+// serves, one set at a time. Each gw-admin resource is written by one Syncer.
 package gwadminsync
 
 import (
@@ -46,9 +49,9 @@ import (
 	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminapi"
 )
 
-// Syncer reaches the gw-admin pods of GWAdmins for one controller. Its
-// exported fields are set when it is created; the zero value of the rest is
-// ready to use.
+// Syncer reaches the gw-admin pods of GWAdmins for one controller, or for
+// the controllers writing the same gw-admin resource. Its exported fields
+// are set when it is created; the zero value of the rest is ready to use.
 type Syncer struct {
 	// Client reads the GWAdmins, their Secrets and their EndpointSlices.
 	Client client.Client

@@ -72,8 +72,9 @@ type Reconciler struct {
 	LoggingMode logging.Mode
 
 	// GWAdminSync reaches the gw-admin pods of the GWAdmins. It is the
-	// controller's own: what it keeps, e.g. what was written to each pod, is
-	// of the gateways only.
+	// reconciler's own, shared by its two controllers, of the gateways and of
+	// the GWAdmins without gateways: what it keeps, e.g. what was written to
+	// each pod, is of the gateways only.
 	GWAdminSync *gwadminsync.Syncer
 
 	// TypeConverter converts the gateways for the Server-Side Apply of their
