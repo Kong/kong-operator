@@ -5,7 +5,16 @@ import hashlib
 import http.server
 import json
 import os
+import socket
 import ssl
+
+
+class DualStackHTTPServer(http.server.ThreadingHTTPServer):
+    address_family = socket.AF_INET6
+
+    def server_bind(self):
+        self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+        super().server_bind()
 
 
 class Handler(http.server.BaseHTTPRequestHandler):
@@ -37,7 +46,7 @@ def serve():
     context.set_servername_callback(
         lambda connection, name, _context: setattr(connection, "requested_server_name", name)
     )
-    server = http.server.ThreadingHTTPServer(("0.0.0.0", int(os.environ.get("PORT", "8443"))), Handler)
+    server = DualStackHTTPServer(("::", int(os.environ.get("PORT", "8443"))), Handler)
     server.socket = context.wrap_socket(server.socket, server_side=True)
     server.serve_forever()
 
