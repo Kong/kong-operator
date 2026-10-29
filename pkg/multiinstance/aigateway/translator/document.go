@@ -106,24 +106,10 @@ func translateKind[
 		statuses := make([]EntityStatus, 0, len(items))
 		for i := range items {
 			obj := any(&items[i]).(client.Object)
-			// The OnOnPremAIGatewayRef index matches entities regardless of their namespace, but
-			// the on-prem path is same-namespace only (consistent with resolveEntityName's
-			// entity references and rejectCrossNamespaceSecretRefs): an entity in another
-			// namespace is listed here only to be rejected with a clear per-entity error,
-			// instead of failing later on its Secrets being invisible to the gateway-namespace
-			// scoped cache.
-			// TODO: support cross-namespace references, tracked in
-			// https://github.com/Kong/kong-operator/issues/5957.
-			if obj.GetNamespace() != gw.Namespace {
-				statuses = append(statuses, EntityStatus{
-					Obj: obj,
-					Err: fmt.Errorf(
-						"cross-namespace reference to OnPremAIGateway %s is not supported on-prem: the entity must live in the gateway's namespace %s",
-						gw, gw.Namespace,
-					),
-				})
-				continue
-			}
+			// Entities are listed regardless of their namespace: the instance's cache is
+			// scoped to the namespaces of spec.watchNamespaces (see the OnPremAIGateway
+			// controller), so an entity from another namespace reaches this loop only when
+			// that namespace is watched, together with the Secrets it references.
 
 			aigwEntity, err := convert(&items[i], ctx, cl)
 			if err != nil {
@@ -504,11 +490,11 @@ func BuildDocument(
 		statuses = append(statuses, s...)
 	}
 
-	// A consumer living in another namespace is rejected by translateKind before its
-	// conversion runs, so the credentials it embeds never reach the closure above: report
-	// them with the consumer's error here, for the same reason - they are rendered through
-	// the consumer and must not keep a stale Programmed condition. A consumer that reached
-	// its conversion lives in the gateway's namespace, so it is not reported twice.
+	// A consumer whose conversion failed before it produced credential translations
+	// left its credentials unreported: report them with the consumer's error here, for
+	// the same reason - they are rendered through the consumer and must not keep a
+	// stale Programmed condition. A consumer that failed after resolving its
+	// credentials already reported them, so this post-pass repeats that status.
 	for _, s := range statuses {
 		consumer, ok := s.Obj.(*aiconfigurationv1alpha1.AIGatewayConsumer)
 		if !ok || s.Err == nil || consumer.Namespace == gw.Namespace {

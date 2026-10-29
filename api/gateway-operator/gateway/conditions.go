@@ -41,4 +41,9 @@ const (
 	// to express that an item in listernOptions does not have a listener matching
 	// its name in the Gateway.
 	ListenerReasonNoMatchingListener consts.ConditionReason = "NoListenerWithMatchingName"
+
+	// InvalidKonnectLabelsReason must be used with the KonnectGatewayControlPlaneProgrammed
+	// or KonnectExtensionReady conditions to express that the Konnect labels
+	// annotation on the Gateway or its GatewayClass is invalid.
+	InvalidKonnectLabelsReason consts.ConditionReason = "InvalidKonnectLabels"
 )

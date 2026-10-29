@@ -161,6 +161,13 @@ func (r *Registry) IsInstanceReady(id manager.ID) error {
 	if !ok {
 		return NewInstanceNotFoundError(id)
 	}
+	// A stopping instance stays registered until its goroutine reaps it. Report it
+	// as absent, so callers do not read it as running and skip rescheduling it.
+	select {
+	case <-in.StopChannel():
+		return NewInstanceNotFoundError(id)
+	default:
+	}
 	return in.IsReady()
 }
 

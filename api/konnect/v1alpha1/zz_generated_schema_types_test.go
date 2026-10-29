@@ -59,19 +59,6 @@ func TestOIDCIdentityProviderClaimMappings_MarshalEmpty(t *testing.T) {
 	}
 }
 
-func TestOIDCIdentityProviderConfig_MarshalEmpty(t *testing.T) {
-	t.Parallel()
-
-	var spec OIDCIdentityProviderConfig
-	out, err := json.Marshal(spec)
-	if err != nil {
-		t.Fatalf("json.Marshal() error = %v", err)
-	}
-	if got, want := string(out), "{}"; got != want {
-		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
-	}
-}
-
 func TestPortalFooterMenuSection_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -89,6 +76,19 @@ func TestPortalMenuItem_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
 	var spec PortalMenuItem
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestPortalOIDCIdentityProviderConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec PortalOIDCIdentityProviderConfig
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)

@@ -232,6 +232,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       description: |-
@@ -299,6 +300,7 @@ spec:
                                         rule: 'self.type == ''inline'' ? has(self.value)
                                           : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -553,6 +555,7 @@ spec:
                                           - body
                                           - query
                                           maxLength: 253
+                                          minLength: 1
                                           type: string
                                         name:
                                           description: |-
@@ -621,6 +624,7 @@ spec:
                                             rule: 'self.type == ''inline'' ? has(self.value)
                                               : has(self.secretRef)'
                                       required:
+                                      - location
                                       - name
                                       type: object
                                     maxItems: 1
@@ -935,6 +939,7 @@ spec:
                                           - body
                                           - query
                                           maxLength: 253
+                                          minLength: 1
                                           type: string
                                         name:
                                           description: |-
@@ -1003,6 +1008,7 @@ spec:
                                             rule: 'self.type == ''inline'' ? has(self.value)
                                               : has(self.secretRef)'
                                       required:
+                                      - location
                                       - name
                                       type: object
                                     maxItems: 1
@@ -1172,6 +1178,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       description: |-
@@ -1239,6 +1246,7 @@ spec:
                                         rule: 'self.type == ''inline'' ? has(self.value)
                                           : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -1398,6 +1406,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       description: |-
@@ -1465,6 +1474,7 @@ spec:
                                         rule: 'self.type == ''inline'' ? has(self.value)
                                           : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -1624,6 +1634,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       description: |-
@@ -1691,6 +1702,7 @@ spec:
                                         rule: 'self.type == ''inline'' ? has(self.value)
                                           : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -1850,6 +1862,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       description: |-
@@ -1917,6 +1930,7 @@ spec:
                                         rule: 'self.type == ''inline'' ? has(self.value)
                                           : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -2076,6 +2090,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       description: |-
@@ -2143,6 +2158,7 @@ spec:
                                         rule: 'self.type == ''inline'' ? has(self.value)
                                           : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -2309,6 +2325,7 @@ spec:
                                           - body
                                           - query
                                           maxLength: 253
+                                          minLength: 1
                                           type: string
                                         name:
                                           description: |-
@@ -2377,6 +2394,7 @@ spec:
                                             rule: 'self.type == ''inline'' ? has(self.value)
                                               : has(self.secretRef)'
                                       required:
+                                      - location
                                       - name
                                       type: object
                                     maxItems: 1
@@ -2720,6 +2738,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       description: |-
@@ -2787,6 +2806,7 @@ spec:
                                         rule: 'self.type == ''inline'' ? has(self.value)
                                           : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -2946,6 +2966,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       description: |-
@@ -3013,6 +3034,7 @@ spec:
                                         rule: 'self.type == ''inline'' ? has(self.value)
                                           : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -3172,6 +3194,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       description: |-
@@ -3239,6 +3262,7 @@ spec:
                                         rule: 'self.type == ''inline'' ? has(self.value)
                                           : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -3398,6 +3422,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       description: |-
@@ -3465,6 +3490,7 @@ spec:
                                         rule: 'self.type == ''inline'' ? has(self.value)
                                           : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -3624,6 +3650,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       description: |-
@@ -3691,6 +3718,7 @@ spec:
                                         rule: 'self.type == ''inline'' ? has(self.value)
                                           : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -3850,6 +3878,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       description: |-
@@ -3917,6 +3946,7 @@ spec:
                                         rule: 'self.type == ''inline'' ? has(self.value)
                                           : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -4083,6 +4113,7 @@ spec:
                                           - body
                                           - query
                                           maxLength: 253
+                                          minLength: 1
                                           type: string
                                         name:
                                           description: |-
@@ -4151,6 +4182,7 @@ spec:
                                             rule: 'self.type == ''inline'' ? has(self.value)
                                               : has(self.secretRef)'
                                       required:
+                                      - location
                                       - name
                                       type: object
                                     maxItems: 1
@@ -4369,6 +4401,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       description: |-
@@ -4436,6 +4469,7 @@ spec:
                                         rule: 'self.type == ''inline'' ? has(self.value)
                                           : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -4595,6 +4629,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       description: |-
@@ -4662,6 +4697,7 @@ spec:
                                         rule: 'self.type == ''inline'' ? has(self.value)
                                           : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -4821,6 +4857,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       description: |-
@@ -4888,6 +4925,7 @@ spec:
                                         rule: 'self.type == ''inline'' ? has(self.value)
                                           : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1
@@ -5047,6 +5085,7 @@ spec:
                                       - body
                                       - query
                                       maxLength: 253
+                                      minLength: 1
                                       type: string
                                     name:
                                       description: |-
@@ -5114,6 +5153,7 @@ spec:
                                         rule: 'self.type == ''inline'' ? has(self.value)
                                           : has(self.secretRef)'
                                   required:
+                                  - location
                                   - name
                                   type: object
                                 maxItems: 1

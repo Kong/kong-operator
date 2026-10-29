@@ -37,10 +37,12 @@ spec:
                     group:
                       enum:
                       - gateway-operator.konghq.com
+                      - aigateway.konghq.com
                       type: string
                     kind:
                       enum:
                       - ControlPlane
+                      - OnPremAIGateway
                       type: string
                     namespace:
                       type: string

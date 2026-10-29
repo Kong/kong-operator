@@ -201,41 +201,6 @@ type OIDCIdentityProviderClientID string
 // application by the identity provider.
 type OIDCIdentityProviderClientSecret string
 
-// OIDCIdentityProviderConfig The identity provider that contains configuration
-// data for the OIDC authentication integration.
-type OIDCIdentityProviderConfig struct {
-	// Defines the mappings between OpenID Connect (OIDC) claims and local claims
-	// used by your application for
-	// authentication.
-	//
-	//
-	// +optional
-	ClaimMappings OIDCIdentityProviderClaimMappings `json:"claimMappings,omitzero"`
-	// The client ID assigned to your application by the identity provider.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	ClientID OIDCIdentityProviderClientID `json:"clientID,omitzero"`
-	// The Client Secret assigned to your application by the identity provider.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	ClientSecret OIDCIdentityProviderClientSecret `json:"clientSecret,omitzero"`
-	// The issuer URI of the identity provider.
-	// This is the URL where the provider's metadata can be obtained.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	IssuerURL OIDCIdentityProviderIssuer `json:"issuerURL,omitzero"`
-	// The scopes requested by your application when authenticating with the
-	// identity provider.
-	//
-	// +optional
-	Scopes []string `json:"scopes,omitempty"`
-}
-
 // OIDCIdentityProviderIssuer The issuer URI of the identity provider.
 // This is the URL where the provider's metadata can be obtained.
 type OIDCIdentityProviderIssuer string
@@ -302,6 +267,41 @@ type PortalMenuItem struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=public;private
 	Visibility string `json:"visibility,omitzero"`
+}
+
+// PortalOIDCIdentityProviderConfig The identity provider that contains
+// configuration data for the OIDC authentication integration.
+type PortalOIDCIdentityProviderConfig struct {
+	// Defines the mappings between OpenID Connect (OIDC) claims and local claims
+	// used by your application for
+	// authentication.
+	//
+	//
+	// +optional
+	ClaimMappings OIDCIdentityProviderClaimMappings `json:"claimMappings,omitzero"`
+	// The client ID assigned to your application by the identity provider.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	ClientID OIDCIdentityProviderClientID `json:"clientID,omitzero"`
+	// The Client Secret assigned to your application by the identity provider.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	ClientSecret OIDCIdentityProviderClientSecret `json:"clientSecret,omitzero"`
+	// The issuer URI of the identity provider.
+	// This is the URL where the provider's metadata can be obtained.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	IssuerURL OIDCIdentityProviderIssuer `json:"issuerURL,omitzero"`
+	// The scopes requested by your application when authenticating with the
+	// identity provider.
+	//
+	// +optional
+	Scopes []string `json:"scopes,omitempty"`
 }
 
 // PortalSAMLIdentityProviderConfig The identity provider that contains

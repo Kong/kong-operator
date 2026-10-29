@@ -49,7 +49,7 @@ type sensitiveSecretRefGetter interface {
 // would not re-render the configuration until an unrelated entity event arrived.
 //
 // The reconciler runs on the instance's own manager, whose cache only holds Secrets
-// matching the operator's Secret label selector in the instance's gateway namespace
+// matching the operator's Secret label selector in the gateway's watch namespaces
 // (see pkg/multiinstance/aigateway's cacheOpts), so only ingestible Secrets produce
 // events and no label predicate is needed here.
 //

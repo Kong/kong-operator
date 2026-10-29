@@ -53,11 +53,13 @@ spec:
                       description: Group is the group of the referent.
                       enum:
                       - gateway-operator.konghq.com
+                      - aigateway.konghq.com
                       type: string
                     kind:
                       description: Kind is the kind of the referent.
                       enum:
                       - ControlPlane
+                      - OnPremAIGateway
                       type: string
                     namespace:
                       description: Namespace is the namespace of the referent.

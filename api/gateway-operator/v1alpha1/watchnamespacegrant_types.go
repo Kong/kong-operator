@@ -35,13 +35,13 @@ type WatchNamespaceGrantSpec struct {
 type WatchNamespaceGrantFrom struct {
 	// Group is the group of the referent.
 	//
-	// +kubebuilder:validation:Enum=gateway-operator.konghq.com
+	// +kubebuilder:validation:Enum=gateway-operator.konghq.com;aigateway.konghq.com
 	// +required
 	Group string `json:"group"`
 
 	// Kind is the kind of the referent.
 	//
-	// +kubebuilder:validation:Enum=ControlPlane
+	// +kubebuilder:validation:Enum=ControlPlane;OnPremAIGateway
 	// +required
 	Kind string `json:"kind"`
 

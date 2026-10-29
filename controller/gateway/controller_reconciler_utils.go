@@ -44,7 +44,6 @@ import (
 	gwconfigutils "github.com/kong/kong-operator/v2/internal/utils/gatewayconfig"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/pkg/ipfamily"
-	"github.com/kong/kong-operator/v2/pkg/metadata"
 	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	k8sreduce "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/reduce"
@@ -141,12 +140,9 @@ func (r *Reconciler) createKonnectGatewayControlPlane(
 	}
 
 	if gatewayConfig.Spec.Konnect.Mirror == nil {
-		cpLabels, err := resolveKonnectLabels(gateway, gatewayClass, metadata.AnnotationKeyKonnectCPLabels)
+		cpLabels, err := resolveKonnectCPLabels(gateway, gatewayClass)
 		if err != nil {
-			return nil, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectCPLabels, err)
-		}
-		if err := validateCPLabels(cpLabels); err != nil {
-			return nil, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectCPLabels, err)
+			return nil, err
 		}
 
 		kgcp.Spec.CreateControlPlaneRequest = &sdkkonnectcomp.CreateControlPlaneRequest{
@@ -209,12 +205,9 @@ func (r *Reconciler) enforceKonnectGatewayControlPlaneSpec(
 	}
 
 	if kgcp.Spec.CreateControlPlaneRequest != nil {
-		cpLabels, err := resolveKonnectLabels(gateway, gatewayClass, metadata.AnnotationKeyKonnectCPLabels)
+		cpLabels, err := resolveKonnectCPLabels(gateway, gatewayClass)
 		if err != nil {
-			return false, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectCPLabels, err)
-		}
-		if err := validateCPLabels(cpLabels); err != nil {
-			return false, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectCPLabels, err)
+			return false, err
 		}
 		if !maps.Equal(kgcp.Spec.CreateControlPlaneRequest.Labels, cpLabels) {
 			kgcp.Spec.CreateControlPlaneRequest.Labels = cpLabels
@@ -238,12 +231,9 @@ func (r *Reconciler) createKonnectExtension(
 	gatewayClass *gatewayv1.GatewayClass,
 	konnectControlPlane *konnectv1alpha2.KonnectGatewayControlPlane,
 ) (*konnectv1alpha2.KonnectExtension, error) {
-	dpLabels, err := resolveKonnectLabels(gateway, gatewayClass, metadata.AnnotationKeyKonnectDPLabels)
+	dpLabels, err := resolveKonnectDPLabels(gateway, gatewayClass)
 	if err != nil {
-		return nil, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectDPLabels, err)
-	}
-	if err := validateDPLabels(dpLabels); err != nil {
-		return nil, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectDPLabels, err)
+		return nil, err
 	}
 
 	konnectExt := &konnectv1alpha2.KonnectExtension{
@@ -294,12 +284,9 @@ func (r *Reconciler) enforceKonnectExtensionSpec(
 	gatewayClass *gatewayv1.GatewayClass,
 	konnectExt *konnectv1alpha2.KonnectExtension,
 ) (bool, error) {
-	dpLabels, err := resolveKonnectLabels(gateway, gatewayClass, metadata.AnnotationKeyKonnectDPLabels)
+	dpLabels, err := resolveKonnectDPLabels(gateway, gatewayClass)
 	if err != nil {
-		return false, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectDPLabels, err)
-	}
-	if err := validateDPLabels(dpLabels); err != nil {
-		return false, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectDPLabels, err)
+		return false, err
 	}
 
 	desired := make(map[string]konnectv1alpha2.DataPlaneLabelValue, len(dpLabels))

@@ -11,6 +11,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/pkg/metadata"
 )
 
 // maxKonnectLabels is the maximum number of Konnect labels allowed on a
@@ -108,6 +109,52 @@ func resolveKonnectLabels(gateway *gwtypes.Gateway, gatewayClass *gatewayv1.Gate
 	}
 
 	return mergeLabelsWithCap(gatewayClassLabels, gatewayLabels, maxKonnectLabels)
+}
+
+// invalidKonnectLabelsError is returned when the Konnect labels annotation on
+// a Gateway or its GatewayClass cannot be parsed, merged or validated.
+// Retrying does not help: the annotation has to be fixed by the user.
+type invalidKonnectLabelsError struct {
+	annotationKey string
+	err           error
+}
+
+func (e invalidKonnectLabelsError) Error() string {
+	return fmt.Sprintf("invalid %s annotation: %v", e.annotationKey, e.err)
+}
+
+func (e invalidKonnectLabelsError) Unwrap() error {
+	return e.err
+}
+
+// resolveKonnectCPLabels resolves the Konnect control plane labels from the
+// Gateway and GatewayClass annotations and validates them.
+// Returned errors are of type invalidKonnectLabelsError.
+func resolveKonnectCPLabels(gateway *gwtypes.Gateway, gatewayClass *gatewayv1.GatewayClass) (map[string]string, error) {
+	return resolveAndValidateKonnectLabels(gateway, gatewayClass, metadata.AnnotationKeyKonnectCPLabels, validateCPLabels)
+}
+
+// resolveKonnectDPLabels resolves the Konnect DataPlane labels from the
+// Gateway and GatewayClass annotations and validates them.
+// Returned errors are of type invalidKonnectLabelsError.
+func resolveKonnectDPLabels(gateway *gwtypes.Gateway, gatewayClass *gatewayv1.GatewayClass) (map[string]string, error) {
+	return resolveAndValidateKonnectLabels(gateway, gatewayClass, metadata.AnnotationKeyKonnectDPLabels, validateDPLabels)
+}
+
+func resolveAndValidateKonnectLabels(
+	gateway *gwtypes.Gateway,
+	gatewayClass *gatewayv1.GatewayClass,
+	annotationKey string,
+	validate func(map[string]string) error,
+) (map[string]string, error) {
+	labels, err := resolveKonnectLabels(gateway, gatewayClass, annotationKey)
+	if err != nil {
+		return nil, invalidKonnectLabelsError{annotationKey: annotationKey, err: err}
+	}
+	if err := validate(labels); err != nil {
+		return nil, invalidKonnectLabelsError{annotationKey: annotationKey, err: err}
+	}
+	return labels, nil
 }
 
 // validateDPLabels validates labels against the Konnect DataPlane label CEL

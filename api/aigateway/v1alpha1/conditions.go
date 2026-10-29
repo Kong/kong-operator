@@ -307,3 +307,22 @@ const (
 	// with the operator's configuration.
 	OnPremAIGatewayOptionsInvalidReason consts.ConditionReason = "OptionsInvalid"
 )
+
+// -----------------------------------------------------------------------------
+// OnPremAIGateway - Watch Namespace Grant Condition Constants
+// -----------------------------------------------------------------------------
+
+const (
+	// OnPremAIGatewayWatchNamespaceGrantValidType indicates whether the
+	// WatchNamespaceGrants for the namespaces requested in spec.watchNamespaces
+	// allow this OnPremAIGateway to watch them.
+	OnPremAIGatewayWatchNamespaceGrantValidType consts.ConditionType = "WatchNamespaceGrantValid"
+
+	// OnPremAIGatewayWatchNamespaceGrantValidReason indicates the required
+	// WatchNamespaceGrants are present and valid.
+	OnPremAIGatewayWatchNamespaceGrantValidReason consts.ConditionReason = "WatchNamespaceGrantValid"
+
+	// OnPremAIGatewayWatchNamespaceGrantInvalidReason indicates a required
+	// WatchNamespaceGrant is missing or invalid.
+	OnPremAIGatewayWatchNamespaceGrantInvalidReason consts.ConditionReason = "WatchNamespaceGrantInvalid"
+)
