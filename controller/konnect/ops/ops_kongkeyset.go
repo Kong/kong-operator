@@ -25,10 +25,10 @@ func createKeySet(
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: keySet}
 	}
 
-	resp, err := sdk.CreateKeySet(ctx,
-		cpID,
-		kongKeySetToKeySetInput(keySet),
-	)
+	resp, err := sdk.CreateKeySet(ctx, sdkkonnectops.CreateKeySetRequest{
+		ControlPlaneID: cpID,
+		KeySet:         kongKeySetToKeySetInput(keySet),
+	})
 
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
@@ -84,7 +84,10 @@ func deleteKeySet(
 	keySet *configurationv1alpha1.KongKeySet,
 ) error {
 	id := keySet.Status.Konnect.GetKonnectID()
-	_, err := sdk.DeleteKeySet(ctx, keySet.GetControlPlaneID(), id)
+	_, err := sdk.DeleteKeySet(ctx, sdkkonnectops.DeleteKeySetRequest{
+		ControlPlaneID: keySet.GetControlPlaneID(),
+		KeySetID:       id,
+	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, keySet); errWrap != nil {
 		return handleDeleteError(ctx, err, keySet)
 	}
@@ -105,7 +108,10 @@ func adoptKeySet(
 	adoptOptions := keySet.Spec.Adopt
 	konnectID := adoptOptions.Konnect.ID
 
-	resp, err := sdk.GetKeySet(ctx, konnectID, cpID)
+	resp, err := sdk.GetKeySet(ctx, sdkkonnectops.GetKeySetRequest{
+		KeySetID:       konnectID,
+		ControlPlaneID: cpID,
+	})
 	if err != nil {
 		return KonnectEntityAdoptionFetchError{
 			KonnectID: konnectID,

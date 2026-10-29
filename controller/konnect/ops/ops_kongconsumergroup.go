@@ -21,10 +21,10 @@ func createConsumerGroup(
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: group, Op: CreateOp}
 	}
 
-	resp, err := sdk.CreateConsumerGroup(ctx,
-		group.Status.Konnect.ControlPlaneID,
-		kongConsumerGroupToSDKConsumerGroupInput(group),
-	)
+	resp, err := sdk.CreateConsumerGroup(ctx, sdkkonnectops.CreateConsumerGroupRequest{
+		ControlPlaneID: group.Status.Konnect.ControlPlaneID,
+		ConsumerGroup:  kongConsumerGroupToSDKConsumerGroupInput(group),
+	})
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, group); errWrap != nil {
 		return errWrap
@@ -77,7 +77,10 @@ func deleteConsumerGroup(
 	consumer *configurationv1beta1.KongConsumerGroup,
 ) error {
 	id := consumer.Status.Konnect.GetKonnectID()
-	_, err := sdk.DeleteConsumerGroup(ctx, consumer.Status.Konnect.ControlPlaneID, id)
+	_, err := sdk.DeleteConsumerGroup(ctx, sdkkonnectops.DeleteConsumerGroupRequest{
+		ControlPlaneID:  consumer.Status.Konnect.ControlPlaneID,
+		ConsumerGroupID: id,
+	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, consumer); errWrap != nil {
 		return handleDeleteError(ctx, err, consumer)
 	}

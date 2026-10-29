@@ -69,7 +69,7 @@ func TestAdoptKongKeySetOverride(t *testing.T) {
 			name: "success",
 			mockPair: func(t *testing.T) (*mocks.MockKeySetsSDK, *configurationv1alpha1.KongKeySet) {
 				sdk := mocks.NewMockKeySetsSDK(t)
-				sdk.EXPECT().GetKeySet(mock.Anything, "ks-1", "cp-1").Return(
+				sdk.EXPECT().GetKeySet(mock.Anything, sdkkonnectops.GetKeySetRequest{KeySetID: "ks-1", ControlPlaneID: "cp-1"}).Return(
 					&sdkkonnectops.GetKeySetResponse{
 						KeySet: &sdkkonnectcomp.KeySet{
 							ID:   new("ks-1"),
@@ -116,7 +116,7 @@ func TestAdoptKongKeySetOverride(t *testing.T) {
 			name: "fetch failed",
 			mockPair: func(t *testing.T) (*mocks.MockKeySetsSDK, *configurationv1alpha1.KongKeySet) {
 				sdk := mocks.NewMockKeySetsSDK(t)
-				sdk.EXPECT().GetKeySet(mock.Anything, "ks-1", "cp-1").Return(
+				sdk.EXPECT().GetKeySet(mock.Anything, sdkkonnectops.GetKeySetRequest{KeySetID: "ks-1", ControlPlaneID: "cp-1"}).Return(
 					nil,
 					&sdkkonnecterrs.NotFoundError{},
 				)
@@ -154,7 +154,7 @@ func TestAdoptKongKeySetOverride(t *testing.T) {
 			name: "uid conflict",
 			mockPair: func(t *testing.T) (*mocks.MockKeySetsSDK, *configurationv1alpha1.KongKeySet) {
 				sdk := mocks.NewMockKeySetsSDK(t)
-				sdk.EXPECT().GetKeySet(mock.Anything, "ks-1", "cp-1").Return(
+				sdk.EXPECT().GetKeySet(mock.Anything, sdkkonnectops.GetKeySetRequest{KeySetID: "ks-1", ControlPlaneID: "cp-1"}).Return(
 					&sdkkonnectops.GetKeySetResponse{
 						KeySet: &sdkkonnectcomp.KeySet{
 							ID:   new("ks-1"),
@@ -225,7 +225,7 @@ func TestAdoptKongKeySetMatch(t *testing.T) {
 			name: "success",
 			mockPair: func(t *testing.T) (*mocks.MockKeySetsSDK, *configurationv1alpha1.KongKeySet) {
 				sdk := mocks.NewMockKeySetsSDK(t)
-				sdk.EXPECT().GetKeySet(mock.Anything, "ks-1", "cp-1").Return(
+				sdk.EXPECT().GetKeySet(mock.Anything, sdkkonnectops.GetKeySetRequest{KeySetID: "ks-1", ControlPlaneID: "cp-1"}).Return(
 					&sdkkonnectops.GetKeySetResponse{
 						KeySet: &sdkkonnectcomp.KeySet{
 							ID:   new("ks-1"),
@@ -269,7 +269,7 @@ func TestAdoptKongKeySetMatch(t *testing.T) {
 			name: "mismatch",
 			mockPair: func(t *testing.T) (*mocks.MockKeySetsSDK, *configurationv1alpha1.KongKeySet) {
 				sdk := mocks.NewMockKeySetsSDK(t)
-				sdk.EXPECT().GetKeySet(mock.Anything, "ks-1", "cp-1").Return(
+				sdk.EXPECT().GetKeySet(mock.Anything, sdkkonnectops.GetKeySetRequest{KeySetID: "ks-1", ControlPlaneID: "cp-1"}).Return(
 					&sdkkonnectops.GetKeySetResponse{
 						KeySet: &sdkkonnectcomp.KeySet{
 							ID:   new("ks-1"),

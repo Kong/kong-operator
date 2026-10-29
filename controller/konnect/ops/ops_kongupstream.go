@@ -21,10 +21,10 @@ func createUpstream(
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: upstream, Op: CreateOp}
 	}
 
-	resp, err := sdk.CreateUpstream(ctx,
-		upstream.Status.Konnect.ControlPlaneID,
-		kongUpstreamToSDKUpstreamInput(upstream),
-	)
+	resp, err := sdk.CreateUpstream(ctx, sdkkonnectops.CreateUpstreamRequest{
+		ControlPlaneID: upstream.Status.Konnect.ControlPlaneID,
+		Upstream:       kongUpstreamToSDKUpstreamInput(upstream),
+	})
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, upstream); errWrap != nil {
 		return errWrap
@@ -77,7 +77,10 @@ func deleteUpstream(
 	upstream *configurationv1alpha1.KongUpstream,
 ) error {
 	id := upstream.GetKonnectStatus().GetKonnectID()
-	_, err := sdk.DeleteUpstream(ctx, upstream.Status.Konnect.ControlPlaneID, id)
+	_, err := sdk.DeleteUpstream(ctx, sdkkonnectops.DeleteUpstreamRequest{
+		ControlPlaneID: upstream.Status.Konnect.ControlPlaneID,
+		UpstreamID:     id,
+	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, upstream); errWrap != nil {
 		return handleDeleteError(ctx, err, upstream)
 	}
@@ -96,7 +99,10 @@ func adoptUpstream(
 	if cpID == "" {
 		return KonnectEntityAdoptionMissingControlPlaneIDError{}
 	}
-	resp, err := sdk.GetUpstream(ctx, konnectID, cpID)
+	resp, err := sdk.GetUpstream(ctx, sdkkonnectops.GetUpstreamRequest{
+		UpstreamID:     konnectID,
+		ControlPlaneID: cpID,
+	})
 	if err != nil {
 		return KonnectEntityAdoptionFetchError{
 			KonnectID: konnectID,

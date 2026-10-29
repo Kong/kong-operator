@@ -836,8 +836,10 @@ func TestCreateCertificate(t *testing.T) {
 					},
 					nil,
 				)
-				sdk.EXPECT().CreateCertificate(mock.Anything, "cp-1", mock.MatchedBy(func(cert sdkkonnectcomp.CertificateRequest) bool {
-					return cert.CertificateWithCertAndKey != nil &&
+				sdk.EXPECT().CreateCertificate(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.CreateCertificateRequest) bool {
+					cert := r.CertificateRequest
+					return r.ControlPlaneID == "cp-1" &&
+						cert.CertificateWithCertAndKey != nil &&
 						cert.CertificateWithCertAndKey.Cert == "cert-data" &&
 						cert.CertificateWithCertAndKey.Key == "key-data"
 				})).Return(&sdkkonnectops.CreateCertificateResponse{
@@ -885,8 +887,10 @@ func TestCreateCertificate(t *testing.T) {
 					},
 					nil,
 				)
-				sdk.EXPECT().CreateCertificate(mock.Anything, "cp-1", mock.MatchedBy(func(cert sdkkonnectcomp.CertificateRequest) bool {
-					return cert.CertificateWithCertAndKey != nil &&
+				sdk.EXPECT().CreateCertificate(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.CreateCertificateRequest) bool {
+					cert := r.CertificateRequest
+					return r.ControlPlaneID == "cp-1" &&
+						cert.CertificateWithCertAndKey != nil &&
 						cert.CertificateWithCertAndKey.Cert == "secret-cert-data" &&
 						cert.CertificateWithCertAndKey.Key == "secret-key-data"
 				})).Return(&sdkkonnectops.CreateCertificateResponse{
@@ -1078,7 +1082,7 @@ func TestCreateCertificate(t *testing.T) {
 					},
 					nil,
 				)
-				sdk.EXPECT().CreateCertificate(mock.Anything, mock.Anything, mock.Anything).Return(
+				sdk.EXPECT().CreateCertificate(mock.Anything, mock.Anything).Return(
 					nil,
 					fmt.Errorf("konnect API error"),
 				)
@@ -1117,7 +1121,7 @@ func TestCreateCertificate(t *testing.T) {
 					},
 					nil,
 				)
-				sdk.EXPECT().CreateCertificate(mock.Anything, mock.Anything, mock.Anything).Return(
+				sdk.EXPECT().CreateCertificate(mock.Anything, mock.Anything).Return(
 					&sdkkonnectops.CreateCertificateResponse{
 						Certificate: nil,
 					},
@@ -1151,7 +1155,7 @@ func TestCreateCertificate(t *testing.T) {
 func TestAdoptKongCertificateOverride(t *testing.T) {
 	ctx := t.Context()
 	sdk := mocks.NewMockCertificatesSDK(t)
-	sdk.EXPECT().GetCertificate(mock.Anything, "konnect-cert-id", "cp-1").Return(
+	sdk.EXPECT().GetCertificate(mock.Anything, sdkkonnectops.GetCertificateRequest{CertificateID: "konnect-cert-id", ControlPlaneID: "cp-1"}).Return(
 		&sdkkonnectops.GetCertificateResponse{
 			Certificate: &sdkkonnectcomp.Certificate{
 				Cert: "cert-data",
@@ -1205,7 +1209,7 @@ func TestAdoptKongCertificateMatchSuccess(t *testing.T) {
 	certAlt := "alt-cert"
 	keyAlt := "alt-key"
 	sdk := mocks.NewMockCertificatesSDK(t)
-	sdk.EXPECT().GetCertificate(mock.Anything, "konnect-cert-id", "cp-1").Return(
+	sdk.EXPECT().GetCertificate(mock.Anything, sdkkonnectops.GetCertificateRequest{CertificateID: "konnect-cert-id", ControlPlaneID: "cp-1"}).Return(
 		&sdkkonnectops.GetCertificateResponse{
 			Certificate: &sdkkonnectcomp.Certificate{
 				Cert:    "cert-data",
@@ -1254,7 +1258,7 @@ func TestAdoptKongCertificateMatchSuccess(t *testing.T) {
 func TestAdoptKongCertificateMatchMismatch(t *testing.T) {
 	ctx := t.Context()
 	sdk := mocks.NewMockCertificatesSDK(t)
-	sdk.EXPECT().GetCertificate(mock.Anything, "konnect-cert-id", "cp-1").Return(
+	sdk.EXPECT().GetCertificate(mock.Anything, sdkkonnectops.GetCertificateRequest{CertificateID: "konnect-cert-id", ControlPlaneID: "cp-1"}).Return(
 		&sdkkonnectops.GetCertificateResponse{
 			Certificate: &sdkkonnectcomp.Certificate{
 				Cert: "other-cert",
@@ -1301,7 +1305,7 @@ func TestAdoptKongCertificateMatchMismatch(t *testing.T) {
 func TestAdoptKongCertificateUIDConflict(t *testing.T) {
 	ctx := t.Context()
 	sdk := mocks.NewMockCertificatesSDK(t)
-	sdk.EXPECT().GetCertificate(mock.Anything, "konnect-cert-id", "cp-1").Return(
+	sdk.EXPECT().GetCertificate(mock.Anything, sdkkonnectops.GetCertificateRequest{CertificateID: "konnect-cert-id", ControlPlaneID: "cp-1"}).Return(
 		&sdkkonnectops.GetCertificateResponse{
 			Certificate: &sdkkonnectcomp.Certificate{
 				Cert: "cert-data",
@@ -1349,7 +1353,7 @@ func TestAdoptKongCertificateUIDConflict(t *testing.T) {
 func TestAdoptKongCertificateFetchFailure(t *testing.T) {
 	ctx := t.Context()
 	sdk := mocks.NewMockCertificatesSDK(t)
-	sdk.EXPECT().GetCertificate(mock.Anything, "konnect-cert-id", "cp-1").Return(
+	sdk.EXPECT().GetCertificate(mock.Anything, sdkkonnectops.GetCertificateRequest{CertificateID: "konnect-cert-id", ControlPlaneID: "cp-1"}).Return(
 		(*sdkkonnectops.GetCertificateResponse)(nil),
 		&sdkkonnecterrs.NotFoundError{},
 	)

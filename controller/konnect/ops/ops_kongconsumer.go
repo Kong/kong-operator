@@ -36,10 +36,10 @@ func createConsumer(
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: consumer, Op: CreateOp}
 	}
 
-	resp, err := sdk.CreateConsumer(ctx,
-		cpID,
-		kongConsumerToSDKConsumerInput(consumer),
-	)
+	resp, err := sdk.CreateConsumer(ctx, sdkkonnectops.CreateConsumerRequest{
+		ControlPlaneID: cpID,
+		Consumer:       kongConsumerToSDKConsumerInput(consumer),
+	})
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, consumer); errWrap != nil {
 		return errWrap
@@ -305,7 +305,10 @@ func deleteConsumer(
 	consumer *configurationv1.KongConsumer,
 ) error {
 	id := consumer.Status.Konnect.GetKonnectID()
-	_, err := sdk.DeleteConsumer(ctx, consumer.Status.Konnect.ControlPlaneID, id)
+	_, err := sdk.DeleteConsumer(ctx, sdkkonnectops.DeleteConsumerRequest{
+		ControlPlaneID: consumer.Status.Konnect.ControlPlaneID,
+		ConsumerID:     id,
+	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, consumer); errWrap != nil {
 		return handleDeleteError(ctx, err, consumer)
 	}
@@ -326,7 +329,10 @@ func adoptConsumer(
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: consumer, Op: AdoptOp}
 	}
 	konnectID := adoptOptions.Konnect.ID
-	resp, err := sdk.GetConsumer(ctx, konnectID, cpID)
+	resp, err := sdk.GetConsumer(ctx, sdkkonnectops.GetConsumerRequest{
+		ConsumerID:     konnectID,
+		ControlPlaneID: cpID,
+	})
 	if err != nil {
 		return KonnectEntityAdoptionFetchError{
 			KonnectID: konnectID,

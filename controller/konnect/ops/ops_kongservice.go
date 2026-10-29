@@ -45,7 +45,10 @@ func createService(
 		return nil
 	}
 
-	resp, err := sdk.CreateService(ctx, cpID, kongServiceToSDKServiceInput(svc))
+	resp, err := sdk.CreateService(ctx, sdkkonnectops.CreateServiceRequest{
+		ControlPlaneID: cpID,
+		ServiceRequest: kongServiceToSDKServiceInput(svc),
+	})
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, svc); errWrap != nil {
 		return errWrap
@@ -98,7 +101,10 @@ func deleteService(
 	svc *configurationv1alpha1.KongService,
 ) error {
 	id := svc.GetKonnectStatus().GetKonnectID()
-	_, err := sdk.DeleteService(ctx, svc.Status.Konnect.ControlPlaneID, id)
+	_, err := sdk.DeleteService(ctx, sdkkonnectops.DeleteServiceRequest{
+		ControlPlaneID: svc.Status.Konnect.ControlPlaneID,
+		ServiceID:      id,
+	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, svc); errWrap != nil {
 		return handleDeleteError(ctx, err, svc)
 	}
@@ -117,7 +123,10 @@ func adoptService(
 	if cpID == "" {
 		return KonnectEntityAdoptionMissingControlPlaneIDError{}
 	}
-	resp, err := sdk.GetService(ctx, konnectID, cpID)
+	resp, err := sdk.GetService(ctx, sdkkonnectops.GetServiceRequest{
+		ServiceID:      konnectID,
+		ControlPlaneID: cpID,
+	})
 	if err != nil {
 		return KonnectEntityAdoptionFetchError{
 			KonnectID: konnectID,

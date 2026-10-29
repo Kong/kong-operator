@@ -49,7 +49,7 @@ func TestCreateKongService(t *testing.T) {
 
 				sdk.
 					EXPECT().
-					CreateService(ctx, "123456789", kongServiceToSDKServiceInput(svc)).
+					CreateService(ctx, sdkkonnectops.CreateServiceRequest{ControlPlaneID: "123456789", ServiceRequest: kongServiceToSDKServiceInput(svc)}).
 					Return(
 						&sdkkonnectops.CreateServiceResponse{
 							Service: &sdkkonnectcomp.Service{
@@ -157,7 +157,7 @@ func TestCreateKongService(t *testing.T) {
 
 				sdk.
 					EXPECT().
-					CreateService(ctx, "123456789", kongServiceToSDKServiceInput(svc)).
+					CreateService(ctx, sdkkonnectops.CreateServiceRequest{ControlPlaneID: "123456789", ServiceRequest: kongServiceToSDKServiceInput(svc)}).
 					Return(
 						nil,
 						&sdkkonnecterrs.BadRequestError{
@@ -203,7 +203,7 @@ func TestCreateKongService(t *testing.T) {
 
 				sdk.
 					EXPECT().
-					CreateService(ctx, "123456789", kongServiceToSDKServiceInput(svc)).
+					CreateService(ctx, sdkkonnectops.CreateServiceRequest{ControlPlaneID: "123456789", ServiceRequest: kongServiceToSDKServiceInput(svc)}).
 					Return(
 						nil,
 						&sdkkonnecterrs.ConflictError{
@@ -267,7 +267,7 @@ func TestDeleteKongService(t *testing.T) {
 				}
 				sdk.
 					EXPECT().
-					DeleteService(ctx, "12345", "123456789").
+					DeleteService(ctx, sdkkonnectops.DeleteServiceRequest{ControlPlaneID: "12345", ServiceID: "123456789"}).
 					Return(
 						&sdkkonnectops.DeleteServiceResponse{
 							StatusCode: 200,
@@ -297,7 +297,7 @@ func TestDeleteKongService(t *testing.T) {
 				}
 				sdk.
 					EXPECT().
-					DeleteService(ctx, "12345", "123456789").
+					DeleteService(ctx, sdkkonnectops.DeleteServiceRequest{ControlPlaneID: "12345", ServiceID: "123456789"}).
 					Return(
 						nil,
 						&sdkkonnecterrs.BadRequestError{
@@ -329,7 +329,7 @@ func TestDeleteKongService(t *testing.T) {
 				}
 				sdk.
 					EXPECT().
-					DeleteService(ctx, "12345", "123456789").
+					DeleteService(ctx, sdkkonnectops.DeleteServiceRequest{ControlPlaneID: "12345", ServiceID: "123456789"}).
 					Return(
 						nil,
 						&sdkkonnecterrs.SDKError{
@@ -533,7 +533,7 @@ func TestAdoptKongServiceOverride(t *testing.T) {
 			name: "success",
 			mockServicePair: func(t *testing.T) (*mocks.MockServicesSDK, *configurationv1alpha1.KongService) {
 				sdk := mocks.NewMockServicesSDK(t)
-				sdk.EXPECT().GetService(mock.Anything, "1234", "123456789").Return(
+				sdk.EXPECT().GetService(mock.Anything, sdkkonnectops.GetServiceRequest{ServiceID: "1234", ControlPlaneID: "123456789"}).Return(
 					&sdkkonnectops.GetServiceResponse{
 						Service: &sdkkonnectcomp.Service{},
 					},
@@ -577,7 +577,7 @@ func TestAdoptKongServiceOverride(t *testing.T) {
 			name: "failed to fetch",
 			mockServicePair: func(t *testing.T) (*mocks.MockServicesSDK, *configurationv1alpha1.KongService) {
 				sdk := mocks.NewMockServicesSDK(t)
-				sdk.EXPECT().GetService(mock.Anything, "1234", "123456789").Return(
+				sdk.EXPECT().GetService(mock.Anything, sdkkonnectops.GetServiceRequest{ServiceID: "1234", ControlPlaneID: "123456789"}).Return(
 					&sdkkonnectops.GetServiceResponse{
 						Service: &sdkkonnectcomp.Service{},
 					},
@@ -620,7 +620,7 @@ func TestAdoptKongServiceOverride(t *testing.T) {
 			name: "uid conflict",
 			mockServicePair: func(t *testing.T) (*mocks.MockServicesSDK, *configurationv1alpha1.KongService) {
 				sdk := mocks.NewMockServicesSDK(t)
-				sdk.EXPECT().GetService(mock.Anything, "1234", "123456789").Return(
+				sdk.EXPECT().GetService(mock.Anything, sdkkonnectops.GetServiceRequest{ServiceID: "1234", ControlPlaneID: "123456789"}).Return(
 					&sdkkonnectops.GetServiceResponse{
 						Service: &sdkkonnectcomp.Service{
 							// different UID in tag

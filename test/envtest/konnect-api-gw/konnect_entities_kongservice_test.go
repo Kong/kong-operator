@@ -87,8 +87,11 @@ func TestKongService(t *testing.T) {
 		sdk.ServicesSDK.EXPECT().
 			CreateService(
 				mock.Anything,
-				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.ServiceRequest) bool {
+				mock.MatchedBy(func(r sdkkonnectops.CreateServiceRequest) bool {
+					if r.ControlPlaneID != cp.GetKonnectID() {
+						return false
+					}
+					req := r.ServiceRequest
 					return req.ServiceWithHost.Host == host
 				}),
 			).
@@ -150,8 +153,7 @@ func TestKongService(t *testing.T) {
 		sdk.ServicesSDK.EXPECT().
 			DeleteService(
 				mock.Anything,
-				cp.GetKonnectID(),
-				serviceID,
+				sdkkonnectops.DeleteServiceRequest{ControlPlaneID: cp.GetKonnectID(), ServiceID: serviceID},
 			).
 			Return(&sdkkonnectops.DeleteServiceResponse{}, nil)
 
@@ -197,8 +199,11 @@ func TestKongService(t *testing.T) {
 		sdk.ServicesSDK.EXPECT().
 			CreateService(
 				mock.Anything,
-				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.ServiceRequest) bool {
+				mock.MatchedBy(func(r sdkkonnectops.CreateServiceRequest) bool {
+					if r.ControlPlaneID != cp.GetKonnectID() {
+						return false
+					}
+					req := r.ServiceRequest
 					return req.ServiceWithHost.Host == host
 				}),
 			).
@@ -253,8 +258,11 @@ func TestKongService(t *testing.T) {
 		sdk.ServicesSDK.EXPECT().
 			CreateService(
 				mock.Anything,
-				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.ServiceRequest) bool {
+				mock.MatchedBy(func(r sdkkonnectops.CreateServiceRequest) bool {
+					if r.ControlPlaneID != cp.GetKonnectID() {
+						return false
+					}
+					req := r.ServiceRequest
 					return req.ServiceWithHost.Host == host
 				}),
 			).
@@ -306,8 +314,11 @@ func TestKongService(t *testing.T) {
 		sdk.ServicesSDK.EXPECT().
 			CreateService(
 				mock.Anything,
-				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.ServiceRequest) bool {
+				mock.MatchedBy(func(r sdkkonnectops.CreateServiceRequest) bool {
+					if r.ControlPlaneID != cp.GetKonnectID() {
+						return false
+					}
+					req := r.ServiceRequest
 					return req.ServiceWithHost.Host == host
 				}),
 			).
@@ -379,7 +390,7 @@ func TestKongService(t *testing.T) {
 
 		t.Log("Setting up SDK expectations for getting and updating service")
 		sdk.ServicesSDK.EXPECT().GetService(
-			mock.Anything, serviceKonnectID, cp.GetKonnectID(),
+			mock.Anything, sdkkonnectops.GetServiceRequest{ControlPlaneID: cp.GetKonnectID(), ServiceID: serviceKonnectID},
 		).Return(
 			&sdkkonnectops.GetServiceResponse{
 				Service: &sdkkonnectcomp.Service{
@@ -411,8 +422,7 @@ func TestKongService(t *testing.T) {
 		t.Log("Setting up SDK expectations for deleting the service")
 		sdk.ServicesSDK.EXPECT().DeleteService(
 			mock.Anything,
-			cp.GetKonnectID(),
-			serviceKonnectID,
+			sdkkonnectops.DeleteServiceRequest{ControlPlaneID: cp.GetKonnectID(), ServiceID: serviceKonnectID},
 		).Return(&sdkkonnectops.DeleteServiceResponse{}, nil)
 
 		t.Logf("Deleting the KongService %s/%s", ns.Name, createdService.Name)
@@ -431,7 +441,7 @@ func TestKongService(t *testing.T) {
 
 		t.Log("Setting up SDK expectations for getting service")
 		sdk.ServicesSDK.EXPECT().GetService(
-			mock.Anything, serviceKonnectID, cp.GetKonnectID(),
+			mock.Anything, sdkkonnectops.GetServiceRequest{ControlPlaneID: cp.GetKonnectID(), ServiceID: serviceKonnectID},
 		).Return(
 			nil, &sdkkonnecterrs.NotFoundError{
 				Title:  "NotFound",
@@ -463,7 +473,7 @@ func TestKongService(t *testing.T) {
 
 		t.Log("Setting up SDK expectations for getting service")
 		sdk.ServicesSDK.EXPECT().GetService(
-			mock.Anything, serviceKonnectID, cp.GetKonnectID(),
+			mock.Anything, sdkkonnectops.GetServiceRequest{ControlPlaneID: cp.GetKonnectID(), ServiceID: serviceKonnectID},
 		).Return(
 			&sdkkonnectops.GetServiceResponse{
 				Service: &sdkkonnectcomp.Service{
@@ -545,8 +555,11 @@ func TestKongService(t *testing.T) {
 		sdk.ServicesSDK.EXPECT().
 			CreateService(
 				mock.Anything,
-				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.ServiceRequest) bool {
+				mock.MatchedBy(func(r sdkkonnectops.CreateServiceRequest) bool {
+					if r.ControlPlaneID != cp.GetKonnectID() {
+						return false
+					}
+					req := r.ServiceRequest
 					return req.ServiceWithHost.Host == host
 				}),
 			).
@@ -615,8 +628,11 @@ func TestKongService(t *testing.T) {
 		sdk.ServicesSDK.EXPECT().
 			CreateService(
 				mock.Anything,
-				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.ServiceRequest) bool {
+				mock.MatchedBy(func(r sdkkonnectops.CreateServiceRequest) bool {
+					if r.ControlPlaneID != cp.GetKonnectID() {
+						return false
+					}
+					req := r.ServiceRequest
 					return req.ServiceWithHost.Host == host
 				}),
 			).
@@ -664,8 +680,7 @@ func TestKongService(t *testing.T) {
 		sdk.ServicesSDK.EXPECT().
 			DeleteService(
 				mock.Anything,
-				cp.GetKonnectID(),
-				id,
+				sdkkonnectops.DeleteServiceRequest{ControlPlaneID: cp.GetKonnectID(), ServiceID: id},
 			).
 			Return(&sdkkonnectops.DeleteServiceResponse{}, nil)
 
@@ -690,8 +705,11 @@ func TestKongService(t *testing.T) {
 		sdk.ServicesSDK.EXPECT().
 			CreateService(
 				mock.Anything,
-				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.ServiceRequest) bool {
+				mock.MatchedBy(func(r sdkkonnectops.CreateServiceRequest) bool {
+					if r.ControlPlaneID != cp.GetKonnectID() {
+						return false
+					}
+					req := r.ServiceRequest
 					return req.ServiceWithHost.Host == host
 				}),
 			).
@@ -740,8 +758,11 @@ func TestKongService(t *testing.T) {
 		sdk.ServicesSDK.EXPECT().
 			CreateService(
 				mock.Anything,
-				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.ServiceRequest) bool {
+				mock.MatchedBy(func(r sdkkonnectops.CreateServiceRequest) bool {
+					if r.ControlPlaneID != cp.GetKonnectID() {
+						return false
+					}
+					req := r.ServiceRequest
 					return req.ServiceWithHost.Host == host
 				}),
 			).

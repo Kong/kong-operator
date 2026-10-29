@@ -106,7 +106,7 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 			}, "Did not see KongPluginBinding set Programmed and Konnect ID")
 
 		t.Log("Setting up SDK expectation for plugin deletion")
-		sdk.PluginSDK.EXPECT().DeletePlugin(mock.Anything, cp.GetKonnectID(), pluginID).Return(nil, nil)
+		sdk.PluginSDK.EXPECT().DeletePlugin(mock.Anything, sdkkonnectops.DeletePluginRequest{ControlPlaneID: cp.GetKonnectID(), PluginID: pluginID}).Return(nil, nil)
 
 		t.Logf("Deleting the KongPluginBinding %s/%s", ns.Name, kpbGlobal.Name)
 		require.NoError(t, clientNamespaced.Delete(ctx, kpbGlobal))
@@ -164,7 +164,7 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 			}, "Did not see KongPluginBinding set Programmed and Konnect ID")
 
 		t.Log("Setting up SDK expectation for plugin deletion")
-		sdk.PluginSDK.EXPECT().DeletePlugin(mock.Anything, cp.GetKonnectID(), pluginID).Return(nil, nil)
+		sdk.PluginSDK.EXPECT().DeletePlugin(mock.Anything, sdkkonnectops.DeletePluginRequest{ControlPlaneID: cp.GetKonnectID(), PluginID: pluginID}).Return(nil, nil)
 
 		t.Logf("Deleting the KongPluginBinding %s/%s", ns.Name, kpbService.Name)
 		require.NoError(t, clientNamespaced.Delete(ctx, kpbService))
