@@ -14,7 +14,11 @@ type UpdateStrategy struct {
 	onUpdate func(content sendconfig.ContentWithHash) (mo.Option[int], error)
 }
 
-func (m *UpdateStrategy) Update(_ context.Context, targetContent sendconfig.ContentWithHash) (n mo.Option[int], err error) {
+func (m *UpdateStrategy) Update(ctx context.Context, targetContent sendconfig.ContentWithHash) (n mo.Option[int], err error) {
+	// Mimic UpdateStrategyDBMode marking the sync as attempted when its stats are collected.
+	if syncStats, ok := sendconfig.SyncStatsFromContext(ctx); ok {
+		syncStats.Attempted = true
+	}
 	return m.onUpdate(targetContent)
 }
 

@@ -3,9 +3,12 @@ package metrics
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"net"
+	"strconv"
 	"time"
 
+	"github.com/kong/go-kong/kong"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/samber/mo"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
@@ -28,6 +31,8 @@ type Recorder interface {
 	RecordFallbackTranslationFailure(duration time.Duration)
 	RecordFallbackTranslationSuccess(duration time.Duration)
 	RecordFallbackCacheGenerationDuration(since time.Duration, err error)
+	RecordKonnectConfigSyncSuccess(s KonnectConfigSync)
+	RecordKonnectConfigSyncFailure(s KonnectConfigSync, err error)
 }
 
 var _ Recorder = &GlobalCtrlRuntimeMetricsRecorder{}
@@ -76,6 +81,29 @@ const (
 	InstanceIDKey string = "instance_id"
 )
 
+const (
+	// ServerURLKey defines the name of the metric label indicating the base URL of the Konnect API used for uploading configuration.
+	ServerURLKey string = "server_url"
+
+	// StatusCodeKey defines the name of the metric label indicating the HTTP status code that caused a Konnect configuration sync to fail.
+	StatusCodeKey string = "status_code"
+
+	// ConcurrencyKey defines the name of the metric label indicating the concurrency used to upload configuration to Konnect.
+	ConcurrencyKey string = "concurrency"
+
+	// OperationKey defines the name of the metric label indicating the type of operation performed on entities in Konnect.
+	OperationKey string = "operation"
+)
+
+const (
+	// OperationCreate indicates that an entity was created.
+	OperationCreate string = "create"
+	// OperationUpdate indicates that an entity was updated.
+	OperationUpdate string = "update"
+	// OperationDelete indicates that an entity was deleted.
+	OperationDelete string = "delete"
+)
+
 // Regular config push metrics names.
 const (
 	MetricNameConfigPushCount            = "ingress_controller_configuration_push_count"
@@ -101,6 +129,13 @@ const (
 	MetricNameFallbackCacheGenerationDuration    = "ingress_controller_fallback_cache_generation_duration_milliseconds"
 	MetricNameProcessedConfigSnapshotCacheHit    = "ingress_controller_processed_config_snapshot_cache_hit"
 	MetricNameProcessedConfigSnapshotCacheMiss   = "ingress_controller_processed_config_snapshot_cache_miss"
+)
+
+// Konnect config sync metrics names.
+const (
+	MetricNameKonnectConfigSyncDuration    = "ingress_controller_konnect_configuration_sync_duration_milliseconds"
+	MetricNameKonnectConfigSyncEntityCount = "ingress_controller_konnect_configuration_sync_entity_count"
+	MetricNameKonnectConfigSyncOperations  = "ingress_controller_konnect_configuration_sync_operation_count"
 )
 
 // Metrics definitions for GlobalCtrlRuntimeMetricsRecorder.
@@ -397,6 +432,54 @@ var (
 	)
 )
 
+var konnectConfigSyncLabelsHelp = fmt.Sprintf(
+	"`%s` describes whether the synchronization succeeded (`%s`) or not (`%s`). "+
+		"`%s` is populated in case of `%s=\"%s\"` with the HTTP status code returned by Konnect that caused the failure "+
+		"(empty when no response was received). "+
+		"`%s` describes the concurrency used to upload the configuration. "+
+		"`%s` describes the base URL of the Konnect API used to upload the configuration. "+
+		"`%s` describes the instance of the controller that uploaded the configuration.",
+	SuccessKey, SuccessTrue, SuccessFalse,
+	StatusCodeKey, SuccessKey, SuccessFalse,
+	ConcurrencyKey,
+	ServerURLKey,
+	InstanceIDKey,
+)
+
+// Konnect config sync metrics definitions for GlobalCtrlRuntimeMetricsRecorder.
+var (
+	konnectConfigSyncDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name: MetricNameKonnectConfigSyncDuration,
+			Help: "How long a single round of configuration synchronization with Konnect took, in milliseconds. " +
+				konnectConfigSyncLabelsHelp,
+			Buckets: prometheus.ExponentialBucketsRange(10, float64((10 * time.Minute).Milliseconds()), 30),
+		},
+		[]string{SuccessKey, StatusCodeKey, ConcurrencyKey, ServerURLKey, InstanceIDKey},
+	)
+
+	konnectConfigSyncEntityCount = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Name: MetricNameKonnectConfigSyncEntityCount,
+			Help: "The number of entities in the configuration uploaded to Konnect in the last synchronization round. " +
+				konnectConfigSyncLabelsHelp,
+		},
+		[]string{SuccessKey, StatusCodeKey, ConcurrencyKey, ServerURLKey, InstanceIDKey},
+	)
+
+	konnectConfigSyncOperations = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: MetricNameKonnectConfigSyncOperations,
+			Help: fmt.Sprintf(
+				"Count of operations performed on entities in Konnect during configuration synchronization. "+
+					"`%s` describes the type of the operation (one of `%s`, `%s`, `%s`). ",
+				OperationKey, OperationCreate, OperationUpdate, OperationDelete,
+			) + konnectConfigSyncLabelsHelp,
+		},
+		[]string{OperationKey, SuccessKey, StatusCodeKey, ConcurrencyKey, ServerURLKey, InstanceIDKey},
+	)
+)
+
 func init() {
 	allMetrics := []prometheus.Collector{
 		configPushCount,
@@ -418,6 +501,9 @@ func init() {
 		fallbackCacheGeneratingDuration,
 		processedConfigSnapshotCacheHit,
 		processedConfigSnapshotCacheMiss,
+		konnectConfigSyncDuration,
+		konnectConfigSyncEntityCount,
+		konnectConfigSyncOperations,
 	}
 	for _, m := range allMetrics {
 		metrics.Registry.MustRegister(m)
@@ -571,6 +657,55 @@ func (c *GlobalCtrlRuntimeMetricsRecorder) RecordFallbackCacheGenerationDuration
 		labels[SuccessKey] = SuccessFalse
 	}
 	fallbackCacheGeneratingDuration.With(labels).Observe(float64(d.Milliseconds()))
+}
+
+// KonnectConfigSync describes a single round of configuration synchronization with Konnect.
+type KonnectConfigSync struct {
+	// ServerURL is the base URL of the Konnect API used to upload the configuration.
+	ServerURL string
+	// Concurrency is the concurrency used to upload the configuration.
+	Concurrency int
+	// Duration is the time taken by the synchronization round.
+	Duration time.Duration
+	// EntityCount is the number of entities in the uploaded configuration.
+	EntityCount int
+	// CreateOps, UpdateOps and DeleteOps are the numbers of entities successfully created, updated and deleted in Konnect.
+	CreateOps, UpdateOps, DeleteOps int
+}
+
+// RecordKonnectConfigSyncSuccess records a successful round of configuration synchronization with Konnect.
+func (c *GlobalCtrlRuntimeMetricsRecorder) RecordKonnectConfigSyncSuccess(s KonnectConfigSync) {
+	c.recordKonnectConfigSync(s, prometheus.Labels{
+		SuccessKey:    SuccessTrue,
+		StatusCodeKey: "",
+	})
+}
+
+// RecordKonnectConfigSyncFailure records a failed round of configuration synchronization with Konnect.
+func (c *GlobalCtrlRuntimeMetricsRecorder) RecordKonnectConfigSyncFailure(s KonnectConfigSync, err error) {
+	c.recordKonnectConfigSync(s, prometheus.Labels{
+		SuccessKey:    SuccessFalse,
+		StatusCodeKey: konnectSyncFailureStatusCode(err),
+	})
+}
+
+func (c *GlobalCtrlRuntimeMetricsRecorder) recordKonnectConfigSync(s KonnectConfigSync, labels prometheus.Labels) {
+	labels[ConcurrencyKey] = strconv.Itoa(s.Concurrency)
+	labels[ServerURLKey] = s.ServerURL
+	labels[InstanceIDKey] = c.instanceID.String()
+
+	konnectConfigSyncDuration.With(labels).Observe(float64(s.Duration.Milliseconds()))
+	konnectConfigSyncEntityCount.With(labels).Set(float64(s.EntityCount))
+
+	for operation, count := range map[string]int{
+		OperationCreate: s.CreateOps,
+		OperationUpdate: s.UpdateOps,
+		OperationDelete: s.DeleteOps,
+	} {
+		opLabels := maps.Clone(labels)
+		opLabels[OperationKey] = operation
+		konnectConfigSyncOperations.With(opLabels).Add(float64(count))
+	}
 }
 
 type recordOption func(prometheus.Labels) prometheus.Labels
@@ -759,4 +894,24 @@ func pushFailureReason(err error) string {
 	}
 
 	return FailureReasonOther
+}
+
+// konnectSyncFailureStatusCode extracts the HTTP status code returned by Konnect from an error returned when
+// synchronizing configuration with Konnect. It returns an empty string when no status code can be found
+// (e.g. on network errors).
+func konnectSyncFailureStatusCode(err error) string {
+	// Errors returned directly from Konnect API calls (e.g. when fetching the current state).
+	if apiErrs := deckerrors.ExtractAPIErrors(err); len(apiErrs) > 0 {
+		return strconv.Itoa(apiErrs[0].Code())
+	}
+
+	// Errors returned from CRUD actions on entities performed by deck. crud.ActionError does not implement Unwrap,
+	// so its wrapped error needs to be inspected explicitly.
+	for _, actionErr := range deckerrors.ExtractCRUDActionErrors(err) {
+		if apiErr, ok := errors.AsType[*kong.APIError](actionErr.Err); ok {
+			return strconv.Itoa(apiErr.Code())
+		}
+	}
+
+	return ""
 }
