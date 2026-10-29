@@ -111,10 +111,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 
 		sdk.PluginSDK.EXPECT().
 			DeletePlugin(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.DeletePluginRequest) bool {
-				if r.ControlPlaneID != cp.GetKonnectStatus().GetKonnectID() {
-					return false
-				}
-				return true
+				return r.ControlPlaneID == cp.GetKonnectStatus().GetKonnectID()
 			})).
 			Return(
 				&sdkkonnectops.DeletePluginResponse{
@@ -196,10 +193,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 
 		sdk.PluginSDK.EXPECT().
 			DeletePlugin(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.DeletePluginRequest) bool {
-				if r.ControlPlaneID != cp.GetKonnectStatus().GetKonnectID() {
-					return false
-				}
-				return true
+				return r.ControlPlaneID == cp.GetKonnectStatus().GetKonnectID()
 			})).
 			Return(
 				&sdkkonnectops.DeletePluginResponse{
@@ -286,10 +280,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 
 		sdk.PluginSDK.EXPECT().
 			DeletePlugin(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.DeletePluginRequest) bool {
-				if r.ControlPlaneID != cp.GetKonnectStatus().GetKonnectID() {
-					return false
-				}
-				return true
+				return r.ControlPlaneID == cp.GetKonnectStatus().GetKonnectID()
 			})).
 			Return(
 				&sdkkonnectops.DeletePluginResponse{
@@ -385,10 +376,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 
 		sdk.PluginSDK.EXPECT().
 			DeletePlugin(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.DeletePluginRequest) bool {
-				if r.ControlPlaneID != cp.GetKonnectStatus().GetKonnectID() {
-					return false
-				}
-				return true
+				return r.ControlPlaneID == cp.GetKonnectStatus().GetKonnectID()
 			})).
 			Return(
 				&sdkkonnectops.DeletePluginResponse{
@@ -477,10 +465,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 
 		sdk.PluginSDK.EXPECT().
 			DeletePlugin(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.DeletePluginRequest) bool {
-				if r.ControlPlaneID != cp.GetKonnectStatus().GetKonnectID() {
-					return false
-				}
-				return true
+				return r.ControlPlaneID == cp.GetKonnectStatus().GetKonnectID()
 			})).
 			Return(
 				&sdkkonnectops.DeletePluginResponse{
@@ -554,10 +539,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 
 		sdk.PluginSDK.EXPECT().
 			DeletePlugin(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.DeletePluginRequest) bool {
-				if r.ControlPlaneID != cp.GetKonnectStatus().GetKonnectID() {
-					return false
-				}
-				return true
+				return r.ControlPlaneID == cp.GetKonnectStatus().GetKonnectID()
 			})).
 			Return(
 				&sdkkonnectops.DeletePluginResponse{
