@@ -32,7 +32,7 @@ package gwadmin
 //     certificate brings its own issuers into that bundle.
 //   - cp client: the cp listener verifies the data plane certificates. The
 //     CA is Automatic or the user's. Once the pods trust it, it is copied,
-//     with its key, into the operator namespace (CPClientCASecretName), where
+//     with its key, into the operator namespace (gwadminref.CPClientCASecretName), where
 //     the controller managing the data planes issues their certificates from
 //     it. The bundle is mounted into the pods.
 //
@@ -70,7 +70,6 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/sha256"
-	"crypto/tls"
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
@@ -94,16 +93,11 @@ import (
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
+	"github.com/kong/kong-operator/v2/internal/utils/pki"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
-
-const caBundleKey = "ca.crt"
-
-// maxRequeue caps the delay until the next reconcile, so long-lived
-// certificates are re-validated at least once a day.
-const maxRequeue = 24 * time.Hour
 
 // minRSAKeyBits is the smallest RSA key accepted in a Manual certificate
 // authority.
@@ -136,9 +130,9 @@ func (e *stopError) Is(target error) bool { return target == errStop }
 // again.
 func stopRequeue(err error) time.Duration {
 	if se, ok := errors.AsType[*stopError](err); ok && se.after > 0 {
-		return min(se.after, maxRequeue)
+		return min(se.after, pki.MaxRenewalRequeue)
 	}
-	return maxRequeue
+	return pki.MaxRenewalRequeue
 }
 
 const (
@@ -148,16 +142,13 @@ const (
 	certificateSourceManual     = "manual"
 
 	// caPublishedAtAnnotation records, on the published cp client CA, when
-	// it was published. Its previousCAKey holds the certificate authorities
+	// it was published. Its gwadminref.PreviousCAKey holds the certificate authorities
 	// published before it that the data planes may still use.
 	caPublishedAtAnnotation = "konghq.com/gw-admin-ca-published-at"
 
-	// previousCAKey holds, on the Secret of a certificate authority Kong
-	// Operator owns, the certificate authorities, or issuers, its domain
-	// moves off. servedCAKey holds, on the cp server CA Secret, the issuers
-	// of the certificate the cp listener serves.
-	previousCAKey = "previous-ca.crt"
-	servedCAKey   = "served-ca.crt"
+	// servedCAKey holds, on the cp server CA Secret, the issuers of the
+	// certificate the cp listener serves.
+	servedCAKey = "served-ca.crt"
 
 	// rotationTokenAnnotation records, on a certificate authority Kong
 	// Operator created, the value of the GWAdminRotateCAsAnnotation of the
@@ -211,21 +202,12 @@ func cpClientCANextSecretName(gw *operatorv1alpha1.GWAdmin) string {
 	return gwadminref.OperatorSecretPrefix(gw) + "-cp-client-ca-next"
 }
 
-// CPClientCASecretName returns the name of the Secret, in the operator
-// namespace, the cp client CA of the GWAdmin is published in: tls.crt and
-// tls.key hold the certificate authority the controller managing the data
-// planes issues their client certificates from. It only ever holds one the
-// gw-admin pods trust.
-func CPClientCASecretName(gw *operatorv1alpha1.GWAdmin) string {
-	return gwadminref.OperatorSecretPrefix(gw) + "-cp-client-ca"
-}
-
 // privateSecretNames returns the names of the Secrets the GWAdmin keeps in
 // the operator namespace.
 func privateSecretNames(gw *operatorv1alpha1.GWAdmin) []string {
 	return []string{
 		APICASecretName(gw), CPServerCASecretName(gw), gwadminref.OperatorClientTLSSecretName(gw),
-		CPClientCASecretName(gw), cpClientCANextSecretName(gw),
+		gwadminref.CPClientCASecretName(gw), cpClientCANextSecretName(gw),
 	}
 }
 
@@ -350,7 +332,7 @@ func tlsChecksum(mounted ...*corev1.Secret) string {
 			h.Write([]byte{0})
 			continue
 		}
-		for _, k := range []string{caBundleKey, corev1.TLSCertKey, corev1.TLSPrivateKeyKey} {
+		for _, k := range []string{consts.CACRT, corev1.TLSCertKey, corev1.TLSPrivateKeyKey} {
 			h.Write(s.Data[k])
 			h.Write([]byte{0})
 		}
@@ -483,7 +465,7 @@ func serviceDNSNames(serviceName, namespace, clusterDomain string) []string {
 // renewalTime returns when a certificate is due for renewal: once two thirds
 // of its validity have elapsed.
 func renewalTime(cert *x509.Certificate) time.Time {
-	return cert.NotBefore.Add(cert.NotAfter.Sub(cert.NotBefore) * 2 / 3)
+	return pki.RenewalTime(cert.NotBefore, cert.NotAfter)
 }
 
 // warningTime returns when a certificate the user provides is about to
@@ -532,8 +514,7 @@ func leafNeedsIssue(secret *corev1.Secret, spec leafSpec, signer *x509.Certifica
 // expiry of its certificate authority can't be extended: renewing it would
 // only roll the pods ever more often as that expiry nears.
 func renewalExtends(leaf, signer *x509.Certificate, now time.Time, ttl time.Duration) bool {
-	fresh := min(ttl, signer.NotAfter.Sub(now))
-	return fresh > 2*leaf.NotAfter.Sub(now)
+	return pki.RenewalExtends(min(ttl, signer.NotAfter.Sub(now)), leaf.NotAfter.Sub(now))
 }
 
 func sameNames(a, b []string) bool {
@@ -549,32 +530,7 @@ func leafCertificate(secret *corev1.Secret) *x509.Certificate {
 	if secret == nil {
 		return nil
 	}
-	if _, err := tls.X509KeyPair(secret.Data[corev1.TLSCertKey], secret.Data[corev1.TLSPrivateKeyKey]); err != nil {
-		return nil
-	}
-	certs := parseCertificates(secret.Data[corev1.TLSCertKey])
-	if len(certs) == 0 {
-		return nil
-	}
-	return certs[0]
-}
-
-// parseCertificates parses the PEM encoded certificates, skipping anything else.
-func parseCertificates(data []byte) []*x509.Certificate {
-	var certs []*x509.Certificate
-	for rest := data; ; {
-		var block *pem.Block
-		block, rest = pem.Decode(rest)
-		if block == nil {
-			return certs
-		}
-		if block.Type != "CERTIFICATE" {
-			continue
-		}
-		if cert, err := x509.ParseCertificate(block.Bytes); err == nil {
-			certs = append(certs, cert)
-		}
-	}
+	return pki.LeafCertificate(secret.Data[corev1.TLSCertKey], secret.Data[corev1.TLSPrivateKeyKey])
 }
 
 func encodeCertificates(certs []*x509.Certificate) []byte {
@@ -607,11 +563,6 @@ func containsCertificate(certs []*x509.Certificate, cert *x509.Certificate) bool
 	return slices.ContainsFunc(certs, func(c *x509.Certificate) bool { return c.Equal(cert) })
 }
 
-func fingerprint(cert *x509.Certificate) string {
-	sum := sha256.Sum256(cert.Raw)
-	return hex.EncodeToString(sum[:])
-}
-
 // issuersOf returns the certificate authorities carried in the chain of the
 // Secret's tls.crt that signed its certificate and are still valid.
 func issuersOf(secret *corev1.Secret, now time.Time) []*x509.Certificate {
@@ -620,7 +571,7 @@ func issuersOf(secret *corev1.Secret, now time.Time) []*x509.Certificate {
 		return nil
 	}
 	var issuers []*x509.Certificate
-	for _, c := range parseCertificates(secret.Data[corev1.TLSCertKey])[1:] {
+	for _, c := range pki.ParseCertificates(secret.Data[corev1.TLSCertKey])[1:] {
 		if c.IsCA && now.Before(c.NotAfter) && leaf.CheckSignatureFrom(c) == nil {
 			issuers = append(issuers, c)
 		}
@@ -637,8 +588,8 @@ func anchorsOf(secret *corev1.Secret, now time.Time) []*x509.Certificate {
 	if leaf == nil {
 		return nil
 	}
-	chain := parseCertificates(secret.Data[corev1.TLSCertKey])[1:]
-	candidates := unexpired(union(chain, parseCertificates(secret.Data[caBundleKey])), now)
+	chain := pki.ParseCertificates(secret.Data[corev1.TLSCertKey])[1:]
+	candidates := unexpired(union(chain, pki.ParseCertificates(secret.Data[consts.CACRT])), now)
 	intermediates := x509.NewCertPool()
 	for _, c := range chain {
 		intermediates.AddCert(c)
@@ -677,7 +628,7 @@ func isManualCopy(secret *corev1.Secret) bool {
 }
 
 func bundleCerts(bundle *corev1.Secret) []*x509.Certificate {
-	return parseCertificates(bundleData(bundle))
+	return pki.ParseCertificates(bundleData(bundle))
 }
 
 // ensureTLS provisions the TLS material of the GWAdmin, moving it one step
@@ -781,7 +732,7 @@ func (r *Reconciler) ensureTLS(
 	// Look again when the next certificate is due. A moment already past is
 	// waiting on something else, e.g. a rollout, whose events trigger the
 	// reconcile.
-	m.due = append(m.due, now.Add(maxRequeue))
+	m.due = append(m.due, now.Add(pki.MaxRenewalRequeue))
 	for _, l := range []*corev1.Secret{m.api, m.cp, m.client} {
 		if c := leafCertificate(l); c != nil && !isManualCopy(l) {
 			m.due = append(m.due, renewalTime(c))
@@ -989,10 +940,10 @@ func issueReason(leaf, signer *x509.Certificate, now time.Time) string {
 	}
 }
 
-// cpClientCA is the cp client CA: the one published in CPClientCASecretName,
+// cpClientCA is the cp client CA: the one published in gwadminref.CPClientCASecretName,
 // and the signer it moves to.
 type cpClientCA struct {
-	// published is the Secret named CPClientCASecretName, or nil, and
+	// published is the Secret named gwadminref.CPClientCASecretName, or nil, and
 	// publishedCA its certificate authority while usable.
 	published   *corev1.Secret
 	publishedCA *x509.Certificate
@@ -1021,7 +972,7 @@ func (c *cpClientCA) previous(now time.Time) []*x509.Certificate {
 	if c.published == nil {
 		return c.lost
 	}
-	return slices.DeleteFunc(unexpired(parseCertificates(c.published.Data[previousCAKey]), now),
+	return slices.DeleteFunc(unexpired(pki.ParseCertificates(c.published.Data[gwadminref.PreviousCAKey]), now),
 		func(p *x509.Certificate) bool { return !p.IsCA })
 }
 
@@ -1062,11 +1013,11 @@ func (r *Reconciler) ensureCPClientDomain(
 	}
 	waiting := "a certificate authority is published"
 	if c.publishedCA != nil {
-		waiting = dataPlanesRun(dataPlanes, consts.GWAdminDataPlaneClientCAAnnotation, fingerprint(c.publishedCA))
+		waiting = dataPlanesRun(dataPlanes, consts.GWAdminDataPlaneClientCAAnnotation, pki.Fingerprint(c.publishedCA))
 	}
 	if waiting != "" {
 		desired = union(desired, c.previous(p.now))
-	} else if c.published != nil && len(c.published.Data[previousCAKey]) > 0 {
+	} else if c.published != nil && len(c.published.Data[gwadminref.PreviousCAKey]) > 0 {
 		// Every data plane moved: forget the previous ones, so that they are
 		// never trusted again.
 		if err := r.forgetPreviousClientCAs(ctx, gw, c); err != nil {
@@ -1100,7 +1051,7 @@ func (r *Reconciler) ensureCPClientDomain(
 // forgetPreviousClientCAs removes the certificate authorities published
 // before the published one from the published Secret.
 func (r *Reconciler) forgetPreviousClientCAs(ctx context.Context, gw *operatorv1alpha1.GWAdmin, c *cpClientCA) error {
-	published, err := r.writeSecret(ctx, gw, c.published, r.private(CPClientCASecretName(gw)), corev1.SecretTypeTLS,
+	published, err := r.writeSecret(ctx, gw, c.published, r.private(gwadminref.CPClientCASecretName(gw)), corev1.SecretTypeTLS,
 		map[string][]byte{
 			corev1.TLSCertKey:       c.published.Data[corev1.TLSCertKey],
 			corev1.TLSPrivateKeyKey: c.published.Data[corev1.TLSPrivateKeyKey],
@@ -1132,7 +1083,7 @@ func keptAnnotations(secret *corev1.Secret) map[string]string {
 // renewal or rotated; then a new one is created in cpClientCANextSecretName,
 // to be published once the pods trust it.
 func (r *Reconciler) ensureClientSigner(ctx context.Context, gw *operatorv1alpha1.GWAdmin, m *tlsMaterial, p *pass) (*cpClientCA, error) {
-	published, err := r.getOwnedSecret(ctx, gw, r.private(CPClientCASecretName(gw)))
+	published, err := r.getOwnedSecret(ctx, gw, r.private(gwadminref.CPClientCASecretName(gw)))
 	if err != nil {
 		return nil, err
 	}
@@ -1186,7 +1137,7 @@ func (r *Reconciler) ensureClientSigner(ctx context.Context, gw *operatorv1alpha
 	return c, nil
 }
 
-// publishClientCA copies the signer into CPClientCASecretName, recording the
+// publishClientCA copies the signer into gwadminref.CPClientCASecretName, recording the
 // certificate authorities published before it, which the data planes may
 // still use.
 func (r *Reconciler) publishClientCA(ctx context.Context, gw *operatorv1alpha1.GWAdmin, c *cpClientCA, now time.Time) error {
@@ -1200,7 +1151,7 @@ func (r *Reconciler) publishClientCA(ctx context.Context, gw *operatorv1alpha1.G
 	}
 	previous = slices.DeleteFunc(previous, func(p *x509.Certificate) bool { return p.Equal(c.signer) })
 	if len(previous) > 0 {
-		data[previousCAKey] = encodeCertificates(previous)
+		data[gwadminref.PreviousCAKey] = encodeCertificates(previous)
 	}
 	annotations := map[string]string{caPublishedAtAnnotation: now.UTC().Format(time.RFC3339)}
 	if isManualCA(gw) {
@@ -1208,7 +1159,7 @@ func (r *Reconciler) publishClientCA(ctx context.Context, gw *operatorv1alpha1.G
 	} else {
 		annotations[rotationTokenAnnotation] = rotationToken(gw)
 	}
-	published, err := r.writeSecret(ctx, gw, c.published, r.private(CPClientCASecretName(gw)), corev1.SecretTypeTLS, data, annotations)
+	published, err := r.writeSecret(ctx, gw, c.published, r.private(gwadminref.CPClientCASecretName(gw)), corev1.SecretTypeTLS, data, annotations)
 	if err != nil {
 		return err
 	}
@@ -1310,7 +1261,7 @@ func (r *Reconciler) ensureCPServerDomain(
 		return containsCertificate(d.targetAnchors, a)
 	})
 	if waiting := dataPlanesRun(dataPlanes, consts.GWAdminDataPlaneServerBundleAnnotation,
-		DataPlaneServerBundleChecksum(m.serverBundle)); waiting != "" && !trustedAlready && current != nil && p.now.Before(current.NotAfter) {
+		gwadminref.DataPlaneServerBundleChecksum(m.serverBundle)); waiting != "" && !trustedAlready && current != nil && p.now.Before(current.NotAfter) {
 		m.rotating = true
 		m.due = append(m.due, current.NotAfter)
 		if !p.now.Before(renewalTime(current)) {
@@ -1327,8 +1278,8 @@ func (r *Reconciler) ensureCPServerDomain(
 			corev1.TLSCertKey:       manual.Data[corev1.TLSCertKey],
 			corev1.TLSPrivateKeyKey: manual.Data[corev1.TLSPrivateKeyKey],
 		}
-		if ca := manual.Data[caBundleKey]; len(ca) > 0 {
-			data[caBundleKey] = ca
+		if ca := manual.Data[consts.CACRT]; len(ca) > 0 {
+			data[consts.CACRT] = ca
 		}
 		if m.cp, err = r.writeSecret(ctx, gw, m.cp, l.ref, corev1.SecretTypeTLS, data,
 			map[string]string{certificateSourceAnnotation: certificateSourceManual}); err != nil {
@@ -1463,38 +1414,18 @@ func dataPlanesRun(dps []dataPlane, key, value string) string {
 	return ""
 }
 
-// DataPlaneServerBundleChecksum returns the value of the
-// GWAdminDataPlaneServerBundleAnnotation of a data plane mounting the cp
-// server bundle Secret.
-func DataPlaneServerBundleChecksum(bundle *corev1.Secret) string {
-	sum := sha256.Sum256(bundleData(bundle))
-	return hex.EncodeToString(sum[:])
-}
-
-// DataPlaneClientCAFingerprint returns the value of the
-// GWAdminDataPlaneClientCAAnnotation of a data plane whose client
-// certificate is issued from the cp client CA in caPEM: the published
-// Secret's tls.crt. It returns "" when caPEM holds no certificate.
-func DataPlaneClientCAFingerprint(caPEM []byte) string {
-	certs := parseCertificates(caPEM)
-	if len(certs) == 0 {
-		return ""
-	}
-	return fingerprint(certs[0])
-}
-
 func bundleData(bundle *corev1.Secret) []byte {
 	if bundle == nil {
 		return nil
 	}
-	return bundle.Data[caBundleKey]
+	return bundle.Data[consts.CACRT]
 }
 
 func sameCertificateData(a, b *corev1.Secret) bool {
 	return a != nil && b != nil &&
 		bytes.Equal(a.Data[corev1.TLSCertKey], b.Data[corev1.TLSCertKey]) &&
 		bytes.Equal(a.Data[corev1.TLSPrivateKeyKey], b.Data[corev1.TLSPrivateKeyKey]) &&
-		bytes.Equal(a.Data[caBundleKey], b.Data[caBundleKey])
+		bytes.Equal(a.Data[consts.CACRT], b.Data[consts.CACRT])
 }
 
 // writeBundle writes certs into the bundle Secret when it doesn't hold
@@ -1507,11 +1438,11 @@ func (r *Reconciler) writeBundle(
 	certs []*x509.Certificate,
 ) (bool, error) {
 	data := encodeCertificates(certs)
-	if b := *bundle; b != nil && bytes.Equal(b.Data[caBundleKey], data) && len(b.Data) == 1 {
+	if b := *bundle; b != nil && bytes.Equal(b.Data[consts.CACRT], data) && len(b.Data) == 1 {
 		return false, nil
 	}
 	var err error
-	*bundle, err = r.writeSecret(ctx, gw, *bundle, ref, corev1.SecretTypeOpaque, map[string][]byte{caBundleKey: data}, nil)
+	*bundle, err = r.writeSecret(ctx, gw, *bundle, ref, corev1.SecretTypeOpaque, map[string][]byte{consts.CACRT: data}, nil)
 	return err == nil, err
 }
 
@@ -1576,9 +1507,9 @@ func (r *Reconciler) ensureAutomaticCA(
 	}
 	rec := &caRecord{ref: ref, secret: secret}
 	if secret != nil && lost != nil {
-		rec.previous = unexpired(parseCertificates(secret.Data[previousCAKey]), now)
+		rec.previous = unexpired(pki.ParseCertificates(secret.Data[gwadminref.PreviousCAKey]), now)
 		if served, ok := secret.Data[servedCAKey]; ok {
-			rec.served, rec.servedKnown = unexpired(parseCertificates(served), now), true
+			rec.served, rec.servedKnown = unexpired(pki.ParseCertificates(served), now), true
 		}
 	}
 	ca, err := validateCA(secret, now)
@@ -1619,7 +1550,7 @@ func (r *Reconciler) ensureAutomaticCA(
 func (c *caRecord) data(certPEM, keyPEM []byte) map[string][]byte {
 	data := map[string][]byte{corev1.TLSCertKey: certPEM, corev1.TLSPrivateKeyKey: keyPEM}
 	if len(c.previous) > 0 {
-		data[previousCAKey] = encodeCertificates(c.previous)
+		data[gwadminref.PreviousCAKey] = encodeCertificates(c.previous)
 	}
 	if c.servedKnown {
 		data[servedCAKey] = encodeCertificates(c.served)

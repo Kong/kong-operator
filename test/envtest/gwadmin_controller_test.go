@@ -141,7 +141,7 @@ func TestGWAdminReconciler(t *testing.T) {
 		// published cp client CA, the API CA and the cp server CA.
 		apiCA, cpServerCA := gwadmin.APICASecretName(gw), gwadmin.CPServerCASecretName(gw)
 		operatorClient := gwadminref.OperatorClientTLSSecretName(gw)
-		clientCA := gwadmin.CPClientCASecretName(gw)
+		clientCA := gwadminref.CPClientCASecretName(gw)
 		signers := map[string]*x509.Certificate{
 			clientCA:   firstCertificate(t, getSecret(t, ctx, cl, operatorNamespace, clientCA).Data[corev1.TLSCertKey]),
 			apiCA:      firstCertificate(t, getSecret(t, ctx, cl, operatorNamespace, apiCA).Data[corev1.TLSCertKey]),
@@ -562,7 +562,7 @@ func TestGWAdminReconciler(t *testing.T) {
 
 		gw := &operatorv1alpha1.GWAdmin{Name: "gw-ca-switch", Namespace: namespace}
 		require.NoError(t, cl.Create(ctx, gw))
-		automaticCA := gwadmin.CPClientCASecretName(gw)
+		automaticCA := gwadminref.CPClientCASecretName(gw)
 		// The pods run the Automatic CA.
 		var trust0 string
 		require.EventuallyWithT(t, func(ct *assert.CollectT) {
@@ -843,7 +843,7 @@ func TestGWAdminReconciler(t *testing.T) {
 		}
 		publishedIs := func(ca *x509.Certificate) error {
 			s := &corev1.Secret{}
-			if err := cl.Get(ctx, client.ObjectKey{Namespace: operatorNamespace, Name: gwadmin.CPClientCASecretName(gw)}, s); err != nil {
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: operatorNamespace, Name: gwadminref.CPClientCASecretName(gw)}, s); err != nil {
 				return err
 			}
 			published, err := parseFirstCertificate(s.Data[corev1.TLSCertKey])
@@ -1339,7 +1339,7 @@ func putDataPlane(
 // GWAdmin, as a data plane mounting it records it.
 func serverBundleChecksumOf(t *testing.T, ctx context.Context, cl client.Client, gw *operatorv1alpha1.GWAdmin) string {
 	t.Helper()
-	return gwadmin.DataPlaneServerBundleChecksum(getSecret(t, ctx, cl, gw.Namespace, gw.Name+"-cp-server-ca-bundle"))
+	return gwadminref.DataPlaneServerBundleChecksum(getSecret(t, ctx, cl, gw.Namespace, gw.Name+"-cp-server-ca-bundle"))
 }
 
 // clientCAOf returns the fingerprint of the cp client CA of the GWAdmin,
@@ -1347,8 +1347,8 @@ func serverBundleChecksumOf(t *testing.T, ctx context.Context, cl client.Client,
 // certificate from it records it.
 func clientCAOf(t *testing.T, ctx context.Context, cl client.Client, operatorNamespace string, gw *operatorv1alpha1.GWAdmin) string {
 	t.Helper()
-	return gwadmin.DataPlaneClientCAFingerprint(
-		getSecret(t, ctx, cl, operatorNamespace, gwadmin.CPClientCASecretName(gw)).Data[corev1.TLSCertKey])
+	return gwadminref.DataPlaneClientCAFingerprint(
+		getSecret(t, ctx, cl, operatorNamespace, gwadminref.CPClientCASecretName(gw)).Data[corev1.TLSCertKey])
 }
 
 // markRolled reports the gw-admin Deployment as rolled out for its current

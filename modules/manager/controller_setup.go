@@ -417,21 +417,13 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 			},
 		},
 		{
-			// The OnPremEventGateway controller watches the gateways, every
-			// Event Gateway entity that can belong to one, the GWAdmins serving
-			// them, and the KongReferenceGrants allowing a gateway to use a
-			// GWAdmin in another namespace.
+			// The OnPremEventGateway controller watches the gateways, the
+			// GWAdmins serving them, the grants allowing a gateway to use one
+			// in another namespace, and every Event Gateway entity that can
+			// belong to a gateway.
 			condition: c.OnPremEventGatewayControllerEnabled,
 			gvrs: slices.Concat(
-				[]schema.GroupVersionResource{
-					{
-						Group:    eventgatewayv1alpha1.SchemeGroupVersion.Group,
-						Version:  eventgatewayv1alpha1.SchemeGroupVersion.Version,
-						Resource: "onpremeventgateways",
-					},
-					operatorv1alpha1.GWAdminGVR(),
-					configurationv1alpha1.SchemeGroupVersion.WithResource("kongreferencegrants"),
-				},
+				gwadminref.GroupVersionResources(),
 				egonprem.EntityGroupVersionResources(),
 			),
 		},
