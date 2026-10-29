@@ -224,6 +224,8 @@ type AIGWOpenIDConnectGeneratedConfig struct {
 	// The `access-token` and `x-access-token` headers are also checked as a
 	// fallback for backward compatibility regardless of this setting.
 	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	BearerTokenHeaderName string `json:"bearerTokenHeaderName,omitzero"`
@@ -372,11 +374,8 @@ type AIGWOpenIDConnectGeneratedConfig struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	ConsumerOptional string `json:"consumerOptional,omitzero"`
-	// The claim used to derive virtual credentials (e.g.
-	// to be consumed by the rate-limiting plugin), in case the consumer mapping is
-	// not used.
-	// If multiple values are set, it means the claim is inside a nested object of
-	// the token payload.
+	// Claim path used to derive virtual credentials when consumer mapping is not
+	// used.
 	//
 	// +optional
 	CredentialClaim []string `json:"credentialClaim,omitempty"`
@@ -2233,13 +2232,13 @@ type AIGWOpenIDConnectGeneratedConfigTokenExchangeRequest struct {
 	// +optional
 	Audience []string `json:"audience,omitempty"`
 	// Use empty audiences.
-	// Use this field to override audiences defined in `config.audience`.
+	// Use this field to remove audiences defined in `config.audience`.
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	EmptyAudience string `json:"emptyAudience,omitzero"`
 	// Use empty scopes.
-	// Use this field to override scopes defined in `config.scopes`.
+	// Use this field to remove scopes defined in `config.scopes`.
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
@@ -2256,10 +2255,13 @@ type AIGWOpenIDConnectGeneratedConfigTokenExchangeRequest struct {
 // If a JWT bearer matches all the conditions of a subject token issuer item,
 // the token will be exchanged.
 type AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuers struct {
-	// A tokens will only be exchange when it matches all these criteria.
-	// To exchanging tokens issued from a different issuer, conditions must not be
-	// defined; On the contrary, to exchange tokens issued from the target issuer
-	// itself, conditions must be defined.
+	// A token will only be exchanged when it matches all these criteria.
+	// To exchange tokens issued by a different issuer, `conditions` must not be
+	// defined -- every token from that issuer is exchanged unconditionally, since
+	// a foreign-issued token that isn't exchanged can never pass normal
+	// verification against the target issuer anyway.
+	// In contrast, to exchange tokens issued by the target issuer itself,
+	// `conditions` must be defined.
 	//
 	// +optional
 	Conditions AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuersConditions `json:"conditions,omitzero"`
@@ -2272,24 +2274,31 @@ type AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuers struct {
 }
 
 // AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuersConditions A
-// tokens will only be exchange when it matches all these criteria.
-// To exchanging tokens issued from a different issuer, conditions must not be
-// defined; On the contrary, to exchange tokens issued from the target issuer
-// itself, conditions must be defined.
+// token will only be exchanged when it matches all these criteria.
+// To exchange tokens issued by a different issuer, `conditions` must not be
+// defined -- every token from that issuer is exchanged unconditionally, since a
+// foreign-issued token that isn't exchanged can never pass normal verification
+// against the target issuer anyway.
+// In contrast, to exchange tokens issued by the target issuer itself,
+// `conditions` must be defined.
 type AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuersConditions struct {
-	//
+	// Audience values that must all be present in the token, matched against
+	// `audience_claim`.
 	//
 	// +optional
 	HasAudience []string `json:"hasAudience,omitempty"`
-	//
+	// Scope values that must all be present in the token, matched against
+	// `scopes_claim`.
 	//
 	// +optional
 	HasScopes []string `json:"hasScopes,omitempty"`
-	//
+	// Audience values that must all be absent from the token, matched against
+	// `audience_claim`.
 	//
 	// +optional
 	MissingAudience []string `json:"missingAudience,omitempty"`
-	//
+	// Scope values that must all be absent from the token, matched against
+	// `scopes_claim`.
 	//
 	// +optional
 	MissingScopes []string `json:"missingScopes,omitempty"`
