@@ -7,9 +7,12 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
 func TestPluginOrderingToSDKOrdering(t *testing.T) {
@@ -148,6 +151,69 @@ func TestOrderingsEqual(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.equal, orderingsEqual(tt.expected, tt.actual))
+		})
+	}
+}
+
+func TestPluginBindingMatches(t *testing.T) {
+	plugin := &configurationv1.KongPlugin{
+		Name:       "plugin",
+		Namespace:  "default",
+		PluginName: "request-termination",
+		Config:     apiextensionsv1.JSON{Raw: []byte(`{"status_code": 418}`)},
+		Ordering: &kong.PluginOrdering{
+			Before: kong.PluginOrderingPhase{"access": {"key-auth", "acl"}},
+		},
+	}
+	binding := &configurationv1alpha1.KongPluginBinding{
+		Name:      "binding",
+		Namespace: "default",
+		Spec: configurationv1alpha1.KongPluginBindingSpec{
+			PluginReference: configurationv1alpha1.PluginRef{Name: plugin.Name},
+			Scope:           configurationv1alpha1.KongPluginBindingScopeGlobalInControlPlane,
+		},
+	}
+	cl := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(plugin).Build()
+
+	remotePlugin := func(ordering *sdkkonnectcomp.Ordering) *sdkkonnectcomp.Plugin {
+		return &sdkkonnectcomp.Plugin{
+			Name:     "request-termination",
+			Config:   map[string]any{"status_code": float64(418)},
+			Ordering: ordering,
+		}
+	}
+
+	tests := []struct {
+		name    string
+		remote  *sdkkonnectcomp.Plugin
+		matches bool
+	}{
+		{
+			name: "same ordering",
+			remote: remotePlugin(&sdkkonnectcomp.Ordering{
+				Before: &sdkkonnectcomp.Before{Access: []string{"acl", "key-auth"}},
+			}),
+			matches: true,
+		},
+		{
+			name: "different ordering",
+			remote: remotePlugin(&sdkkonnectcomp.Ordering{
+				After: &sdkkonnectcomp.After{Access: []string{"key-auth", "acl"}},
+			}),
+			matches: false,
+		},
+		{
+			name:    "missing ordering",
+			remote:  remotePlugin(nil),
+			matches: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			matches, err := pluginBindingMatches(t.Context(), cl, binding, tt.remote)
+			require.NoError(t, err)
+			assert.Equal(t, tt.matches, matches)
 		})
 	}
 }
