@@ -54,6 +54,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
 	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminapi"
 	"github.com/kong/kong-operator/v2/internal/gwadmin/gwadminsync"
+	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
@@ -212,7 +213,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha
 
 	// The revision of the configuration is recorded before it is pushed.
 	previous, _ := r.lastEntities.Load(gateway.UID)
-	cfg, err := buildConfiguration(ctx, r.Client, gateway, gwadminsync.SecretHint(r.GWAdminSync.SecretLabelSelector), asEntities(previous))
+	cfg, err := buildConfiguration(ctx, r.Client, gateway, gwadminref.SecretHint(r.GWAdminSync.SecretLabelSelector), asEntities(previous))
 	if err != nil {
 		return requeueOnConflict(logger, ctrl.Result{}, err)
 	}

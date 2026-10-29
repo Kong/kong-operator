@@ -25,9 +25,9 @@ func testMaterial(bundle string) *tlsMaterial {
 		return &corev1.Secret{Data: map[string][]byte{corev1.TLSCertKey: []byte(v + "-crt"), corev1.TLSPrivateKeyKey: []byte(v + "-key")}}
 	}
 	return &tlsMaterial{
-		clientBundle: &corev1.Secret{Data: map[string][]byte{caBundleKey: []byte(bundle)}},
-		apiBundle:    &corev1.Secret{Data: map[string][]byte{caBundleKey: []byte("api-bundle")}},
-		serverBundle: &corev1.Secret{Data: map[string][]byte{caBundleKey: []byte("server-bundle")}},
+		clientBundle: &corev1.Secret{Data: map[string][]byte{consts.CACRT: []byte(bundle)}},
+		apiBundle:    &corev1.Secret{Data: map[string][]byte{consts.CACRT: []byte("api-bundle")}},
+		serverBundle: &corev1.Secret{Data: map[string][]byte{consts.CACRT: []byte("server-bundle")}},
 		api:          tlsSecret("api"),
 		cp:           tlsSecret("cp"),
 		client:       tlsSecret("client"),
@@ -113,7 +113,7 @@ func TestChecksums(t *testing.T) {
 	// Neither the operator client certificate nor the cp server bundle is
 	// mounted.
 	m = testMaterial("bundle")
-	m.serverBundle.Data[caBundleKey] = []byte("other server bundle")
+	m.serverBundle.Data[consts.CACRT] = []byte("other server bundle")
 	assert.Equal(t, base, m.checksum())
 	assert.Equal(t, trust, m.trustChecksum())
 	m.client.Data[corev1.TLSCertKey] = []byte("renewed")
@@ -126,13 +126,13 @@ func TestChecksums(t *testing.T) {
 	assert.NotEqual(t, base, m.checksum())
 	assert.NotEqual(t, trust, m.trustChecksum())
 	m = testMaterial("bundle")
-	m.apiBundle.Data[caBundleKey] = []byte("other api bundle")
+	m.apiBundle.Data[consts.CACRT] = []byte("other api bundle")
 	assert.NotEqual(t, base, m.checksum())
 	assert.NotEqual(t, trust, m.trustChecksum())
 
 	// The bundles are told apart: swapping them changes both.
 	m = testMaterial("api-bundle")
-	m.apiBundle.Data[caBundleKey] = []byte("bundle")
+	m.apiBundle.Data[consts.CACRT] = []byte("bundle")
 	assert.NotEqual(t, base, m.checksum())
 	assert.NotEqual(t, trust, m.trustChecksum())
 

@@ -16,17 +16,24 @@ limitations under the License.
 
 // Package gwadminref follows the reference of an OnPremEventGateway to its
 // GWAdmin: it finds the gateways of a GWAdmin, tells whether a gateway is
-// allowed to use a GWAdmin in another namespace, and names the API Service
-// and the operator Secrets the GWAdmin controller provisions.
+// allowed to use a GWAdmin in another namespace, and names the API Service,
+// the operator Secrets the GWAdmin controller provisions, and the values the
+// data planes carry to tell which certificate authorities they were rolled
+// out with.
 package gwadminref
 
 import (
 	"cmp"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"slices"
 
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -35,6 +42,7 @@ import (
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
+	"github.com/kong/kong-operator/v2/internal/utils/pki"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
@@ -188,4 +196,96 @@ func OperatorSecretPrefix(gw *operatorv1alpha1.GWAdmin) string { return "gwadmin
 // the API listener of the GWAdmin with.
 func OperatorClientTLSSecretName(gw *operatorv1alpha1.GWAdmin) string {
 	return OperatorSecretPrefix(gw) + "-operator-client-tls"
+}
+
+// CPClientCASecretName returns the name of the Secret, in the operator
+// namespace, the cp client CA of the GWAdmin is published in: tls.crt and
+// tls.key hold the certificate authority the controller managing the data
+// planes issues their client certificates from. It only ever holds one the
+// gw-admin pods trust.
+func CPClientCASecretName(gw *operatorv1alpha1.GWAdmin) string {
+	return OperatorSecretPrefix(gw) + "-cp-client-ca"
+}
+
+// PreviousCAKey is the key, on the Secret of a certificate authority the
+// GWAdmin controller owns, holding the certificate authorities its domain
+// moves off. On the published cp client CA, they are those published before
+// it, which the gw-admin pods keep trusting until every data plane runs a
+// certificate from the published one.
+const PreviousCAKey = "previous-ca.crt"
+
+// DataPlaneServerBundleChecksum returns the value of the
+// GWAdminDataPlaneServerBundleAnnotation of a data plane mounting the cp
+// server bundle Secret.
+func DataPlaneServerBundleChecksum(bundle *corev1.Secret) string {
+	var data []byte
+	if bundle != nil {
+		data = bundle.Data[consts.CACRT]
+	}
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])
+}
+
+// DataPlaneClientCAFingerprint returns the value of the
+// GWAdminDataPlaneClientCAAnnotation of a data plane whose client
+// certificate is issued from the cp client CA in caPEM: the published
+// Secret's tls.crt. It returns "" when caPEM holds no certificate.
+func DataPlaneClientCAFingerprint(caPEM []byte) string {
+	certs := pki.ParseCertificates(caPEM)
+	if len(certs) == 0 {
+		return ""
+	}
+	return pki.Fingerprint(certs[0])
+}
+
+// GroupVersionResources returns the resources a controller following the
+// GWAdmin of an OnPremEventGateway needs: the gateways, the GWAdmins serving
+// them, and the KongReferenceGrants allowing a gateway to use a GWAdmin in
+// another namespace.
+func GroupVersionResources() []schema.GroupVersionResource {
+	return []schema.GroupVersionResource{
+		eventgatewayv1alpha1.SchemeGroupVersion.WithResource("onpremeventgateways"),
+		operatorv1alpha1.GWAdminGVR(),
+		configurationv1alpha1.SchemeGroupVersion.WithResource("kongreferencegrants"),
+	}
+}
+
+// NotReadyError tells what the GWAdmin of a gateway doesn't provide yet. It
+// is not retried: a change to the GWAdmin or to its Secrets triggers the
+// controllers following it again.
+type NotReadyError struct {
+	Message string
+}
+
+func (e NotReadyError) Error() string { return e.Message }
+
+// SecretHint tells how to make a Secret visible to the operator when its
+// Secret cache is filtered by the label selector, or "" when it isn't.
+func SecretHint(selector string) string {
+	if selector == "" {
+		return ""
+	}
+	return fmt.Sprintf(" (it must exist and carry the %q label to be visible to the operator)", selector)
+}
+
+// GetSecret returns a Secret of the GWAdmin. what names it in messages,
+// e.g. "API CA bundle". A Secret the GWAdmin publishes in the operator
+// namespace is named after the UID of the GWAdmin, and labelled with it:
+// when ownedBy is set, the label must match. The message of a Secret that
+// isn't found tells how to make it visible under the label selector of the
+// operator's Secret cache (see SecretHint).
+func GetSecret(
+	ctx context.Context, cl client.Client, key client.ObjectKey, what string, ownedBy *operatorv1alpha1.GWAdmin, selector string,
+) (*corev1.Secret, error) {
+	var secret corev1.Secret
+	if err := cl.Get(ctx, key, &secret); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, NotReadyError{Message: fmt.Sprintf("The %s Secret %s of the GWAdmin does not exist%s", what, key, SecretHint(selector))}
+		}
+		return nil, fmt.Errorf("failed to get the %s Secret %s of the GWAdmin: %w", what, key, err)
+	}
+	if ownedBy != nil && secret.Labels[consts.GWAdminUIDLabel] != string(ownedBy.UID) {
+		return nil, NotReadyError{Message: fmt.Sprintf("The %s Secret %s doesn't belong to the GWAdmin %s", what, key, client.ObjectKeyFromObject(ownedBy))}
+	}
+	return &secret, nil
 }

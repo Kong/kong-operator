@@ -25,6 +25,7 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
+	"github.com/kong/kong-operator/v2/internal/utils/pki"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
@@ -183,7 +184,7 @@ func TestReconcile_ReadySemantics(t *testing.T) {
 	res, gw, err := e.reconcile(t)
 	require.NoError(t, err)
 	requireReady(t, gw, metav1.ConditionFalse, operatorv1alpha1.GWAdminReasonWaitingToBecomeReady)
-	assert.Equal(t, maxRequeue, res.RequeueAfter)
+	assert.Equal(t, pki.MaxRenewalRequeue, res.RequeueAfter)
 
 	// Created, not observed yet.
 	_, gw, err = e.reconcile(t)
@@ -249,7 +250,7 @@ func TestReconcile_StopKeepsApplying(t *testing.T) {
 
 	res, gw, err := e.reconcile(t)
 	require.NoError(t, err, "a user error is reported in the status")
-	assert.Equal(t, maxRequeue, res.RequeueAfter)
+	assert.Equal(t, pki.MaxRenewalRequeue, res.RequeueAfter)
 	assert.Equal(t, "custom/gw-admin:2", e.image(t), "the Deployment is still applied")
 	cert := certificateCondition(gw)
 	require.NotNil(t, cert)
@@ -273,7 +274,7 @@ func TestReconcile_StopWithoutMountableMaterial(t *testing.T) {
 	e := newReconcileEnv(t, interceptor.Funcs{}, newGWAdmin(&operatorv1alpha1.GWAdminTLS{ClientCA: manualCA("missing")}))
 	res, gw, err := e.reconcile(t)
 	require.NoError(t, err)
-	assert.Equal(t, maxRequeue, res.RequeueAfter)
+	assert.Equal(t, pki.MaxRenewalRequeue, res.RequeueAfter)
 	requireReady(t, gw, metav1.ConditionFalse, operatorv1alpha1.GWAdminReasonDependenciesNotReady)
 	err = e.cl.Get(t.Context(), client.ObjectKey{Namespace: testNamespace, Name: "gw"}, &appsv1.Deployment{})
 	assert.True(t, apierrors.IsNotFound(err), "no Deployment without the material it mounts: %v", err)

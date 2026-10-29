@@ -17,6 +17,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
+	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
+	"github.com/kong/kong-operator/v2/internal/utils/pki"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
@@ -86,8 +88,8 @@ func TestEnsureTLS_AutomaticProvisioning(t *testing.T) {
 	assert.Equal(t, m.serverBundle.Annotations, again.serverBundle.Annotations)
 	// The leaves are due in 60 days and the CAs in months: the daily
 	// re-validation comes first.
-	assert.Equal(t, maxRequeue, m.requeueAfter)
-	assert.Equal(t, maxRequeue, again.requeueAfter)
+	assert.Equal(t, pki.MaxRenewalRequeue, m.requeueAfter)
+	assert.Equal(t, pki.MaxRenewalRequeue, again.requeueAfter)
 }
 
 func TestEnsureTLS_LeafRenewalIsNotGated(t *testing.T) {
@@ -168,13 +170,13 @@ func TestEnsureTLS_CARotationPhases(t *testing.T) {
 	m2, err := r.ensureTLS(t.Context(), gw, rolledDeployment(m1))
 	require.NoError(t, err)
 	assert.True(t, publishedClientCA(t, r).Equal(certB))
-	assert.Equal(t, encodeCertificates([]*x509.Certificate{certA}), getPrivateSecret(t, r, "gwadmin-gw-uid-cp-client-ca").Data[previousCAKey])
+	assert.Equal(t, encodeCertificates([]*x509.Certificate{certA}), getPrivateSecret(t, r, "gwadmin-gw-uid-cp-client-ca").Data[gwadminref.PreviousCAKey])
 	require.Len(t, clientBundleCerts(m2), 2)
 	assert.Equal(t, m1.checksum(), m2.checksum(), "publishing changes nothing mounted")
 	assert.True(t, m2.rotating)
 	assert.Contains(t, certificateCondition(gw).Message, "stays trusted until every data plane")
 	assert.Contains(t, certificateCondition(gw).Message, "dp-ns/dp")
-	assert.Equal(t, maxRequeue, m2.requeueAfter, "the data plane rollout triggers the next pass, not time")
+	assert.Equal(t, pki.MaxRenewalRequeue, m2.requeueAfter, "the data plane rollout triggers the next pass, not time")
 
 	// Nothing moves while the data plane doesn't run it, whatever the time.
 	now = now.Add(30 * 24 * time.Hour)
@@ -188,7 +190,7 @@ func TestEnsureTLS_CARotationPhases(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, clientBundleCerts(m3), 1)
 	assert.True(t, clientBundleCerts(m3)[0].Equal(certB))
-	assert.NotContains(t, getPrivateSecret(t, r, "gwadmin-gw-uid-cp-client-ca").Data, previousCAKey)
+	assert.NotContains(t, getPrivateSecret(t, r, "gwadmin-gw-uid-cp-client-ca").Data, gwadminref.PreviousCAKey)
 	assert.False(t, m3.rotating)
 	cond := certificateCondition(gw)
 	require.NotNil(t, cond)
@@ -218,7 +220,7 @@ func TestEnsureTLS_ManualCP(t *testing.T) {
 	m, err := r.ensureTLS(t.Context(), gw, nil)
 	require.NoError(t, err)
 	assert.Equal(t, src.Data[corev1.TLSCertKey], m.cp.Data[corev1.TLSCertKey], "copied into the owned Secret")
-	assert.Equal(t, src.Data[caBundleKey], m.cp.Data[caBundleKey], "the copy keeps the issuer of ca.crt")
+	assert.Equal(t, src.Data[consts.CACRT], m.cp.Data[consts.CACRT], "the copy keeps the issuer of ca.crt")
 	assert.True(t, metav1.IsControlledBy(m.cp, gw))
 	assert.True(t, containsCertificate(serverBundleCerts(m), issuerA), "the data planes trust the user's issuer")
 	assert.False(t, containsCertificate(clientBundleCerts(m), issuerA), "the cp listener never accepts it for clients")
@@ -560,7 +562,7 @@ func TestEnsureTLS_AutomaticCARenewal(t *testing.T) {
 	published := getPrivateSecret(t, r, "gwadmin-gw-uid-cp-client-ca")
 	assert.True(t, caCert(t, published).Equal(clientB))
 	assert.Equal(t, nextSecret.Data[corev1.TLSPrivateKeyKey], published.Data[corev1.TLSPrivateKeyKey])
-	assert.Equal(t, encodeCertificates([]*x509.Certificate{clientA}), published.Data[previousCAKey])
+	assert.Equal(t, encodeCertificates([]*x509.Certificate{clientA}), published.Data[gwadminref.PreviousCAKey])
 	assert.Equal(t, now.UTC().Format(time.RFC3339), published.Annotations[caPublishedAtAnnotation])
 	err := r.Get(t.Context(), types.NamespacedName{Namespace: testOperatorNamespace, Name: "gwadmin-gw-uid-cp-client-ca-next"}, &corev1.Secret{})
 	assert.True(t, apierrors.IsNotFound(err), "%v", err)
@@ -612,7 +614,7 @@ func TestEnsureTLS_AutomaticCARenewal(t *testing.T) {
 	assert.Equal(t, m5.checksum(), m6.checksum())
 	assert.Equal(t, m5.serverBundle.Data, m6.serverBundle.Data)
 	assert.True(t, publishedClientCA(t, r).Equal(clientB))
-	assert.Equal(t, maxRequeue, m6.requeueAfter)
+	assert.Equal(t, pki.MaxRenewalRequeue, m6.requeueAfter)
 }
 
 func TestEnsureTLS_LeafRenewalIsStable(t *testing.T) {
@@ -630,7 +632,7 @@ func TestEnsureTLS_LeafRenewalIsStable(t *testing.T) {
 	}
 	newLeaf := leafCertificate(renewed.api)
 	assert.WithinDuration(t, now.Truncate(time.Minute).Add(-5*time.Minute), newLeaf.NotBefore, 0, "issued at the injected clock")
-	assert.Equal(t, maxRequeue, renewed.requeueAfter, "the renewed leaves are due in 60 days")
+	assert.Equal(t, pki.MaxRenewalRequeue, renewed.requeueAfter, "the renewed leaves are due in 60 days")
 
 	// The next pass doesn't renew them again.
 	again := ensure(t, r, gw, rolledDeployment(renewed))
@@ -683,7 +685,7 @@ func TestEnsureTLS_ManualCAValidity(t *testing.T) {
 
 		_, err := r.ensureTLS(t.Context(), gw, nil)
 		require.ErrorIs(t, err, errStop)
-		assert.Equal(t, maxRequeue, stopRequeue(err))
+		assert.Equal(t, pki.MaxRenewalRequeue, stopRequeue(err))
 		cond := certificateCondition(gw)
 		assert.Equal(t, metav1.ConditionFalse, cond.Status)
 		assert.Equal(t, operatorv1alpha1.GWAdminReasonInvalidSecret, cond.Reason)
@@ -720,7 +722,7 @@ func TestEnsureTLS_ManualCAValidity(t *testing.T) {
 		r := newReconciler(t, &now, gw, ca)
 		_, err := r.ensureTLS(t.Context(), gw, nil)
 		require.ErrorIs(t, err, errStop)
-		assert.Equal(t, maxRequeue, stopRequeue(err))
+		assert.Equal(t, pki.MaxRenewalRequeue, stopRequeue(err))
 	})
 
 	for _, tc := range []struct {
@@ -874,7 +876,7 @@ func TestEnsureTLS_SwitchToManualCAPublishesItOnceTrusted(t *testing.T) {
 		// No data plane to wait for either: the previous CA is dropped.
 		require.Len(t, clientBundleCerts(m1), 1)
 		assert.False(t, containsCertificate(clientBundleCerts(m1), autoCA))
-		assert.NotContains(t, getPrivateSecret(t, r, "gwadmin-gw-uid-cp-client-ca").Data, previousCAKey)
+		assert.NotContains(t, getPrivateSecret(t, r, "gwadmin-gw-uid-cp-client-ca").Data, gwadminref.PreviousCAKey)
 
 		m2 := pass(t, r, gw, rolledDeployment(m1))
 		require.Len(t, clientBundleCerts(m2), 1)
@@ -1172,7 +1174,7 @@ func TestAnchorsOf_SkipsWhatIsNoCA(t *testing.T) {
 	src := userCPSecretFrom(t, ca, time.Time{}, 90*24*time.Hour, false)
 	// ca.crt also holds a private key and the leaf itself: neither is an
 	// anchor.
-	src.Data[caBundleKey] = append(append(src.Data[corev1.TLSPrivateKeyKey], src.Data[corev1.TLSCertKey]...), src.Data[caBundleKey]...)
+	src.Data[consts.CACRT] = append(append(src.Data[corev1.TLSPrivateKeyKey], src.Data[corev1.TLSCertKey]...), src.Data[consts.CACRT]...)
 	anchors := anchorsOf(src, time.Now())
 	require.Len(t, anchors, 1)
 	assert.True(t, anchors[0].Equal(caCert(t, ca)))

@@ -32,6 +32,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
+	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
+	"github.com/kong/kong-operator/v2/internal/utils/pki"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
@@ -83,7 +85,7 @@ func cExpiredCA(t *testing.T, now time.Time) *x509.Certificate {
 func cAppendToBundle(t *testing.T, r *Reconciler, name string, cert *x509.Certificate) {
 	t.Helper()
 	live := getSecret(t, r, name)
-	live.Data[caBundleKey] = append(live.Data[caBundleKey], encodeCertificates([]*x509.Certificate{cert})...)
+	live.Data[consts.CACRT] = append(live.Data[consts.CACRT], encodeCertificates([]*x509.Certificate{cert})...)
 	require.NoError(t, r.Update(t.Context(), live))
 }
 
@@ -109,7 +111,7 @@ func cSettle(t *testing.T, r *Reconciler, gw *operatorv1alpha1.GWAdmin, m *tlsMa
 // authorities published before it.
 func cHasPrevious(t *testing.T, r *Reconciler) bool {
 	t.Helper()
-	return len(getPrivateSecret(t, r, "gwadmin-gw-uid-cp-client-ca").Data[previousCAKey]) > 0
+	return len(getPrivateSecret(t, r, "gwadmin-gw-uid-cp-client-ca").Data[gwadminref.PreviousCAKey]) > 0
 }
 
 // TestEnsureTLS_ClientDataPlaneCertificatesSurviveRotations follows
@@ -281,7 +283,7 @@ func TestEnsureTLS_ClientWaitsForTheDataPlanes(t *testing.T) {
 	assert.Equal(t, operatorv1alpha1.GWAdminReasonCARotationInProgress, cond.Reason)
 	assert.Contains(t, cond.Message, "stays trusted until every data plane runs a certificate issued from the new one")
 	assert.Contains(t, cond.Message, "data plane Deployment dp-ns/dp doesn't run it yet")
-	assert.Equal(t, maxRequeue, m.requeueAfter, "the data plane rollout triggers the reconcile, not time")
+	assert.Equal(t, pki.MaxRenewalRequeue, m.requeueAfter, "the data plane rollout triggers the reconcile, not time")
 
 	// The data plane template moved, but its rollout isn't complete.
 	rollDataPlane(t, r, cDataPlaneNamespace, cDataPlaneName, m)
@@ -413,7 +415,7 @@ func TestEnsureTLS_ClientNewDataPlaneDoesNotBringBackAnOldCA(t *testing.T) {
 
 	grantDataPlanes(t, r, "other-ns")
 	require.NoError(t, r.Create(t.Context(), dataPlaneDeploymentWith("other-ns", "new-dp",
-		DataPlaneServerBundleChecksum(m.serverBundle), DataPlaneClientCAFingerprint(encodeCertificates([]*x509.Certificate{certA})), false)))
+		gwadminref.DataPlaneServerBundleChecksum(m.serverBundle), gwadminref.DataPlaneClientCAFingerprint(encodeCertificates([]*x509.Certificate{certA})), false)))
 	for range 3 {
 		m = ensure(t, r, gw, rolledDeployment(m))
 	}
@@ -603,19 +605,19 @@ func TestEnsureTLS_ClientAutomaticCAValidity(t *testing.T) {
 }
 
 func TestDataPlaneContractValues(t *testing.T) {
-	bundle := &corev1.Secret{Data: map[string][]byte{caBundleKey: []byte("bundle")}}
+	bundle := &corev1.Secret{Data: map[string][]byte{consts.CACRT: []byte("bundle")}}
 	sum := sha256.Sum256([]byte("bundle"))
-	assert.Equal(t, hex.EncodeToString(sum[:]), DataPlaneServerBundleChecksum(bundle))
+	assert.Equal(t, hex.EncodeToString(sum[:]), gwadminref.DataPlaneServerBundleChecksum(bundle))
 	empty := sha256.Sum256(nil)
-	assert.Equal(t, hex.EncodeToString(empty[:]), DataPlaneServerBundleChecksum(nil))
+	assert.Equal(t, hex.EncodeToString(empty[:]), gwadminref.DataPlaneServerBundleChecksum(nil))
 
 	ca := userCASecret(t, "ca")
 	other := userCASecret(t, "other")
 	der := sha256.Sum256(caCert(t, ca).Raw)
-	assert.Equal(t, hex.EncodeToString(der[:]), DataPlaneClientCAFingerprint(ca.Data[corev1.TLSCertKey]))
+	assert.Equal(t, hex.EncodeToString(der[:]), gwadminref.DataPlaneClientCAFingerprint(ca.Data[corev1.TLSCertKey]))
 	chain := append(append([]byte{}, ca.Data[corev1.TLSCertKey]...), other.Data[corev1.TLSCertKey]...)
-	assert.Equal(t, hex.EncodeToString(der[:]), DataPlaneClientCAFingerprint(chain), "the first certificate")
-	assert.Empty(t, DataPlaneClientCAFingerprint([]byte("nothing")))
+	assert.Equal(t, hex.EncodeToString(der[:]), gwadminref.DataPlaneClientCAFingerprint(chain), "the first certificate")
+	assert.Empty(t, gwadminref.DataPlaneClientCAFingerprint([]byte("nothing")))
 }
 
 func TestEnqueueForDataPlane(t *testing.T) {

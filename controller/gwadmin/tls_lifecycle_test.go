@@ -30,6 +30,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
+	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
+	"github.com/kong/kong-operator/v2/internal/utils/pki"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
@@ -124,7 +126,7 @@ func TestEnsureTLS_StalledAPIRotationReissuesAtExpiry(t *testing.T) {
 	}
 	assert.Equal(t, operatorv1alpha1.GWAdminReasonCARotationInProgress, certificateCondition(gw).Reason)
 	assert.True(t, hasEvent(drainEvents(rec), "Normal CertificateIssued Issued certificate gw-api-tls (expired)"))
-	assert.LessOrEqual(t, m2.requeueAfter, maxRequeue)
+	assert.LessOrEqual(t, m2.requeueAfter, pki.MaxRenewalRequeue)
 
 	// Once the pods run them, A is dropped: the API domain doesn't wait for
 	// data planes, Kong Operator is its only client.
@@ -156,9 +158,9 @@ func TestEnsureTLS_ManualCPRenewal(t *testing.T) {
 		replaceUserCP(t, r, renewed)
 		copied := ensure(t, r, gw, rollingDeployment(m))
 		assert.Equal(t, renewed.Data[corev1.TLSCertKey], copied.cp.Data[corev1.TLSCertKey])
-		assert.Equal(t, renewed.Data[caBundleKey], copied.cp.Data[caBundleKey], "its issuers are kept along")
+		assert.Equal(t, renewed.Data[consts.CACRT], copied.cp.Data[consts.CACRT], "its issuers are kept along")
 		assert.Equal(t, certificateSourceManual, copied.cp.Annotations[certificateSourceAnnotation])
-		assert.Equal(t, DataPlaneServerBundleChecksum(m.serverBundle), DataPlaneServerBundleChecksum(copied.serverBundle),
+		assert.Equal(t, gwadminref.DataPlaneServerBundleChecksum(m.serverBundle), gwadminref.DataPlaneServerBundleChecksum(copied.serverBundle),
 			"the bundle didn't change")
 		again := ensure(t, r, gw, rollingDeployment(copied))
 		assert.Equal(t, renewed.Data[corev1.TLSCertKey], again.cp.Data[corev1.TLSCertKey])
@@ -255,7 +257,7 @@ func TestEnsureTLS_ManualCPRenewal(t *testing.T) {
 		// The controller managing the data plane applies the new bundle; its
 		// pods never roll.
 		setDataPlane(t, r, bDataPlaneNamespace, "dp", map[string]string{
-			consts.GWAdminDataPlaneServerBundleAnnotation: DataPlaneServerBundleChecksum(waiting.serverBundle),
+			consts.GWAdminDataPlaneServerBundleAnnotation: gwadminref.DataPlaneServerBundleChecksum(waiting.serverBundle),
 		}, false)
 		again := ensure(t, r, gw, rolledDeployment(waiting))
 		assert.Equal(t, first.Data[corev1.TLSCertKey], again.cp.Data[corev1.TLSCertKey])
@@ -337,7 +339,7 @@ func TestEnsureTLS_NewCAWithoutDeployment(t *testing.T) {
 	m3 := ensure(t, r, gw, rolledDeployment(m2))
 	require.Len(t, clientBundleCerts(m3), 1)
 	assert.True(t, clientBundleCerts(m3)[0].Equal(certB))
-	assert.NotContains(t, getPrivateSecret(t, r, "gwadmin-gw-uid-cp-client-ca").Data, previousCAKey)
+	assert.NotContains(t, getPrivateSecret(t, r, "gwadmin-gw-uid-cp-client-ca").Data, gwadminref.PreviousCAKey)
 	m3 = ensure(t, r, gw, rolledDeployment(m3))
 	assert.Equal(t, operatorv1alpha1.GWAdminReasonCertificateProvisioned, certificateCondition(gw).Reason)
 
@@ -436,7 +438,7 @@ func TestEnsureTLS_ManualCPRejected(t *testing.T) {
 			Data: map[string][]byte{corev1.TLSCertKey: certPEM, corev1.TLSPrivateKeyKey: keyPEM},
 		}
 		if withIssuer {
-			s.Data[caBundleKey] = ca.Data[corev1.TLSCertKey]
+			s.Data[consts.CACRT] = ca.Data[corev1.TLSCertKey]
 		}
 		return s
 	}
@@ -500,7 +502,7 @@ func TestEnsureTLS_ManualCPRejected(t *testing.T) {
 			tls:  &operatorv1alpha1.GWAdminTLS{CP: manualCP()},
 			objs: func(t *testing.T) []client.Object {
 				s := issue(t, false, x509.ExtKeyUsageServerAuth)
-				s.Data[caBundleKey] = userCASecret(t, "unrelated").Data[corev1.TLSCertKey]
+				s.Data[consts.CACRT] = userCASecret(t, "unrelated").Data[corev1.TLSCertKey]
 				return []client.Object{s}
 			},
 			message: "carries no issuer the data planes can verify it with",
@@ -511,7 +513,7 @@ func TestEnsureTLS_ManualCPRejected(t *testing.T) {
 			r := newReconciler(t, &now, append(tc.objs(t), gw)...)
 			m, err := r.ensureTLS(t.Context(), gw, nil)
 			require.ErrorIs(t, err, errStop)
-			assert.Equal(t, maxRequeue, stopRequeue(err))
+			assert.Equal(t, pki.MaxRenewalRequeue, stopRequeue(err))
 			cond := certificateCondition(gw)
 			assert.Equal(t, metav1.ConditionFalse, cond.Status)
 			assert.Equal(t, operatorv1alpha1.GWAdminReasonInvalidSecret, cond.Reason)
@@ -1094,7 +1096,7 @@ func TestEnsureTLS_ManualCAValidation(t *testing.T) {
 			for range 2 {
 				_, err := r.ensureTLS(t.Context(), gw, nil)
 				require.ErrorIs(t, err, errStop, "a stop, not an error retried with backoff")
-				assert.Equal(t, maxRequeue, stopRequeue(err))
+				assert.Equal(t, pki.MaxRenewalRequeue, stopRequeue(err))
 				cond := certificateCondition(gw)
 				assert.Equal(t, metav1.ConditionFalse, cond.Status)
 				assert.Equal(t, operatorv1alpha1.GWAdminReasonInvalidSecret, cond.Reason)
@@ -1248,7 +1250,7 @@ func TestEnsureTLS_LongNames(t *testing.T) {
 	m := ensure(t, r, gw, nil)
 
 	s := &corev1.Secret{}
-	require.NoError(t, r.Get(t.Context(), types.NamespacedName{Namespace: testOperatorNamespace, Name: CPClientCASecretName(gw)}, s))
+	require.NoError(t, r.Get(t.Context(), types.NamespacedName{Namespace: testOperatorNamespace, Name: gwadminref.CPClientCASecretName(gw)}, s))
 	ca := caCert(t, s)
 	assert.Len(t, ca.Subject.CommonName, 64)
 	assert.Equal(t, ("gw-admin cp client CA " + gw.Namespace + "/" + gw.Name)[:64], ca.Subject.CommonName)
@@ -1341,7 +1343,7 @@ func TestEnsureTLS_TrustDomainsAreSeparate(t *testing.T) {
 			// What anyone reading the published cp client CA can issue: a
 			// data plane client certificate, and a server certificate for
 			// the cp listener.
-			published := getPrivateSecret(t, r, CPClientCASecretName(gw))
+			published := getPrivateSecret(t, r, gwadminref.CPClientCASecretName(gw))
 			issue := func(spec leafSpec) *corev1.Secret {
 				certPEM, keyPEM, err := issueCertificate(published, certRequest{
 					commonName: spec.commonName, dnsNames: spec.dnsNames, usages: spec.usages, ttl: time.Hour, now: now,
