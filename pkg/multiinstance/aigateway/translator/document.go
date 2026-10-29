@@ -228,7 +228,7 @@ type ModelAliasConflictError struct {
 
 func (e *ModelAliasConflictError) Error() string {
 	return fmt.Sprintf(
-		"duplicate model alias %q: AIGatewayModel %q already uses it, and each model alias renders one ai_models entity named after it (the data plane rejects duplicate names; the first model in namespace/name order wins)",
+		"duplicate model alias %q: AIGatewayModel %q already uses it, and each model alias renders one ai_models entity named after it (the data plane rejects duplicate names; the earliest-created model keeps the alias, ties go to namespace/name order)",
 		e.Alias, e.First,
 	)
 }
@@ -300,15 +300,11 @@ func BuildDocument(
 	// document.
 	translatedVaultPrefixes := make(map[string]string)
 
-	// Model aliases already claimed by a translated AIGatewayModel, mapped to the claiming
-	// CR's name: the converter renders one ai_models entity per model alias (the selector's
-	// values, or the model's entity name when no selector is set), and the data plane's
-	// declarative import rejects the whole payload when two entities share a name
-	// (uniqueness violation) — unlike the Konnect hybrid sync, which silently drops the
-	// later row. The first CR in namespace/name order wins; the duplicate is reported
-	// per-entity and excluded from the document. See ai-deck-converter#248 and its
-	// RFC 00229.
-	translatedModelAliases := make(map[string]string)
+	// Model CRs that translated successfully, index-aligned with doc.Models: the
+	// alias adjudication post-pass maps each rendered model back to its CR to
+	// pick the winner per contested alias and patch the losers' statuses.
+	// translatedModelCRs[i] is the CR of doc.Models[i].
+	translatedModelCRs := make([]*aiconfigurationv1alpha1.AIGatewayModel, 0, 4)
 
 	// The list is ordered so every kind translates after all the kinds it references:
 	// checkTranslatedRefs inside the converting wrappers relies on the referenced kinds'
@@ -399,13 +395,7 @@ func BuildDocument(
 				if err := checkTranslatedRefs(translatedModelProviders, "AIGatewayModelProvider", embeddingsProvider); err != nil {
 					return nil, err
 				}
-				aliases := modelAliases(model)
-				for _, alias := range aliases {
-					if first, ok := translatedModelAliases[alias]; ok {
-						return nil, &ModelAliasConflictError{Alias: alias, First: first}
-					}
-					translatedModelAliases[alias] = m.Name
-				}
+				translatedModelCRs = append(translatedModelCRs, m)
 				return model, nil
 			},
 			&doc.Models),
@@ -625,6 +615,58 @@ func BuildDocument(
 			}
 		}
 		doc.MCPServers = kept
+	}
+
+	// Model aliases share one name space: two models claiming one alias render
+	// identically named ai_models rows, and the data plane rejects the whole
+	// import. Claim aliases in creation order (tie: namespace/name), so a model created
+	// later can never displace a programmed one, which the translate order
+	// (namespace/name) would allow. A model is excluded only when an alias is
+	// already held by a kept model. See ai-deck-converter#248.
+	if len(doc.Models) > 1 {
+		order := make([]int, len(doc.Models))
+		for i := range order {
+			order[i] = i
+		}
+		slices.SortFunc(order, func(a, b int) int {
+			ca, cb := translatedModelCRs[a], translatedModelCRs[b]
+			return cmp.Or(
+				ca.CreationTimestamp.Compare(cb.CreationTimestamp.Time),
+				cmp.Compare(ca.Namespace, cb.Namespace),
+				cmp.Compare(ca.Name, cb.Name),
+			)
+		})
+		owner := make(map[string]string) // alias → claiming CR name
+		exclude := make(map[int]*ModelAliasConflictError)
+		for _, i := range order {
+			aliases := modelAliases(&doc.Models[i])
+			if j := slices.IndexFunc(aliases, func(a string) bool { _, ok := owner[a]; return ok }); j >= 0 {
+				exclude[i] = &ModelAliasConflictError{Alias: aliases[j], First: owner[aliases[j]]}
+				continue
+			}
+			for _, a := range aliases {
+				owner[a] = translatedModelCRs[i].Name
+			}
+		}
+		if len(exclude) > 0 {
+			kept := make([]aigw.Model, 0, len(doc.Models)-len(exclude))
+			for i := range doc.Models {
+				conflict, loser := exclude[i]
+				if !loser {
+					kept = append(kept, doc.Models[i])
+					continue
+				}
+				// The status reported success during translation: patch it in
+				// place, as the MCPServer sources pass does.
+				cr := translatedModelCRs[i]
+				for j := range statuses {
+					if statuses[j].Obj == cr {
+						statuses[j].Err = fmt.Errorf("converting %T %s: %w", cr, client.ObjectKeyFromObject(cr), conflict)
+					}
+				}
+			}
+			doc.Models = kept
+		}
 	}
 
 	return doc, statuses, nil

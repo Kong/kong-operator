@@ -32,6 +32,7 @@ import (
 	"github.com/stretchr/testify/require"
 	yaml "gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -895,69 +896,156 @@ func TestBuildDocument_VaultDuplicatePrefix(t *testing.T) {
 	require.Equal(t, 1, failed)
 }
 
-// TestBuildDocument_ModelDuplicateAlias covers two models sharing a selector alias: the
-// converter renders one ai_models entity per alias, named after it, so two identically
-// named rows would make the data plane's declarative import reject the whole payload
-// (uniqueness violation). The later model in namespace/name order is excluded from the
-// document and reported per-entity instead; the first claimant programs normally.
+// TestBuildDocument_ModelDuplicateAlias covers two models sharing a selector
+// alias: the converter renders one ai_models entity per alias, named after it,
+// so two identically named rows would make the data plane's declarative import
+// reject the whole payload (uniqueness violation). The earliest-created model
+// keeps the alias (ties fall back to namespace/name order); the later claimant
+// is excluded from the document and reported per-entity instead.
 func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 	t.Parallel()
 
-	scheme := runtime.NewScheme()
-	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
-	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+	// buildClient assembles the fake client with the index every kind needs:
+	// BuildDocument lists every configuration-entity kind.
+	buildClient := func(t *testing.T, objects ...client.Object) client.Client {
+		t.Helper()
+		scheme := runtime.NewScheme()
+		require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+		require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+
+		builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...)
+		for _, opts := range [][]index.Option{
+			index.OptionsForAIGatewayModel(),
+			index.OptionsForAIGatewayModelProvider(),
+			index.OptionsForAIGatewayPolicy(),
+			index.OptionsForAIGatewayConsumerGroup(),
+			index.OptionsForAIGatewayConsumer(),
+			index.OptionsForAIGatewayConsumerCredential(),
+			index.OptionsForAIGatewayAuthStrategy(),
+			index.OptionsForAIGatewayCACertificate(),
+			index.OptionsForAIGatewayCertificate(),
+			index.OptionsForAIGatewaySNI(),
+			index.OptionsForAIGatewayCustomPolicy(),
+			index.OptionsForAIGatewayAgent(),
+			index.OptionsForAIGatewayMCPServer(),
+			index.OptionsForAIGatewayVault(),
+		} {
+			for _, opt := range opts {
+				builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+			}
+		}
+		return builder.Build()
+	}
+
+	withAlias := func(name string, created metav1.Time) *aiconfigurationv1alpha1.AIGatewayModel {
+		m := aiGatewayModelFixture(name)
+		m.CreationTimestamp = created
+		m.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
+			Values: []string{"shared-alias"},
+		}
+		return m
+	}
 
 	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
-	modelA := aiGatewayModelFixture("model-a")
-	modelA.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
-		Values: []string{"shared-alias"},
-	}
-	modelB := aiGatewayModelFixture("model-b")
-	modelB.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
-		Values: []string{"shared-alias"},
-	}
+	dayOne := metav1.NewTime(time.Date(2026, 10, 21, 0, 0, 0, 0, time.UTC))
+	dayTwo := metav1.NewTime(time.Date(2026, 10, 22, 0, 0, 0, 0, time.UTC))
 
-	builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gw, modelA, modelB)
-	// BuildDocument lists every configuration-entity kind, so every kind's index is needed.
-	for _, opts := range [][]index.Option{
-		index.OptionsForAIGatewayModel(),
-		index.OptionsForAIGatewayModelProvider(),
-		index.OptionsForAIGatewayPolicy(),
-		index.OptionsForAIGatewayConsumerGroup(),
-		index.OptionsForAIGatewayConsumer(),
-		index.OptionsForAIGatewayConsumerCredential(),
-		index.OptionsForAIGatewayAuthStrategy(),
-		index.OptionsForAIGatewayCACertificate(),
-		index.OptionsForAIGatewayCertificate(),
-		index.OptionsForAIGatewaySNI(),
-		index.OptionsForAIGatewayCustomPolicy(),
-		index.OptionsForAIGatewayAgent(),
-		index.OptionsForAIGatewayMCPServer(),
-		index.OptionsForAIGatewayVault(),
-	} {
-		for _, opt := range opts {
-			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	t.Run("the earliest-created model keeps the alias", func(t *testing.T) {
+		t.Parallel()
+
+		// scoped sorts after plain, so name order would pick plain-model:
+		// the creation-time winner proves the rule is not name-based.
+		plain := withAlias("plain-model", dayTwo)
+		scoped := withAlias("scoped-model", dayOne)
+
+		cl := buildClient(t, gw, plain, scoped)
+		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+		require.NoError(t, err)
+
+		require.Len(t, doc.Models, 1)
+		require.Equal(t, "scoped-model", doc.Models[0].Name)
+
+		require.Len(t, statuses, 2)
+		conflicts := 0
+		for _, s := range statuses {
+			if s.Err != nil {
+				conflicts++
+				require.Equal(t, "plain-model", s.Obj.GetName())
+				require.ErrorContains(t, s.Err, `duplicate model alias "shared-alias"`)
+				require.ErrorContains(t, s.Err, `"scoped-model"`)
+			}
 		}
-	}
-	cl := builder.Build()
+		require.Equal(t, 1, conflicts)
+	})
 
-	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
-	require.NoError(t, err)
+	t.Run("ties fall back to namespace/name order", func(t *testing.T) {
+		t.Parallel()
 
-	require.Len(t, doc.Models, 1)
-	require.Equal(t, "model-a", doc.Models[0].Name)
+		// Equal creation timestamps (e.g. two models applied in the same
+		// second): the entity names break the tie deterministically.
+		plain := withAlias("plain-model", dayOne)
+		scoped := withAlias("scoped-model", dayOne)
 
-	require.Len(t, statuses, 2)
-	failed := 0
-	for _, s := range statuses {
-		if s.Err != nil {
-			failed++
-			require.Equal(t, "model-b", s.Obj.GetName())
-			require.ErrorContains(t, s.Err, `duplicate model alias "shared-alias"`)
-			require.ErrorContains(t, s.Err, `"model-a"`)
+		cl := buildClient(t, gw, plain, scoped)
+		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+		require.NoError(t, err)
+
+		require.Len(t, doc.Models, 1)
+		require.Equal(t, "plain-model", doc.Models[0].Name)
+
+		require.Len(t, statuses, 2)
+		conflicts := 0
+		for _, s := range statuses {
+			if s.Err != nil {
+				conflicts++
+				require.Equal(t, "scoped-model", s.Obj.GetName())
+				require.ErrorContains(t, s.Err, `duplicate model alias "shared-alias"`)
+				require.ErrorContains(t, s.Err, `"plain-model"`)
+			}
 		}
-	}
-	require.Equal(t, 1, failed)
+		require.Equal(t, 1, conflicts)
+	})
+
+	t.Run("an excluded model does not exclude later claimants", func(t *testing.T) {
+		t.Parallel()
+
+		// middle loses "x" to oldest, so its claim on "y" must not exclude newest.
+		oldest := aiGatewayModelFixture("oldest")
+		oldest.CreationTimestamp = dayOne
+		oldest.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
+			Values: []string{"x"},
+		}
+		middle := aiGatewayModelFixture("middle")
+		middle.CreationTimestamp = dayTwo
+		middle.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
+			Values: []string{"x", "y"},
+		}
+		newest := aiGatewayModelFixture("newest")
+		newest.CreationTimestamp = metav1.NewTime(dayTwo.Add(24 * time.Hour))
+		newest.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
+			Values: []string{"y"},
+		}
+
+		cl := buildClient(t, gw, oldest, middle, newest)
+		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+		require.NoError(t, err)
+
+		names := make([]string, 0, len(doc.Models))
+		for _, m := range doc.Models {
+			names = append(names, m.Name)
+		}
+		require.ElementsMatch(t, []string{"oldest", "newest"}, names)
+
+		require.Len(t, statuses, 3)
+		for _, s := range statuses {
+			if s.Obj.GetName() != "middle" {
+				require.NoError(t, s.Err)
+				continue
+			}
+			require.ErrorContains(t, s.Err, `duplicate model alias "x"`)
+			require.ErrorContains(t, s.Err, `"oldest"`)
+		}
+	})
 }
 
 // TestBuildDocument_ModelAliasCollisionVariants covers the remaining collision

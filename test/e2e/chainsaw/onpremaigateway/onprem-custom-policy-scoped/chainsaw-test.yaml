@@ -27,11 +27,16 @@ spec:
     rejects the whole payload when two entities share a name (uniqueness
     violation) — unlike the Konnect hybrid sync, which silently drops the
     later model (ai-deck-converter#248). The operator therefore catches the
-    conflict and fails the later model per-entity: models are translated in
-    namespace/name order, so plain-model claims the alias and scoped-model
-    gets Programmed=False naming both models and the alias, while everything
-    else — the global policy, the surviving model's routes, the consumers —
-    programs normally and the data plane goes Ready.
+    conflict and fails the later model per-entity: the earliest-created model
+    claims the alias (ties go to namespace/name order), so plain-model claims
+    it and scoped-model gets Programmed=False naming both models and the
+    alias, while everything else — the global policy, the surviving model's
+    routes, the consumers — programs normally and the data plane goes Ready.
+
+    A newcomer model with the same alias is then created after plain-model is
+    programmed. Its name sorts before plain-model, so a name-order rule would
+    move the alias to it and break plain-model's traffic. The newcomer must
+    get Programmed=False instead, and plain-model must keep serving.
 
     Model scope itself (a model's own policy winning over the global one) is
     not asserted here: the model carrying the model policy is the one the
@@ -117,6 +122,11 @@ spec:
       value: scoped-model
     - name: scoped_model_route_path
       value: /scoped/model
+    # Created last with the same alias; sorts before plain-model.
+    - name: newcomer_model_name
+      value: newcomer-model
+    - name: newcomer_model_route_path
+      value: /scoped/newcomer
     # Agent and MCP server.
     - name: agent_name
       value: scoped-agent
@@ -837,6 +847,65 @@ spec:
               value: ($scope_header)
             - name: expected_header_value
               value: mcp
+    # --- A newcomer that sorts first must not take the alias from the
+    # programmed plain-model: the earliest-created model keeps it.
+    - name: Create-newcomer-model
+      description: Model created after plain-model, with the same alias and a name that sorts before it.
+      try:
+        - apply:
+            file: 01-model.yaml
+            bindings:
+              - name: model_name
+                value: ($newcomer_model_name)
+              - name: model_route_path
+                value: ($newcomer_model_route_path)
+              - name: model_policies
+                value: (`[]`)
+    # Asserted first: it waits for the reconcile that includes the newcomer,
+    # so the plain-model checks below see the post-newcomer state.
+    - name: Assert-newcomer-model-programmed-false
+      try:
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayModel
+              metadata:
+                name: ($newcomer_model_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'False'
+                    reason: Invalid
+                    (contains(message, 'duplicate model alias')): true
+                    (contains(message, $plain_model_name)): true
+    - name: Assert-plain-model-still-programmed
+      try:
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayModel
+              metadata:
+                name: ($plain_model_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+    - name: Verify-plain-model-still-serves-after-newcomer
+      description: plain-model still owns the alias, so its route still answers.
+      use:
+        template: ../../common/_step_templates/verify-aigw-chat-completion-from-cluster.yaml
+        with:
+          bindings:
+            - name: route_path
+              value: ($plain_model_route_path)
+            - name: model_alias
+              value: qwen2.5:0.5b
+            - name: request_headers
+              value: (join('', ['apikey:', $consumer_c_api_key]))
+            - name: expect_header
+              value: ($scope_header)
+            - name: expect_header_value
+              value: global
   catch:
     - description: Capture debug snapshot on test failure.
       script:

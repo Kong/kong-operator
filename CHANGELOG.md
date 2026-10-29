@@ -130,7 +130,8 @@
   push. The operator detects the conflict before the push, excludes the later
   model from the document, and reports the conflict on that model's own
   status (`Programmed=False`) while the rest of the configuration and the
-  data planes program normally. The conflict is also reported as a Warning
+  data planes program normally. The alias is claimed by the earliest-created
+  model (ties fall back to namespace/name order). The conflict is also reported as a Warning
   event on the `OnPremAIGateway`.
   [#6220](https://github.com/Kong/kong-operator/pull/6220)
 - On-prem AI Gateway: an `AIGatewayModel` with a semantic load balancer is now
