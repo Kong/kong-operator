@@ -3,6 +3,8 @@ package konnect_test
 import (
 	"context"
 	"fmt"
+	"slices"
+	"sync"
 	"testing"
 	"time"
 
@@ -19,6 +21,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/sendconfig"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/konnect"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/metrics"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/clock"
 	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
@@ -351,4 +354,122 @@ func runSynchronizer(ctx context.Context, t *testing.T, s *konnect.ConfigSynchro
 		err := s.Start(ctx)
 		assert.NoError(t, err)
 	}()
+}
+
+// konnectConfigSyncRecorder is a metrics recorder capturing recorded Konnect config sync rounds.
+type konnectConfigSyncRecorder struct {
+	mocks.MetricsRecorder
+
+	lock      sync.Mutex
+	successes []metrics.KonnectConfigSync
+	failures  []metrics.KonnectConfigSync
+}
+
+func (r *konnectConfigSyncRecorder) RecordKonnectConfigSyncSuccess(s metrics.KonnectConfigSync) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	r.successes = append(r.successes, s)
+}
+
+func (r *konnectConfigSyncRecorder) RecordKonnectConfigSyncFailure(s metrics.KonnectConfigSync, _ error) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	r.failures = append(r.failures, s)
+}
+
+func (r *konnectConfigSyncRecorder) recorded() (successes, failures []metrics.KonnectConfigSync) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	return slices.Clone(r.successes), slices.Clone(r.failures)
+}
+
+func TestConfigSynchronizer_RecordsSyncRoundMetrics(t *testing.T) {
+	const konnectConcurrency = 7
+
+	testCases := []struct {
+		name                 string
+		configurationChanged bool
+		returnErrorOnUpdate  bool
+		expectSuccess        bool
+		expectFailure        bool
+	}{
+		{
+			name:                 "success",
+			configurationChanged: true,
+			expectSuccess:        true,
+		},
+		{
+			name:                 "failure",
+			configurationChanged: true,
+			returnErrorOnUpdate:  true,
+			expectFailure:        true,
+		},
+		{
+			name:                 "no configuration change is not recorded",
+			configurationChanged: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			testKonnectClient := mustSampleKonnectClient(t)
+			resolver := mocks.NewUpdateStrategyResolver()
+			if tc.returnErrorOnUpdate {
+				resolver.ReturnErrorOnUpdate(testKonnectClient.BaseRootURL())
+			}
+			recorder := &konnectConfigSyncRecorder{}
+			s := konnect.NewConfigSynchronizer(
+				konnect.ConfigSynchronizerParams{
+					Logger: logr.Discard(),
+					KongConfig: sendconfig.Config{
+						KonnectConcurrency: konnectConcurrency,
+					},
+					ConfigUploadTicker:     clock.NewTickerWithDuration(testSendConfigPeriod),
+					KonnectClientFactory:   &mocks.KonnectClientFactory{Client: testKonnectClient},
+					UpdateStrategyResolver: resolver,
+					ConfigChangeDetector:   &mocks.ConfigurationChangeDetector{ConfigurationChanged: tc.configurationChanged},
+					ConfigStatusNotifier:   &mocks.ConfigStatusNotifier{},
+					MetricsRecorder:        recorder,
+				},
+			)
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			runSynchronizer(ctx, t, s)
+
+			s.UpdateKongState(&kongstate.KongState{
+				Services: []kongstate.Service{
+					{
+						Name: new("service1"),
+						Host: new("example.com"),
+					},
+				},
+			}, false)
+
+			if !tc.expectSuccess && !tc.expectFailure {
+				asserts.Never(t, func(_ context.Context) bool {
+					successes, failures := recorder.recorded()
+					return len(successes) != 0 || len(failures) != 0
+				}, testSendConfigNeverTimeout, testSendConfigAssertionTick,
+					"should not record sync rounds when configuration was not synchronized")
+				return
+			}
+
+			require.EventuallyWithT(t, func(t *assert.CollectT) {
+				successes, failures := recorder.recorded()
+				recorded := successes
+				if tc.expectFailure {
+					require.Empty(t, successes, "should not record successful sync rounds")
+					recorded = failures
+				} else {
+					require.Empty(t, failures, "should not record failed sync rounds")
+				}
+				require.NotEmpty(t, recorded, "should record sync rounds")
+				syncRound := recorded[0]
+				require.Equal(t, testKonnectClient.BaseRootURL(), syncRound.ServerURL)
+				require.Equal(t, konnectConcurrency, syncRound.Concurrency)
+				require.Equal(t, 1, syncRound.EntityCount)
+				require.Positive(t, syncRound.Duration)
+			}, testSendConfigAssertionTimeout, testSendConfigAssertionTick)
+		})
+	}
 }
