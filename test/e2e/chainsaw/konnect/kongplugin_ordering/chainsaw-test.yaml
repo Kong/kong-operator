@@ -209,9 +209,11 @@ spec:
               status:
                 (conditions[?type == 'Programmed']):
                   - status: 'False'
+                    reason: FailedToUpdate
+                    (contains(message, 'plugin ordering phase "header_filter" is not supported by Konnect')): true
 
-    - name: 9-restore-valid-plugin
-      description: Remove the unsupported ordering so the binding can be deprovisioned cleanly.
+    - name: 9-recover-valid-plugin
+      description: Remove the unsupported ordering and assert the binding recovers to Programmed.
       try:
         - patch:
             resource:
