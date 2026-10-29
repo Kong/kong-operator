@@ -181,6 +181,82 @@ func TestOnPremAIGateway(t *testing.T) {
 		}.RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("spec.watchNamespaces", func(t *testing.T) {
+		t.Parallel()
+
+		common.TestCasesGroup[*aigatewayv1alpha1.OnPremAIGateway]{
+			{
+				Name:       "unset - defaults to own",
+				TestObject: validOnPremAIGateway(ns.Name),
+				Assert: func(t *testing.T, obj *aigatewayv1alpha1.OnPremAIGateway) {
+					t.Helper()
+					require.NotNil(t, obj.Spec.WatchNamespaces)
+					require.Equal(t, aigatewayv1alpha1.OnPremAIGatewayWatchNamespacesTypeOwn, obj.Spec.WatchNamespaces.Type)
+				},
+			},
+			{
+				Name: "all - valid",
+				TestObject: func() *aigatewayv1alpha1.OnPremAIGateway {
+					obj := validOnPremAIGateway(ns.Name)
+					obj.Spec.WatchNamespaces = &aigatewayv1alpha1.OnPremAIGatewayWatchNamespaces{
+						Type: aigatewayv1alpha1.OnPremAIGatewayWatchNamespacesTypeAll,
+					}
+					return obj
+				}(),
+			},
+			{
+				Name: "list with namespaces - valid",
+				TestObject: func() *aigatewayv1alpha1.OnPremAIGateway {
+					obj := validOnPremAIGateway(ns.Name)
+					obj.Spec.WatchNamespaces = &aigatewayv1alpha1.OnPremAIGatewayWatchNamespaces{
+						Type: aigatewayv1alpha1.OnPremAIGatewayWatchNamespacesTypeList,
+						List: []string{"team-a", "team-b"},
+					}
+					return obj
+				}(),
+				Assert: func(t *testing.T, obj *aigatewayv1alpha1.OnPremAIGateway) {
+					t.Helper()
+					require.NotNil(t, obj.Spec.WatchNamespaces)
+					require.Equal(t, []string{"team-a", "team-b"}, obj.Spec.WatchNamespaces.List)
+				},
+			},
+			{
+				Name: "list without a list - invalid",
+				TestObject: func() *aigatewayv1alpha1.OnPremAIGateway {
+					obj := validOnPremAIGateway(ns.Name)
+					obj.Spec.WatchNamespaces = &aigatewayv1alpha1.OnPremAIGatewayWatchNamespaces{
+						Type: aigatewayv1alpha1.OnPremAIGatewayWatchNamespacesTypeList,
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("list is required when type is 'list'"),
+			},
+			{
+				Name: "list with type all - invalid",
+				TestObject: func() *aigatewayv1alpha1.OnPremAIGateway {
+					obj := validOnPremAIGateway(ns.Name)
+					obj.Spec.WatchNamespaces = &aigatewayv1alpha1.OnPremAIGatewayWatchNamespaces{
+						Type: aigatewayv1alpha1.OnPremAIGatewayWatchNamespacesTypeAll,
+						List: []string{"team-a"},
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("list must not be specified when type is not 'list'"),
+			},
+			{
+				Name: "unknown type - invalid",
+				TestObject: func() *aigatewayv1alpha1.OnPremAIGateway {
+					obj := validOnPremAIGateway(ns.Name)
+					obj.Spec.WatchNamespaces = &aigatewayv1alpha1.OnPremAIGatewayWatchNamespaces{
+						Type: "sometimes",
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("Unsupported value"),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("status defaults", func(t *testing.T) {
 		common.TestCasesGroup[*aigatewayv1alpha1.OnPremAIGateway]{
 			{

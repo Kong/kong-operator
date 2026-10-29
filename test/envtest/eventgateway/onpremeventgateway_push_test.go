@@ -6,8 +6,10 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -57,12 +59,18 @@ type fakeGWAdmin struct {
 	writes int
 	// reject, when it returns a non-empty field, rejects the entities with a 400
 	// on that field.
-	reject func(gwadminapi.GatewayEntities) string
+	reject func(gwadminapi.GatewayEntitySet) string
+	// rejectCertificate, when it returns true, rejects the data plane
+	// certificate of the gateway with a 400.
+	rejectCertificate func(gateway uuid.UUID, body gwadminapi.UpsertEventGatewayDataPlaneCertificateRequestOnPrem) bool
 }
 
+// fakeGateway is a gateway a gw-admin pod holds.
 type fakeGateway struct {
-	name     string
-	entities gwadminapi.GatewayEntities
+	name         string
+	entities     gwadminapi.GatewayEntitySet
+	version      gwadminapi.GatewayConfigVersion
+	certificates map[uuid.UUID]gwadminapi.EventGatewayDataPlaneCertificateOnPrem
 }
 
 var createdAtPattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$`)
@@ -80,11 +88,12 @@ func newFakeGWAdmin(t *testing.T, tlsConfig *tls.Config) *fakeGWAdmin {
 		if g, ok := f.gateways[id]; ok {
 			g.name = body.Name
 		} else {
-			f.gateways[id] = &fakeGateway{name: body.Name}
+			f.gateways[id] = &fakeGateway{name: body.Name, certificates: map[uuid.UUID]gwadminapi.EventGatewayDataPlaneCertificateOnPrem{}}
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
 	mux.HandleFunc("DELETE /v1/event-gateways/{id}", f.withGateway(true, func(w http.ResponseWriter, _ *http.Request, id uuid.UUID, _ *fakeGateway) {
+		// With its entities and its data plane certificates.
 		delete(f.gateways, id)
 		w.WriteHeader(http.StatusNoContent)
 	}))
@@ -94,48 +103,105 @@ func newFakeGWAdmin(t *testing.T, tlsConfig *tls.Config) *fakeGWAdmin {
 			badRequest(w, "", err.Error())
 			return
 		}
-		var lists map[string]json.RawMessage
-		if err := json.Unmarshal(raw, &lists); err != nil {
+		var body struct {
+			ConfigVersion json.RawMessage            `json:"config_version"`
+			Entities      map[string]json.RawMessage `json:"entities"`
+		}
+		if err := json.Unmarshal(raw, &body); err != nil {
 			badRequest(w, "", err.Error())
+			return
+		}
+		if len(body.ConfigVersion) == 0 || string(body.ConfigVersion) == "null" {
+			badRequest(w, "config_version", "required and not nullable")
 			return
 		}
 		for _, key := range []string{"backend_clusters", "listeners", "schema_registries", "static_keys", "tls_trust_bundles", "virtual_clusters"} {
-			if v, ok := lists[key]; !ok || string(v) == "null" {
-				badRequest(w, key, "required and not nullable")
+			if v, ok := body.Entities[key]; !ok || string(v) == "null" {
+				badRequest(w, "entities."+key, "required and not nullable")
 				return
 			}
 		}
-		var doc gwadminapi.GatewayEntities
+		var sent gwadminapi.GatewayEntities
 		dec := json.NewDecoder(bytes.NewReader(raw))
 		dec.DisallowUnknownFields()
-		if err := dec.Decode(&doc); err != nil {
+		if err := dec.Decode(&sent); err != nil {
 			badRequest(w, "", err.Error())
 			return
 		}
+		doc := sent.Entities
 		for i, bc := range doc.BackendClusters {
 			if bc.Id.Version() != 4 {
-				badRequest(w, fmt.Sprintf("backend_clusters.%d.id", i), "not a version 4 UUID")
+				badRequest(w, fmt.Sprintf("entities.backend_clusters.%d.id", i), "not a version 4 UUID")
 				return
 			}
 			if !createdAtPattern.MatchString(bc.CreatedAt.Format("2006-01-02T15:04:05.999999999Z07:00")) {
-				badRequest(w, fmt.Sprintf("backend_clusters.%d.created_at", i), "not whole seconds in UTC")
+				badRequest(w, fmt.Sprintf("entities.backend_clusters.%d.created_at", i), "not whole seconds in UTC")
 				return
 			}
 		}
 		if f.reject != nil {
 			if field := f.reject(doc); field != "" {
-				badRequest(w, field, "rejected by the test")
+				badRequest(w, "entities."+field, "rejected by the test")
 				return
 			}
 		}
-		g.entities = doc
+		g.entities, g.version = withResolvedDestinations(doc), sent.ConfigVersion
 		w.WriteHeader(http.StatusOK)
 	}))
 	mux.HandleFunc("GET /v1/event-gateways/{id}/entities", f.withGateway(true, func(w http.ResponseWriter, _ *http.Request, _ uuid.UUID, g *fakeGateway) {
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(g.entities); err != nil {
+		if err := json.NewEncoder(w).Encode(gwadminapi.GatewayEntities{ConfigVersion: g.version, Entities: g.entities}); err != nil {
 			panic(err)
 		}
+	}))
+	mux.HandleFunc("GET /v1/event-gateways/{id}/data-plane-certificates", f.withGateway(true, func(w http.ResponseWriter, _ *http.Request, _ uuid.UUID, g *fakeGateway) {
+		list := gwadminapi.ListEventGatewayDataPlaneCertificatesOnPrem{Data: []gwadminapi.EventGatewayDataPlaneCertificateOnPrem{}}
+		for _, id := range slices.SortedFunc(maps.Keys(g.certificates), func(a, b uuid.UUID) int { return strings.Compare(a.String(), b.String()) }) {
+			list.Data = append(list.Data, g.certificates[id])
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(list); err != nil {
+			panic(err)
+		}
+	}))
+	mux.HandleFunc("PUT /v1/event-gateways/{id}/data-plane-certificates/{cert}", f.withGateway(true, func(w http.ResponseWriter, r *http.Request, id uuid.UUID, g *fakeGateway) {
+		cert, err := uuid.Parse(r.PathValue("cert"))
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		// gw-admin accepts unknown properties in a certificate, and any string
+		// as one, but checks created_at.
+		var body gwadminapi.UpsertEventGatewayDataPlaneCertificateRequestOnPrem
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			badRequest(w, "", err.Error())
+			return
+		}
+		if !createdAtPattern.MatchString(body.CreatedAt.Format("2006-01-02T15:04:05.999999999Z07:00")) {
+			badRequest(w, "created_at", "not whole seconds in UTC")
+			return
+		}
+		if f.rejectCertificate != nil && f.rejectCertificate(id, body) {
+			badRequest(w, "certificate", "rejected by the test")
+			return
+		}
+		g.certificates[cert] = gwadminapi.EventGatewayDataPlaneCertificateOnPrem{
+			Id: cert, Certificate: body.Certificate, CreatedAt: body.CreatedAt, Name: body.Name, Description: body.Description,
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	mux.HandleFunc("DELETE /v1/event-gateways/{id}/data-plane-certificates/{cert}", f.withGateway(true, func(w http.ResponseWriter, r *http.Request, _ uuid.UUID, g *fakeGateway) {
+		cert, err := uuid.Parse(r.PathValue("cert"))
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		if _, ok := g.certificates[cert]; !ok {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		delete(g.certificates, cert)
+		w.WriteHeader(http.StatusNoContent)
 	}))
 	mux.HandleFunc("PUT /v1/expected-event-gateways", func(w http.ResponseWriter, r *http.Request) {
 		f.mu.Lock()
@@ -165,6 +231,70 @@ func newFakeGWAdmin(t *testing.T, tlsConfig *tls.Config) *fakeGWAdmin {
 	f.StartTLS()
 	t.Cleanup(f.Close)
 	return f
+}
+
+// withResolvedDestinations returns the entities as gw-admin keeps them: each
+// destination with both the id and the name of its target, resolved from the
+// one it was sent with, the backend cluster of a virtual cluster, or the
+// virtual cluster a listener policy forwards to.
+func withResolvedDestinations(e gwadminapi.GatewayEntitySet) gwadminapi.GatewayEntitySet {
+	data, err := json.Marshal(e)
+	if err != nil {
+		panic(err)
+	}
+	var doc map[string]any
+	if err := json.Unmarshal(data, &doc); err != nil {
+		panic(err)
+	}
+	names := func(list string) (byID, byName map[string]string) {
+		byID, byName = map[string]string{}, map[string]string{}
+		items, _ := doc[list].([]any)
+		for _, item := range items {
+			fields, _ := item.(map[string]any)
+			id, _ := fields["id"].(string)
+			name, _ := fields["name"].(string)
+			byID[id], byName[name] = name, id
+		}
+		return byID, byName
+	}
+	resolve := func(destination any, byID, byName map[string]string) {
+		fields, ok := destination.(map[string]any)
+		if !ok {
+			return
+		}
+		if id, ok := fields["id"].(string); ok {
+			fields["name"] = byID[id]
+		} else if name, ok := fields["name"].(string); ok {
+			fields["id"] = byName[name]
+		}
+	}
+	bcByID, bcByName := names("backend_clusters")
+	vcByID, vcByName := names("virtual_clusters")
+	vcs, _ := doc["virtual_clusters"].([]any)
+	for _, vc := range vcs {
+		if fields, ok := vc.(map[string]any); ok {
+			resolve(fields["destination"], bcByID, bcByName)
+		}
+	}
+	listeners, _ := doc["listeners"].([]any)
+	for _, l := range listeners {
+		fields, _ := l.(map[string]any)
+		policies, _ := fields["policies"].([]any)
+		for _, p := range policies {
+			policy, _ := p.(map[string]any)
+			if config, ok := policy["config"].(map[string]any); ok {
+				resolve(config["destination"], vcByID, vcByName)
+			}
+		}
+	}
+	if data, err = json.Marshal(doc); err != nil {
+		panic(err)
+	}
+	var resolved gwadminapi.GatewayEntitySet
+	if err := json.Unmarshal(data, &resolved); err != nil {
+		panic(err)
+	}
+	return resolved
 }
 
 // withGateway serves a request on a gateway, with the lock held. When
@@ -229,14 +359,23 @@ func (f *fakeGWAdmin) state(id uuid.UUID) (fakeGateway, bool, []uuid.UUID) {
 	if !ok {
 		return fakeGateway{}, false, slices.Clone(f.expected)
 	}
-	return *g, true, slices.Clone(f.expected)
+	copied := *g
+	copied.certificates = maps.Clone(g.certificates)
+	return copied, true, slices.Clone(f.expected)
 }
 
-// setReject sets the entities the pod rejects (see fakeGWAdmin.reject).
-func (f *fakeGWAdmin) setReject(reject func(gwadminapi.GatewayEntities) string) {
+func (f *fakeGWAdmin) setReject(reject func(gwadminapi.GatewayEntitySet) string) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.reject = reject
+}
+
+// setRejectCertificate sets the data plane certificates the pod rejects (see
+// fakeGWAdmin.rejectCertificate).
+func (f *fakeGWAdmin) setRejectCertificate(reject func(gateway uuid.UUID, body gwadminapi.UpsertEventGatewayDataPlaneCertificateRequestOnPrem) bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.rejectCertificate = reject
 }
 
 // writeCount returns how many requests changed what the pod holds.
@@ -263,6 +402,9 @@ type testGWAdmin struct {
 	mu sync.Mutex
 	// pods are the gw-admin pods by address.
 	pods map[string]*fakeGWAdmin
+	// unreachable are the addresses of the pods that can't be connected to,
+	// although they hold what they were told, e.g. on a node cut off.
+	unreachable map[string]bool
 }
 
 // testGWAdminName is the name of the GWAdmin of the tests, the one of
@@ -305,9 +447,13 @@ func newOnPremTypeConverter(ctx context.Context, t *testing.T, mgr ctrl.Manager)
 func (g *testGWAdmin) dial(ctx context.Context, network, addr string) (net.Conn, error) {
 	g.mu.Lock()
 	pod, ok := g.pods[addr]
+	unreachable := g.unreachable[addr]
 	g.mu.Unlock()
 	if !ok {
 		return nil, fmt.Errorf("no gw-admin pod at %s", addr)
+	}
+	if unreachable {
+		return nil, &net.OpError{Op: "dial", Net: network, Err: errors.New("unreachable")}
 	}
 	var d net.Dialer
 	return d.DialContext(ctx, network, pod.Listener.Addr().String())
@@ -416,6 +562,42 @@ func (g *testGWAdmin) startPodWith(ctx context.Context, name, ip string, ca gwad
 		})
 	})
 	return pod
+}
+
+// disconnect makes the pod on the address unreachable, and not serving, as
+// its endpoint tells, while it keeps what it holds; reconnect makes it
+// reachable and serving again.
+func (g *testGWAdmin) disconnect(ctx context.Context, ip string) {
+	g.t.Helper()
+	addr := fmt.Sprintf("%s:%d", ip, gwadminsynctest.APIPort)
+	g.mu.Lock()
+	if g.unreachable == nil {
+		g.unreachable = map[string]bool{}
+	}
+	g.unreachable[addr] = true
+	pod := g.pods[addr]
+	g.mu.Unlock()
+	pod.CloseClientConnections()
+	g.setServing(ctx, ip, false)
+}
+
+func (g *testGWAdmin) reconnect(ctx context.Context, ip string) {
+	g.t.Helper()
+	g.mu.Lock()
+	delete(g.unreachable, fmt.Sprintf("%s:%d", ip, gwadminsynctest.APIPort))
+	g.mu.Unlock()
+	g.setServing(ctx, ip, true)
+}
+
+func (g *testGWAdmin) setServing(ctx context.Context, ip string, serving bool) {
+	g.updateEndpoints(ctx, func(endpoints []discoveryv1.Endpoint) []discoveryv1.Endpoint {
+		for i := range endpoints {
+			if endpoints[i].Addresses[0] == ip {
+				endpoints[i].Conditions.Serving = new(serving)
+			}
+		}
+		return endpoints
+	})
 }
 
 // stopPod removes the pod from the EndpointSlice.

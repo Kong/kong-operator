@@ -4367,6 +4367,8 @@ func TestGenerateOnPremEventGatewayEntitiesDispatcher(t *testing.T) {
 		assert.Contains(t, file.Content,
 			`// +kubebuilder:rbac:groups=configuration.konghq.com,resources=eventgatewaybackendclusters;eventgatewaylistenerpolicies;eventgatewaylisteners;eventgatewayvirtualclusterproducepolicies;eventgatewayvirtualclusters,verbs=get;list;watch`)
 		assert.Contains(t, file.Content, `configurationv1alpha1.GroupVersion.WithResource("eventgatewaylistenerpolicies"),`)
+		assert.Contains(t, file.Content, "index.OptionsForEventGatewayListenerPolicy(),")
+		assert.NotContains(t, file.Content, "index.OptionsForKonnectOnlyRoot()")
 		assert.Contains(t, file.Content, `configurationv1alpha1.GroupVersion.WithResource("eventgatewayvirtualclusterproducepolicies"),`)
 		assert.Contains(t, file.Content, "index.OptionsForEventGatewayBackendCluster(),")
 		assert.Contains(t, file.Content, "index.OptionsForEventGatewayVirtualClusterProducePolicy(),")
@@ -4374,6 +4376,44 @@ func TestGenerateOnPremEventGatewayEntitiesDispatcher(t *testing.T) {
 		formatted, err := format.Source([]byte(file.Content))
 		require.NoError(t, err)
 		assert.Equal(t, string(formatted), file.Content)
+	})
+
+	t.Run("parent entities", func(t *testing.T) {
+		infos := []*WatchFileInfo{
+			entity("EventGatewaySchemaRegistry", "KonnectEventGateway", onPrem),
+			entity("EventGatewayBackendCluster", "KonnectEventGateway", onPrem),
+			entity("EventGatewayVirtualCluster", "EventGatewayBackendCluster", nil),
+			entity("EventGatewayVirtualClusterConsumePolicy", "EventGatewayVirtualCluster", nil),
+		}
+
+		file, err := GenerateOnPremEventGatewayEntitiesDispatcher(infos)
+		require.NoError(t, err)
+		require.NotNil(t, file)
+
+		assert.Contains(t, file.Content, `	reflect.TypeFor[*configurationv1alpha1.EventGatewayVirtualCluster](): {
+		{&configurationv1alpha1.EventGatewayBackendCluster{}, func() client.ObjectList { return &configurationv1alpha1.EventGatewayVirtualClusterList{} },
+			index.IndexFieldEventGatewayVirtualClusterOnEventGatewayBackendClusterRef},
+	},`)
+		assert.Contains(t, file.Content, `	reflect.TypeFor[*configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy](): {
+		{&configurationv1alpha1.EventGatewayVirtualCluster{}, func() client.ObjectList { return &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicyList{} },
+			index.IndexFieldEventGatewayVirtualClusterConsumePolicyOnEventGatewayVirtualClusterRef},
+	},`)
+		assert.NotContains(t, file.Content, "reflect.TypeFor[*configurationv1alpha1.EventGatewayBackendCluster]()",
+			"a root's gateway is no parent entity")
+
+		formatted, err := format.Source([]byte(file.Content))
+		require.NoError(t, err)
+		assert.Equal(t, string(formatted), file.Content)
+	})
+
+	t.Run("no parent entities", func(t *testing.T) {
+		file, err := GenerateOnPremEventGatewayEntitiesDispatcher([]*WatchFileInfo{
+			entity("EventGatewayListener", "KonnectEventGateway", onPrem),
+		})
+		require.NoError(t, err)
+		require.NotNil(t, file)
+
+		assert.Contains(t, file.Content, "var parentEntities = map[reflect.Type][]parentEntity{}")
 	})
 
 	t.Run("no entity accepts the gateway", func(t *testing.T) {

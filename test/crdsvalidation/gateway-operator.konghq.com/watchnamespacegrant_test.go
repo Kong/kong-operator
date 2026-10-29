@@ -58,7 +58,7 @@ func TestWatchNamespaceGrant(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: new("spec.from[0].group: Unsupported value: \"invalid.group\": supported values: \"gateway-operator.konghq.com\""),
+				ExpectedErrorMessage: new("spec.from[0].group: Unsupported value: \"invalid.group\": supported values: \"gateway-operator.konghq.com\", \"aigateway.konghq.com\""),
 			},
 			{
 				Name: "unsupported kind",
@@ -74,7 +74,22 @@ func TestWatchNamespaceGrant(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: new("spec.from[0].kind: Unsupported value: \"invalid.kind\": supported values: \"ControlPlane\""),
+				ExpectedErrorMessage: new("spec.from[0].kind: Unsupported value: \"invalid.kind\": supported values: \"ControlPlane\", \"OnPremAIGateway\""),
+			},
+			{
+				Name: "OnPremAIGateway referent is valid",
+				TestObject: &operatorv1alpha1.WatchNamespaceGrant{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv1alpha1.WatchNamespaceGrantSpec{
+						From: []operatorv1alpha1.WatchNamespaceGrantFrom{
+							{
+								Group:     "aigateway.konghq.com",
+								Kind:      "OnPremAIGateway",
+								Namespace: "test",
+							},
+						},
+					},
+				},
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

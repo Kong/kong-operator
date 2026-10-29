@@ -13,10 +13,55 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
+
+func TestMapGatewayForKongCertificateAndGrants(t *testing.T) {
+	ctx := t.Context()
+	gateway := &gwtypes.Gateway{
+		Name: "gateway", Namespace: "gateways",
+		Spec: gatewayv1.GatewaySpec{Listeners: []gatewayv1.Listener{{
+			TLS: &gatewayv1.ListenerTLSConfig{CertificateRefs: []gatewayv1.SecretObjectReference{{
+				Group: new(gatewayv1.Group(configurationv1alpha1.GroupVersion.Group)), Kind: new(gatewayv1.Kind("KongCertificate")),
+				Name: "certificate", Namespace: new(gatewayv1.Namespace("certificates")),
+			}}},
+		}}},
+	}
+	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(gateway).
+		WithIndex(&gwtypes.Gateway{}, index.TLSKongCertificatesOnGatewayIndex, index.TLSKongCertificatesOnGateway).Build()
+	cert := &configurationv1alpha1.KongCertificate{Name: "certificate", Namespace: "certificates"}
+	requests := MapGatewayForKongCertificate(cl)(ctx, cert)
+	assert.Len(t, requests, 1)
+	if assert.NotEmpty(t, requests) {
+		assert.Equal(t, client.ObjectKeyFromObject(gateway), requests[0].NamespacedName)
+	}
+	assert.Empty(t, MapGatewayForKongCertificate(cl)(ctx, &corev1.Secret{Name: cert.Name, Namespace: cert.Namespace}))
+	assert.Empty(t, MapGatewayForKongCertificate(cl)(ctx, &configurationv1alpha1.KongCertificate{Name: "other", Namespace: cert.Namespace}))
+
+	kongGrant := &configurationv1alpha1.KongReferenceGrant{
+		Name: "grant", Namespace: cert.Namespace,
+		Spec: configurationv1alpha1.KongReferenceGrantSpec{From: []configurationv1alpha1.ReferenceGrantFrom{{
+			Group: configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group), Kind: "KongSNI", Namespace: configurationv1alpha1.Namespace(gateway.Namespace),
+		}}},
+	}
+	assert.Equal(t, requests, MapGatewayForKongReferenceGrant(cl)(ctx, kongGrant))
+	kongGrant.Spec.From[0].Kind = "KongService"
+	assert.Empty(t, MapGatewayForKongReferenceGrant(cl)(ctx, kongGrant))
+	grant := &gatewayv1.ReferenceGrant{
+		Name: "grant", Namespace: cert.Namespace,
+		Spec: gatewayv1.ReferenceGrantSpec{
+			From: []gatewayv1.ReferenceGrantFrom{{Group: gatewayv1.GroupName, Kind: "Gateway", Namespace: gatewayv1.Namespace(gateway.Namespace)}},
+			To:   []gatewayv1.ReferenceGrantTo{{Group: gatewayv1.Group(configurationv1alpha1.GroupVersion.Group), Kind: "KongCertificate"}},
+		},
+	}
+	assert.Equal(t, requests, MapGatewayForReferenceGrant(cl)(ctx, grant))
+	assert.Equal(t, requests, MapGatewayForReferenceGrant(cl)(ctx, (*gatewayv1beta1.ReferenceGrant)(grant)))
+	grant.Namespace = "other"
+	assert.Empty(t, MapGatewayForReferenceGrant(cl)(ctx, grant))
+}
 
 func Test_MapGatewayForTLSSecret(t *testing.T) {
 	secretKind := gatewayv1.Kind("Secret")
@@ -929,7 +974,7 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 	}
 }
 
-func Test_hasMatchingCrossNamespaceSecretRef(t *testing.T) {
+func Test_hasMatchingCrossNamespaceCertificateRef(t *testing.T) {
 	secretKind := gatewayv1.Kind("Secret")
 	gatewayKind := gatewayv1beta1.Kind("Gateway")
 	ns1 := gatewayv1.Namespace("ns1")
@@ -1279,7 +1324,7 @@ func Test_hasMatchingCrossNamespaceSecretRef(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := hasMatchingCrossNamespaceSecretRef(tt.gw, tt.rg)
+			result := hasMatchingCrossNamespaceCertificateRef(tt.gw, tt.rg)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

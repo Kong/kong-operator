@@ -87,7 +87,7 @@ spec:
                         - clientID
                         - issuerURL
                         type: object
-                      portalSAML:
+                      sAML:
                         properties:
                           idpMetadataURL:
                             maxLength: 253
@@ -99,7 +99,7 @@ spec:
                       type:
                         enum:
                         - oIDC
-                        - portalSAML
+                        - sAML
                         minLength: 1
                         type: string
                     required:

@@ -359,6 +359,7 @@ OnPremAIGatewaySpec defines the desired state of OnPremAIGateway.
 | --- | --- |
 | `dataplaneSync` _[OnPremAIGatewayDataPlaneSync](#aigateway-konghq-com-v1alpha1-types-onpremaigatewaydataplanesync)_ | DataPlaneSync defines the configuration for syncing configuration to the data planes referencing this OnPremAIGateway. |
 | `objectFilters` _[OnPremAIGatewayObjectFilters](#aigateway-konghq-com-v1alpha1-types-onpremaigatewayobjectfilters)_ | ObjectFilters defines the filters to limit watched objects by the controllers. |
+| `watchNamespaces` _[OnPremAIGatewayWatchNamespaces](#aigateway-konghq-com-v1alpha1-types-onpremaigatewaywatchnamespaces)_ | WatchNamespaces defines the namespaces the controllers watch for the configuration entities pushed to this gateway's data planes, and for the Secrets they reference.<br /><br />When unset, only the OnPremAIGateway's own namespace is watched. When set to `list`, every listed namespace plus the OnPremAIGateway's own namespace is watched. A WatchNamespaceGrant is required in every listed namespace that is not the OnPremAIGateway's own. When set to `all`, every namespace is watched. This requires the operator to run with an empty `--watch-namespaces`, that is, cluster-wide.<br /><br />Changing this field restarts the control plane instance: its caches are built at start. |
 
 _Appears in:_
 
@@ -379,6 +380,45 @@ OnPremAIGatewayStatus defines the observed state of OnPremAIGateway.
 _Appears in:_
 
 - [OnPremAIGateway](#aigateway-konghq-com-v1alpha1-onpremaigateway)
+
+#### OnPremAIGatewayWatchNamespaces
+
+
+OnPremAIGatewayWatchNamespaces defines the namespaces watched for the
+configuration entities of an OnPremAIGateway.<br /><br />It mirrors the ControlPlane's spec.watchNamespaces.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[OnPremAIGatewayWatchNamespacesType](#aigateway-konghq-com-v1alpha1-types-onpremaigatewaywatchnamespacestype)_ | Type indicates the type of namespace watching to be done. |
+| `list` _[]string_ | List is a list of namespaces to watch for resources. Only used when Type is set to List. |
+
+_Appears in:_
+
+- [OnPremAIGatewaySpec](#aigateway-konghq-com-v1alpha1-types-onpremaigatewayspec)
+
+#### OnPremAIGatewayWatchNamespacesType
+
+_Underlying type:_ `string`
+
+OnPremAIGatewayWatchNamespacesType indicates the type of namespace watching to
+be done.
+
+
+
+
+_Appears in:_
+
+- [OnPremAIGatewayWatchNamespaces](#aigateway-konghq-com-v1alpha1-types-onpremaigatewaywatchnamespaces)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `all` | OnPremAIGatewayWatchNamespacesTypeAll indicates that all namespaces should<br />be watched for resources.<br /> |
+| `list` | OnPremAIGatewayWatchNamespacesTypeList indicates that only the namespaces<br />listed in the List field should be watched for resources.<br />All the namespaces enumerated in the list are watched in addition to the<br />namespace of the OnPremAIGateway.<br /> |
+| `own` | OnPremAIGatewayWatchNamespacesTypeOwn indicates that only the namespace of<br />the OnPremAIGateway should be watched for resources.<br /> |
 
 #### Scaling
 

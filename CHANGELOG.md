@@ -419,7 +419,10 @@
   references stay in the configuration. Their `Programmed`
   and `SecretRefValid` conditions report the outcome; `Programmed` turns
   `Detached` for one that no longer belongs to the gateway, e.g. whose parent
-  was deleted. `KongReferenceGrant` now accepts `EventGatewayBackendCluster`,
+  was deleted, and is `False` with the reason `GatewayNotFound` for one whose
+  `OnPremEventGateway` doesn't exist, directly or through its parent
+  entities, e.g. one created before its gateway or whose gateway was deleted.
+  `KongReferenceGrant` now accepts `EventGatewayBackendCluster`,
   `EventGatewaySchemaRegistry`, `EventGatewayTLSTrustBundle` and
   `EventGatewayListenerPolicy` in `spec.from`, for Secrets in other
   namespaces.
@@ -427,6 +430,7 @@
   [#6270](https://github.com/Kong/kong-operator/pull/6270)
   [#6276](https://github.com/Kong/kong-operator/pull/6276)
   [#6281](https://github.com/Kong/kong-operator/pull/6281)
+  [#6322](https://github.com/Kong/kong-operator/pull/6322)
 - `KegDataPlane`: `spec.controlPlaneRef` accepts an `OnPremEventGateway` in
   the same namespace, with `type: onpremNamespacedRef`. The control plane
   reference can't change type, and an `onpremNamespacedRef` can't change;
@@ -434,6 +438,27 @@
   only: the operator doesn't deploy a data plane for an
   `onpremNamespacedRef` yet.
   [#6283](https://github.com/Kong/kong-operator/pull/6283)
+- `OnPremEventGateway`: the controller pushes the
+  `EventGatewayDataPlaneCertificate`s attached to a gateway to its gw-admin
+  pods. On every push it reads the certificates each pod holds for the
+  gateway, registers those missing or changed, and deletes those the gateway
+  doesn't have anymore, e.g. deleted, left out or moved to another gateway.
+  The terminating pods, not pushed to, stop trusting those and those whose
+  content changed, as far as they can be reached. A pod that can't be
+  reached is told once it is. A certificate is `Programmed` once every
+  gw-admin pod reached holds it, whatever the rest of the configuration, and
+  reports `NotRegistered` with the pods missing it or whose push failed, or
+  `Invalid` with the reason when gw-admin rejects it: a rejected certificate
+  doesn't fail the push of the gateway. The entities are sent
+  with the version of the configuration, its `status.configRevision`.
+  Rotate a data plane certificate with a new
+  `EventGatewayDataPlaneCertificate`, deleting the previous one once no data
+  plane uses it: a new certificate in the Secret of an existing one replaces
+  it on every gw-admin pod at once, and one whose Secret can't be read
+  anymore is no longer trusted. Requires a gw-admin serving version 1.11.0
+  of its API, which lists the data plane certificates and deletes them with
+  their gateway.
+  [#6314](https://github.com/Kong/kong-operator/pull/6314)
 - `--konnect-list-page-size` flag (default and maximum `100`): the page size
   the operator requests when listing Konnect entities to find the Konnect
   entity of an object, e.g. one whose Konnect ID was lost. It is a fallback in
@@ -482,10 +507,15 @@
   `konghq.com/konnect-cp-labels` or `konghq.com/konnect-dp-labels` annotation is
   over 5 in `Gateway` or `GatewayClass`, or the number of combined labels from
   the two parts is over 5, the controller rejects the `Gateway`.
+  An invalid annotation (malformed, too many labels, or an invalid label key or
+  value) is reported on the `Gateway`'s `KonnectGatewayControlPlaneProgrammed`
+  or `KonnectExtensionReady` condition with reason `InvalidKonnectLabels`, and
+  the `Gateway` is not retried until the annotation is fixed.
   The labels from annotations of `Gateway`s take precedence over the labels from
   `GatewayClass`es. When they have different values on the same key, the value
   from annotation of `Gateway` is used.
   [#5808](https://github.com/Kong/kong-operator/pull/5808)
+  [#6315](https://github.com/Kong/kong-operator/pull/6315)
 - Hybrid Gateway: support the `konghq.com/request-buffering`,
   `konghq.com/response-buffering`, `konghq.com/https-redirect-status-code` and
   `konghq.com/path-handling` annotations on `HTTPRoute` and `GRPCRoute`, and
@@ -571,6 +601,15 @@
   ControlPlanes gets the union of both Gateways' tags on each ControlPlane's
   entities.
   [#5869](https://github.com/Kong/kong-operator/pull/5869)
+- Konnect-backed Gateway HTTPS Listeners can reference an existing
+  `configuration.konghq.com/KongCertificate` directly through `certificateRefs`.
+  Kong Operator manages the Listener SNI without copying or owning the certificate,
+  allowing Vault-backed certificates and cert-manager rotation without a
+  placeholder TLS Secret or a manually managed KongSNI. Cross-namespace references
+  require both a Gateway API ReferenceGrant and a KongReferenceGrant.
+  TLS Passthrough Listeners ignore certificate references without creating or
+  waiting for certificate bindings.
+  [#6233](https://github.com/Kong/kong-operator/pull/6233)
 
 ### Changed
 

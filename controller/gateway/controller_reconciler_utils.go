@@ -36,6 +36,7 @@ import (
 	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	hybridgatewayrefs "github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
 	"github.com/kong/kong-operator/v2/controller/pkg/extensions"
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets/ref"
@@ -43,7 +44,6 @@ import (
 	gwconfigutils "github.com/kong/kong-operator/v2/internal/utils/gatewayconfig"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/pkg/ipfamily"
-	"github.com/kong/kong-operator/v2/pkg/metadata"
 	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	k8sreduce "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/reduce"
@@ -140,12 +140,9 @@ func (r *Reconciler) createKonnectGatewayControlPlane(
 	}
 
 	if gatewayConfig.Spec.Konnect.Mirror == nil {
-		cpLabels, err := resolveKonnectLabels(gateway, gatewayClass, metadata.AnnotationKeyKonnectCPLabels)
+		cpLabels, err := resolveKonnectCPLabels(gateway, gatewayClass)
 		if err != nil {
-			return nil, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectCPLabels, err)
-		}
-		if err := validateCPLabels(cpLabels); err != nil {
-			return nil, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectCPLabels, err)
+			return nil, err
 		}
 
 		kgcp.Spec.CreateControlPlaneRequest = &sdkkonnectcomp.CreateControlPlaneRequest{
@@ -208,12 +205,9 @@ func (r *Reconciler) enforceKonnectGatewayControlPlaneSpec(
 	}
 
 	if kgcp.Spec.CreateControlPlaneRequest != nil {
-		cpLabels, err := resolveKonnectLabels(gateway, gatewayClass, metadata.AnnotationKeyKonnectCPLabels)
+		cpLabels, err := resolveKonnectCPLabels(gateway, gatewayClass)
 		if err != nil {
-			return false, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectCPLabels, err)
-		}
-		if err := validateCPLabels(cpLabels); err != nil {
-			return false, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectCPLabels, err)
+			return false, err
 		}
 		if !maps.Equal(kgcp.Spec.CreateControlPlaneRequest.Labels, cpLabels) {
 			kgcp.Spec.CreateControlPlaneRequest.Labels = cpLabels
@@ -237,12 +231,9 @@ func (r *Reconciler) createKonnectExtension(
 	gatewayClass *gatewayv1.GatewayClass,
 	konnectControlPlane *konnectv1alpha2.KonnectGatewayControlPlane,
 ) (*konnectv1alpha2.KonnectExtension, error) {
-	dpLabels, err := resolveKonnectLabels(gateway, gatewayClass, metadata.AnnotationKeyKonnectDPLabels)
+	dpLabels, err := resolveKonnectDPLabels(gateway, gatewayClass)
 	if err != nil {
-		return nil, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectDPLabels, err)
-	}
-	if err := validateDPLabels(dpLabels); err != nil {
-		return nil, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectDPLabels, err)
+		return nil, err
 	}
 
 	konnectExt := &konnectv1alpha2.KonnectExtension{
@@ -293,12 +284,9 @@ func (r *Reconciler) enforceKonnectExtensionSpec(
 	gatewayClass *gatewayv1.GatewayClass,
 	konnectExt *konnectv1alpha2.KonnectExtension,
 ) (bool, error) {
-	dpLabels, err := resolveKonnectLabels(gateway, gatewayClass, metadata.AnnotationKeyKonnectDPLabels)
+	dpLabels, err := resolveKonnectDPLabels(gateway, gatewayClass)
 	if err != nil {
-		return false, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectDPLabels, err)
-	}
-	if err := validateDPLabels(dpLabels); err != nil {
-		return false, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectDPLabels, err)
+		return false, err
 	}
 
 	desired := make(map[string]konnectv1alpha2.DataPlaneLabelValue, len(dpLabels))
@@ -1691,7 +1679,7 @@ func getSupportedKindsWithResolvedRefsCondition(
 	}
 
 	message := ""
-	if listener.TLS != nil {
+	if listener.TLS != nil && !hybridgatewayrefs.IsTLSPassthroughListener(listener) {
 		// We only support Terminate for protocols other than TLS.
 		tlsMode := gatewayv1.TLSModeTerminate
 		if listener.TLS.Mode != nil {
@@ -1708,50 +1696,61 @@ func getSupportedKindsWithResolvedRefsCondition(
 			resolvedRefsCondition.Reason = string(kcfggateway.ListenerReasonTooManyTLSSecrets)
 			message = conditionMessage(message, "Only one certificate per listener is supported")
 		} else if len(listener.TLS.CertificateRefs) == 1 {
-			isValidGroupKind := true
-			certificateRef := listener.TLS.CertificateRefs[0]
-			gatewayNamespace := gatewayv1.Namespace(gateway.Namespace)
-			ref.EnsureNamespaceInSecretRef(&certificateRef, gatewayNamespace)
-
-			if err := ref.DoesFieldReferenceCoreV1Secret(certificateRef, "CertificateRef"); err != nil {
-				resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
-				message = conditionMessage(message, err.Error())
-				isValidGroupKind = false
-			}
-
-			msg, isReferenceGranted, err := ref.CheckReferenceGrantForSecret(ctx, c, referenceGrantVersion, &gateway, certificateRef)
-			if err != nil {
-				return nil, metav1.Condition{}, fmt.Errorf("failed to resolve reference: %w", err)
-			}
-			if !isReferenceGranted {
-				resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonRefNotPermitted)
-				message = conditionMessage(message, msg)
-			}
-
-			var secretExists bool
-			certificateSecret := &corev1.Secret{}
-			if isValidGroupKind && isReferenceGranted {
-				// Get the secret and check it exists.
-				err = c.Get(ctx, types.NamespacedName{
-					Namespace: string(*certificateRef.Namespace),
-					Name:      string(certificateRef.Name),
-				}, certificateSecret)
-				if err != nil {
-					if !apierrors.IsNotFound(err) {
-						return nil, metav1.Condition{}, fmt.Errorf("failed to get Secret: %w", err)
+			if certificateRef := listener.TLS.CertificateRefs[0]; hybridgatewayrefs.IsKongCertificateRef(certificateRef) {
+				if _, err := hybridgatewayrefs.ResolveListenerKongCertificate(ctx, c, referenceGrantVersion, &gateway, certificateRef); err != nil {
+					if invalid, ok := errors.AsType[*hybridgatewayrefs.ListenerCertificateRefError](err); ok {
+						resolvedRefsCondition.Reason = string(invalid.Reason)
+						message = conditionMessage(message, invalid.Message)
+					} else {
+						return nil, metav1.Condition{}, err
 					}
-					resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
-					message = conditionMessage(message, fmt.Sprintf("Referenced secret %s/%s does not exist", *certificateRef.Namespace, certificateRef.Name))
-				} else {
-					secretExists = true
 				}
-			}
+			} else {
+				isValidGroupKind := true
+				certificateRef := listener.TLS.CertificateRefs[0]
+				gatewayNamespace := gatewayv1.Namespace(gateway.Namespace)
+				ref.EnsureNamespaceInSecretRef(&certificateRef, gatewayNamespace)
 
-			if isReferenceGranted && secretExists {
-				// Check if the secret is a valid TLS secret.
-				if !secrets.IsTLSSecretValid(certificateSecret) {
+				if err := ref.DoesFieldReferenceCoreV1Secret(certificateRef, "CertificateRef"); err != nil {
 					resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
-					message = conditionMessage(message, "Referenced secret does not contain a valid TLS certificate")
+					message = conditionMessage(message, err.Error())
+					isValidGroupKind = false
+				}
+
+				msg, isReferenceGranted, err := ref.CheckReferenceGrantForSecret(ctx, c, referenceGrantVersion, &gateway, certificateRef)
+				if err != nil {
+					return nil, metav1.Condition{}, fmt.Errorf("failed to resolve reference: %w", err)
+				}
+				if !isReferenceGranted {
+					resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonRefNotPermitted)
+					message = conditionMessage(message, msg)
+				}
+
+				var secretExists bool
+				certificateSecret := &corev1.Secret{}
+				if isValidGroupKind && isReferenceGranted {
+					// Get the secret and check it exists.
+					err = c.Get(ctx, types.NamespacedName{
+						Namespace: string(*certificateRef.Namespace),
+						Name:      string(certificateRef.Name),
+					}, certificateSecret)
+					if err != nil {
+						if !apierrors.IsNotFound(err) {
+							return nil, metav1.Condition{}, fmt.Errorf("failed to get Secret: %w", err)
+						}
+						resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
+						message = conditionMessage(message, fmt.Sprintf("Referenced secret %s/%s does not exist", *certificateRef.Namespace, certificateRef.Name))
+					} else {
+						secretExists = true
+					}
+				}
+
+				if isReferenceGranted && secretExists {
+					// Check if the secret is a valid TLS secret.
+					if !secrets.IsTLSSecretValid(certificateSecret) {
+						resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
+						message = conditionMessage(message, "Referenced secret does not contain a valid TLS certificate")
+					}
 				}
 			}
 		}

@@ -1,0 +1,26 @@
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayBackendCluster
+metadata:
+  name: backend-cluster
+status:
+  (conditions[?type == 'Programmed']):
+    - status: "True"
+      reason: Programmed
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualCluster
+metadata:
+  name: virtual-cluster
+status:
+  (conditions[?type == 'Programmed']):
+    - status: "True"
+      reason: Programmed
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListener
+metadata:
+  name: listener
+status:
+  (conditions[?type == 'Programmed']):
+    - status: "True"
+      reason: Programmed

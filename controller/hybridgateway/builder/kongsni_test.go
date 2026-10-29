@@ -11,13 +11,15 @@ import (
 )
 
 func TestKongSNIBuilder_BasicFields(t *testing.T) {
-	b := NewKongSNI().WithName("sni1").WithNamespace("ns1").WithSNIName("example.com").WithCertificateRef("cert1")
+	b := NewKongSNI().WithName("sni1").WithNamespace("ns1").WithSNIName("example.com").
+		WithCertificateRef(commonv1alpha1.NamespacedRef{Name: "cert1", Namespace: new("certificates")})
 	sni, err := b.Build()
 	require.NoError(t, err)
 	require.Equal(t, "sni1", sni.Name)
 	require.Equal(t, "ns1", sni.Namespace)
 	require.Equal(t, "example.com", sni.Spec.Name)
 	require.Equal(t, "cert1", sni.Spec.CertificateRef.Name)
+	require.Equal(t, new("certificates"), sni.Spec.CertificateRef.Namespace)
 }
 
 func TestKongSNIBuilder_WithLabels(t *testing.T) {
@@ -86,7 +88,8 @@ func TestKongSNIBuilder_MustBuild_PanicsOnError(t *testing.T) {
 }
 
 func TestKongSNIBuilder_MustBuild_Success(t *testing.T) {
-	b := NewKongSNI().WithName("sni-ok").WithNamespace("ns-ok").WithSNIName("ok.com").WithCertificateRef("cert-ok")
+	b := NewKongSNI().WithName("sni-ok").WithNamespace("ns-ok").WithSNIName("ok.com").
+		WithCertificateRef(commonv1alpha1.NamespacedRef{Name: "cert-ok"})
 	sni := b.MustBuild()
 	require.Equal(t, "sni-ok", sni.Name)
 	require.Equal(t, "ns-ok", sni.Namespace)

@@ -2,15 +2,19 @@ package konnect
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/samber/mo"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kong-operator/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -18,12 +22,73 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
+	hybridgatewayrefs "github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/controller/pkg/controlplane"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
+	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
+
+func gatewayOwnerForSNI(sni *configurationv1alpha1.KongSNI) *metav1.OwnerReference {
+	owner := metav1.GetControllerOf(sni)
+	if owner == nil || owner.Kind != "Gateway" || !strings.HasPrefix(owner.APIVersion, gwtypes.GroupName+"/") {
+		return nil
+	}
+	return owner
+}
+
+func getGatewayForSNI(ctx context.Context, cl client.Client, sni *configurationv1alpha1.KongSNI) (*gwtypes.Gateway, error) {
+	owner := gatewayOwnerForSNI(sni)
+	if owner == nil {
+		return nil, nil
+	}
+	nn := client.ObjectKey{Namespace: sni.Namespace, Name: owner.Name}
+	var gateway gwtypes.Gateway
+	if err := cl.Get(ctx, nn, &gateway); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, ReferencedObjectDoesNotExistError{Reference: nn, Err: err}
+		}
+		return nil, fmt.Errorf("failed to get KongSNI owner Gateway: %w", err)
+	}
+	if gateway.UID != owner.UID {
+		return nil, ReferencedObjectDoesNotExistError{
+			Reference: nn,
+			Err:       fmt.Errorf("KongSNI owner Gateway UID %q does not match current Gateway UID %q", owner.UID, gateway.UID),
+		}
+	}
+	return &gateway, nil
+}
+
+// Recheck Gateway-owned bindings before programming: the certificate's ControlPlane
+// or grants may have changed before the Gateway converter can remove its old SNI.
+func validateGatewaySNICertificate(ctx context.Context, cl client.Client, sni *configurationv1alpha1.KongSNI, cert *configurationv1alpha1.KongCertificate) error {
+	gateway, err := getGatewayForSNI(ctx, cl, sni)
+	if _, missing := errors.AsType[ReferencedObjectDoesNotExistError](err); missing {
+		return &hybridgatewayrefs.ListenerCertificateRefError{
+			Reason: gatewayv1.ListenerReasonInvalidCertificateRef, Message: err.Error(),
+		}
+	}
+	if err != nil || gateway == nil {
+		return err
+	}
+	ref := gatewayv1.SecretObjectReference{
+		Group: new(gatewayv1.Group(configurationv1alpha1.GroupVersion.Group)),
+		Kind:  new(gatewayv1.Kind("KongCertificate")), Name: gatewayv1.ObjectName(cert.Name),
+	}
+	var referenceGrantVersion schema.GroupVersion
+	if cert.Namespace != gateway.Namespace {
+		ref.Namespace = new(gatewayv1.Namespace(cert.Namespace))
+		mapping, err := cl.RESTMapper().RESTMapping(schema.GroupKind{Group: gatewayv1.GroupName, Kind: "ReferenceGrant"})
+		if err != nil {
+			return fmt.Errorf("failed to resolve ReferenceGrant version for Gateway-owned KongSNI: %w", err)
+		}
+		referenceGrantVersion = mapping.GroupVersionKind.GroupVersion()
+	}
+	_, err = hybridgatewayrefs.ResolveListenerKongCertificate(ctx, cl, referenceGrantVersion, gateway, ref)
+	return err
+}
 
 // getKongCertificateRef gets the reference of KongCertificate.
 func getKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
@@ -53,6 +118,12 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 	cl client.Client,
 	ent TEnt,
 ) (ctrl.Result, error) {
+	// Revoking a reference must not prevent deleting the existing remote SNI.
+	// Keep its persisted ControlPlane/Certificate IDs for the delete operation.
+	if sni, ok := any(ent).(*configurationv1alpha1.KongSNI); ok &&
+		!sni.DeletionTimestamp.IsZero() && gatewayOwnerForSNI(sni) != nil {
+		return ctrl.Result{}, nil
+	}
 	certRef, ok := getKongCertificateRef(ent).Get()
 	if !ok {
 		if svc, ok := any(ent).(*configurationv1alpha1.KongService); ok && svc.Status.Konnect != nil {
@@ -145,6 +216,21 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 		return ctrl.Result{}, ReferencedKongCertificateIsBeingDeletedError{
 			Reference:         nn,
 			DeletionTimestamp: delTimestamp.Time,
+		}
+	}
+
+	if sni, ok := any(ent).(*configurationv1alpha1.KongSNI); ok {
+		if err := validateGatewaySNICertificate(ctx, cl, sni, cert); err != nil {
+			if invalid, ok := errors.AsType[*hybridgatewayrefs.ListenerCertificateRefError](err); ok {
+				if res, errStatus := patch.StatusWithCondition(ctx, cl, ent,
+					konnectv1alpha1.KongCertificateRefValidConditionType, metav1.ConditionFalse,
+					konnectv1alpha1.KongCertificateRefReasonInvalid, invalid.Message,
+				); errStatus != nil || !res.IsZero() {
+					return res, errStatus
+				}
+				return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+			}
+			return ctrl.Result{}, err
 		}
 	}
 
@@ -274,6 +360,7 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 	// Set CertificateID after all patches so the server-response from each merge patch
 	// cannot clobber it (see comment above near certKonnectID declaration).
 	// Status.Konnect is already initialised above so nil-guards are not needed here.
+	old := ent.DeepCopyObject().(TEnt)
 	switch ent := any(ent).(type) {
 	case *configurationv1alpha1.KongSNI:
 		ent.Status.Konnect.CertificateID = certKonnectID
@@ -281,6 +368,16 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 		ent.Status.Konnect.CertificateID = certKonnectID
 	case *configurationv1alpha1.KongUpstream:
 		ent.Status.Konnect.CertificateID = certKonnectID
+	}
+
+	// Persist it now, before the entity is created in Konnect. KongSNI deletion
+	// and the create/update payloads read the ID from the status, so a delete
+	// racing the create would otherwise leave the entity undeletable in Konnect.
+	if _, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old); err != nil {
+		if apierrors.IsConflict(err) {
+			return ctrl.Result{Requeue: true}, nil
+		}
+		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil
 }

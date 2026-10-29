@@ -123,8 +123,8 @@ spec:
                         - clientID
                         - issuerURL
                         type: object
-                      portalSAML:
-                        description: PortalSAML configuration.
+                      sAML:
+                        description: SAML configuration.
                         properties:
                           idpMetadataURL:
                             description: |-
@@ -144,7 +144,7 @@ spec:
                         description: Type designates the type of configuration.
                         enum:
                         - oIDC
-                        - portalSAML
+                        - sAML
                         minLength: 1
                         type: string
                     required:

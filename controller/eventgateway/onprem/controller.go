@@ -17,6 +17,7 @@ limitations under the License.
 package onprem
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -24,6 +25,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -84,6 +86,8 @@ type Reconciler struct {
 
 	// backoff delays the pushes and the removals that failed.
 	backoff gwadminsync.Backoff
+	// terminatingTimeout overrides terminatingPodTimeout, in tests.
+	terminatingTimeout time.Duration
 	// pending spaces the requeues of a gateway whose gw-admin pods are still
 	// pending (see gwadminsync.Syncer.ForEachPod), e.g. one crash looping is
 	// pending for long: a reconcile triggered otherwise pushes to them right
@@ -121,8 +125,9 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 		// Every change to the gateway triggers it, its status too, so a
 		// status changed by someone else is set back. A push only writes to
 		// gw-admin what changed, and a push that failed waits for its backoff,
-		// so the status writes of the reconcile cost one read per gw-admin pod,
-		// and no write.
+		// so the status writes of the reconcile cost two reads per gw-admin pod,
+		// its entities and its data plane certificates, one per terminating
+		// pod, and no write.
 		For(&eventgatewayv1alpha1.OnPremEventGateway{}, builder.WithPredicates(r.forgetDeleted())).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxConcurrentReconciles})
 
@@ -155,7 +160,10 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 		handler.EnqueueRequestsFromMapFunc(mapGatewayToGatewaysOfItsGWAdmin(mgr.GetClient())),
 		builder.WithPredicates(onlyDeletions()))
 
-	return b.Complete(reconcile.AsReconciler(r.Client, r))
+	if err := b.Complete(reconcile.AsReconciler(r.Client, r)); err != nil {
+		return err
+	}
+	return r.setupUnreachable(mgr)
 }
 
 // Reconcile pushes the configuration of an OnPremEventGateway to its
@@ -209,6 +217,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha
 	if err := r.recordRevision(ctx, gateway, config); err != nil {
 		return requeueOnConflict(logger, ctrl.Result{}, err)
 	}
+	config.Version = configVersion(gateway)
 
 	result, pushErr, err := r.pushConfiguration(ctx, gateway, gatewayID, config, cfg)
 	if !result.done {
@@ -219,7 +228,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha
 	if statusErr := r.reportPush(ctx, logger, gateway, result, pushErr); statusErr != nil {
 		err = errors.Join(err, statusErr)
 	}
-	if statusErr := r.reportEntities(ctx, gateway, cfg); statusErr != nil {
+	if statusErr := r.reportEntities(ctx, gateway, cfg, result); statusErr != nil {
 		err = errors.Join(err, statusErr)
 	}
 	switch {
@@ -236,6 +245,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *eventgatewayv1alpha
 			log.Error(logger, pushErr, "failed to push the OnPremEventGateway to gw-admin, trying again later", "retryAfter", result.retryAfter.String())
 		case len(result.pending) > 0:
 			log.Debug(logger, "gw-admin pods are not serving yet, pushing to them later", "pods", len(result.pending), "retryAfter", result.retryAfter.String())
+		case result.terminatingFailed:
+			log.Debug(logger, "terminating gw-admin pods couldn't be reached, trying again later", "retryAfter", result.retryAfter.String())
 		default:
 			log.Debug(logger, "the push of the OnPremEventGateway failed recently, waiting before trying again", "retryAfter", result.retryAfter.String())
 		}
@@ -259,9 +270,9 @@ func (e invalidUIDError) Error() string {
 	return fmt.Sprintf("the UID %q of the OnPremEventGateway is not a version 4 UUID, which gw-admin requires as the id of a gateway", e.uid)
 }
 
-// reportInvalidUID reports on the gateway that it can't be pushed because of
-// its UID. It is not retried. A gateway being deleted has nothing to clean
-// up: it never got its finalizer.
+// reportInvalidUID reports on the gateway, and on its entities, that it can't
+// be pushed because of its UID. It is not retried. A gateway being deleted
+// has nothing to clean up: it never got its finalizer.
 func (r *Reconciler) reportInvalidUID(ctx context.Context, logger logr.Logger, gateway *eventgatewayv1alpha1.OnPremEventGateway) error {
 	if !gateway.DeletionTimestamp.IsZero() {
 		return nil
@@ -307,7 +318,7 @@ func (r *Reconciler) event(gateway *eventgatewayv1alpha1.OnPremEventGateway, eve
 // the next reconcile reads it again.
 func requeueOnConflict(logger logr.Logger, res ctrl.Result, err error) (ctrl.Result, error) {
 	if err != nil && apierrors.IsConflict(err) {
-		log.Debug(logger, "conflict while reconciling OnPremEventGateway resource, requeueing", "reason", err.Error())
+		log.Debug(logger, "conflict while reconciling, requeueing", "reason", err.Error())
 		return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 	}
 	return res, err
@@ -327,10 +338,19 @@ type pushResult struct {
 	pending []gwadminsync.Pod
 	// retryAfter, when set, tells when to try again: after a push, or a
 	// removal, that failed, either now (failed) or recently, its error then
-	// being the one of the last that failed, or when pods are pending.
+	// being the one of the last that failed, or when pods are pending, or
+	// terminating pods couldn't be reached.
 	retryAfter time.Duration
+	// terminatingFailed tells a terminating gw-admin pod couldn't be told to
+	// stop trusting the data plane certificates the configuration no longer
+	// holds: it is tried again like a pod pending.
+	terminatingFailed bool
 	// failed tells the push, or the removal, failed now.
 	failed bool
+	// certificates tells, once pushed, which gw-admin pods hold each data
+	// plane certificate of the configuration, and which rejected it. It is
+	// nil when nothing was pushed, e.g. while the push waits for its backoff.
+	certificates *certificateOutcome
 }
 
 // pushConfiguration pushes the configuration of the gateway to every
@@ -361,17 +381,38 @@ func (r *Reconciler) pushConfiguration(
 	if wait, lastErr := r.backoff.Wait(gateway.UID, inputs, time.Now()); wait > 0 {
 		return pushResult{done: true, target: target, retryAfter: wait}, lastErr, nil
 	}
-	pending, pushErr := r.GWAdminSync.ForEachPod(ctx, target, target.Pods,
+	// The terminating pods aren't pushed to, but may still serve data planes:
+	// they stop trusting the data plane certificates the configuration no
+	// longer holds as they are, as far as they can be reached within
+	// terminatingPodTimeout, not to hold the lock of the GWAdmin. One that
+	// can't be is tried again like a pod pending.
+	certificates := newCertificateOutcome()
+	var terminatingFailed atomic.Bool
+	pending, pushErr := r.GWAdminSync.ForEachPod(ctx, target, slices.Concat(target.Pods, target.Terminating),
 		func(ctx context.Context, pod gwadminsync.Pod, gwAdmin gwadminapi.ClientInterface) error {
-			return r.push(ctx, target, pod, gwAdmin, config, cfg, gatewayID, expected)
+			if slices.Contains(target.Terminating, pod) {
+				ctx, cancel := context.WithTimeout(ctx, cmp.Or(r.terminatingTimeout, terminatingPodTimeout))
+				defer cancel()
+				if err := removeUnconfigured(ctx, gwAdmin, gatewayID, cfg); err != nil {
+					terminatingFailed.Store(true)
+					log.Debug(log.GetLogger(ctx, ControllerName, r.LoggingMode),
+						"a terminating gw-admin pod can't be told to stop trusting data plane certificates", "pod", pod.Name, "reason", err.Error())
+				}
+				return nil
+			}
+			err := r.push(ctx, target, pod, gwAdmin, config, cfg, gatewayID, expected, certificates)
+			if err != nil {
+				certificates.fail(pod)
+			}
+			return err
 		})
-	result = pushResult{done: true, target: target, pending: pending}
+	result = pushResult{done: true, target: target, pending: pending, certificates: certificates, terminatingFailed: terminatingFailed.Load()}
 	if pushErr != nil {
 		result.retryAfter, result.failed = r.backoff.Failed(gateway.UID, inputs, pushErr, time.Now()), true
 		return result, pushErr, nil
 	}
 	r.backoff.Forget(gateway.UID)
-	if len(pending) == 0 {
+	if len(pending) == 0 && !result.terminatingFailed {
 		r.pendingRetries().Forget(gateway.UID)
 		return result, nil, nil
 	}

@@ -1,0 +1,9 @@
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualCluster
+metadata:
+  name: virtual-cluster
+status:
+  (conditions[?type == 'Programmed']):
+    - status: "False"
+      reason: Detached
+      message: "(join('', ['Not in the configuration of its OnPremEventGateway: its EventGatewayBackendCluster ', $namespace, '/backend-cluster does not exist']))"
