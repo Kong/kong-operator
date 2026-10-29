@@ -8986,6 +8986,9 @@ Allowed values:
 _Underlying type:_ `string array`
 
 Tags is a type for a list of tags applied to a Kong entity.
+Tags starting with the prefixes reserved for the Kubernetes metadata of the source object
+(k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:)
+are not allowed as the operator sets them on the Konnect entities.
 
 
 

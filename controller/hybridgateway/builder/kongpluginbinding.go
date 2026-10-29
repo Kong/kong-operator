@@ -13,6 +13,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	pkgmetadata "github.com/kong/kong-operator/v2/pkg/metadata"
 )
 
 // KongPluginBindingBuilder is a builder for configurationv1alpha1.KongPluginBinding resources.
@@ -114,8 +115,10 @@ func (b *KongPluginBindingBuilder) WithOwner(owner *gwtypes.HTTPRoute) *KongPlug
 }
 
 // WithSpecTags sets the tags in the KongPluginBinding spec.
-// A nil or empty slice leaves Spec.Tags unset.
+// Tags with prefixes reserved for the Kubernetes metadata tags (e.g. "k8s-uid:") are dropped.
+// A nil or empty slice (after dropping the reserved tags) leaves Spec.Tags unset.
 func (b *KongPluginBindingBuilder) WithSpecTags(tags []string) *KongPluginBindingBuilder {
+	tags = pkgmetadata.WithoutReservedTags(tags)
 	if len(tags) == 0 {
 		return b
 	}

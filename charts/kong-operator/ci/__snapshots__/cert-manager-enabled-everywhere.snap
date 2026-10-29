@@ -31503,6 +31503,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
               type:
                 default: inline
                 enum:
@@ -31759,6 +31761,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
               type:
                 default: inline
                 enum:
@@ -32065,6 +32069,8 @@ spec:
             x-kubernetes-validations:
             - message: tags entries must not be longer than 128 characters
               rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+            - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+              rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
         required:
         - plugin
         type: object
@@ -32195,6 +32201,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
             type: object
             x-kubernetes-validations:
             - message: spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef
@@ -32405,6 +32413,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
             type: object
             x-kubernetes-validations:
             - message: spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef
@@ -32581,6 +32591,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
             required:
             - consumerRef
             - group
@@ -32755,6 +32767,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
             required:
             - consumerRef
             - key
@@ -32929,6 +32943,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
               username:
                 type: string
             required:
@@ -33108,6 +33124,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
               username:
                 type: string
             required:
@@ -33307,6 +33325,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
             required:
             - consumerRef
             type: object
@@ -33881,6 +33901,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
             required:
             - kid
             type: object
@@ -34086,6 +34108,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
             required:
             - controlPlaneRef
             - name
@@ -34456,6 +34480,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
               targets:
                 properties:
                   consumerGroupRef:
@@ -34825,6 +34851,8 @@ spec:
             x-kubernetes-validations:
             - message: tags entries must not be longer than 128 characters
               rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+            - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+              rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
         required:
         - plugin
         type: object
@@ -35151,6 +35179,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
             type: object
             x-kubernetes-validations:
             - message: KIC is not supported as control plane
@@ -35412,6 +35442,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
               tls_verify:
                 type: boolean
               tls_verify_depth:
@@ -35615,6 +35647,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
             required:
             - certificateRef
             - name
@@ -35788,6 +35822,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
               target:
                 type: string
               upstreamRef:
@@ -36528,6 +36564,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
               use_srv_name:
                 type: boolean
             required:
@@ -36797,6 +36835,8 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+                - message: 'tags entries must not start with reserved prefixes: k8s-group:, k8s-version:, k8s-kind:, k8s-namespace:, k8s-name:, k8s-uid:, k8s-generation:, managed-by:'
+                  rule: self.all(tag, !tag.startsWith('k8s-group:') && !tag.startsWith('k8s-version:') && !tag.startsWith('k8s-kind:') && !tag.startsWith('k8s-namespace:') && !tag.startsWith('k8s-name:') && !tag.startsWith('k8s-uid:') && !tag.startsWith('k8s-generation:') && !tag.startsWith('managed-by:'))
             required:
             - backend
             - prefix

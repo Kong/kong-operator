@@ -1,8 +1,10 @@
 package configuration_test
 
 import (
+	"fmt"
 	"testing"
 
+	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -307,6 +309,123 @@ func TestKongCACertificate(t *testing.T) {
 					obj.Spec.ID = &newID
 				},
 				ExpectedUpdateErrorMessage: new("spec.id is immutable when an entity is already Programmed"),
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("tags validation", func(t *testing.T) {
+		common.TestCasesGroup[*configurationv1alpha1.KongCACertificate]{
+			{
+				Name: "up to 20 tags are allowed",
+				TestObject: &configurationv1alpha1.KongCACertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCACertificateSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongCACertificateAPISpec: configurationv1alpha1.KongCACertificateAPISpec{
+							Cert: "test-cert",
+							Tags: func() []string {
+								var tags []string
+								for i := range 20 {
+									tags = append(tags, fmt.Sprintf("tag-%d", i))
+								}
+								return tags
+							}(),
+						},
+					},
+				},
+			},
+			{
+				Name: "more than 20 tags are not allowed",
+				TestObject: &configurationv1alpha1.KongCACertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCACertificateSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongCACertificateAPISpec: configurationv1alpha1.KongCACertificateAPISpec{
+							Cert: "test-cert",
+							Tags: func() []string {
+								var tags []string
+								for i := range 21 {
+									tags = append(tags, fmt.Sprintf("tag-%d", i))
+								}
+								return tags
+							}(),
+						},
+					},
+				},
+				ExpectedErrorMessage: new("spec.tags: Too many: 21: must have at most 20 items"),
+			},
+			{
+				Name: "tags entries must not be longer than 128 characters",
+				TestObject: &configurationv1alpha1.KongCACertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCACertificateSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongCACertificateAPISpec: configurationv1alpha1.KongCACertificateAPISpec{
+							Cert: "test-cert",
+							Tags: []string{
+								lo.RandomString(129, lo.AlphanumericCharset),
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("tags entries must not be longer than 128 characters"),
+			},
+			{
+				Name: "tags entries must not start with reserved prefix k8s-uid:",
+				TestObject: &configurationv1alpha1.KongCACertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCACertificateSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongCACertificateAPISpec: configurationv1alpha1.KongCACertificateAPISpec{
+							Cert: "test-cert",
+							Tags: []string{
+								"k8s-uid:value",
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("tags entries must not start with reserved prefixes"),
+			},
+			{
+				Name: "tags entries starting with k8s- but not with a reserved prefix are allowed",
+				TestObject: &configurationv1alpha1.KongCACertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCACertificateSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongCACertificateAPISpec: configurationv1alpha1.KongCACertificateAPISpec{
+							Cert: "test-cert",
+							Tags: []string{
+								"k8s-team:value",
+							},
+						},
+					},
+				},
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

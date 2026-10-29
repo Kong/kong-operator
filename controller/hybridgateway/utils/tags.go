@@ -61,16 +61,24 @@ func TagsFromBackendRefs(
 				"service", fmt.Sprintf("%s/%s", ns, ref.Name), "error", err)
 			continue
 		}
-		if tags := pkgmetadata.ExtractTags(svc); len(tags) > 0 {
+		// Tags with reserved prefixes are dropped here as well, so that a Service carrying only
+		// such tags does not shadow the tags of the next backend Service.
+		if tags := pkgmetadata.WithoutReservedTags(pkgmetadata.ExtractTags(svc)); len(tags) > 0 {
 			return tags
 		}
 	}
 	return nil
 }
 
-// MergeTags returns the ordered union of groups: every tag is whitespace-trimmed, empty tags are
-// dropped, over-long tags are truncated to maxTagLength, duplicates are removed keeping the first
+// MergeTags returns the ordered union of groups: every tag is whitespace-trimmed, empty tags and
+// tags with prefixes reserved for the Kubernetes metadata tags (e.g. "k8s-uid:") are dropped,
+// over-long tags are truncated to maxTagLength, duplicates are removed keeping the first
 // occurrence, and the result is capped at MaxTags.
+//
+// Reserved tags are dropped here because the merged tags are written to the generated Kong
+// resources directly: CEL validation would reject them in spec.tags, and the Konnect reconciler
+// would refuse to sync an entity (or a KongPluginBinding of a KongPlugin) carrying them in the
+// konghq.com/tags annotation. They are dropped before the MaxTags cap so they never take up budget.
 //
 // Order is significant. Callers pass the groups most-specific-first - the entity's own tags, then
 // the parent Gateway's, then the GatewayClass's - so that the least specific tags are the ones
@@ -80,15 +88,20 @@ func TagsFromBackendRefs(
 // no-op-on-empty contract of the builders' WithSpecTags methods.
 func MergeTags(logger logr.Logger, groups ...[]string) []string {
 	var (
-		merged  []string
-		dropped []string
-		seen    = map[string]struct{}{}
+		merged   []string
+		dropped  []string
+		reserved []string
+		seen     = map[string]struct{}{}
 	)
 
 	for _, group := range groups {
 		for _, tag := range group {
 			tag = strings.TrimSpace(tag)
 			if tag == "" {
+				continue
+			}
+			if pkgmetadata.IsReservedTag(tag) {
+				reserved = append(reserved, tag)
 				continue
 			}
 			if len(tag) > maxTagLength {
@@ -108,6 +121,10 @@ func MergeTags(logger logr.Logger, groups ...[]string) []string {
 		}
 	}
 
+	if len(reserved) > 0 {
+		log.Debug(logger, "Dropped tags with reserved prefixes",
+			"reservedPrefixes", pkgmetadata.ReservedTagPrefixes, "dropped", reserved)
+	}
 	if len(dropped) > 0 {
 		log.Trace(logger, "Dropped tags exceeding the maximum allowed count",
 			"max", MaxTags, "kept", merged, "dropped", dropped)

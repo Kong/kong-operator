@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/v2/controller/konnect/ops"
+	"github.com/kong/kong-operator/v2/pkg/metadata"
 )
 
 // testObjectKind is a test object type that implements the client.Object interface.
@@ -523,6 +524,30 @@ func TestGenerateTagsForObject(t *testing.T) {
 				"r",
 			},
 		},
+		{
+			name: "user provided tags with reserved prefixes are dropped",
+			obj: func() testObjectKind {
+				obj := namespacedObject()
+				obj.Annotations = map[string]string{
+					"konghq.com/tags": "tag1,k8s-name:other-object,managed-by:someone-else",
+				}
+				return obj
+			}(),
+			additionalTags: []string{"tag2", "k8s-uid:other-uid", "k8s-team:team"},
+			expectedTags: []string{
+				"k8s-generation:2",
+				"k8s-group:test.objects.io",
+				"k8s-kind:TestObjectKind",
+				"k8s-name:test-object",
+				"k8s-namespace:test-namespace",
+				"k8s-team:team",
+				"k8s-uid:test-uid",
+				"k8s-version:v1",
+				"managed-by:kong-operator",
+				"tag1",
+				"tag2",
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -531,4 +556,12 @@ func TestGenerateTagsForObject(t *testing.T) {
 			require.Equal(t, tc.expectedTags, tags)
 		})
 	}
+
+	t.Run("generated Kubernetes metadata tags use reserved prefixes", func(t *testing.T) {
+		// This ensures that metadata.ReservedTagPrefixes is kept in sync with the generated tags.
+		obj := namespacedObject()
+		for _, tag := range ops.GenerateTagsForObject(&obj) {
+			require.Truef(t, metadata.IsReservedTag(tag), "tag %q is not covered by metadata.ReservedTagPrefixes", tag)
+		}
+	})
 }

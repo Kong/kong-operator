@@ -639,6 +639,28 @@ func TestPluginsForRule_InheritedTagsAnnotation(t *testing.T) {
 		require.Len(t, plugins, 1)
 		assert.Equal(t, "plugin-tag,gw-tag,class-tag", plugins[0].Annotations[pkgmetadata.AnnotationKeyTags])
 	})
+
+	t.Run("tags with reserved prefixes on the Gateway and GatewayClass are dropped", func(t *testing.T) {
+		reservedGateway := gateway.DeepCopy()
+		reservedGateway.Annotations = map[string]string{pkgmetadata.AnnotationKeyTags: "gw-tag,k8s-uid:1234"}
+		reservedGatewayClass := gatewayClass.DeepCopy()
+		reservedGatewayClass.Annotations = map[string]string{pkgmetadata.AnnotationKeyTags: "managed-by:someone-else,class-tag"}
+		rule := gwtypes.HTTPRouteRule{
+			Filters: []gwtypes.HTTPRouteFilter{{
+				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
+				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+					Set: []gatewayv1.HTTPHeader{{Name: "X-Custom-Header", Value: "custom-value"}},
+				},
+			}},
+		}
+		fakeClient := fakectrlruntimeclient.NewClientBuilder().
+			WithScheme(scheme.Get()).WithObjects(reservedGateway, reservedGatewayClass).Build()
+
+		plugins, err := PluginsForRule(ctx, logger, fakeClient, httpRoute, rule, parentRef)
+		require.NoError(t, err)
+		require.Len(t, plugins, 1)
+		assert.Equal(t, "gw-tag,class-tag", plugins[0].Annotations[pkgmetadata.AnnotationKeyTags])
+	})
 }
 
 func TestPluginsForRule_ExtensionRef_Tags(t *testing.T) {
