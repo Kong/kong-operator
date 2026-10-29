@@ -21,6 +21,7 @@ import (
 	eventconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/events"
 	finalizerconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/finalizers"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/converter"
+	hybridgatewayerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/events"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/watch"
@@ -221,6 +222,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 
 	// Phase 2: Translation.
 	resourceCount, err := translate(conv, ctx, logger)
+	invalidClientCertificate := hybridgatewayerrors.OnlyClientCertificateRefErrors(err)
 	if err != nil {
 		// Record translation failure event.
 		r.eventRecorder.Eventf(
@@ -229,16 +231,21 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 			eventconst.EventReasonTranslationFailed,
 			fmt.Sprintf("Translation failed: %v", err),
 		)
-		return ctrl.Result{}, err
+		if !invalidClientCertificate {
+			return ctrl.Result{}, err
+		}
+		log.Info(logger, "Removing bindings for invalid upstream client certificate references", "error", err)
 	}
 
 	// Record translation success event.
-	r.eventRecorder.Eventf(
-		obj,
-		corev1.EventTypeNormal,
-		eventconst.EventReasonTranslationSucceeded,
-		fmt.Sprintf("Successfully translated to %d Kong resources", resourceCount),
-	)
+	if err == nil {
+		r.eventRecorder.Eventf(
+			obj,
+			corev1.EventTypeNormal,
+			eventconst.EventReasonTranslationSucceeded,
+			fmt.Sprintf("Successfully translated to %d Kong resources", resourceCount),
+		)
+	}
 
 	// Phase 3: Status Update (Accepted/ResolvedRefs/Programmed)
 	// If the converter supports status updates for the root object (e.g., HTTPRoute),
@@ -270,6 +277,21 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 			// Accepted or ResolvedRefs is False; do not proceed with applying resources.
 			log.Debug(logger, "Halting reconciliation after status update (invalid or unresolved references)")
 			return ctrl.Result{}, nil
+		}
+	}
+
+	// Revocation must not wait for unrelated desired rules to become ready.
+	// Invalid rules are absent from desired state; remove their old bindings first.
+	if invalidClientCertificate {
+		deleted, err := cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv, orphanCleanupOptions{waitForDeletes: true})
+		if err != nil {
+			if result, ok := requeueOnConflict(err, logger, "Client certificate revocation cleanup conflicted, requeueing"); ok {
+				return result, nil
+			}
+			return ctrl.Result{}, fmt.Errorf("failed to clean up invalid client certificate bindings: %w", err)
+		}
+		if deleted {
+			return ctrl.Result{Requeue: true}, nil
 		}
 	}
 
@@ -305,6 +327,14 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 	}
 
 	// Phase 4.5: Readiness gate before orphan cleanup.
+	// Keep an obsolete Secret-backed certificate until its KongService has actually
+	// switched client authentication in Konnect, not just changed its Kubernetes spec.
+	if ready, err := desiredClientCertificateBindingsReady(ctx, r.Client, logger, conv); err != nil {
+		return ctrl.Result{}, err
+	} else if !ready {
+		return ctrl.Result{RequeueAfter: requeueWhileWaiting}, nil
+	}
+
 	// For converters that opt in (currently HTTPRoute), defer deleting orphaned resources
 	// until all desired resources are Programmed. This prevents removing stale resources
 	// before their replacements are live in the data plane, which would otherwise open a

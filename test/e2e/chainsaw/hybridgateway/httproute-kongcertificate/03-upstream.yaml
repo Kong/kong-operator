@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: upstream
+  namespace: ($backend_namespace)
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: upstream
+  template:
+    metadata:
+      labels:
+        app: upstream
+    spec:
+      containers:
+        - name: upstream
+          image: python:3.13-alpine
+          command: [python3, /app/server.py]
+          ports:
+            - containerPort: 8443
+          readinessProbe:
+            tcpSocket:
+              port: 8443
+          resources:
+            requests:
+              cpu: 20m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 64Mi
+          volumeMounts:
+            - name: script
+              mountPath: /app
+              readOnly: true
+            - name: server
+              mountPath: /tls
+              readOnly: true
+            - name: client-ca
+              mountPath: /client-ca
+              readOnly: true
+      volumes:
+        - name: script
+          configMap:
+            name: upstream-script
+        - name: server
+          secret:
+            secretName: upstream-server
+        - name: client-ca
+          configMap:
+            name: upstream-client-ca
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: upstream
+  namespace: ($backend_namespace)
+  annotations:
+    konghq.com/protocol: https
+    konghq.com/tls-verify: "true"
+    konghq.com/host-header: ($upstream_hostname)
+    konghq.com/client-cert-ref: client
+spec:
+  selector:
+    app: upstream
+  ports:
+    - port: 443
+      targetPort: 8443
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: ReferenceGrant
+metadata:
+  name: backend
+  namespace: ($backend_namespace)
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: ($namespace)
+  to:
+    - group: ""
+      kind: Service
+      name: upstream

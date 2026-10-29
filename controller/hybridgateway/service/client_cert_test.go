@@ -133,7 +133,6 @@ func TestExtractClientCertFromBackendRef(t *testing.T) {
 
 func TestResolveClientCertFromBackendRefs(t *testing.T) {
 	ctx := context.Background()
-	logger := zap.New()
 
 	scheme := runtime.NewScheme()
 	require.NoError(t, corev1.AddToScheme(scheme))
@@ -144,6 +143,7 @@ func TestResolveClientCertFromBackendRefs(t *testing.T) {
 		objects        []client.Object
 		wantSecretName string
 		wantSvcName    string
+		wantError      bool
 	}{
 		{
 			name:           "no backendRefs",
@@ -152,7 +152,7 @@ func TestResolveClientCertFromBackendRefs(t *testing.T) {
 			wantSecretName: "",
 		},
 		{
-			name: "first backend has annotation",
+			name: "different legacy selections retain first-wins",
 			backendRefs: []gwtypes.BackendRef{
 				{Name: "svc-a"},
 				{Name: "svc-b"},
@@ -214,13 +214,18 @@ func TestResolveClientCertFromBackendRefs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.objects...).Build()
-			secretName, svc := resolveClientCertFromBackendRefs(ctx, cl, "ns", tt.backendRefs, logger)
-			assert.Equal(t, tt.wantSecretName, secretName)
+			selection, err := resolveClientCertFromBackendRefs(ctx, cl, "ns", tt.backendRefs)
+			if tt.wantError {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantSecretName, selection.secretName)
 			if tt.wantSvcName != "" {
-				require.NotNil(t, svc)
-				assert.Equal(t, tt.wantSvcName, svc.Name)
+				require.NotNil(t, selection.ownerSvc)
+				assert.Equal(t, tt.wantSvcName, selection.ownerSvc.Name)
 			} else {
-				assert.Nil(t, svc)
+				assert.Nil(t, selection.ownerSvc)
 			}
 		})
 	}

@@ -778,6 +778,14 @@
   document and reports the failure on its own status.
   [#6376](https://github.com/Kong/kong-operator/issues/6376)
 
+- Konnect-backed Gateway API backend Services can select an existing
+  `KongCertificate` for upstream mTLS with `konghq.com/client-cert-ref`.
+  Namespaced references support Vault-backed client certificates without copying
+  or adopting them. References require current readiness, the same remote
+  ControlPlane, and KongService-to-certificate cross-namespace authorization.
+  Invalid or conflicting direct selections fail closed; `konghq.com/client-cert`
+  retains its Secret semantics and legacy-only selection behavior.
+
 ### Changed
 
 - Konnect core entities (`KongService`, `KongRoute`, `KongConsumer`,

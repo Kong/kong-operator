@@ -170,8 +170,15 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 			// KongService with a clientCertificateRef depends on the referenced KongCertificate being Programmed.
 			certName, _, _ := unstructured.NestedString(desired.Object, "spec", "clientCertificateRef", "name")
 			if certName != "" {
+				certNamespace, _, _ := unstructured.NestedString(desired.Object, "spec", "clientCertificateRef", "namespace")
+				if certNamespace == "" {
+					certNamespace = desired.GetNamespace()
+				}
 				var cert configurationv1alpha1.KongCertificate
-				if err := cl.Get(ctx, client.ObjectKey{Namespace: desired.GetNamespace(), Name: certName}, &cert); err != nil {
+				if err := cl.Get(ctx, client.ObjectKey{Namespace: certNamespace, Name: certName}, &cert); err != nil {
+					if !apierrors.IsNotFound(err) {
+						return false, false, fmt.Errorf("failed to get KongService client certificate %s/%s: %w", certNamespace, certName, err)
+					}
 					log.Debug(logger, "Certificate not found yet for service, waiting", "certificate", certName)
 					objectsSkipped++
 					stopAtKind = "KongCertificate"
@@ -367,6 +374,57 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 // desiredHasUpstreamNamed reports whether the pre-built upstream name set contains the given name.
 // Used to decide whether a KongService's host refers to a managed upstream (and should therefore be gated
 // on it) versus an external hostname (which must not gate).
+func desiredClientCertificateBindingsReady[t converter.RootObject](
+	ctx context.Context,
+	cl client.Client,
+	logger logr.Logger,
+	conv converter.APIConverter[t],
+) (bool, error) {
+	desired, err := conv.GetOutputStore(ctx, logger)
+	if err != nil {
+		return false, err
+	}
+	for _, obj := range desired {
+		if obj.GetKind() != "KongService" {
+			continue
+		}
+		var service configurationv1alpha1.KongService
+		if err := cl.Get(ctx, client.ObjectKeyFromObject(&obj), &service); err != nil {
+			if apierrors.IsNotFound(err) {
+				return false, nil
+			}
+			return false, err
+		}
+		certName, _, _ := unstructured.NestedString(obj.Object, "spec", "clientCertificateRef", "name")
+		condition, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, &service)
+		if !ok || condition.Status != metav1.ConditionTrue || condition.ObservedGeneration != service.Generation || service.Status.Konnect == nil {
+			return false, nil
+		}
+		expectedID := ""
+		if certName != "" {
+			certNamespace, _, _ := unstructured.NestedString(obj.Object, "spec", "clientCertificateRef", "namespace")
+			if certNamespace == "" {
+				certNamespace = obj.GetNamespace()
+			}
+			var cert configurationv1alpha1.KongCertificate
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: certNamespace, Name: certName}, &cert); err != nil {
+				if apierrors.IsNotFound(err) {
+					return false, nil
+				}
+				return false, err
+			}
+			expectedID = cert.GetKonnectID()
+			if expectedID == "" {
+				return false, nil
+			}
+		}
+		if service.Status.Konnect.CertificateID != expectedID {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
 func desiredHasUpstreamNamed(desiredUpstreamNames map[string]struct{}, name string) bool {
 	_, ok := desiredUpstreamNames[name]
 	return ok
