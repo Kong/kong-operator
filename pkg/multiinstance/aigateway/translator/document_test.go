@@ -1046,6 +1046,26 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 			require.ErrorContains(t, s.Err, `"oldest"`)
 		}
 	})
+
+	t.Run("a disabled model claims no alias", func(t *testing.T) {
+		t.Parallel()
+
+		// The converter renders nothing for a disabled model, so the older
+		// disabled one must not exclude the newer enabled one.
+		disabled := withAlias("disabled-model", dayOne)
+		disabled.Spec.APISpec.Model.Enabled = "Disabled"
+		enabled := withAlias("enabled-model", dayTwo)
+
+		cl := buildClient(t, gw, disabled, enabled)
+		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+		require.NoError(t, err)
+
+		require.Len(t, doc.Models, 2)
+		require.Len(t, statuses, 2)
+		for _, s := range statuses {
+			require.NoError(t, s.Err, s.Obj.GetName())
+		}
+	})
 }
 
 // TestBuildDocument_ModelAliasCollisionVariants covers the remaining collision
@@ -1083,9 +1103,19 @@ func TestBuildDocument_ModelAliasCollisionVariants(t *testing.T) {
 	modelF.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
 		Values: []string{"f-alias", "f-alias"},
 	}
+	// With a selector, the entity name is not an alias: model-h's value equal
+	// to model-g's name is no conflict.
+	modelG := aiGatewayModelFixture("model-g")
+	modelG.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
+		Values: []string{"g-alias"},
+	}
+	modelH := aiGatewayModelFixture("model-h")
+	modelH.Spec.APISpec.Model.Config.Route.Model = aiconfigurationv1alpha1.AIGatewayModelSelectorConfig{
+		Values: []string{"model-g"},
+	}
 
 	builder := fake.NewClientBuilder().WithScheme(scheme).
-		WithObjects(gw, modelA, modelC, modelD, modelE, modelF)
+		WithObjects(gw, modelA, modelC, modelD, modelE, modelF, modelG, modelH)
 	for _, opts := range [][]index.Option{
 		index.OptionsForAIGatewayModel(),
 		index.OptionsForAIGatewayModelProvider(),
@@ -1111,26 +1141,29 @@ func TestBuildDocument_ModelAliasCollisionVariants(t *testing.T) {
 	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
 	require.NoError(t, err)
 
-	// model-a (no selector), model-d (first alias) and model-f (deduped
-	// values) survive; model-c and model-e conflict.
-	require.Len(t, doc.Models, 3)
+	// Equal (zero) creation timestamps: the tie-break by name decides. model-c
+	// and model-e conflict; the rest survive.
 	names := make([]string, 0, len(doc.Models))
 	for _, m := range doc.Models {
 		names = append(names, m.Name)
 	}
-	require.Contains(t, names, "model-a")
-	require.Contains(t, names, "model-d")
-	require.Contains(t, names, "model-f")
+	require.ElementsMatch(t, []string{"model-a", "model-d", "model-f", "model-g", "model-h"}, names)
 
-	require.Len(t, statuses, 5)
-	conflicts := 0
+	wantConflicts := map[string][]string{
+		"model-c": {`duplicate model alias "model-a"`, `AIGatewayModel "model-a"`},
+		"model-e": {`duplicate model alias "d-alias-2"`, `AIGatewayModel "model-d"`},
+	}
+	require.Len(t, statuses, 7)
 	for _, s := range statuses {
-		if s.Err != nil {
-			conflicts++
-			require.ErrorContains(t, s.Err, "duplicate model alias")
+		want, conflict := wantConflicts[s.Obj.GetName()]
+		if !conflict {
+			require.NoError(t, s.Err, s.Obj.GetName())
+			continue
+		}
+		for _, w := range want {
+			require.ErrorContains(t, s.Err, w)
 		}
 	}
-	require.Equal(t, 2, conflicts)
 }
 
 // TestBuildDocument_SNIFailsWhenReferencedCertificateFails covers the cross-entity dependency:

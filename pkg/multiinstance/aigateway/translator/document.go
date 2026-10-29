@@ -25,6 +25,7 @@ import (
 
 	"github.com/Kong/ai-deck-converter/aigw"
 	"github.com/Kong/ai-deck-converter/convert"
+	"github.com/samber/lo"
 	yaml "gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -195,19 +196,10 @@ func modelAliases(m *aigw.Model) []string {
 	if len(values) == 0 {
 		return []string{m.Name}
 	}
-	// Collapse duplicate values to their first occurrence, mirroring the
+	// lo.Uniq keeps the first occurrence of each value, mirroring the
 	// converter's extractModelAliases: a repeated value renders one ai_models
 	// entity, not two identically named ones.
-	seen := make(map[string]struct{}, len(values))
-	unique := make([]string, 0, len(values))
-	for _, v := range values {
-		if _, dup := seen[v]; dup {
-			continue
-		}
-		seen[v] = struct{}{}
-		unique = append(unique, v)
-	}
-	return unique
+	return lo.Uniq(values)
 }
 
 // ModelAliasConflictError reports a model whose selector alias (or entity name, when no
@@ -222,7 +214,7 @@ func modelAliases(m *aigw.Model) []string {
 type ModelAliasConflictError struct {
 	// Alias is the contested selector alias.
 	Alias string
-	// First is the name of the AIGatewayModel that claimed the alias first.
+	// First is the name of the AIGatewayModel that keeps the alias (the earliest created).
 	First string
 }
 
@@ -619,10 +611,12 @@ func BuildDocument(
 
 	// Model aliases share one name space: two models claiming one alias render
 	// identically named ai_models rows, and the data plane rejects the whole
-	// import. Claim aliases in creation order (tie: namespace/name), so a model created
-	// later can never displace a programmed one, which the translate order
-	// (namespace/name) would allow. A model is excluded only when an alias is
-	// already held by a kept model. See ai-deck-converter#248.
+	// import. Claim aliases in creation order (tie: namespace/name), so a model
+	// created later can never displace a programmed one, which the translate
+	// order (namespace/name) would allow. A model is excluded only when an
+	// alias is already held by a kept model. Disabled models claim nothing:
+	// the converter renders no ai_models rows for them. See
+	// ai-deck-converter#248.
 	if len(doc.Models) > 1 {
 		order := make([]int, len(doc.Models))
 		for i := range order {
@@ -639,6 +633,9 @@ func BuildDocument(
 		owner := make(map[string]string) // alias → claiming CR name
 		exclude := make(map[int]*ModelAliasConflictError)
 		for _, i := range order {
+			if m := &doc.Models[i]; m.Enabled != nil && !*m.Enabled {
+				continue
+			}
 			aliases := modelAliases(&doc.Models[i])
 			if j := slices.IndexFunc(aliases, func(a string) bool { _, ok := owner[a]; return ok }); j >= 0 {
 				exclude[i] = &ModelAliasConflictError{Alias: aliases[j], First: owner[aliases[j]]}
