@@ -637,7 +637,10 @@ func BuildDocument(
 				continue
 			}
 			aliases := modelAliases(&doc.Models[i])
-			if j := slices.IndexFunc(aliases, func(a string) bool { _, ok := owner[a]; return ok }); j >= 0 {
+			// Find the first alias of this model that a kept model already
+			// claims. If one exists, exclude this model.
+			claimed := func(a string) bool { _, ok := owner[a]; return ok }
+			if j := slices.IndexFunc(aliases, claimed); j >= 0 {
 				exclude[i] = &ModelAliasConflictError{Alias: aliases[j], First: owner[aliases[j]]}
 				continue
 			}
