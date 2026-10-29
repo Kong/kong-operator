@@ -1,18 +1,22 @@
 package konnectapigw
 
 import (
+	"slices"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/google/uuid"
+	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/konnect"
@@ -489,7 +493,8 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 					},
 				},
 				nil,
-			)
+			).
+			Once()
 		kpb := deploy.KongPluginBinding(t, ctx, clientNamespaced,
 			konnect.NewKongPluginBindingBuilder().
 				WithControlPlaneRefKonnectNamespaced(cp.Name).
@@ -519,6 +524,74 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		t.Logf("delete the unmanaged KongPluginBinding %s, the check it gets collected",
 			client.ObjectKeyFromObject(kpb),
 		)
+		require.NoError(t, clientNamespaced.Delete(ctx, kpb))
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, apierrors.IsNotFound(
+				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kpb), kpb),
+			))
+		}, consts.WaitTime, consts.TickTime, "KongPluginBinding did not get deleted but should have")
+
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PluginSDK, consts.WaitTime, consts.TickTime)
+	})
+
+	t.Run("binding globally with plugin ordering", func(t *testing.T) {
+		orderedKongPlugin := &configurationv1.KongPlugin{
+			GenerateName: "request-termination-kp-",
+			PluginName:   "request-termination",
+			Config: apiextensionsv1.JSON{
+				Raw: []byte(`{"status_code": 418}`),
+			},
+			Ordering: &kong.PluginOrdering{
+				Before: kong.PluginOrderingPhase{"access": {"key-auth"}},
+			},
+		}
+		require.NoError(t, clientNamespaced.Create(ctx, orderedKongPlugin))
+		pluginID := uuid.NewString()
+
+		sdk.PluginSDK.EXPECT().
+			CreatePlugin(
+				mock.Anything,
+				cp.GetKonnectStatus().GetKonnectID(),
+				mock.MatchedBy(func(pi sdkkonnectcomp.Plugin) bool {
+					return pi.Name == orderedKongPlugin.PluginName &&
+						slices.Equal(pi.Ordering.GetBefore().GetAccess(), []string{"key-auth"}) &&
+						pi.Ordering.GetAfter() == nil
+				})).
+			Return(
+				&sdkkonnectops.CreatePluginResponse{
+					Plugin: &sdkkonnectcomp.Plugin{
+						ID: new(pluginID),
+					},
+				},
+				nil,
+			).
+			Once()
+		kpb := deploy.KongPluginBinding(t, ctx, clientNamespaced,
+			konnect.NewKongPluginBindingBuilder().
+				WithControlPlaneRefKonnectNamespaced(cp.Name).
+				WithPluginRefName(orderedKongPlugin.Name).
+				WithScope(configurationv1alpha1.KongPluginBindingScopeGlobalInControlPlane).
+				Build(),
+		)
+		t.Logf(
+			"wait for the controller to create the global KongPluginBinding %s with plugin ordering in Konnect",
+			client.ObjectKeyFromObject(kpb),
+		)
+		assert.EventuallyWithT(t,
+			envtest.AssertCollectObjectExistsAndHasKonnectID(t, ctx, clientNamespaced, kpb, pluginID),
+			consts.WaitTime, consts.TickTime,
+			"KongPluginBinding wasn't created using Konnect API or its KonnectID wasn't set",
+		)
+
+		sdk.PluginSDK.EXPECT().
+			DeletePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
+			Return(
+				&sdkkonnectops.DeletePluginResponse{
+					StatusCode: 200,
+				},
+				nil,
+			)
+
 		require.NoError(t, clientNamespaced.Delete(ctx, kpb))
 		assert.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.True(c, apierrors.IsNotFound(

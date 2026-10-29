@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"reflect"
 	"slices"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -364,7 +366,11 @@ func kongPluginWithTargetsToKongPluginInput(binding *configurationv1alpha1.KongP
 			},
 		)
 	}
-	// TODO: add support for ordering https://github.com/kong/kong-operator/issues/1682
+	ordering, err := pluginOrderingToSDKOrdering(plugin.Ordering)
+	if err != nil {
+		return nil, fmt.Errorf("invalid ordering in KongPlugin %s: %w", client.ObjectKeyFromObject(plugin), err)
+	}
+	pluginInput.Ordering = ordering
 
 	// TODO(mlavacca): check all the entities reference the same KonnectGatewayControlPlane
 
@@ -428,6 +434,9 @@ func pluginBindingMatches(
 	if !configsEqual(desired.Config, konnectPlugin.Config) {
 		return false, nil
 	}
+	if !orderingsEqual(desired.Ordering, konnectPlugin.Ordering) {
+		return false, nil
+	}
 	if pluginServiceID(desired.Service) != pluginServiceID(konnectPlugin.Service) {
 		return false, nil
 	}
@@ -484,6 +493,50 @@ func configsEqual(expected, actual map[string]any) bool {
 	}
 
 	return reflect.DeepEqual(expected, actual)
+}
+
+const pluginOrderingPhaseAccess = "access"
+
+// pluginOrderingToSDKOrdering converts KongPlugin ordering to the Konnect type, which only supports the access phase.
+func pluginOrderingToSDKOrdering(ordering *kong.PluginOrdering) (*sdkkonnectcomp.Ordering, error) {
+	if ordering == nil {
+		return nil, nil
+	}
+
+	accessPlugins := func(phases kong.PluginOrderingPhase) ([]string, error) {
+		for _, phase := range slices.Sorted(maps.Keys(phases)) {
+			if phase != pluginOrderingPhaseAccess && len(phases[phase]) > 0 {
+				return nil, fmt.Errorf("plugin ordering phase %q is not supported by Konnect, only %q is", phase, pluginOrderingPhaseAccess)
+			}
+		}
+		return phases[pluginOrderingPhaseAccess], nil
+	}
+
+	before, err := accessPlugins(ordering.Before)
+	if err != nil {
+		return nil, err
+	}
+	after, err := accessPlugins(ordering.After)
+	if err != nil {
+		return nil, err
+	}
+	if len(before) == 0 && len(after) == 0 {
+		return nil, nil
+	}
+
+	out := &sdkkonnectcomp.Ordering{}
+	if len(before) > 0 {
+		out.Before = &sdkkonnectcomp.Before{Access: before}
+	}
+	if len(after) > 0 {
+		out.After = &sdkkonnectcomp.After{Access: after}
+	}
+	return out, nil
+}
+
+func orderingsEqual(expected, actual *sdkkonnectcomp.Ordering) bool {
+	return lo.ElementsMatch(expected.GetBefore().GetAccess(), actual.GetBefore().GetAccess()) &&
+		lo.ElementsMatch(expected.GetAfter().GetAccess(), actual.GetAfter().GetAccess())
 }
 
 func pluginServiceID(service *sdkkonnectcomp.PluginService) string {

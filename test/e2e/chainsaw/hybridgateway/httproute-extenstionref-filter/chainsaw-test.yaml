@@ -176,10 +176,37 @@ spec:
                 value: ($konnect_token)
               - name: KONNECT_URL
                 value: ($konnect_url)
-              - name: EXPECTED_TAGS
-                value: "team-payments,env-e2e"
+              - name: FIELD
+                value: .tags
+              - name: MATCH
+                value: includes
+              - name: EXPECTED
+                value: '["team-payments","env-e2e"]'
             content: |
-              bash ../../common/scripts/verify_konnect_plugin_tags.sh
+              bash ../../common/scripts/verify_konnect_plugin_field.sh
+            check:
+              (json_parse($stdout).success): true
+
+    # Step 7f: Verify the KongPlugin's ordering propagated to the real Konnect-side plugin.
+    - name: 7f-Verify-single-plugin-ordering
+      description: Verify ordering on the referenced KongPlugin reached the Konnect plugin
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: PLUGIN_REFERENCE_NAME
+                value: (join('.',[($namespace),'rate-limiting']))
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: FIELD
+                value: .ordering
+              - name: EXPECTED
+                value: '{"before":{"access":["key-auth"]}}'
+            content: |
+              bash ../../common/scripts/verify_konnect_plugin_field.sh
             check:
               (json_parse($stdout).success): true
 
