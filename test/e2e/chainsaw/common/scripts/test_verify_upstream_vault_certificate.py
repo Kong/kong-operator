@@ -2,6 +2,7 @@
 """Exercise the actual Chainsaw upstream and TLS verifier without a cluster."""
 
 import contextlib
+import http.client
 import json
 import os
 from pathlib import Path
@@ -104,6 +105,18 @@ class UpstreamMTLSTest(unittest.TestCase):
             self.assertEqual(result["client_fingerprint"], fingerprint((self.root / (client + ".crt")).read_bytes()))
             observed.append(result["client_fingerprint"])
         self.assertNotEqual(*observed)
+
+    def test_upstream_accepts_ipv6(self):
+        with socket.create_connection(("::1", self.port), timeout=10) as connection:
+            with self.context("client").wrap_socket(connection, server_hostname="upstream.example.test") as tls:
+                tls.sendall(b"GET / HTTP/1.1\r\nHost: upstream.example.test\r\nConnection: close\r\n\r\n")
+                with http.client.HTTPResponse(tls) as response:
+                    response.begin()
+                    result = json.loads(response.read())
+                    self.assertEqual(response.status, 200)
+                    self.assertEqual(result["server_name"], "upstream.example.test")
+                    self.assertEqual(result["client_fingerprint"],
+                                     fingerprint((self.root / "client.crt").read_bytes()))
 
     def test_all_upstream_controls_use_independent_forwards(self):
         def material(name, namespace=None):

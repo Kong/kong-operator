@@ -96,6 +96,13 @@ func ResolveListenerKongCertificate(
 		}
 	}
 
+	cert, err := getProgrammedKongCertificate(ctx, cl, key)
+	if err != nil {
+		if refErr, ok := errors.AsType[*hybridgatewayerrors.ClientCertificateRefError](err); ok {
+			return invalid(refErr.Message)
+		}
+		return nil, err
+	}
 	gatewayCPRef, err := GetControlPlaneRefByGateway(ctx, cl, gateway)
 	if err != nil {
 		if errors.Is(err, hybridgatewayerrors.ErrGatewayNotReferencingControlPlane) {
@@ -103,11 +110,14 @@ func ResolveListenerKongCertificate(
 		}
 		return nil, err
 	}
-	cert, err := resolveCertificateForControlPlane(ctx, cl, key, *gatewayCPRef, gateway.Namespace)
+	err = validateCertificateControlPlane(ctx, cl, cert, *gatewayCPRef, gateway.Namespace)
 	if refErr, ok := errors.AsType[*hybridgatewayerrors.ClientCertificateRefError](err); ok {
 		return invalid(refErr.Message)
 	}
-	return cert, err
+	if err != nil {
+		return nil, err
+	}
+	return cert, nil
 }
 
 // ResolveServiceKongCertificate checks authorization from the actual KongService
@@ -147,15 +157,20 @@ func ResolveServiceKongCertificate(
 			Reason: "InvalidCertificateRef", Message: "KongService does not reference a Konnect ControlPlane",
 		}
 	}
-	return resolveCertificateForControlPlane(ctx, cl, key, *service.Spec.ControlPlaneRef, service.Namespace)
+	cert, err := getProgrammedKongCertificate(ctx, cl, key)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateCertificateControlPlane(ctx, cl, cert, *service.Spec.ControlPlaneRef, service.Namespace); err != nil {
+		return nil, err
+	}
+	return cert, nil
 }
 
-func resolveCertificateForControlPlane(
+func getProgrammedKongCertificate(
 	ctx context.Context,
 	cl client.Client,
 	key client.ObjectKey,
-	cpRef commonv1alpha1.ControlPlaneRef,
-	namespace string,
 ) (*configurationv1alpha1.KongCertificate, error) {
 	invalid := func(message string) (*configurationv1alpha1.KongCertificate, error) {
 		return nil, &hybridgatewayerrors.ClientCertificateRefError{Reason: "InvalidCertificateRef", Message: message}
@@ -175,6 +190,20 @@ func resolveCertificateForControlPlane(
 		cert.GetKonnectID() == "" || cert.Status.Konnect == nil {
 		return invalid(fmt.Sprintf("Referenced KongCertificate %s is not programmed in Konnect yet", key))
 	}
+	return &cert, nil
+}
+
+func validateCertificateControlPlane(
+	ctx context.Context,
+	cl client.Client,
+	cert *configurationv1alpha1.KongCertificate,
+	cpRef commonv1alpha1.ControlPlaneRef,
+	namespace string,
+) error {
+	key := client.ObjectKeyFromObject(cert)
+	invalid := func(message string) error {
+		return &hybridgatewayerrors.ClientCertificateRefError{Reason: "InvalidCertificateRef", Message: message}
+	}
 	if cpRef.Type != commonv1alpha1.ControlPlaneRefKonnectNamespacedRef || cpRef.KonnectNamespacedRef == nil {
 		return invalid("Certificate bindings require a Konnect ControlPlane reference")
 	}
@@ -183,7 +212,7 @@ func resolveCertificateForControlPlane(
 		if apierrors.IsNotFound(err) {
 			return invalid("Referenced Konnect ControlPlane does not exist")
 		}
-		return nil, err
+		return err
 	}
 	certCPRef := cert.GetControlPlaneRef()
 	if certCPRef == nil || certCPRef.Type != commonv1alpha1.ControlPlaneRefKonnectNamespacedRef || certCPRef.KonnectNamespacedRef == nil {
@@ -194,7 +223,7 @@ func resolveCertificateForControlPlane(
 		if apierrors.IsNotFound(err) {
 			return invalid(fmt.Sprintf("Referenced KongCertificate %s ControlPlane does not exist", key))
 		}
-		return nil, err
+		return err
 	}
 	if gatewayCP.Status.ID == "" || certCP.Status.ID == "" {
 		return invalid("Binding and certificate Konnect ControlPlanes must be programmed")
@@ -208,5 +237,5 @@ func resolveCertificateForControlPlane(
 	if gatewayCP.Status.ID != certCP.Status.ID || cert.Status.Konnect.ControlPlaneID != gatewayCP.Status.ID {
 		return invalid(fmt.Sprintf("Referenced KongCertificate %s belongs to a different Konnect ControlPlane", key))
 	}
-	return &cert, nil
+	return nil
 }
