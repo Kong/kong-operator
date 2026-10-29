@@ -493,10 +493,15 @@
   `konghq.com/konnect-cp-labels` or `konghq.com/konnect-dp-labels` annotation is
   over 5 in `Gateway` or `GatewayClass`, or the number of combined labels from
   the two parts is over 5, the controller rejects the `Gateway`.
+  An invalid annotation (malformed, too many labels, or an invalid label key or
+  value) is reported on the `Gateway`'s `KonnectGatewayControlPlaneProgrammed`
+  or `KonnectExtensionReady` condition with reason `InvalidKonnectLabels`, and
+  the `Gateway` is not retried until the annotation is fixed.
   The labels from annotations of `Gateway`s take precedence over the labels from
   `GatewayClass`es. When they have different values on the same key, the value
   from annotation of `Gateway` is used.
   [#5808](https://github.com/Kong/kong-operator/pull/5808)
+  [#6315](https://github.com/Kong/kong-operator/pull/6315)
 - Hybrid Gateway: support the `konghq.com/request-buffering`,
   `konghq.com/response-buffering`, `konghq.com/https-redirect-status-code` and
   `konghq.com/path-handling` annotations on `HTTPRoute` and `GRPCRoute`, and
