@@ -434,7 +434,7 @@ var (
 
 var konnectConfigSyncLabelsHelp = fmt.Sprintf(
 	"`%s` describes whether the synchronization succeeded (`%s`) or not (`%s`). "+
-		"`%s` is populated in case of `%s=\"%s\"` with the HTTP status code returned by Konnect that caused the failure "+
+		"`%s` is populated in case of `%s=\"%s\"` with the HTTP status code of the first Konnect API error that caused the failure "+
 		"(empty when no response was received). "+
 		"`%s` describes the concurrency used to upload the configuration. "+
 		"`%s` describes the base URL of the Konnect API used to upload the configuration. "+
