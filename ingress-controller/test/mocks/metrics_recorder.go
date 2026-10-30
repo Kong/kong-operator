@@ -49,3 +49,9 @@ func (m MetricsRecorder) RecordFallbackTranslationSuccess(time.Duration) {
 
 func (m MetricsRecorder) RecordFallbackCacheGenerationDuration(time.Duration, error) {
 }
+
+func (m MetricsRecorder) RecordKonnectConfigSyncSuccess(metrics.KonnectConfigSync) {
+}
+
+func (m MetricsRecorder) RecordKonnectConfigSyncFailure(metrics.KonnectConfigSync, error) {
+}
