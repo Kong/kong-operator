@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/require"
@@ -19,8 +18,10 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/test"
+	dpconf "github.com/kong/kong-operator/v2/ingress-controller/test/dataplane/config"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/testlabels"
+	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
 	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
@@ -41,17 +42,10 @@ func TestGatewayHTTPSMultipleCertificates(t *testing.T) {
 		New("essentials").
 		WithLabel(testlabels.NetworkingFamily, testlabels.NetworkingFamilyGatewayAPI).
 		WithLabel(testlabels.Kind, testlabels.KindHTTPRoute).
-		WithSetup("skip if router not expressions", SkipIfRouterNotExpressions).
-		WithSetup("deploy kong addon into cluster", featureSetup(
-			withControllerManagerOpts(helpers.ControllerManagerOptAdditionalWatchNamespace("default")),
-			withKongProxyEnvVars(map[string]string{
-				"PROXY_LISTEN": `0.0.0.0:8443 http2 ssl`, // Ensure that only HTTPS is available.
-			}),
-		)).
+		WithSetup("create test namespace", featureSetup(withoutGateway())).
 		Assess(
 			"deploying gateway with configuration (certificates and routing) to cluster",
 			func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-				cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
 				cluster := GetClusterFromCtx(ctx)
 				namespace := GetNamespaceForT(ctx, t)
 
@@ -68,6 +62,9 @@ func TestGatewayHTTPSMultipleCertificates(t *testing.T) {
 					)
 					certificateSecret := &corev1.Secret{
 						Name: nn.Name,
+						Labels: map[string]string{
+							mgrconfig.DefaultSecretLabelSelector: mgrconfig.LabelValueForSelectorTrue,
+						},
 						Type: corev1.SecretTypeTLS,
 						Data: map[string][]byte{
 							"tls.crt": certificateCrt,
@@ -89,13 +86,7 @@ func TestGatewayHTTPSMultipleCertificates(t *testing.T) {
 				gatewayClient, err := gatewayclient.NewForConfig(cluster.Config())
 				require.NoError(t, err)
 
-				t.Log("deploying a new gatewayClass")
-				gatewayClassName := uuid.NewString()
-				gwc, err := helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
-				require.NoError(t, err)
-				cleaner.Add(gwc)
-
-				t.Log("deploying a new gateway")
+				t.Log("deploying a new gateway, with only HTTPS listeners")
 				createHTTPSListener := func(t *testing.T, domainName string, certSecretName string) gatewayapi.Listener {
 					t.Helper()
 					return gatewayapi.Listener{
@@ -114,16 +105,14 @@ func TestGatewayHTTPSMultipleCertificates(t *testing.T) {
 						},
 					}
 				}
-				gatewayName := uuid.NewString()
-				gateway, err := helpers.DeployGateway(ctx, gatewayClient, namespace, gatewayClassName, func(gw *gatewayapi.Gateway) {
-					gw.Name = gatewayName
-					gw.Spec.Listeners = []gatewayapi.Listener{
+				ctx = setUpGateway(ctx, t,
+					withKongRouterFlavor(dpconf.RouterFlavorExpressions),
+					withGatewayListeners(
 						createHTTPSListener(t, wildcardExample, nameWildcardExample),
 						createHTTPSListener(t, wildCardOneInternalExample, nameWildcardOneInternalExample),
-					}
-				})
-				require.NoError(t, err)
-				cleaner.Add(gateway)
+					),
+				)
+				gateway := GetFromCtxForT[*gatewayapi.Gateway](ctx, t)
 
 				t.Log("deploying a minimal HTTP container")
 				deployment := generators.NewDeploymentForContainer(
