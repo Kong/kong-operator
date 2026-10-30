@@ -1,0 +1,312 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: httproute-kongcertificate
+spec:
+  description: |
+    Real upstream mTLS using a cross-namespace, Vault-only KongCertificate.
+    The upstream requires and verifies a client certificate against an independent
+    client CA and returns its fingerprint. Every response closes the TLS connection.
+    Server CA trust and SNI/hostname verification are configured independently.
+    Verify rotation on new handshakes, stable IDs and Pods, revocation/restoration,
+    direct/legacy switching and cleanup without adopting the external certificate.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: backend_namespace
+      value: (join('-', [$namespace, 'backends']))
+    - name: namespace_name
+      value: ($backend_namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: konnect-auth
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [$namespace, 'auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: auth_name
+      value: ($konnect_auth_name)
+    - name: cp_name
+      value: (join('-', [$namespace, 'cp']))
+    - name: cp_namespace
+      value: ($namespace)
+    - name: config_store_name
+      value: client
+    - name: config_store_namespace
+      value: ($namespace)
+    - name: vault_name
+      value: (join('-', [$namespace, 'vault']))
+    - name: gateway_name
+      value: (join('-', [$namespace, 'gateway']))
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE'))
+    - name: upstream_hostname
+      value: (join('.', ['upstream', $backend_namespace, 'svc']))
+  steps:
+    - name: backend-namespace
+      use:
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
+    - name: auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: auth-configuration
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: control-plane
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectGatewayControlPlane.yaml
+    - name: certificates
+      try:
+        - apply:
+            file: 01-material.yaml
+        - assert:
+            resource:
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: client
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: upstream
+                namespace: ($backend_namespace)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: cert-manager.io/v1
+              kind: Certificate
+              metadata:
+                name: untrusted-client
+                namespace: ($backend_namespace)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"
+    - name: config-store
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectConfigStore.yaml
+    - name: vault-certificate
+      try:
+        - apply:
+            file: 02-vault.yaml
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongCertificate
+              metadata:
+                name: client
+                namespace: ($backend_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectConfigStoreSync
+              metadata:
+                name: client
+              status:
+                (conditions[?type == 'Synced']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongVault
+              metadata:
+                name: ($vault_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+    - name: upstream-and-server-trust
+      try:
+        - script:
+            env: &mtls-env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: BACKEND_NAMESPACE
+                value: ($backend_namespace)
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: CONTROL_PLANE_NAME
+                value: ($cp_name)
+              - name: CONFIG_STORE_NAME
+                value: ($config_store_name)
+              - name: UPSTREAM_HOSTNAME
+                value: ($upstream_hostname)
+              - name: TEST_LABEL
+                value: ($test_name)
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_SERVER_URL
+                value: ($konnect_url)
+            content: |
+              MODE=prepare python3 ../../common/scripts/verify_upstream_vault_certificate.py
+        - script:
+            env:
+              - name: BACKEND_NAMESPACE
+                value: ($backend_namespace)
+            content: |
+              set -eu
+              kubectl -n "$BACKEND_NAMESPACE" create configmap upstream-script \
+                --from-file=server.py=upstream_server.py --dry-run=client -o yaml | kubectl apply -f -
+        - apply:
+            file: 03-upstream.yaml
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: upstream
+                namespace: ($backend_namespace)
+              status:
+                readyReplicas: 1
+    - name: missing-service-grant
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: CP_NAME
+                value: ($cp_name)
+            content: |
+              kubectl -n "$NAMESPACE" get konnectgatewaycontrolplane "$CP_NAME" -o json | jq '{cp_id: .status.id}'
+            outputs:
+              - name: cp_id
+                value: (json_parse($stdout).cp_id)
+        - apply:
+            file: 04-gateway.yaml
+        - assert: &ref-denied
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              metadata:
+                name: upstream
+              status:
+                parents:
+                  - (conditions[?type == 'ResolvedRefs']):
+                      - status: "False"
+                        reason: RefNotPermitted
+        - error:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongService
+    - name: service-grant-from-actual-gateway-namespace
+      try:
+        - apply:
+            file: 05-service-grant.yaml
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              metadata:
+                name: upstream
+              status:
+                parents:
+                  - (conditions[?type == 'KongServiceProgrammed']):
+                      - status: "True"
+        - assert:
+            resource:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: Gateway
+              metadata:
+                name: ($gateway_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+    - name: verified-upstream-and-rotation
+      try:
+        - script:
+            env: *mtls-env
+            content: |
+              python3 ../../common/scripts/verify_upstream_vault_certificate.py
+            outputs:
+              - name: baseline
+                value: ($stdout)
+        - script:
+            env:
+              - name: BASELINE
+                value: ($baseline)
+            content: |
+              printf '%s' "$BASELINE" > baseline.json
+        - script:
+            env: *mtls-env
+            content: |
+              MODE=rotate BASELINE="$(cat baseline.json)" python3 ../../common/scripts/verify_upstream_vault_certificate.py
+        - script:
+            env: *mtls-env
+            content: |
+              MODE=hostname python3 ../../common/scripts/verify_upstream_vault_certificate.py
+      finally:
+        - script:
+            content: rm -f baseline.json
+    - name: revoke-service-grant
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: upstream-client
+              namespace: ($backend_namespace)
+        - assert: *ref-denied
+        - script:
+            env: *mtls-env
+            content: |
+              MODE=revoked python3 ../../common/scripts/verify_upstream_vault_certificate.py
+    - name: restore-and-switch-legacy-direct
+      try:
+        - apply:
+            file: 05-service-grant.yaml
+        - script:
+            env: *mtls-env
+            content: |
+              python3 ../../common/scripts/verify_upstream_vault_certificate.py
+        - script:
+            env: *mtls-env
+            content: |
+              MODE=legacy python3 ../../common/scripts/verify_upstream_vault_certificate.py
+        - script:
+            env: *mtls-env
+            content: |
+              MODE=direct python3 ../../common/scripts/verify_upstream_vault_certificate.py
+    - name: route-deletion-preserves-external-certificate
+      try:
+        - delete:
+            ref:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              name: upstream
+        - script:
+            env: *mtls-env
+            content: |
+              MODE=deleted python3 ../../common/scripts/verify_upstream_vault_certificate.py
+  catch:
+    - script:
+        env:
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: TEST_LABEL
+            value: ($test_name)
+        content: |
+          python3 - <<'PY'
+          import os
+          import subprocess
+          result = subprocess.run([
+              "kubectl", "-n", os.environ["NAMESPACE"], "logs",
+              "-l", "upstream-mtls-test=" + os.environ["TEST_LABEL"],
+              "--all-containers=true", "--tail=80", "--prefix=true",
+          ], check=True, stdout=subprocess.PIPE, text=True, timeout=30)
+          for line in result.stdout.splitlines():
+              if any(level in line for level in ("[error]", "[crit]", "[alert]", "[emerg]")):
+                  print(line)
+          PY

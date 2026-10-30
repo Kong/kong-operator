@@ -96,6 +96,85 @@ func ResolveListenerKongCertificate(
 		}
 	}
 
+	cert, err := getProgrammedKongCertificate(ctx, cl, key)
+	if err != nil {
+		if refErr, ok := errors.AsType[*hybridgatewayerrors.ClientCertificateRefError](err); ok {
+			return invalid(refErr.Message)
+		}
+		return nil, err
+	}
+	gatewayCPRef, err := GetControlPlaneRefByGateway(ctx, cl, gateway)
+	if err != nil {
+		if errors.Is(err, hybridgatewayerrors.ErrGatewayNotReferencingControlPlane) {
+			return invalid("KongCertificate references are only supported for Konnect Gateways")
+		}
+		return nil, err
+	}
+	err = validateCertificateControlPlane(ctx, cl, cert, *gatewayCPRef, gateway.Namespace)
+	if refErr, ok := errors.AsType[*hybridgatewayerrors.ClientCertificateRefError](err); ok {
+		return invalid(refErr.Message)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return cert, nil
+}
+
+// ResolveServiceKongCertificate checks authorization from the actual KongService
+// namespace, then readiness and binding to its explicitly selected remote ControlPlane.
+// No Gateway -> certificate grant is needed: the Gateway API reference is Route -> Service.
+func ResolveServiceKongCertificate(
+	ctx context.Context,
+	cl client.Client,
+	service *configurationv1alpha1.KongService,
+) (*configurationv1alpha1.KongCertificate, error) {
+	ref := service.Spec.ClientCertificateRef
+	if ref == nil {
+		return nil, nil
+	}
+	namespace := service.Namespace
+	if ref.Namespace != nil && *ref.Namespace != "" {
+		namespace = *ref.Namespace
+	}
+	key := client.ObjectKey{Namespace: namespace, Name: ref.Name}
+	if namespace != service.Namespace {
+		if err := crossnamespace.CheckKongReferenceGrantForResource(ctx, cl, service.Namespace, namespace, ref.Name,
+			metav1.GroupVersionKind(configurationv1alpha1.GroupVersion.WithKind("KongService")),
+			metav1.GroupVersionKind(configurationv1alpha1.GroupVersion.WithKind("KongCertificate")),
+		); err != nil {
+			if crossnamespace.IsReferenceNotGranted(err) {
+				return nil, &hybridgatewayerrors.ClientCertificateRefError{
+					Reason: string(gatewayv1.RouteReasonRefNotPermitted),
+					Message: fmt.Sprintf("KongService in namespace %s reference to KongCertificate %s not allowed by any KongReferenceGrant",
+						service.Namespace, key),
+				}
+			}
+			return nil, err
+		}
+	}
+	if service.Spec.ControlPlaneRef == nil {
+		return nil, &hybridgatewayerrors.ClientCertificateRefError{
+			Reason: "InvalidCertificateRef", Message: "KongService does not reference a Konnect ControlPlane",
+		}
+	}
+	cert, err := getProgrammedKongCertificate(ctx, cl, key)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateCertificateControlPlane(ctx, cl, cert, *service.Spec.ControlPlaneRef, service.Namespace); err != nil {
+		return nil, err
+	}
+	return cert, nil
+}
+
+func getProgrammedKongCertificate(
+	ctx context.Context,
+	cl client.Client,
+	key client.ObjectKey,
+) (*configurationv1alpha1.KongCertificate, error) {
+	invalid := func(message string) (*configurationv1alpha1.KongCertificate, error) {
+		return nil, &hybridgatewayerrors.ClientCertificateRefError{Reason: "InvalidCertificateRef", Message: message}
+	}
 	var cert configurationv1alpha1.KongCertificate
 	if err := cl.Get(ctx, key, &cert); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -111,20 +190,29 @@ func ResolveListenerKongCertificate(
 		cert.GetKonnectID() == "" || cert.Status.Konnect == nil {
 		return invalid(fmt.Sprintf("Referenced KongCertificate %s is not programmed in Konnect yet", key))
 	}
+	return &cert, nil
+}
 
-	gatewayCPRef, err := GetControlPlaneRefByGateway(ctx, cl, gateway)
-	if err != nil {
-		if errors.Is(err, hybridgatewayerrors.ErrGatewayNotReferencingControlPlane) {
-			return invalid("KongCertificate references are only supported for Konnect Gateways")
-		}
-		return nil, err
+func validateCertificateControlPlane(
+	ctx context.Context,
+	cl client.Client,
+	cert *configurationv1alpha1.KongCertificate,
+	cpRef commonv1alpha1.ControlPlaneRef,
+	namespace string,
+) error {
+	key := client.ObjectKeyFromObject(cert)
+	invalid := func(message string) error {
+		return &hybridgatewayerrors.ClientCertificateRefError{Reason: "InvalidCertificateRef", Message: message}
 	}
-	gatewayCP, err := controlplane.GetCPForRef(ctx, cl, *gatewayCPRef, gateway.Namespace)
+	if cpRef.Type != commonv1alpha1.ControlPlaneRefKonnectNamespacedRef || cpRef.KonnectNamespacedRef == nil {
+		return invalid("Certificate bindings require a Konnect ControlPlane reference")
+	}
+	gatewayCP, err := controlplane.GetCPForRef(ctx, cl, cpRef, namespace)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return invalid("Gateway Konnect ControlPlane does not exist")
+			return invalid("Referenced Konnect ControlPlane does not exist")
 		}
-		return nil, err
+		return err
 	}
 	certCPRef := cert.GetControlPlaneRef()
 	if certCPRef == nil || certCPRef.Type != commonv1alpha1.ControlPlaneRefKonnectNamespacedRef || certCPRef.KonnectNamespacedRef == nil {
@@ -135,19 +223,19 @@ func ResolveListenerKongCertificate(
 		if apierrors.IsNotFound(err) {
 			return invalid(fmt.Sprintf("Referenced KongCertificate %s ControlPlane does not exist", key))
 		}
-		return nil, err
+		return err
 	}
 	if gatewayCP.Status.ID == "" || certCP.Status.ID == "" {
-		return invalid("Gateway and certificate Konnect ControlPlanes must be programmed")
+		return invalid("Binding and certificate Konnect ControlPlanes must be programmed")
 	}
 	for _, cp := range []*konnectv1alpha2.KonnectGatewayControlPlane{gatewayCP, certCP} {
 		condition, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, cp)
 		if !ok || condition.Status != metav1.ConditionTrue || condition.ObservedGeneration != cp.GetGeneration() {
-			return invalid("Gateway and certificate Konnect ControlPlanes must be programmed")
+			return invalid("Binding and certificate Konnect ControlPlanes must be programmed")
 		}
 	}
 	if gatewayCP.Status.ID != certCP.Status.ID || cert.Status.Konnect.ControlPlaneID != gatewayCP.Status.ID {
 		return invalid(fmt.Sprintf("Referenced KongCertificate %s belongs to a different Konnect ControlPlane", key))
 	}
-	return &cert, nil
+	return nil
 }

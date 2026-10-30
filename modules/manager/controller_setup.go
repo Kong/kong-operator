@@ -191,6 +191,7 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 			index.OptionsForKongConsumer(cl),
 			index.OptionsForKongConsumerGroup(cl),
 			index.OptionsForKongService(cl),
+			index.OptionsForBackendService(),
 			index.OptionsForKongRoute(cl),
 			index.OptionsForKongUpstream(cl),
 			index.OptionsForKongTarget(),

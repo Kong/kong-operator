@@ -9,8 +9,10 @@ import (
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -37,6 +39,10 @@ const (
 	clientCertKey              = "/client-cert"
 	serviceUpstreamAnnotation  = "ingress.kubernetes.io/service-upstream"
 )
+
+// ClientCertificateRefAnnotation selects an existing KongCertificate, not a Secret.
+// It is only interpreted by the Konnect/hybrid Gateway API translator.
+const ClientCertificateRefAnnotation = annotationPrefix + "/client-cert-ref"
 
 // The Gateway API kinds of the root objects that own their children through the
 // hybrid-routes annotations. Exported so the reconcilers that build those
@@ -238,6 +244,32 @@ func ExtractRetries(anns map[string]string) (*int64, error) {
 // This mirrors ingress-controller/internal/annotations.ExtractClientCertificate.
 func ExtractClientCertificate(anns map[string]string) string {
 	return anns[annotationPrefix+clientCertKey]
+}
+
+// ExtractClientCertificateRef resolves name or namespace/name relative to the backend Service.
+// A present but empty annotation is invalid. The legacy annotation remains a Secret name.
+func ExtractClientCertificateRef(anns map[string]string, namespace string) (*commonv1alpha1.NamespacedRef, error) {
+	value, present := anns[ClientCertificateRefAnnotation]
+	if !present {
+		return nil, nil
+	}
+	if _, legacy := anns[annotationPrefix+clientCertKey]; legacy {
+		return nil, fmt.Errorf("%s and %s cannot both be configured", annotationPrefix+clientCertKey, ClientCertificateRefAnnotation)
+	}
+	parts := strings.Split(value, "/")
+	var name string
+	switch len(parts) {
+	case 1:
+		name = parts[0]
+	case 2:
+		namespace, name = parts[0], parts[1]
+	default:
+		return nil, fmt.Errorf("%s must be name or namespace/name", ClientCertificateRefAnnotation)
+	}
+	if len(validation.IsDNS1123Label(namespace)) != 0 || len(validation.IsDNS1123Subdomain(name)) != 0 {
+		return nil, fmt.Errorf("%s must contain a valid namespace and KongCertificate name (name or namespace/name)", ClientCertificateRefAnnotation)
+	}
+	return &commonv1alpha1.NamespacedRef{Name: name, Namespace: new(namespace)}, nil
 }
 
 // ExtractHostHeader extracts the host-header annotation value.

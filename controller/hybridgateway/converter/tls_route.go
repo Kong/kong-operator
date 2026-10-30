@@ -175,7 +175,6 @@ func (c *tlsRouteConverter) translate(ctx context.Context, logger logr.Logger) e
 				continue
 			}
 			upstreamName := upstreamPtr.Name
-			c.outputStore = append(c.outputStore, upstreamPtr)
 			log.Debug(logger, "Successfully translated KongUpstream resource", "upstream", upstreamName)
 
 			// Build the KongService resource (and optionally a KongCertificate + KongReferenceGrant for client-cert).
@@ -188,6 +187,7 @@ func (c *tlsRouteConverter) translate(ctx context.Context, logger logr.Logger) e
 				continue
 			}
 			// Append KongReferenceGrant before KongCertificate so the grant exists when the cert is applied.
+			c.outputStore = append(c.outputStore, upstreamPtr)
 			if grantPtr != nil {
 				c.outputStore = append(c.outputStore, grantPtr)
 				log.Debug(logger, "Successfully translated KongReferenceGrant resource", "grant", grantPtr.Name)
