@@ -25,6 +25,7 @@ import (
 
 	"github.com/Kong/ai-deck-converter/aigw"
 	"github.com/Kong/ai-deck-converter/convert"
+	"github.com/samber/lo"
 	yaml "gopkg.in/yaml.v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -186,6 +187,44 @@ func checkTranslatedACLs(translated map[string]struct{}, acls aigw.ACLs) error {
 	)
 }
 
+// modelAliases mirrors ai-deck-converter's extractModelAliases: the model selector's
+// values when set, the model's entity name otherwise. The converter renders one
+// ai_models entity per alias, named after it, so these are the names the data plane
+// enforces uniqueness on.
+func modelAliases(m *aigw.Model) []string {
+	values := m.Config.Route.Model.Values
+	if len(values) == 0 {
+		return []string{m.Name}
+	}
+	// lo.Uniq keeps the first occurrence of each value, mirroring the
+	// converter's extractModelAliases: a repeated value renders one ai_models
+	// entity, not two identically named ones.
+	return lo.Uniq(values)
+}
+
+// ModelAliasConflictError reports a model whose selector alias (or entity name, when no
+// selector is set) is already claimed by another model of the same gateway.
+//
+// It is a per-entity routing conflict, not a gateway-level translation failure: the
+// later model is excluded from the document and reports the conflict on its own status,
+// while the rest of the configuration translated and pushed fine. The reporting layer
+// detects this type and treats it as a warning on the gateway's aggregated
+// ConfigurationTranslated condition, which therefore stays True and lets the gateway —
+// and its data planes — become Ready (see ai-deck-converter#248).
+type ModelAliasConflictError struct {
+	// Alias is the contested selector alias.
+	Alias string
+	// First is the name of the AIGatewayModel that keeps the alias (the earliest created).
+	First string
+}
+
+func (e *ModelAliasConflictError) Error() string {
+	return fmt.Sprintf(
+		"duplicate model alias %q: AIGatewayModel %q already uses it, and each model alias renders one ai_models entity named after it (the data plane rejects duplicate names; the earliest-created model keeps the alias, ties go to namespace/name order)",
+		e.Alias, e.First,
+	)
+}
+
 // BuildDocument assembles the aigw.Document for the given OnPremAIGateway, translating every
 // aiconfiguration entity kind pointing at it. Alongside the document it returns the per-entity
 // translation status (see EntityStatus), so that the caller can report each entity's outcome on
@@ -252,6 +291,12 @@ func BuildDocument(
 	// namespace/name order wins; the duplicate is reported per-entity and excluded from the
 	// document.
 	translatedVaultPrefixes := make(map[string]string)
+
+	// Model CRs that translated successfully, index-aligned with doc.Models: the
+	// alias adjudication post-pass maps each rendered model back to its CR to
+	// pick the winner per contested alias and patch the losers' statuses.
+	// translatedModelCRs[i] is the CR of doc.Models[i].
+	translatedModelCRs := make([]*aiconfigurationv1alpha1.AIGatewayModel, 0, 4)
 
 	// The list is ordered so every kind translates after all the kinds it references:
 	// checkTranslatedRefs inside the converting wrappers relies on the referenced kinds'
@@ -342,6 +387,7 @@ func BuildDocument(
 				if err := checkTranslatedRefs(translatedModelProviders, "AIGatewayModelProvider", embeddingsProvider); err != nil {
 					return nil, err
 				}
+				translatedModelCRs = append(translatedModelCRs, m)
 				return model, nil
 			},
 			&doc.Models),
@@ -561,6 +607,66 @@ func BuildDocument(
 			}
 		}
 		doc.MCPServers = kept
+	}
+
+	// Model aliases share one name space: two models claiming one alias render
+	// identically named ai_models rows, and the data plane rejects the whole
+	// import. Claim aliases in creation order (tie: namespace/name), so a model
+	// created later can never displace a programmed one, which the translate
+	// order (namespace/name) would allow. A model is excluded only when an
+	// alias is already held by a kept model. Disabled models claim nothing:
+	// the converter renders no ai_models rows for them. See
+	// ai-deck-converter#248.
+	if len(doc.Models) > 1 {
+		order := make([]int, len(doc.Models))
+		for i := range order {
+			order[i] = i
+		}
+		slices.SortFunc(order, func(a, b int) int {
+			ca, cb := translatedModelCRs[a], translatedModelCRs[b]
+			return cmp.Or(
+				ca.CreationTimestamp.Compare(cb.CreationTimestamp.Time),
+				cmp.Compare(ca.Namespace, cb.Namespace),
+				cmp.Compare(ca.Name, cb.Name),
+			)
+		})
+		owner := make(map[string]string) // alias → claiming CR name
+		exclude := make(map[int]*ModelAliasConflictError)
+		for _, i := range order {
+			if m := &doc.Models[i]; m.Enabled != nil && !*m.Enabled {
+				continue
+			}
+			aliases := modelAliases(&doc.Models[i])
+			// Find the first alias of this model that a kept model already
+			// claims. If one exists, exclude this model.
+			claimed := func(a string) bool { _, ok := owner[a]; return ok }
+			if j := slices.IndexFunc(aliases, claimed); j >= 0 {
+				exclude[i] = &ModelAliasConflictError{Alias: aliases[j], First: owner[aliases[j]]}
+				continue
+			}
+			for _, a := range aliases {
+				owner[a] = translatedModelCRs[i].Name
+			}
+		}
+		if len(exclude) > 0 {
+			kept := make([]aigw.Model, 0, len(doc.Models)-len(exclude))
+			for i := range doc.Models {
+				conflict, loser := exclude[i]
+				if !loser {
+					kept = append(kept, doc.Models[i])
+					continue
+				}
+				// The status reported success during translation: patch it in
+				// place, as the MCPServer sources pass does.
+				cr := translatedModelCRs[i]
+				for j := range statuses {
+					if statuses[j].Obj == cr {
+						statuses[j].Err = fmt.Errorf("converting %T %s: %w", cr, client.ObjectKeyFromObject(cr), conflict)
+					}
+				}
+			}
+			doc.Models = kept
+		}
 	}
 
 	return doc, statuses, nil
