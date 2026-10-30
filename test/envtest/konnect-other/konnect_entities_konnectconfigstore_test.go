@@ -64,7 +64,7 @@ func TestKonnectConfigStore(t *testing.T) {
 
 		t.Log("Setting up SDK expectations on KonnectConfigStore creation")
 		sdk.ConfigStoresSDK.EXPECT().
-			CreateConfigStore(mock.Anything, cp.GetKonnectID(), mock.Anything).
+			CreateConfigStore(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.CreateConfigStoreRequest) bool { return r.ControlPlaneID == cp.GetKonnectID() })).
 			Return(&sdkkonnectops.CreateConfigStoreResponse{
 				ConfigStore: &sdkkonnectcomp.ConfigStore{
 					ID: new(configStoreID),
@@ -118,7 +118,7 @@ func TestKonnectConfigStore(t *testing.T) {
 		w := envtest.SetupWatch[konnectv1alpha1.KonnectConfigStoreList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		sdk.ConfigStoresSDK.EXPECT().
-			CreateConfigStore(mock.Anything, cp.GetKonnectID(), mock.Anything).
+			CreateConfigStore(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.CreateConfigStoreRequest) bool { return r.ControlPlaneID == cp.GetKonnectID() })).
 			Return(&sdkkonnectops.CreateConfigStoreResponse{
 				ConfigStore: &sdkkonnectcomp.ConfigStore{
 					ID: new(configStoreID),
@@ -173,7 +173,7 @@ func TestKonnectConfigStore(t *testing.T) {
 		w := envtest.SetupWatch[konnectv1alpha1.KonnectConfigStoreList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		sdk.ConfigStoresSDK.EXPECT().
-			CreateConfigStore(mock.Anything, cp.GetKonnectID(), mock.Anything).
+			CreateConfigStore(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.CreateConfigStoreRequest) bool { return r.ControlPlaneID == cp.GetKonnectID() })).
 			Return(&sdkkonnectops.CreateConfigStoreResponse{
 				ConfigStore: &sdkkonnectcomp.ConfigStore{
 					ID: new(configStoreID),

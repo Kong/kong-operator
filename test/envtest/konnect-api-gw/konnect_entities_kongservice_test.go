@@ -97,7 +97,7 @@ func TestKongService(t *testing.T) {
 			).
 			Return(
 				&sdkkonnectops.CreateServiceResponse{
-					Service: &sdkkonnectcomp.Service{
+					Service: &sdkkonnectcomp.ServiceOutput{
 						ID: new(serviceID),
 					},
 				},
@@ -268,7 +268,7 @@ func TestKongService(t *testing.T) {
 			).
 			Return(
 				&sdkkonnectops.CreateServiceResponse{
-					Service: &sdkkonnectcomp.Service{
+					Service: &sdkkonnectcomp.ServiceOutput{
 						ID: new(id),
 					},
 				},
@@ -324,7 +324,7 @@ func TestKongService(t *testing.T) {
 			).
 			Return(
 				&sdkkonnectops.CreateServiceResponse{
-					Service: &sdkkonnectcomp.Service{
+					Service: &sdkkonnectcomp.ServiceOutput{
 						ID: new(id),
 					},
 				},
@@ -362,7 +362,7 @@ func TestKongService(t *testing.T) {
 				return r.ServiceID == id && r.ServiceRequest.ServiceWithHost.Host == host
 			})).
 			Return(&sdkkonnectops.UpsertServiceResponse{
-				Service: &sdkkonnectcomp.Service{
+				Service: &sdkkonnectcomp.ServiceOutput{
 					ID: new(id2),
 				},
 			}, nil)
@@ -393,7 +393,7 @@ func TestKongService(t *testing.T) {
 			mock.Anything, sdkkonnectops.GetServiceRequest{ControlPlaneID: cp.GetKonnectID(), ServiceID: serviceKonnectID},
 		).Return(
 			&sdkkonnectops.GetServiceResponse{
-				Service: &sdkkonnectcomp.Service{
+				Service: &sdkkonnectcomp.ServiceOutput{
 					ID:   new(serviceKonnectID),
 					Host: "example.com",
 				},
@@ -476,7 +476,7 @@ func TestKongService(t *testing.T) {
 			mock.Anything, sdkkonnectops.GetServiceRequest{ControlPlaneID: cp.GetKonnectID(), ServiceID: serviceKonnectID},
 		).Return(
 			&sdkkonnectops.GetServiceResponse{
-				Service: &sdkkonnectcomp.Service{
+				Service: &sdkkonnectcomp.ServiceOutput{
 					ID:   new(serviceKonnectID),
 					Host: "example.com",
 					Tags: []string{
@@ -565,7 +565,7 @@ func TestKongService(t *testing.T) {
 			).
 			Return(
 				&sdkkonnectops.CreateServiceResponse{
-					Service: &sdkkonnectcomp.Service{
+					Service: &sdkkonnectcomp.ServiceOutput{
 						ID: new(id),
 					},
 				},
@@ -638,7 +638,7 @@ func TestKongService(t *testing.T) {
 			).
 			Return(
 				&sdkkonnectops.CreateServiceResponse{
-					Service: &sdkkonnectcomp.Service{
+					Service: &sdkkonnectcomp.ServiceOutput{
 						ID: new(id),
 					},
 				},
@@ -768,7 +768,7 @@ func TestKongService(t *testing.T) {
 			).
 			Return(
 				&sdkkonnectops.CreateServiceResponse{
-					Service: &sdkkonnectcomp.Service{
+					Service: &sdkkonnectcomp.ServiceOutput{
 						ID: new(serviceID),
 					},
 				},

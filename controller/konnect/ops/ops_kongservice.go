@@ -235,7 +235,7 @@ func getKongServiceForUID(
 
 // serviceMatch compares the existing service fetched from Konnect and the spec of the KongService
 // for adopting in match mode.
-func serviceMatch(konnectService *sdkkonnectcomp.Service, svc *configurationv1alpha1.KongService) bool {
+func serviceMatch(konnectService *sdkkonnectcomp.ServiceOutput, svc *configurationv1alpha1.KongService) bool {
 	spec := svc.Spec
 	specProtocol := sdkkonnectcomp.ServiceProtocol(spec.Protocol)
 	if spec.URL != nil {

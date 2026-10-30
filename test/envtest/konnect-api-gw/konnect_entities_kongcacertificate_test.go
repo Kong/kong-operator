@@ -64,10 +64,11 @@ func TestKongCACertificate(t *testing.T) {
 	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
 	t.Log("Setting up SDK expectations on KongCACertificate creation")
-	sdk.CACertificatesSDK.EXPECT().CreateCaCertificate(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-		mock.MatchedBy(func(input sdkkonnectcomp.CACertificate) bool {
-			return input.Cert == deploy.TestValidCACertPEM &&
-				slices.Contains(input.Tags, tagName)
+	sdk.CACertificatesSDK.EXPECT().CreateCaCertificate(mock.Anything,
+		mock.MatchedBy(func(r sdkkonnectops.CreateCaCertificateRequest) bool {
+			return r.ControlPlaneID == cp.GetKonnectStatus().GetKonnectID() &&
+				r.CACertificate.Cert == deploy.TestValidCACertPEM &&
+				slices.Contains(r.CACertificate.Tags, tagName)
 		}),
 	).Return(&sdkkonnectops.CreateCaCertificateResponse{
 		CACertificate: &sdkkonnectcomp.CACertificate{
@@ -114,7 +115,7 @@ func TestKongCACertificate(t *testing.T) {
 	envtest.EventuallyAssertSDKExpectations(t, factory.SDK.CACertificatesSDK, consts.WaitTime, consts.TickTime)
 
 	t.Log("Setting up SDK expectations on KongCACertificate deletion")
-	sdk.CACertificatesSDK.EXPECT().DeleteCaCertificate(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), "12345").
+	sdk.CACertificatesSDK.EXPECT().DeleteCaCertificate(mock.Anything, sdkkonnectops.DeleteCaCertificateRequest{ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(), CACertificateID: "12345"}).
 		Return(&sdkkonnectops.DeleteCaCertificateResponse{}, nil)
 
 	t.Log("Deleting KongCACertificate")
@@ -130,10 +131,11 @@ func TestKongCACertificate(t *testing.T) {
 		t.Log("Setup mock SDK for creating CA certificate and listing CA certificates by UID")
 		cpID := cp.GetKonnectStatus().GetKonnectID()
 		sdk.CACertificatesSDK.EXPECT().
-			CreateCaCertificate(mock.Anything, cpID,
-				mock.MatchedBy(func(input sdkkonnectcomp.CACertificate) bool {
-					return input.Cert == deploy.TestValidCACertPEM &&
-						slices.Contains(input.Tags, conflictingTagName)
+			CreateCaCertificate(mock.Anything,
+				mock.MatchedBy(func(r sdkkonnectops.CreateCaCertificateRequest) bool {
+					return r.ControlPlaneID == cpID &&
+						r.CACertificate.Cert == deploy.TestValidCACertPEM &&
+						slices.Contains(r.CACertificate.Tags, conflictingTagName)
 				}),
 			).
 			Return(nil,
@@ -195,9 +197,8 @@ func TestKongCACertificate(t *testing.T) {
 		sdk.CACertificatesSDK.EXPECT().
 			CreateCaCertificate(
 				mock.Anything,
-				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.CACertificate) bool {
-					return slices.Contains(req.Tags, "tag1")
+				mock.MatchedBy(func(req sdkkonnectops.CreateCaCertificateRequest) bool {
+					return req.ControlPlaneID == cp.GetKonnectID() && slices.Contains(req.CACertificate.Tags, "tag1")
 				}),
 			).
 			Return(
@@ -240,8 +241,7 @@ func TestKongCACertificate(t *testing.T) {
 		t.Log("Setting up SDK expectations on getting and updating CA certificates")
 		sdk.CACertificatesSDK.EXPECT().GetCaCertificate(
 			mock.Anything,
-			caCertID,
-			cp.GetKonnectID(),
+			sdkkonnectops.GetCaCertificateRequest{CACertificateID: caCertID, ControlPlaneID: cp.GetKonnectID()},
 		).Return(&sdkkonnectops.GetCaCertificateResponse{
 			CACertificate: &sdkkonnectcomp.CACertificate{
 				Cert: "test-cert",
@@ -271,7 +271,7 @@ func TestKongCACertificate(t *testing.T) {
 		)
 
 		t.Log("Setting up SDK expecatations on CA certificate deletion")
-		sdk.CACertificatesSDK.EXPECT().DeleteCaCertificate(mock.Anything, cp.GetKonnectID(), caCertID).Return(nil, nil)
+		sdk.CACertificatesSDK.EXPECT().DeleteCaCertificate(mock.Anything, sdkkonnectops.DeleteCaCertificateRequest{ControlPlaneID: cp.GetKonnectID(), CACertificateID: caCertID}).Return(nil, nil)
 
 		t.Logf("Deleting the KongCACertificate %s and waiting for it to disappear", client.ObjectKeyFromObject(createdCACert))
 		require.NoError(t, clientNamespaced.Delete(ctx, createdCACert))

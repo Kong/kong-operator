@@ -52,7 +52,7 @@ func TestCreateKongService(t *testing.T) {
 					CreateService(ctx, sdkkonnectops.CreateServiceRequest{ControlPlaneID: "123456789", ServiceRequest: kongServiceToSDKServiceInput(svc)}).
 					Return(
 						&sdkkonnectops.CreateServiceResponse{
-							Service: &sdkkonnectcomp.Service{
+							Service: &sdkkonnectcomp.ServiceOutput{
 								ID:   new("12345"),
 								Host: "example.com",
 								Name: new("svc-1"),
@@ -94,7 +94,7 @@ func TestCreateKongService(t *testing.T) {
 					})).
 					Return(
 						&sdkkonnectops.UpsertServiceResponse{
-							Service: &sdkkonnectcomp.Service{
+							Service: &sdkkonnectcomp.ServiceOutput{
 								ID: new("abcd-1234"),
 							},
 						},
@@ -400,7 +400,7 @@ func TestUpdateKongService(t *testing.T) {
 					Return(
 						&sdkkonnectops.UpsertServiceResponse{
 							StatusCode: 200,
-							Service: &sdkkonnectcomp.Service{
+							Service: &sdkkonnectcomp.ServiceOutput{
 								ID:   new("123456789"),
 								Name: new("svc-1"),
 							},
@@ -535,7 +535,7 @@ func TestAdoptKongServiceOverride(t *testing.T) {
 				sdk := mocks.NewMockServicesSDK(t)
 				sdk.EXPECT().GetService(mock.Anything, sdkkonnectops.GetServiceRequest{ServiceID: "1234", ControlPlaneID: "123456789"}).Return(
 					&sdkkonnectops.GetServiceResponse{
-						Service: &sdkkonnectcomp.Service{},
+						Service: &sdkkonnectcomp.ServiceOutput{},
 					},
 					nil,
 				)
@@ -579,7 +579,7 @@ func TestAdoptKongServiceOverride(t *testing.T) {
 				sdk := mocks.NewMockServicesSDK(t)
 				sdk.EXPECT().GetService(mock.Anything, sdkkonnectops.GetServiceRequest{ServiceID: "1234", ControlPlaneID: "123456789"}).Return(
 					&sdkkonnectops.GetServiceResponse{
-						Service: &sdkkonnectcomp.Service{},
+						Service: &sdkkonnectcomp.ServiceOutput{},
 					},
 					&sdkkonnecterrs.NotFoundError{},
 				)
@@ -622,7 +622,7 @@ func TestAdoptKongServiceOverride(t *testing.T) {
 				sdk := mocks.NewMockServicesSDK(t)
 				sdk.EXPECT().GetService(mock.Anything, sdkkonnectops.GetServiceRequest{ServiceID: "1234", ControlPlaneID: "123456789"}).Return(
 					&sdkkonnectops.GetServiceResponse{
-						Service: &sdkkonnectcomp.Service{
+						Service: &sdkkonnectcomp.ServiceOutput{
 							// different UID in tag
 							Tags: []string{"k8s-uid:abcd-0000"},
 						},

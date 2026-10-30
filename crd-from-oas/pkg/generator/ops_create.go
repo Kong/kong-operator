@@ -151,7 +151,8 @@ func (g *Generator) generateOpsCreateFuncBody(
 	// createFullyWrapped is true when create.path is in the operations package
 	// (i.e. the full request struct with path params included), which occurs for
 	// entities with multiple parent dependencies in the URL path.
-	createFullyWrapped := len(parents) >= 2
+	// shortcut: the operations-package check is for internal SDK config stores, drop with the replace.
+	createFullyWrapped := len(parents) >= 2 || strings.HasSuffix(createReqImportPath, "/models/operations")
 
 	// For fully-wrapped requests the JSON body lives under a named field on the
 	// operations wrapper; label/tag injection must target that field.
