@@ -28,7 +28,8 @@ func testGeneratedKonnectConfigStoreForSDKOps() *konnectv1alpha1.KonnectConfigSt
 		},
 		Spec: konnectv1alpha1.KonnectConfigStoreSpec{
 			APISpec: konnectv1alpha1.KonnectConfigStoreAPISpec{
-				Name: "test-value",
+				ManagedBy: konnectv1alpha1.ManagedBy{"test-key": "test-value"},
+				Name:      "test-value",
 			},
 		},
 	}
@@ -42,14 +43,14 @@ func TestCreateKonnectConfigStore_UsesSDKOpsConversion(t *testing.T) {
 	obj := testGeneratedKonnectConfigStoreForSDKOps()
 	parentID := "parentID-1"
 	obj.SetControlPlaneID(parentID)
-	expectedRequest, err := obj.Spec.APISpec.ToCreateConfigStore()
+	expectedRequest, err := obj.Spec.APISpec.ToCreateConfigStoreRequest()
 	require.NoError(t, err)
+	expectedRequest.ControlPlaneID = parentID
 	expectedID := "konnect_configstore-id"
 
 	sdk.EXPECT().
 		CreateConfigStore(
 			mock.Anything,
-			parentID,
 			*expectedRequest,
 		).
 		Return(&sdkkonnectops.CreateConfigStoreResponse{
@@ -71,14 +72,14 @@ func TestCreateKonnectConfigStore_PropagatesSDKError(t *testing.T) {
 	obj := testGeneratedKonnectConfigStoreForSDKOps()
 	parentID := "parentID-1"
 	obj.SetControlPlaneID(parentID)
-	expectedRequest, err := obj.Spec.APISpec.ToCreateConfigStore()
+	expectedRequest, err := obj.Spec.APISpec.ToCreateConfigStoreRequest()
 	require.NoError(t, err)
+	expectedRequest.ControlPlaneID = parentID
 	sdkErr := errors.New("sdk error")
 
 	sdk.EXPECT().
 		CreateConfigStore(
 			mock.Anything,
-			parentID,
 			*expectedRequest,
 		).
 		Return(nil, sdkErr).

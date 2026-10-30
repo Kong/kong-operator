@@ -114,6 +114,11 @@ var KonnectAIGatewaySDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 			"labels",
 		},
 	},
+	{
+		Path: []string{
+			"managed_by",
+		},
+	},
 }
 
 func (s *KonnectAIGatewayAPISpec) marshalSDKOpsPayload() ([]byte, error) {

@@ -128,6 +128,11 @@ var AIGatewayPolicySDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 	},
 	{
 		Path: []string{
+			"expressions",
+		},
+	},
+	{
+		Path: []string{
 			"labels",
 		},
 	},

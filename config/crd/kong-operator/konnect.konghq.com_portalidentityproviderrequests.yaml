@@ -73,6 +73,21 @@ spec:
                       oIDC:
                         description: OIDC configuration.
                         properties:
+                          backchannelLogout:
+                            description: The back-channel logout settings for the
+                              OIDC identity provider.
+                            properties:
+                              enabled:
+                                description: |-
+                                  Indicates whether back-channel logout is enabled.
+                                  When enabled, the identity provider can notify
+                                  the portal to end a user's session when they log out of the identity
+                                  provider.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                            type: object
                           claimMappings:
                             description: |-
                               Defines the mappings between OpenID Connect (OIDC) claims and local claims

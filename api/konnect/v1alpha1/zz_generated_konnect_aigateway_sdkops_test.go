@@ -15,6 +15,7 @@ func TestKonnectAIGatewayAPISpec_ToCreateAIGatewayRequest(t *testing.T) {
 		Description:        "test-value",
 		DisplayName:        "test-value",
 		Labels:             PublicLabels{"test-key": "test-value"},
+		ManagedBy:          ManagedBy{"test-key": "test-value"},
 		MinRuntimeVersion:  AIGatewayMinRuntimeVersion("test-value"),
 		Name:               "test-value",
 		RuntimeAutoUpgrade: "Enabled",
@@ -33,6 +34,7 @@ func TestKonnectAIGatewayAPISpec_ToCreateAIGatewayRequest(t *testing.T) {
 	require.Equal(t, "test-value", payload["description"])
 	require.Equal(t, "test-value", payload["display_name"])
 	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["labels"])
+	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["managed_by"])
 	require.Equal(t, "test-value", payload["min_runtime_version"])
 	require.Equal(t, "test-value", payload["name"])
 	require.Equal(t, true, payload["runtime_auto_upgrade"])
@@ -44,6 +46,7 @@ func TestKonnectAIGatewayAPISpec_ToUpdateAIGatewayRequest(t *testing.T) {
 		Description:        "test-value",
 		DisplayName:        "test-value",
 		Labels:             PublicLabels{"test-key": "test-value"},
+		ManagedBy:          ManagedBy{"test-key": "test-value"},
 		MinRuntimeVersion:  AIGatewayMinRuntimeVersion("test-value"),
 		Name:               "test-value",
 		RuntimeAutoUpgrade: "Enabled",
@@ -62,6 +65,7 @@ func TestKonnectAIGatewayAPISpec_ToUpdateAIGatewayRequest(t *testing.T) {
 	require.Equal(t, "test-value", payload["description"])
 	require.Equal(t, "test-value", payload["display_name"])
 	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["labels"])
+	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["managed_by"])
 	require.Equal(t, "test-value", payload["min_runtime_version"])
 	require.Equal(t, "test-value", payload["name"])
 	require.Equal(t, true, payload["runtime_auto_upgrade"])

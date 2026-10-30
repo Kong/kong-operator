@@ -34,6 +34,9 @@ func createAIGatewayModelProvider(
 	if req.AIGatewayModelProviderAzure != nil {
 		req.AIGatewayModelProviderAzure.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderAzure.Labels)
 	}
+	if req.AIGatewayModelProviderBaseten != nil {
+		req.AIGatewayModelProviderBaseten.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderBaseten.Labels)
+	}
 	if req.AIGatewayModelProviderBedrock != nil {
 		req.AIGatewayModelProviderBedrock.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderBedrock.Labels)
 	}
@@ -139,6 +142,9 @@ func updateAIGatewayModelProvider(
 	}
 	if req.AIGatewayModelProviderAzure != nil {
 		req.AIGatewayModelProviderAzure.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderAzure.Labels)
+	}
+	if req.AIGatewayModelProviderBaseten != nil {
+		req.AIGatewayModelProviderBaseten.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderBaseten.Labels)
 	}
 	if req.AIGatewayModelProviderBedrock != nil {
 		req.AIGatewayModelProviderBedrock.Labels = WithKubernetesMetadataLabels(obj, req.AIGatewayModelProviderBedrock.Labels)
@@ -274,6 +280,8 @@ func getAIGatewayModelProviderForUID(
 				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderAnthropic.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderAnthropic.GetLabels()
 			case entry.AIGatewayModelProviderAIGatewayModelProviderAzure != nil:
 				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderAzure.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderAzure.GetLabels()
+			case entry.AIGatewayModelProviderAIGatewayModelProviderBaseten != nil:
+				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderBaseten.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderBaseten.GetLabels()
 			case entry.AIGatewayModelProviderAIGatewayModelProviderBedrock != nil:
 				id, labels = entry.AIGatewayModelProviderAIGatewayModelProviderBedrock.GetID(), entry.AIGatewayModelProviderAIGatewayModelProviderBedrock.GetLabels()
 			case entry.AIGatewayModelProviderAIGatewayModelProviderCerebras != nil:
