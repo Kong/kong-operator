@@ -374,6 +374,13 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 // desiredHasUpstreamNamed reports whether the pre-built upstream name set contains the given name.
 // Used to decide whether a KongService's host refers to a managed upstream (and should therefore be gated
 // on it) versus an external hostname (which must not gate).
+func desiredHasUpstreamNamed(desiredUpstreamNames map[string]struct{}, name string) bool {
+	_, ok := desiredUpstreamNames[name]
+	return ok
+}
+
+// desiredClientCertificateBindingsReady reports whether each desired KongService is programmed
+// for its current generation with the expected client certificate ID.
 func desiredClientCertificateBindingsReady[t converter.RootObject](
 	ctx context.Context,
 	cl client.Client,
@@ -423,11 +430,6 @@ func desiredClientCertificateBindingsReady[t converter.RootObject](
 		}
 	}
 	return true, nil
-}
-
-func desiredHasUpstreamNamed(desiredUpstreamNames map[string]struct{}, name string) bool {
-	_, ok := desiredUpstreamNames[name]
-	return ok
 }
 
 // upstreamTargetsProgrammed reports whether every KongTarget in the pre-filtered targets slice is present
