@@ -23,6 +23,8 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -40,6 +42,8 @@ import (
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
@@ -1566,10 +1570,12 @@ func TestBuildDocument_ModelFailsWhenReferencedProviderFails(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
 	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
 
 	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
-	// A provider with a cross-namespace secretRef fails its own translation while keeping its
-	// entity name intact; the healthy pair proves the model failure stays per-entity.
+	// A provider with a cross-namespace secretRef and no KongReferenceGrant fails its own
+	// translation while keeping its entity name intact; the healthy pair proves the model
+	// failure stays per-entity.
 	brokenProvider := aiGatewayModelProviderFixture("provider-broken")
 	brokenProvider.Spec.APISpec.Openai.Config.Auth.Headers = []aiconfigurationv1alpha1.AIGatewayModelProviderConfigAuthBasicHeaders{{
 		Name: "Authorization",
@@ -1606,9 +1612,12 @@ func TestBuildDocument_ModelFailsWhenReferencedProviderFails(t *testing.T) {
 	require.Equal(t, "provider-healthy", doc.Models[0].TargetModels[0].Provider)
 
 	require.Len(t, statuses, 4)
-	require.Contains(t, findStatusByName(t, statuses, "provider-broken").Err.Error(), "cross-namespace secretRef")
+	require.Contains(t, findStatusByName(t, statuses, "provider-broken").Err.Error(), "is not granted by any KongReferenceGrant")
 	require.Contains(t, findStatusByName(t, statuses, "model-broken").Err.Error(),
 		`referenced AIGatewayModelProvider "provider-broken" was excluded from the document`)
+	// The grant denial and the exclusion it causes only fail their entities, not the gateway.
+	require.True(t, IsEntityScopedFailure(findStatusByName(t, statuses, "provider-broken").Err))
+	require.True(t, IsEntityScopedFailure(findStatusByName(t, statuses, "model-broken").Err))
 	require.NoError(t, findStatusByName(t, statuses, "model-healthy").Err)
 }
 
@@ -1664,10 +1673,11 @@ func TestBuildDocument_ConsumerFailsWhenReferencedPolicyFails(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
 	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
 
 	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
-	// A policy with a cross-namespace secretRef fails its own translation while keeping its
-	// entity name intact.
+	// A policy with a cross-namespace secretRef and no KongReferenceGrant fails its own
+	// translation while keeping its entity name intact.
 	brokenPolicy := aiGatewayPolicyFixture("policy-broken")
 	brokenPolicy.Spec.APISpec.Config = aiconfigurationv1alpha1.AIGatewayPolicyConfigDataSource{
 		Type:      aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
@@ -1716,7 +1726,7 @@ func TestBuildDocument_ConsumerFailsWhenReferencedPolicyFails(t *testing.T) {
 	require.Empty(t, doc.Consumers[0].Credentials)
 
 	require.Len(t, statuses, 5)
-	require.Contains(t, findStatusByName(t, statuses, "policy-broken").Err.Error(), "cross-namespace secretRef")
+	require.Contains(t, findStatusByName(t, statuses, "policy-broken").Err.Error(), "is not granted by any KongReferenceGrant")
 	require.Contains(t, findStatusByName(t, statuses, "consumer-broken").Err.Error(),
 		`referenced AIGatewayPolicy "policy-broken" was excluded from the document`)
 	require.NoError(t, findStatusByName(t, statuses, "consumer-healthy").Err)
@@ -1739,10 +1749,11 @@ func TestBuildDocument_ConsumerGroupFailsWhenReferencedPolicyFails(t *testing.T)
 	scheme := runtime.NewScheme()
 	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
 	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
 
 	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
-	// A policy with a cross-namespace secretRef fails its own translation while keeping its
-	// entity name intact.
+	// A policy with a cross-namespace secretRef and no KongReferenceGrant fails its own
+	// translation while keeping its entity name intact.
 	brokenPolicy := aiGatewayPolicyFixture("policy-broken")
 	brokenPolicy.Spec.APISpec.Config = aiconfigurationv1alpha1.AIGatewayPolicyConfigDataSource{
 		Type:      aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
@@ -1767,7 +1778,7 @@ func TestBuildDocument_ConsumerGroupFailsWhenReferencedPolicyFails(t *testing.T)
 	require.Equal(t, []string{"policy-healthy"}, doc.ConsumerGroups[0].Policies)
 
 	require.Len(t, statuses, 4)
-	require.Contains(t, findStatusByName(t, statuses, "policy-broken").Err.Error(), "cross-namespace secretRef")
+	require.Contains(t, findStatusByName(t, statuses, "policy-broken").Err.Error(), "is not granted by any KongReferenceGrant")
 	require.Contains(t, findStatusByName(t, statuses, "group-broken").Err.Error(),
 		`referenced AIGatewayPolicy "policy-broken" was excluded from the document`)
 	require.NoError(t, findStatusByName(t, statuses, "group-healthy").Err)
@@ -1782,10 +1793,11 @@ func TestBuildDocument_AgentFailsWhenReferencedAuthStrategyFails(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
 	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
 
 	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
-	// An auth strategy with a cross-namespace secretRef fails its own translation while
-	// keeping its entity name intact.
+	// An auth strategy with a cross-namespace secretRef and no KongReferenceGrant fails its
+	// own translation while keeping its entity name intact.
 	brokenAuthStrategy := &aiconfigurationv1alpha1.AIGatewayAuthStrategy{
 		Name: "auth-strategy-broken", Namespace: "default",
 		Spec: aiconfigurationv1alpha1.AIGatewayAuthStrategySpec{
@@ -1835,7 +1847,7 @@ func TestBuildDocument_AgentFailsWhenReferencedAuthStrategyFails(t *testing.T) {
 	require.Equal(t, "agent-healthy", doc.Agents[0].Name)
 
 	require.Len(t, statuses, 6)
-	require.Contains(t, findStatusByName(t, statuses, "auth-strategy-broken").Err.Error(), "cross-namespace secretRef")
+	require.Contains(t, findStatusByName(t, statuses, "auth-strategy-broken").Err.Error(), "is not granted by any KongReferenceGrant")
 	require.Contains(t, findStatusByName(t, statuses, "agent-broken").Err.Error(),
 		`referenced AIGatewayAuthStrategy "auth-strategy-broken" was excluded from the document`)
 	require.NoError(t, findStatusByName(t, statuses, "agent-healthy").Err)
@@ -2057,4 +2069,55 @@ func TestBuildDocument_MCPServerDuplicateEntityNameRejected(t *testing.T) {
 	require.Contains(t, findStatusByName(t, statuses, "mcp-dup-b").Err.Error(),
 		`duplicate AIGatewayMCPServer entity name "mcp-dup"`)
 	require.NoError(t, findStatusByName(t, statuses, "mcp-dup-a").Err)
+}
+
+func TestIsEntityScopedFailure(t *testing.T) {
+	notGranted := &crossnamespace.ReferenceNotGrantedError{ToNamespace: "secrets", ToName: "creds"}
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{name: "model alias conflict", err: fmt.Errorf("converting: %w", &ModelAliasConflictError{Alias: "a", First: "m"}), want: true},
+		{name: "cross-namespace reference not granted", err: fmt.Errorf("converting: %w", notGranted), want: true},
+		{
+			name: "reference to an entity excluded for a reference not granted",
+			err:  &ReferencedEntityExcludedError{Kind: "AIGatewayPolicy", Name: "p", Cause: fmt.Errorf("converting: %w", notGranted)},
+			want: true,
+		},
+		{
+			name: "reference to an entity excluded for another failure",
+			err:  &ReferencedEntityExcludedError{Kind: "AIGatewayPolicy", Name: "p", Cause: errors.New("missing key")},
+		},
+		{name: "reference to an entity never translated", err: &ReferencedEntityExcludedError{Kind: "AIGatewayPolicy", Name: "p"}},
+		{name: "other failure", err: errors.New("spec.apiSpec is required")},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.want, IsEntityScopedFailure(tt.err))
+		})
+	}
+}
+
+func TestTranslatedNamesRecord(t *testing.T) {
+	failure := errors.New("failure")
+	names := make(translatedNames)
+
+	names.record("failed-then-ok", failure)
+	names.record("failed-then-ok", nil)
+	names.record("ok-then-failed", nil)
+	names.record("ok-then-failed", failure)
+	names.record("failed", failure)
+	names.record("failed", errors.New("later failure"))
+
+	// A success wins: the document holds an entity of that name.
+	require.NoError(t, checkTranslatedRefs(names, "AIGatewayPolicy", []string{"failed-then-ok", "ok-then-failed"}))
+
+	err := checkTranslatedRefs(names, "AIGatewayPolicy", []string{"failed"})
+	require.ErrorIs(t, err, failure, "the first failure is kept as the cause")
+	require.EqualError(t, err, `referenced AIGatewayPolicy "failed" was excluded from the document: its own translation failed`)
+
+	err = checkTranslatedRefs(names, "AIGatewayPolicy", []string{"unknown"})
+	require.Error(t, err)
+	require.NoError(t, errors.Unwrap(err))
 }

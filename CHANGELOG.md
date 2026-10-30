@@ -312,6 +312,8 @@
   reported by the AI Gateway configuration converter are also emitted as
   Warning events on the OnPremAIGateway.
   [#6051](https://github.com/Kong/kong-operator/pull/6051)
+- OnPremAIGateway: support for cross-namespace references to Secrets.
+  [#6362](https://github.com/Kong/kong-operator/pull/6362)
 - Event Gateway: `EventGatewayBackendCluster`, `EventGatewayDataPlaneCertificate`,
   `EventGatewayListener`, `EventGatewaySchemaRegistry`, `EventGatewayStaticKey`
   and `EventGatewayTLSTrustBundle` gained `spec.parentRef`, a reference to the

@@ -260,3 +260,34 @@ func TestSecretReconcilerSkipsUnnotifiableCredentialRefs(t *testing.T) {
 	require.NoError(t, err)
 	requireNoChange(t, cn.NotifyChannel())
 }
+
+// A cross-namespace secretRef points at a Secret outside the entity's namespace, so a
+// change to that Secret must notify the entity too.
+func TestSecretReconcilerNotifiesCrossNamespaceReferrers(t *testing.T) {
+	const secretName = "client-secret"
+	crossNamespaceRefStrategy := onPremAuthStrategyWithSecretRef("strat", secretName)
+	crossNamespaceRefStrategy.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect.Config.ClientSecret[0].
+		SecretRef.Namespace = new("secrets")
+	cred := consumerCredential("cred", "consumer", secretName)
+	cred.Spec.APISpec.APIKey.SecretRef.Namespace = new("secrets")
+
+	cn := changenotifier.New()
+	defer cn.Close()
+	cl := newReconcilerClient(t, crossNamespaceRefStrategy, onPremConsumer("consumer", "gw"), cred)
+	r := &SecretReconciler{Client: cl, Log: logr.Discard(), ChangeNotifier: cn}
+	ch := cn.NotifyChannel()
+
+	_, err := r.Reconcile(t.Context(), ctrl.Request{Namespace: "secrets", Name: secretName})
+	require.NoError(t, err)
+	notified := []string{
+		client.ObjectKeyFromObject(waitForChange(t, ch).Object).String(),
+		client.ObjectKeyFromObject(waitForChange(t, ch).Object).String(),
+	}
+	require.ElementsMatch(t, []string{"default/strat", "default/consumer"}, notified)
+	requireNoChange(t, ch)
+
+	// The same Secret name in the entity's namespace is not referenced.
+	_, err = r.Reconcile(t.Context(), ctrl.Request{Namespace: "default", Name: secretName})
+	require.NoError(t, err)
+	requireNoChange(t, ch)
+}

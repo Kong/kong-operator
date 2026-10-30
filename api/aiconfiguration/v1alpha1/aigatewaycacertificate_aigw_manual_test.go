@@ -18,6 +18,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
 // genCACertPEM returns a self-signed CA certificate PEM with the given validity window.
@@ -47,6 +49,7 @@ func TestAIGatewayCACertificate_ToAIGWCACertificate(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, AddToScheme(scheme))
 	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
 
 	now := time.Now()
 	validCert := genCACertPEM(t, now.Add(-time.Hour), now.AddDate(1, 0, 0))
@@ -109,7 +112,7 @@ func TestAIGatewayCACertificate_ToAIGWCACertificate(t *testing.T) {
 			},
 		},
 		{
-			name: "cross-namespace secretRef rejected",
+			name: "cross-namespace secretRef without KongReferenceGrant rejected",
 			obj: &AIGatewayCACertificate{
 				Name: "sample-ai-gw-ca-cert-cross-ns", Namespace: "default",
 				Spec: AIGatewayCACertificateSpec{
@@ -126,7 +129,7 @@ func TestAIGatewayCACertificate_ToAIGWCACertificate(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "cross-namespace secretRef",
+			wantErr: "is not granted by any KongReferenceGrant",
 		},
 		{
 			name: "unset spec.apiSpec rejected",

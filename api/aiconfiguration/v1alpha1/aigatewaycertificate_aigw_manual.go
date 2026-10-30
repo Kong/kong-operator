@@ -22,7 +22,7 @@ func (obj *AIGatewayCertificate) ToAIGWCertificate(ctx context.Context, cl clien
 		return nil, fmt.Errorf("AIGatewayCertificate %s/%s: spec.apiSpec is required", obj.Namespace, obj.Name)
 	}
 
-	if err := rejectCrossNamespaceSecretRefs(obj); err != nil {
+	if err := checkCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
 		return nil, fmt.Errorf("AIGatewayCertificate %s/%s: %w", obj.Namespace, obj.Name, err)
 	}
 
