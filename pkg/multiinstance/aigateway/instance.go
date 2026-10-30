@@ -458,7 +458,7 @@ func (i *Instance) sendConfig(
 	// The translation outcome is fully known here: report it before the push, so
 	// that push failures - which belong to the DataPlanesConfigured condition -
 	// do not alter it.
-	i.reportTranslationStatus(ctx, *gw, nil, failures, warnings)
+	warnings = i.reportTranslationStatus(ctx, *gw, nil, failures, warnings)
 
 	pushed, err := i.sendConfigToDataPlanes(ctx, *gw, payload)
 	if err != nil {

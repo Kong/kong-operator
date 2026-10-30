@@ -33,8 +33,11 @@ func TestBackoff(t *testing.T) {
 		return d
 	}
 	assert.Zero(t, wait("inputs", now), "never failed")
+	assert.False(t, b.Failing("object", "inputs"))
 
 	assert.Equal(t, defaultBackoffBase, b.Failed("object", "inputs", failed, now))
+	assert.True(t, b.Failing("object", "inputs"))
+	assert.False(t, b.Failing("object", "other inputs"))
 	d, err := b.Wait("object", "inputs", now)
 	assert.Equal(t, defaultBackoffBase, d)
 	assert.Equal(t, failed, err, "the error of the last push that failed")
@@ -42,6 +45,7 @@ func TestBackoff(t *testing.T) {
 	_, err = b.Wait("object", "inputs", now.Add(defaultBackoffBase))
 	assert.NoError(t, err, "waited long enough: nothing to report")
 	assert.Zero(t, wait("inputs", now.Add(defaultBackoffBase)))
+	assert.True(t, b.Failing("object", "inputs"), "failing until pushed, waiting or not")
 
 	b.Failed("object", "inputs", failed, now)
 	assert.Equal(t, 2*defaultBackoffBase, wait("inputs", now), "it doubles")
@@ -55,4 +59,7 @@ func TestBackoff(t *testing.T) {
 
 	b.Forget("object")
 	assert.Zero(t, wait("other inputs", now), "pushed")
+	assert.False(t, b.Failing("object", "other inputs"))
+	b.Failed("object", "inputs", nil, now)
+	assert.False(t, b.Failing("object", "inputs"), "a push pending didn't fail")
 }

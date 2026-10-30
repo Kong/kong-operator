@@ -92,6 +92,15 @@ func (b *Backoff) Failed(object types.UID, inputs string, err error, now time.Ti
 	return delay
 }
 
+// Failing reports whether the last push of the object with these inputs
+// failed, waiting or not: e.g. to report a failure once, not on every retry.
+func (b *Backoff) Failing(object types.UID, inputs string) bool {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	e, ok := b.byObject[object]
+	return ok && e.inputs == inputs && e.err != nil
+}
+
 // Forget forgets the failures of the object, e.g. once it is pushed.
 func (b *Backoff) Forget(object types.UID) {
 	b.mu.Lock()

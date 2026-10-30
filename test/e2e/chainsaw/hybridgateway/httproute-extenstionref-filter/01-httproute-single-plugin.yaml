@@ -11,6 +11,10 @@ plugin: rate-limiting
 config:
   minute: 1000
   policy: local
+ordering:
+  before:
+    access:
+      - key-auth
 ---
 kind: HTTPRoute
 apiVersion: gateway.networking.k8s.io/v1

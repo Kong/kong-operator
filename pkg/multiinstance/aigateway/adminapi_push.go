@@ -39,6 +39,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	adminapi "github.com/kong/kong-operator/v2/internal/adminapi"
+	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/translator"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
@@ -305,13 +306,33 @@ func (i *Instance) reportPushStatus(
 // once the push has run, so that a failing push does not re-emit them on every
 // retry (they are reported again on the next successful push anyway, because
 // the sync re-translates the configuration on every tick).
+// Returns the effective warnings: the caller's warnings plus one text per
+// conflict failure, so that every warning counted in the condition message is
+// also emitted by the caller's reportTranslationWarnings call.
 func (i *Instance) reportTranslationStatus(
 	ctx context.Context,
 	gwNN types.NamespacedName,
 	renderErr error,
 	entityFailures []EntityFailure,
 	warnings []string,
-) {
+) []string {
+	// Entity failures carrying a translator conflict marker (the model-alias
+	// routing conflict) are surfaced as warnings instead of failures: the
+	// offending entity is excluded from the document and reports the conflict on
+	// its own status, but the rest of the configuration translated and pushed
+	// fine, so the gateway's aggregated ConfigurationTranslated condition stays
+	// True and the gateway — and its data planes — become Ready
+	// (see ai-deck-converter#248).
+	realFailures := make([]EntityFailure, 0, len(entityFailures))
+	for _, f := range entityFailures {
+		if _, ok := errors.AsType[*translator.ModelAliasConflictError](f.Err); ok {
+			warnings = append(warnings, i.entityFailureDesc(f))
+			continue
+		}
+		realFailures = append(realFailures, f)
+	}
+	entityFailures = realFailures
+
 	failureMessages := make([]string, 0, len(entityFailures)+1)
 	if renderErr != nil {
 		failureMessages = append(failureMessages, renderErr.Error())
@@ -350,7 +371,7 @@ func (i *Instance) reportTranslationStatus(
 		log.Error(i.logger, err, "failed to report the configuration translation result on the OnPremAIGateway status")
 	}
 	if i.eventRecorder == nil {
-		return
+		return warnings
 	}
 	// Only emit the failure event when the condition actually changed, so that
 	// recurring failures on the retry loop do not spam the event recorder. A
@@ -372,6 +393,7 @@ func (i *Instance) reportTranslationStatus(
 		// warnings here instead of waiting for a push that never comes.
 		i.reportTranslationWarnings(gwNN, warnings)
 	}
+	return warnings
 }
 
 // reportTranslationWarnings logs the given converter warnings and emits a

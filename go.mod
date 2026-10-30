@@ -21,14 +21,14 @@ require (
 	github.com/gohugoio/hashstructure v1.1.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.22.1
-	github.com/google/pprof v0.0.0-20261016150608-1facf8f91b50
+	github.com/google/pprof v0.0.0-20261026192309-dbd0ed30aa88
 	github.com/google/uuid v1.6.0
 	github.com/gruntwork-io/terratest v1.0.1
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/jpillora/backoff v1.0.0
 	github.com/kong/go-database-reconciler v1.42.5
-	github.com/kong/go-kong v0.79.0
+	github.com/kong/go-kong v0.80.0
 	github.com/kong/kubernetes-telemetry v0.1.14
 	github.com/kong/kubernetes-testing-framework v0.53.0
 	github.com/kong/semver/v4 v4.0.1
