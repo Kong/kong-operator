@@ -34,10 +34,10 @@ func createCACertificate(
 		return err
 	}
 
-	resp, err := sdk.CreateCaCertificate(ctx,
-		cpID,
-		input,
-	)
+	resp, err := sdk.CreateCaCertificate(ctx, sdkkonnectops.CreateCaCertificateRequest{
+		ControlPlaneID: cpID,
+		CACertificate:  input,
+	})
 
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
@@ -101,7 +101,10 @@ func deleteCACertificate(
 	cert *configurationv1alpha1.KongCACertificate,
 ) error {
 	id := cert.Status.Konnect.GetKonnectID()
-	_, err := sdk.DeleteCaCertificate(ctx, cert.GetControlPlaneID(), id)
+	_, err := sdk.DeleteCaCertificate(ctx, sdkkonnectops.DeleteCaCertificateRequest{
+		ControlPlaneID:  cert.GetControlPlaneID(),
+		CACertificateID: id,
+	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, cert); errWrap != nil {
 		return handleDeleteError(ctx, err, cert)
 	}
@@ -123,7 +126,10 @@ func adoptCACertificate(
 	adoptOptions := cert.Spec.Adopt
 	konnectID := adoptOptions.Konnect.ID
 
-	resp, err := sdk.GetCaCertificate(ctx, konnectID, cpID)
+	resp, err := sdk.GetCaCertificate(ctx, sdkkonnectops.GetCaCertificateRequest{
+		CACertificateID: konnectID,
+		ControlPlaneID:  cpID,
+	})
 	if err != nil {
 		return KonnectEntityAdoptionFetchError{
 			KonnectID: konnectID,

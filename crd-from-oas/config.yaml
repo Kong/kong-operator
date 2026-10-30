@@ -1570,7 +1570,7 @@ apiGroupVersions:
               - objectField: Spec.APISpec.Name
                 responseField: GetName()
           create:
-            path: github.com/Kong/sdk-konnect-go/models/components.CreateConfigStore
+            path: github.com/Kong/sdk-konnect-go/models/operations.CreateConfigStoreRequest
           update:
             path: github.com/Kong/sdk-konnect-go/models/operations.UpdateConfigStoreRequest
           delete:
