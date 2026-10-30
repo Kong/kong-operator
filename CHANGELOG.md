@@ -599,7 +599,7 @@
 
 ### Changed
 
-- Bumped `sdk-konnect-go` to `v0.77.0`. Konnect core entities (`KongService`,
+- Bumped `sdk-konnect-go` to `v0.78.0`. Konnect core entities (`KongService`,
   `KongRoute`, `KongConsumer`, `KongConsumerGroup`, `KongPluginBinding`,
   `KongCertificate`, `KongKey`, `KongKeySet`, `KongUpstream`, `KongVault`) are
   now created, read and deleted through the workspace-scoped

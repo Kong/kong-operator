@@ -207,7 +207,7 @@ type Theme struct {
 	// +kubebuilder:validation:Enum=light;dark;system
 	Mode string `json:"mode,omitzero"`
 	// The theme name to apply to this portal.
-	// Supported names are 'ocean', 'mesa', and 'grove'.
+	// Supported names are 'mesa', 'grove', 'pebble', or 'ocean'.
 	// If another name is provided or this property is omitted, the portal uses the
 	// default 'ocean' theme.
 	//
