@@ -277,7 +277,7 @@ func (s *ConfigSynchronizer) uploadConfig(
 		nil,
 		targetContent.IsFallback,
 	)
-	// Only record the round when the configuration was actually synchronized with Konnect, i.e. not when it was
+	// Only record the round when the DB-mode update was attempted, i.e. not when it was
 	// skipped because of no configuration change or because of the backoff strategy.
 	if syncStats.Attempted {
 		s.recordSyncRound(client, targetContent, syncStats, time.Since(roundStart), err)
