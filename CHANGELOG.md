@@ -632,6 +632,14 @@
   TLS Passthrough Listeners ignore certificate references without creating or
   waiting for certificate bindings.
   [#6233](https://github.com/Kong/kong-operator/pull/6233)
+- Konnect: the Cloud Gateway resources `KonnectCloudGatewayNetwork`,
+  `KonnectCloudGatewayTransitGateway` and
+  `KonnectCloudGatewayDataPlaneGroupConfiguration` now send their API calls to
+  the global form of the `KonnectAPIAuthConfiguration` `serverURL` (for
+  example `https://global.svc.konghq.com/api` for
+  `https://us.svc.konghq.com/api`) instead of the public global host, so they
+  can be managed over AWS PrivateLink by adding a `GLOBAL` VPC endpoint.
+  [#6110](https://github.com/Kong/kong-operator/issues/6110)
 
 ### Changed
 

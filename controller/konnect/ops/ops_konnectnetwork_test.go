@@ -49,7 +49,7 @@ func TestAdoptMatchNetworkSuccess(t *testing.T) {
 
 	sdk.CloudGatewaysSDK.
 		EXPECT().
-		GetNetwork(mock.Anything, "net-1").
+		GetNetwork(mock.Anything, "net-1", mock.Anything).
 		Return(&sdkkonnectops.GetNetworkResponse{
 			Network: &sdkkonnectcomp.Network{
 				ID:                            "net-1",
@@ -98,7 +98,7 @@ func TestAdoptMatchNetworkMismatch(t *testing.T) {
 
 	sdk.CloudGatewaysSDK.
 		EXPECT().
-		GetNetwork(mock.Anything, "net-1").
+		GetNetwork(mock.Anything, "net-1", mock.Anything).
 		Return(&sdkkonnectops.GetNetworkResponse{
 			Network: &sdkkonnectcomp.Network{
 				ID:                            "net-1",

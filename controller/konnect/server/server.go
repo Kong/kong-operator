@@ -34,7 +34,8 @@ func NewServer[T any](serverURL string) (Server, error) {
 	// NOTE: Code below tries to determine if we need a global API endpoint for the given type.
 	// Thus far there's no way to determine that programmatically (easily).
 	var t T
-	// TODO: add more types here that target the global API endpoint.
+	// Only types whose Region() nobody reads belong here (the data plane group configuration
+	// sends it as control_plane_geo); per-call global hosts use Server.GlobalURL().
 	switch any(t).(type) {
 	case konnectv1alpha1.KonnectCloudGatewayNetwork:
 		region = RegionGlobal
@@ -69,6 +70,13 @@ func (s Server) URL() string {
 // Region returns the region of the Server.
 func (s Server) Region() Region {
 	return s.region
+}
+
+// GlobalURL returns the URL of the global endpoint of the Server's domain, e.g.
+// "https://global.svc.konghq.com/api" for a Server built from "https://us.svc.konghq.com/api".
+func (s Server) GlobalURL() string {
+	s.region = RegionGlobal
+	return s.URL()
 }
 
 // Domain returns the registrable domain of the server URL, i.e. the last two

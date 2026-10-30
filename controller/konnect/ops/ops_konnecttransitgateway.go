@@ -14,12 +14,14 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	"github.com/kong/kong-operator/v2/controller/konnect/server"
 )
 
 // createKonnectTransitGateway creates a transit gateway on the Konnect side.
 func createKonnectTransitGateway(
 	ctx context.Context,
 	sdk sdkkonnectgo.CloudGatewaysSDK,
+	srv server.Server,
 	tg *konnectv1alpha1.KonnectCloudGatewayTransitGateway,
 ) error {
 	networkID := tg.GetNetworkID()
@@ -35,6 +37,7 @@ func createKonnectTransitGateway(
 	resp, err := sdk.CreateTransitGateway(
 		ctx, networkID, transitGatewaySpecToTransitGatewayInput(tg.Spec.KonnectTransitGatewayAPISpec),
 		sdkkonnectops.WithRetries(retry.Config{}),
+		sdkkonnectops.WithServerURL(srv.GlobalURL()),
 	)
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, tg); errWrap != nil {
 		return errWrap
@@ -55,6 +58,7 @@ func createKonnectTransitGateway(
 func updateKonnectTransitGateway(
 	ctx context.Context,
 	sdk sdkkonnectgo.CloudGatewaysSDK,
+	srv server.Server,
 	tg *konnectv1alpha1.KonnectCloudGatewayTransitGateway,
 ) error {
 	networkID := tg.GetNetworkID()
@@ -65,7 +69,7 @@ func updateKonnectTransitGateway(
 		}
 	}
 
-	resp, err := sdk.GetTransitGateway(ctx, networkID, tg.GetKonnectID())
+	resp, err := sdk.GetTransitGateway(ctx, networkID, tg.GetKonnectID(), sdkkonnectops.WithServerURL(srv.GlobalURL()))
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, tg); errWrap != nil {
 		return errWrap
 	}
@@ -82,6 +86,7 @@ func updateKonnectTransitGateway(
 func deleteKonnectTransitGateway(
 	ctx context.Context,
 	sdk sdkkonnectgo.CloudGatewaysSDK,
+	srv server.Server,
 	tg *konnectv1alpha1.KonnectCloudGatewayTransitGateway,
 ) error {
 	networkID := tg.GetNetworkID()
@@ -94,7 +99,10 @@ func deleteKonnectTransitGateway(
 
 	// We need to set the empty retry config to prevent using the default retry which causes failures and blocks the reconciliation:
 	// https://github.com/kong/kong-operator/issues/1521
-	resp, err := sdk.DeleteTransitGateway(ctx, networkID, tg.GetKonnectID(), sdkkonnectops.WithRetries(retry.Config{}))
+	resp, err := sdk.DeleteTransitGateway(ctx, networkID, tg.GetKonnectID(),
+		sdkkonnectops.WithRetries(retry.Config{}),
+		sdkkonnectops.WithServerURL(srv.GlobalURL()),
+	)
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, tg); errWrap != nil {
 		return errWrap
@@ -110,6 +118,7 @@ func deleteKonnectTransitGateway(
 func getKonnectTransitGatewayMatchingSpecName(
 	ctx context.Context,
 	sdk sdkkonnectgo.CloudGatewaysSDK,
+	srv server.Server,
 	tg *konnectv1alpha1.KonnectCloudGatewayTransitGateway,
 ) (string, error) {
 	networkID := tg.GetNetworkID()
@@ -127,7 +136,7 @@ func getKonnectTransitGatewayMatchingSpecName(
 				Eq: new(extractNameFromKonnectCloudGatewayTransitGatewaySpec(tg.Spec.KonnectTransitGatewayAPISpec)),
 			},
 		},
-	})
+	}, sdkkonnectops.WithServerURL(srv.GlobalURL()))
 	if err != nil {
 		return "", fmt.Errorf("failed listing %s: %w", tg.GetTypeName(), err)
 	}
@@ -253,6 +262,7 @@ func listTransitGatewayResponseDataToEntityWithIDSlice(resps []sdkkonnectcomp.Tr
 func adoptKonnectTransitGateway(
 	ctx context.Context,
 	sdk sdkkonnectgo.CloudGatewaysSDK,
+	srv server.Server,
 	tg *konnectv1alpha1.KonnectCloudGatewayTransitGateway,
 	adoptOptions commonv1alpha1.AdoptOptions,
 ) error {
@@ -269,7 +279,7 @@ func adoptKonnectTransitGateway(
 		return CantPerformOperationWithoutNetworkIDError{Entity: tg, Op: GetOp}
 	}
 
-	resp, err := sdk.GetTransitGateway(ctx, networkID, konnectID)
+	resp, err := sdk.GetTransitGateway(ctx, networkID, konnectID, sdkkonnectops.WithServerURL(srv.GlobalURL()))
 	if err != nil {
 		return KonnectEntityAdoptionFetchError{KonnectID: konnectID, Err: err}
 	}

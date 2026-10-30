@@ -83,11 +83,11 @@ func Create[
 	case *konnectv1alpha2.KonnectGatewayControlPlane:
 		err = ensureControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
 	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
-		err = createKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), ent)
+		err = createKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(), ent)
 	case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
-		err = createKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), cl, ent, sdk.GetServer().Region())
+		err = createKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(), cl, ent)
 	case *konnectv1alpha1.KonnectCloudGatewayTransitGateway:
-		err = createKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), ent)
+		err = createKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(), ent)
 	case *configurationv1alpha1.KongService:
 		err = createService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
@@ -269,13 +269,13 @@ func getKonnectIDForUID[
 		// NOTE: since Cloud Gateways resources do not support labels/tags,
 		// we can't reliably get the Konnect ID for a Cloud Gateway Network
 		// given a K8s object UID. This uses a list, with a name filter, instead.
-		return getKonnectNetworkMatchingSpecName(ctx, sdk.GetCloudGatewaysSDK(), ent)
+		return getKonnectNetworkMatchingSpecName(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(), ent)
 	case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
 		// NOTE: can't get the ID for a DataPlaneGroupConfiguration as this
 		// resource type does not support labels/tags nor a name-based lookup.
 		return "", nil
 	case *konnectv1alpha1.KonnectCloudGatewayTransitGateway:
-		return getKonnectTransitGatewayMatchingSpecName(ctx, sdk.GetCloudGatewaysSDK(), ent)
+		return getKonnectTransitGatewayMatchingSpecName(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(), ent)
 	case *configurationv1alpha1.KongService:
 		return getKongServiceForUID(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
@@ -387,11 +387,11 @@ func Delete[
 	case *konnectv1alpha2.KonnectGatewayControlPlane:
 		err = deleteControlPlane(ctx, sdk.GetControlPlaneSDK(), e)
 	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
-		err = deleteKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), e)
+		err = deleteKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(), e)
 	case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
-		err = deleteKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), e, sdk.GetServer().Region())
+		err = deleteKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(), e)
 	case *konnectv1alpha1.KonnectCloudGatewayTransitGateway:
-		err = deleteKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), e)
+		err = deleteKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(), e)
 	case *konnectv1alpha1.KonnectConfigStore:
 		err = deleteKonnectConfigStoreGuarded(ctx, sdk.GetConfigStoresSDK(), sdk.GetConfigStoreSecretsSDK(), e)
 	case *aiconfigurationv1alpha1.AIGatewayCustomPolicy:
@@ -569,11 +569,11 @@ func Update[
 			err = updateControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
 		}
 	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
-		err = updateKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), ent)
+		err = updateKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(), ent)
 	case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
-		err = updateKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), cl, ent, sdk.GetServer())
+		err = updateKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(), cl, ent)
 	case *konnectv1alpha1.KonnectCloudGatewayTransitGateway:
-		err = updateKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), ent)
+		err = updateKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(), ent)
 	case *configurationv1alpha1.KongService:
 		err = updateService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
@@ -713,11 +713,11 @@ func Adopt[
 	case *configurationv1beta1.KongConsumerGroup:
 		err = adoptConsumerGroup(ctx, sdk.GetConsumerGroupsSDK(), ent, adoptOptions)
 	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
-		err = adoptKonnectCloudGatewayNetwork(ctx, sdk.GetCloudGatewaysSDK(), ent, adoptOptions)
+		err = adoptKonnectCloudGatewayNetwork(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(), ent, adoptOptions)
 	case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
-		err = adoptKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), cl, ent, adoptOptions)
+		err = adoptKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(), cl, ent, adoptOptions)
 	case *konnectv1alpha1.KonnectCloudGatewayTransitGateway:
-		err = adoptKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), ent, adoptOptions)
+		err = adoptKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(), ent, adoptOptions)
 	case *configurationv1alpha1.KongRoute:
 		err = adoptRoute(ctx, sdk.GetRoutesSDK(), ent)
 	case *configurationv1alpha1.KongUpstream:

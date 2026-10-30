@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
 	"github.com/samber/mo"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -94,7 +95,9 @@ func handleKonnectNetworkRef[T constraints.SupportedKonnectEntityType, TEnt cons
 			networkID = network.GetKonnectID()
 
 		case commonv1alpha1.ObjectRefTypeKonnectID:
-			n, err := sdk.GetCloudGatewaysSDK().GetNetwork(ctx, *ref.KonnectID)
+			n, err := sdk.GetCloudGatewaysSDK().GetNetwork(ctx, *ref.KonnectID,
+				sdkkonnectops.WithServerURL(sdk.GetServer().GlobalURL()),
+			)
 			if err != nil {
 				msg := fmt.Sprintf("Could not get the referenced KonnectCloudGatewayNetwork <konnectID:%s>: %v", *ref.KonnectID, err)
 				setInvalidWithMsg(msg)
