@@ -958,7 +958,7 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		plain := withAlias("plain-model", dayTwo)
 		scoped := withAlias("scoped-model", dayOne)
 
-		cl := buildClient(t, gw, plain, scoped)
+		cl := buildClient(t, gw.DeepCopy(), plain, scoped)
 		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
 		require.NoError(t, err)
 
@@ -986,7 +986,7 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		plain := withAlias("plain-model", dayOne)
 		scoped := withAlias("scoped-model", dayOne)
 
-		cl := buildClient(t, gw, plain, scoped)
+		cl := buildClient(t, gw.DeepCopy(), plain, scoped)
 		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
 		require.NoError(t, err)
 
@@ -1026,7 +1026,7 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 			Values: []string{"y"},
 		}
 
-		cl := buildClient(t, gw, oldest, middle, newest)
+		cl := buildClient(t, gw.DeepCopy(), oldest, middle, newest)
 		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
 		require.NoError(t, err)
 
@@ -1056,7 +1056,7 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		disabled.Spec.APISpec.Model.Enabled = "Disabled"
 		enabled := withAlias("enabled-model", dayTwo)
 
-		cl := buildClient(t, gw, disabled, enabled)
+		cl := buildClient(t, gw.DeepCopy(), disabled, enabled)
 		doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
 		require.NoError(t, err)
 
