@@ -150,6 +150,19 @@ func TestAIGatewayContextWindowFactor_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestAIGatewayDatastoreRef_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayDatastoreRef
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestAIGatewayDenyACL_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -349,6 +362,32 @@ func TestAIGatewayMCPServerProtectedResourceMetadata_MarshalEmpty(t *testing.T) 
 	t.Parallel()
 
 	var spec AIGatewayMCPServerProtectedResourceMetadata
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPServerRateLimit_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPServerRateLimit
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPServerRateLimiting_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPServerRateLimiting
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -739,6 +778,19 @@ func TestAIGatewayModelProviderAzure_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
 	var spec AIGatewayModelProviderAzure
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayModelProviderBaseten_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayModelProviderBaseten
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -1255,6 +1307,19 @@ func TestAIGatewayTargetAzureConfig_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestAIGatewayTargetBasetenConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayTargetBasetenConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestAIGatewayTargetBedrockConfig_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -1480,6 +1545,58 @@ func TestAIGatewayTargetXaiConfig_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
 	var spec AIGatewayTargetXaiConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayTokenVault_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayTokenVault
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayTokenVaultCredential_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayTokenVaultCredential
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayTokenVaultCredentialManager_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayTokenVaultCredentialManager
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayTokenVaultCredentialPlacement_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayTokenVaultCredentialPlacement
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -2326,6 +2443,7 @@ func TestAIGatewayTargetConfigUnmarshalJSON_NilReceiver(t *testing.T) {
 	}{
 		{name: "anthropic", payload: []byte("{\"type\":\"anthropic\",\"anthropic\":{}}")},
 		{name: "azure", payload: []byte("{\"type\":\"azure\",\"azure\":{}}")},
+		{name: "baseten", payload: []byte("{\"type\":\"baseten\",\"baseten\":{}}")},
 		{name: "bedrock", payload: []byte("{\"type\":\"bedrock\",\"bedrock\":{}}")},
 		{name: "cerebras", payload: []byte("{\"type\":\"cerebras\",\"cerebras\":{}}")},
 		{name: "cohere", payload: []byte("{\"type\":\"cohere\",\"cohere\":{}}")},
@@ -3466,6 +3584,22 @@ func TestAIGatewayTargetUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 				}
 				if target.Config.Azure == nil {
 					t.Fatalf("Config.Azure should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Config/baseten",
+			payload: []byte("{\"config\":{\"type\":\"baseten\",\"baseten\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayTarget) {
+				t.Helper()
+				if target.Config == nil {
+					t.Fatalf("Config should be allocated")
+				}
+				if got, want := target.Config.Type, AIGatewayTargetConfigTypeBaseten; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Config.Baseten == nil {
+					t.Fatalf("Config.Baseten should be allocated")
 				}
 			},
 		},

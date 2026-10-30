@@ -1,0 +1,37 @@
+name: Setup private SDK access
+description: >
+  Throwaway (never-merge branch): lets Go fetch github.com/Kong/sdk-konnect-go-internal
+  with a read-only KONG_READONLY app token scoped to that single repository.
+inputs:
+  app-id:
+    description: KONG_READONLY GitHub App client ID.
+    required: true
+  private-key:
+    description: KONG_READONLY GitHub App private key.
+    required: true
+outputs:
+  token:
+    description: Read-only token for sdk-konnect-go-internal (e.g. for Docker build secrets).
+    value: ${{ steps.app-token.outputs.token }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+      id: app-token
+      with:
+        client-id: ${{ inputs.app-id }}
+        private-key: ${{ inputs.private-key }}
+        owner: Kong
+        repositories: |
+          sdk-konnect-go-internal
+        permission-contents: read
+
+    - name: Configure Go and git for sdk-konnect-go-internal
+      shell: bash
+      env:
+        TOKEN: ${{ steps.app-token.outputs.token }}
+      run: |
+        git config --global \
+          url."https://x-access-token:${TOKEN}@github.com/Kong/sdk-konnect-go-internal".insteadOf \
+          "https://github.com/Kong/sdk-konnect-go-internal"
+        echo "GOPRIVATE=github.com/Kong/sdk-konnect-go-internal" >> "${GITHUB_ENV}"

@@ -68,6 +68,12 @@ jobs:
     - name: load docker image
       run: docker load -i kong-operator_e2e.tar
 
+    - name: Setup private SDK access
+      uses: ./.github/actions/setup-private-sdk
+      with:
+        app-id: ${{ vars.GH_APP__KONG_READONLY__APP_ID }}
+        private-key: ${{ secrets.GH_APP__KONG_READONLY__PRIVATE_KEY }}
+
     - uses: ./.github/actions/setup-mise
       with:
         install_args: github:Kong/kubernetes-testing-framework aqua:helm/helm kind

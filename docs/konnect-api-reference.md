@@ -367,6 +367,89 @@ Allowed values:
 | `Enabled` | AIGatewayRuntimeAutoUpgradeEnabled sets AIGatewayRuntimeAutoUpgrade as enabled.<br /> |
 | `Disabled` | AIGatewayRuntimeAutoUpgradeDisabled sets AIGatewayRuntimeAutoUpgrade as disabled.<br /> |
 
+#### AISettings
+
+
+AISettings is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `enabled` _string_ | Is AI enabled? |
+| `features` _[AISettingsFeatures](#konnect-konghq-com-v1alpha1-types-aisettingsfeatures)_ | AI features configuration. When top-level `enabled` is false, every feature toggle here is automatically reset to false. |
+
+_Appears in:_
+
+- [PortalAPISpec](#konnect-konghq-com-v1alpha1-types-portalapispec)
+
+#### AISettingsFeatures
+
+
+AISettingsFeatures AI features configuration.
+When top-level `enabled` is false, every feature toggle here is automatically
+reset to false.
+
+
+
+| Field | Description |
+| --- | --- |
+| `aiSearch` _[AISettingsFeaturesAISearch](#konnect-konghq-com-v1alpha1-types-aisettingsfeaturesaisearch)_ | AI Search config |
+| `mcpServer` _[AISettingsFeaturesMcpServer](#konnect-konghq-com-v1alpha1-types-aisettingsfeaturesmcpserver)_ | AI Features config |
+| `portalAgent` _[AISettingsFeaturesPortalAgent](#konnect-konghq-com-v1alpha1-types-aisettingsfeaturesportalagent)_ | Portal Agent config |
+
+_Appears in:_
+
+- [AISettings](#konnect-konghq-com-v1alpha1-types-aisettings)
+
+#### AISettingsFeaturesAISearch
+
+
+AISettingsFeaturesAISearch AI Search config
+
+
+
+| Field | Description |
+| --- | --- |
+| `enabled` _string_ | Whether AI Search is enabled or not |
+
+_Appears in:_
+
+- [AISettingsFeatures](#konnect-konghq-com-v1alpha1-types-aisettingsfeatures)
+
+#### AISettingsFeaturesMcpServer
+
+
+AISettingsFeaturesMcpServer AI Features config
+
+
+
+| Field | Description |
+| --- | --- |
+| `enabled` _string_ | Whether the MCP Server is enabled or not |
+| `writeOperationsEnabled` _string_ | Whether write operations are enabled or not for the Portal MCP Server enabled |
+
+_Appears in:_
+
+- [AISettingsFeatures](#konnect-konghq-com-v1alpha1-types-aisettingsfeatures)
+
+#### AISettingsFeaturesPortalAgent
+
+
+AISettingsFeaturesPortalAgent Portal Agent config
+
+
+
+| Field | Description |
+| --- | --- |
+| `audience` _[PortalAgentAudience](#konnect-konghq-com-v1alpha1-types-portalagentaudience)_ | The audience allowed to interact with the Portal Agent. Currently only `all` (available to every developer, including unauthenticated ones) is supported. `authenticated` (restricted to signed-in developers only) is planned for a future release. |
+| `displayName` _[PortalAgentDisplayName](#konnect-konghq-com-v1alpha1-types-portalagentdisplayname)_ | The display name for the Portal Agent, shown to developers in the portal |
+| `enabled` _string_ | Whether the Portal Agent is enabled or not |
+
+_Appears in:_
+
+- [AISettingsFeatures](#konnect-konghq-com-v1alpha1-types-aisettingsfeatures)
+
 
 
 #### AWSTransitGateway
@@ -657,6 +740,21 @@ _Appears in:_
 
 - [PortalPageAPISpec](#konnect-konghq-com-v1alpha1-types-portalpageapispec)
 
+#### Footer
+
+
+Footer is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `snippetName` _string_ | The unique name of a snippet in the portal to render in place of the default footer. |
+
+_Appears in:_
+
+- [PortalLayout](#konnect-konghq-com-v1alpha1-types-portallayout)
+
 #### GatewayDescription
 
 _Underlying type:_ `string`
@@ -696,6 +794,22 @@ _Appears in:_
 
 - [PortalIdentityProviderRequestAPISpec](#konnect-konghq-com-v1alpha1-types-portalidentityproviderrequestapispec)
 
+#### Js
+
+
+Js is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `custom` _*string_ |  |
+| `scripts` _[]string_ |  |
+
+_Appears in:_
+
+- [PortalCustomizationAPISpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationapispec)
+
 #### KonnectAIGatewayAPISpec
 
 
@@ -709,6 +823,7 @@ KonnectAIGatewayAPISpec defines the API spec fields for KonnectAIGateway.
 | `description` _string_ | The description of the AI Gateway. |
 | `displayName` _string_ | The display name for this AI Gateway. |
 | `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `minRuntimeVersion` _[AIGatewayMinRuntimeVersion](#konnect-konghq-com-v1alpha1-types-aigatewayminruntimeversion)_ | The minimum AI Gateway runtime version supported by this AI Gateway. This is the lowest data plane version that may receive configuration from it, and it controls which features the API accepts.<br /><br />Data planes older than this version still connect for topology visibility.<br /><br />When not specified, the latest generally available runtime version is used.<br /><br />When runtime_auto_upgrade is enabled (the default), this value is raised automatically to track the minimum runtime version reported across connected data planes, so any value set here may be superseded as the fleet upgrades. |
 | `name` _string_ | The name for this AI Gateway. This value is immutable after creation. |
 | `proxyUrls` _[][AIGatewayProxyURL](#konnect-konghq-com-v1alpha1-types-aigatewayproxyurl)_ | Array of proxy URLs associated with reaching the data-planes connected to a control-plane. |
@@ -979,6 +1094,7 @@ KonnectConfigStoreAPISpec defines the API spec fields for KonnectConfigStore.
 
 | Field | Description |
 | --- | --- |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _string_ |  |
 
 _Appears in:_
@@ -1646,6 +1762,34 @@ _Appears in:_
 
 - [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
 
+#### ManagedBy
+
+_Underlying type:_ `[map[string]ManagedByValue](#map[string]managedbyvalue)`
+
+ManagedBy Stores information about what manages this entity, such as the tool
+or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character.
+
+
+
+
+_Appears in:_
+
+- [KonnectAIGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnectaigatewayapispec)
+- [KonnectConfigStoreAPISpec](#konnect-konghq-com-v1alpha1-types-konnectconfigstoreapispec)
+
+#### ManagedByValue
+
+_Underlying type:_ `string`
+
+ManagedByValue is the value type for ManagedBy.
+
+
+
+
+_Appears in:_
+
+- [ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)
+
 #### Menu
 
 
@@ -1710,6 +1854,46 @@ _Appears in:_
 
 - [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
 - [MCPServerSpec](#konnect-konghq-com-v1alpha1-types-mcpserverspec)
+
+#### OIDCIdentityProviderBackChannelLogout
+
+
+OIDCIdentityProviderBackChannelLogout The back-channel logout settings for
+the OIDC identity provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `enabled` _[OIDCIdentityProviderBackChannelLogoutEnabled](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderbackchannellogoutenabled)_ | Indicates whether back-channel logout is enabled. When enabled, the identity provider can notify the portal to end a user's session when they log out of the identity provider. |
+
+_Appears in:_
+
+- [PortalOIDCIdentityProviderConfig](#konnect-konghq-com-v1alpha1-types-portaloidcidentityproviderconfig)
+
+#### OIDCIdentityProviderBackChannelLogoutEnabled
+
+_Underlying type:_ `string`
+
+OIDCIdentityProviderBackChannelLogoutEnabled Indicates whether back-channel
+logout is enabled.
+When enabled, the identity provider can notify
+the portal to end a user's session when they log out of the identity
+provider.
+
+
+
+
+_Appears in:_
+
+- [OIDCIdentityProviderBackChannelLogout](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderbackchannellogout)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `Enabled` | OIDCIdentityProviderBackChannelLogoutEnabledEnabled sets OIDCIdentityProviderBackChannelLogoutEnabled as enabled.<br /> |
+| `Disabled` | OIDCIdentityProviderBackChannelLogoutEnabledDisabled sets OIDCIdentityProviderBackChannelLogoutEnabled as disabled.<br /> |
 
 #### OIDCIdentityProviderClaimMappings
 
@@ -1842,9 +2026,11 @@ PortalAPISpec defines the API spec fields for Portal.
 
 | Field | Description |
 | --- | --- |
+| `ai` _[AISettings](#konnect-konghq-com-v1alpha1-types-aisettings)_ |  |
 | `authenticationEnabled` _string_ | Whether the portal supports developer authentication. If disabled, developers cannot register for accounts or create applications. |
 | `autoApproveApplications` _string_ | Whether requests from applications to register for APIs will be automatically approved, or if they will be set to pending until approved by an admin. |
 | `autoApproveDevelopers` _string_ | Whether developer account registrations will be automatically approved, or if they will be set to pending until approved by an admin. |
+| `createDefaultContent` _string_ | Use to create the portal page default content upon creation of this portal |
 | `defaultAPIVisibility` _string_ | The default visibility of APIs in the portal. If set to `public`, newly published APIs are visible to unauthenticated developers. If set to `private`, newly published APIs are hidden from unauthenticated developers. |
 | `defaultApplicationAuthStrategyIDRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | The default authentication strategy for APIs published to the portal. Newly published APIs will use this authentication strategy unless overridden during publication. If set to `null`, API publications will not use an authentication strategy unless set during publication. |
 | `defaultPageVisibility` _string_ | The default visibility of pages in the portal. If set to `public`, newly created pages are visible to unauthenticated developers. If set to `private`, newly created pages are hidden from unauthenticated developers. |
@@ -1859,6 +2045,37 @@ PortalAPISpec defines the API spec fields for Portal.
 _Appears in:_
 
 - [PortalSpec](#konnect-konghq-com-v1alpha1-types-portalspec)
+
+#### PortalAgentAudience
+
+_Underlying type:_ `string`
+
+PortalAgentAudience The audience allowed to interact with the Portal Agent.
+Currently only `all` (available to every developer, including unauthenticated
+ones) is supported.
+`authenticated` (restricted to signed-in developers only) is planned for a
+future release.
+
+
+
+
+_Appears in:_
+
+- [AISettingsFeaturesPortalAgent](#konnect-konghq-com-v1alpha1-types-aisettingsfeaturesportalagent)
+
+#### PortalAgentDisplayName
+
+_Underlying type:_ `string`
+
+PortalAgentDisplayName The display name for the Portal Agent, shown to
+developers in the portal
+
+
+
+
+_Appears in:_
+
+- [AISettingsFeaturesPortalAgent](#konnect-konghq-com-v1alpha1-types-aisettingsfeaturesportalagent)
 
 #### PortalCustomDomainAPISpec
 
@@ -1960,8 +2177,10 @@ PortalCustomizationAPISpec defines the API spec fields for PortalCustomization.
 | Field | Description |
 | --- | --- |
 | `css` _*string_ |  |
+| `js` _[Js](#konnect-konghq-com-v1alpha1-types-js)_ |  |
 | `layout` _string_ | This property is deprecated and is not used by the portal. |
 | `menu` _[Menu](#konnect-konghq-com-v1alpha1-types-menu)_ |  |
+| `portalLayout` _[PortalLayout](#konnect-konghq-com-v1alpha1-types-portallayout)_ |  |
 | `robots` _*string_ |  |
 | `specRenderer` _[SpecRenderer](#konnect-konghq-com-v1alpha1-types-specrenderer)_ | The spec renderer settings of this portal |
 | `theme` _[Theme](#konnect-konghq-com-v1alpha1-types-theme)_ | The theme settings for this portal. |
@@ -2181,6 +2400,21 @@ _Appears in:_
 
 - [PortalIdentityProviderRequest](#konnect-konghq-com-v1alpha1-portalidentityproviderrequest)
 
+#### PortalLayout
+
+
+PortalLayout is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `footer` _[Footer](#konnect-konghq-com-v1alpha1-types-footer)_ |  |
+
+_Appears in:_
+
+- [PortalCustomizationAPISpec](#konnect-konghq-com-v1alpha1-types-portalcustomizationapispec)
+
 #### PortalMenuItem
 
 
@@ -2210,6 +2444,7 @@ configuration data for the OIDC authentication integration.
 
 | Field | Description |
 | --- | --- |
+| `backchannelLogout` _[OIDCIdentityProviderBackChannelLogout](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderbackchannellogout)_ | The back-channel logout settings for the OIDC identity provider. |
 | `claimMappings` _[OIDCIdentityProviderClaimMappings](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclaimmappings)_ | Defines the mappings between OpenID Connect (OIDC) claims and local claims used by your application for authentication. |
 | `clientID` _[OIDCIdentityProviderClientID](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientid)_ | The client ID assigned to your application by the identity provider. |
 | `clientSecret` _[OIDCIdentityProviderClientSecret](#konnect-konghq-com-v1alpha1-types-oidcidentityproviderclientsecret)_ | The Client Secret assigned to your application by the identity provider. |
@@ -2523,7 +2758,7 @@ Theme The theme settings for this portal.
 | --- | --- |
 | `colors` _[Colors](#konnect-konghq-com-v1alpha1-types-colors)_ |  |
 | `mode` _string_ |  |
-| `name` _string_ | The theme name to apply to this portal. Supported names are 'mesa', 'grove', 'pebble', or 'ocean'. If another name is provided or this property is omitted, the portal uses the default 'ocean' theme. |
+| `name` _string_ | The theme name to apply to this portal. Supported names are 'ocean', 'mesa', and 'grove'. If another name is provided or this property is omitted, the portal uses the default 'ocean' theme. |
 
 _Appears in:_
 

@@ -21,12 +21,13 @@ func createKonnectConfigStore(
 	if parentID == "" {
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectGatewayControlPlane", Op: CreateOp}
 	}
-	req, err := obj.Spec.APISpec.ToCreateConfigStore()
+	req, err := obj.Spec.APISpec.ToCreateConfigStoreRequest()
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
+	req.ControlPlaneID = parentID
 
-	resp, err := sdk.CreateConfigStore(ctx, parentID, *req)
+	resp, err := sdk.CreateConfigStore(ctx, *req)
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, obj); errWrap != nil {
 		return errWrap
 	}

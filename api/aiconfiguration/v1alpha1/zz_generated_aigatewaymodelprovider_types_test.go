@@ -29,6 +29,7 @@ func TestAIGatewayModelProviderConfigUnmarshalJSON_NilReceiver(t *testing.T) {
 	}{
 		{name: "anthropic", payload: []byte("{\"type\":\"anthropic\",\"anthropic\":{}}")},
 		{name: "azure", payload: []byte("{\"type\":\"azure\",\"azure\":{}}")},
+		{name: "baseten", payload: []byte("{\"type\":\"baseten\",\"baseten\":{}}")},
 		{name: "bedrock", payload: []byte("{\"type\":\"bedrock\",\"bedrock\":{}}")},
 		{name: "cerebras", payload: []byte("{\"type\":\"cerebras\",\"cerebras\":{}}")},
 		{name: "cohere", payload: []byte("{\"type\":\"cohere\",\"cohere\":{}}")},
@@ -119,6 +120,22 @@ func TestAIGatewayModelProviderAPISpecUnmarshalJSON_DecodesUnionFields(t *testin
 				}
 				if target.AIGatewayModelProviderConfig.Azure == nil {
 					t.Fatalf("AIGatewayModelProviderConfig.Azure should be allocated")
+				}
+			},
+		},
+		{
+			name:    "AIGatewayModelProviderConfig/baseten",
+			payload: []byte("{\"type\":\"baseten\",\"baseten\":{}}"),
+			assert: func(t *testing.T, target AIGatewayModelProviderAPISpec) {
+				t.Helper()
+				if target.AIGatewayModelProviderConfig == nil {
+					t.Fatalf("AIGatewayModelProviderConfig should be allocated")
+				}
+				if got, want := target.AIGatewayModelProviderConfig.Type, AIGatewayModelProviderConfigTypeBaseten; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.AIGatewayModelProviderConfig.Baseten == nil {
+					t.Fatalf("AIGatewayModelProviderConfig.Baseten should be allocated")
 				}
 			},
 		},

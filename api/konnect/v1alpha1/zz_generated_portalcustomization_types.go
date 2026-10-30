@@ -60,6 +60,11 @@ type PortalCustomizationAPISpec struct {
 	// +kubebuilder:validation:MaxLength=253
 	Css *string `json:"css,omitempty"`
 
+	//
+	//
+	// +optional
+	Js Js `json:"js,omitzero"`
+
 	// This property is deprecated and is not used by the portal.
 	//
 	// +optional
@@ -70,6 +75,11 @@ type PortalCustomizationAPISpec struct {
 	//
 	// +optional
 	Menu Menu `json:"menu,omitzero"`
+
+	//
+	//
+	// +optional
+	PortalLayout PortalLayout `json:"portalLayout,omitzero"`
 
 	//
 	//
@@ -116,6 +126,20 @@ type PortalCustomizationStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitzero"`
 }
 
+// Js is a type alias.
+type Js struct {
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Custom *string `json:"custom,omitempty"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=20
+	Scripts []string `json:"scripts,omitempty"`
+}
+
 // Menu is a type alias.
 type Menu struct {
 	//
@@ -130,6 +154,24 @@ type Menu struct {
 	//
 	// +optional
 	Main []PortalMenuItem `json:"main,omitempty"`
+}
+
+// PortalLayout is a type alias.
+type PortalLayout struct {
+	//
+	//
+	// +optional
+	Footer Footer `json:"footer,omitzero"`
+}
+
+// Footer is a type alias.
+type Footer struct {
+	// The unique name of a snippet in the portal to render in place of the default
+	// footer.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=512
+	SnippetName string `json:"snippetName,omitzero"`
 }
 
 // SpecRenderer The spec renderer settings of this portal
@@ -207,7 +249,7 @@ type Theme struct {
 	// +kubebuilder:validation:Enum=light;dark;system
 	Mode string `json:"mode,omitzero"`
 	// The theme name to apply to this portal.
-	// Supported names are 'mesa', 'grove', 'pebble', or 'ocean'.
+	// Supported names are 'ocean', 'mesa', and 'grove'.
 	// If another name is provided or this property is omitted, the portal uses the
 	// default 'ocean' theme.
 	//

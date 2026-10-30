@@ -499,6 +499,9 @@ spec:
                                               videoOutputS3URI:
                                                 maxLength: 253
                                                 type: string
+                                              vpcEndpoint:
+                                                maxLength: 253
+                                                type: string
                                             type: object
                                           gemini:
                                             properties:
@@ -1024,6 +1027,18 @@ spec:
                         required:
                         - route
                         type: object
+                      datastores:
+                        items:
+                          properties:
+                            name:
+                              maxLength: 255
+                              minLength: 2
+                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        type: array
                       displayName:
                         maxLength: 256
                         minLength: 1
@@ -1038,6 +1053,7 @@ spec:
                           properties:
                             type:
                               enum:
+                              - '*'
                               - anthropic
                               - bedrock
                               - cohere
@@ -1412,6 +1428,155 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                baseten:
+                                  properties:
+                                    cacheReadCost:
+                                      minimum: 0
+                                      type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    cacheWriteCost:
+                                      minimum: 0
+                                      type: number
+                                    cacheWriteCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          ttl:
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[hm]$
+                                            type: string
+                                        required:
+                                        - cost
+                                        - ttl
+                                        type: object
+                                      type: array
+                                    contextWindowFactor:
+                                      items:
+                                        properties:
+                                          above:
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[km]$
+                                            type: string
+                                          inputFactor:
+                                            minimum: 0
+                                            type: number
+                                          outputFactor:
+                                            minimum: 0
+                                            type: number
+                                        required:
+                                        - above
+                                        - inputFactor
+                                        - outputFactor
+                                        type: object
+                                      type: array
+                                    embeddingsDimensions:
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    inputCost:
+                                      minimum: 0
+                                      type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    maxTokens:
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    outputCost:
+                                      minimum: 0
+                                      type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    serviceTierFactor:
+                                      items:
+                                        properties:
+                                          factor:
+                                            minimum: 0
+                                            type: number
+                                          tier:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - factor
+                                        - tier
+                                        type: object
+                                      type: array
+                                    temperature:
+                                      maximum: 5
+                                      minimum: 0
+                                      type: number
+                                    topK:
+                                      maximum: 500
+                                      minimum: 0
+                                      type: integer
+                                    topP:
+                                      maximum: 1
+                                      minimum: 0
+                                      type: number
+                                    upstreamURL:
+                                      maxLength: 253
+                                      type: string
+                                  type: object
                                 bedrock:
                                   properties:
                                     batchBucketPrefix:
@@ -1487,6 +1652,12 @@ spec:
                                       enum:
                                       - Enabled
                                       - Disabled
+                                      type: string
+                                    endpointType:
+                                      enum:
+                                      - runtime
+                                      - mantle
+                                      maxLength: 253
                                       type: string
                                     inputCost:
                                       minimum: 0
@@ -1575,6 +1746,9 @@ spec:
                                       maxLength: 253
                                       type: string
                                     videoOutputS3URI:
+                                      maxLength: 253
+                                      type: string
+                                    vpcEndpoint:
                                       maxLength: 253
                                       type: string
                                   type: object
@@ -3632,6 +3806,7 @@ spec:
                                   enum:
                                   - anthropic
                                   - azure
+                                  - baseten
                                   - bedrock
                                   - cerebras
                                   - cohere
@@ -4563,6 +4738,9 @@ spec:
                                               videoOutputS3URI:
                                                 maxLength: 253
                                                 type: string
+                                              vpcEndpoint:
+                                                maxLength: 253
+                                                type: string
                                             type: object
                                           gemini:
                                             properties:
@@ -5096,6 +5274,18 @@ spec:
                         required:
                         - route
                         type: object
+                      datastores:
+                        items:
+                          properties:
+                            name:
+                              maxLength: 255
+                              minLength: 2
+                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        type: array
                       displayName:
                         maxLength: 256
                         minLength: 1
@@ -5110,6 +5300,7 @@ spec:
                           properties:
                             type:
                               enum:
+                              - '*'
                               - anthropic
                               - bedrock
                               - cohere
@@ -5484,6 +5675,155 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                baseten:
+                                  properties:
+                                    cacheReadCost:
+                                      minimum: 0
+                                      type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    cacheWriteCost:
+                                      minimum: 0
+                                      type: number
+                                    cacheWriteCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          ttl:
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[hm]$
+                                            type: string
+                                        required:
+                                        - cost
+                                        - ttl
+                                        type: object
+                                      type: array
+                                    contextWindowFactor:
+                                      items:
+                                        properties:
+                                          above:
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[km]$
+                                            type: string
+                                          inputFactor:
+                                            minimum: 0
+                                            type: number
+                                          outputFactor:
+                                            minimum: 0
+                                            type: number
+                                        required:
+                                        - above
+                                        - inputFactor
+                                        - outputFactor
+                                        type: object
+                                      type: array
+                                    embeddingsDimensions:
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    inputCost:
+                                      minimum: 0
+                                      type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    maxTokens:
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    outputCost:
+                                      minimum: 0
+                                      type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    serviceTierFactor:
+                                      items:
+                                        properties:
+                                          factor:
+                                            minimum: 0
+                                            type: number
+                                          tier:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - factor
+                                        - tier
+                                        type: object
+                                      type: array
+                                    temperature:
+                                      maximum: 5
+                                      minimum: 0
+                                      type: number
+                                    topK:
+                                      maximum: 500
+                                      minimum: 0
+                                      type: integer
+                                    topP:
+                                      maximum: 1
+                                      minimum: 0
+                                      type: number
+                                    upstreamURL:
+                                      maxLength: 253
+                                      type: string
+                                  type: object
                                 bedrock:
                                   properties:
                                     batchBucketPrefix:
@@ -5559,6 +5899,12 @@ spec:
                                       enum:
                                       - Enabled
                                       - Disabled
+                                      type: string
+                                    endpointType:
+                                      enum:
+                                      - runtime
+                                      - mantle
+                                      maxLength: 253
                                       type: string
                                     inputCost:
                                       minimum: 0
@@ -5647,6 +5993,9 @@ spec:
                                       maxLength: 253
                                       type: string
                                     videoOutputS3URI:
+                                      maxLength: 253
+                                      type: string
+                                    vpcEndpoint:
                                       maxLength: 253
                                       type: string
                                   type: object
@@ -7704,6 +8053,7 @@ spec:
                                   enum:
                                   - anthropic
                                   - azure
+                                  - baseten
                                   - bedrock
                                   - cerebras
                                   - cohere

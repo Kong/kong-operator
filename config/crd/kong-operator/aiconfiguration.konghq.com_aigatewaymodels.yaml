@@ -793,6 +793,15 @@ spec:
                                                   generation outputs.
                                                 maxLength: 253
                                                 type: string
+                                              vpcEndpoint:
+                                                description: |-
+                                                  Hostname of an AWS PrivateLink VPC endpoint to use instead of the public
+                                                  Bedrock endpoint.
+                                                  Ignored if `upstream_url` is set.
+
+                                                  **Requires a minimum runtime version of `2.3`**.
+                                                maxLength: 253
+                                                type: string
                                             type: object
                                           gemini:
                                             description: Gemini configuration.
@@ -1697,6 +1706,23 @@ spec:
                         required:
                         - route
                         type: object
+                      datastores:
+                        description: Names of the Datastores this model references.
+                        items:
+                          description: AIGatewayDatastoreRef A reference to an existing
+                            datastore
+                          properties:
+                            name:
+                              description: An immutable user-defined identifier for
+                                this resource.
+                              maxLength: 255
+                              minLength: 2
+                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        type: array
                       displayName:
                         description: The display name for this model instance.
                         maxLength: 256
@@ -1716,13 +1742,9 @@ spec:
                             supported by this model.
                           properties:
                             type:
-                              description: |-
-                                The format type.
-
-                                **`passthrough` requires a minimum runtime version of `2.2`**.
-
-                                **`typesafe` requires a minimum runtime version of `2.2`**.
+                              description: The format type.
                               enum:
+                              - '*'
                               - anthropic
                               - bedrock
                               - cohere
@@ -2334,6 +2356,248 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                baseten:
+                                  description: Baseten configuration.
+                                  properties:
+                                    cacheReadCost:
+                                      description: Cost per 1M cache-read (cached)
+                                        prompt tokens for billing and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    cacheReadCostList:
+                                      description: |-
+                                        Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+                                        tokens.
+                                        Set it for models that price each modality separately.
+
+                                        **Requires a minimum runtime version of `2.1`**.
+                                      items:
+                                        description: AIGatewayModalCostList is a type
+                                          alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M tokens for this
+                                              modal type.
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            description: The modal type this price
+                                              applies to.
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    cacheWriteCost:
+                                      description: Cost per 1M cache-write prompt
+                                        tokens for billing and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    cacheWriteCostList:
+                                      description: |-
+                                        Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+                                        Configure this when the upstream provider charges differently for different
+                                        cache TTLs.
+                                      items:
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M cache-write prompt
+                                              tokens for this TTL.
+                                            minimum: 0
+                                            type: number
+                                          ttl:
+                                            description: Cache TTL this price applies
+                                              to, e.g. "5m" or "1h".
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[hm]$
+                                            type: string
+                                        required:
+                                        - cost
+                                        - ttl
+                                        type: object
+                                      type: array
+                                    contextWindowFactor:
+                                      description: |-
+                                        Above an input-token threshold, scale input and output pricing by the
+                                        corresponding factor.
+                                      items:
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
+                                        properties:
+                                          above:
+                                            description: Input-token threshold above
+                                              which the factors apply, e.g. "128k"
+                                              or "1m".
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[km]$
+                                            type: string
+                                          inputFactor:
+                                            description: Multiplier applied to input
+                                              pricing above the threshold.
+                                            minimum: 0
+                                            type: number
+                                          outputFactor:
+                                            description: Multiplier applied to output
+                                              pricing above the threshold.
+                                            minimum: 0
+                                            type: number
+                                        required:
+                                        - above
+                                        - inputFactor
+                                        - outputFactor
+                                        type: object
+                                      type: array
+                                    embeddingsDimensions:
+                                      description: The number of dimensions for embedding
+                                        outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    inputCost:
+                                      description: Cost per 1M input tokens for billing
+                                        and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    inputCostList:
+                                      description: |-
+                                        Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+                                        Set it for models that price each modality separately.
+
+                                        **Requires a minimum runtime version of `2.1`**.
+                                      items:
+                                        description: AIGatewayModalCostList is a type
+                                          alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M tokens for this
+                                              modal type.
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            description: The modal type this price
+                                              applies to.
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    maxTokens:
+                                      description: The maximum number of tokens to
+                                        generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    outputCost:
+                                      description: Cost per 1M output tokens for billing
+                                        and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    outputCostList:
+                                      description: |-
+                                        Per-modality override of `output_cost`, in cost per 1M output tokens.
+                                        Set it for models that price each modality separately.
+
+                                        **Requires a minimum runtime version of `2.1`**.
+                                      items:
+                                        description: AIGatewayModalCostList is a type
+                                          alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M tokens for this
+                                              modal type.
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            description: The modal type this price
+                                              applies to.
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    serviceTierFactor:
+                                      description: |-
+                                        Multiplier applied to the whole request for a service tier.
+                                        The default factor is 1.0 when no tier matches.
+                                      items:
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
+                                        properties:
+                                          factor:
+                                            description: Multiplier applied to the
+                                              whole request for this service tier.
+                                            minimum: 0
+                                            type: number
+                                          tier:
+                                            description: |-
+                                              Matched case-insensitively as a substring of the vendor's reported service
+                                              tier (e.g.
+                                              "priority", "flex", "throughput").
+                                              When more than one entry matches, the longest (most specific) tier wins;
+                                              array order does not matter.
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - factor
+                                        - tier
+                                        type: object
+                                      type: array
+                                    temperature:
+                                      description: |-
+                                        Controls randomness in the model output.
+                                        Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
+                                      type: number
+                                    topK:
+                                      description: |-
+                                        Limits the number of highest-probability tokens considered during
+                                        generation.
+                                      maximum: 500
+                                      minimum: 0
+                                      type: integer
+                                    topP:
+                                      description: |-
+                                        Nucleus sampling probability mass.
+                                        Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
+                                      type: number
+                                    upstreamURL:
+                                      description: The upstream URL for the model
+                                        endpoint.
+                                      maxLength: 253
+                                      type: string
+                                  type: object
                                 bedrock:
                                   description: Bedrock configuration.
                                   properties:
@@ -2454,6 +2718,24 @@ spec:
                                       enum:
                                       - Enabled
                                       - Disabled
+                                      type: string
+                                    endpointType:
+                                      description: |-
+                                        The AWS Bedrock inference endpoint that requests to this target are sent to.
+                                        `runtime` sends requests to the Bedrock Runtime endpoint
+                                        (`bedrock-runtime.{region}.amazonaws.com`). `mantle` sends requests to the
+                                        Bedrock Mantle endpoint (`bedrock-mantle.{region}.api.aws`), which accepts
+                                        OpenAI and Anthropic request formats natively.
+
+                                        A target with `endpoint_type` set to `mantle` is rejected if its model
+                                        includes a format with `type` set to `bedrock`, because the Mantle endpoint
+                                        does not support the Bedrock Converse or InvokeModel APIs.
+
+                                        **Requires a minimum runtime version of `2.3`**.
+                                      enum:
+                                      - runtime
+                                      - mantle
+                                      maxLength: 253
                                       type: string
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -2601,6 +2883,15 @@ spec:
                                     videoOutputS3URI:
                                       description: S3 URI for storing video generation
                                         outputs.
+                                      maxLength: 253
+                                      type: string
+                                    vpcEndpoint:
+                                      description: |-
+                                        Hostname of an AWS PrivateLink VPC endpoint to use instead of the public
+                                        Bedrock endpoint.
+                                        Ignored if `upstream_url` is set.
+
+                                        **Requires a minimum runtime version of `2.3`**.
                                       maxLength: 253
                                       type: string
                                   type: object
@@ -5919,6 +6210,7 @@ spec:
                                   enum:
                                   - anthropic
                                   - azure
+                                  - baseten
                                   - bedrock
                                   - cerebras
                                   - cohere
@@ -7411,6 +7703,15 @@ spec:
                                                   generation outputs.
                                                 maxLength: 253
                                                 type: string
+                                              vpcEndpoint:
+                                                description: |-
+                                                  Hostname of an AWS PrivateLink VPC endpoint to use instead of the public
+                                                  Bedrock endpoint.
+                                                  Ignored if `upstream_url` is set.
+
+                                                  **Requires a minimum runtime version of `2.3`**.
+                                                maxLength: 253
+                                                type: string
                                             type: object
                                           gemini:
                                             description: Gemini configuration.
@@ -8327,6 +8628,23 @@ spec:
                         required:
                         - route
                         type: object
+                      datastores:
+                        description: Names of the Datastores this model references.
+                        items:
+                          description: AIGatewayDatastoreRef A reference to an existing
+                            datastore
+                          properties:
+                            name:
+                              description: An immutable user-defined identifier for
+                                this resource.
+                              maxLength: 255
+                              minLength: 2
+                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        type: array
                       displayName:
                         description: The display name for this model instance.
                         maxLength: 256
@@ -8346,13 +8664,9 @@ spec:
                             supported by this model.
                           properties:
                             type:
-                              description: |-
-                                The format type.
-
-                                **`passthrough` requires a minimum runtime version of `2.2`**.
-
-                                **`typesafe` requires a minimum runtime version of `2.2`**.
+                              description: The format type.
                               enum:
+                              - '*'
                               - anthropic
                               - bedrock
                               - cohere
@@ -8964,6 +9278,248 @@ spec:
                                       maxLength: 253
                                       type: string
                                   type: object
+                                baseten:
+                                  description: Baseten configuration.
+                                  properties:
+                                    cacheReadCost:
+                                      description: Cost per 1M cache-read (cached)
+                                        prompt tokens for billing and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    cacheReadCostList:
+                                      description: |-
+                                        Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+                                        tokens.
+                                        Set it for models that price each modality separately.
+
+                                        **Requires a minimum runtime version of `2.1`**.
+                                      items:
+                                        description: AIGatewayModalCostList is a type
+                                          alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M tokens for this
+                                              modal type.
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            description: The modal type this price
+                                              applies to.
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    cacheWriteCost:
+                                      description: Cost per 1M cache-write prompt
+                                        tokens for billing and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    cacheWriteCostList:
+                                      description: |-
+                                        Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+                                        Configure this when the upstream provider charges differently for different
+                                        cache TTLs.
+                                      items:
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M cache-write prompt
+                                              tokens for this TTL.
+                                            minimum: 0
+                                            type: number
+                                          ttl:
+                                            description: Cache TTL this price applies
+                                              to, e.g. "5m" or "1h".
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[hm]$
+                                            type: string
+                                        required:
+                                        - cost
+                                        - ttl
+                                        type: object
+                                      type: array
+                                    contextWindowFactor:
+                                      description: |-
+                                        Above an input-token threshold, scale input and output pricing by the
+                                        corresponding factor.
+                                      items:
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
+                                        properties:
+                                          above:
+                                            description: Input-token threshold above
+                                              which the factors apply, e.g. "128k"
+                                              or "1m".
+                                            maxLength: 253
+                                            minLength: 1
+                                            pattern: ^[0-9]+\.?[0-9]*[km]$
+                                            type: string
+                                          inputFactor:
+                                            description: Multiplier applied to input
+                                              pricing above the threshold.
+                                            minimum: 0
+                                            type: number
+                                          outputFactor:
+                                            description: Multiplier applied to output
+                                              pricing above the threshold.
+                                            minimum: 0
+                                            type: number
+                                        required:
+                                        - above
+                                        - inputFactor
+                                        - outputFactor
+                                        type: object
+                                      type: array
+                                    embeddingsDimensions:
+                                      description: The number of dimensions for embedding
+                                        outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    inputCost:
+                                      description: Cost per 1M input tokens for billing
+                                        and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    inputCostList:
+                                      description: |-
+                                        Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+                                        Set it for models that price each modality separately.
+
+                                        **Requires a minimum runtime version of `2.1`**.
+                                      items:
+                                        description: AIGatewayModalCostList is a type
+                                          alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M tokens for this
+                                              modal type.
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            description: The modal type this price
+                                              applies to.
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    maxTokens:
+                                      description: The maximum number of tokens to
+                                        generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
+                                      type: integer
+                                    outputCost:
+                                      description: Cost per 1M output tokens for billing
+                                        and cost tracking.
+                                      minimum: 0
+                                      type: number
+                                    outputCostList:
+                                      description: |-
+                                        Per-modality override of `output_cost`, in cost per 1M output tokens.
+                                        Set it for models that price each modality separately.
+
+                                        **Requires a minimum runtime version of `2.1`**.
+                                      items:
+                                        description: AIGatewayModalCostList is a type
+                                          alias.
+                                        properties:
+                                          cost:
+                                            description: Cost per 1M tokens for this
+                                              modal type.
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            description: The modal type this price
+                                              applies to.
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
+                                    serviceTierFactor:
+                                      description: |-
+                                        Multiplier applied to the whole request for a service tier.
+                                        The default factor is 1.0 when no tier matches.
+                                      items:
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
+                                        properties:
+                                          factor:
+                                            description: Multiplier applied to the
+                                              whole request for this service tier.
+                                            minimum: 0
+                                            type: number
+                                          tier:
+                                            description: |-
+                                              Matched case-insensitively as a substring of the vendor's reported service
+                                              tier (e.g.
+                                              "priority", "flex", "throughput").
+                                              When more than one entry matches, the longest (most specific) tier wins;
+                                              array order does not matter.
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - factor
+                                        - tier
+                                        type: object
+                                      type: array
+                                    temperature:
+                                      description: |-
+                                        Controls randomness in the model output.
+                                        Higher values produce more varied responses.
+                                      maximum: 5
+                                      minimum: 0
+                                      type: number
+                                    topK:
+                                      description: |-
+                                        Limits the number of highest-probability tokens considered during
+                                        generation.
+                                      maximum: 500
+                                      minimum: 0
+                                      type: integer
+                                    topP:
+                                      description: |-
+                                        Nucleus sampling probability mass.
+                                        Tokens with cumulative probability up to top_p are considered.
+                                      maximum: 1
+                                      minimum: 0
+                                      type: number
+                                    upstreamURL:
+                                      description: The upstream URL for the model
+                                        endpoint.
+                                      maxLength: 253
+                                      type: string
+                                  type: object
                                 bedrock:
                                   description: Bedrock configuration.
                                   properties:
@@ -9084,6 +9640,24 @@ spec:
                                       enum:
                                       - Enabled
                                       - Disabled
+                                      type: string
+                                    endpointType:
+                                      description: |-
+                                        The AWS Bedrock inference endpoint that requests to this target are sent to.
+                                        `runtime` sends requests to the Bedrock Runtime endpoint
+                                        (`bedrock-runtime.{region}.amazonaws.com`). `mantle` sends requests to the
+                                        Bedrock Mantle endpoint (`bedrock-mantle.{region}.api.aws`), which accepts
+                                        OpenAI and Anthropic request formats natively.
+
+                                        A target with `endpoint_type` set to `mantle` is rejected if its model
+                                        includes a format with `type` set to `bedrock`, because the Mantle endpoint
+                                        does not support the Bedrock Converse or InvokeModel APIs.
+
+                                        **Requires a minimum runtime version of `2.3`**.
+                                      enum:
+                                      - runtime
+                                      - mantle
+                                      maxLength: 253
                                       type: string
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -9231,6 +9805,15 @@ spec:
                                     videoOutputS3URI:
                                       description: S3 URI for storing video generation
                                         outputs.
+                                      maxLength: 253
+                                      type: string
+                                    vpcEndpoint:
+                                      description: |-
+                                        Hostname of an AWS PrivateLink VPC endpoint to use instead of the public
+                                        Bedrock endpoint.
+                                        Ignored if `upstream_url` is set.
+
+                                        **Requires a minimum runtime version of `2.3`**.
                                       maxLength: 253
                                       type: string
                                   type: object
@@ -12549,6 +13132,7 @@ spec:
                                   enum:
                                   - anthropic
                                   - azure
+                                  - baseten
                                   - bedrock
                                   - cerebras
                                   - cohere

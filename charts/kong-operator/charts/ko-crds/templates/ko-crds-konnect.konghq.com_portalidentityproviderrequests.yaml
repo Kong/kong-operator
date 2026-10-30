@@ -56,6 +56,14 @@ spec:
                     properties:
                       oIDC:
                         properties:
+                          backchannelLogout:
+                            properties:
+                              enabled:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                            type: object
                           claimMappings:
                             properties:
                               email:

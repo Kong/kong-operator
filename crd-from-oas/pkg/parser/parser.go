@@ -411,6 +411,10 @@ func (p *Parser) extractPathDependencies(path string) []*Dependency {
 	// so portalId is a dependency
 	for _, match := range matches {
 		paramName := match[1] // e.g., "portalId"
+		// shortcut: internal SDK only; {workspace} is filled by the SDK default, drop with the replace.
+		if paramName == "workspace" {
+			continue
+		}
 		entityName := getEntityNameFromParam(paramName)
 		accessorEntityName := getAccessorEntityNameFromPath(path, paramName)
 		fieldEntityName := entityName

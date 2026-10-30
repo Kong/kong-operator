@@ -62,6 +62,12 @@ jobs:
         # Fetch all history so that we can get the correct commit hash for the conformance tests.
         fetch-depth: 0
 
+    - name: Setup private SDK access
+      uses: ./.github/actions/setup-private-sdk
+      with:
+        app-id: ${{ vars.GH_APP__KONG_READONLY__APP_ID }}
+        private-key: ${{ secrets.GH_APP__KONG_READONLY__PRIVATE_KEY }}
+
     - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
         go-version-file: go.mod

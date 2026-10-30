@@ -9,11 +9,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestKonnectConfigStoreAPISpec_ToCreateConfigStore(t *testing.T) {
+func TestKonnectConfigStoreAPISpec_ToCreateConfigStoreRequest(t *testing.T) {
 	spec := &KonnectConfigStoreAPISpec{
-		Name: "test-value",
+		ManagedBy: ManagedBy{"test-key": "test-value"},
+		Name:      "test-value",
 	}
-	result, err := spec.ToCreateConfigStore()
+	result, err := spec.ToCreateConfigStoreRequest()
 	require.NoError(t, err)
 	require.NotNil(t, result)
 
@@ -23,12 +24,14 @@ func TestKonnectConfigStoreAPISpec_ToCreateConfigStore(t *testing.T) {
 	var payload map[string]any
 	err = json.Unmarshal(data, &payload)
 	require.NoError(t, err)
+	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["managed_by"])
 	require.Equal(t, "test-value", payload["name"])
 }
 
 func TestKonnectConfigStoreAPISpec_ToUpdateConfigStoreRequest(t *testing.T) {
 	spec := &KonnectConfigStoreAPISpec{
-		Name: "test-value",
+		ManagedBy: ManagedBy{"test-key": "test-value"},
+		Name:      "test-value",
 	}
 	result, err := spec.ToUpdateConfigStoreRequest()
 	require.NoError(t, err)
@@ -40,5 +43,6 @@ func TestKonnectConfigStoreAPISpec_ToUpdateConfigStoreRequest(t *testing.T) {
 	var payload map[string]any
 	err = json.Unmarshal(data, &payload)
 	require.NoError(t, err)
+	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["managed_by"])
 	require.Equal(t, "test-value", payload["name"])
 }

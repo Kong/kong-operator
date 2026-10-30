@@ -120,7 +120,7 @@ func getPortalIdentityProviderRequestForUID(
 			if entryContainer == nil {
 				continue
 			}
-			entryVariant := entryContainer.PortalOIDCIdentityProviderConfigOutput
+			entryVariant := entryContainer.PortalOIDCIdentityProviderConfig
 			if entryVariant == nil {
 				continue
 			}

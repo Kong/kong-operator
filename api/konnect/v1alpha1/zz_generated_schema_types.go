@@ -56,6 +56,89 @@ const (
 	AIGatewayRuntimeAutoUpgradeDisabled AIGatewayRuntimeAutoUpgrade = "Disabled"
 )
 
+// AISettings is a type alias.
+type AISettings struct {
+	// Is AI enabled?
+	//
+	// +required
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// AI features configuration.
+	// When top-level `enabled` is false, every feature toggle here is
+	// automatically reset to false.
+	//
+	// +required
+	Features AISettingsFeatures `json:"features,omitzero"`
+}
+
+// AISettingsFeatures AI features configuration.
+// When top-level `enabled` is false, every feature toggle here is automatically
+// reset to false.
+type AISettingsFeatures struct {
+	// AI Search config
+	//
+	// +optional
+	AISearch AISettingsFeaturesAISearch `json:"aiSearch,omitzero"`
+	// AI Features config
+	//
+	// +required
+	McpServer AISettingsFeaturesMcpServer `json:"mcpServer,omitzero"`
+	// Portal Agent config
+	//
+	// +optional
+	PortalAgent AISettingsFeaturesPortalAgent `json:"portalAgent,omitzero"`
+}
+
+// AISettingsFeaturesAISearch AI Search config
+type AISettingsFeaturesAISearch struct {
+	// Whether AI Search is enabled or not
+	//
+	// +required
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+}
+
+// AISettingsFeaturesMcpServer AI Features config
+type AISettingsFeaturesMcpServer struct {
+	// Whether the MCP Server is enabled or not
+	//
+	// +required
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// Whether write operations are enabled or not for the Portal MCP Server
+	// enabled
+	//
+	// +required
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	WriteOperationsEnabled string `json:"writeOperationsEnabled,omitzero"`
+}
+
+// AISettingsFeaturesPortalAgent Portal Agent config
+type AISettingsFeaturesPortalAgent struct {
+	// The audience allowed to interact with the Portal Agent.
+	// Currently only `all` (available to every developer, including
+	// unauthenticated ones) is supported.
+	// `authenticated` (restricted to signed-in developers only) is planned for a
+	// future release.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=all
+	Audience PortalAgentAudience `json:"audience,omitzero"`
+	// The display name for the Portal Agent, shown to developers in the portal
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=120
+	DisplayName PortalAgentDisplayName `json:"displayName,omitzero"`
+	// Whether the Portal Agent is enabled or not
+	//
+	// +required
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+}
+
 // CreatePortalCustomDomainSSL is a type alias.
 type CreatePortalCustomDomainSSL = apiextensionsv1.JSON
 
@@ -165,12 +248,56 @@ type LabelsUpdateValue string
 // +kubebuilder:validation:MaxProperties=50
 type LabelsUpdate map[string]LabelsUpdateValue
 
+// ManagedByValue is the value type for ManagedBy.
+//
+// +kubebuilder:validation:MinLength=1
+// +kubebuilder:validation:MaxLength=63
+// +kubebuilder:validation:Pattern=`^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$`
+type ManagedByValue string
+
+// ManagedBy Stores information about what manages this entity, such as the tool
+// or system responsible for its lifecycle (for example, `terraform`).
+//
+// Keys must be 1–63 characters long and start with an alphanumeric character.
+//
+// +kubebuilder:validation:MaxProperties=5
+type ManagedBy map[string]ManagedByValue
+
 // MinRuntimeVersion The minimum runtime version supported by the API.
 // This is the lowest version of the data plane
 // release that can be used with the entity model.
 // When not specified, the minimum runtime version will be pinned to the latest
 // available release.
 type MinRuntimeVersion string
+
+// OIDCIdentityProviderBackChannelLogout The back-channel logout settings for
+// the OIDC identity provider.
+type OIDCIdentityProviderBackChannelLogout struct {
+	// Indicates whether back-channel logout is enabled.
+	// When enabled, the identity provider can notify
+	// the portal to end a user's session when they log out of the identity
+	// provider.
+	//
+	//
+	// +optional
+	Enabled OIDCIdentityProviderBackChannelLogoutEnabled `json:"enabled,omitzero"`
+}
+
+// OIDCIdentityProviderBackChannelLogoutEnabled Indicates whether back-channel
+// logout is enabled.
+// When enabled, the identity provider can notify
+// the portal to end a user's session when they log out of the identity
+// provider.
+//
+// +kubebuilder:validation:Enum=Enabled;Disabled
+type OIDCIdentityProviderBackChannelLogoutEnabled string
+
+const (
+	// OIDCIdentityProviderBackChannelLogoutEnabledEnabled sets OIDCIdentityProviderBackChannelLogoutEnabled as enabled.
+	OIDCIdentityProviderBackChannelLogoutEnabledEnabled OIDCIdentityProviderBackChannelLogoutEnabled = "Enabled"
+	// OIDCIdentityProviderBackChannelLogoutEnabledDisabled sets OIDCIdentityProviderBackChannelLogoutEnabled as disabled.
+	OIDCIdentityProviderBackChannelLogoutEnabledDisabled OIDCIdentityProviderBackChannelLogoutEnabled = "Disabled"
+)
 
 // OIDCIdentityProviderClaimMappings Defines the mappings between OpenID Connect
 // (OIDC) claims and local claims used by your application for
@@ -226,6 +353,17 @@ type PageTitle string
 // used.
 type PageVisibilityStatus string
 
+// PortalAgentAudience The audience allowed to interact with the Portal Agent.
+// Currently only `all` (available to every developer, including unauthenticated
+// ones) is supported.
+// `authenticated` (restricted to signed-in developers only) is planned for a
+// future release.
+type PortalAgentAudience string
+
+// PortalAgentDisplayName The display name for the Portal Agent, shown to
+// developers in the portal
+type PortalAgentDisplayName string
+
 // PortalFooterMenuSection is a type alias.
 type PortalFooterMenuSection struct {
 	//
@@ -272,6 +410,10 @@ type PortalMenuItem struct {
 // PortalOIDCIdentityProviderConfig The identity provider that contains
 // configuration data for the OIDC authentication integration.
 type PortalOIDCIdentityProviderConfig struct {
+	// The back-channel logout settings for the OIDC identity provider.
+	//
+	// +optional
+	BackchannelLogout OIDCIdentityProviderBackChannelLogout `json:"backchannelLogout,omitzero"`
 	// Defines the mappings between OpenID Connect (OIDC) claims and local claims
 	// used by your application for
 	// authentication.

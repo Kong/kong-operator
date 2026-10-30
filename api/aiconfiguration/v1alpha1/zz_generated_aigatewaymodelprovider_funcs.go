@@ -39,6 +39,10 @@ func (obj *AIGatewayModelProvider) GetKonnectName() string {
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Azure != nil {
 			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Azure.Name)
 		}
+	case AIGatewayModelProviderConfigTypeBaseten:
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Baseten != nil {
+			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Baseten.Name)
+		}
 	case AIGatewayModelProviderConfigTypeBedrock:
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Bedrock != nil {
 			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Bedrock.Name)

@@ -106,6 +106,16 @@ type KonnectAIGatewayAPISpec struct {
 	// +optional
 	Labels PublicLabels `json:"labels,omitzero"`
 
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+
 	// The minimum AI Gateway runtime version supported by this AI Gateway.
 	// This is the lowest data plane version that may receive configuration from
 	// it, and it controls which features the API accepts.

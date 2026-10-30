@@ -10,6 +10,17 @@ import (
 	sdkkonnectoper "github.com/Kong/sdk-konnect-go/models/operations"
 )
 
+// KonnectConfigStoreSDKOpsFreeformKeyFields lists free-form / map data-keyed
+// subtrees whose keys are user data (e.g. an HTTP header name) and must be
+// preserved verbatim rather than camelCase→snake_case renamed.
+var KonnectConfigStoreSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
+	{
+		Path: []string{
+			"managed_by",
+		},
+	},
+}
+
 func (s *KonnectConfigStoreAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	data, err := json.Marshal(s)
 	if err != nil {
@@ -19,10 +30,10 @@ func (s *KonnectConfigStoreAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return nil, fmt.Errorf("failed to decode KonnectConfigStoreAPISpec: %w", err)
 	}
-	payload = flattenSDKUnions(payload)
+	payload = flattenSDKUnionsExcept(payload, KonnectConfigStoreSDKOpsFreeformKeyFields)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
-	payload = renameKeysToSDK(payload)
+	payload = renameKeysToSDKExcept(payload, KonnectConfigStoreSDKOpsFreeformKeyFields)
 	data, err = json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal normalized KonnectConfigStoreAPISpec: %w", err)
@@ -30,20 +41,22 @@ func (s *KonnectConfigStoreAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	return data, nil
 }
 
-// ToCreateConfigStore converts the KonnectConfigStoreAPISpec to the SDK type
-// sdkkonnectcomp.CreateConfigStore using JSON marshal/unmarshal.
+// ToCreateConfigStoreRequest converts the KonnectConfigStoreAPISpec to the SDK type
+// sdkkonnectoper.CreateConfigStoreRequest using JSON marshal/unmarshal.
 // Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes
 // object references) are naturally excluded because they have different JSON names.
-func (s *KonnectConfigStoreAPISpec) ToCreateConfigStore() (*sdkkonnectcomp.CreateConfigStore, error) {
+func (s *KonnectConfigStoreAPISpec) ToCreateConfigStoreRequest() (*sdkkonnectoper.CreateConfigStoreRequest, error) {
 	data, err := s.marshalSDKOpsPayload()
 	if err != nil {
 		return nil, err
 	}
-	var target sdkkonnectcomp.CreateConfigStore
-	if err := json.Unmarshal(data, &target); err != nil {
+	var body sdkkonnectcomp.CreateConfigStore
+	if err := json.Unmarshal(data, &body); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal into CreateConfigStore: %w", err)
 	}
-	return &target, nil
+	return &sdkkonnectoper.CreateConfigStoreRequest{
+		CreateConfigStore: body,
+	}, nil
 }
 
 // ToUpdateConfigStoreRequest converts the KonnectConfigStoreAPISpec to the SDK type

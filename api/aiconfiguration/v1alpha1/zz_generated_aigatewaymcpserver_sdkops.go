@@ -150,6 +150,48 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 		},
 	},
 	{
+		Label: "conversion-listener.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"conversion-listener",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "conversion-listener.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"conversion-listener",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "conversion-listener.token_vault.cache.redis.ssl",
+		Path: []string{
+			"conversion-listener",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "conversion-listener.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"conversion-listener",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
 		Label: "conversion-listener.tools.[].annotations.destructive_hint",
 		Path: []string{
 			"conversion-listener",
@@ -259,6 +301,48 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 		Path: []string{
 			"conversion-only",
 			"enabled",
+		},
+	},
+	{
+		Label: "conversion-only.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"conversion-only",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "conversion-only.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"conversion-only",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "conversion-only.token_vault.cache.redis.ssl",
+		Path: []string{
+			"conversion-only",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "conversion-only.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"conversion-only",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
 		},
 	},
 	{
@@ -439,6 +523,48 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 		},
 	},
 	{
+		Label: "listener.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"listener",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "listener.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"listener",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "listener.token_vault.cache.redis.ssl",
+		Path: []string{
+			"listener",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "listener.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"listener",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
 		Label: "passthrough-listener.config.logging.audits",
 		Path: []string{
 			"passthrough-listener",
@@ -562,6 +688,48 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 		Path: []string{
 			"passthrough-listener",
 			"enabled",
+		},
+	},
+	{
+		Label: "passthrough-listener.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"passthrough-listener",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "passthrough-listener.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"passthrough-listener",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "passthrough-listener.token_vault.cache.redis.ssl",
+		Path: []string{
+			"passthrough-listener",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "passthrough-listener.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"passthrough-listener",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
 		},
 	},
 	{
@@ -697,6 +865,48 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 		Path: []string{
 			"upstream-server",
 			"enabled",
+		},
+	},
+	{
+		Label: "upstream-server.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"upstream-server",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "upstream-server.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"upstream-server",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "upstream-server.token_vault.cache.redis.ssl",
+		Path: []string{
+			"upstream-server",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "upstream-server.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"upstream-server",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
 		},
 	},
 	{
