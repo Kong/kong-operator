@@ -10,9 +10,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	extensionserrors "github.com/kong/kong-operator/v2/controller/pkg/extensions/errors"
 	"github.com/kong/kong-operator/v2/controller/pkg/extensions/processor"
 	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/internal/utils/konnectendpoint"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
@@ -116,7 +118,11 @@ func kicInKonnectDefaults(ctx context.Context, cl client.Client, konnectExtensio
 
 		// Build the configuration and return it.
 		konnectConfig := managercfg.DefaultKonnectConfig()
-		konnectConfig.Address = buildKonnectAddress(konnectExtension.Status.Konnect.Endpoints.ControlPlaneEndpoint)
+		address, err := buildKonnectAddress(konnectExtension.Status.Konnect.Endpoints.ControlPlaneEndpoint)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %w", extensionserrors.ErrInvalidEndpoint, err)
+		}
+		konnectConfig.Address = address
 		konnectConfig.ControlPlaneID = konnectExtension.Status.Konnect.ControlPlaneID
 		konnectConfig.TLSClient = managercfg.TLSClientConfig{
 			Cert: TLSClientCert,
@@ -137,9 +143,14 @@ func kicInKonnectDefaults(ctx context.Context, cl client.Client, konnectExtensio
 }
 
 // buildKonnectAddress builds the Konnect address out of the control plane endpoint.
-// input: "https://7b46471d3b.us.tp.konghq.tech:443"
+// input: "https://2cf352e764.us.cp.konghq.tech"
 // output: "https://us.kic.api.konghq.tech"
-func buildKonnectAddress(endpoint string) string {
+func buildKonnectAddress(endpoint string) (string, error) {
+	// A private endpoint carries a path, and no private route exists for kic.api.
+	if konnectendpoint.CarriesPath(endpoint) {
+		return "", fmt.Errorf("cannot derive a KIC address from private endpoint %q", endpoint)
+	}
+
 	portlessEndpoint := strings.TrimSuffix(endpoint, ":443")
 	addressSlice := strings.Split(portlessEndpoint, ".")
 	addressSlice = lo.Filter(addressSlice, func(_ string, i int) bool {
@@ -149,7 +160,10 @@ func buildKonnectAddress(endpoint string) string {
 		}
 		return true
 	})
-	return fmt.Sprintf("https://%s.kic.api.%s", addressSlice[0], strings.Join(addressSlice[1:], "."))
+	if len(addressSlice) == 0 {
+		return "", fmt.Errorf("cannot derive a KIC address from endpoint %q", endpoint)
+	}
+	return fmt.Sprintf("https://%s.kic.api.%s", addressSlice[0], strings.Join(addressSlice[1:], ".")), nil
 }
 
 // getTLSClientCertAndKey retrieves the TLS client certificate and key from the specified secret.

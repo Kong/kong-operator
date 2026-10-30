@@ -52,6 +52,27 @@ func Parse(raw string) (Endpoint, error) {
 	return e, nil
 }
 
+// CarriesPath reports whether a Konnect endpoint value is private: only private
+// endpoints carry a path such as "/cp/<id>", public ones are bare hosts.
+func CarriesPath(raw string) bool {
+	e, err := Parse(raw)
+	return err == nil && e.Path != ""
+}
+
+// CheckPrivateEndpoints reports the first endpoint that cannot reach a private
+// serverURL, which would leave the dataplane pointing at the wrong Konnect.
+func CheckPrivateEndpoints(serverURL string, endpoints ...string) error {
+	if !CarriesPath(serverURL) {
+		return nil
+	}
+	for _, endpoint := range endpoints {
+		if !CarriesPath(endpoint) {
+			return fmt.Errorf("endpoint %q is not private, server URL %q is", endpoint, serverURL)
+		}
+	}
+	return nil
+}
+
 // ServerName is the TLS server name to use for the endpoint.
 func (e Endpoint) ServerName() string {
 	return e.Host

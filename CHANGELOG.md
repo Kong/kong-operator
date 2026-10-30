@@ -71,6 +71,16 @@
 
 ## [Unreleased]
 
+### Breaking changes
+
+- A data plane whose `KonnectAPIAuthConfiguration` `serverURL` carries a path,
+  on a geo that does not return private endpoints yet, is no longer reconciled:
+  it keeps serving, but no spec, image or certificate change is applied until
+  the geo returns private endpoints. Its `KonnectExtension` reports
+  `Ready=False` with reason `EndpointMismatch`. Use a `serverURL` without a path
+  to keep the previous behaviour.
+  [#6265](https://github.com/Kong/kong-operator/pull/6265)
+
 ### Fixed
 
 - `KongPlugin` `spec.ordering` is now sent to Konnect. It was dropped for every
@@ -291,6 +301,15 @@
   route may run without plugin in the time window between old plugin deleted and
   new plugin created.
   [#6181](https://github.com/Kong/kong-operator/pull/6181)
+- A `KonnectExtension` whose Konnect endpoints cannot be used now reports
+  `Ready=False` and holds its data plane, instead of letting it reach Konnect
+  through the public endpoint: reason `InvalidEndpoint` for a
+  `K8SIngressController` endpoint carrying a path, `EndpointMismatch` for a
+  `serverURL` carrying a path paired with an endpoint that does not. A
+  Konnect-backed `AIGatewayDataPlane` reports `KonnectAIGatewayResolved=False`
+  with reason `EndpointMismatch` on the same mismatch, and on any endpoint
+  carrying a path until its private rendering lands.
+  [#6265](https://github.com/Kong/kong-operator/pull/6265)
 
 ### Added
 
