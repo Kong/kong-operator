@@ -14,7 +14,14 @@ RUN --mount=type=cache,target=$GOPATH/pkg/mod \
     --mount=type=cache,target=$GOCACHE \
     --mount=type=bind,source=go.sum,target=go.sum \
     --mount=type=bind,source=go.mod,target=go.mod \
-    go mod download -x
+    --mount=type=secret,id=gh_token,required=false \
+    # shortcut: never-merge branch; token lets go fetch the private sdk-konnect-go-internal.
+    if [ -s /run/secrets/gh_token ]; then \
+      export GIT_CONFIG_COUNT=1 \
+        GIT_CONFIG_KEY_0="url.https://x-access-token:$(cat /run/secrets/gh_token)@github.com/Kong/sdk-konnect-go-internal.insteadOf" \
+        GIT_CONFIG_VALUE_0="https://github.com/Kong/sdk-konnect-go-internal"; \
+    fi; \
+    GOPRIVATE=github.com/Kong/sdk-konnect-go-internal go mod download -x
 
 COPY ingress-controller/ ingress-controller/
 COPY cmd/main.go cmd/main.go

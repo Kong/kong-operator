@@ -57,6 +57,13 @@ jobs:
       - name: checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: Setup private SDK access
+        id: private-sdk
+        uses: ./.github/actions/setup-private-sdk
+        with:
+          app-id: ${{ vars.GH_APP__KONG_READONLY__APP_ID }}
+          private-key: ${{ secrets.GH_APP__KONG_READONLY__PRIVATE_KEY }}
+
       - name: setup golang
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
@@ -64,6 +71,9 @@ jobs:
           cache: false
 
       - name: build docker image
+        env:
+          GH_TOKEN_PRIVATE_READ: ${{ steps.private-sdk.outputs.token }}
+          DOCKERBUILDFLAGS: --secret id=gh_token,env=GH_TOKEN_PRIVATE_READ
         run: make docker.build
 
       - name: save docker image as artifact
@@ -154,6 +164,11 @@ jobs:
         egress-policy: audit
     - name: Checkout repository
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - name: Setup private SDK access
+      uses: ./.github/actions/setup-private-sdk
+      with:
+        app-id: ${{ vars.GH_APP__KONG_READONLY__APP_ID }}
+        private-key: ${{ secrets.GH_APP__KONG_READONLY__PRIVATE_KEY }}
     - name: Setup go
       uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
@@ -211,6 +226,11 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+    - name: Setup private SDK access
+      uses: ./.github/actions/setup-private-sdk
+      with:
+        app-id: ${{ vars.GH_APP__KONG_READONLY__APP_ID }}
+        private-key: ${{ secrets.GH_APP__KONG_READONLY__PRIVATE_KEY }}
     - name: Setup go
       uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
@@ -261,6 +281,11 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+    - name: Setup private SDK access
+      uses: ./.github/actions/setup-private-sdk
+      with:
+        app-id: ${{ vars.GH_APP__KONG_READONLY__APP_ID }}
+        private-key: ${{ secrets.GH_APP__KONG_READONLY__PRIVATE_KEY }}
     - name: Setup go
       uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
@@ -323,6 +348,11 @@ jobs:
         egress-policy: audit
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+    - name: Setup private SDK access
+      uses: ./.github/actions/setup-private-sdk
+      with:
+        app-id: ${{ vars.GH_APP__KONG_READONLY__APP_ID }}
+        private-key: ${{ secrets.GH_APP__KONG_READONLY__PRIVATE_KEY }}
     - name: setup golang
       uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
