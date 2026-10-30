@@ -165,7 +165,7 @@ func (obj *AIGatewayConsumer) aigwCredentials(
 // allowed by a KongReferenceGrant (the generated sdkOpsAPISpec alone would resolve it
 // regardless of namespace).
 func (obj *AIGatewayConsumerCredential) toAIGWCredential(ctx context.Context, cl client.Client) (*aigw.Credential, error) {
-	if err := checkCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
+	if err := CheckCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
 		return nil, err
 	}
 

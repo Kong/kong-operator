@@ -112,7 +112,7 @@ func TestCheckCrossNamespaceSecretRefsGranted(t *testing.T) {
 			t.Parallel()
 
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.grants...).Build()
-			err := checkCrossNamespaceSecretRefsGranted(t.Context(), cl, tt.obj)
+			err := CheckCrossNamespaceSecretRefsGranted(t.Context(), cl, tt.obj)
 			if tt.wantNotGranted {
 				require.True(t, crossnamespace.IsReferenceNotGranted(err), "expected not granted error, got %v", err)
 				return

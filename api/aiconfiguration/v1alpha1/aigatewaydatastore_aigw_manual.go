@@ -22,7 +22,7 @@ func (obj *AIGatewayDatastore) ToAIGWDatastore(ctx context.Context, cl client.Cl
 		return nil, fmt.Errorf("AIGatewayDatastore %s/%s: spec.apiSpec is required", obj.Namespace, obj.Name)
 	}
 
-	if err := checkCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
+	if err := CheckCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
 		return nil, fmt.Errorf("AIGatewayDatastore %s/%s: %w", obj.Namespace, obj.Name, err)
 	}
 

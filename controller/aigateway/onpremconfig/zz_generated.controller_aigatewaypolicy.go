@@ -43,6 +43,7 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/changenotifier"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
 // -----------------------------------------------------------------------------
@@ -88,6 +89,12 @@ func (r *AIGatewayPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			),
 		)
 	}
+	// Watch KongReferenceGrants, so that the ResolvedRefs condition follows a grant
+	// that is created, changed or deleted.
+	blder.Watches(
+		&configurationv1alpha1.KongReferenceGrant{},
+		handler.EnqueueRequestsFromMapFunc(mapKongReferenceGrantToEntities[aiconfigurationv1alpha1.AIGatewayPolicyList](r.Client)),
+	)
 	return blder.
 		For(
 			&aiconfigurationv1alpha1.AIGatewayPolicy{},
@@ -206,6 +213,11 @@ func (r *AIGatewayPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			ctrlutils.WithFailedMessage(r.StatusClient.KubernetesObjectConfigurationStatusMessage(obj)),
 		)
 		obj.Status.Conditions = conditions
+		resolvedRefsChanged, err := ensureResolvedRefsCondition(ctx, r.Client, obj, obj.Generation, &obj.Status.Conditions)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		updateNeeded = updateNeeded || resolvedRefsChanged
 		if updateNeeded {
 			if err := r.Status().Update(ctx, obj); err != nil {
 				if apierrors.IsConflict(err) {

@@ -62,7 +62,9 @@ func newReconcilerClient(t *testing.T, objs ...client.Object) client.Client {
 	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
 	require.NoError(t, corev1.AddToScheme(scheme))
 	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
-	return fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).WithStatusSubresource(&aiconfigurationv1alpha1.AIGatewayModel{}).Build()
+	return fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).
+		WithStatusSubresource(&aiconfigurationv1alpha1.AIGatewayModel{}, &aiconfigurationv1alpha1.AIGatewayAuthStrategy{}).
+		Build()
 }
 
 func getProgrammedCondition(t *testing.T, cl client.Client, nn client.ObjectKey) metav1.Condition {
