@@ -62,10 +62,10 @@ func createCertificate(
 		return err
 	}
 
-	resp, err := sdk.CreateCertificate(ctx,
-		cpID,
-		input,
-	)
+	resp, err := sdk.CreateCertificate(ctx, sdkkonnectops.CreateCertificateRequest{
+		ControlPlaneID:     cpID,
+		CertificateRequest: input,
+	})
 
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
@@ -129,7 +129,10 @@ func deleteCertificate(
 	cert *configurationv1alpha1.KongCertificate,
 ) error {
 	id := cert.Status.Konnect.GetKonnectID()
-	_, err := sdk.DeleteCertificate(ctx, cert.GetControlPlaneID(), id)
+	_, err := sdk.DeleteCertificate(ctx, sdkkonnectops.DeleteCertificateRequest{
+		ControlPlaneID: cert.GetControlPlaneID(),
+		CertificateID:  id,
+	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, cert); errWrap != nil {
 		return handleDeleteError(ctx, err, cert)
 	}
@@ -150,7 +153,10 @@ func adoptCertificate(
 	adoptOptions := cert.Spec.Adopt
 	konnectID := adoptOptions.Konnect.ID
 
-	resp, err := sdk.GetCertificate(ctx, konnectID, cpID)
+	resp, err := sdk.GetCertificate(ctx, sdkkonnectops.GetCertificateRequest{
+		CertificateID:  konnectID,
+		ControlPlaneID: cpID,
+	})
 	if err != nil {
 		return KonnectEntityAdoptionFetchError{
 			KonnectID: konnectID,

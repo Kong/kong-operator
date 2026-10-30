@@ -635,6 +635,12 @@
 
 ### Changed
 
+- Bumped `sdk-konnect-go` to `v0.78.0`. Konnect core entities (`KongService`,
+  `KongRoute`, `KongConsumer`, `KongConsumerGroup`, `KongPluginBinding`,
+  `KongCertificate`, `KongKey`, `KongKeySet`, `KongUpstream`, `KongVault`) are
+  now created, read and deleted through the workspace-scoped
+  `/v2/control-planes/{controlPlaneId}/core-entities/default/...` endpoints.
+  [#6347](https://github.com/Kong/kong-operator/pull/6347)
 - On-prem AI Gateway: an `AIGatewayConsumer` with a broken
   `AIGatewayConsumerCredential` now reports `Programmed=True` while its healthy
   credentials keep rendering. The failure of the broken credential reports on

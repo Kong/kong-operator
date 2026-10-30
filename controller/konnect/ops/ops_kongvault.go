@@ -41,7 +41,10 @@ func createVault(ctx context.Context, cl client.Client, sdk sdkkonnectgo.VaultsS
 	if err != nil {
 		return fmt.Errorf("failed to convert KongVault to Konnect vault input: %w", err)
 	}
-	resp, err := sdk.CreateVault(ctx, cpID, vaultInput)
+	resp, err := sdk.CreateVault(ctx, sdkkonnectops.CreateVaultRequest{
+		ControlPlaneID: cpID,
+		Vault:          vaultInput,
+	})
 
 	if errWrapped := wrapErrIfKonnectOpFailed(err, CreateOp, vault); errWrapped != nil {
 		return errWrapped
@@ -87,7 +90,10 @@ func deleteVault(ctx context.Context, sdk sdkkonnectgo.VaultsSDK, vault *configu
 	}
 
 	id := vault.GetKonnectStatus().GetKonnectID()
-	_, err := sdk.DeleteVault(ctx, cpID, id)
+	_, err := sdk.DeleteVault(ctx, sdkkonnectops.DeleteVaultRequest{
+		ControlPlaneID: cpID,
+		VaultID:        id,
+	})
 	if errWrapped := wrapErrIfKonnectOpFailed(err, DeleteOp, vault); errWrapped != nil {
 		return handleDeleteError(ctx, err, vault)
 	}
@@ -108,7 +114,10 @@ func adoptVault(ctx context.Context, cl client.Client, sdk sdkkonnectgo.VaultsSD
 
 	konnectID := adoptOptions.Konnect.ID
 
-	resp, err := sdk.GetVault(ctx, konnectID, cpID)
+	resp, err := sdk.GetVault(ctx, sdkkonnectops.GetVaultRequest{
+		VaultID:        konnectID,
+		ControlPlaneID: cpID,
+	})
 	if err != nil {
 		return KonnectEntityAdoptionFetchError{
 			KonnectID: konnectID,

@@ -44,10 +44,10 @@ func createPlugin(
 		return err
 	}
 
-	resp, err := sdk.CreatePlugin(ctx,
-		controlPlaneID,
-		*pluginInput,
-	)
+	resp, err := sdk.CreatePlugin(ctx, sdkkonnectops.CreatePluginRequest{
+		ControlPlaneID: controlPlaneID,
+		Plugin:         *pluginInput,
+	})
 
 	if errWrapped := wrapErrIfKonnectOpFailed(err, CreateOp, pluginBinding); errWrapped != nil {
 		return errWrapped
@@ -107,7 +107,10 @@ func deletePlugin(
 	pb *configurationv1alpha1.KongPluginBinding,
 ) error {
 	id := pb.GetKonnectID()
-	_, err := sdk.DeletePlugin(ctx, pb.GetControlPlaneID(), id)
+	_, err := sdk.DeletePlugin(ctx, sdkkonnectops.DeletePluginRequest{
+		ControlPlaneID: pb.GetControlPlaneID(),
+		PluginID:       id,
+	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, pb); errWrap != nil {
 		return handleDeleteError(ctx, err, pb)
 	}

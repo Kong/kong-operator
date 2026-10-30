@@ -64,8 +64,11 @@ func TestKongUpstream(t *testing.T) {
 		sdk.UpstreamsSDK.EXPECT().
 			CreateUpstream(
 				mock.Anything,
-				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.Upstream) bool {
+				mock.MatchedBy(func(r sdkkonnectops.CreateUpstreamRequest) bool {
+					if r.ControlPlaneID != cp.GetKonnectID() {
+						return false
+					}
+					req := r.Upstream
 					return req.Algorithm != nil && *req.Algorithm == "round-robin"
 				}),
 			).
@@ -118,8 +121,7 @@ func TestKongUpstream(t *testing.T) {
 		sdk.UpstreamsSDK.EXPECT().
 			DeleteUpstream(
 				mock.Anything,
-				cp.GetKonnectID(),
-				upstreamID,
+				sdkkonnectops.DeleteUpstreamRequest{ControlPlaneID: cp.GetKonnectID(), UpstreamID: upstreamID},
 			).
 			Return(&sdkkonnectops.DeleteUpstreamResponse{}, nil)
 
@@ -145,8 +147,11 @@ func TestKongUpstream(t *testing.T) {
 		sdk.UpstreamsSDK.EXPECT().
 			CreateUpstream(
 				mock.Anything,
-				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.Upstream) bool {
+				mock.MatchedBy(func(r sdkkonnectops.CreateUpstreamRequest) bool {
+					if r.ControlPlaneID != cp.GetKonnectID() {
+						return false
+					}
+					req := r.Upstream
 					return slices.Contains(req.Tags, "test-1")
 				}),
 			).
@@ -191,8 +196,7 @@ func TestKongUpstream(t *testing.T) {
 		t.Log("Setting up SDK expectations for getting and updating upstreams")
 		sdk.UpstreamsSDK.EXPECT().GetUpstream(
 			mock.Anything,
-			upstreamID,
-			cp.GetKonnectID(),
+			sdkkonnectops.GetUpstreamRequest{ControlPlaneID: cp.GetKonnectID(), UpstreamID: upstreamID},
 		).Return(&sdkkonnectops.GetUpstreamResponse{
 			Upstream: &sdkkonnectcomp.Upstream{
 				ID:        &upstreamID,
@@ -222,7 +226,7 @@ func TestKongUpstream(t *testing.T) {
 		)
 
 		t.Log("Setting up SDK expectations for upstream deletion")
-		sdk.UpstreamsSDK.EXPECT().DeleteUpstream(mock.Anything, cp.GetKonnectID(), upstreamID).Return(nil, nil)
+		sdk.UpstreamsSDK.EXPECT().DeleteUpstream(mock.Anything, sdkkonnectops.DeleteUpstreamRequest{ControlPlaneID: cp.GetKonnectID(), UpstreamID: upstreamID}).Return(nil, nil)
 
 		t.Logf("Deleting KongUpstream %s/%s", ns.Name, createdUpstream.Name)
 		require.NoError(t, clientNamespaced.Delete(ctx, createdUpstream))

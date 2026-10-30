@@ -97,9 +97,9 @@ func TestKongPluginBindingOrdering(t *testing.T) {
 	sdk.PluginSDK.EXPECT().
 		CreatePlugin(
 			mock.Anything,
-			cp.GetKonnectStatus().GetKonnectID(),
-			mock.MatchedBy(func(pi sdkkonnectcomp.Plugin) bool {
-				return slices.Equal(pi.Ordering.GetBefore().GetAccess(), []string{"key-auth"})
+			mock.MatchedBy(func(r sdkkonnectops.CreatePluginRequest) bool {
+				return r.ControlPlaneID == cp.GetKonnectStatus().GetKonnectID() &&
+					slices.Equal(r.Plugin.Ordering.GetBefore().GetAccess(), []string{"key-auth"})
 			}),
 		).
 		Return(&sdkkonnectops.CreatePluginResponse{Plugin: &sdkkonnectcomp.Plugin{ID: new(pluginID)}}, nil).
@@ -168,7 +168,10 @@ func TestKongPluginBindingOrdering(t *testing.T) {
 	})
 
 	sdk.PluginSDK.EXPECT().
-		DeletePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), pluginID).
+		DeletePlugin(mock.Anything, sdkkonnectops.DeletePluginRequest{
+			ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
+			PluginID:       pluginID,
+		}).
 		Return(&sdkkonnectops.DeletePluginResponse{StatusCode: 200}, nil)
 	require.NoError(t, clientNamespaced.Delete(ctx, kpb))
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {

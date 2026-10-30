@@ -78,7 +78,9 @@ func TestKongPluginBindingManaged(t *testing.T) {
 
 	addPluginDeleteExpectation := func() {
 		sdk.PluginSDK.EXPECT().
-			DeletePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
+			DeletePlugin(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.DeletePluginRequest) bool {
+				return r.ControlPlaneID == cp.GetKonnectStatus().GetKonnectID()
+			})).
 			Return(
 				&sdkkonnectops.DeletePluginResponse{
 					StatusCode: 200,
@@ -239,7 +241,9 @@ func TestKongPluginBindingManaged(t *testing.T) {
 
 		pluginID := uuid.NewString()
 		sdk.PluginSDK.EXPECT().
-			CreatePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
+			CreatePlugin(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.CreatePluginRequest) bool {
+				return r.ControlPlaneID == cp.GetKonnectStatus().GetKonnectID()
+			})).
 			Return(
 				&sdkkonnectops.CreatePluginResponse{
 					Plugin: &sdkkonnectcomp.Plugin{
@@ -491,7 +495,9 @@ func TestKongPluginBindingManaged(t *testing.T) {
 
 		// Permissive CreatePlugin expectation: allow multiple invocations from concurrent reconciles.
 		sdk.PluginSDK.EXPECT().
-			CreatePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
+			CreatePlugin(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.CreatePluginRequest) bool {
+				return r.ControlPlaneID == cp.GetKonnectStatus().GetKonnectID()
+			})).
 			Return(
 				&sdkkonnectops.CreatePluginResponse{
 					Plugin: &sdkkonnectcomp.Plugin{
@@ -658,7 +664,9 @@ func TestKongPluginBindingManaged(t *testing.T) {
 
 		// Permissive CreatePlugin expectation: allow multiple invocations from concurrent reconciles.
 		sdk.PluginSDK.EXPECT().
-			CreatePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
+			CreatePlugin(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.CreatePluginRequest) bool {
+				return r.ControlPlaneID == cp.GetKonnectStatus().GetKonnectID()
+			})).
 			Return(
 				&sdkkonnectops.CreatePluginResponse{
 					Plugin: &sdkkonnectcomp.Plugin{

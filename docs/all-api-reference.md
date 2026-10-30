@@ -350,7 +350,7 @@ AIGWOpenIDConnectGeneratedConfig is a type alias.
 | `authorizationQueryArgsValues` _[]string_ | Extra query argument values passed to the authorization endpoint. |
 | `authorizationRollingTimeout` _float64_ | Specifies how long the session used for the authorization code flow can be used in seconds until it needs to be renewed. 0 disables the checks and rolling. |
 | `bearerTokenCookieName` _string_ | The name of the cookie in which the bearer token is passed. |
-| `bearerTokenHeaderName` _string_ | The name of the HTTP header from which the bearer token is retrieved. The default value is `authorization:bearer`, which reads the token from the `Authorization: Bearer <token>` header. Accepts plain header names such as `x-my-token` as well as Kong's special `authorization:bearer` notation. The `access-token` and `x-access-token` headers are also checked as a fallback for backward compatibility regardless of this setting. |
+| `bearerTokenHeaderName` _string_ | The name of the HTTP header from which the bearer token is retrieved. The default value is `authorization:bearer`, which reads the token from the `Authorization: Bearer <token>` header. Accepts plain header names such as `x-my-token` as well as Kong's special `authorization:bearer` notation. The `access-token` and `x-access-token` headers are also checked as a fallback for backward compatibility regardless of this setting.<br /><br />**Requires a minimum runtime version of `2.1`**. |
 | `bearerTokenParamType` _[]string_ | Where to look for the bearer token: - `header`: search the `Authorization`, `access-token`, and `x-access-token` HTTP headers - `query`: search the URL's query string - `body`: search the HTTP request body - `cookie`: search the HTTP request cookies specified with `config.bearer_token_cookie_name`. |
 | `byUsernameIgnoreCase` _string_ | If `consumer_by` is set to `username`, specify whether `username` can match consumers case-insensitively. |
 | `cacheIntrospection` _string_ | Cache the introspection endpoint requests. |
@@ -378,7 +378,7 @@ AIGWOpenIDConnectGeneratedConfig is a type alias.
 | `consumerGroupsClaim` _[]string_ | The claim used for consumer groups mapping. If multiple values are set, it means the claim is inside a nested object of the token payload. |
 | `consumerGroupsOptional` _string_ | Do not terminate the request if consumer groups mapping fails. |
 | `consumerOptional` _string_ | Do not terminate the request if consumer mapping fails. |
-| `credentialClaim` _[]string_ | The claim used to derive virtual credentials (e.g. to be consumed by the rate-limiting plugin), in case the consumer mapping is not used. If multiple values are set, it means the claim is inside a nested object of the token payload. |
+| `credentialClaim` _[]string_ | Claim path used to derive virtual credentials when consumer mapping is not used. |
 | `disableSession` _[]string_ | Disable issuing the session cookie with the specified grants. |
 | `discoveryHeadersNames` _[]string_ | Extra header names passed to the discovery endpoint. |
 | `discoveryHeadersValues` _[]string_ | Extra header values passed to the discovery endpoint. |
@@ -898,8 +898,8 @@ token exchange request.
 | Field | Description |
 | --- | --- |
 | `audience` _[]string_ | Audiences used in the token exchange request. Values defined here override those defined in `config.audience`. |
-| `emptyAudience` _string_ | Use empty audiences. Use this field to override audiences defined in `config.audience`. |
-| `emptyScopes` _string_ | Use empty scopes. Use this field to override scopes defined in `config.scopes`. |
+| `emptyAudience` _string_ | Use empty audiences. Use this field to remove audiences defined in `config.audience`. |
+| `emptyScopes` _string_ | Use empty scopes. Use this field to remove scopes defined in `config.scopes`. |
 | `scopes` _[]string_ | Scopes used in the token exchange request. Values defined here override those defined in `config.scopes`. |
 
 _Appears in:_
@@ -918,7 +918,7 @@ the token will be exchanged.
 
 | Field | Description |
 | --- | --- |
-| `conditions` _[AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuersConditions](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigtokenexchangesubjecttokenissuersconditions)_ | A tokens will only be exchange when it matches all these criteria. To exchanging tokens issued from a different issuer, conditions must not be defined; On the contrary, to exchange tokens issued from the target issuer itself, conditions must be defined. |
+| `conditions` _[AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuersConditions](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigtokenexchangesubjecttokenissuersconditions)_ | A token will only be exchanged when it matches all these criteria. To exchange tokens issued by a different issuer, `conditions` must not be defined -- every token from that issuer is exchanged unconditionally, since a foreign-issued token that isn't exchanged can never pass normal verification against the target issuer anyway. In contrast, to exchange tokens issued by the target issuer itself, `conditions` must be defined. |
 | `issuer` _string_ | Tokens of whose iss claim matches this value will be exchanged. |
 
 _Appears in:_
@@ -929,19 +929,22 @@ _Appears in:_
 
 
 AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuersConditions A
-tokens will only be exchange when it matches all these criteria.
-To exchanging tokens issued from a different issuer, conditions must not be
-defined; On the contrary, to exchange tokens issued from the target issuer
-itself, conditions must be defined.
+token will only be exchanged when it matches all these criteria.
+To exchange tokens issued by a different issuer, `conditions` must not be
+defined -- every token from that issuer is exchanged unconditionally, since a
+foreign-issued token that isn't exchanged can never pass normal verification
+against the target issuer anyway.
+In contrast, to exchange tokens issued by the target issuer itself,
+`conditions` must be defined.
 
 
 
 | Field | Description |
 | --- | --- |
-| `hasAudience` _[]string_ |  |
-| `hasScopes` _[]string_ |  |
-| `missingAudience` _[]string_ |  |
-| `missingScopes` _[]string_ |  |
+| `hasAudience` _[]string_ | Audience values that must all be present in the token, matched against `audience_claim`. |
+| `hasScopes` _[]string_ | Scope values that must all be present in the token, matched against `scopes_claim`. |
+| `missingAudience` _[]string_ | Audience values that must all be absent from the token, matched against `audience_claim`. |
+| `missingScopes` _[]string_ | Scope values that must all be absent from the token, matched against `scopes_claim`. |
 
 _Appears in:_
 
@@ -23037,7 +23040,7 @@ Theme The theme settings for this portal.
 | --- | --- |
 | `colors` _[Colors](#konnect-konghq-com-v1alpha1-types-colors)_ |  |
 | `mode` _string_ |  |
-| `name` _string_ | The theme name to apply to this portal. Supported names are 'ocean', 'mesa', and 'grove'. If another name is provided or this property is omitted, the portal uses the default 'ocean' theme. |
+| `name` _string_ | The theme name to apply to this portal. Supported names are 'mesa', 'grove', 'pebble', or 'ocean'. If another name is provided or this property is omitted, the portal uses the default 'ocean' theme. |
 
 _Appears in:_
 

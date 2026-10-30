@@ -78,7 +78,7 @@ func TestAdoptKongConsumerOverride(t *testing.T) {
 	}
 
 	sdk.EXPECT().
-		GetConsumer(ctx, "cons-1", "cp-1").
+		GetConsumer(ctx, sdkkonnectops.GetConsumerRequest{ConsumerID: "cons-1", ControlPlaneID: "cp-1"}).
 		Return(&sdkkonnectops.GetConsumerResponse{
 			Consumer: &sdkkonnectcomp.Consumer{},
 		}, nil)
@@ -145,7 +145,7 @@ func TestAdoptKongConsumerMatch(t *testing.T) {
 	}
 
 	sdk.EXPECT().
-		GetConsumer(ctx, "cons-2", "cp-1").
+		GetConsumer(ctx, sdkkonnectops.GetConsumerRequest{ConsumerID: "cons-2", ControlPlaneID: "cp-1"}).
 		Return(&sdkkonnectops.GetConsumerResponse{
 			Consumer: &sdkkonnectcomp.Consumer{
 				Username: new("user-1"),
@@ -203,7 +203,7 @@ func TestAdoptKongConsumerMatchNotMatching(t *testing.T) {
 	}
 
 	sdk.EXPECT().
-		GetConsumer(ctx, "cons-3", "cp-1").
+		GetConsumer(ctx, sdkkonnectops.GetConsumerRequest{ConsumerID: "cons-3", ControlPlaneID: "cp-1"}).
 		Return(&sdkkonnectops.GetConsumerResponse{
 			Consumer: &sdkkonnectcomp.Consumer{
 				Username: new("actual"),
@@ -240,7 +240,7 @@ func TestAdoptKongConsumerFetchError(t *testing.T) {
 	}
 
 	sdk.EXPECT().
-		GetConsumer(ctx, "cons-err", "cp-1").
+		GetConsumer(ctx, sdkkonnectops.GetConsumerRequest{ConsumerID: "cons-err", ControlPlaneID: "cp-1"}).
 		Return(nil, errors.New("boom"))
 
 	err := adoptConsumer(ctx, sdk, cgSDK, cl, consumer, adoptOptions)

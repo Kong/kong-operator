@@ -151,8 +151,7 @@ func TestAdoptRoute(t *testing.T) {
 				}
 				sdk.EXPECT().GetRoute(
 					mock.Anything,
-					"1234",
-					"123456789",
+					sdkkonnectops.GetRouteRequest{RouteID: "1234", ControlPlaneID: "123456789"},
 				).Return(
 					&sdkkonnectops.GetRouteResponse{
 						Route: &sdkkonnectcomp.Route{
@@ -208,8 +207,7 @@ func TestAdoptRoute(t *testing.T) {
 
 				sdk.EXPECT().GetRoute(
 					mock.Anything,
-					"1234",
-					"123456789",
+					sdkkonnectops.GetRouteRequest{RouteID: "1234", ControlPlaneID: "123456789"},
 				).Return(
 					nil, &sdkkonnecterrs.NotFoundError{},
 				)
@@ -249,8 +247,7 @@ func TestAdoptRoute(t *testing.T) {
 
 				sdk.EXPECT().GetRoute(
 					mock.Anything,
-					"1234",
-					"123456789",
+					sdkkonnectops.GetRouteRequest{RouteID: "1234", ControlPlaneID: "123456789"},
 				).Return(
 					&sdkkonnectops.GetRouteResponse{
 						Route: &sdkkonnectcomp.Route{
@@ -299,8 +296,7 @@ func TestAdoptRoute(t *testing.T) {
 				}
 				sdk.EXPECT().GetRoute(
 					mock.Anything,
-					"1234",
-					"123456789",
+					sdkkonnectops.GetRouteRequest{RouteID: "1234", ControlPlaneID: "123456789"},
 				).Return(
 					&sdkkonnectops.GetRouteResponse{
 						Route: &sdkkonnectcomp.Route{
@@ -350,8 +346,7 @@ func TestAdoptRoute(t *testing.T) {
 				}
 				sdk.EXPECT().GetRoute(
 					mock.Anything,
-					"1234",
-					"123456789",
+					sdkkonnectops.GetRouteRequest{RouteID: "1234", ControlPlaneID: "123456789"},
 				).Return(
 					&sdkkonnectops.GetRouteResponse{
 						Route: &sdkkonnectcomp.Route{
@@ -405,8 +400,7 @@ func TestAdoptRoute(t *testing.T) {
 				}
 				sdk.EXPECT().GetRoute(
 					mock.Anything,
-					"1234",
-					"123456789",
+					sdkkonnectops.GetRouteRequest{RouteID: "1234", ControlPlaneID: "123456789"},
 				).Return(
 					&sdkkonnectops.GetRouteResponse{
 						Route: &sdkkonnectcomp.Route{
