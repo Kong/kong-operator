@@ -73,6 +73,11 @@
 
 ### Fixed
 
+- `KongReferenceGrant` now accepts `EventGatewayDataPlaneCertificate` as a
+  `spec.from` kind. Its controller already honoured grants for a `secretRef`
+  in another namespace, but the CRD validation rejected the grant, so the
+  cross-namespace reference could not be allowed.
+  [#6361](https://github.com/Kong/kong-operator/pull/6361)
 - `KongPlugin` `spec.ordering` is now sent to Konnect. It was dropped for every
   `KongPluginBinding`, and for `KongPlugin`s referenced from `HTTPRoute` and
   `GRPCRoute` `ExtensionRef` filters in hybrid gateways, so dynamic plugin
