@@ -30,6 +30,7 @@ Package v1alpha1 contains API Schema definitions for the aiconfiguration.konghq.
 - [AIGatewayConsumerGroup](#aiconfiguration-konghq-com-v1alpha1-aigatewayconsumergroup)
 - [AIGatewayCustomPolicy](#aiconfiguration-konghq-com-v1alpha1-aigatewaycustompolicy)
 - [AIGatewayDataPlaneCertificate](#aiconfiguration-konghq-com-v1alpha1-aigatewaydataplanecertificate)
+- [AIGatewayDatastore](#aiconfiguration-konghq-com-v1alpha1-aigatewaydatastore)
 - [AIGatewayMCPServer](#aiconfiguration-konghq-com-v1alpha1-aigatewaymcpserver)
 - [AIGatewayModel](#aiconfiguration-konghq-com-v1alpha1-aigatewaymodel)
 - [AIGatewayModelProvider](#aiconfiguration-konghq-com-v1alpha1-aigatewaymodelprovider)
@@ -171,6 +172,21 @@ AIGatewayDataPlaneCertificate is the Schema for the aigatewaydataplanecertificat
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[AIGatewayDataPlaneCertificateSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydataplanecertificatespec)_ |  |
 | `status` _[AIGatewayDataPlaneCertificateStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydataplanecertificatestatus)_ |  |
+
+### AIGatewayDatastore
+
+
+AIGatewayDatastore is the Schema for the aigatewaydatastores API.
+
+<!-- ai_gateway_datastore description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `aiconfiguration.konghq.com/v1alpha1`
+| `kind` _string_ | `AIGatewayDatastore`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[AIGatewayDatastoreSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastorespec)_ |  |
+| `status` _[AIGatewayDatastoreStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastorestatus)_ |  |
 
 ### AIGatewayMCPServer
 
@@ -2013,6 +2029,60 @@ _Appears in:_
 
 - [AIGatewayDataPlaneCertificate](#aiconfiguration-konghq-com-v1alpha1-aigatewaydataplanecertificate)
 
+#### AIGatewayDatastoreAPISpec
+
+
+AIGatewayDatastoreAPISpec defines the API spec fields for AIGatewayDatastore.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayDatastoreSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastorespec)
+
+#### AIGatewayDatastoreConfig
+
+
+AIGatewayDatastoreConfig represents a union type for AIGatewayDatastoreConfig.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayDatastoreConfigType](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreconfigtype)_ | Type designates the type of configuration. |
+| `redis-ce` _[RedisCEDatastore](#aiconfiguration-konghq-com-v1alpha1-types-rediscedatastore)_ | RedisCE configuration. |
+| `redis-ee` _[RedisEEDatastore](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastore)_ | RedisEE configuration. |
+| `token-vault` _[TokenVaultDatastore](#aiconfiguration-konghq-com-v1alpha1-types-tokenvaultdatastore)_ | TokenVault configuration. |
+| `vectordb` _[VectorDBDatastore](#aiconfiguration-konghq-com-v1alpha1-types-vectordbdatastore)_ | VectorDB configuration. |
+
+_Appears in:_
+
+- [AIGatewayDatastoreAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreapispec)
+
+#### AIGatewayDatastoreConfigType
+
+_Underlying type:_ `string`
+
+AIGatewayDatastoreConfigType represents the type of AIGatewayDatastoreConfig.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `redis-ce` |  |
+| `redis-ee` |  |
+| `token-vault` |  |
+| `vectordb` |  |
+
 #### AIGatewayDatastoreName
 
 _Underlying type:_ `string`
@@ -2026,6 +2096,10 @@ resource.
 _Appears in:_
 
 - [AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)
+- [RedisCEDatastore](#aiconfiguration-konghq-com-v1alpha1-types-rediscedatastore)
+- [RedisEEDatastore](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastore)
+- [TokenVaultDatastore](#aiconfiguration-konghq-com-v1alpha1-types-tokenvaultdatastore)
+- [VectorDBDatastore](#aiconfiguration-konghq-com-v1alpha1-types-vectordbdatastore)
 
 #### AIGatewayDatastoreRef
 
@@ -2071,6 +2145,41 @@ _Appears in:_
 - [AIGatewayModelProviderVllm](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidervllm)
 - [AIGatewayModelProviderXai](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderxai)
 - [AIGatewayPolicyAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyapispec)
+
+
+
+#### AIGatewayDatastoreSpec
+
+
+AIGatewayDatastoreSpec defines the desired state of AIGatewayDatastore.
+
+
+
+| Field | Description |
+| --- | --- |
+| `aiGatewayRef` _[AIGatewayRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayref)_ | AIGatewayRef is the reference to the parent AI Gateway (control plane) object. |
+| `apiSpec` _[AIGatewayDatastoreAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [AIGatewayDatastore](#aiconfiguration-konghq-com-v1alpha1-aigatewaydatastore)
+
+#### AIGatewayDatastoreStatus
+
+
+AIGatewayDatastoreStatus defines the observed state of AIGatewayDatastore.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#aiconfiguration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [AIGatewayDatastore](#aiconfiguration-konghq-com-v1alpha1-aigatewaydatastore)
 
 #### AIGatewayDenyACL
 
@@ -6320,6 +6429,7 @@ _Appears in:_
 - [AIGatewayConsumerSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumerspec)
 - [AIGatewayCustomPolicySpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycustompolicyspec)
 - [AIGatewayDataPlaneCertificateSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydataplanecertificatespec)
+- [AIGatewayDatastoreSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastorespec)
 - [AIGatewayMCPServerSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverspec)
 - [AIGatewayModelProviderSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderspec)
 - [AIGatewayModelSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelspec)
@@ -7831,6 +7941,98 @@ _Appears in:_
 
 
 
+#### DatastoreRedisCloudAuthentication
+
+
+DatastoreRedisCloudAuthentication Cloud-managed Redis authentication.
+Only the fields relevant to the chosen `auth_provider` need to be set.
+
+
+
+| Field | Description |
+| --- | --- |
+| `authProvider` _[DatastoreRedisCloudAuthenticationAuthProvider](#aiconfiguration-konghq-com-v1alpha1-types-datastorerediscloudauthenticationauthprovider)_ |  |
+| `awsAccessKeyID` _*string_ |  |
+| `awsAssumeRoleArn` _*string_ |  |
+| `awsCacheName` _*string_ |  |
+| `awsIsServerless` _*string_ |  |
+| `awsRegion` _*string_ |  |
+| `awsRoleSessionName` _*string_ |  |
+| `awsSecretAccessKey` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ |  |
+| `azureClientID` _*string_ |  |
+| `azureClientSecret` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ |  |
+| `azureTenantID` _*string_ |  |
+| `gcpServiceAccountJSON` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ |  |
+
+_Appears in:_
+
+- [RedisCEDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-rediscedatastoreconfig)
+- [RedisEEDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfig)
+
+#### DatastoreRedisCloudAuthenticationAuthProvider
+
+
+DatastoreRedisCloudAuthenticationAuthProvider represents a union type for auth_provider.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[DatastoreRedisCloudAuthenticationAuthProviderType](#aiconfiguration-konghq-com-v1alpha1-types-datastorerediscloudauthenticationauthprovidertype)_ | Type designates the type of configuration. |
+| `variant1` _[DatastoreRedisCloudAuthenticationAuthProviderVariant1](#aiconfiguration-konghq-com-v1alpha1-types-datastorerediscloudauthenticationauthprovidervariant1)_ | Variant1 configuration. |
+| `variant2` _[DatastoreRedisCloudAuthenticationAuthProviderVariant2](#aiconfiguration-konghq-com-v1alpha1-types-datastorerediscloudauthenticationauthprovidervariant2)_ | Variant2 configuration. |
+
+_Appears in:_
+
+- [DatastoreRedisCloudAuthentication](#aiconfiguration-konghq-com-v1alpha1-types-datastorerediscloudauthentication)
+
+#### DatastoreRedisCloudAuthenticationAuthProviderType
+
+_Underlying type:_ `string`
+
+DatastoreRedisCloudAuthenticationAuthProviderType represents the type of auth_provider.
+
+
+
+
+_Appears in:_
+
+- [DatastoreRedisCloudAuthenticationAuthProvider](#aiconfiguration-konghq-com-v1alpha1-types-datastorerediscloudauthenticationauthprovider)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `variant1` |  |
+| `variant2` |  |
+
+#### DatastoreRedisCloudAuthenticationAuthProviderVariant1
+
+_Underlying type:_ `string`
+
+DatastoreRedisCloudAuthenticationAuthProviderVariant1 is a type alias.
+
+
+
+
+_Appears in:_
+
+- [DatastoreRedisCloudAuthenticationAuthProvider](#aiconfiguration-konghq-com-v1alpha1-types-datastorerediscloudauthenticationauthprovider)
+
+#### DatastoreRedisCloudAuthenticationAuthProviderVariant2
+
+_Underlying type:_ `string`
+
+DatastoreRedisCloudAuthenticationAuthProviderVariant2 is a type alias.
+
+
+
+
+_Appears in:_
+
+- [DatastoreRedisCloudAuthenticationAuthProvider](#aiconfiguration-konghq-com-v1alpha1-types-datastorerediscloudauthenticationauthprovider)
+
 #### EnvironmentVariableVault
 
 
@@ -8336,6 +8538,7 @@ _Appears in:_
 - [AIGatewayConsumerStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumerstatus)
 - [AIGatewayCustomPolicyStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycustompolicystatus)
 - [AIGatewayDataPlaneCertificateStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydataplanecertificatestatus)
+- [AIGatewayDatastoreStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastorestatus)
 - [AIGatewayMCPServerStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverstatus)
 - [AIGatewayModelProviderStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderstatus)
 - [AIGatewayModelStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelstatus)
@@ -8405,6 +8608,10 @@ _Appears in:_
 - [GoogleSecretManagerVault](#aiconfiguration-konghq-com-v1alpha1-types-googlesecretmanagervault)
 - [HashiCorpVault](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvault)
 - [KonnectConfigStoreVault](#aiconfiguration-konghq-com-v1alpha1-types-konnectconfigstorevault)
+- [RedisCEDatastore](#aiconfiguration-konghq-com-v1alpha1-types-rediscedatastore)
+- [RedisEEDatastore](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastore)
+- [TokenVaultDatastore](#aiconfiguration-konghq-com-v1alpha1-types-tokenvaultdatastore)
+- [VectorDBDatastore](#aiconfiguration-konghq-com-v1alpha1-types-vectordbdatastore)
 
 #### ManagedByValue
 
@@ -8480,6 +8687,10 @@ _Appears in:_
 - [GoogleSecretManagerVault](#aiconfiguration-konghq-com-v1alpha1-types-googlesecretmanagervault)
 - [HashiCorpVault](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvault)
 - [KonnectConfigStoreVault](#aiconfiguration-konghq-com-v1alpha1-types-konnectconfigstorevault)
+- [RedisCEDatastore](#aiconfiguration-konghq-com-v1alpha1-types-rediscedatastore)
+- [RedisEEDatastore](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastore)
+- [TokenVaultDatastore](#aiconfiguration-konghq-com-v1alpha1-types-tokenvaultdatastore)
+- [VectorDBDatastore](#aiconfiguration-konghq-com-v1alpha1-types-vectordbdatastore)
 
 #### PublicLabelsValue
 
@@ -8493,6 +8704,202 @@ PublicLabelsValue is the value type for PublicLabels.
 _Appears in:_
 
 - [PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)
+
+#### RedisCEDatastore
+
+
+RedisCEDatastore is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[RedisCEDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-rediscedatastoreconfig)_ |  |
+| `description` _string_ | The description of the Datastore. |
+| `displayName` _string_ | The display name for this Datastore. |
+| `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayDatastoreName](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastorename)_ | A user-defined unique identifier for this Datastore, used as a stable human-readable reference. This value is immutable after creation. |
+
+_Appears in:_
+
+- [AIGatewayDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreconfig)
+
+#### RedisCEDatastoreConfig
+
+
+RedisCEDatastoreConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `cloudAuthentication` _[DatastoreRedisCloudAuthentication](#aiconfiguration-konghq-com-v1alpha1-types-datastorerediscloudauthentication)_ | Cloud-managed Redis authentication. Only the fields relevant to the chosen `auth_provider` need to be set. |
+| `database` _int_ | The Redis database index to use. |
+| `host` _string_ |  |
+| `password` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ |  |
+| `port` _int_ |  |
+| `serverName` _*string_ | SNI to use when connecting over SSL. |
+| `ssl` _string_ |  |
+| `sslVerify` _string_ |  |
+| `timeout` _int_ | Timeout in milliseconds for connecting, reading, and writing to the Redis server. |
+| `username` _*string_ |  |
+
+_Appears in:_
+
+- [RedisCEDatastore](#aiconfiguration-konghq-com-v1alpha1-types-rediscedatastore)
+
+#### RedisEEDatastore
+
+
+RedisEEDatastore is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[RedisEEDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfig)_ |  |
+| `description` _string_ | The description of the Datastore. |
+| `displayName` _string_ | The display name for this Datastore. |
+| `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayDatastoreName](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastorename)_ | A user-defined unique identifier for this Datastore, used as a stable human-readable reference. This value is immutable after creation. |
+
+_Appears in:_
+
+- [AIGatewayDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreconfig)
+
+#### RedisEEDatastoreConfig
+
+
+RedisEEDatastoreConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `cloudAuthentication` _[DatastoreRedisCloudAuthentication](#aiconfiguration-konghq-com-v1alpha1-types-datastorerediscloudauthentication)_ | Cloud-managed Redis authentication. Only the fields relevant to the chosen `auth_provider` need to be set. |
+| `clusterMaxRedirections` _int_ |  |
+| `clusterNodes` _[][RedisEEDatastoreConfigClusterNodes](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfigclusternodes)_ |  |
+| `connectTimeout` _int_ |  |
+| `connectionIsProxied` _string_ |  |
+| `database` _int_ | The Redis database index to use. |
+| `host` _string_ |  |
+| `keepaliveBacklog` _*int_ |  |
+| `keepalivePoolSize` _int_ |  |
+| `password` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ |  |
+| `port` _[RedisEEDatastoreConfigPort](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfigport)_ | An integer representing a port number between 0 and 65535, inclusive. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `readTimeout` _int_ |  |
+| `sendTimeout` _int_ |  |
+| `sentinelMaster` _*string_ |  |
+| `sentinelNodes` _[][RedisEEDatastoreConfigSentinelNodes](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfigsentinelnodes)_ |  |
+| `sentinelPassword` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ |  |
+| `sentinelRole` _*string_ |  |
+| `sentinelUsername` _*string_ |  |
+| `serverName` _*string_ | SNI to use when connecting over SSL. |
+| `ssl` _string_ |  |
+| `sslVerify` _string_ |  |
+| `username` _*string_ |  |
+
+_Appears in:_
+
+- [RedisEEDatastore](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastore)
+
+#### RedisEEDatastoreConfigClusterNodes
+
+
+RedisEEDatastoreConfigClusterNodes is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `ip` _string_ |  |
+| `port` _int_ |  |
+
+_Appears in:_
+
+- [RedisEEDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfig)
+
+#### RedisEEDatastoreConfigPort
+
+
+RedisEEDatastoreConfigPort represents a union type for port.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[RedisEEDatastoreConfigPortType](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfigporttype)_ | Type designates the type of configuration. |
+| `variant1` _[RedisEEDatastoreConfigPortVariant1](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfigportvariant1)_ | Variant1 configuration. |
+| `variant2` _[RedisEEDatastoreConfigPortVariant2](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfigportvariant2)_ | Variant2 configuration. |
+
+_Appears in:_
+
+- [RedisEEDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfig)
+
+#### RedisEEDatastoreConfigPortType
+
+_Underlying type:_ `string`
+
+RedisEEDatastoreConfigPortType represents the type of port.
+
+
+
+
+_Appears in:_
+
+- [RedisEEDatastoreConfigPort](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfigport)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `variant1` |  |
+| `variant2` |  |
+
+#### RedisEEDatastoreConfigPortVariant1
+
+_Underlying type:_ `integer`
+
+RedisEEDatastoreConfigPortVariant1 is a type alias.
+
+
+
+
+_Appears in:_
+
+- [RedisEEDatastoreConfigPort](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfigport)
+
+#### RedisEEDatastoreConfigPortVariant2
+
+_Underlying type:_ `string`
+
+RedisEEDatastoreConfigPortVariant2 is a type alias.
+
+
+
+
+_Appears in:_
+
+- [RedisEEDatastoreConfigPort](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfigport)
+
+#### RedisEEDatastoreConfigSentinelNodes
+
+
+RedisEEDatastoreConfigSentinelNodes is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `host` _string_ |  |
+| `port` _int_ |  |
+
+_Appears in:_
+
+- [RedisEEDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfig)
 
 
 
@@ -8544,12 +8951,16 @@ _Appears in:_
 - [AIGatewayModelProviderConfigAuthBasicParams](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasicparams)
 - [AIGatewayModelProviderConfigAuthGCP](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthgcp)
 - [ConjurVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-conjurvaultconfig)
+- [DatastoreRedisCloudAuthentication](#aiconfiguration-konghq-com-v1alpha1-types-datastorerediscloudauthentication)
 - [HashiCorpVaultAppRoleConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultapproleconfig)
 - [HashiCorpVaultAwsIAMConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultawsiamconfig)
 - [HashiCorpVaultCertConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultcertconfig)
 - [HashiCorpVaultGcpIAMConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultgcpiamconfig)
 - [HashiCorpVaultOauth2Config](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultoauth2config)
 - [HashiCorpVaultTokenConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaulttokenconfig)
+- [RedisCEDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-rediscedatastoreconfig)
+- [RedisEEDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfig)
+- [VectorDBDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-vectordbdatastoreconfig)
 
 #### SensitiveDataSourceType
 
@@ -8571,6 +8982,108 @@ Allowed values:
 | --- | --- |
 | `inline` | SensitiveDataSourceTypeInline indicates that the data is provided inline in the APISpec.<br /> |
 | `secretRef` | SensitiveDataSourceTypeSecretRef indicates that the data is sourced from a Kubernetes Secret.<br /> |
+
+#### TokenVaultDatastore
+
+
+TokenVaultDatastore is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[TokenVaultDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-tokenvaultdatastoreconfig)_ |  |
+| `description` _string_ | The description of the Datastore. |
+| `displayName` _string_ | The display name for this Datastore. |
+| `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayDatastoreName](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastorename)_ | A user-defined unique identifier for this Datastore, used as a stable human-readable reference. This value is immutable after creation. |
+
+_Appears in:_
+
+- [AIGatewayDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreconfig)
+
+#### TokenVaultDatastoreConfig
+
+
+TokenVaultDatastoreConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `currentVersion` _string_ | The version of the encryption key used to encrypt new tokens. |
+| `directory` _string_ | The name of the directory in which tokens are stored. |
+| `keys` _[][TokenVaultDatastoreKey](#aiconfiguration-konghq-com-v1alpha1-types-tokenvaultdatastorekey)_ | The encryption keys used to protect stored tokens. Keep previous versions in the list so existing tokens can still be decrypted. |
+
+_Appears in:_
+
+- [TokenVaultDatastore](#aiconfiguration-konghq-com-v1alpha1-types-tokenvaultdatastore)
+
+#### TokenVaultDatastoreKey
+
+
+TokenVaultDatastoreKey is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `key` _string_ | A [vault reference](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault) to the encryption key. A literal key value is rejected. |
+| `version` _string_ | The identifier of this key version. |
+
+_Appears in:_
+
+- [TokenVaultDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-tokenvaultdatastoreconfig)
+
+#### VectorDBDatastore
+
+
+VectorDBDatastore Carries the pgvector connection only.
+`strategy`, `dimensions`, `distance_metric`, and `threshold`
+belong to the policy or model referencing this Datastore, not the Datastore
+itself.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[VectorDBDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-vectordbdatastoreconfig)_ |  |
+| `description` _string_ | The description of the Datastore. |
+| `displayName` _string_ | The display name for this Datastore. |
+| `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayDatastoreName](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastorename)_ | A user-defined unique identifier for this Datastore, used as a stable human-readable reference. This value is immutable after creation. |
+
+_Appears in:_
+
+- [AIGatewayDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreconfig)
+
+#### VectorDBDatastoreConfig
+
+
+VectorDBDatastoreConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `database` _string_ |  |
+| `host` _string_ |  |
+| `password` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ |  |
+| `port` _int_ |  |
+| `ssl` _string_ |  |
+| `sslCert` _*string_ |  |
+| `sslCertKey` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ |  |
+| `sslRequired` _string_ |  |
+| `sslVerify` _string_ |  |
+| `sslVersion` _string_ |  |
+| `timeout` _int_ | Timeout in milliseconds for connecting, reading, and writing to the database. |
+| `user` _string_ |  |
+
+_Appears in:_
+
+- [VectorDBDatastore](#aiconfiguration-konghq-com-v1alpha1-types-vectordbdatastore)
 
 ## aigateway.konghq.com/v1alpha1
 

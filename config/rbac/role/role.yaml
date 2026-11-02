@@ -83,6 +83,7 @@ rules:
   - aigatewayconsumergroups
   - aigatewayconsumers
   - aigatewaycustompolicies
+  - aigatewaydatastores
   - aigatewaymcpservers
   - aigatewaymodelproviders
   - aigatewaymodels
@@ -108,6 +109,8 @@ rules:
   - aigatewayconsumers/finalizers
   - aigatewaycustompolicies/finalizers
   - aigatewaydataplanecertificates/finalizers
+  - aigatewaydatastores/finalizers
+  - aigatewaydatastores/status
   - aigatewaymcpservers/finalizers
   - aigatewaymodelproviders/finalizers
   - aigatewaymodels/finalizers

@@ -783,6 +783,109 @@ apiGroupVersions:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
 
+      # Every writeOnly credential in the datastore configs is sourced from a
+      # Secret, like AIGatewayModelProvider's cloud credentials. The token-vault
+      # key is left alone: the OAS only accepts a {vault://...} reference there,
+      # which is not a secret.
+      - path: /v1/ai-gateways/{gatewayId}/datastores
+        name: AIGatewayDatastore
+        dataSources:
+          - path: spec.apiSpec.redis-ce.config.password
+            type: Secret
+          - path: spec.apiSpec.redis-ce.config.cloudAuthentication.awsSecretAccessKey
+            type: Secret
+          - path: spec.apiSpec.redis-ce.config.cloudAuthentication.gcpServiceAccountJSON
+            type: Secret
+          - path: spec.apiSpec.redis-ce.config.cloudAuthentication.azureClientSecret
+            type: Secret
+          - path: spec.apiSpec.redis-ee.config.password
+            type: Secret
+          - path: spec.apiSpec.redis-ee.config.sentinelPassword
+            type: Secret
+          - path: spec.apiSpec.redis-ee.config.cloudAuthentication.awsSecretAccessKey
+            type: Secret
+          - path: spec.apiSpec.redis-ee.config.cloudAuthentication.gcpServiceAccountJSON
+            type: Secret
+          - path: spec.apiSpec.redis-ee.config.cloudAuthentication.azureClientSecret
+            type: Secret
+          - path: spec.apiSpec.vectordb.config.password
+            type: Secret
+          - path: spec.apiSpec.vectordb.config.sslCertKey
+            type: Secret
+        # Konnect rejects a change of name or type after creation. Both are
+        # checked from the resource root where needed so that removing the
+        # field cannot reset the value.
+        cel:
+          _validations:
+            - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.spec) || !has(oldSelf.spec.apiSpec) || !has(oldSelf.spec.apiSpec.type) || (has(self.spec) && has(self.spec.apiSpec) && has(self.spec.apiSpec.type) && self.spec.apiSpec.type == oldSelf.spec.apiSpec.type)\",message=\"type is immutable\",fieldPath=\".spec.apiSpec.type\""
+          spec:
+            apiSpec:
+              redis-ce:
+                name:
+                  _validations:
+                    - "+kubebuilder:validation:XValidation:rule=\"self == oldSelf\",message=\"name is immutable\""
+              redis-ee:
+                name:
+                  _validations:
+                    - "+kubebuilder:validation:XValidation:rule=\"self == oldSelf\",message=\"name is immutable\""
+              vectordb:
+                name:
+                  _validations:
+                    - "+kubebuilder:validation:XValidation:rule=\"self == oldSelf\",message=\"name is immutable\""
+              token-vault:
+                name:
+                  _validations:
+                    - "+kubebuilder:validation:XValidation:rule=\"self == oldSelf\",message=\"name is immutable\""
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayDatastoresSDK
+            fieldName: AIGatewayDatastores
+          # The list endpoint returns summaries that carry no labels, so
+          # conflicts are recovered by matching the immutable name the API
+          # echoes back. This mitigates
+          # https://github.com/Kong/kong-operator/issues/3987.
+          getForUID:
+            rootUnion:
+              unionField: Spec.APISpec.AIGatewayDatastoreConfig
+              responseTypeField: Type
+              cases:
+                - typeValue: redis-ce
+                  variantField: RedisCE
+                  responseTypeValue: redis-ce
+                  matchFields:
+                    - objectField: Name
+                      responseField: Name
+                - typeValue: redis-ee
+                  variantField: RedisEE
+                  responseTypeValue: redis-ee
+                  matchFields:
+                    - objectField: Name
+                      responseField: Name
+                - typeValue: vectordb
+                  variantField: VectorDB
+                  responseTypeValue: vectordb
+                  matchFields:
+                    - objectField: Name
+                      responseField: Name
+                - typeValue: token-vault
+                  variantField: TokenVault
+                  responseTypeValue: token-vault
+                  matchFields:
+                    - objectField: Name
+                      responseField: Name
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayDatastoreRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayDatastoreRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectAIGateway
+            group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayRef
+            typeName: AIGatewayRef
+
   configuration.konghq.com/v1alpha1:
     categories:
       - kong

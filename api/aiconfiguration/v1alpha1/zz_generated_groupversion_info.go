@@ -27,6 +27,8 @@ func addKnownTypesGenerated(scheme *runtime.Scheme) error {
 		&AIGatewayCustomPolicyList{},
 		&AIGatewayDataPlaneCertificate{},
 		&AIGatewayDataPlaneCertificateList{},
+		&AIGatewayDatastore{},
+		&AIGatewayDatastoreList{},
 		&AIGatewayMCPServer{},
 		&AIGatewayMCPServerList{},
 		&AIGatewayModel{},

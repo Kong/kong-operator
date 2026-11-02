@@ -335,6 +335,7 @@ type WatchableEntityType interface {
 		aiconfigurationv1alpha1.AIGatewayCertificate |
 		aiconfigurationv1alpha1.AIGatewaySNI |
 		aiconfigurationv1alpha1.AIGatewayVault |
+		aiconfigurationv1alpha1.AIGatewayDatastore |
 		konnectv1alpha1.KonnectEventGateway |
 		configurationv1alpha1.EventGatewayBackendCluster |
 		configurationv1alpha1.EventGatewayListener |

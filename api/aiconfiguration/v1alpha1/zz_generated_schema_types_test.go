@@ -1710,6 +1710,19 @@ func TestCreateAIGatewayCustomPolicyStreamingRequest_MarshalEmpty(t *testing.T) 
 	}
 }
 
+func TestDatastoreRedisCloudAuthentication_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec DatastoreRedisCloudAuthentication
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestEnvironmentVariableVault_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -1896,6 +1909,123 @@ func TestKonnectConfigStoreVault_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
 	var spec KonnectConfigStoreVault
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestRedisCEDatastore_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec RedisCEDatastore
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestRedisCEDatastoreConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec RedisCEDatastoreConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestRedisEEDatastore_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec RedisEEDatastore
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestRedisEEDatastoreConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec RedisEEDatastoreConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestTokenVaultDatastore_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec TokenVaultDatastore
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestTokenVaultDatastoreConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec TokenVaultDatastoreConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestTokenVaultDatastoreKey_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec TokenVaultDatastoreKey
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestVectorDBDatastore_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec VectorDBDatastore
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestVectorDBDatastoreConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec VectorDBDatastoreConfig
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -2535,6 +2665,34 @@ func TestAuthGCPWorkloadIdentityFederationUnmarshalJSON_NilReceiver(t *testing.T
 	}
 }
 
+func TestDatastoreRedisCloudAuthenticationAuthProviderUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "Variant1", payload: []byte("{\"type\":\"variant1\",\"variant1\":\"\"}")},
+		{name: "Variant2", payload: []byte("{\"type\":\"variant2\",\"variant2\":\"\"}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *DatastoreRedisCloudAuthenticationAuthProvider
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling DatastoreRedisCloudAuthenticationAuthProvider: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
 func TestHashiCorpVaultConfigUnmarshalJSON_NilReceiver(t *testing.T) {
 	t.Parallel()
 
@@ -2565,6 +2723,34 @@ func TestHashiCorpVaultConfigUnmarshalJSON_NilReceiver(t *testing.T) {
 				t.Fatal("expected error for nil receiver")
 			}
 			if got, want := err.Error(), "unmarshaling HashiCorpVaultConfig: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestRedisEEDatastoreConfigPortUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "Variant1", payload: []byte("{\"type\":\"variant1\",\"variant1\":0}")},
+		{name: "Variant2", payload: []byte("{\"type\":\"variant2\",\"variant2\":\"\"}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *RedisEEDatastoreConfigPort
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling RedisEEDatastoreConfigPort: nil receiver"; got != want {
 				t.Fatalf("unexpected error: got %q want %q", got, want)
 			}
 		})
@@ -3947,6 +4133,62 @@ func TestAIGatewayUpstreamConfigUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 	}
 }
 
+func TestDatastoreRedisCloudAuthenticationUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+		assert  func(*testing.T, DatastoreRedisCloudAuthentication)
+	}{
+		{
+			name:    "AuthProvider/Variant1",
+			payload: []byte("{\"authProvider\":{\"type\":\"variant1\",\"variant1\":\"\"}}"),
+			assert: func(t *testing.T, target DatastoreRedisCloudAuthentication) {
+				t.Helper()
+				if target.AuthProvider == nil {
+					t.Fatalf("AuthProvider should be allocated")
+				}
+				if got, want := target.AuthProvider.Type, DatastoreRedisCloudAuthenticationAuthProviderTypeVariant1; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.AuthProvider.Variant1 == nil {
+					t.Fatalf("AuthProvider.Variant1 should be allocated")
+				}
+			},
+		},
+		{
+			name:    "AuthProvider/Variant2",
+			payload: []byte("{\"authProvider\":{\"type\":\"variant2\",\"variant2\":\"\"}}"),
+			assert: func(t *testing.T, target DatastoreRedisCloudAuthentication) {
+				t.Helper()
+				if target.AuthProvider == nil {
+					t.Fatalf("AuthProvider should be allocated")
+				}
+				if got, want := target.AuthProvider.Type, DatastoreRedisCloudAuthenticationAuthProviderTypeVariant2; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.AuthProvider.Variant2 == nil {
+					t.Fatalf("AuthProvider.Variant2 should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target DatastoreRedisCloudAuthentication
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
 func TestHashiCorpVaultUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 	t.Parallel()
 
@@ -4123,6 +4365,62 @@ func TestHashiCorpVaultUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			t.Parallel()
 
 			var target HashiCorpVault
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
+func TestRedisEEDatastoreConfigUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+		assert  func(*testing.T, RedisEEDatastoreConfig)
+	}{
+		{
+			name:    "Port/Variant1",
+			payload: []byte("{\"port\":{\"type\":\"variant1\",\"variant1\":0}}"),
+			assert: func(t *testing.T, target RedisEEDatastoreConfig) {
+				t.Helper()
+				if target.Port == nil {
+					t.Fatalf("Port should be allocated")
+				}
+				if got, want := target.Port.Type, RedisEEDatastoreConfigPortTypeVariant1; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Port.Variant1 == nil {
+					t.Fatalf("Port.Variant1 should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Port/Variant2",
+			payload: []byte("{\"port\":{\"type\":\"variant2\",\"variant2\":\"\"}}"),
+			assert: func(t *testing.T, target RedisEEDatastoreConfig) {
+				t.Helper()
+				if target.Port == nil {
+					t.Fatalf("Port should be allocated")
+				}
+				if got, want := target.Port.Type, RedisEEDatastoreConfigPortTypeVariant2; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Port.Variant2 == nil {
+					t.Fatalf("Port.Variant2 should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target RedisEEDatastoreConfig
 			if err := json.Unmarshal(tt.payload, &target); err != nil {
 				t.Fatalf("json.Unmarshal() error = %v", err)
 			}

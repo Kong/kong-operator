@@ -15790,6 +15790,190 @@ type CreateAIGatewayCustomPolicyStreamingRequest struct {
 	Schema ConfigMapDataSource `json:"schema,omitzero"`
 }
 
+// DatastoreRedisCloudAuthentication Cloud-managed Redis authentication.
+// Only the fields relevant to the chosen `auth_provider` need to be set.
+type DatastoreRedisCloudAuthentication struct {
+	//
+	//
+	// +optional
+	AuthProvider *DatastoreRedisCloudAuthenticationAuthProvider `json:"authProvider,omitempty"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AwsAccessKeyID *string `json:"awsAccessKeyID,omitempty"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AwsAssumeRoleArn *string `json:"awsAssumeRoleArn,omitempty"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AwsCacheName *string `json:"awsCacheName,omitempty"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	AwsIsServerless *string `json:"awsIsServerless,omitempty"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AwsRegion *string `json:"awsRegion,omitempty"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AwsRoleSessionName *string `json:"awsRoleSessionName,omitempty"`
+	//
+	//
+	// +optional
+	AwsSecretAccessKey SensitiveDataSource `json:"awsSecretAccessKey,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AzureClientID *string `json:"azureClientID,omitempty"`
+	//
+	//
+	// +optional
+	AzureClientSecret SensitiveDataSource `json:"azureClientSecret,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AzureTenantID *string `json:"azureTenantID,omitempty"`
+	//
+	//
+	// +optional
+	GcpServiceAccountJSON SensitiveDataSource `json:"gcpServiceAccountJSON,omitzero"`
+}
+
+// DatastoreRedisCloudAuthenticationAuthProviderVariant1 is a type alias.
+type DatastoreRedisCloudAuthenticationAuthProviderVariant1 string
+
+// DatastoreRedisCloudAuthenticationAuthProviderVariant2 is a type alias.
+type DatastoreRedisCloudAuthenticationAuthProviderVariant2 string
+
+// DatastoreRedisCloudAuthenticationAuthProvider represents a union type for auth_provider.
+// Only one of the fields should be set based on the Type.
+type DatastoreRedisCloudAuthenticationAuthProvider struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=variant1;variant2
+	Type DatastoreRedisCloudAuthenticationAuthProviderType `json:"type,omitempty"`
+
+	// Variant1 configuration.
+	//
+	// +optional
+	Variant1 *DatastoreRedisCloudAuthenticationAuthProviderVariant1 `json:"variant1,omitempty"`
+	// Variant2 configuration.
+	//
+	// +optional
+	Variant2 *DatastoreRedisCloudAuthenticationAuthProviderVariant2 `json:"variant2,omitempty"`
+}
+
+// DatastoreRedisCloudAuthenticationAuthProviderType represents the type of auth_provider.
+type DatastoreRedisCloudAuthenticationAuthProviderType string
+
+// DatastoreRedisCloudAuthenticationAuthProviderType values.
+const (
+	DatastoreRedisCloudAuthenticationAuthProviderTypeVariant1 DatastoreRedisCloudAuthenticationAuthProviderType = "variant1"
+	DatastoreRedisCloudAuthenticationAuthProviderTypeVariant2 DatastoreRedisCloudAuthenticationAuthProviderType = "variant2"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u DatastoreRedisCloudAuthenticationAuthProvider) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling DatastoreRedisCloudAuthenticationAuthProvider type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case DatastoreRedisCloudAuthenticationAuthProviderTypeVariant1:
+		if u.Variant1 != nil {
+			raw, err := json.Marshal(u.Variant1)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling DatastoreRedisCloudAuthenticationAuthProvider Variant1: %w", err)
+			}
+			m["variant1"] = raw
+		}
+	case DatastoreRedisCloudAuthenticationAuthProviderTypeVariant2:
+		if u.Variant2 != nil {
+			raw, err := json.Marshal(u.Variant2)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling DatastoreRedisCloudAuthenticationAuthProvider Variant2: %w", err)
+			}
+			m["variant2"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *DatastoreRedisCloudAuthenticationAuthProvider) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling DatastoreRedisCloudAuthenticationAuthProvider: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = DatastoreRedisCloudAuthenticationAuthProviderType(probe.Type)
+	switch probe.Type {
+	case "variant1":
+		payload, ok := raw["variant1"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val DatastoreRedisCloudAuthenticationAuthProviderVariant1
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling DatastoreRedisCloudAuthenticationAuthProvider Variant1: %w", err)
+		}
+		u.Variant1 = &val
+	case "variant2":
+		payload, ok := raw["variant2"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val DatastoreRedisCloudAuthenticationAuthProviderVariant2
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling DatastoreRedisCloudAuthenticationAuthProvider Variant2: %w", err)
+		}
+		u.Variant2 = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *DatastoreRedisCloudAuthentication) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling DatastoreRedisCloudAuthentication: nil receiver")
+	}
+	type alias DatastoreRedisCloudAuthentication
+	aux := alias{}
+	aux.AuthProvider = &DatastoreRedisCloudAuthenticationAuthProvider{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling DatastoreRedisCloudAuthentication: %w", err)
+	}
+	if aux.AuthProvider != nil && aux.AuthProvider.Type == "" && aux.AuthProvider.Variant1 == nil && aux.AuthProvider.Variant2 == nil {
+		aux.AuthProvider = nil
+	}
+	*s = DatastoreRedisCloudAuthentication(aux)
+	return nil
+}
+
 // EnvironmentVariableVault is a type alias.
 type EnvironmentVariableVault struct {
 	//
@@ -17440,3 +17624,629 @@ type PublicLabelsValue string
 //
 // +kubebuilder:validation:MaxProperties=50
 type PublicLabels map[string]PublicLabelsValue
+
+// RedisCEDatastore is a type alias.
+type RedisCEDatastore struct {
+	//
+	//
+	// +required
+	Config RedisCEDatastoreConfig `json:"config,omitzero"`
+	// The description of the Datastore.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1024
+	Description string `json:"description,omitzero"`
+	// The display name for this Datastore.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this Datastore, used as a stable
+	// human-readable reference.
+	// This value is immutable after creation.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=2
+	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[a-z][a-z0-9-]*[a-z0-9]+$`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="name is immutable"
+	Name AIGatewayDatastoreName `json:"name,omitzero"`
+}
+
+// RedisCEDatastoreConfig is a type alias.
+type RedisCEDatastoreConfig struct {
+	// Cloud-managed Redis authentication.
+	// Only the fields relevant to the chosen `auth_provider` need to be set.
+	//
+	// +optional
+	CloudAuthentication DatastoreRedisCloudAuthentication `json:"cloudAuthentication,omitzero"`
+	// The Redis database index to use.
+	//
+	// +optional
+	Database int `json:"database,omitzero"`
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	//
+	//
+	// +optional
+	Password SensitiveDataSource `json:"password,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	Port int `json:"port,omitzero"`
+	// SNI to use when connecting over SSL.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	ServerName *string `json:"serverName,omitempty"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSL string `json:"ssl,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSLVerify string `json:"sslVerify,omitzero"`
+	// Timeout in milliseconds for connecting, reading, and writing to the Redis
+	// server.
+	//
+	// +optional
+	Timeout int `json:"timeout,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Username *string `json:"username,omitempty"`
+}
+
+// RedisEEDatastore is a type alias.
+type RedisEEDatastore struct {
+	//
+	//
+	// +required
+	Config RedisEEDatastoreConfig `json:"config,omitzero"`
+	// The description of the Datastore.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1024
+	Description string `json:"description,omitzero"`
+	// The display name for this Datastore.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this Datastore, used as a stable
+	// human-readable reference.
+	// This value is immutable after creation.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=2
+	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[a-z][a-z0-9-]*[a-z0-9]+$`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="name is immutable"
+	Name AIGatewayDatastoreName `json:"name,omitzero"`
+}
+
+// RedisEEDatastoreConfig is a type alias.
+type RedisEEDatastoreConfig struct {
+	// Cloud-managed Redis authentication.
+	// Only the fields relevant to the chosen `auth_provider` need to be set.
+	//
+	// +optional
+	CloudAuthentication DatastoreRedisCloudAuthentication `json:"cloudAuthentication,omitzero"`
+	//
+	//
+	// +optional
+	ClusterMaxRedirections int `json:"clusterMaxRedirections,omitzero"`
+	//
+	//
+	// +optional
+	ClusterNodes []RedisEEDatastoreConfigClusterNodes `json:"clusterNodes,omitempty"`
+	//
+	//
+	// +optional
+	ConnectTimeout int `json:"connectTimeout,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ConnectionIsProxied string `json:"connectionIsProxied,omitzero"`
+	// The Redis database index to use.
+	//
+	// +optional
+	Database int `json:"database,omitzero"`
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	//
+	//
+	// +optional
+	KeepaliveBacklog *int `json:"keepaliveBacklog,omitempty"`
+	//
+	//
+	// +optional
+	KeepalivePoolSize int `json:"keepalivePoolSize,omitzero"`
+	//
+	//
+	// +optional
+	Password SensitiveDataSource `json:"password,omitzero"`
+	// An integer representing a port number between 0 and 65535, inclusive.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	Port *RedisEEDatastoreConfigPort `json:"port,omitempty"`
+	//
+	//
+	// +optional
+	ReadTimeout int `json:"readTimeout,omitzero"`
+	//
+	//
+	// +optional
+	SendTimeout int `json:"sendTimeout,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SentinelMaster *string `json:"sentinelMaster,omitempty"`
+	//
+	//
+	// +optional
+	SentinelNodes []RedisEEDatastoreConfigSentinelNodes `json:"sentinelNodes,omitempty"`
+	//
+	//
+	// +optional
+	SentinelPassword SensitiveDataSource `json:"sentinelPassword,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=master;slave;any
+	SentinelRole *string `json:"sentinelRole,omitempty"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SentinelUsername *string `json:"sentinelUsername,omitempty"`
+	// SNI to use when connecting over SSL.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	ServerName *string `json:"serverName,omitempty"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSL string `json:"ssl,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSLVerify string `json:"sslVerify,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Username *string `json:"username,omitempty"`
+}
+
+// RedisEEDatastoreConfigClusterNodes is a type alias.
+type RedisEEDatastoreConfigClusterNodes struct {
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	IP string `json:"ip,omitzero"`
+	//
+	//
+	// +required
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	Port int `json:"port,omitzero"`
+}
+
+// RedisEEDatastoreConfigSentinelNodes is a type alias.
+type RedisEEDatastoreConfigSentinelNodes struct {
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	//
+	//
+	// +required
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	Port int `json:"port,omitzero"`
+}
+
+// RedisEEDatastoreConfigPortVariant1 is a type alias.
+type RedisEEDatastoreConfigPortVariant1 int
+
+// RedisEEDatastoreConfigPortVariant2 is a type alias.
+type RedisEEDatastoreConfigPortVariant2 string
+
+// RedisEEDatastoreConfigPort represents a union type for port.
+// Only one of the fields should be set based on the Type.
+type RedisEEDatastoreConfigPort struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=variant1;variant2
+	Type RedisEEDatastoreConfigPortType `json:"type,omitempty"`
+
+	// Variant1 configuration.
+	//
+	// +optional
+	Variant1 *RedisEEDatastoreConfigPortVariant1 `json:"variant1,omitempty"`
+	// Variant2 configuration.
+	//
+	// +optional
+	Variant2 *RedisEEDatastoreConfigPortVariant2 `json:"variant2,omitempty"`
+}
+
+// RedisEEDatastoreConfigPortType represents the type of port.
+type RedisEEDatastoreConfigPortType string
+
+// RedisEEDatastoreConfigPortType values.
+const (
+	RedisEEDatastoreConfigPortTypeVariant1 RedisEEDatastoreConfigPortType = "variant1"
+	RedisEEDatastoreConfigPortTypeVariant2 RedisEEDatastoreConfigPortType = "variant2"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u RedisEEDatastoreConfigPort) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling RedisEEDatastoreConfigPort type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case RedisEEDatastoreConfigPortTypeVariant1:
+		if u.Variant1 != nil {
+			raw, err := json.Marshal(u.Variant1)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling RedisEEDatastoreConfigPort Variant1: %w", err)
+			}
+			m["variant1"] = raw
+		}
+	case RedisEEDatastoreConfigPortTypeVariant2:
+		if u.Variant2 != nil {
+			raw, err := json.Marshal(u.Variant2)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling RedisEEDatastoreConfigPort Variant2: %w", err)
+			}
+			m["variant2"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *RedisEEDatastoreConfigPort) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling RedisEEDatastoreConfigPort: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = RedisEEDatastoreConfigPortType(probe.Type)
+	switch probe.Type {
+	case "variant1":
+		payload, ok := raw["variant1"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val RedisEEDatastoreConfigPortVariant1
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling RedisEEDatastoreConfigPort Variant1: %w", err)
+		}
+		u.Variant1 = &val
+	case "variant2":
+		payload, ok := raw["variant2"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val RedisEEDatastoreConfigPortVariant2
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling RedisEEDatastoreConfigPort Variant2: %w", err)
+		}
+		u.Variant2 = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *RedisEEDatastoreConfig) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling RedisEEDatastoreConfig: nil receiver")
+	}
+	type alias RedisEEDatastoreConfig
+	aux := alias{}
+	aux.Port = &RedisEEDatastoreConfigPort{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling RedisEEDatastoreConfig: %w", err)
+	}
+	if aux.Port != nil && aux.Port.Type == "" && aux.Port.Variant1 == nil && aux.Port.Variant2 == nil {
+		aux.Port = nil
+	}
+	*s = RedisEEDatastoreConfig(aux)
+	return nil
+}
+
+// TokenVaultDatastore is a type alias.
+type TokenVaultDatastore struct {
+	//
+	//
+	// +required
+	Config TokenVaultDatastoreConfig `json:"config,omitzero"`
+	// The description of the Datastore.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1024
+	Description string `json:"description,omitzero"`
+	// The display name for this Datastore.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this Datastore, used as a stable
+	// human-readable reference.
+	// This value is immutable after creation.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=2
+	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[a-z][a-z0-9-]*[a-z0-9]+$`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="name is immutable"
+	Name AIGatewayDatastoreName `json:"name,omitzero"`
+}
+
+// TokenVaultDatastoreConfig is a type alias.
+type TokenVaultDatastoreConfig struct {
+	// The version of the encryption key used to encrypt new tokens.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	CurrentVersion string `json:"currentVersion,omitzero"`
+	// The name of the directory in which tokens are stored.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Directory string `json:"directory,omitzero"`
+	// The encryption keys used to protect stored tokens.
+	// Keep previous versions in the list so existing tokens can still be
+	// decrypted.
+	//
+	// +required
+	Keys []TokenVaultDatastoreKey `json:"keys,omitempty"`
+}
+
+// TokenVaultDatastoreKey is a type alias.
+type TokenVaultDatastoreKey struct {
+	// A [vault
+	// reference](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault)
+	// to the encryption key.
+	// A literal key value is rejected.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^\{vault://.*\}$`
+	Key string `json:"key,omitzero"`
+	// The identifier of this key version.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Version string `json:"version,omitzero"`
+}
+
+// VectorDBDatastore Carries the pgvector connection only.
+// `strategy`, `dimensions`, `distance_metric`, and `threshold`
+// belong to the policy or model referencing this Datastore, not the Datastore
+// itself.
+type VectorDBDatastore struct {
+	//
+	//
+	// +required
+	Config VectorDBDatastoreConfig `json:"config,omitzero"`
+	// The description of the Datastore.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1024
+	Description string `json:"description,omitzero"`
+	// The display name for this Datastore.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this Datastore, used as a stable
+	// human-readable reference.
+	// This value is immutable after creation.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=2
+	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[a-z][a-z0-9-]*[a-z0-9]+$`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="name is immutable"
+	Name AIGatewayDatastoreName `json:"name,omitzero"`
+}
+
+// VectorDBDatastoreConfig is a type alias.
+type VectorDBDatastoreConfig struct {
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Database string `json:"database,omitzero"`
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	//
+	//
+	// +optional
+	Password SensitiveDataSource `json:"password,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	Port int `json:"port,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSL string `json:"ssl,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SSLCert *string `json:"sslCert,omitempty"`
+	//
+	//
+	// +optional
+	SSLCertKey SensitiveDataSource `json:"sslCertKey,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSLRequired string `json:"sslRequired,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSLVerify string `json:"sslVerify,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SSLVersion string `json:"sslVersion,omitzero"`
+	// Timeout in milliseconds for connecting, reading, and writing to the
+	// database.
+	//
+	// +optional
+	Timeout int `json:"timeout,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	User string `json:"user,omitzero"`
+}
