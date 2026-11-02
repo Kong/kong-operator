@@ -2003,9 +2003,51 @@ func TestBuildDocument_MCPServerListenerFailsWhenSourceFails(t *testing.T) {
 	require.Contains(t, findStatusByName(t, statuses, "mcp-listener-broken").Err.Error(),
 		`referenced AIGatewayMCPServer "mcp-src-broken" was excluded from the document`)
 	require.Contains(t, findStatusByName(t, statuses, "mcp-listener-cascade").Err.Error(),
-		`referenced AIGatewayMCPServer "mcp-listener-broken" was excluded from the document: its own translation failed, or it references an excluded server`)
+		`referenced AIGatewayMCPServer "mcp-listener-broken" was excluded from the document: its own translation failed`)
 	require.NoError(t, findStatusByName(t, statuses, "mcp-src-healthy").Err)
 	require.NoError(t, findStatusByName(t, statuses, "mcp-listener-healthy").Err)
+	// The source failed for a reason other than a grant denial, so the listeners that
+	// depend on it still fail the gateway.
+	require.False(t, IsEntityScopedFailure(findStatusByName(t, statuses, "mcp-listener-broken").Err))
+	require.False(t, IsEntityScopedFailure(findStatusByName(t, statuses, "mcp-listener-cascade").Err))
+}
+
+// TestBuildDocument_MCPServerListenerOfGrantDeniedSourceIsEntityScoped pins the cause
+// chain through the sources post-pass: a source excluded because its policy has no
+// KongReferenceGrant only excludes the listeners that source it, also through a
+// cascade, and does not fail the gateway.
+func TestBuildDocument_MCPServerListenerOfGrantDeniedSourceIsEntityScoped(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	deniedPolicy := aiGatewayPolicyFixture("policy-denied")
+	deniedPolicy.Spec.APISpec.Config = aiconfigurationv1alpha1.AIGatewayPolicyConfigDataSource{
+		Type:      aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+		SecretRef: &aiconfigurationv1alpha1.SensitiveDataSecretRef{Name: "creds", Key: "key", Namespace: new("other-ns")},
+	}
+	src := aiGatewayMCPServerConversionOnlyFixture("mcp-src")
+	src.Spec.APISpec.ConversionOnly.Policies = []aiconfigurationv1alpha1.AIGatewayPolicyRef{{Name: "policy-denied"}}
+	listener := aiGatewayMCPServerListenerFixture("mcp-listener", "mcp-src")
+	cascade := aiGatewayMCPServerListenerFixture("mcp-listener-cascade", "mcp-listener")
+
+	cl := newTestBuilder(scheme, gw, deniedPolicy, src, listener, cascade).Build()
+
+	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
+	require.NoError(t, err)
+	require.Empty(t, doc.MCPServers)
+
+	for _, name := range []string{"policy-denied", "mcp-src", "mcp-listener", "mcp-listener-cascade"} {
+		status := findStatusByName(t, statuses, name)
+		require.Error(t, status.Err, name)
+		require.True(t, IsEntityScopedFailure(status.Err), "%s: %v", name, status.Err)
+	}
+	require.EqualError(t, findStatusByName(t, statuses, "mcp-listener").Err,
+		`referenced AIGatewayMCPServer "mcp-src" was excluded from the document: its own translation failed`)
 }
 
 // TestBuildDocument_MCPServerSourceSortedLater is the regression guard for the same-kind

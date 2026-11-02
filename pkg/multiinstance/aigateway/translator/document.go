@@ -317,7 +317,7 @@ func BuildDocument(
 	translatedPolicies := make(translatedNames)
 	translatedConsumerGroups := make(translatedNames)
 	translatedAuthStrategies := make(translatedNames)
-	translatedMCPServers := make(map[string]struct{})
+	translatedMCPServers := make(translatedNames)
 	// translatedMCPCRByName maps a translated MCPServer's entity name to its original CR, so
 	// the same-kind sources post-pass can attribute a dropped listener's failure to the CR
 	// whose EntityStatus already reported success (the maps store the same pointers
@@ -477,7 +477,13 @@ func BuildDocument(
 			&doc.Agents),
 		translateKind[aiconfigurationv1alpha1.AIGatewayMCPServerList](
 			cl, gw, index.IndexFieldAIGatewayMCPServerOnOnPremAIGatewayRef,
-			func(s *aiconfigurationv1alpha1.AIGatewayMCPServer, ctx context.Context, cl client.Client) (*aigw.MCPServer, error) {
+			func(s *aiconfigurationv1alpha1.AIGatewayMCPServer, ctx context.Context, cl client.Client) (_ *aigw.MCPServer, err error) {
+				// The sources post-pass needs the failure of a source to keep its cause.
+				defer func() {
+					if err != nil {
+						translatedMCPServers.record(s.GetKonnectName(), err)
+					}
+				}()
 				mcpServer, err := s.ToAIGWMCPServer(ctx, cl)
 				if err != nil {
 					return nil, err
@@ -500,13 +506,13 @@ func BuildDocument(
 					}
 				}
 				name := s.GetKonnectName()
-				if _, dup := translatedMCPServers[name]; dup {
+				if prev, dup := translatedMCPServers[name]; dup && prev == nil {
 					return nil, fmt.Errorf(
 						"duplicate AIGatewayMCPServer entity name %q: entity names must be unique across AIGatewayMCPServer CRs",
 						name,
 					)
 				}
-				translatedMCPServers[name] = struct{}{}
+				translatedMCPServers.record(name, nil)
 				translatedMCPCRByName[name] = s
 				return mcpServer, nil
 			},
@@ -618,29 +624,22 @@ func BuildDocument(
 		dropped = false
 		kept := make([]aigw.MCPServer, 0, len(doc.MCPServers))
 		for _, m := range doc.MCPServers {
-			missing := ""
-			for _, src := range m.Config.Sources {
-				if _, ok := translatedMCPServers[src]; !ok {
-					missing = src
-					break
-				}
-			}
-			if missing == "" {
+			excluded := checkTranslatedRefs(translatedMCPServers, "AIGatewayMCPServer", m.Config.Sources)
+			if excluded == nil {
 				kept = append(kept, m)
 				continue
 			}
 			dropped = true
-			delete(translatedMCPServers, m.Name)
+			// Assigned, not recorded: the listener translated, and its exclusion must
+			// replace that success so that a listener sourcing it keeps the cause too.
+			translatedMCPServers[m.Name] = excluded
 			cr, ok := translatedMCPCRByName[m.Name]
 			if !ok {
 				continue
 			}
 			for i := range statuses {
 				if statuses[i].Obj == cr {
-					statuses[i].Err = fmt.Errorf(
-						"referenced AIGatewayMCPServer %q was excluded from the document: its own translation failed, or it references an excluded server",
-						missing,
-					)
+					statuses[i].Err = excluded
 				}
 			}
 		}
