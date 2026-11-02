@@ -70,7 +70,7 @@ version = "4.3.1"
 
 [tools."go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"]
 # renovate: datasource=git-refs packageName=https://github.com/kubernetes-sigs/kube-api-linter.git
-version = "79b557aa8c8dc08e801a1d3e6109881e3551bf30"
+version = "d90122c89087043556fce3cba41c92bea0d8fd15"
 
 [tools."yq"]
 # renovate: datasource=github-releases depName=mikefarah/yq
