@@ -3,6 +3,9 @@ package crdsvalidation_test
 import (
 	"testing"
 
+	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
+
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -156,6 +159,49 @@ func TestAIGatewayModel(t *testing.T) {
 					return obj
 				}(),
 				ExpectedErrorMessage: new("spec.apiSpec.model.config.balancer.semantic.embeddings: Required value"),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("apiSpec.model.formats validation", func(t *testing.T) {
+		withFormats := func(types ...string) *aiconfigurationv1alpha1.AIGatewayModel {
+			obj := validAIGatewayModel(ns.Name)
+			obj.Spec.APISpec.Model.Formats = lo.Map(types, func(typ string, _ int) aiconfigurationv1alpha1.AIGatewayModelFormat {
+				return aiconfigurationv1alpha1.AIGatewayModelFormat{Type: typ}
+			})
+			return obj
+		}
+		assertFormats := func(want ...string) func(*testing.T, *aiconfigurationv1alpha1.AIGatewayModel) {
+			return func(t *testing.T, obj *aiconfigurationv1alpha1.AIGatewayModel) {
+				got := lo.Map(obj.Spec.APISpec.Model.Formats, func(f aiconfigurationv1alpha1.AIGatewayModelFormat, _ int) string {
+					return f.Type
+				})
+				assert.Equal(t, want, got)
+			}
+		}
+
+		common.TestCasesGroup[*aiconfigurationv1alpha1.AIGatewayModel]{
+			{
+				Name:       "bedrock format is valid",
+				TestObject: withFormats("bedrock"),
+				Assert:     assertFormats("bedrock"),
+			},
+			{
+				Name:       "bedrock together with other formats is valid",
+				TestObject: withFormats("bedrock", "openai"),
+				Assert:     assertFormats("bedrock", "openai"),
+			},
+			{
+				Name:       "every documented format is valid",
+				TestObject: withFormats("*", "anthropic", "bedrock", "cohere", "gemini", "huggingface", "openai", "passthrough", "typesafe"),
+				Assert: assertFormats(
+					"*", "anthropic", "bedrock", "cohere", "gemini", "huggingface", "openai", "passthrough", "typesafe",
+				),
+			},
+			{
+				Name:                 "unknown format is invalid",
+				TestObject:           withFormats("not-a-format"),
+				ExpectedErrorMessage: new("spec.apiSpec.model.formats[0].type: Unsupported value: \"not-a-format\""),
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
