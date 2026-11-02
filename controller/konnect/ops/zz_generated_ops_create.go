@@ -46,6 +46,8 @@ func CreateGeneratedOps[
 		return createAIGatewayCustomPolicy(ctx, cl, sdk.GetAIGatewayCustomPoliciesSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate:
 		return createAIGatewayDataPlaneCertificate(ctx, cl, sdk.GetAIGatewayDataPlaneCertificatesSDK(), ent)
+	case *aiconfigurationv1alpha1.AIGatewayDatastore:
+		return createAIGatewayDatastore(ctx, cl, sdk.GetAIGatewayDatastoresSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayMCPServer:
 		return createAIGatewayMCPServer(ctx, cl, sdk.GetAIGatewayMCPServersSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayModel:

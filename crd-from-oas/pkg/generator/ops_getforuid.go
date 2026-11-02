@@ -378,16 +378,18 @@ func resolveListPagination(listMethod, listResponseType string, positional bool,
 		if err != nil {
 			return "", false, fmt.Errorf("inspect list response %q: %w", listResponseType, err)
 		}
-		if ok && slices.Contains([]string{"CursorMeta", "CursorMetaPage", "PaginatedMeta"}, meta) {
+		if ok && slices.Contains([]string{"CursorMeta", "CursorMetaPage", "CursorMetaWithTotal", "PaginatedMeta"}, meta) {
 			return "", false, fmt.Errorf("list response %q is paginated (meta %q) but list request %q has no page parameters", listResponseType, meta, requestType)
 		}
 		return listPaginationNone, false, nil
 	}
 
-	// The response's meta holds the page (CursorMeta, PaginatedMeta), or, for
-	// some cursor-paginated endpoints, is the page itself (CursorMetaPage).
+	// The response's meta holds the page (CursorMeta, CursorMetaWithTotal,
+	// PaginatedMeta), or, for some cursor-paginated endpoints, is the page
+	// itself (CursorMetaPage). CursorMetaWithTotal adds a total count to the
+	// page but is read the same way.
 	wantMeta := map[string][]string{
-		listPaginationCursor: {"CursorMeta", "CursorMetaPage"},
+		listPaginationCursor: {"CursorMeta", "CursorMetaPage", "CursorMetaWithTotal"},
 		listPaginationNumber: {"PaginatedMeta"},
 	}[pagination]
 	meta, ok, err := sdkStructFieldTypeName(componentsImportPath, listResponseType, "Meta")
