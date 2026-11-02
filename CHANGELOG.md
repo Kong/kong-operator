@@ -456,6 +456,14 @@
   another namespace follows its consumer. The grant of the consumer also covers the
   credentials.
   [#5685](https://github.com/Kong/kong-operator/issues/5685)
+
+- `EventGatewayVirtualClusterPolicyChain` now applies declared cluster-level
+  policy ordering to `OnPremEventGateway` configuration, using Kubernetes policy
+  references without Konnect IDs. Invalid owning declarations pause the
+  gateway's complete configuration updates; deleting a chain restores the
+  default policy order without deleting policies.
+  [#6365](https://github.com/Kong/kong-operator/issues/6365)
+
 - Added the `EventGatewayVirtualClusterPolicyChain` CRD to declare the execution
   order of cluster-level policies within an Event Gateway virtual cluster.
   The API requires an explicit policy list and an immutable virtual-cluster CR

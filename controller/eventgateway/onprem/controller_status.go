@@ -212,6 +212,9 @@ func pushConditions(gateway *eventgatewayv1alpha1.OnPremEventGateway, result pus
 // failureReason returns the reason of the conditions of the gateway
 // reporting the error of a push.
 func failureReason(pushErr error) kcfgconsts.ConditionReason {
+	if _, ok := errors.AsType[invalidPolicyChainsError](pushErr); ok {
+		return "InvalidPolicyChain"
+	}
 	if _, ok := errors.AsType[gwAdminNotReadyError](pushErr); ok {
 		return eventgatewayv1alpha1.DependenciesNotReadyReason
 	}
@@ -444,10 +447,11 @@ func keptMessage(e entityStatus) string {
 // SecretRefValid condition, removed when it reads no Secret, e.g. one whose
 // value moved from a Secret to an inline one.
 func (r *Reconciler) setEntityStatus(ctx context.Context, e entityStatus, programmed metav1.Condition) error {
+	conditions := slices.Clone(e.conditions)
 	if e.secretRefValid == nil {
-		return r.setEntityConditions(ctx, e.obj, []string{string(konnectv1alpha1.SecretRefValidConditionType)}, programmed)
+		return r.setEntityConditions(ctx, e.obj, []string{string(konnectv1alpha1.SecretRefValidConditionType)}, append(conditions, programmed)...)
 	}
-	return r.setEntityConditions(ctx, e.obj, nil, *e.secretRefValid, programmed)
+	return r.setEntityConditions(ctx, e.obj, nil, append(conditions, *e.secretRefValid, programmed)...)
 }
 
 // secretRefValidCondition returns the SecretRefValid condition of the

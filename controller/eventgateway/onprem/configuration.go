@@ -67,6 +67,12 @@ type configuration struct {
 	// pushedKey is entities as they are compared with the entities gw-admin
 	// holds (see sameEntities), encoded once for every gw-admin pod.
 	pushedKey []byte
+	// orderedClusterPolicies are the virtual clusters whose explicit chain
+	// order must also be compared when checking gw-admin for drift.
+	orderedClusterPolicies []uuid.UUID
+	// invalidChains prevent pushing a partial document or falling back to
+	// implicit ordering while an owning declaration cannot be fulfilled.
+	invalidChains []string
 	// previous holds the entities of the last configuration built for the
 	// gateway, by the UID of their object, and built those of this one: an
 	// entity reading a Secret that is gone is sent as it was last.
@@ -95,7 +101,8 @@ type entityStatus struct {
 	secretRefValid *metav1.Condition
 	// kept tells the entity is sent as it was last, a Secret it reads being
 	// unusable.
-	kept bool
+	kept       bool
+	conditions []metav1.Condition
 }
 
 // dataPlaneCertificate is a data plane certificate of the gateway.
@@ -147,13 +154,16 @@ func buildConfiguration(
 	if err := cfg.addVirtualClusterPolicies(ctx, resolver, virtualClusters, targets); err != nil {
 		return configuration{}, err
 	}
+	if err := cfg.addClusterPolicyChains(ctx, cl, virtualClusters); err != nil {
+		return configuration{}, err
+	}
 	if err := cfg.addListeners(ctx, resolver, gateway, targets); err != nil {
 		return configuration{}, err
 	}
 	if err := cfg.addCertificates(ctx, cl, gateway); err != nil {
 		return configuration{}, err
 	}
-	key, err := comparisonKey(withGWAdminDefaults(cfg.entities))
+	key, err := comparisonKey(withGWAdminDefaults(cfg.entities), cfg.orderedClusterPolicies...)
 	if err != nil {
 		return configuration{}, fmt.Errorf("failed to encode the entities of the gateway: %w", err)
 	}
