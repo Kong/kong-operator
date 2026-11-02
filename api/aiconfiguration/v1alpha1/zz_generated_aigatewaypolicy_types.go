@@ -79,7 +79,7 @@ type AIGatewayPolicyAPISpec struct {
 	// Names of the Datastores this policy references.
 	//
 	// +optional
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 
 	// The display name for this policy instance.
 	//

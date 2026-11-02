@@ -52,6 +52,56 @@ func AIGatewayDatastoreReconciliationWatchOptions(
 				),
 			)
 		},
+		// AIGatewayAuthStrategy objects reference AIGatewayDatastore (reverseWatch):
+		// re-reconcile the ones AIGatewayAuthStrategy objects use whenever they change or are deleted.
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&aiconfigurationv1alpha1.AIGatewayAuthStrategy{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueAIGatewayDatastoreForAIGatewayAuthStrategy(cl),
+				),
+			)
+		},
+		// AIGatewayMCPServer objects reference AIGatewayDatastore (reverseWatch):
+		// re-reconcile the ones AIGatewayMCPServer objects use whenever they change or are deleted.
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&aiconfigurationv1alpha1.AIGatewayMCPServer{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueAIGatewayDatastoreForAIGatewayMCPServer(cl),
+				),
+			)
+		},
+		// AIGatewayModel objects reference AIGatewayDatastore (reverseWatch):
+		// re-reconcile the ones AIGatewayModel objects use whenever they change or are deleted.
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&aiconfigurationv1alpha1.AIGatewayModel{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueAIGatewayDatastoreForAIGatewayModel(cl),
+				),
+			)
+		},
+		// AIGatewayModelProvider objects reference AIGatewayDatastore (reverseWatch):
+		// re-reconcile the ones AIGatewayModelProvider objects use whenever they change or are deleted.
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&aiconfigurationv1alpha1.AIGatewayModelProvider{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueAIGatewayDatastoreForAIGatewayModelProvider(cl),
+				),
+			)
+		},
+		// AIGatewayPolicy objects reference AIGatewayDatastore (reverseWatch):
+		// re-reconcile the ones AIGatewayPolicy objects use whenever they change or are deleted.
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&aiconfigurationv1alpha1.AIGatewayPolicy{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueAIGatewayDatastoreForAIGatewayPolicy(cl),
+				),
+			)
+		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
 				&configurationv1alpha1.KongReferenceGrant{},
@@ -86,5 +136,100 @@ func enqueueAIGatewayDatastoreForKonnectAIGateway(
 			return nil
 		}
 		return objectListToReconcileRequests(l.Items)
+	}
+}
+
+// enqueueAIGatewayDatastoreForAIGatewayAuthStrategy enqueues the AIGatewayDatastore objects
+// AIGatewayAuthStrategy objects use.
+func enqueueAIGatewayDatastoreForAIGatewayAuthStrategy(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		referrer, ok := obj.(*aiconfigurationv1alpha1.AIGatewayAuthStrategy)
+		if !ok {
+			return nil
+		}
+		var reqs []reconcile.Request
+		// References name their targets: no lookup needed.
+		for _, key := range aiconfigurationv1alpha1.AIGatewayAuthStrategyRefsToAIGatewayDatastore(referrer) {
+			reqs = append(reqs, reconcile.Request{NamespacedName: key})
+		}
+		return reqs
+	}
+}
+
+// enqueueAIGatewayDatastoreForAIGatewayMCPServer enqueues the AIGatewayDatastore objects
+// AIGatewayMCPServer objects use.
+func enqueueAIGatewayDatastoreForAIGatewayMCPServer(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		referrer, ok := obj.(*aiconfigurationv1alpha1.AIGatewayMCPServer)
+		if !ok {
+			return nil
+		}
+		var reqs []reconcile.Request
+		// References name their targets: no lookup needed.
+		for _, key := range aiconfigurationv1alpha1.AIGatewayMCPServerRefsToAIGatewayDatastore(referrer) {
+			reqs = append(reqs, reconcile.Request{NamespacedName: key})
+		}
+		return reqs
+	}
+}
+
+// enqueueAIGatewayDatastoreForAIGatewayModel enqueues the AIGatewayDatastore objects
+// AIGatewayModel objects use.
+func enqueueAIGatewayDatastoreForAIGatewayModel(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		referrer, ok := obj.(*aiconfigurationv1alpha1.AIGatewayModel)
+		if !ok {
+			return nil
+		}
+		var reqs []reconcile.Request
+		// References name their targets: no lookup needed.
+		for _, key := range aiconfigurationv1alpha1.AIGatewayModelRefsToAIGatewayDatastore(referrer) {
+			reqs = append(reqs, reconcile.Request{NamespacedName: key})
+		}
+		return reqs
+	}
+}
+
+// enqueueAIGatewayDatastoreForAIGatewayModelProvider enqueues the AIGatewayDatastore objects
+// AIGatewayModelProvider objects use.
+func enqueueAIGatewayDatastoreForAIGatewayModelProvider(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		referrer, ok := obj.(*aiconfigurationv1alpha1.AIGatewayModelProvider)
+		if !ok {
+			return nil
+		}
+		var reqs []reconcile.Request
+		// References name their targets: no lookup needed.
+		for _, key := range aiconfigurationv1alpha1.AIGatewayModelProviderRefsToAIGatewayDatastore(referrer) {
+			reqs = append(reqs, reconcile.Request{NamespacedName: key})
+		}
+		return reqs
+	}
+}
+
+// enqueueAIGatewayDatastoreForAIGatewayPolicy enqueues the AIGatewayDatastore objects
+// AIGatewayPolicy objects use.
+func enqueueAIGatewayDatastoreForAIGatewayPolicy(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		referrer, ok := obj.(*aiconfigurationv1alpha1.AIGatewayPolicy)
+		if !ok {
+			return nil
+		}
+		var reqs []reconcile.Request
+		// References name their targets: no lookup needed.
+		for _, key := range aiconfigurationv1alpha1.AIGatewayPolicyRefsToAIGatewayDatastore(referrer) {
+			reqs = append(reqs, reconcile.Request{NamespacedName: key})
+		}
+		return reqs
 	}
 }

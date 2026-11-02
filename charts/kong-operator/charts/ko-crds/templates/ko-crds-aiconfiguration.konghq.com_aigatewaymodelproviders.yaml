@@ -210,10 +210,15 @@ spec:
                       datastores:
                         items:
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              minLength: 1
+                              type: string
+                            namespace:
                               type: string
                           required:
                           - name
@@ -680,10 +685,15 @@ spec:
                       datastores:
                         items:
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              minLength: 1
+                              type: string
+                            namespace:
                               type: string
                           required:
                           - name
@@ -1068,10 +1078,15 @@ spec:
                       datastores:
                         items:
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              minLength: 1
+                              type: string
+                            namespace:
                               type: string
                           required:
                           - name
@@ -1524,10 +1539,15 @@ spec:
                       datastores:
                         items:
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              minLength: 1
+                              type: string
+                            namespace:
                               type: string
                           required:
                           - name
@@ -1912,10 +1932,15 @@ spec:
                       datastores:
                         items:
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              minLength: 1
+                              type: string
+                            namespace:
                               type: string
                           required:
                           - name
@@ -2300,10 +2325,15 @@ spec:
                       datastores:
                         items:
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              minLength: 1
+                              type: string
+                            namespace:
                               type: string
                           required:
                           - name
@@ -2688,10 +2718,15 @@ spec:
                       datastores:
                         items:
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              minLength: 1
+                              type: string
+                            namespace:
                               type: string
                           required:
                           - name
@@ -3076,10 +3111,15 @@ spec:
                       datastores:
                         items:
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              minLength: 1
+                              type: string
+                            namespace:
                               type: string
                           required:
                           - name
@@ -3464,10 +3504,15 @@ spec:
                       datastores:
                         items:
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              minLength: 1
+                              type: string
+                            namespace:
                               type: string
                           required:
                           - name
@@ -3953,10 +3998,15 @@ spec:
                       datastores:
                         items:
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              minLength: 1
+                              type: string
+                            namespace:
                               type: string
                           required:
                           - name
@@ -4341,10 +4391,15 @@ spec:
                       datastores:
                         items:
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              minLength: 1
+                              type: string
+                            namespace:
                               type: string
                           required:
                           - name
@@ -4729,10 +4784,15 @@ spec:
                       datastores:
                         items:
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              minLength: 1
+                              type: string
+                            namespace:
                               type: string
                           required:
                           - name
@@ -5117,10 +5177,15 @@ spec:
                       datastores:
                         items:
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              minLength: 1
+                              type: string
+                            namespace:
                               type: string
                           required:
                           - name
@@ -5505,10 +5570,15 @@ spec:
                       datastores:
                         items:
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              minLength: 1
+                              type: string
+                            namespace:
                               type: string
                           required:
                           - name
@@ -5893,10 +5963,15 @@ spec:
                       datastores:
                         items:
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              minLength: 1
+                              type: string
+                            namespace:
                               type: string
                           required:
                           - name
@@ -6281,10 +6356,15 @@ spec:
                       datastores:
                         items:
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              minLength: 1
+                              type: string
+                            namespace:
                               type: string
                           required:
                           - name
@@ -6695,10 +6775,15 @@ spec:
                       datastores:
                         items:
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              minLength: 1
+                              type: string
+                            namespace:
                               type: string
                           required:
                           - name
@@ -7108,10 +7193,15 @@ spec:
                       datastores:
                         items:
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              minLength: 1
+                              type: string
+                            namespace:
                               type: string
                           required:
                           - name
@@ -7496,10 +7586,15 @@ spec:
                       datastores:
                         items:
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              minLength: 1
+                              type: string
+                            namespace:
                               type: string
                           required:
                           - name
@@ -7884,10 +7979,15 @@ spec:
                       datastores:
                         items:
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              minLength: 1
+                              type: string
+                            namespace:
                               type: string
                           required:
                           - name
@@ -8272,10 +8372,15 @@ spec:
                       datastores:
                         items:
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              minLength: 1
+                              type: string
+                            namespace:
                               type: string
                           required:
                           - name

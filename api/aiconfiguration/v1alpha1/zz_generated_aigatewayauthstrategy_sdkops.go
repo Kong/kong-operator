@@ -5,9 +5,11 @@ package v1alpha1
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -852,15 +854,10 @@ func (s *AIGatewayAuthStrategyAPISpec) selectedSDKOpsPayload(payload map[string]
 	return data, variant, nil
 }
 
-// ToCreateAIGatewayAuthStrategyRequest converts the AIGatewayAuthStrategyAPISpec to the SDK type
-// sdkkonnectcomp.CreateAIGatewayAuthStrategyRequest using JSON marshal/unmarshal.
-// Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes
-// object references) are naturally excluded because they have different JSON names.
-func (s *AIGatewayAuthStrategyAPISpec) ToCreateAIGatewayAuthStrategyRequest() (*sdkkonnectcomp.CreateAIGatewayAuthStrategyRequest, error) {
-	payload, err := s.marshalSDKOpsPayload()
-	if err != nil {
-		return nil, err
-	}
+// toCreateAIGatewayAuthStrategyRequestFromPayload builds the SDK request from an already-computed
+// SDK payload map, so resolved CR references can be injected into the payload
+// between computation and conversion.
+func (s *AIGatewayAuthStrategyAPISpec) toCreateAIGatewayAuthStrategyRequestFromPayload(payload map[string]any) (*sdkkonnectcomp.CreateAIGatewayAuthStrategyRequest, error) {
 	data, variant, err := s.selectedSDKOpsPayload(payload)
 	if err != nil {
 		return nil, err
@@ -886,15 +883,10 @@ func (s *AIGatewayAuthStrategyAPISpec) ToCreateAIGatewayAuthStrategyRequest() (*
 	}
 }
 
-// ToUpdateAIGatewayAuthStrategyRequest converts the AIGatewayAuthStrategyAPISpec to the SDK type
-// sdkkonnectcomp.UpdateAIGatewayAuthStrategyRequest using JSON marshal/unmarshal.
-// Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes
-// object references) are naturally excluded because they have different JSON names.
-func (s *AIGatewayAuthStrategyAPISpec) ToUpdateAIGatewayAuthStrategyRequest() (*sdkkonnectcomp.UpdateAIGatewayAuthStrategyRequest, error) {
-	payload, err := s.marshalSDKOpsPayload()
-	if err != nil {
-		return nil, err
-	}
+// toUpdateAIGatewayAuthStrategyRequestFromPayload builds the SDK request from an already-computed
+// SDK payload map, so resolved CR references can be injected into the payload
+// between computation and conversion.
+func (s *AIGatewayAuthStrategyAPISpec) toUpdateAIGatewayAuthStrategyRequestFromPayload(payload map[string]any) (*sdkkonnectcomp.UpdateAIGatewayAuthStrategyRequest, error) {
 	data, variant, err := s.selectedSDKOpsPayload(payload)
 	if err != nil {
 		return nil, err
@@ -977,22 +969,309 @@ func (obj *AIGatewayAuthStrategy) GetSensitiveDataSecretRefs() []SensitiveDataSe
 	return refs
 }
 
+// RefsAtAIGatewayAuthStrategyKeyAuthDatastores returns the references at spec.apiSpec.key-auth.datastores,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayAuthStrategyKeyAuthDatastores(obj *AIGatewayAuthStrategy) []AIGatewayDatastoreNamespacedRef {
+	if obj.Spec.APISpec.AIGatewayAuthStrategyConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayAuthStrategyConfig.KeyAuth == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayAuthStrategyConfig.KeyAuth.Datastores
+}
+
+// resolveAIGatewayAuthStrategyKeyAuthDatastores resolves the CR references in spec.apiSpec.key-auth.datastores
+// to Konnect names.
+func resolveAIGatewayAuthStrategyKeyAuthDatastores(ctx context.Context, cl client.Client, obj *AIGatewayAuthStrategy) ([]string, error) {
+	refs := RefsAtAIGatewayAuthStrategyKeyAuthDatastores(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayDatastore"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		if ns != obj.GetNamespace() {
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
+		}
+		var referenced AIGatewayDatastore
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayDatastore %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		// AIGatewayDatastore objects being deleted must not gain new users, which
+		// could keep their deletion blocked: a referrer not created in Konnect
+		// yet can't use them, while existing ones keep syncing until they drop
+		// the reference.
+		if !referenced.GetDeletionTimestamp().IsZero() && obj.GetKonnectID() == "" {
+			errs = append(errs, ReferenceBeingDeletedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayAuthStrategyOpenidConnectDatastores returns the references at spec.apiSpec.openid-connect.datastores,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayAuthStrategyOpenidConnectDatastores(obj *AIGatewayAuthStrategy) []AIGatewayDatastoreNamespacedRef {
+	if obj.Spec.APISpec.AIGatewayAuthStrategyConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect.Datastores
+}
+
+// resolveAIGatewayAuthStrategyOpenidConnectDatastores resolves the CR references in spec.apiSpec.openid-connect.datastores
+// to Konnect names.
+func resolveAIGatewayAuthStrategyOpenidConnectDatastores(ctx context.Context, cl client.Client, obj *AIGatewayAuthStrategy) ([]string, error) {
+	refs := RefsAtAIGatewayAuthStrategyOpenidConnectDatastores(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayDatastore"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		if ns != obj.GetNamespace() {
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
+		}
+		var referenced AIGatewayDatastore
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayDatastore %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		// AIGatewayDatastore objects being deleted must not gain new users, which
+		// could keep their deletion blocked: a referrer not created in Konnect
+		// yet can't use them, while existing ones keep syncing until they drop
+		// the reference.
+		if !referenced.GetDeletionTimestamp().IsZero() && obj.GetKonnectID() == "" {
+			errs = append(errs, ReferenceBeingDeletedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// AIGatewayAuthStrategyRefsToAIGatewayDatastore returns the keys of the AIGatewayDatastore
+// objects obj references through spec.apiSpec.key-auth.datastores, spec.apiSpec.openid-connect.datastores, with the default namespace applied.
+func AIGatewayAuthStrategyRefsToAIGatewayDatastore(obj *AIGatewayAuthStrategy) []client.ObjectKey {
+	var keys []client.ObjectKey
+	for _, ref := range RefsAtAIGatewayAuthStrategyKeyAuthDatastores(obj) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
+	}
+	for _, ref := range RefsAtAIGatewayAuthStrategyOpenidConnectDatastores(obj) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
+	}
+	return keys
+}
+
+// ResolveKonnectReferences resolves every CR reference declared on the spec and
+// returns the joined resolution errors, or nil when all references resolve.
+func (obj *AIGatewayAuthStrategy) ResolveKonnectReferences(ctx context.Context, cl client.Client) error {
+	var errs []error
+	if _, err := resolveAIGatewayAuthStrategyKeyAuthDatastores(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayAuthStrategyOpenidConnectDatastores(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
+}
+
+// CrossNamespaceSiblingReferences returns every cross-namespace sibling
+// reference declared on obj's spec whose SupportCrossNamespaceReference is
+// enabled, for callers to authorize against KongReferenceGrant before
+// calling ResolveKonnectReferences.
+func (obj *AIGatewayAuthStrategy) CrossNamespaceSiblingReferences() []CrossNamespaceReferenceCheck {
+	var checks []CrossNamespaceReferenceCheck
+	return checks
+}
+
 // ToCreateAIGatewayAuthStrategyRequest converts the AIGatewayAuthStrategy to the SDK type
-// sdkkonnectcomp.CreateAIGatewayAuthStrategyRequest, resolving referenced Secrets via the provided client.
+// sdkkonnectcomp.CreateAIGatewayAuthStrategyRequest, resolving referenced Secrets and CRs via the provided client.
 func (obj *AIGatewayAuthStrategy) ToCreateAIGatewayAuthStrategyRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.CreateAIGatewayAuthStrategyRequest, error) {
 	spec, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {
 		return nil, err
 	}
-	return spec.ToCreateAIGatewayAuthStrategyRequest()
+	payload, err := spec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, err
+	}
+	// spec.apiSpec.key-auth.datastores carries CR references: replace it in the SDK payload with one
+	// object per resolved Konnect value, each keeping the OAS item shape and
+	// wrapping that value under "name". A nil CRD ancestor
+	// pointer means that part of the config wasn't set, so the payload is left
+	// untouched.
+	if obj.Spec.APISpec.AIGatewayAuthStrategyConfig != nil && obj.Spec.APISpec.AIGatewayAuthStrategyConfig.KeyAuth != nil {
+		keyAuth, _ := payload["key-auth"].(map[string]any)
+		if keyAuth == nil {
+			keyAuth = map[string]any{}
+		}
+		resolvedKeyAuthDatastores, err := resolveAIGatewayAuthStrategyKeyAuthDatastores(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.key-auth.datastores references: %w", err)
+		}
+		wrappedKeyAuthDatastores := make([]map[string]string, 0, len(resolvedKeyAuthDatastores))
+		for _, v := range resolvedKeyAuthDatastores {
+			wrappedKeyAuthDatastores = append(wrappedKeyAuthDatastores, map[string]string{"name": v})
+		}
+		keyAuth["datastores"] = wrappedKeyAuthDatastores
+		payload["key-auth"] = keyAuth
+	}
+	// spec.apiSpec.openid-connect.datastores carries CR references: replace it in the SDK payload with one
+	// object per resolved Konnect value, each keeping the OAS item shape and
+	// wrapping that value under "name". A nil CRD ancestor
+	// pointer means that part of the config wasn't set, so the payload is left
+	// untouched.
+	if obj.Spec.APISpec.AIGatewayAuthStrategyConfig != nil && obj.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect != nil {
+		openidConnect, _ := payload["openid-connect"].(map[string]any)
+		if openidConnect == nil {
+			openidConnect = map[string]any{}
+		}
+		resolvedOpenidConnectDatastores, err := resolveAIGatewayAuthStrategyOpenidConnectDatastores(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.openid-connect.datastores references: %w", err)
+		}
+		wrappedOpenidConnectDatastores := make([]map[string]string, 0, len(resolvedOpenidConnectDatastores))
+		for _, v := range resolvedOpenidConnectDatastores {
+			wrappedOpenidConnectDatastores = append(wrappedOpenidConnectDatastores, map[string]string{"name": v})
+		}
+		openidConnect["datastores"] = wrappedOpenidConnectDatastores
+		payload["openid-connect"] = openidConnect
+	}
+	return spec.toCreateAIGatewayAuthStrategyRequestFromPayload(payload)
 }
 
 // ToUpdateAIGatewayAuthStrategyRequest converts the AIGatewayAuthStrategy to the SDK type
-// sdkkonnectcomp.UpdateAIGatewayAuthStrategyRequest, resolving referenced Secrets via the provided client.
+// sdkkonnectcomp.UpdateAIGatewayAuthStrategyRequest, resolving referenced Secrets and CRs via the provided client.
 func (obj *AIGatewayAuthStrategy) ToUpdateAIGatewayAuthStrategyRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.UpdateAIGatewayAuthStrategyRequest, error) {
 	spec, err := obj.sdkOpsAPISpec(ctx, cl)
 	if err != nil {
 		return nil, err
 	}
-	return spec.ToUpdateAIGatewayAuthStrategyRequest()
+	payload, err := spec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, err
+	}
+	// spec.apiSpec.key-auth.datastores carries CR references: replace it in the SDK payload with one
+	// object per resolved Konnect value, each keeping the OAS item shape and
+	// wrapping that value under "name". A nil CRD ancestor
+	// pointer means that part of the config wasn't set, so the payload is left
+	// untouched.
+	if obj.Spec.APISpec.AIGatewayAuthStrategyConfig != nil && obj.Spec.APISpec.AIGatewayAuthStrategyConfig.KeyAuth != nil {
+		keyAuth, _ := payload["key-auth"].(map[string]any)
+		if keyAuth == nil {
+			keyAuth = map[string]any{}
+		}
+		resolvedKeyAuthDatastores, err := resolveAIGatewayAuthStrategyKeyAuthDatastores(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.key-auth.datastores references: %w", err)
+		}
+		wrappedKeyAuthDatastores := make([]map[string]string, 0, len(resolvedKeyAuthDatastores))
+		for _, v := range resolvedKeyAuthDatastores {
+			wrappedKeyAuthDatastores = append(wrappedKeyAuthDatastores, map[string]string{"name": v})
+		}
+		keyAuth["datastores"] = wrappedKeyAuthDatastores
+		payload["key-auth"] = keyAuth
+	}
+	// spec.apiSpec.openid-connect.datastores carries CR references: replace it in the SDK payload with one
+	// object per resolved Konnect value, each keeping the OAS item shape and
+	// wrapping that value under "name". A nil CRD ancestor
+	// pointer means that part of the config wasn't set, so the payload is left
+	// untouched.
+	if obj.Spec.APISpec.AIGatewayAuthStrategyConfig != nil && obj.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect != nil {
+		openidConnect, _ := payload["openid-connect"].(map[string]any)
+		if openidConnect == nil {
+			openidConnect = map[string]any{}
+		}
+		resolvedOpenidConnectDatastores, err := resolveAIGatewayAuthStrategyOpenidConnectDatastores(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.openid-connect.datastores references: %w", err)
+		}
+		wrappedOpenidConnectDatastores := make([]map[string]string, 0, len(resolvedOpenidConnectDatastores))
+		for _, v := range resolvedOpenidConnectDatastores {
+			wrappedOpenidConnectDatastores = append(wrappedOpenidConnectDatastores, map[string]string{"name": v})
+		}
+		openidConnect["datastores"] = wrappedOpenidConnectDatastores
+		payload["openid-connect"] = openidConnect
+	}
+	return spec.toUpdateAIGatewayAuthStrategyRequestFromPayload(payload)
 }

@@ -4417,6 +4417,428 @@ func resolveAIGatewayMCPServerUpstreamServerToolsAccessAclsDeny(ctx context.Cont
 	return resolved, nil
 }
 
+// RefsAtAIGatewayMCPServerConversionListenerDatastores returns the references at spec.apiSpec.conversion-listener.datastores,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerConversionListenerDatastores(obj *AIGatewayMCPServer) []AIGatewayDatastoreNamespacedRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Datastores
+}
+
+// resolveAIGatewayMCPServerConversionListenerDatastores resolves the CR references in spec.apiSpec.conversion-listener.datastores
+// to Konnect names.
+func resolveAIGatewayMCPServerConversionListenerDatastores(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerConversionListenerDatastores(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayDatastore"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		if ns != obj.GetNamespace() {
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
+		}
+		var referenced AIGatewayDatastore
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayDatastore %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		// AIGatewayDatastore objects being deleted must not gain new users, which
+		// could keep their deletion blocked: a referrer not created in Konnect
+		// yet can't use them, while existing ones keep syncing until they drop
+		// the reference.
+		if !referenced.GetDeletionTimestamp().IsZero() && obj.GetKonnectID() == "" {
+			errs = append(errs, ReferenceBeingDeletedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerConversionOnlyDatastores returns the references at spec.apiSpec.conversion-only.datastores,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerConversionOnlyDatastores(obj *AIGatewayMCPServer) []AIGatewayDatastoreNamespacedRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionOnly == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionOnly.Datastores
+}
+
+// resolveAIGatewayMCPServerConversionOnlyDatastores resolves the CR references in spec.apiSpec.conversion-only.datastores
+// to Konnect names.
+func resolveAIGatewayMCPServerConversionOnlyDatastores(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerConversionOnlyDatastores(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayDatastore"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		if ns != obj.GetNamespace() {
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
+		}
+		var referenced AIGatewayDatastore
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayDatastore %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		// AIGatewayDatastore objects being deleted must not gain new users, which
+		// could keep their deletion blocked: a referrer not created in Konnect
+		// yet can't use them, while existing ones keep syncing until they drop
+		// the reference.
+		if !referenced.GetDeletionTimestamp().IsZero() && obj.GetKonnectID() == "" {
+			errs = append(errs, ReferenceBeingDeletedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerListenerDatastores returns the references at spec.apiSpec.listener.datastores,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerListenerDatastores(obj *AIGatewayMCPServer) []AIGatewayDatastoreNamespacedRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Datastores
+}
+
+// resolveAIGatewayMCPServerListenerDatastores resolves the CR references in spec.apiSpec.listener.datastores
+// to Konnect names.
+func resolveAIGatewayMCPServerListenerDatastores(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerListenerDatastores(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayDatastore"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		if ns != obj.GetNamespace() {
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
+		}
+		var referenced AIGatewayDatastore
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayDatastore %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		// AIGatewayDatastore objects being deleted must not gain new users, which
+		// could keep their deletion blocked: a referrer not created in Konnect
+		// yet can't use them, while existing ones keep syncing until they drop
+		// the reference.
+		if !referenced.GetDeletionTimestamp().IsZero() && obj.GetKonnectID() == "" {
+			errs = append(errs, ReferenceBeingDeletedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerPassthroughListenerDatastores returns the references at spec.apiSpec.passthrough-listener.datastores,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerPassthroughListenerDatastores(obj *AIGatewayMCPServer) []AIGatewayDatastoreNamespacedRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Datastores
+}
+
+// resolveAIGatewayMCPServerPassthroughListenerDatastores resolves the CR references in spec.apiSpec.passthrough-listener.datastores
+// to Konnect names.
+func resolveAIGatewayMCPServerPassthroughListenerDatastores(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerPassthroughListenerDatastores(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayDatastore"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		if ns != obj.GetNamespace() {
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
+		}
+		var referenced AIGatewayDatastore
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayDatastore %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		// AIGatewayDatastore objects being deleted must not gain new users, which
+		// could keep their deletion blocked: a referrer not created in Konnect
+		// yet can't use them, while existing ones keep syncing until they drop
+		// the reference.
+		if !referenced.GetDeletionTimestamp().IsZero() && obj.GetKonnectID() == "" {
+			errs = append(errs, ReferenceBeingDeletedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerUpstreamServerDatastores returns the references at spec.apiSpec.upstream-server.datastores,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerUpstreamServerDatastores(obj *AIGatewayMCPServer) []AIGatewayDatastoreNamespacedRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer.Datastores
+}
+
+// resolveAIGatewayMCPServerUpstreamServerDatastores resolves the CR references in spec.apiSpec.upstream-server.datastores
+// to Konnect names.
+func resolveAIGatewayMCPServerUpstreamServerDatastores(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([]string, error) {
+	refs := RefsAtAIGatewayMCPServerUpstreamServerDatastores(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayDatastore"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		if ns != obj.GetNamespace() {
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
+		}
+		var referenced AIGatewayDatastore
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayDatastore %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		// AIGatewayDatastore objects being deleted must not gain new users, which
+		// could keep their deletion blocked: a referrer not created in Konnect
+		// yet can't use them, while existing ones keep syncing until they drop
+		// the reference.
+		if !referenced.GetDeletionTimestamp().IsZero() && obj.GetKonnectID() == "" {
+			errs = append(errs, ReferenceBeingDeletedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// AIGatewayMCPServerRefsToAIGatewayDatastore returns the keys of the AIGatewayDatastore
+// objects obj references through spec.apiSpec.conversion-listener.datastores, spec.apiSpec.conversion-only.datastores, spec.apiSpec.listener.datastores, spec.apiSpec.passthrough-listener.datastores, spec.apiSpec.upstream-server.datastores, with the default namespace applied.
+func AIGatewayMCPServerRefsToAIGatewayDatastore(obj *AIGatewayMCPServer) []client.ObjectKey {
+	var keys []client.ObjectKey
+	for _, ref := range RefsAtAIGatewayMCPServerConversionListenerDatastores(obj) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerConversionOnlyDatastores(obj) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerListenerDatastores(obj) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerPassthroughListenerDatastores(obj) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
+	}
+	for _, ref := range RefsAtAIGatewayMCPServerUpstreamServerDatastores(obj) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
+	}
+	return keys
+}
+
 // ResolveKonnectReferences resolves every CR reference declared on the spec and
 // returns the joined resolution errors, or nil when all references resolve.
 func (obj *AIGatewayMCPServer) ResolveKonnectReferences(ctx context.Context, cl client.Client) error {
@@ -4551,6 +4973,21 @@ func (obj *AIGatewayMCPServer) ResolveKonnectReferences(ctx context.Context, cl 
 		errs = append(errs, err)
 	}
 	if _, err := resolveAIGatewayMCPServerUpstreamServerToolsAccessAclsDeny(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerConversionListenerDatastores(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerConversionOnlyDatastores(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerListenerDatastores(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerPassthroughListenerDatastores(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerUpstreamServerDatastores(ctx, cl, obj); err != nil {
 		errs = append(errs, err)
 	}
 	return errors.Join(errs...)
@@ -6493,6 +6930,111 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		}
 		payload["upstream-server"] = upstreamServer2
 	}
+	// spec.apiSpec.conversion-listener.datastores carries CR references: replace it in the SDK payload with one
+	// object per resolved Konnect value, each keeping the OAS item shape and
+	// wrapping that value under "name". A nil CRD ancestor
+	// pointer means that part of the config wasn't set, so the payload is left
+	// untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil {
+		conversionListener13, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener13 == nil {
+			conversionListener13 = map[string]any{}
+		}
+		resolvedConversionListenerDatastores, err := resolveAIGatewayMCPServerConversionListenerDatastores(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.datastores references: %w", err)
+		}
+		wrappedConversionListenerDatastores := make([]map[string]string, 0, len(resolvedConversionListenerDatastores))
+		for _, v := range resolvedConversionListenerDatastores {
+			wrappedConversionListenerDatastores = append(wrappedConversionListenerDatastores, map[string]string{"name": v})
+		}
+		conversionListener13["datastores"] = wrappedConversionListenerDatastores
+		payload["conversion-listener"] = conversionListener13
+	}
+	// spec.apiSpec.conversion-only.datastores carries CR references: replace it in the SDK payload with one
+	// object per resolved Konnect value, each keeping the OAS item shape and
+	// wrapping that value under "name". A nil CRD ancestor
+	// pointer means that part of the config wasn't set, so the payload is left
+	// untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionOnly != nil {
+		conversionOnly3, _ := payload["conversion-only"].(map[string]any)
+		if conversionOnly3 == nil {
+			conversionOnly3 = map[string]any{}
+		}
+		resolvedConversionOnlyDatastores, err := resolveAIGatewayMCPServerConversionOnlyDatastores(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-only.datastores references: %w", err)
+		}
+		wrappedConversionOnlyDatastores := make([]map[string]string, 0, len(resolvedConversionOnlyDatastores))
+		for _, v := range resolvedConversionOnlyDatastores {
+			wrappedConversionOnlyDatastores = append(wrappedConversionOnlyDatastores, map[string]string{"name": v})
+		}
+		conversionOnly3["datastores"] = wrappedConversionOnlyDatastores
+		payload["conversion-only"] = conversionOnly3
+	}
+	// spec.apiSpec.listener.datastores carries CR references: replace it in the SDK payload with one
+	// object per resolved Konnect value, each keeping the OAS item shape and
+	// wrapping that value under "name". A nil CRD ancestor
+	// pointer means that part of the config wasn't set, so the payload is left
+	// untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil {
+		listener13, _ := payload["listener"].(map[string]any)
+		if listener13 == nil {
+			listener13 = map[string]any{}
+		}
+		resolvedListenerDatastores, err := resolveAIGatewayMCPServerListenerDatastores(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.listener.datastores references: %w", err)
+		}
+		wrappedListenerDatastores := make([]map[string]string, 0, len(resolvedListenerDatastores))
+		for _, v := range resolvedListenerDatastores {
+			wrappedListenerDatastores = append(wrappedListenerDatastores, map[string]string{"name": v})
+		}
+		listener13["datastores"] = wrappedListenerDatastores
+		payload["listener"] = listener13
+	}
+	// spec.apiSpec.passthrough-listener.datastores carries CR references: replace it in the SDK payload with one
+	// object per resolved Konnect value, each keeping the OAS item shape and
+	// wrapping that value under "name". A nil CRD ancestor
+	// pointer means that part of the config wasn't set, so the payload is left
+	// untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil {
+		passthroughListener13, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener13 == nil {
+			passthroughListener13 = map[string]any{}
+		}
+		resolvedPassthroughListenerDatastores, err := resolveAIGatewayMCPServerPassthroughListenerDatastores(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.datastores references: %w", err)
+		}
+		wrappedPassthroughListenerDatastores := make([]map[string]string, 0, len(resolvedPassthroughListenerDatastores))
+		for _, v := range resolvedPassthroughListenerDatastores {
+			wrappedPassthroughListenerDatastores = append(wrappedPassthroughListenerDatastores, map[string]string{"name": v})
+		}
+		passthroughListener13["datastores"] = wrappedPassthroughListenerDatastores
+		payload["passthrough-listener"] = passthroughListener13
+	}
+	// spec.apiSpec.upstream-server.datastores carries CR references: replace it in the SDK payload with one
+	// object per resolved Konnect value, each keeping the OAS item shape and
+	// wrapping that value under "name". A nil CRD ancestor
+	// pointer means that part of the config wasn't set, so the payload is left
+	// untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer != nil {
+		upstreamServer3, _ := payload["upstream-server"].(map[string]any)
+		if upstreamServer3 == nil {
+			upstreamServer3 = map[string]any{}
+		}
+		resolvedUpstreamServerDatastores, err := resolveAIGatewayMCPServerUpstreamServerDatastores(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.upstream-server.datastores references: %w", err)
+		}
+		wrappedUpstreamServerDatastores := make([]map[string]string, 0, len(resolvedUpstreamServerDatastores))
+		for _, v := range resolvedUpstreamServerDatastores {
+			wrappedUpstreamServerDatastores = append(wrappedUpstreamServerDatastores, map[string]string{"name": v})
+		}
+		upstreamServer3["datastores"] = wrappedUpstreamServerDatastores
+		payload["upstream-server"] = upstreamServer3
+	}
 	return spec.toCreateAIGatewayMCPServerRequestFromPayload(payload)
 }
 
@@ -7767,6 +8309,111 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 			}
 		}
 		payload["upstream-server"] = upstreamServer2
+	}
+	// spec.apiSpec.conversion-listener.datastores carries CR references: replace it in the SDK payload with one
+	// object per resolved Konnect value, each keeping the OAS item shape and
+	// wrapping that value under "name". A nil CRD ancestor
+	// pointer means that part of the config wasn't set, so the payload is left
+	// untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil {
+		conversionListener13, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener13 == nil {
+			conversionListener13 = map[string]any{}
+		}
+		resolvedConversionListenerDatastores, err := resolveAIGatewayMCPServerConversionListenerDatastores(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.datastores references: %w", err)
+		}
+		wrappedConversionListenerDatastores := make([]map[string]string, 0, len(resolvedConversionListenerDatastores))
+		for _, v := range resolvedConversionListenerDatastores {
+			wrappedConversionListenerDatastores = append(wrappedConversionListenerDatastores, map[string]string{"name": v})
+		}
+		conversionListener13["datastores"] = wrappedConversionListenerDatastores
+		payload["conversion-listener"] = conversionListener13
+	}
+	// spec.apiSpec.conversion-only.datastores carries CR references: replace it in the SDK payload with one
+	// object per resolved Konnect value, each keeping the OAS item shape and
+	// wrapping that value under "name". A nil CRD ancestor
+	// pointer means that part of the config wasn't set, so the payload is left
+	// untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionOnly != nil {
+		conversionOnly3, _ := payload["conversion-only"].(map[string]any)
+		if conversionOnly3 == nil {
+			conversionOnly3 = map[string]any{}
+		}
+		resolvedConversionOnlyDatastores, err := resolveAIGatewayMCPServerConversionOnlyDatastores(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-only.datastores references: %w", err)
+		}
+		wrappedConversionOnlyDatastores := make([]map[string]string, 0, len(resolvedConversionOnlyDatastores))
+		for _, v := range resolvedConversionOnlyDatastores {
+			wrappedConversionOnlyDatastores = append(wrappedConversionOnlyDatastores, map[string]string{"name": v})
+		}
+		conversionOnly3["datastores"] = wrappedConversionOnlyDatastores
+		payload["conversion-only"] = conversionOnly3
+	}
+	// spec.apiSpec.listener.datastores carries CR references: replace it in the SDK payload with one
+	// object per resolved Konnect value, each keeping the OAS item shape and
+	// wrapping that value under "name". A nil CRD ancestor
+	// pointer means that part of the config wasn't set, so the payload is left
+	// untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil {
+		listener13, _ := payload["listener"].(map[string]any)
+		if listener13 == nil {
+			listener13 = map[string]any{}
+		}
+		resolvedListenerDatastores, err := resolveAIGatewayMCPServerListenerDatastores(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.listener.datastores references: %w", err)
+		}
+		wrappedListenerDatastores := make([]map[string]string, 0, len(resolvedListenerDatastores))
+		for _, v := range resolvedListenerDatastores {
+			wrappedListenerDatastores = append(wrappedListenerDatastores, map[string]string{"name": v})
+		}
+		listener13["datastores"] = wrappedListenerDatastores
+		payload["listener"] = listener13
+	}
+	// spec.apiSpec.passthrough-listener.datastores carries CR references: replace it in the SDK payload with one
+	// object per resolved Konnect value, each keeping the OAS item shape and
+	// wrapping that value under "name". A nil CRD ancestor
+	// pointer means that part of the config wasn't set, so the payload is left
+	// untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil {
+		passthroughListener13, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener13 == nil {
+			passthroughListener13 = map[string]any{}
+		}
+		resolvedPassthroughListenerDatastores, err := resolveAIGatewayMCPServerPassthroughListenerDatastores(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.datastores references: %w", err)
+		}
+		wrappedPassthroughListenerDatastores := make([]map[string]string, 0, len(resolvedPassthroughListenerDatastores))
+		for _, v := range resolvedPassthroughListenerDatastores {
+			wrappedPassthroughListenerDatastores = append(wrappedPassthroughListenerDatastores, map[string]string{"name": v})
+		}
+		passthroughListener13["datastores"] = wrappedPassthroughListenerDatastores
+		payload["passthrough-listener"] = passthroughListener13
+	}
+	// spec.apiSpec.upstream-server.datastores carries CR references: replace it in the SDK payload with one
+	// object per resolved Konnect value, each keeping the OAS item shape and
+	// wrapping that value under "name". A nil CRD ancestor
+	// pointer means that part of the config wasn't set, so the payload is left
+	// untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer != nil {
+		upstreamServer3, _ := payload["upstream-server"].(map[string]any)
+		if upstreamServer3 == nil {
+			upstreamServer3 = map[string]any{}
+		}
+		resolvedUpstreamServerDatastores, err := resolveAIGatewayMCPServerUpstreamServerDatastores(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.upstream-server.datastores references: %w", err)
+		}
+		wrappedUpstreamServerDatastores := make([]map[string]string, 0, len(resolvedUpstreamServerDatastores))
+		for _, v := range resolvedUpstreamServerDatastores {
+			wrappedUpstreamServerDatastores = append(wrappedUpstreamServerDatastores, map[string]string{"name": v})
+		}
+		upstreamServer3["datastores"] = wrappedUpstreamServerDatastores
+		payload["upstream-server"] = upstreamServer3
 	}
 	return spec.toUpdateAIGatewayMCPServerRequestFromPayload(payload)
 }

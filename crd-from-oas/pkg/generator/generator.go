@@ -4850,6 +4850,12 @@ type GoPathSegment struct {
 	// []<RefType> slice. The path's last segment names the CRD field
 	// ("parentPageIDRef"), not the OAS property.
 	ObjectRefField bool
+	// ItemObjectKey is set when this is the final segment, it is an array, and
+	// its items are a plain object with a single property equal to the
+	// reference's resolvesTo (e.g. "datastores: [{name}]"). Konnect expects the
+	// item shape to stay, so each resolved value is wrapped back under this key
+	// on injection instead of being sent as a bare string.
+	ItemObjectKey string
 }
 
 // TemplateAssociationConfig is the per-association data used by crdTypeTemplate
@@ -4947,6 +4953,10 @@ type TemplateReferenceConfig struct {
 	// ResolvesToName is true when references resolve to the referenced CR's Konnect
 	// name rather than its Konnect ID.
 	ResolvesToName bool
+	// ItemObjectKey is set when the reference leaf is an array of single-property
+	// objects (e.g. "datastores: [{name}]"): each resolved Konnect value is
+	// wrapped back under this key instead of being sent as a bare string.
+	ItemObjectKey string
 	// NestedArrayScalar is true when the reference path resolves to a scalar
 	// leaf inside a single non-leaf array of objects (e.g. "api.targets.provider").
 	// Such references need a ranging RefsAt accessor instead of the linear one
@@ -5077,6 +5087,13 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 		// against earlier by validateReferences, so any error at this point
 		// leaves GoPathSegments empty rather than aborting generation.
 		_, fieldJSONName, walkedPath, walkErr := g.refFieldTarget(entityName, ref)
+		// An array of single-property objects (e.g. "datastores: [{name}]")
+		// keeps its item shape in the SDK payload: the resolved values are
+		// wrapped back under the leaf's ItemObjectKey.
+		var itemObjectKey string
+		if walkErr == nil && len(walkedPath) > 0 {
+			itemObjectKey = walkedPath[len(walkedPath)-1].ItemObjectKey
+		}
 		if nested {
 			refsExpr = "RefsAt" + entityName + goResolverName + "(obj)"
 			if walkErr == nil {
@@ -5222,6 +5239,7 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 			ArrayLeafPointer:           arrayLeafPointer,
 			SingleValueObjectRef:       singleValueObjectRef,
 			ObjectWrapKey:              objectWrapKey,
+			ItemObjectKey:              itemObjectKey,
 			UnionMemberGoName:          unionMemberGoName,
 			ArmChecks:                  armChecks,
 			ElementArmChecks:           elementArmChecks,
@@ -5394,6 +5412,11 @@ type TemplateRefInjection struct {
 	// ObjectWrapKey is the key the resolved value is wrapped under (e.g. "name"
 	// or "id"). Only set when ObjectWrap is true or UnionMemberKey is set.
 	ObjectWrapKey string
+	// ItemObjectKey is set when the reference leaf is an array of
+	// single-property objects (e.g. "datastores: [{name}]"): the write replaces
+	// the leaf array with one object per resolved value, each wrapping it under
+	// this key.
+	ItemObjectKey string
 }
 
 // refInjections computes the SDK payload injection plan for every nested
@@ -5618,6 +5641,7 @@ func appendRefInjection(ref TemplateReferenceConfig, usedVars map[string]bool, g
 		Variants:           []TemplateRefVariant{variant},
 		ArrayKey:           arrayKey,
 		ElementNavs:        elementNavs,
+		ItemObjectKey:      ref.ItemObjectKey,
 	}
 	if isACL {
 		pathParts := strings.Split(ref.Path, ".")
@@ -6050,6 +6074,15 @@ func (g *Generator) validateReferences(parsed *parser.ParsedSpec) error {
 	sort.Strings(entityNames)
 	for _, entityName := range entityNames {
 		for _, ref := range g.config.References[entityName] {
+			// The ref struct is emitted into the same package as the generated
+			// OAS schema types, so its name must not shadow one of them.
+			if refTypeName := ref.TypeName(); refTypeName != "" {
+				for schemaName := range parsed.Schemas {
+					if fixInitialisms(schemaName) == refTypeName {
+						return fmt.Errorf("reference path %q: refTypeName %q collides with the generated OAS schema type %s; set an explicit refTypeName", ref.Path, refTypeName, schemaName)
+					}
+				}
+			}
 			schemaType, field, goPath, err := g.refFieldTarget(entityName, ref)
 			if err != nil {
 				return err
@@ -6066,6 +6099,9 @@ func (g *Generator) validateReferences(parsed *parser.ParsedSpec) error {
 				if len(ref.Kinds) != 1 {
 					return fmt.Errorf("reference path %q: ObjectRef reference fields support exactly one kind, got %d", ref.Path, len(ref.Kinds))
 				}
+			}
+			if len(goPath) > 0 && goPath[len(goPath)-1].ItemObjectKey != "" && isNestedArrayScalar(goPath) {
+				return fmt.Errorf("reference path %q: an array of single-property objects inside an array of objects is not supported", ref.Path)
 			}
 			if len(goPath) > 1 {
 				// Nested AIGatewayACLRef references reconstruct a discriminated
@@ -6570,6 +6606,27 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 			// An OAS reference property (string uuid marked IsReference) is a
 			// valid scalar leaf: its CRD field is a single *ObjectRef.
 			objectRefField := prop.IsReference && prop.Type != "array"
+			// An array whose items are a plain object with a single property
+			// equal to resolvesTo (e.g. "datastores" holding {name}) keeps
+			// that OAS item shape in the SDK payload: each resolved Konnect
+			// value is wrapped back under the key on injection.
+			var itemObjectKey string
+			if prop.Type == "array" && prop.Items != nil && ref.ResolvesTo != "" && !objectRefItems {
+				var itemProps []*parser.Property
+				var itemOneOf, itemAnyOf bool
+				if prop.Items.RefName != "" {
+					if s := g.parsed.Schemas[prop.Items.RefName]; s != nil {
+						itemProps = s.Properties
+						itemOneOf, itemAnyOf = len(s.OneOf) > 0, len(s.AnyOf) > 0
+					}
+				} else {
+					itemProps = prop.Items.Properties
+					itemOneOf, itemAnyOf = len(prop.Items.OneOf) > 0, len(prop.Items.AnyOf) > 0
+				}
+				if len(itemProps) == 1 && !itemOneOf && !itemAnyOf && jsonName(itemProps[0].Name) == ref.ResolvesTo {
+					itemObjectKey = ref.ResolvesTo
+				}
+			}
 			if prop.Type != "array" && !sawArray && !objectRefLeaf && !objectRefField && !directScalarLeaf {
 				return "", "", nil, fmt.Errorf("reference path %q must be an array property, got %q", ref.Path, prop.Type)
 			}
@@ -6593,7 +6650,7 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 			case objectRefItems:
 				objectRefSchema = prop.Items.RefName
 			}
-			goPathSegments = append(goPathSegments, GoPathSegment{Name: leafName, Pointer: leafPointer, JSONKey: leafJSONKey, ObjectRefLeaf: objectRefLeaf, ObjectRefItems: objectRefItems, ObjectRefSchema: objectRefSchema, LeafArray: prop.Type == "array", ObjectRefField: objectRefField})
+			goPathSegments = append(goPathSegments, GoPathSegment{Name: leafName, Pointer: leafPointer, JSONKey: leafJSONKey, ObjectRefLeaf: objectRefLeaf, ObjectRefItems: objectRefItems, ObjectRefSchema: objectRefSchema, LeafArray: prop.Type == "array", ObjectRefField: objectRefField, ItemObjectKey: itemObjectKey})
 			return typeName, jsonName(prop.Name), goPathSegments, nil
 		}
 
