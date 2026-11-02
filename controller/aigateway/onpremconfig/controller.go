@@ -130,8 +130,9 @@ func (cs *Controllers) SetupWithManager(_ context.Context, mgr ctrl.Manager) err
 	}).SetupWithManager(mgr); err != nil {
 		return err
 	}
-	// Like the Secret reconciler, it re-renders the configuration when a
-	// KongReferenceGrant for a cross-namespace secretRef changes.
+	// Like the Secret reconciler, the KongReferenceGrant reconciler re-renders the
+	// configuration: a grant change decides which cross-namespace secretRefs stay
+	// resolvable, and which cross-namespace entities may reference the gateway.
 	if err := (&KongReferenceGrantReconciler{
 		Client:         cs.Client,
 		Log:            cs.Log,

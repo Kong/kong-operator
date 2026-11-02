@@ -414,6 +414,15 @@
 
 ### Added
 
+- On-prem AI Gateway: a configuration entity of another namespace can reference an
+  `OnPremAIGateway`. Two grants are needed. A `WatchNamespaceGrant` in the entity's
+  namespace lets the gateway watch it. A `KongReferenceGrant` in the gateway's
+  namespace lets the entity kind of that namespace reference the `OnPremAIGateway`.
+  Without the second grant, the entity reports `Programmed=False` and is left out of
+  the pushed configuration. The `AIGatewayConsumerCredential` of a consumer in
+  another namespace follows its consumer. The grant of the consumer also covers the
+  credentials.
+  [#5685](https://github.com/Kong/kong-operator/issues/5685)
 - Added the `EventGatewayVirtualClusterPolicyChain` CRD to declare the execution
   order of cluster-level policies within an Event Gateway virtual cluster.
   The API requires an explicit policy list and an immutable virtual-cluster CR
