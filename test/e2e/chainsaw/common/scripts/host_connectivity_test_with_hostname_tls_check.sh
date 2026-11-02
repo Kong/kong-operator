@@ -71,6 +71,9 @@ json_escape() {
   printf '%s' "$1" | awk '
     {
       line = $0
+      # Raw \r inside a JSON string is invalid JSON; curl 8.18 verbose output
+      # contains some, which would break chainsaw json_parse($stdout).
+      gsub(/\r/, "", line)
       out = ""
       n = length(line)
       for (i = 1; i <= n; i++) {
@@ -169,9 +172,10 @@ validate_certificate() {
 # certificate's own Subject CN is a different, more specific name (e.g.
 # CN=api.example.com with SAN=*.example.com). Falls back to the Subject CN
 # only when that line is absent (TLS verification was skipped, INSECURE=true).
+# curl 8.18 dropped "host" and reworded "matched" to "matches", so match both.
 resolve_actual_hostname() {
   local output="$1" hostname
-  hostname=$(echo "$output" | grep -o 'subjectAltName: host "[^"]*" matched cert'"'"'s "[^"]*"' | sed -E 's/.*matched cert'"'"'s "([^"]*)"/\1/' || echo "")
+  hostname=$(echo "$output" | grep -oE 'subjectAltName: (host )?"[^"]*" match(ed|es) cert'"'"'s "[^"]*"' | sed -E 's/.*cert'"'"'s "([^"]*)"/\1/' || echo "")
   if [ -z "$hostname" ]; then
     hostname=$(echo "$output" | grep -o 'subject:.*CN=[^;]*' | sed 's/.*CN=//' | tr -d ' ' || echo "")
   fi
