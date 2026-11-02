@@ -1,0 +1,92 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth-1
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # For a complete list of available API URLs see:https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
+  serverURL: us.api.konghq.com
+---
+kind: KonnectAIGateway
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-cp-1
+  namespace: default
+spec:
+  apiSpec:
+    name: ai-gw-cp-1
+    displayName: My AI Gateway
+    description: AI Gateway control plane
+  konnect:
+    authRef:
+      name: konnect-api-auth-1
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ai-gw-datastore-credentials
+  namespace: default
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+stringData:
+  # Fake sample passwords so the manifest applies out of the box. Replace them
+  # with the real credentials for anything real.
+  redis-password: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  pgvector-password: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+---
+kind: AIGatewayDatastore
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-datastore-redis
+  namespace: default
+spec:
+  aiGatewayRef:
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    # type selects the backend; the field named after it holds that backend's
+    # configuration. name is the identifier policies and models use to
+    # reference this datastore, and cannot change after creation.
+    type: redis-ce
+    redis-ce:
+      name: shared-redis
+      displayName: Shared Redis
+      description: Redis shared by rate limiting and semantic cache
+      config:
+        host: redis.example.com
+        port: 6379
+        # Credentials are sourced from a Kubernetes Secret, like a vault's API
+        # key. The Secret must carry the operator's Secret label
+        # (konghq.com/secret=true by default).
+        password:
+          type: secretRef
+          secretRef:
+            name: ai-gw-datastore-credentials
+            key: redis-password
+---
+kind: AIGatewayDatastore
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-datastore-pgvector
+  namespace: default
+spec:
+  aiGatewayRef:
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    type: vectordb
+    vectordb:
+      name: shared-pgvector
+      displayName: Shared pgvector
+      config:
+        host: pgvector.example.com
+        database: kong-pgvector
+        user: postgres
+        password:
+          type: secretRef
+          secretRef:
+            name: ai-gw-datastore-credentials
+            key: pgvector-password

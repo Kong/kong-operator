@@ -19,6 +19,12 @@ runs:
         sudo apt-get update -qq
         sudo apt-get install -y tayga unbound bind9-dnsutils
 
+        # tayga >= 0.9.2-11 (Ubuntu resolute runner image) ships a systemd
+        # unit that apt auto-starts. Its daemon grabs the nat64 TUN with the
+        # packaged default config and makes --mktun fail with EBUSY. We run
+        # tayga ourselves below; stop the distro unit before that.
+        sudo systemctl disable --now tayga.service 2>/dev/null || true
+
         sudo sysctl -w net.ipv4.ip_forward=1
         sudo sysctl -w net.ipv6.conf.all.forwarding=1
         sudo sysctl -w net.ipv6.conf.default.forwarding=1

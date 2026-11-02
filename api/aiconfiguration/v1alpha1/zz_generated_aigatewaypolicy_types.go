@@ -76,6 +76,11 @@ type AIGatewayPolicyAPISpec struct {
 	// +required
 	Config AIGatewayPolicyConfigDataSource `json:"config,omitzero"`
 
+	// Names of the Datastores this policy references.
+	//
+	// +optional
+	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+
 	// The display name for this policy instance.
 	//
 	// +required
@@ -88,6 +93,13 @@ type AIGatewayPolicyAPISpec struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	Enabled string `json:"enabled,omitzero"`
+
+	// Policy config expressions
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	Expressions apiextensionsv1.JSON `json:"expressions,omitzero"`
 
 	// Whether the policy is globally applied to all resources.
 	//

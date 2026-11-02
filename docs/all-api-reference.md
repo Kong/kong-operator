@@ -30,6 +30,7 @@ Package v1alpha1 contains API Schema definitions for the aiconfiguration.konghq.
 - [AIGatewayConsumerGroup](#aiconfiguration-konghq-com-v1alpha1-aigatewayconsumergroup)
 - [AIGatewayCustomPolicy](#aiconfiguration-konghq-com-v1alpha1-aigatewaycustompolicy)
 - [AIGatewayDataPlaneCertificate](#aiconfiguration-konghq-com-v1alpha1-aigatewaydataplanecertificate)
+- [AIGatewayDatastore](#aiconfiguration-konghq-com-v1alpha1-aigatewaydatastore)
 - [AIGatewayMCPServer](#aiconfiguration-konghq-com-v1alpha1-aigatewaymcpserver)
 - [AIGatewayModel](#aiconfiguration-konghq-com-v1alpha1-aigatewaymodel)
 - [AIGatewayModelProvider](#aiconfiguration-konghq-com-v1alpha1-aigatewaymodelprovider)
@@ -171,6 +172,21 @@ AIGatewayDataPlaneCertificate is the Schema for the aigatewaydataplanecertificat
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[AIGatewayDataPlaneCertificateSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydataplanecertificatespec)_ |  |
 | `status` _[AIGatewayDataPlaneCertificateStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydataplanecertificatestatus)_ |  |
+
+### AIGatewayDatastore
+
+
+AIGatewayDatastore is the Schema for the aigatewaydatastores API.
+
+<!-- ai_gateway_datastore description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `aiconfiguration.konghq.com/v1alpha1`
+| `kind` _string_ | `AIGatewayDatastore`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[AIGatewayDatastoreSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastorespec)_ |  |
+| `status` _[AIGatewayDatastoreStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastorestatus)_ |  |
 
 ### AIGatewayMCPServer
 
@@ -379,6 +395,7 @@ AIGWOpenIDConnectGeneratedConfig is a type alias.
 | `consumerGroupsOptional` _string_ | Do not terminate the request if consumer groups mapping fails. |
 | `consumerOptional` _string_ | Do not terminate the request if consumer mapping fails. |
 | `credentialClaim` _[]string_ | Claim path used to derive virtual credentials when consumer mapping is not used. |
+| `credentialClaims` _[]string_ | The claims used to derive a virtual credential, for example to be consumed by the rate-limiting plugin, when consumer mapping is not used. Each entry represents a claim path inside the token payload. The paths are evaluated in order, and the first matching claim is used.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `disableSession` _[]string_ | Disable issuing the session cookie with the specified grants. |
 | `discoveryHeadersNames` _[]string_ | Extra header names passed to the discovery endpoint. |
 | `discoveryHeadersValues` _[]string_ | Extra header values passed to the discovery endpoint. |
@@ -462,6 +479,7 @@ AIGWOpenIDConnectGeneratedConfig is a type alias.
 | `proofOfPossessionAuthMethodsValidation` _string_ | If set to true, only the auth_methods that are compatible with Proof of Possession (PoP) can be configured when PoP is enabled. If set to false, all auth_methods will be configurable and PoP checks will be silently skipped for those auth_methods that are not compatible with PoP. |
 | `proofOfPossessionDpop` _string_ | Enable Demonstrating Proof-of-Possession (DPoP). If set to strict, all request are verified despite the presence of the DPoP key claim (cnf.jkt). If set to optional, only tokens bound with DPoP's key are verified with the proof. |
 | `proofOfPossessionMtls` _string_ | Enable mtls proof of possession. If set to strict, all tokens (from supported auth_methods: bearer, introspection, and session granted with bearer or introspection) are verified, if set to optional, only tokens that contain the certificate hash claim are verified. If the verification fails, the request will be rejected with 401. |
+| `protectedResourceMetadata` _[AIGWOpenIDConnectGeneratedConfigProtectedResourceMetadata](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigprotectedresourcemetadata)_ | When configured, the plugin advertises this API as an OAuth 2.0 protected resource per RFC 9728. It serves a discovery document at the well-known URI and includes resource_metadata in WWW-Authenticate challenge headers.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `pushedAuthorizationRequestEndpoint` _string_ | The pushed authorization endpoint. If set it overrides the value in `pushed_authorization_request_endpoint` returned by the discovery endpoint. |
 | `pushedAuthorizationRequestEndpointAuthMethod` _string_ | The pushed authorization request endpoint authentication method: `client_secret_basic`, `client_secret_post`, `client_secret_jwt`, `private_key_jwt`, `tls_client_auth`, `self_signed_tls_client_auth`, or `none`: do not authenticate |
 | `redirectURI` _[]string_ | The redirect URI passed to the authorization and token endpoints. |
@@ -740,10 +758,55 @@ principal hydration after token verification.
 | `directory` _string_ | The Kong Identity directory instance to look up against. |
 | `enabled` _string_ | When true, query Kong Identity to map a Principal after token verification. |
 | `errorOnMiss` _string_ | When true (default), return 401 if fail to match a Principal in Kong Identity after token verification. When false, the request continues without authenticated_principal set. |
+| `jit` _[AIGWOpenIDConnectGeneratedConfigPrincipalsJit](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigprincipalsjit)_ | Token claims to share with the Kong Identity principal lookup. Kong Identity, not this plugin, decides whether the claims are used: a trusted IdP with JIT provisioning enabled in Konnect maps them onto a principal provisioned just in time. By default the lookup only carries the principal claim (e.g. 'sub') and no additional claims are shared.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `matchConsumer` _string_ | If a Consumer is attached to the matched Principal in Kong Identity, load it and set it in the request context, overriding consumer_by. |
 | `matchConsumerGroups` _string_ | If Consumer Groups are attached to the matched Principal in Kong Identity, load them, overriding consumer_groups_claim. |
 | `principalBy` _string_ | Custom identity name for a type=custom Kong Identity lookup. When absent and principal_claim is set, an OIDC lookup is performed using principal_claim as the claim name instead of 'sub'. |
 | `principalClaim` _[]string_ | Token claim to use for the Kong Identity lookup. If multiple values are set, it means the claim is inside a nested object of the token payload. When principal_by is also set, performs a custom identity lookup (type=custom). When set alone, performs an OIDC lookup using this claim name instead of the default 'sub'. |
+
+_Appears in:_
+
+- [AIGWOpenIDConnectGeneratedConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfig)
+
+#### AIGWOpenIDConnectGeneratedConfigPrincipalsJit
+
+
+AIGWOpenIDConnectGeneratedConfigPrincipalsJit Token claims to share with the
+Kong Identity principal lookup.
+Kong Identity, not this plugin, decides whether the claims are used: a
+trusted IdP with JIT provisioning enabled in Konnect maps them onto a
+principal provisioned just in time.
+By default the lookup only carries the principal claim (e.g.
+'sub') and no additional claims are shared.<br /><br />**Requires a minimum runtime version of `2.3`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `allClaims` _string_ | Send the full set of verified token claims with the Kong Identity principal lookup. |
+| `claims` _[]string_ | Send only the named token claims with the Kong Identity principal lookup. The claims are picked from the same source the principal claim is read from. Set all_claims to send every verified claim instead. |
+
+_Appears in:_
+
+- [AIGWOpenIDConnectGeneratedConfigPrincipals](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigprincipals)
+
+#### AIGWOpenIDConnectGeneratedConfigProtectedResourceMetadata
+
+
+AIGWOpenIDConnectGeneratedConfigProtectedResourceMetadata When configured,
+the plugin advertises this API as an OAuth 2.0 protected resource per RFC
+9728.
+It serves a discovery document at the well-known URI and includes
+resource_metadata in WWW-Authenticate challenge headers.<br /><br />**Requires a minimum runtime version of `2.3`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `authorizationServers` _[]string_ | List of authorization server issuer URIs to advertise in the RFC 9728 metadata document. |
+| `metadataEndpoint` _string_ | Override the well-known metadata endpoint path. Defaults to the path component of resource with /.well-known/oauth-protected-resource appended. |
+| `resource` _string_ | The URI of the protected resource. Used as the resource field in the RFC 9728 metadata document and to derive the well-known endpoint path. |
+| `scopesSupported` _[]string_ | Scopes supported by this protected resource. Included in the RFC 9728 metadata document and in the scope attribute of WWW-Authenticate challenge headers on 401 responses. |
 
 _Appears in:_
 
@@ -863,6 +926,9 @@ from other identity providers.
 | Field | Description |
 | --- | --- |
 | `cache` _[AIGWOpenIDConnectGeneratedConfigTokenExchangeCache](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigtokenexchangecache)_ | Cache support for token exchange |
+| `grantType` _string_ | The token exchange grant. `token_exchange` (default) uses the OAuth 2.0 Token Exchange grant (RFC 8693). `jwt_bearer` uses the JWT Bearer authorization-grant flow (RFC 7523); see `token_exchange.provider` for provider-specific defaults in this mode.<br /><br />**Requires a minimum runtime version of `2.3`**. |
+| `mapIdentitiesFrom` _string_ | Which token's claims to use for consumer, consumer group, and principal mapping. Only takes effect when token exchange is configured. `exchanged_tokens` (default) uses the token(s) returned by the exchange or tokens derived from it, as today. `subject_token` uses the original, pre-exchange bearer token's claims instead.<br /><br />**Requires a minimum runtime version of `2.3`**. |
+| `provider` _string_ | Identity provider used with `grant_type = jwt_bearer`; not allowed with `grant_type = token_exchange`. `standard` (default) adds no provider-specific parameter. `microsoft` adds the required `requested_token_use=on_behalf_of`, which is fixed and cannot be overridden via `post_args_names/values`.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `request` _[AIGWOpenIDConnectGeneratedConfigTokenExchangeRequest](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigtokenexchangerequest)_ | Parameters used in the token exchange request. |
 | `subjectTokenIssuers` _[][AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuers](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigtokenexchangesubjecttokenissuers)_ | Trusted token issuers from which the upstream may accept tokens to be exchanged. If a JWT bearer matches all the conditions of a subject token issuer item, the token will be exchanged. |
 
@@ -897,14 +963,41 @@ token exchange request.
 
 | Field | Description |
 | --- | --- |
+| `actorToken` _[AIGWOpenIDConnectGeneratedConfigTokenExchangeRequestActorToken](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigtokenexchangerequestactortoken)_ | How to obtain the actor token to include in the token exchange request. Represents the identity of the party acting on behalf of the subject.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `audience` _[]string_ | Audiences used in the token exchange request. Values defined here override those defined in `config.audience`. |
 | `emptyAudience` _string_ | Use empty audiences. Use this field to remove audiences defined in `config.audience`. |
+| `emptyHeaders` _string_ | Use no extra headers on the token exchange request. Use this field to remove extra headers defined in `config.token_headers_names`.<br /><br />**Requires a minimum runtime version of `2.3`**. |
+| `emptyPostArgs` _string_ | Use no extra POST arguments on the token exchange request. Use this field to remove extra POST arguments defined in `config.token_post_args_names`.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `emptyScopes` _string_ | Use empty scopes. Use this field to remove scopes defined in `config.scopes`. |
+| `headersNames` _[]string_ | Extra header names sent only on the token exchange request. Overrides `config.token_headers_names` for this request.<br /><br />**Requires a minimum runtime version of `2.3`**. |
+| `headersValues` _[]string_ | Values paired by index with `headers_names`.<br /><br />**Requires a minimum runtime version of `2.3`**. |
+| `postArgsNames` _[]string_ | Extra POST argument names sent only on the token exchange request. Overrides `config.token_post_args_names` for this request. Use this, not the top-level field, for parameters that must not be attached to the plugin's other token endpoint calls, for example `requested_token_use` for Entra ID's On-Behalf-Of flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
+| `postArgsValues` _[]string_ | Values paired by index with `post_args_names`.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `scopes` _[]string_ | Scopes used in the token exchange request. Values defined here override those defined in `config.scopes`. |
 
 _Appears in:_
 
 - [AIGWOpenIDConnectGeneratedConfigTokenExchange](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigtokenexchange)
+
+#### AIGWOpenIDConnectGeneratedConfigTokenExchangeRequestActorToken
+
+
+AIGWOpenIDConnectGeneratedConfigTokenExchangeRequestActorToken How to obtain
+the actor token to include in the token exchange request.
+Represents the identity of the party acting on behalf of the subject.<br /><br />**Requires a minimum runtime version of `2.3`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `headerName` _string_ | Header name containing the actor token. Required when `source` is `header`. |
+| `source` _string_ | Where to obtain the actor token. `header` reads it from a request header. `config` uses a fixed value. `none` disables actor token support. |
+| `staticToken` _string_ | Static actor token value. Required when `source` is `config`. |
+| `type` _string_ | The RFC 8693 token type identifier of the actor token (the `actor_token_type` request parameter). |
+
+_Appears in:_
+
+- [AIGWOpenIDConnectGeneratedConfigTokenExchangeRequest](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigtokenexchangerequest)
 
 #### AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuers
 
@@ -919,7 +1012,10 @@ the token will be exchanged.
 | Field | Description |
 | --- | --- |
 | `conditions` _[AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuersConditions](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfigtokenexchangesubjecttokenissuersconditions)_ | A token will only be exchanged when it matches all these criteria. To exchange tokens issued by a different issuer, `conditions` must not be defined -- every token from that issuer is exchanged unconditionally, since a foreign-issued token that isn't exchanged can never pass normal verification against the target issuer anyway. In contrast, to exchange tokens issued by the target issuer itself, `conditions` must be defined. |
+| `denyOnMismatch` _string_ | When true, a token issued by `issuer` that fails to match `conditions` is denied instead of being passed through unexchanged. Evaluated independently for this item only, with no effect on other `subject_token_issuers` items. Only allowed when this issuer is the target issuer, since `conditions` is required there and foreign-issuer items always match.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `issuer` _string_ | Tokens of whose iss claim matches this value will be exchanged. |
+| `jwksURI` _string_ | An explicit JWKS endpoint for this issuer. This field should be left empty when this issuer is the same as the target issuer. It is only used when `verify_signature` is `true`. When set, Kong fetches the signing keys from this URI directly instead of using OIDC Discovery.<br /><br />**Requires a minimum runtime version of `2.3`**. |
+| `verifySignature` _string_ | When true, Kong cryptographically verifies the signature of the incoming subject token before exchanging it. This field should be left empty or set to `false` when this issuer is the same as the target issuer. Defaults to `false` for backward compatibility.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -1080,6 +1176,8 @@ The structure varies depending on the agent type.
 
 | Field | Description |
 | --- | --- |
+| `caCertificates` _[][AIGatewayCACertificateReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificatereference)_ | CA certificates used to verify the TLS certificate of the upstream agent endpoint, referenced by name. Each entry must be the `name` of an existing AI CA Certificate on the same AI Gateway.<br /><br />The CA certificates build the trust store (`ca_certificates`) of the Kong Gateway Service generated for this Agent, which proxies requests to `config.url`.<br /><br />If unset, the default trust store is used to verify the upstream's TLS certificate. |
+| `certificates` _[][AIGatewayCertificateReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificatereference)_ | Client certificates used for mutual TLS (mTLS) authentication with the upstream agent endpoint, referenced by name. Each entry must be the `name` of an existing AI Certificate on the same AI Gateway.<br /><br />The certificates are applied to the Kong Gateway Service generated for this Agent, which proxies requests to `config.url`. The generated Service presents a single client certificate (`client_certificate`) during the TLS handshake with the upstream, so at most one certificate may be configured.<br /><br />If unset, no client certificate is presented to the upstream. |
 | `logging` _[AIGatewayAgentConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfiglogging)_ | Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
 | `proxy` _[AIGatewayProxyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayproxyconfig)_ | HTTP/HTTPS proxy configuration for outbound requests to the upstream AI provider. |
@@ -1234,6 +1332,7 @@ AIGatewayAuthStrategyKeyAuth Configuration for an auth strategy.
 | Field | Description |
 | --- | --- |
 | `config` _[AIGWKeyAuthGeneratedConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigwkeyauthgeneratedconfig)_ |  |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `displayName` _string_ | The display name for this auth strategy instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
@@ -1253,10 +1352,12 @@ AIGatewayAuthStrategyOpenIDConnect Configuration for an auth strategy.
 | Field | Description |
 | --- | --- |
 | `config` _[AIGWOpenIDConnectGeneratedConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigwopenidconnectgeneratedconfig)_ |  |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `displayName` _string_ | The display name for this auth strategy instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this auth strategy instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `tokenVault` _[AIGatewayTokenVaultCredentialManager](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvaultcredentialmanager)_ | Serves the self-service enrollment UI through which end users authorize the upstream providers this auth strategy authenticates against. Omit `token_vault` entirely to serve no such UI.<br /><br />Requires a `token-vault` Datastore reference in `datastores`; enabling the credential manager without one is rejected.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -1357,6 +1458,7 @@ a model.
 | `region` _string_ | The AWS region for the model. Setting this option overrides the AWS_REGION environment variable. |
 | `upstreamURL` _string_ | The URL of the embeddings model. |
 | `videoOutputS3URI` _string_ | S3 URI for storing video generation outputs. |
+| `vpcEndpoint` _string_ | Hostname of an AWS PrivateLink VPC endpoint to use instead of the public Bedrock endpoint. Ignored if `upstream_url` is set.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -1380,6 +1482,24 @@ AIGatewayCACertificateAPISpec defines the API spec fields for AIGatewayCACertifi
 _Appears in:_
 
 - [AIGatewayCACertificateSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificatespec)
+
+#### AIGatewayCACertificateReference
+
+_Underlying type:_ `string`
+
+AIGatewayCACertificateReference A reference to an AI CA Certificate on the
+same AI Gateway, by CA certificate name.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayAgentConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfig)
+- [AIGatewayMCPServerConversionListenerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfig)
+- [AIGatewayMCPServerUpstreamServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfig)
+- [AIGatewayMCPServerWithUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)
+- [AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfignoserverconfig)
 
 #### AIGatewayCACertificateSpec
 
@@ -1430,6 +1550,7 @@ _Appears in:_
 
 - [AIGatewayTargetAnthropicConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetanthropicconfig)
 - [AIGatewayTargetAzureConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetazureconfig)
+- [AIGatewayTargetBasetenConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetbasetenconfig)
 - [AIGatewayTargetBedrockConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetbedrockconfig)
 - [AIGatewayTargetCerebrasConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetcerebrasconfig)
 - [AIGatewayTargetCohereConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetcohereconfig)
@@ -1486,6 +1607,26 @@ object's Konnect name is used where the Konnect API accepts it.
 _Appears in:_
 
 - [AIGatewaySNIAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaysniapispec)
+
+#### AIGatewayCertificateReference
+
+_Underlying type:_ `string`
+
+AIGatewayCertificateReference A reference to an AI Certificate on the same AI
+Gateway, by certificate name.
+The certificate must have a valid private key to be presented as a client
+certificate to an upstream.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayAgentConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfig)
+- [AIGatewayMCPServerConversionListenerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfig)
+- [AIGatewayMCPServerUpstreamServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfig)
+- [AIGatewayMCPServerWithUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)
+- [AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfignoserverconfig)
 
 #### AIGatewayCertificateSpec
 
@@ -1715,6 +1856,7 @@ _Appears in:_
 
 - [AIGatewayTargetAnthropicConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetanthropicconfig)
 - [AIGatewayTargetAzureConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetazureconfig)
+- [AIGatewayTargetBasetenConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetbasetenconfig)
 - [AIGatewayTargetBedrockConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetbedrockconfig)
 - [AIGatewayTargetCerebrasConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetcerebrasconfig)
 - [AIGatewayTargetCohereConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetcohereconfig)
@@ -1887,6 +2029,158 @@ _Appears in:_
 
 - [AIGatewayDataPlaneCertificate](#aiconfiguration-konghq-com-v1alpha1-aigatewaydataplanecertificate)
 
+#### AIGatewayDatastoreAPISpec
+
+
+AIGatewayDatastoreAPISpec defines the API spec fields for AIGatewayDatastore.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayDatastoreSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastorespec)
+
+#### AIGatewayDatastoreConfig
+
+
+AIGatewayDatastoreConfig represents a union type for AIGatewayDatastoreConfig.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayDatastoreConfigType](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreconfigtype)_ | Type designates the type of configuration. |
+| `redis-ce` _[RedisCEDatastore](#aiconfiguration-konghq-com-v1alpha1-types-rediscedatastore)_ | RedisCE configuration. |
+| `redis-ee` _[RedisEEDatastore](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastore)_ | RedisEE configuration. |
+| `token-vault` _[TokenVaultDatastore](#aiconfiguration-konghq-com-v1alpha1-types-tokenvaultdatastore)_ | TokenVault configuration. |
+| `vectordb` _[VectorDBDatastore](#aiconfiguration-konghq-com-v1alpha1-types-vectordbdatastore)_ | VectorDB configuration. |
+
+_Appears in:_
+
+- [AIGatewayDatastoreAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreapispec)
+
+#### AIGatewayDatastoreConfigType
+
+_Underlying type:_ `string`
+
+AIGatewayDatastoreConfigType represents the type of AIGatewayDatastoreConfig.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreconfig)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `redis-ce` |  |
+| `redis-ee` |  |
+| `token-vault` |  |
+| `vectordb` |  |
+
+#### AIGatewayDatastoreName
+
+_Underlying type:_ `string`
+
+AIGatewayDatastoreName An immutable user-defined identifier for this
+resource.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)
+- [RedisCEDatastore](#aiconfiguration-konghq-com-v1alpha1-types-rediscedatastore)
+- [RedisEEDatastore](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastore)
+- [TokenVaultDatastore](#aiconfiguration-konghq-com-v1alpha1-types-tokenvaultdatastore)
+- [VectorDBDatastore](#aiconfiguration-konghq-com-v1alpha1-types-vectordbdatastore)
+
+#### AIGatewayDatastoreRef
+
+
+AIGatewayDatastoreRef A reference to an existing datastore
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _[AIGatewayDatastoreName](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastorename)_ | An immutable user-defined identifier for this resource. |
+
+_Appears in:_
+
+- [AIGatewayAuthStrategyKeyAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategykeyauth)
+- [AIGatewayAuthStrategyOpenIDConnect](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyopenidconnect)
+- [AIGatewayMCPServerConversionListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistener)
+- [AIGatewayMCPServerConversionOnly](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversiononly)
+- [AIGatewayMCPServerListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistener)
+- [AIGatewayMCPServerPassthroughListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlistener)
+- [AIGatewayMCPServerUpstreamServer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserver)
+- [AIGatewayModelAPI](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelapi)
+- [AIGatewayModelModel](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelmodel)
+- [AIGatewayModelProviderAnthropic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovideranthropic)
+- [AIGatewayModelProviderAzure](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderazure)
+- [AIGatewayModelProviderBaseten](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderbaseten)
+- [AIGatewayModelProviderBedrock](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderbedrock)
+- [AIGatewayModelProviderCerebras](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidercerebras)
+- [AIGatewayModelProviderCohere](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidercohere)
+- [AIGatewayModelProviderDashscope](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdashscope)
+- [AIGatewayModelProviderDatabricks](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdatabricks)
+- [AIGatewayModelProviderDeepseek](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdeepseek)
+- [AIGatewayModelProviderGemini](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidergemini)
+- [AIGatewayModelProviderHuggingface](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderhuggingface)
+- [AIGatewayModelProviderKimi](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderkimi)
+- [AIGatewayModelProviderLlama2](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderllama2)
+- [AIGatewayModelProviderMistral](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidermistral)
+- [AIGatewayModelProviderOllama](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderollama)
+- [AIGatewayModelProviderOpenai](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovideropenai)
+- [AIGatewayModelProviderSagemaker](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemaker)
+- [AIGatewayModelProviderTypesafe](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidertypesafe)
+- [AIGatewayModelProviderVercel](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidervercel)
+- [AIGatewayModelProviderVllm](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidervllm)
+- [AIGatewayModelProviderXai](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderxai)
+- [AIGatewayPolicyAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyapispec)
+
+
+
+#### AIGatewayDatastoreSpec
+
+
+AIGatewayDatastoreSpec defines the desired state of AIGatewayDatastore.
+
+
+
+| Field | Description |
+| --- | --- |
+| `aiGatewayRef` _[AIGatewayRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayref)_ | AIGatewayRef is the reference to the parent AI Gateway (control plane) object. |
+| `apiSpec` _[AIGatewayDatastoreAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [AIGatewayDatastore](#aiconfiguration-konghq-com-v1alpha1-aigatewaydatastore)
+
+#### AIGatewayDatastoreStatus
+
+
+AIGatewayDatastoreStatus defines the observed state of AIGatewayDatastore.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#aiconfiguration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [AIGatewayDatastore](#aiconfiguration-konghq-com-v1alpha1-aigatewaydatastore)
+
 #### AIGatewayDenyACL
 
 
@@ -1975,6 +2269,7 @@ _Appears in:_
 - [AIGatewayModelModel](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelmodel)
 - [AIGatewayModelProviderAnthropic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovideranthropic)
 - [AIGatewayModelProviderAzure](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderazure)
+- [AIGatewayModelProviderBaseten](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderbaseten)
 - [AIGatewayModelProviderBedrock](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderbedrock)
 - [AIGatewayModelProviderCerebras](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidercerebras)
 - [AIGatewayModelProviderCohere](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidercohere)
@@ -2112,7 +2407,9 @@ Configure `allow`, `deny`, or both.
 | Field | Description |
 | --- | --- |
 | `allow` _[][AIGatewayMCPACLRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpaclref)_ | List of consumer groups that are permitted access. |
+| `allowWhen` _[]string_ | Allow the request if it matches any of these CEL boolean expressions evaluated against the request context.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `deny` _[][AIGatewayMCPACLRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpaclref)_ | List of consumer groups that are denied access. |
+| `denyWhen` _[]string_ | Deny the request if it matches any of these CEL boolean expressions evaluated against the request context.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -2251,12 +2548,15 @@ AIGatewayMCPServerConversionListener is a type alias.
 | --- | --- |
 | `access` _[AIGatewayMCPServerConversionListenerAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlisteneraccess)_ |  |
 | `config` _[AIGatewayMCPServerConversionListenerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfig)_ | Server-side configuration specific to modes where Kong answers as the MCP server. |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `displayName` _string_ | The display name for the MCP Server. |
 | `enabled` _string_ | Whether the MCP Server is enabled. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
 | `policies` _[][AIGatewayPolicyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
+| `rateLimiting` _[AIGatewayMCPServerRateLimiting](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverratelimiting)_ | Rate limits applied to requests to this MCP Server, matched by MCP method or tool name. Each AI Gateway node counts and enforces the limits independently.<br /><br />**Requires a minimum runtime version of `2.3`**. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `tools` _[][AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)_ | List of tools exposed by this MCP Server. Each tool's `path`, `method`, and `host` describe the backend HTTP operation on the upstream selected by `config.url` — they do not need to match the public MCP Route configured in `config.route`. |
 
 _Appears in:_
@@ -2312,7 +2612,9 @@ to modes where Kong answers as the MCP server.
 | Field | Description |
 | --- | --- |
 | `allowedVersions` _[]string_ | The MCP protocol revisions this server accepts. Leave unset to accept every revision Kong implements, which is the default. When set, `server/discover` advertises exactly this list and a request declaring anything else is rejected. Listing only per-request revisions refuses handshake clients.<br /><br />**Requires a minimum runtime version of `2.1`**. |
+| `caCertificates` _[][AIGatewayCACertificateReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificatereference)_ | CA certificates used to verify the TLS certificate of the upstream MCP server, referenced by name. Each entry must be the `name` of an existing AI CA Certificate on the same AI Gateway.<br /><br />The CA certificates build the trust store (`ca_certificates`) of the Kong Gateway Service generated for this MCP Server, which proxies requests to the upstream MCP server.<br /><br />If unset, the default trust store is used to verify the upstream's TLS certificate. |
 | `cache` _[AIGatewayMCPServerConversionListenerConfigCache](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfigcache)_ | Cache hints Kong emits on the cacheable operations it serves. Only clients on a protocol revision that defines them receive them.<br /><br />**Requires a minimum runtime version of `2.1`**. |
+| `certificates` _[][AIGatewayCertificateReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificatereference)_ | Client certificates used for mutual TLS (mTLS) authentication with the upstream MCP server, referenced by name. Each entry must be the `name` of an existing AI Certificate on the same AI Gateway.<br /><br />The certificates are applied to the Kong Gateway Service generated for this MCP Server, which proxies requests to the upstream MCP server. The generated Service presents a single client certificate (`client_certificate`) during the TLS handshake with the upstream, so at most one certificate may be configured.<br /><br />If unset, no client certificate is presented to the upstream. |
 | `logging` _[AIGatewayMCPServerConversionListenerConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfiglogging)_ |  |
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
 | `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
@@ -2369,12 +2671,14 @@ AIGatewayMCPServerConversionOnly is a type alias.
 | Field | Description |
 | --- | --- |
 | `config` _[AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfignoserverconfig)_ | Routing, logging, and request body size limits for the MCP Server. |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `displayName` _string_ | The display name for the MCP Server. |
 | `enabled` _string_ | Whether the MCP Server is enabled. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
 | `policies` _[][AIGatewayPolicyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `tools` _[][AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)_ | List of tools exposed by this MCP Server. |
 
 _Appears in:_
@@ -2392,6 +2696,7 @@ AIGatewayMCPServerListener is a type alias.
 | --- | --- |
 | `access` _[AIGatewayMCPServerListenerAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneraccess)_ |  |
 | `config` _[AIGatewayMCPServerListenerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconfig)_ | Server-side configuration specific to modes where Kong answers as the MCP server. |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `displayName` _string_ | The display name for the MCP Server. |
 | `enabled` _string_ | Whether the MCP Server is enabled. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
@@ -2399,6 +2704,7 @@ AIGatewayMCPServerListener is a type alias.
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
 | `policies` _[][AIGatewayPolicyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
 | `sources` _[][AIGatewayMCPServerRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverref)_ | The explicit list of source MCP Servers whose tools this listener exposes. Each entry is the immutable `name` of a `conversion-only` (toolset) or `upstream-server` (third-party MCP server) MCP Server in the same AI Gateway. All of the referenced source's tools are exposed. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -2556,12 +2862,15 @@ AIGatewayMCPServerPassthroughListener is a type alias.
 | --- | --- |
 | `access` _[AIGatewayMCPServerPassthroughListenerAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlisteneraccess)_ |  |
 | `config` _[AIGatewayMCPServerWithUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)_ | Routing, logging, and server configuration for the MCP Server. |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `displayName` _string_ | The display name for the MCP Server. |
 | `enabled` _string_ | Whether the MCP Server is enabled. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
 | `policies` _[][AIGatewayPolicyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
+| `rateLimiting` _[AIGatewayMCPServerRateLimiting](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverratelimiting)_ | Rate limits applied to requests to this MCP Server, matched by MCP method or tool name. Each AI Gateway node counts and enforces the limits independently.<br /><br />**Requires a minimum runtime version of `2.3`**. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `tools` _[][AIGatewayMCPPassthroughTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcppassthroughtool)_ | Per-tool access-control overrides for tools advertised by the remote MCP Server. Each entry is matched to a remote tool by `name`; only its access-control rules are applied. |
 
 _Appears in:_
@@ -2628,6 +2937,43 @@ _Appears in:_
 
 - [AIGatewayMCPServerListenerConsumer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconsumer)
 - [AIGatewayMCPServerListenerOauth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneroauth)
+
+#### AIGatewayMCPServerRateLimit
+
+
+AIGatewayMCPServerRateLimit A rate limit on an MCP method or tool.
+Exactly one of `method` or `tool` must be set.
+
+
+
+| Field | Description |
+| --- | --- |
+| `limit` _int_ | The number of requests allowed per window. |
+| `method` _string_ | The MCP method this limit applies to. |
+| `tool` _string_ | The name of the tool this limit applies to. |
+| `windowSize` _int_ | The window size in seconds, one of a second, a minute, an hour, or a day. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerRateLimiting](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverratelimiting)
+
+#### AIGatewayMCPServerRateLimiting
+
+
+AIGatewayMCPServerRateLimiting Rate limits applied to requests to this MCP
+Server, matched by MCP method or tool name.
+Each AI Gateway node counts and enforces the limits independently.<br /><br />**Requires a minimum runtime version of `2.3`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `limits` _[][AIGatewayMCPServerRateLimit](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverratelimit)_ | The rate limits to enforce. Each entry targets exactly one of `method` or `tool`. Two entries cannot share the same target and `window_size`. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerConversionListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistener)
+- [AIGatewayMCPServerPassthroughListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlistener)
 
 #### AIGatewayMCPServerRef
 
@@ -2785,12 +3131,14 @@ AIGatewayMCPServerUpstreamServer is a type alias.
 | Field | Description |
 | --- | --- |
 | `config` _[AIGatewayMCPServerUpstreamServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfig)_ | Routing, logging, and server configuration for the MCP Server. |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `displayName` _string_ | The display name for the MCP Server. |
 | `enabled` _string_ | Whether the MCP Server is enabled. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
 | `policies` _[][AIGatewayPolicyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `tools` _[][AIGatewayMCPUpstreamTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpupstreamtool)_ | List of tools exposed by this MCP Server. |
 
 _Appears in:_
@@ -2807,6 +3155,8 @@ configuration for the MCP Server.
 
 | Field | Description |
 | --- | --- |
+| `caCertificates` _[][AIGatewayCACertificateReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificatereference)_ | CA certificates used to verify the TLS certificate of the upstream MCP server, referenced by name. Each entry must be the `name` of an existing AI CA Certificate on the same AI Gateway.<br /><br />The CA certificates build the trust store (`ca_certificates`) of the Kong Gateway Service generated for this MCP Server, which proxies requests to the upstream MCP server.<br /><br />If unset, the default trust store is used to verify the upstream's TLS certificate. |
+| `certificates` _[][AIGatewayCertificateReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificatereference)_ | Client certificates used for mutual TLS (mTLS) authentication with the upstream MCP server, referenced by name. Each entry must be the `name` of an existing AI Certificate on the same AI Gateway.<br /><br />The certificates are applied to the Kong Gateway Service generated for this MCP Server, which proxies requests to the upstream MCP server. The generated Service presents a single client certificate (`client_certificate`) during the TLS handshake with the upstream, so at most one certificate may be configured.<br /><br />If unset, no client certificate is presented to the upstream. |
 | `logging` _[AIGatewayMCPServerUpstreamServerConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfiglogging)_ | Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
 | `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
@@ -3005,6 +3355,8 @@ configuration for the MCP Server.
 
 | Field | Description |
 | --- | --- |
+| `caCertificates` _[][AIGatewayCACertificateReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificatereference)_ | CA certificates used to verify the TLS certificate of the upstream MCP server, referenced by name. Each entry must be the `name` of an existing AI CA Certificate on the same AI Gateway.<br /><br />The CA certificates build the trust store (`ca_certificates`) of the Kong Gateway Service generated for this MCP Server, which proxies requests to the upstream MCP server.<br /><br />If unset, the default trust store is used to verify the upstream's TLS certificate. |
+| `certificates` _[][AIGatewayCertificateReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificatereference)_ | Client certificates used for mutual TLS (mTLS) authentication with the upstream MCP server, referenced by name. Each entry must be the `name` of an existing AI Certificate on the same AI Gateway.<br /><br />The certificates are applied to the Kong Gateway Service generated for this MCP Server, which proxies requests to the upstream MCP server. The generated Service presents a single client certificate (`client_certificate`) during the TLS handshake with the upstream, so at most one certificate may be configured.<br /><br />If unset, no client certificate is presented to the upstream. |
 | `logging` _[AIGatewayMCPServerWithUpstreamConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfiglogging)_ | Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
 | `proxy` _[AIGatewayProxyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayproxyconfig)_ | HTTP/HTTPS proxy configuration for outbound requests to the upstream AI provider. |
@@ -3101,6 +3453,8 @@ and request body size limits for the MCP Server.
 
 | Field | Description |
 | --- | --- |
+| `caCertificates` _[][AIGatewayCACertificateReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificatereference)_ | CA certificates used to verify the TLS certificate of the upstream MCP server, referenced by name. Each entry must be the `name` of an existing AI CA Certificate on the same AI Gateway.<br /><br />The CA certificates build the trust store (`ca_certificates`) of the Kong Gateway Service generated for this MCP Server, which proxies requests to the upstream MCP server.<br /><br />If unset, the default trust store is used to verify the upstream's TLS certificate. |
+| `certificates` _[][AIGatewayCertificateReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificatereference)_ | Client certificates used for mutual TLS (mTLS) authentication with the upstream MCP server, referenced by name. Each entry must be the `name` of an existing AI Certificate on the same AI Gateway.<br /><br />The certificates are applied to the Kong Gateway Service generated for this MCP Server, which proxies requests to the upstream MCP server. The generated Service presents a single client certificate (`client_certificate`) during the TLS handshake with the upstream, so at most one certificate may be configured.<br /><br />If unset, no client certificate is presented to the upstream. |
 | `logging` _[AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfignoserverconfiglogging)_ | Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
 | `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
@@ -3252,8 +3606,9 @@ to/from an AI Gateway model using the files, batches, and skills APIs.
 | Field | Description |
 | --- | --- |
 | `access` _[AIGatewayModelAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelaccess)_ | Access control configuration for a model. |
-| `capabilities` _[]string_ | List of AI capabilities enabled for this API model. |
+| `capabilities` _[]string_ | The capabilities this model supports. Set to a specific capability to restrict the model to that capability only, or to `*` to allow all capabilities that the targets support at the gateway's min_runtime_version. A capability that needs a newer min_runtime_version is left out of `*`. |
 | `config` _[AIGatewayModelAPIConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelapiconfig)_ | Routing, logging, and load balancing configuration for the model. |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | Names of the Datastores this model references. |
 | `displayName` _string_ | The display name for this model instance. |
 | `enabled` _string_ | Whether the model is enabled. |
 | `formats` _[][AIGatewayModelFormat](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelformat)_ | List of request/response formats supported by this model. |
@@ -3760,7 +4115,7 @@ AIGatewayModelFormat Request and response format supported by this model.
 
 | Field | Description |
 | --- | --- |
-| `type` _string_ | The format type.<br /><br />**`passthrough` requires a minimum runtime version of `2.2`**.<br /><br />**`typesafe` requires a minimum runtime version of `2.2`**. |
+| `type` _string_ | The request and response format this model supports. Set to a specific format to restrict the model to that format only, or to `*` to allow all formats that the targets support at the gateway's min_runtime_version. A format that needs a newer min_runtime_version is left out of `*`. The `*` format never includes passthrough.<br /><br />**`passthrough` requires a minimum runtime version of `2.2`**.<br /><br />**`typesafe` requires a minimum runtime version of `2.2`**. |
 
 _Appears in:_
 
@@ -3778,8 +4133,9 @@ to/from an AI Gateway model using generative APIs.
 | Field | Description |
 | --- | --- |
 | `access` _[AIGatewayModelAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelaccess)_ | Access control configuration for a model. |
-| `capabilities` _[]string_ | List of AI capabilities enabled for this model. |
+| `capabilities` _[]string_ | The capabilities this model supports. Set to a specific capability to restrict the model to that capability only, or to `*` to allow all capabilities that the targets support at the gateway's min_runtime_version. A capability that needs a newer min_runtime_version is left out of `*`. |
 | `config` _[AIGatewayModelModelConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelmodelconfig)_ | Routing, logging, and load balancing configuration for the model. |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | Names of the Datastores this model references. |
 | `displayName` _string_ | The display name for this model instance. |
 | `enabled` _string_ | Whether the model is enabled. |
 | `formats` _[][AIGatewayModelFormat](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelformat)_ | List of request/response formats supported by this model. |
@@ -3900,10 +4256,12 @@ AIGatewayModelProviderAnthropic Configuration for an upstream model provider.
 | Field | Description |
 | --- | --- |
 | `config` _[AIGatewayModelProviderAnthropicConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovideranthropicconfig)_ | Configuration for the model provider. |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -3934,10 +4292,12 @@ AIGatewayModelProviderAzure Config for Azure model provider.
 | Field | Description |
 | --- | --- |
 | `config` _[AIGatewayModelProviderAzureConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderazureconfig)_ |  |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -4018,6 +4378,42 @@ _Appears in:_
 
 - [AIGatewayModelProviderAzureConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderazureconfig)
 
+#### AIGatewayModelProviderBaseten
+
+
+AIGatewayModelProviderBaseten Configuration for an upstream model provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[AIGatewayModelProviderBasetenConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderbasetenconfig)_ | Configuration for the model provider. |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
+| `displayName` _string_ | The display name for this model provider instance. |
+| `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
+
+_Appears in:_
+
+- [AIGatewayModelProviderConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfig)
+
+#### AIGatewayModelProviderBasetenConfig
+
+
+AIGatewayModelProviderBasetenConfig Configuration for the model provider.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | Basic auth config for an upstream model provider. |
+
+_Appears in:_
+
+- [AIGatewayModelProviderBaseten](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderbaseten)
+
 #### AIGatewayModelProviderBedrock
 
 
@@ -4028,10 +4424,12 @@ AIGatewayModelProviderBedrock Config for AWS model provider.
 | Field | Description |
 | --- | --- |
 | `config` _[AIGatewayModelProviderBedrockConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderbedrockconfig)_ |  |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -4100,10 +4498,12 @@ AIGatewayModelProviderCerebras Configuration for an upstream model provider.
 | Field | Description |
 | --- | --- |
 | `config` _[AIGatewayModelProviderCerebrasConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidercerebrasconfig)_ | Configuration for the model provider. |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -4134,10 +4534,12 @@ AIGatewayModelProviderCohere Configuration for an upstream model provider.
 | Field | Description |
 | --- | --- |
 | `config` _[AIGatewayModelProviderCohereConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidercohereconfig)_ | Configuration for the model provider. |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -4171,6 +4573,7 @@ Only one of the fields should be set based on the Type.
 | `type` _[AIGatewayModelProviderConfigType](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigtype)_ | Type designates the type of configuration. |
 | `anthropic` _[AIGatewayModelProviderAnthropic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovideranthropic)_ | Anthropic configuration. |
 | `azure` _[AIGatewayModelProviderAzure](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderazure)_ | Azure configuration. |
+| `baseten` _[AIGatewayModelProviderBaseten](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderbaseten)_ | Baseten configuration. |
 | `bedrock` _[AIGatewayModelProviderBedrock](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderbedrock)_ | Bedrock configuration. |
 | `cerebras` _[AIGatewayModelProviderCerebras](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidercerebras)_ | Cerebras configuration. |
 | `cohere` _[AIGatewayModelProviderCohere](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidercohere)_ | Cohere configuration. |
@@ -4250,6 +4653,7 @@ _Appears in:_
 
 - [AIGatewayModelProviderAnthropicConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovideranthropicconfig)
 - [AIGatewayModelProviderAzureConfigAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderazureconfigauth)
+- [AIGatewayModelProviderBasetenConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderbasetenconfig)
 - [AIGatewayModelProviderBedrockConfigAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderbedrockconfigauth)
 - [AIGatewayModelProviderCerebrasConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidercerebrasconfig)
 - [AIGatewayModelProviderCohereConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidercohereconfig)
@@ -4409,6 +4813,7 @@ Allowed values:
 | --- | --- |
 | `anthropic` |  |
 | `azure` |  |
+| `baseten` |  |
 | `bedrock` |  |
 | `cerebras` |  |
 | `cohere` |  |
@@ -4438,10 +4843,12 @@ AIGatewayModelProviderDashscope Configuration for an upstream model provider.
 | Field | Description |
 | --- | --- |
 | `config` _[AIGatewayModelProviderDashscopeConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdashscopeconfig)_ | Configuration for the model provider. |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -4473,10 +4880,12 @@ provider.
 | Field | Description |
 | --- | --- |
 | `config` _[AIGatewayModelProviderDatabricksConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdatabricksconfig)_ | Configuration for the model provider. |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -4507,10 +4916,12 @@ AIGatewayModelProviderDeepseek Configuration for an upstream model provider.
 | Field | Description |
 | --- | --- |
 | `config` _[AIGatewayModelProviderDeepseekConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdeepseekconfig)_ | Configuration for the model provider. |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -4541,10 +4952,12 @@ AIGatewayModelProviderGemini Config for GCP model provider.
 | Field | Description |
 | --- | --- |
 | `config` _[AIGatewayModelProviderGeminiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidergeminiconfig)_ |  |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -4614,10 +5027,12 @@ provider.
 | Field | Description |
 | --- | --- |
 | `config` _[AIGatewayModelProviderHuggingfaceConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderhuggingfaceconfig)_ | Configuration for the model provider. |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -4648,10 +5063,12 @@ AIGatewayModelProviderKimi Configuration for an upstream model provider.
 | Field | Description |
 | --- | --- |
 | `config` _[AIGatewayModelProviderKimiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderkimiconfig)_ | Configuration for the model provider. |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -4682,10 +5099,12 @@ AIGatewayModelProviderLlama2 Configuration for an upstream model provider.
 | Field | Description |
 | --- | --- |
 | `config` _[AIGatewayModelProviderLlama2Config](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderllama2config)_ | Configuration for the model provider. |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -4716,10 +5135,12 @@ AIGatewayModelProviderMistral Configuration for an upstream model provider.
 | Field | Description |
 | --- | --- |
 | `config` _[AIGatewayModelProviderMistralConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidermistralconfig)_ | Configuration for the model provider. |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -4750,10 +5171,12 @@ AIGatewayModelProviderOllama Configuration for an upstream model provider.
 | Field | Description |
 | --- | --- |
 | `config` _[AIGatewayModelProviderOllamaConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderollamaconfig)_ | Configuration for the model provider. |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -4784,10 +5207,12 @@ AIGatewayModelProviderOpenai Configuration for an upstream model provider.
 | Field | Description |
 | --- | --- |
 | `config` _[AIGatewayModelProviderOpenaiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovideropenaiconfig)_ | Configuration for the model provider. |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -4852,10 +5277,12 @@ AIGatewayModelProviderSagemaker Config for Sagemaker model provider.
 | Field | Description |
 | --- | --- |
 | `config` _[AIGatewayModelProviderSagemakerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemakerconfig)_ |  |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -4957,10 +5384,12 @@ AIGatewayModelProviderTypesafe Configuration for an upstream model provider.
 | Field | Description |
 | --- | --- |
 | `config` _[AIGatewayModelProviderTypesafeConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidertypesafeconfig)_ | Configuration for the model provider. |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -4991,10 +5420,12 @@ AIGatewayModelProviderVercel Configuration for an upstream model provider.
 | Field | Description |
 | --- | --- |
 | `config` _[AIGatewayModelProviderVercelConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidervercelconfig)_ | Configuration for the model provider. |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -5025,10 +5456,12 @@ AIGatewayModelProviderVllm Configuration for an upstream model provider.
 | Field | Description |
 | --- | --- |
 | `config` _[AIGatewayModelProviderVllmConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidervllmconfig)_ | Configuration for the model provider. |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -5059,10 +5492,12 @@ AIGatewayModelProviderXai Configuration for an upstream model provider.
 | Field | Description |
 | --- | --- |
 | `config` _[AIGatewayModelProviderXaiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderxaiconfig)_ | Configuration for the model provider. |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | The Token Vault Datastore holding this entity's credential storage: the directory credentials are written to, and the encryption keys that seal them. Required when `token_vault` is set (on an auth strategy, when its credential manager is enabled), and the referenced Datastore must have type `token-vault`. Only one Datastore can be referenced.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `tokenVault` _[AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)_ | Resolves an upstream credential per request via Kong's Token Vault instead of sending a static credential. The directory credentials live in, and the keys that encrypt them, come from the `token-vault` Datastore this entity references, and are returned read-only in `storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the credential can be resolved. Until enrollment completes, an MCP Server serves virtual `authenticate` and `check_authentication_status` tools that guide the caller through the enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -5509,8 +5944,10 @@ AIGatewayPolicyAPISpec defines the API spec fields for AIGatewayPolicy.
 | --- | --- |
 | `condition` _*string_ | An expression used for conditional control over plugin execution. If the expression evaluates to `true` during the request flow, the plugin is executed; otherwise, it is skipped.<br /><br />**Requires a minimum runtime version of `2.1`**. |
 | `config` _[AIGatewayPolicyConfigDataSource](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyconfigdatasource)_ | Configuration for the policy. This is equivalent to the Kong 3 plugin configuration. Note: Plugins have been renamed to Policies in Kong AI Gateway. Policy types and configuration documentation can be found in the [Developer Docs](https://developer.konghq.com/plugins/). |
+| `datastores` _[][AIGatewayDatastoreRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreref)_ | Names of the Datastores this policy references. |
 | `displayName` _string_ | The display name for this policy instance. |
 | `enabled` _string_ | Whether the policy is enabled. |
+| `expressions` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | Policy config expressions<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `global` _string_ | Whether the policy is globally applied to all resources. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
@@ -5750,6 +6187,7 @@ _Appears in:_
 - [AIGatewayMCPServerServerConfigBaseSession](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbasesession)
 - [AIGatewayMCPServerUpstreamServerServerConfigSession](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverserverconfigsession)
 - [AIGatewayMCPServerWithUpstreamConfigServerSession](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfigserversession)
+- [AIGatewayTokenVaultCache](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvaultcache)
 
 #### AIGatewayRedisCloudConfigurationCloudAuthentication
 
@@ -5991,6 +6429,7 @@ _Appears in:_
 - [AIGatewayConsumerSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumerspec)
 - [AIGatewayCustomPolicySpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycustompolicyspec)
 - [AIGatewayDataPlaneCertificateSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydataplanecertificatespec)
+- [AIGatewayDatastoreSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastorespec)
 - [AIGatewayMCPServerSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverspec)
 - [AIGatewayModelProviderSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderspec)
 - [AIGatewayModelSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelspec)
@@ -6156,6 +6595,7 @@ _Appears in:_
 
 - [AIGatewayTargetAnthropicConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetanthropicconfig)
 - [AIGatewayTargetAzureConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetazureconfig)
+- [AIGatewayTargetBasetenConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetbasetenconfig)
 - [AIGatewayTargetBedrockConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetbedrockconfig)
 - [AIGatewayTargetCerebrasConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetcerebrasconfig)
 - [AIGatewayTargetCohereConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetcohereconfig)
@@ -6253,6 +6693,43 @@ _Appears in:_
 
 - [AIGatewayTargetConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetconfig)
 
+#### AIGatewayTargetBasetenConfig
+
+
+AIGatewayTargetBasetenConfig Baseten-specific configuration for a model.
+Requests are sent to Baseten Model APIs at
+`https://inference.baseten.co/v1` by default, and the target `name` is the
+Baseten model
+slug (for example, `deepseek-ai/DeepSeek-V4-Pro-0813`).
+To route to a dedicated Baseten
+deployment, set `upstream_url` to the deployment's full OpenAI-compatible
+endpoint (for
+example,
+`https://model-{model_id}.api.baseten.co/environments/{environment}/sync/v1/chat/completions`)
+or use passthrough format.<br /><br />**Requires a minimum runtime version of `2.3`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `cacheReadCost` _float64_ | Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking. |
+| `cacheWriteCost` _float64_ | Cost per 1M cache-write prompt tokens for billing and cost tracking. |
+| `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
+| `contextWindowFactor` _[][AIGatewayContextWindowFactor](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
+| `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
+| `inputCost` _float64_ | Cost per 1M input tokens for billing and cost tracking. |
+| `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
+| `outputCost` _float64_ | Cost per 1M output tokens for billing and cost tracking. |
+| `serviceTierFactor` _[][AIGatewayServiceTierFactor](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayservicetierfactor)_ | Multiplier applied to the whole request for a service tier. The default factor is 1.0 when no tier matches. |
+| `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
+| `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
+| `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
+| `upstreamURL` _string_ | The upstream URL for the model endpoint. |
+
+_Appears in:_
+
+- [AIGatewayTargetConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetconfig)
+
 #### AIGatewayTargetBedrockConfig
 
 
@@ -6269,6 +6746,7 @@ AIGatewayTargetBedrockConfig AWS Bedrock-specific configuration for a model.
 | `contextWindowFactor` _[][AIGatewayContextWindowFactor](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
 | `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
 | `embeddingsNormalize` _string_ | Whether to normalize embedding vectors in the response. |
+| `endpointType` _string_ | The AWS Bedrock inference endpoint that requests to this target are sent to. `runtime` sends requests to the Bedrock Runtime endpoint (`bedrock-runtime.{region}.amazonaws.com`). `mantle` sends requests to the Bedrock Mantle endpoint (`bedrock-mantle.{region}.api.aws`), which accepts OpenAI and Anthropic request formats natively.<br /><br />A target with `endpoint_type` set to `mantle` is rejected if its model includes a format with `type` set to `bedrock`, because the Mantle endpoint does not support the Bedrock Converse or InvokeModel APIs.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 | `inputCost` _float64_ | Cost per 1M input tokens for billing and cost tracking. |
 | `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
 | `outputCost` _float64_ | Cost per 1M output tokens for billing and cost tracking. |
@@ -6280,6 +6758,7 @@ AIGatewayTargetBedrockConfig AWS Bedrock-specific configuration for a model.
 | `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
 | `upstreamURL` _string_ | The upstream URL for the model endpoint. |
 | `videoOutputS3URI` _string_ | S3 URI for storing video generation outputs. |
+| `vpcEndpoint` _string_ | Hostname of an AWS PrivateLink VPC endpoint to use instead of the public Bedrock endpoint. Ignored if `upstream_url` is set.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -6355,6 +6834,7 @@ Only one of the fields should be set based on the Type.
 | `type` _[AIGatewayTargetConfigType](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetconfigtype)_ | Type designates the type of configuration. |
 | `anthropic` _[AIGatewayTargetAnthropicConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetanthropicconfig)_ | Anthropic configuration. |
 | `azure` _[AIGatewayTargetAzureConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetazureconfig)_ | Azure configuration. |
+| `baseten` _[AIGatewayTargetBasetenConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetbasetenconfig)_ | Baseten configuration. |
 | `bedrock` _[AIGatewayTargetBedrockConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetbedrockconfig)_ | Bedrock configuration. |
 | `cerebras` _[AIGatewayTargetCerebrasConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetcerebrasconfig)_ | Cerebras configuration. |
 | `cohere` _[AIGatewayTargetCohereConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetcohereconfig)_ | Cohere configuration. |
@@ -6397,6 +6877,7 @@ Allowed values:
 | --- | --- |
 | `anthropic` |  |
 | `azure` |  |
+| `baseten` |  |
 | `bedrock` |  |
 | `cerebras` |  |
 | `cohere` |  |
@@ -6862,6 +7343,142 @@ _Appears in:_
 
 - [AIGatewayTargetConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetconfig)
 
+#### AIGatewayTokenVault
+
+
+AIGatewayTokenVault Resolves an upstream credential per request via Kong's
+Token Vault instead of sending a static
+credential.
+The directory credentials live in, and the keys that encrypt them, come from
+the
+`token-vault` Datastore this entity references, and are returned read-only in
+`storage`.<br /><br />Callers must enroll with the configured Token Vault provider before the
+credential can be
+resolved.
+Until enrollment completes, an MCP Server serves virtual `authenticate` and
+`check_authentication_status` tools that guide the caller through the
+enrollment flow.<br /><br />**Requires a minimum runtime version of `2.3`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `cache` _[AIGatewayTokenVaultCache](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvaultcache)_ | Optional best-effort cache for exchanged credentials, shared across the cluster. Losing it only costs a re-exchange. Credentials are encrypted with the keys held by the Token Vault Datastore before being cached. |
+| `credential` _[AIGatewayTokenVaultCredential](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvaultcredential)_ | Where the caller's subject token is read from, and where the credential the Token Vault returns is placed on the upstream request.<br /><br />Both placements default to `Authorization: Bearer <credential>` in a header, though an `outbound` placement left unset honours whatever the provider advertises instead. Set them for providers that take the credential elsewhere, such as an `x-api-key` header carrying the raw credential. |
+| `provider` _string_ | Name of the upstream credential provider registered in the Token Vault directory. |
+| `subjectTokenType` _string_ | The kind of bearer token the caller presents, which the Token Vault exchanges for the upstream credential. Omit it unless the request shape makes the token type ambiguous: it is otherwise resolved from the request, and failing that from the token's shape (a JWS is an `access_token`, anything else an `api_key`). |
+
+_Appears in:_
+
+- [AIGatewayMCPServerConversionListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistener)
+- [AIGatewayMCPServerConversionOnly](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversiononly)
+- [AIGatewayMCPServerListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistener)
+- [AIGatewayMCPServerPassthroughListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlistener)
+- [AIGatewayMCPServerUpstreamServer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserver)
+- [AIGatewayModelProviderAnthropic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovideranthropic)
+- [AIGatewayModelProviderAzure](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderazure)
+- [AIGatewayModelProviderBaseten](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderbaseten)
+- [AIGatewayModelProviderBedrock](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderbedrock)
+- [AIGatewayModelProviderCerebras](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidercerebras)
+- [AIGatewayModelProviderCohere](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidercohere)
+- [AIGatewayModelProviderDashscope](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdashscope)
+- [AIGatewayModelProviderDatabricks](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdatabricks)
+- [AIGatewayModelProviderDeepseek](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderdeepseek)
+- [AIGatewayModelProviderGemini](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidergemini)
+- [AIGatewayModelProviderHuggingface](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderhuggingface)
+- [AIGatewayModelProviderKimi](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderkimi)
+- [AIGatewayModelProviderLlama2](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderllama2)
+- [AIGatewayModelProviderMistral](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidermistral)
+- [AIGatewayModelProviderOllama](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderollama)
+- [AIGatewayModelProviderOpenai](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovideropenai)
+- [AIGatewayModelProviderSagemaker](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemaker)
+- [AIGatewayModelProviderTypesafe](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidertypesafe)
+- [AIGatewayModelProviderVercel](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidervercel)
+- [AIGatewayModelProviderVllm](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidervllm)
+- [AIGatewayModelProviderXai](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderxai)
+
+#### AIGatewayTokenVaultCache
+
+
+AIGatewayTokenVaultCache Optional best-effort cache for exchanged
+credentials, shared across the cluster.
+Losing it
+only costs a re-exchange.
+Credentials are encrypted with the keys held by the Token Vault
+Datastore before being cached.
+
+
+
+| Field | Description |
+| --- | --- |
+| `redis` _[AIGatewayRedisCloudConfiguration](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayrediscloudconfiguration)_ | Config for connecting to a Cloud Provider's Redis instance. |
+
+_Appears in:_
+
+- [AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)
+
+#### AIGatewayTokenVaultCredential
+
+
+AIGatewayTokenVaultCredential Where the caller's subject token is read from,
+and where the credential the Token Vault returns
+is placed on the upstream request.<br /><br />Both placements default to `Authorization: Bearer <credential>` in a header,
+though an
+`outbound` placement left unset honours whatever the provider advertises
+instead.
+Set them for
+providers that take the credential elsewhere, such as an `x-api-key` header
+carrying the raw
+credential.
+
+
+
+| Field | Description |
+| --- | --- |
+| `inbound` _[AIGatewayTokenVaultCredentialPlacement](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvaultcredentialplacement)_ |  |
+| `outbound` _[AIGatewayTokenVaultCredentialPlacement](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvaultcredentialplacement)_ |  |
+
+_Appears in:_
+
+- [AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)
+
+#### AIGatewayTokenVaultCredentialManager
+
+
+AIGatewayTokenVaultCredentialManager Serves the self-service enrollment UI
+through which end users authorize the upstream providers
+this auth strategy authenticates against.
+Omit `token_vault` entirely to serve no such UI.<br /><br />Requires a `token-vault` Datastore reference in `datastores`; enabling the
+credential manager
+without one is rejected.<br /><br />**Requires a minimum runtime version of `2.3`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `enableCredentialManager` _string_ | Whether the self-service enrollment UI is served for this auth strategy. |
+
+_Appears in:_
+
+- [AIGatewayAuthStrategyOpenIDConnect](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyopenidconnect)
+
+#### AIGatewayTokenVaultCredentialPlacement
+
+
+AIGatewayTokenVaultCredentialPlacement is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `location` _string_ | Whether the credential travels in a header, the request body, or the query string. Defaults to `header`. |
+| `name` _string_ | Name of the header, query parameter, or body field carrying the credential. Defaults to `Authorization` for a header, `access_token` otherwise. |
+| `prefix` _string_ | String prepended verbatim to the credential value. Defaults to `Bearer ` (with its trailing space) for a header, and to no prefix otherwise. Set it to an empty string when the provider expects the raw credential. |
+
+_Appears in:_
+
+- [AIGatewayTokenVaultCredential](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvaultcredential)
+
 #### AIGatewayUpstreamAuthAWS
 
 
@@ -7323,6 +7940,98 @@ _Appears in:_
 - [AIGatewayCustomPolicyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycustompolicyconfig)
 
 
+
+#### DatastoreRedisCloudAuthentication
+
+
+DatastoreRedisCloudAuthentication Cloud-managed Redis authentication.
+Only the fields relevant to the chosen `auth_provider` need to be set.
+
+
+
+| Field | Description |
+| --- | --- |
+| `authProvider` _[DatastoreRedisCloudAuthenticationAuthProvider](#aiconfiguration-konghq-com-v1alpha1-types-datastorerediscloudauthenticationauthprovider)_ |  |
+| `awsAccessKeyID` _*string_ |  |
+| `awsAssumeRoleArn` _*string_ |  |
+| `awsCacheName` _*string_ |  |
+| `awsIsServerless` _*string_ |  |
+| `awsRegion` _*string_ |  |
+| `awsRoleSessionName` _*string_ |  |
+| `awsSecretAccessKey` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ |  |
+| `azureClientID` _*string_ |  |
+| `azureClientSecret` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ |  |
+| `azureTenantID` _*string_ |  |
+| `gcpServiceAccountJSON` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ |  |
+
+_Appears in:_
+
+- [RedisCEDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-rediscedatastoreconfig)
+- [RedisEEDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfig)
+
+#### DatastoreRedisCloudAuthenticationAuthProvider
+
+
+DatastoreRedisCloudAuthenticationAuthProvider represents a union type for auth_provider.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[DatastoreRedisCloudAuthenticationAuthProviderType](#aiconfiguration-konghq-com-v1alpha1-types-datastorerediscloudauthenticationauthprovidertype)_ | Type designates the type of configuration. |
+| `variant1` _[DatastoreRedisCloudAuthenticationAuthProviderVariant1](#aiconfiguration-konghq-com-v1alpha1-types-datastorerediscloudauthenticationauthprovidervariant1)_ | Variant1 configuration. |
+| `variant2` _[DatastoreRedisCloudAuthenticationAuthProviderVariant2](#aiconfiguration-konghq-com-v1alpha1-types-datastorerediscloudauthenticationauthprovidervariant2)_ | Variant2 configuration. |
+
+_Appears in:_
+
+- [DatastoreRedisCloudAuthentication](#aiconfiguration-konghq-com-v1alpha1-types-datastorerediscloudauthentication)
+
+#### DatastoreRedisCloudAuthenticationAuthProviderType
+
+_Underlying type:_ `string`
+
+DatastoreRedisCloudAuthenticationAuthProviderType represents the type of auth_provider.
+
+
+
+
+_Appears in:_
+
+- [DatastoreRedisCloudAuthenticationAuthProvider](#aiconfiguration-konghq-com-v1alpha1-types-datastorerediscloudauthenticationauthprovider)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `variant1` |  |
+| `variant2` |  |
+
+#### DatastoreRedisCloudAuthenticationAuthProviderVariant1
+
+_Underlying type:_ `string`
+
+DatastoreRedisCloudAuthenticationAuthProviderVariant1 is a type alias.
+
+
+
+
+_Appears in:_
+
+- [DatastoreRedisCloudAuthenticationAuthProvider](#aiconfiguration-konghq-com-v1alpha1-types-datastorerediscloudauthenticationauthprovider)
+
+#### DatastoreRedisCloudAuthenticationAuthProviderVariant2
+
+_Underlying type:_ `string`
+
+DatastoreRedisCloudAuthenticationAuthProviderVariant2 is a type alias.
+
+
+
+
+_Appears in:_
+
+- [DatastoreRedisCloudAuthenticationAuthProvider](#aiconfiguration-konghq-com-v1alpha1-types-datastorerediscloudauthenticationauthprovider)
 
 #### EnvironmentVariableVault
 
@@ -7829,6 +8538,7 @@ _Appears in:_
 - [AIGatewayConsumerStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumerstatus)
 - [AIGatewayCustomPolicyStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycustompolicystatus)
 - [AIGatewayDataPlaneCertificateStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydataplanecertificatestatus)
+- [AIGatewayDatastoreStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastorestatus)
 - [AIGatewayMCPServerStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverstatus)
 - [AIGatewayModelProviderStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderstatus)
 - [AIGatewayModelStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelstatus)
@@ -7868,6 +8578,7 @@ _Appears in:_
 - [AIGatewayModelModel](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelmodel)
 - [AIGatewayModelProviderAnthropic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovideranthropic)
 - [AIGatewayModelProviderAzure](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderazure)
+- [AIGatewayModelProviderBaseten](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderbaseten)
 - [AIGatewayModelProviderBedrock](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderbedrock)
 - [AIGatewayModelProviderCerebras](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidercerebras)
 - [AIGatewayModelProviderCohere](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidercohere)
@@ -7897,6 +8608,10 @@ _Appears in:_
 - [GoogleSecretManagerVault](#aiconfiguration-konghq-com-v1alpha1-types-googlesecretmanagervault)
 - [HashiCorpVault](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvault)
 - [KonnectConfigStoreVault](#aiconfiguration-konghq-com-v1alpha1-types-konnectconfigstorevault)
+- [RedisCEDatastore](#aiconfiguration-konghq-com-v1alpha1-types-rediscedatastore)
+- [RedisEEDatastore](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastore)
+- [TokenVaultDatastore](#aiconfiguration-konghq-com-v1alpha1-types-tokenvaultdatastore)
+- [VectorDBDatastore](#aiconfiguration-konghq-com-v1alpha1-types-vectordbdatastore)
 
 #### ManagedByValue
 
@@ -7942,6 +8657,7 @@ _Appears in:_
 - [AIGatewayModelModel](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelmodel)
 - [AIGatewayModelProviderAnthropic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovideranthropic)
 - [AIGatewayModelProviderAzure](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderazure)
+- [AIGatewayModelProviderBaseten](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderbaseten)
 - [AIGatewayModelProviderBedrock](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderbedrock)
 - [AIGatewayModelProviderCerebras](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidercerebras)
 - [AIGatewayModelProviderCohere](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidercohere)
@@ -7971,6 +8687,10 @@ _Appears in:_
 - [GoogleSecretManagerVault](#aiconfiguration-konghq-com-v1alpha1-types-googlesecretmanagervault)
 - [HashiCorpVault](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvault)
 - [KonnectConfigStoreVault](#aiconfiguration-konghq-com-v1alpha1-types-konnectconfigstorevault)
+- [RedisCEDatastore](#aiconfiguration-konghq-com-v1alpha1-types-rediscedatastore)
+- [RedisEEDatastore](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastore)
+- [TokenVaultDatastore](#aiconfiguration-konghq-com-v1alpha1-types-tokenvaultdatastore)
+- [VectorDBDatastore](#aiconfiguration-konghq-com-v1alpha1-types-vectordbdatastore)
 
 #### PublicLabelsValue
 
@@ -7984,6 +8704,202 @@ PublicLabelsValue is the value type for PublicLabels.
 _Appears in:_
 
 - [PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)
+
+#### RedisCEDatastore
+
+
+RedisCEDatastore is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[RedisCEDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-rediscedatastoreconfig)_ |  |
+| `description` _string_ | The description of the Datastore. |
+| `displayName` _string_ | The display name for this Datastore. |
+| `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayDatastoreName](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastorename)_ | A user-defined unique identifier for this Datastore, used as a stable human-readable reference. This value is immutable after creation. |
+
+_Appears in:_
+
+- [AIGatewayDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreconfig)
+
+#### RedisCEDatastoreConfig
+
+
+RedisCEDatastoreConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `cloudAuthentication` _[DatastoreRedisCloudAuthentication](#aiconfiguration-konghq-com-v1alpha1-types-datastorerediscloudauthentication)_ | Cloud-managed Redis authentication. Only the fields relevant to the chosen `auth_provider` need to be set. |
+| `database` _int_ | The Redis database index to use. |
+| `host` _string_ |  |
+| `password` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ |  |
+| `port` _int_ |  |
+| `serverName` _*string_ | SNI to use when connecting over SSL. |
+| `ssl` _string_ |  |
+| `sslVerify` _string_ |  |
+| `timeout` _int_ | Timeout in milliseconds for connecting, reading, and writing to the Redis server. |
+| `username` _*string_ |  |
+
+_Appears in:_
+
+- [RedisCEDatastore](#aiconfiguration-konghq-com-v1alpha1-types-rediscedatastore)
+
+#### RedisEEDatastore
+
+
+RedisEEDatastore is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[RedisEEDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfig)_ |  |
+| `description` _string_ | The description of the Datastore. |
+| `displayName` _string_ | The display name for this Datastore. |
+| `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayDatastoreName](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastorename)_ | A user-defined unique identifier for this Datastore, used as a stable human-readable reference. This value is immutable after creation. |
+
+_Appears in:_
+
+- [AIGatewayDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreconfig)
+
+#### RedisEEDatastoreConfig
+
+
+RedisEEDatastoreConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `cloudAuthentication` _[DatastoreRedisCloudAuthentication](#aiconfiguration-konghq-com-v1alpha1-types-datastorerediscloudauthentication)_ | Cloud-managed Redis authentication. Only the fields relevant to the chosen `auth_provider` need to be set. |
+| `clusterMaxRedirections` _int_ |  |
+| `clusterNodes` _[][RedisEEDatastoreConfigClusterNodes](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfigclusternodes)_ |  |
+| `connectTimeout` _int_ |  |
+| `connectionIsProxied` _string_ |  |
+| `database` _int_ | The Redis database index to use. |
+| `host` _string_ |  |
+| `keepaliveBacklog` _*int_ |  |
+| `keepalivePoolSize` _int_ |  |
+| `password` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ |  |
+| `port` _[RedisEEDatastoreConfigPort](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfigport)_ | An integer representing a port number between 0 and 65535, inclusive. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `readTimeout` _int_ |  |
+| `sendTimeout` _int_ |  |
+| `sentinelMaster` _*string_ |  |
+| `sentinelNodes` _[][RedisEEDatastoreConfigSentinelNodes](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfigsentinelnodes)_ |  |
+| `sentinelPassword` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ |  |
+| `sentinelRole` _*string_ |  |
+| `sentinelUsername` _*string_ |  |
+| `serverName` _*string_ | SNI to use when connecting over SSL. |
+| `ssl` _string_ |  |
+| `sslVerify` _string_ |  |
+| `username` _*string_ |  |
+
+_Appears in:_
+
+- [RedisEEDatastore](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastore)
+
+#### RedisEEDatastoreConfigClusterNodes
+
+
+RedisEEDatastoreConfigClusterNodes is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `ip` _string_ |  |
+| `port` _int_ |  |
+
+_Appears in:_
+
+- [RedisEEDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfig)
+
+#### RedisEEDatastoreConfigPort
+
+
+RedisEEDatastoreConfigPort represents a union type for port.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[RedisEEDatastoreConfigPortType](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfigporttype)_ | Type designates the type of configuration. |
+| `variant1` _[RedisEEDatastoreConfigPortVariant1](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfigportvariant1)_ | Variant1 configuration. |
+| `variant2` _[RedisEEDatastoreConfigPortVariant2](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfigportvariant2)_ | Variant2 configuration. |
+
+_Appears in:_
+
+- [RedisEEDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfig)
+
+#### RedisEEDatastoreConfigPortType
+
+_Underlying type:_ `string`
+
+RedisEEDatastoreConfigPortType represents the type of port.
+
+
+
+
+_Appears in:_
+
+- [RedisEEDatastoreConfigPort](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfigport)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `variant1` |  |
+| `variant2` |  |
+
+#### RedisEEDatastoreConfigPortVariant1
+
+_Underlying type:_ `integer`
+
+RedisEEDatastoreConfigPortVariant1 is a type alias.
+
+
+
+
+_Appears in:_
+
+- [RedisEEDatastoreConfigPort](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfigport)
+
+#### RedisEEDatastoreConfigPortVariant2
+
+_Underlying type:_ `string`
+
+RedisEEDatastoreConfigPortVariant2 is a type alias.
+
+
+
+
+_Appears in:_
+
+- [RedisEEDatastoreConfigPort](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfigport)
+
+#### RedisEEDatastoreConfigSentinelNodes
+
+
+RedisEEDatastoreConfigSentinelNodes is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `host` _string_ |  |
+| `port` _int_ |  |
+
+_Appears in:_
+
+- [RedisEEDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfig)
 
 
 
@@ -8035,12 +8951,16 @@ _Appears in:_
 - [AIGatewayModelProviderConfigAuthBasicParams](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasicparams)
 - [AIGatewayModelProviderConfigAuthGCP](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthgcp)
 - [ConjurVaultConfig](#aiconfiguration-konghq-com-v1alpha1-types-conjurvaultconfig)
+- [DatastoreRedisCloudAuthentication](#aiconfiguration-konghq-com-v1alpha1-types-datastorerediscloudauthentication)
 - [HashiCorpVaultAppRoleConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultapproleconfig)
 - [HashiCorpVaultAwsIAMConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultawsiamconfig)
 - [HashiCorpVaultCertConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultcertconfig)
 - [HashiCorpVaultGcpIAMConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultgcpiamconfig)
 - [HashiCorpVaultOauth2Config](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaultoauth2config)
 - [HashiCorpVaultTokenConfig](#aiconfiguration-konghq-com-v1alpha1-types-hashicorpvaulttokenconfig)
+- [RedisCEDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-rediscedatastoreconfig)
+- [RedisEEDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-rediseedatastoreconfig)
+- [VectorDBDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-vectordbdatastoreconfig)
 
 #### SensitiveDataSourceType
 
@@ -8062,6 +8982,108 @@ Allowed values:
 | --- | --- |
 | `inline` | SensitiveDataSourceTypeInline indicates that the data is provided inline in the APISpec.<br /> |
 | `secretRef` | SensitiveDataSourceTypeSecretRef indicates that the data is sourced from a Kubernetes Secret.<br /> |
+
+#### TokenVaultDatastore
+
+
+TokenVaultDatastore is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[TokenVaultDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-tokenvaultdatastoreconfig)_ |  |
+| `description` _string_ | The description of the Datastore. |
+| `displayName` _string_ | The display name for this Datastore. |
+| `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayDatastoreName](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastorename)_ | A user-defined unique identifier for this Datastore, used as a stable human-readable reference. This value is immutable after creation. |
+
+_Appears in:_
+
+- [AIGatewayDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreconfig)
+
+#### TokenVaultDatastoreConfig
+
+
+TokenVaultDatastoreConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `currentVersion` _string_ | The version of the encryption key used to encrypt new tokens. |
+| `directory` _string_ | The name of the directory in which tokens are stored. |
+| `keys` _[][TokenVaultDatastoreKey](#aiconfiguration-konghq-com-v1alpha1-types-tokenvaultdatastorekey)_ | The encryption keys used to protect stored tokens. Keep previous versions in the list so existing tokens can still be decrypted. |
+
+_Appears in:_
+
+- [TokenVaultDatastore](#aiconfiguration-konghq-com-v1alpha1-types-tokenvaultdatastore)
+
+#### TokenVaultDatastoreKey
+
+
+TokenVaultDatastoreKey is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `key` _string_ | A [vault reference](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault) to the encryption key. A literal key value is rejected. |
+| `version` _string_ | The identifier of this key version. |
+
+_Appears in:_
+
+- [TokenVaultDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-tokenvaultdatastoreconfig)
+
+#### VectorDBDatastore
+
+
+VectorDBDatastore Carries the pgvector connection only.
+`strategy`, `dimensions`, `distance_metric`, and `threshold`
+belong to the policy or model referencing this Datastore, not the Datastore
+itself.
+
+
+
+| Field | Description |
+| --- | --- |
+| `config` _[VectorDBDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-vectordbdatastoreconfig)_ |  |
+| `description` _string_ | The description of the Datastore. |
+| `displayName` _string_ | The display name for this Datastore. |
+| `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayDatastoreName](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastorename)_ | A user-defined unique identifier for this Datastore, used as a stable human-readable reference. This value is immutable after creation. |
+
+_Appears in:_
+
+- [AIGatewayDatastoreConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydatastoreconfig)
+
+#### VectorDBDatastoreConfig
+
+
+VectorDBDatastoreConfig is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `database` _string_ |  |
+| `host` _string_ |  |
+| `password` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ |  |
+| `port` _int_ |  |
+| `ssl` _string_ |  |
+| `sslCert` _*string_ |  |
+| `sslCertKey` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ |  |
+| `sslRequired` _string_ |  |
+| `sslVerify` _string_ |  |
+| `sslVersion` _string_ |  |
+| `timeout` _int_ | Timeout in milliseconds for connecting, reading, and writing to the database. |
+| `user` _string_ |  |
+
+_Appears in:_
+
+- [VectorDBDatastore](#aiconfiguration-konghq-com-v1alpha1-types-vectordbdatastore)
 
 ## aigateway.konghq.com/v1alpha1
 
@@ -21225,6 +22247,7 @@ KonnectAIGatewayAPISpec defines the API spec fields for KonnectAIGateway.
 | `description` _string_ | The description of the AI Gateway. |
 | `displayName` _string_ | The display name for this AI Gateway. |
 | `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `minRuntimeVersion` _[AIGatewayMinRuntimeVersion](#konnect-konghq-com-v1alpha1-types-aigatewayminruntimeversion)_ | The minimum AI Gateway runtime version supported by this AI Gateway. This is the lowest data plane version that may receive configuration from it, and it controls which features the API accepts.<br /><br />Data planes older than this version still connect for topology visibility.<br /><br />When not specified, the latest generally available runtime version is used.<br /><br />When runtime_auto_upgrade is enabled (the default), this value is raised automatically to track the minimum runtime version reported across connected data planes, so any value set here may be superseded as the fleet upgrades. |
 | `name` _string_ | The name for this AI Gateway. This value is immutable after creation. |
 | `proxyUrls` _[][AIGatewayProxyURL](#konnect-konghq-com-v1alpha1-types-aigatewayproxyurl)_ | Array of proxy URLs associated with reaching the data-planes connected to a control-plane. |
@@ -22161,6 +23184,33 @@ MCPServerStatus defines the observed state of MCPServer.
 _Appears in:_
 
 - [MCPServer](#konnect-konghq-com-v1alpha1-mcpserver)
+
+#### ManagedBy
+
+_Underlying type:_ `[map[string]ManagedByValue](#map[string]managedbyvalue)`
+
+ManagedBy Stores information about what manages this entity, such as the tool
+or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character.
+
+
+
+
+_Appears in:_
+
+- [KonnectAIGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnectaigatewayapispec)
+
+#### ManagedByValue
+
+_Underlying type:_ `string`
+
+ManagedByValue is the value type for ManagedBy.
+
+
+
+
+_Appears in:_
+
+- [ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)
 
 #### Menu
 

@@ -47,6 +47,11 @@ func (*AIGatewayDataPlaneCertificate) PersistsKonnectID() bool {
 	return true
 }
 
+// PersistsKonnectID reports whether AIGatewayDatastore persists a Konnect ID in status.
+func (*AIGatewayDatastore) PersistsKonnectID() bool {
+	return true
+}
+
 // PersistsKonnectID reports whether AIGatewayMCPServer persists a Konnect ID in status.
 func (*AIGatewayMCPServer) PersistsKonnectID() bool {
 	return true

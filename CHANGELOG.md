@@ -637,6 +637,18 @@
   TLS Passthrough Listeners ignore certificate references without creating or
   waiting for certificate bindings.
   [#6233](https://github.com/Kong/kong-operator/pull/6233)
+- Added `AIGatewayDatastore` CRD: a datastore that AI Gateway entities share.
+  The backend is Redis CE (`redis-ce`), Redis EE (`redis-ee`), a vector
+  database (`vectordb`) or a token vault (`token-vault`). `spec.apiSpec.type`
+  selects the backend, and the field named after it holds that backend's
+  configuration. Each write-only credential can be given inline or read from a
+  Kubernetes Secret. Those credentials are the Redis passwords, the vector
+  database password and TLS private key, and the cloud Redis credentials.
+  `name` and `type` cannot change after creation, as Konnect requires. The
+  entity is reconciled for a `KonnectAIGateway`. A policy or a model cannot
+  reference an `AIGatewayDatastore` yet: the generated `datastores` field of
+  those entities still takes Konnect names.
+  [#6375](https://github.com/Kong/kong-operator/issues/6375)
 
 ### Changed
 
