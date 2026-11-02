@@ -913,7 +913,14 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 		require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
 		require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
 
-		builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...)
+		// The fake tracker stamps resource versions into the objects it is
+		// given, so parallel subtests must not share a fixture.
+		objs := make([]client.Object, 0, len(objects))
+		for _, obj := range objects {
+			objs = append(objs, obj.DeepCopyObject().(client.Object))
+		}
+
+		builder := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...)
 		for _, opts := range [][]index.Option{
 			index.OptionsForAIGatewayModel(),
 			index.OptionsForAIGatewayModelProvider(),
