@@ -240,6 +240,20 @@ func checkTranslatedACLs(translated translatedNames, acls aigw.ACLs) error {
 	)
 }
 
+// checkTranslatedDatastores is checkTranslatedRefs for the datastore references, which the caller
+// passes as the referencing CR's datastore keys (see translatedDatastores).
+func checkTranslatedDatastores(translated map[string]struct{}, keys []client.ObjectKey) error {
+	for _, key := range keys {
+		if _, ok := translated[key.String()]; !ok {
+			return fmt.Errorf(
+				"referenced AIGatewayDatastore %s was excluded from the document: its own translation failed",
+				key,
+			)
+		}
+	}
+	return nil
+}
+
 // modelAliases mirrors ai-deck-converter's extractModelAliases: the model selector's
 // values when set, the model's entity name otherwise. The converter renders one
 // ai_models entity per alias, named after it, so these are the names the data plane
@@ -324,6 +338,12 @@ func BuildDocument(
 	// translateKind put into the statuses).
 	translatedMCPCRByName := make(map[string]client.Object)
 
+	// translatedDatastores holds the CR keys (namespace/name) of the datastores that translated
+	// successfully, unlike the other sets, which hold entity names: a datastore is referenced
+	// through its CR, so the referencing entity's own CR refs are what the check needs, and the
+	// status message names the CR the user must fix.
+	translatedDatastores := make(map[string]struct{})
+
 	// credentialStatuses holds the per-credential outcome collected while translating the
 	// consumers: credentials are not a document kind of their own (they are nested in their
 	// parent consumer), so no translateKind call reports them.
@@ -356,20 +376,53 @@ func BuildDocument(
 	// translated-name sets being complete by then. The one same-kind dependency
 	// (MCPServer -> MCPServer sources) can't be ordered this way, hence the post-pass below.
 	for _, translate := range []func(context.Context) ([]EntityStatus, error){
+		translateKind[aiconfigurationv1alpha1.AIGatewayDatastoreList](
+			cl, gw, index.IndexFieldAIGatewayDatastoreOnOnPremAIGatewayRef,
+			func(d *aiconfigurationv1alpha1.AIGatewayDatastore, ctx context.Context, cl client.Client) (*aigw.Datastore, error) {
+				datastore, err := d.ToAIGWDatastore(ctx, cl)
+				if err != nil {
+					return nil, err
+				}
+				// The converter resolves a datastore reference by name, into one map, so two
+				// datastores sharing a name would silently leave the later one unreachable.
+				if slices.ContainsFunc(doc.Datastores, func(other aigw.Datastore) bool {
+					return other.Name == datastore.Name
+				}) {
+					return nil, fmt.Errorf(
+						"duplicate datastore name %q: entity names must be unique across AIGatewayDatastore CRs, because the referencing entities resolve a datastore by name",
+						datastore.Name,
+					)
+				}
+				translatedDatastores[client.ObjectKeyFromObject(d).String()] = struct{}{}
+				return datastore, nil
+			},
+			&doc.Datastores),
 		translateKind[aiconfigurationv1alpha1.AIGatewayModelProviderList](
 			cl, gw, index.IndexFieldAIGatewayModelProviderOnOnPremAIGatewayRef,
 			func(p *aiconfigurationv1alpha1.AIGatewayModelProvider, ctx context.Context, cl client.Client) (*aigw.Provider, error) {
 				provider, err := p.ToAIGWProvider(ctx, cl)
+				if err == nil {
+					err = checkTranslatedDatastores(translatedDatastores, aiconfigurationv1alpha1.AIGatewayModelProviderRefsToAIGatewayDatastore(p))
+				}
 				translatedModelProviders.record(p.GetKonnectName(), err)
-				return provider, err
+				if err != nil {
+					return nil, err
+				}
+				return provider, nil
 			},
 			&doc.ModelProviders),
 		translateKind[aiconfigurationv1alpha1.AIGatewayPolicyList](
 			cl, gw, index.IndexFieldAIGatewayPolicyOnOnPremAIGatewayRef,
 			func(p *aiconfigurationv1alpha1.AIGatewayPolicy, ctx context.Context, cl client.Client) (*aigw.Policy, error) {
 				policy, err := p.ToAIGWPolicy(ctx, cl)
+				if err == nil {
+					err = checkTranslatedDatastores(translatedDatastores, aiconfigurationv1alpha1.AIGatewayPolicyRefsToAIGatewayDatastore(p))
+				}
 				translatedPolicies.record(p.GetKonnectName(), err)
-				return policy, err
+				if err != nil {
+					return nil, err
+				}
+				return policy, nil
 			},
 			&doc.Policies),
 		translateKind[aiconfigurationv1alpha1.AIGatewayCustomPolicyList](
@@ -393,8 +446,14 @@ func BuildDocument(
 			cl, gw, index.IndexFieldAIGatewayAuthStrategyOnOnPremAIGatewayRef,
 			func(a *aiconfigurationv1alpha1.AIGatewayAuthStrategy, ctx context.Context, cl client.Client) (*aigw.AuthStrategy, error) {
 				authStrategy, err := a.ToAIGWAuthStrategy(ctx, cl)
+				if err == nil {
+					err = checkTranslatedDatastores(translatedDatastores, aiconfigurationv1alpha1.AIGatewayAuthStrategyRefsToAIGatewayDatastore(a))
+				}
 				translatedAuthStrategies.record(a.GetKonnectName(), err)
-				return authStrategy, err
+				if err != nil {
+					return nil, err
+				}
+				return authStrategy, nil
 			},
 			&doc.AuthStrategies),
 		translateKind[aiconfigurationv1alpha1.AIGatewayModelList](
@@ -408,6 +467,7 @@ func BuildDocument(
 					checkTranslatedRefs(translatedPolicies, "AIGatewayPolicy", model.Policies),
 					checkTranslatedRefs(translatedAuthStrategies, "AIGatewayAuthStrategy", model.Access.AuthStrategies),
 					checkTranslatedACLs(translatedConsumerGroups, model.Access.ACLs),
+					checkTranslatedDatastores(translatedDatastores, aiconfigurationv1alpha1.AIGatewayModelRefsToAIGatewayDatastore(m)),
 				); err != nil {
 					return nil, err
 				}
@@ -495,6 +555,7 @@ func BuildDocument(
 					checkTranslatedACLs(translatedConsumerGroups, mcpServer.Access.ACLs),
 					checkTranslatedACLs(translatedConsumerGroups, mcpServer.Access.DefaultToolACLs),
 					checkTranslatedRefs(translatedAuthStrategies, "AIGatewayAuthStrategy", mcpServer.Access.AuthStrategies),
+					checkTranslatedDatastores(translatedDatastores, aiconfigurationv1alpha1.AIGatewayMCPServerRefsToAIGatewayDatastore(s)),
 				); err != nil {
 					return nil, err
 				}

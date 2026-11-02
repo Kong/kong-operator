@@ -158,7 +158,6 @@ func TestAIGatewayPolicy_ToAIGWPolicy(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			got.Datastores = nil
 			require.Equal(t, tt.want, got)
 		})
 	}

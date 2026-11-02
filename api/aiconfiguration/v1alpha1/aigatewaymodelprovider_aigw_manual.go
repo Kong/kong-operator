@@ -15,9 +15,8 @@ import (
 
 // ToAIGWProvider converts the AIGatewayModelProvider into ai-deck-converter's aigw.Provider.
 //
-// Unlike AIGatewayModel.ToAIGWModel, no reference resolution is needed: a provider carries
-// no cross-entity references (its auth is inline), so the client is only used for secretRef
-// resolution.
+// The client resolves the config's secretRefs and the token-vault datastore references (a
+// provider's only cross-entity references: its auth is inline).
 func (obj *AIGatewayModelProvider) ToAIGWProvider(ctx context.Context, cl client.Client) (*aigw.Provider, error) {
 	spec := &obj.Spec.APISpec
 	if spec.AIGatewayModelProviderConfig == nil {
@@ -44,6 +43,10 @@ func (obj *AIGatewayModelProvider) ToAIGWProvider(ctx context.Context, cl client
 	if err := yaml.Unmarshal(data, &provider); err != nil {
 		return nil, fmt.Errorf("decoding AIGatewayModelProvider %s/%s as aigw.Provider: %w", obj.Namespace, obj.Name, err)
 	}
+
+	if err := resolveDatastoreRefs(ctx, cl, obj.Namespace, AIGatewayModelProviderRefsToAIGatewayDatastore(obj), &provider.Datastores); err != nil {
+		return nil, fmt.Errorf("resolving AIGatewayModelProvider %s/%s datastores: %w", obj.Namespace, obj.Name, err)
+	}
 	return &provider, nil
 }
 
@@ -63,6 +66,9 @@ func (spec *AIGatewayModelProviderAPISpec) marshalAIGWProviderPayload() ([]byte,
 
 	// Konnect-only bookkeeping: no on-prem equivalent.
 	delete(cfg, "managed_by")
+	// Carries {kind,name} CR references; aigw wants plain resolved names. Stripped here,
+	// re-attached resolved in ToAIGWProvider.
+	delete(cfg, "datastores")
 
 	// The selected variant payload already carries the discriminator as its top-level "type"
 	// (selectedSDKOpsPayload copies it in), which is exactly aigw.Provider.Type.

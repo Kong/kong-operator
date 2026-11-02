@@ -83581,7 +83581,6 @@ rules:
   - aigatewaycustompolicies/finalizers
   - aigatewaydataplanecertificates/finalizers
   - aigatewaydatastores/finalizers
-  - aigatewaydatastores/status
   - aigatewaymcpservers/finalizers
   - aigatewaymodelproviders/finalizers
   - aigatewaymodels/finalizers
@@ -83602,6 +83601,7 @@ rules:
   - aigatewayconsumers/status
   - aigatewaycustompolicies/status
   - aigatewaydataplanecertificates/status
+  - aigatewaydatastores/status
   - aigatewaymcpservers/status
   - aigatewaymodelproviders/status
   - aigatewaymodels/status

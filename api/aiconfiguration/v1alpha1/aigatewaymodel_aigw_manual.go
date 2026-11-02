@@ -101,6 +101,10 @@ func (obj *AIGatewayModel) ToAIGWModel(ctx context.Context, cl client.Client) (*
 		return nil, fmt.Errorf("resolving AIGatewayModel %s/%s policies: %w", obj.Namespace, obj.Name, err)
 	}
 
+	if err := resolveDatastoreRefs(ctx, cl, obj.Namespace, AIGatewayModelRefsToAIGatewayDatastore(obj), &model.Datastores); err != nil {
+		return nil, fmt.Errorf("resolving AIGatewayModel %s/%s datastores: %w", obj.Namespace, obj.Name, err)
+	}
+
 	authStrategies, err := resolveEntityNames[AIGatewayAuthStrategy](ctx, cl, obj.Namespace, authStrategyRefs(access.AuthStrategies))
 	if err != nil {
 		return nil, fmt.Errorf("resolving AIGatewayModel %s/%s access.authStrategies: %w", obj.Namespace, obj.Name, err)
@@ -194,6 +198,7 @@ func (spec *AIGatewayModelAPISpec) marshalAIGWPayload() ([]byte, error) {
 	// These carry {kind,name} CR references; aigw wants plain resolved names. Stripped here,
 	// re-attached typed in ToAIGWModel.
 	delete(cfg, "policies")
+	delete(cfg, "datastores")
 	if a, ok := cfg["access"].(map[string]any); ok {
 		delete(a, "auth_strategies")
 		delete(a, "acls")

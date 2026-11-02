@@ -42,6 +42,10 @@ func (obj *AIGatewayPolicy) ToAIGWPolicy(ctx context.Context, cl client.Client) 
 		return nil, fmt.Errorf("decoding AIGatewayPolicy %s/%s as aigw.Policy: %w", obj.Namespace, obj.Name, err)
 	}
 
+	if err := resolveDatastoreRefs(ctx, cl, obj.Namespace, AIGatewayPolicyRefsToAIGatewayDatastore(obj), &policy.Datastores); err != nil {
+		return nil, fmt.Errorf("resolving AIGatewayPolicy %s/%s datastores: %w", obj.Namespace, obj.Name, err)
+	}
+
 	if ref := obj.Spec.APISpec.CustomPolicyRef; ref.Name != "" {
 		if policy.Type != "" {
 			return nil, fmt.Errorf("AIGatewayPolicy %s/%s: type and customPolicyRef are mutually exclusive", obj.Namespace, obj.Name)
@@ -89,5 +93,8 @@ func (spec *AIGatewayPolicyAPISpec) marshalAIGWPolicyPayload() ([]byte, error) {
 	}
 	// Konnect-only bookkeeping: no on-prem equivalent.
 	delete(cfg, "managed_by")
+	// Carries {kind,name} CR references; aigw wants plain resolved names. Stripped here,
+	// re-attached resolved in ToAIGWPolicy.
+	delete(cfg, "datastores")
 	return json.Marshal(cfg)
 }
