@@ -31,7 +31,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -39,10 +41,30 @@ import (
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
+	"github.com/kong/kong-operator/v2/internal/utils/policychain"
 )
 
 // onPremEventGatewayGVK is the GroupVersionKind of OnPremEventGateway.
 var onPremEventGatewayGVK = eventgatewayv1alpha1.SchemeGroupVersion.WithKind("OnPremEventGateway")
+
+func entityChanged() predicate.Predicate {
+	return predicate.Or(predicate.GenerationChangedPredicate{}, predicate.Funcs{
+		CreateFunc:  func(event.CreateEvent) bool { return false },
+		DeleteFunc:  func(event.DeleteEvent) bool { return false },
+		GenericFunc: func(event.GenericEvent) bool { return false },
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			// A terminating policy or chain is unusable before its finalizers
+			// are removed. A claim is metadata, not a generation change.
+			switch e.ObjectNew.(type) {
+			case *configurationv1alpha1.EventGatewayVirtualClusterPolicy, *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain:
+				return !e.ObjectOld.GetDeletionTimestamp().Equal(e.ObjectNew.GetDeletionTimestamp())
+			case *configurationv1alpha1.EventGatewayVirtualCluster:
+				return e.ObjectOld.GetAnnotations()[policychain.OwnerAnnotation] != e.ObjectNew.GetAnnotations()[policychain.OwnerAnnotation]
+			}
+			return false
+		},
+	})
+}
 
 // entityWithParent is an entity that can name its parent.
 type entityWithParent interface {
@@ -72,6 +94,30 @@ func mapEntityToOnPremEventGateway(cl client.Client) handler.MapFunc {
 			return nil
 		}
 		return []reconcile.Request{{NamespacedName: gateway}}
+	}
+}
+
+// mapClusterPolicyToChainGateways also rebuilds gateways referencing a policy
+// with a different parent, including a policy deleted and recreated there.
+func mapClusterPolicyToChainGateways(cl client.Client) handler.MapFunc {
+	toGateway := mapEntityToOnPremEventGateway(cl)
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		var chains configurationv1alpha1.EventGatewayVirtualClusterPolicyChainList
+		if err := cl.List(ctx, &chains, client.MatchingFields{
+			index.IndexFieldEventGatewayVirtualClusterPolicyChainOnEventGatewayVirtualClusterPolicyRef: client.ObjectKeyFromObject(obj).String(),
+		}); err != nil {
+			ctrl.LoggerFrom(ctx).Error(err, "failed to list cluster policy chains referencing a policy", "policy", client.ObjectKeyFromObject(obj))
+			return onPremEventGatewaysIn(ctx, cl, obj.GetNamespace())
+		}
+		var requests []reconcile.Request
+		for i := range chains.Items {
+			for _, req := range toGateway(ctx, &chains.Items[i]) {
+				if !slices.Contains(requests, req) {
+					requests = append(requests, req)
+				}
+			}
+		}
+		return requests
 	}
 }
 

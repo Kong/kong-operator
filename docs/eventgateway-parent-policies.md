@@ -13,7 +13,7 @@ the child's namespace). Cross-namespace parent references are rejected during
 reference resolution (`KonnectReferencesResolved=False`).
 
 | Child policy type | `parentPolicyRef` |
-|-------------------|-------------------|
+| ----------------- | ----------------- |
 | Produce `encryptFields` | Required |
 | Consume `decryptFields` | Required |
 | Produce or consume `modifyHeaders` | Optional |
@@ -233,9 +233,77 @@ Deleting the chain CR releases ownership and stops management. It preserves the
 remote chain and all policy objects, even if authentication or referenced policies
 are no longer available; it does not PUT an empty list or delete policies.
 
-This controller supports Konnect only. Policy chains are not registered with
-the on-prem Event Gateway controller; on-prem ordering and gw-admin application
-are outside this layer's scope.
+### On-prem reconciliation
+
+The same chain API also applies to an `EventGatewayVirtualCluster` whose backend
+cluster references an `OnPremEventGateway`. The chain is configuration on that
+virtual cluster, not a gw-admin entity. Its policy references resolve to the
+policies' Kubernetes UIDs in the complete gw-admin document; neither Konnect
+authentication, Konnect IDs nor a policy's previous `Programmed` condition is
+required. `status.id` remains unset.
+
+For example, after creating cluster-level policy CRs named `validate-requests`
+and `authorize` for the on-prem virtual cluster `vc`, declare their order with:
+
+```yaml
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterPolicyChain
+metadata:
+  name: cluster-order
+  namespace: default
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: vc
+  apiSpec:
+    policies:
+      - name: validate-requests
+      - name: authorize
+```
+
+List **every live cluster-level policy CR** for that virtual cluster, in its
+namespace, exactly once. An empty list is valid only when there are no such
+policies. A policy rejected during configuration assembly does not disappear
+from this complete-set requirement and cannot satisfy a reference. Missing,
+terminating, duplicate, wrong-kind, wrong-parent or cross-namespace policy
+references are invalid; references are never silently skipped.
+
+Ownership uses the same UID-bound parent annotation as Konnect, without claiming
+that a local ownership claim means the chain is programmed remotely. An existing
+owner is retained across updates and operator restarts. When there is no owner,
+the earliest-created eligible chain claims the parent (ties use resource names).
+Competing chains report `PolicyChainOwnerValid=False` with reason
+`ConflictingChain` and `Programmed=False`; they do not prevent a valid owner from
+being applied. Stale claims, including an owner deleted and recreated with another
+UID, can be replaced. A terminating owner releases its on-prem claim without
+waiting for its finalizers.
+
+An invalid owning declaration reports `Programmed=False` on the chain and
+`Programmed=False` / `ConfigurationPushed=False` with reason `InvalidPolicyChain`
+on the gateway. **No new document or configuration revision is applied for that
+gateway until the declaration is repaired or removed.** This also pauses
+unrelated changes and certificate updates on that gateway: gw-admin replaces
+the entire document, so neither omitting the virtual cluster nor silently using
+default policy ordering would preserve the declared configuration. Already
+running pods retain their last document; new or restarted pods cannot be
+provisioned from the invalid declaration. GWAdmin access revocation and gateway
+deletion still perform their normal cleanup.
+
+Chain changes and policy creation, updates, termination, deletion and same-name
+recreation trigger a rebuild. A pure order change changes the configuration hash
+and revision and is pushed to gw-admin. Reconciliation also detects and corrects
+ordering drift within explicitly managed cluster-policy scopes. Listener,
+consume and produce ordering, and comparison behavior for virtual clusters
+without a chain, remain unchanged.
+
+Deleting the chain releases its ownership and rebuilds the complete document
+using the existing default order: policy creation timestamp, then resource name.
+It deletes neither policy CRs nor their entities. Unlike Konnect's retain-on-delete
+behavior, on-prem does not preserve the last remote order or cache a historical
+ordering. After adding or deleting policy CRs, update the declaration to match;
+until then, an incomplete declaration or a reference to a deleted policy pauses
+the gateway's configuration updates.
 
 ## Listener policy-chain API
 

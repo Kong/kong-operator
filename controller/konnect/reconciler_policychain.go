@@ -3,7 +3,6 @@ package konnect
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -16,9 +15,10 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
+	"github.com/kong/kong-operator/v2/internal/utils/policychain"
 )
 
-const policyChainOwnerAnnotation = "gateway-operator.konghq.com/cluster-policy-chain-owner"
+const policyChainOwnerAnnotation = policychain.OwnerAnnotation
 
 type policyChainReferenceResolver struct {
 	*configurationv1alpha1.EventGatewayVirtualClusterPolicyChain
@@ -34,7 +34,7 @@ func (r *policyChainReferenceResolver) ResolveKonnectReferences(ctx context.Cont
 }
 
 func policyChainOwnerClaim(chain *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain) string {
-	return chain.Name + "/" + string(chain.UID)
+	return policychain.ClaimValue(chain)
 }
 
 func finalizePolicyChain(ctx context.Context, cl client.Client, chain *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain) (ctrl.Result, error) {
@@ -81,57 +81,26 @@ func finalizePolicyChain(ctx context.Context, cl client.Client, chain *configura
 // claimPolicyChain serializes ownership on the parent with an optimistic-lock
 // patch. A cached list of chains alone cannot prevent simultaneous claimants.
 func claimPolicyChain(ctx context.Context, cl client.Client, chain *configurationv1alpha1.EventGatewayVirtualClusterPolicyChain, syncPeriod time.Duration) (bool, ctrl.Result, error) {
-	ref := chain.Spec.EventGatewayVirtualClusterRef.NamespacedRef
-	if ref == nil || ref.Name == "" || (ref.Namespace != nil && *ref.Namespace != "" && *ref.Namespace != chain.Namespace) {
-		return false, ctrl.Result{}, configurationv1alpha1.PolicyChainInvalidError{Message: "policy-chain ownership requires a same-namespace EventGatewayVirtualCluster reference"}
-	}
-	if chain.UID == "" {
-		return false, ctrl.Result{}, fmt.Errorf("policy chain %s has no Kubernetes UID", client.ObjectKeyFromObject(chain))
-	}
-	var parent configurationv1alpha1.EventGatewayVirtualCluster
-	if err := cl.Get(ctx, client.ObjectKey{Namespace: chain.Namespace, Name: ref.Name}, &parent); err != nil {
+	owner, err := policychain.Claim(ctx, cl, chain)
+	if err != nil {
+		if apierrors.IsConflict(err) {
+			return false, ctrl.Result{Requeue: true}, nil
+		}
 		return false, ctrl.Result{}, err
 	}
-	claim := policyChainOwnerClaim(chain)
-	owner := parent.Annotations[policyChainOwnerAnnotation]
-	if owner != "" && owner != claim {
-		name, uid, valid := strings.Cut(owner, "/")
-		var existing configurationv1alpha1.EventGatewayVirtualClusterPolicyChain
-		claimed := false
-		if valid && name != "" && uid != "" {
-			err := cl.Get(ctx, client.ObjectKey{Namespace: chain.Namespace, Name: name}, &existing)
-			if err != nil && !apierrors.IsNotFound(err) {
-				return false, ctrl.Result{}, err
-			}
-			claimed = err == nil && string(existing.UID) == uid
+	if owner != "" {
+		res, err := patch.StatusWithCondition(ctx, cl, chain,
+			apiconsts.ConditionType("PolicyChainOwnerValid"), metav1.ConditionFalse,
+			apiconsts.ConditionReason("ConflictingChain"),
+			fmt.Sprintf("EventGatewayVirtualCluster %s is owned by policy chain %s; delete that chain before claiming it", chain.Spec.EventGatewayVirtualClusterRef.NamespacedRef.Name, owner))
+		if err != nil || !res.IsZero() {
+			return false, res, err
 		}
-		if claimed {
-			res, err := patch.StatusWithCondition(ctx, cl, chain,
-				apiconsts.ConditionType("PolicyChainOwnerValid"), metav1.ConditionFalse,
-				apiconsts.ConditionReason("ConflictingChain"),
-				fmt.Sprintf("EventGatewayVirtualCluster %s is owned by policy chain %s; delete that chain before claiming it", ref.Name, name))
-			if err != nil || !res.IsZero() {
-				return false, res, err
-			}
-			res, err = patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, cl, chain)
-			if err != nil || !res.IsZero() {
-				return false, res, err
-			}
-			return false, ctrl.Result{RequeueAfter: syncPeriod}, nil
+		res, err = patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, cl, chain)
+		if err != nil || !res.IsZero() {
+			return false, res, err
 		}
-	}
-	if owner != claim {
-		old := parent.DeepCopy()
-		if parent.Annotations == nil {
-			parent.Annotations = make(map[string]string)
-		}
-		parent.Annotations[policyChainOwnerAnnotation] = claim
-		if err := cl.Patch(ctx, &parent, client.MergeFromWithOptions(old, client.MergeFromWithOptimisticLock{})); err != nil {
-			if apierrors.IsConflict(err) {
-				return false, ctrl.Result{Requeue: true}, nil
-			}
-			return false, ctrl.Result{}, fmt.Errorf("claiming policy chain on virtual cluster: %w", err)
-		}
+		return false, ctrl.Result{RequeueAfter: syncPeriod}, nil
 	}
 	res, err := patch.StatusWithCondition(ctx, cl, chain,
 		apiconsts.ConditionType("PolicyChainOwnerValid"), metav1.ConditionTrue,

@@ -1661,7 +1661,6 @@ apiGroupVersions:
           update:
             path: github.com/Kong/sdk-konnect-go/models/operations.UpdateEventGatewayVirtualClusterClusterLevelPolicyChainRequest
         reconciler:
-          skipOnPremEventGateway: true
           parentEntityGVK:
             kind: EventGatewayVirtualCluster
           ancestorEntityGVKs:
