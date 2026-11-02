@@ -165,6 +165,21 @@ type LabelsUpdateValue string
 // +kubebuilder:validation:MaxProperties=50
 type LabelsUpdate map[string]LabelsUpdateValue
 
+// ManagedByValue is the value type for ManagedBy.
+//
+// +kubebuilder:validation:MinLength=1
+// +kubebuilder:validation:MaxLength=63
+// +kubebuilder:validation:Pattern=`^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$`
+type ManagedByValue string
+
+// ManagedBy Stores information about what manages this entity, such as the tool
+// or system responsible for its lifecycle (for example, `terraform`).
+//
+// Keys must be 1–63 characters long and start with an alphanumeric character.
+//
+// +kubebuilder:validation:MaxProperties=5
+type ManagedBy map[string]ManagedByValue
+
 // MinRuntimeVersion The minimum runtime version supported by the API.
 // This is the lowest version of the data plane
 // release that can be used with the entity model.

@@ -163,6 +163,19 @@ spec:
                             - Disabled
                             type: string
                         type: object
+                      datastores:
+                        items:
+                          properties:
+                            name:
+                              maxLength: 255
+                              minLength: 2
+                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        maxItems: 1
+                        type: array
                       displayName:
                         maxLength: 256
                         minLength: 1
@@ -632,6 +645,12 @@ spec:
                             items:
                               type: string
                             type: array
+                          credentialClaims:
+                            items:
+                              items:
+                                type: string
+                              type: array
+                            type: array
                           disableSession:
                             items:
                               type: string
@@ -965,6 +984,18 @@ spec:
                                 - Enabled
                                 - Disabled
                                 type: string
+                              jit:
+                                properties:
+                                  allClaims:
+                                    enum:
+                                    - Enabled
+                                    - Disabled
+                                    type: string
+                                  claims:
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
                               matchConsumer:
                                 enum:
                                 - Enabled
@@ -1003,6 +1034,27 @@ spec:
                             - strict
                             maxLength: 253
                             type: string
+                          protectedResourceMetadata:
+                            properties:
+                              authorizationServers:
+                                items:
+                                  type: string
+                                type: array
+                              metadataEndpoint:
+                                maxLength: 253
+                                type: string
+                              resource:
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              scopesSupported:
+                                items:
+                                  type: string
+                                type: array
+                            required:
+                            - authorizationServers
+                            - resource
+                            type: object
                           pushedAuthorizationRequestEndpoint:
                             maxLength: 253
                             type: string
@@ -1431,8 +1483,45 @@ spec:
                                   ttl:
                                     type: integer
                                 type: object
+                              grantType:
+                                enum:
+                                - jwt_bearer
+                                - token_exchange
+                                maxLength: 253
+                                type: string
+                              mapIdentitiesFrom:
+                                enum:
+                                - exchanged_tokens
+                                - subject_token
+                                maxLength: 253
+                                type: string
+                              provider:
+                                enum:
+                                - microsoft
+                                - standard
+                                maxLength: 253
+                                type: string
                               request:
                                 properties:
+                                  actorToken:
+                                    properties:
+                                      headerName:
+                                        maxLength: 253
+                                        type: string
+                                      source:
+                                        enum:
+                                        - config
+                                        - header
+                                        - none
+                                        maxLength: 253
+                                        type: string
+                                      staticToken:
+                                        maxLength: 253
+                                        type: string
+                                      type:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
                                   audience:
                                     items:
                                       type: string
@@ -1442,11 +1531,37 @@ spec:
                                     - Enabled
                                     - Disabled
                                     type: string
+                                  emptyHeaders:
+                                    enum:
+                                    - Enabled
+                                    - Disabled
+                                    type: string
+                                  emptyPostArgs:
+                                    enum:
+                                    - Enabled
+                                    - Disabled
+                                    type: string
                                   emptyScopes:
                                     enum:
                                     - Enabled
                                     - Disabled
                                     type: string
+                                  headersNames:
+                                    items:
+                                      type: string
+                                    type: array
+                                  headersValues:
+                                    items:
+                                      type: string
+                                    type: array
+                                  postArgsNames:
+                                    items:
+                                      type: string
+                                    type: array
+                                  postArgsValues:
+                                    items:
+                                      type: string
+                                    type: array
                                   scopes:
                                     items:
                                       type: string
@@ -1474,9 +1589,22 @@ spec:
                                             type: string
                                           type: array
                                       type: object
+                                    denyOnMismatch:
+                                      enum:
+                                      - Enabled
+                                      - Disabled
+                                      type: string
                                     issuer:
                                       maxLength: 253
                                       minLength: 1
+                                      type: string
+                                    jwksURI:
+                                      maxLength: 253
+                                      type: string
+                                    verifySignature:
+                                      enum:
+                                      - Enabled
+                                      - Disabled
                                       type: string
                                   required:
                                   - issuer
@@ -1655,6 +1783,19 @@ spec:
                         - cacheTokensSalt
                         - issuer
                         type: object
+                      datastores:
+                        items:
+                          properties:
+                            name:
+                              maxLength: 255
+                              minLength: 2
+                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        maxItems: 1
+                        type: array
                       displayName:
                         maxLength: 256
                         minLength: 1
@@ -1680,6 +1821,14 @@ spec:
                         minLength: 1
                         pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
+                      tokenVault:
+                        properties:
+                          enableCredentialManager:
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                        type: object
                     required:
                     - displayName
                     - name

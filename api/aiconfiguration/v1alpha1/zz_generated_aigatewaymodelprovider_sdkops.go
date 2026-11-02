@@ -22,6 +22,48 @@ type AIGatewayModelProviderSDKOpsBoolField struct {
 // AIGatewayModelProviderSDKOpsBoolFields lists all boolean enum fields that must be normalized for SDK payloads.
 var AIGatewayModelProviderSDKOpsBoolFields = []AIGatewayModelProviderSDKOpsBoolField{
 	{
+		Label: "anthropic.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"anthropic",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "anthropic.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"anthropic",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "anthropic.token_vault.cache.redis.ssl",
+		Path: []string{
+			"anthropic",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "anthropic.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"anthropic",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
 		Label: "azure.config.auth.azure.use_managed_identity",
 		Path: []string{
 			"azure",
@@ -32,6 +74,342 @@ var AIGatewayModelProviderSDKOpsBoolFields = []AIGatewayModelProviderSDKOpsBoolF
 		},
 	},
 	{
+		Label: "azure.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"azure",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "azure.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"azure",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "azure.token_vault.cache.redis.ssl",
+		Path: []string{
+			"azure",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "azure.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"azure",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "baseten.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"baseten",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "baseten.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"baseten",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "baseten.token_vault.cache.redis.ssl",
+		Path: []string{
+			"baseten",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "baseten.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"baseten",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "bedrock.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"bedrock",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "bedrock.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"bedrock",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "bedrock.token_vault.cache.redis.ssl",
+		Path: []string{
+			"bedrock",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "bedrock.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"bedrock",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "cerebras.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"cerebras",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "cerebras.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"cerebras",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "cerebras.token_vault.cache.redis.ssl",
+		Path: []string{
+			"cerebras",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "cerebras.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"cerebras",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "cohere.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"cohere",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "cohere.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"cohere",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "cohere.token_vault.cache.redis.ssl",
+		Path: []string{
+			"cohere",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "cohere.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"cohere",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "dashscope.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"dashscope",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "dashscope.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"dashscope",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "dashscope.token_vault.cache.redis.ssl",
+		Path: []string{
+			"dashscope",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "dashscope.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"dashscope",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "databricks.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"databricks",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "databricks.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"databricks",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "databricks.token_vault.cache.redis.ssl",
+		Path: []string{
+			"databricks",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "databricks.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"databricks",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "deepseek.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"deepseek",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "deepseek.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"deepseek",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "deepseek.token_vault.cache.redis.ssl",
+		Path: []string{
+			"deepseek",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "deepseek.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"deepseek",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
 		Label: "gemini.config.auth.gcp.use_gcp_service_account",
 		Path: []string{
 			"gemini",
@@ -39,6 +417,510 @@ var AIGatewayModelProviderSDKOpsBoolFields = []AIGatewayModelProviderSDKOpsBoolF
 			"auth",
 			"gcp",
 			"use_gcp_service_account",
+		},
+	},
+	{
+		Label: "gemini.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"gemini",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "gemini.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"gemini",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "gemini.token_vault.cache.redis.ssl",
+		Path: []string{
+			"gemini",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "gemini.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"gemini",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "huggingface.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"huggingface",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "huggingface.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"huggingface",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "huggingface.token_vault.cache.redis.ssl",
+		Path: []string{
+			"huggingface",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "huggingface.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"huggingface",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "kimi.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"kimi",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "kimi.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"kimi",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "kimi.token_vault.cache.redis.ssl",
+		Path: []string{
+			"kimi",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "kimi.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"kimi",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "llama2.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"llama2",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "llama2.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"llama2",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "llama2.token_vault.cache.redis.ssl",
+		Path: []string{
+			"llama2",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "llama2.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"llama2",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "mistral.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"mistral",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "mistral.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"mistral",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "mistral.token_vault.cache.redis.ssl",
+		Path: []string{
+			"mistral",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "mistral.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"mistral",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "ollama.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"ollama",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "ollama.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"ollama",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "ollama.token_vault.cache.redis.ssl",
+		Path: []string{
+			"ollama",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "ollama.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"ollama",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "openai.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"openai",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "openai.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"openai",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "openai.token_vault.cache.redis.ssl",
+		Path: []string{
+			"openai",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "openai.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"openai",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "sagemaker.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"sagemaker",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "sagemaker.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"sagemaker",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "sagemaker.token_vault.cache.redis.ssl",
+		Path: []string{
+			"sagemaker",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "sagemaker.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"sagemaker",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "typesafe.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"typesafe",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "typesafe.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"typesafe",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "typesafe.token_vault.cache.redis.ssl",
+		Path: []string{
+			"typesafe",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "typesafe.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"typesafe",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "vercel.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"vercel",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "vercel.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"vercel",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "vercel.token_vault.cache.redis.ssl",
+		Path: []string{
+			"vercel",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "vercel.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"vercel",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "vllm.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"vllm",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "vllm.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"vllm",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "vllm.token_vault.cache.redis.ssl",
+		Path: []string{
+			"vllm",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "vllm.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"vllm",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
+		Label: "xai.token_vault.cache.redis.cloud_authentication.aws.is_serverless",
+		Path: []string{
+			"xai",
+			"token_vault",
+			"cache",
+			"redis",
+			"cloud_authentication",
+			"aws",
+			"is_serverless",
+		},
+	},
+	{
+		Label: "xai.token_vault.cache.redis.connection_is_proxied",
+		Path: []string{
+			"xai",
+			"token_vault",
+			"cache",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "xai.token_vault.cache.redis.ssl",
+		Path: []string{
+			"xai",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "xai.token_vault.cache.redis.ssl_verify",
+		Path: []string{
+			"xai",
+			"token_vault",
+			"cache",
+			"redis",
+			"ssl_verify",
 		},
 	},
 }
@@ -129,6 +1011,15 @@ var AIGatewayModelProviderSDKOpsConstFields = []sdkOpsConstField{
 	{
 		Path: []string{
 			"anthropic",
+			"config",
+			"auth",
+		},
+		Key:   "type",
+		Value: "basic",
+	},
+	{
+		Path: []string{
+			"baseten",
 			"config",
 			"auth",
 		},
@@ -297,6 +1188,18 @@ var AIGatewayModelProviderSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 	{
 		Path: []string{
 			"azure",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"baseten",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"baseten",
 			"managed_by",
 		},
 	},
@@ -560,6 +1463,10 @@ func (s *AIGatewayModelProviderAPISpec) selectedSDKOpsPayload(payload map[string
 		selected = payload["azure"]
 		variant = "Azure"
 		variantJSON = "azure"
+	case AIGatewayModelProviderConfigTypeBaseten:
+		selected = payload["baseten"]
+		variant = "Baseten"
+		variantJSON = "baseten"
 	case AIGatewayModelProviderConfigTypeBedrock:
 		selected = payload["bedrock"]
 		variant = "Bedrock"
@@ -688,6 +1595,13 @@ func (s *AIGatewayModelProviderAPISpec) ToCreateAIGatewayModelProviderRequest() 
 			return nil, fmt.Errorf("failed to unmarshal into AIGatewayModelProviderAzure: %w", err)
 		}
 		target := sdkkonnectcomp.CreateCreateAIGatewayModelProviderRequestAzure(member)
+		return &target, nil
+	case "Baseten":
+		var member sdkkonnectcomp.AIGatewayModelProviderBaseten
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayModelProviderBaseten: %w", err)
+		}
+		target := sdkkonnectcomp.CreateCreateAIGatewayModelProviderRequestBaseten(member)
 		return &target, nil
 	case "Bedrock":
 		var member sdkkonnectcomp.AIGatewayModelProviderBedrock
@@ -848,6 +1762,13 @@ func (s *AIGatewayModelProviderAPISpec) ToUpdateAIGatewayModelProviderRequest() 
 			return nil, fmt.Errorf("failed to unmarshal into AIGatewayModelProviderAzure: %w", err)
 		}
 		target := sdkkonnectcomp.CreateUpdateAIGatewayModelProviderRequestAzure(member)
+		return &target, nil
+	case "Baseten":
+		var member sdkkonnectcomp.AIGatewayModelProviderBaseten
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayModelProviderBaseten: %w", err)
+		}
+		target := sdkkonnectcomp.CreateUpdateAIGatewayModelProviderRequestBaseten(member)
 		return &target, nil
 	case "Bedrock":
 		var member sdkkonnectcomp.AIGatewayModelProviderBedrock
@@ -1012,6 +1933,33 @@ func (obj *AIGatewayModelProvider) sdkOpsAPISpec(ctx context.Context, cl client.
 					}
 					resolved := string(secretBytes)
 					apiSpec.AIGatewayModelProviderConfig.Anthropic.Config.Auth.Headers[i].Value.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.config.auth.headers[].value
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Baseten != nil {
+			for i := range apiSpec.AIGatewayModelProviderConfig.Baseten.Config.Auth.Headers {
+				src := apiSpec.AIGatewayModelProviderConfig.Baseten.Config.Auth.Headers[i].Value
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.config.auth.headers[].value")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Baseten.Config.Auth.Headers[i].Value.Value = &resolved
 				}
 			}
 		}
@@ -1444,6 +2392,33 @@ func (obj *AIGatewayModelProvider) sdkOpsAPISpec(ctx context.Context, cl client.
 					}
 					resolved := string(secretBytes)
 					apiSpec.AIGatewayModelProviderConfig.Anthropic.Config.Auth.Params[i].Value.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.config.auth.params[].value
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Baseten != nil {
+			for i := range apiSpec.AIGatewayModelProviderConfig.Baseten.Config.Auth.Params {
+				src := apiSpec.AIGatewayModelProviderConfig.Baseten.Config.Auth.Params[i].Value
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.config.auth.params[].value")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Baseten.Config.Auth.Params[i].Value.Value = &resolved
 				}
 			}
 		}
@@ -2213,6 +3188,15 @@ func (obj *AIGatewayModelProvider) GetSensitiveDataSecretRefs() []SensitiveDataS
 		}
 	}
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Baseten != nil {
+			for _, item := range obj.Spec.APISpec.AIGatewayModelProviderConfig.Baseten.Config.Auth.Headers {
+				if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
+					refs = append(refs, *item.Value.SecretRef)
+				}
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Cerebras != nil {
 			for _, item := range obj.Spec.APISpec.AIGatewayModelProviderConfig.Cerebras.Config.Auth.Headers {
 				if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
@@ -2350,6 +3334,15 @@ func (obj *AIGatewayModelProvider) GetSensitiveDataSecretRefs() []SensitiveDataS
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Anthropic != nil {
 			for _, item := range obj.Spec.APISpec.AIGatewayModelProviderConfig.Anthropic.Config.Auth.Params {
+				if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
+					refs = append(refs, *item.Value.SecretRef)
+				}
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Baseten != nil {
+			for _, item := range obj.Spec.APISpec.AIGatewayModelProviderConfig.Baseten.Config.Auth.Params {
 				if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
 					refs = append(refs, *item.Value.SecretRef)
 				}

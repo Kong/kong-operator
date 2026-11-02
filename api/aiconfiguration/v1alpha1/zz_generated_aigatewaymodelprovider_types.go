@@ -97,7 +97,7 @@ type AIGatewayModelProviderConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=anthropic;azure;bedrock;cerebras;cohere;dashscope;databricks;deepseek;gemini;huggingface;kimi;llama2;mistral;ollama;openai;sagemaker;typesafe;vercel;vllm;xai
+	// +kubebuilder:validation:Enum=anthropic;azure;baseten;bedrock;cerebras;cohere;dashscope;databricks;deepseek;gemini;huggingface;kimi;llama2;mistral;ollama;openai;sagemaker;typesafe;vercel;vllm;xai
 	Type AIGatewayModelProviderConfigType `json:"type,omitempty"`
 
 	// Anthropic configuration.
@@ -108,6 +108,10 @@ type AIGatewayModelProviderConfig struct {
 	//
 	// +optional
 	Azure *AIGatewayModelProviderAzure `json:"azure,omitempty"`
+	// Baseten configuration.
+	//
+	// +optional
+	Baseten *AIGatewayModelProviderBaseten `json:"baseten,omitempty"`
 	// Bedrock configuration.
 	//
 	// +optional
@@ -189,6 +193,7 @@ type AIGatewayModelProviderConfigType string
 const (
 	AIGatewayModelProviderConfigTypeAnthropic   AIGatewayModelProviderConfigType = "anthropic"
 	AIGatewayModelProviderConfigTypeAzure       AIGatewayModelProviderConfigType = "azure"
+	AIGatewayModelProviderConfigTypeBaseten     AIGatewayModelProviderConfigType = "baseten"
 	AIGatewayModelProviderConfigTypeBedrock     AIGatewayModelProviderConfigType = "bedrock"
 	AIGatewayModelProviderConfigTypeCerebras    AIGatewayModelProviderConfigType = "cerebras"
 	AIGatewayModelProviderConfigTypeCohere      AIGatewayModelProviderConfigType = "cohere"
@@ -233,6 +238,14 @@ func (u AIGatewayModelProviderConfig) MarshalJSON() ([]byte, error) {
 				return nil, fmt.Errorf("marshaling AIGatewayModelProviderConfig azure: %w", err)
 			}
 			m["azure"] = raw
+		}
+	case AIGatewayModelProviderConfigTypeBaseten:
+		if u.Baseten != nil {
+			raw, err := json.Marshal(u.Baseten)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayModelProviderConfig baseten: %w", err)
+			}
+			m["baseten"] = raw
 		}
 	case AIGatewayModelProviderConfigTypeBedrock:
 		if u.Bedrock != nil {
@@ -419,6 +432,16 @@ func (u *AIGatewayModelProviderConfig) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling AIGatewayModelProviderConfig azure: %w", err)
 		}
 		u.Azure = &val
+	case "baseten":
+		payload, ok := raw["baseten"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayModelProviderBaseten
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayModelProviderConfig baseten: %w", err)
+		}
+		u.Baseten = &val
 	case "bedrock":
 		payload, ok := raw["bedrock"]
 		if !ok || len(payload) == 0 {
@@ -629,7 +652,7 @@ func (s *AIGatewayModelProviderAPISpec) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling AIGatewayModelProviderAPISpec: %w", err)
 	}
-	if aux.AIGatewayModelProviderConfig != nil && aux.AIGatewayModelProviderConfig.Type == "" && aux.AIGatewayModelProviderConfig.Anthropic == nil && aux.AIGatewayModelProviderConfig.Azure == nil && aux.AIGatewayModelProviderConfig.Bedrock == nil && aux.AIGatewayModelProviderConfig.Cerebras == nil && aux.AIGatewayModelProviderConfig.Cohere == nil && aux.AIGatewayModelProviderConfig.Dashscope == nil && aux.AIGatewayModelProviderConfig.Databricks == nil && aux.AIGatewayModelProviderConfig.Deepseek == nil && aux.AIGatewayModelProviderConfig.Gemini == nil && aux.AIGatewayModelProviderConfig.Huggingface == nil && aux.AIGatewayModelProviderConfig.Kimi == nil && aux.AIGatewayModelProviderConfig.Llama2 == nil && aux.AIGatewayModelProviderConfig.Mistral == nil && aux.AIGatewayModelProviderConfig.Ollama == nil && aux.AIGatewayModelProviderConfig.Openai == nil && aux.AIGatewayModelProviderConfig.Sagemaker == nil && aux.AIGatewayModelProviderConfig.Typesafe == nil && aux.AIGatewayModelProviderConfig.Vercel == nil && aux.AIGatewayModelProviderConfig.Vllm == nil && aux.AIGatewayModelProviderConfig.Xai == nil {
+	if aux.AIGatewayModelProviderConfig != nil && aux.AIGatewayModelProviderConfig.Type == "" && aux.AIGatewayModelProviderConfig.Anthropic == nil && aux.AIGatewayModelProviderConfig.Azure == nil && aux.AIGatewayModelProviderConfig.Baseten == nil && aux.AIGatewayModelProviderConfig.Bedrock == nil && aux.AIGatewayModelProviderConfig.Cerebras == nil && aux.AIGatewayModelProviderConfig.Cohere == nil && aux.AIGatewayModelProviderConfig.Dashscope == nil && aux.AIGatewayModelProviderConfig.Databricks == nil && aux.AIGatewayModelProviderConfig.Deepseek == nil && aux.AIGatewayModelProviderConfig.Gemini == nil && aux.AIGatewayModelProviderConfig.Huggingface == nil && aux.AIGatewayModelProviderConfig.Kimi == nil && aux.AIGatewayModelProviderConfig.Llama2 == nil && aux.AIGatewayModelProviderConfig.Mistral == nil && aux.AIGatewayModelProviderConfig.Ollama == nil && aux.AIGatewayModelProviderConfig.Openai == nil && aux.AIGatewayModelProviderConfig.Sagemaker == nil && aux.AIGatewayModelProviderConfig.Typesafe == nil && aux.AIGatewayModelProviderConfig.Vercel == nil && aux.AIGatewayModelProviderConfig.Vllm == nil && aux.AIGatewayModelProviderConfig.Xai == nil {
 		aux.AIGatewayModelProviderConfig = nil
 	}
 	*s = AIGatewayModelProviderAPISpec(aux)

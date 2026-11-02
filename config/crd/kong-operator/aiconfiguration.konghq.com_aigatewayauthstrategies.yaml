@@ -250,6 +250,33 @@ spec:
                             - Disabled
                             type: string
                         type: object
+                      datastores:
+                        description: |-
+                          The Token Vault Datastore holding this entity's credential storage: the
+                          directory credentials
+                          are written to, and the encryption keys that seal them.
+                          Required when `token_vault` is set
+                          (on an auth strategy, when its credential manager is enabled), and the
+                          referenced Datastore
+                          must have type `token-vault`. Only one Datastore can be referenced.
+
+                          **Requires a minimum runtime version of `2.3`**.
+                        items:
+                          description: AIGatewayDatastoreRef A reference to an existing
+                            datastore
+                          properties:
+                            name:
+                              description: An immutable user-defined identifier for
+                                this resource.
+                              maxLength: 255
+                              minLength: 2
+                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        maxItems: 1
+                        type: array
                       displayName:
                         description: The display name for this auth strategy instance.
                         maxLength: 256
@@ -1040,6 +1067,19 @@ spec:
                             items:
                               type: string
                             type: array
+                          credentialClaims:
+                            description: |-
+                              The claims used to derive a virtual credential, for example to be consumed
+                              by the rate-limiting plugin, when consumer mapping is not used.
+                              Each entry represents a claim path inside the token payload.
+                              The paths are evaluated in order, and the first matching claim is used.
+
+                              **Requires a minimum runtime version of `2.3`**.
+                            items:
+                              items:
+                                type: string
+                              type: array
+                            type: array
                           disableSession:
                             description: Disable issuing the session cookie with the
                               specified grants.
@@ -1594,6 +1634,34 @@ spec:
                                 - Enabled
                                 - Disabled
                                 type: string
+                              jit:
+                                description: |-
+                                  Token claims to share with the Kong Identity principal lookup.
+                                  Kong Identity, not this plugin, decides whether the claims are used: a
+                                  trusted IdP with JIT provisioning enabled in Konnect maps them onto a
+                                  principal provisioned just in time.
+                                  By default the lookup only carries the principal claim (e.g.
+                                  'sub') and no additional claims are shared.
+
+                                  **Requires a minimum runtime version of `2.3`**.
+                                properties:
+                                  allClaims:
+                                    description: |-
+                                      Send the full set of verified token claims with the Kong Identity principal
+                                      lookup.
+                                    enum:
+                                    - Enabled
+                                    - Disabled
+                                    type: string
+                                  claims:
+                                    description: |-
+                                      Send only the named token claims with the Kong Identity principal lookup.
+                                      The claims are picked from the same source the principal claim is read from.
+                                      Set all_claims to send every verified claim instead.
+                                    items:
+                                      type: string
+                                    type: array
+                                type: object
                               matchConsumer:
                                 description: |-
                                   If a Consumer is attached to the matched Principal in Kong Identity, load it
@@ -1668,6 +1736,49 @@ spec:
                             - strict
                             maxLength: 253
                             type: string
+                          protectedResourceMetadata:
+                            description: |-
+                              When configured, the plugin advertises this API as an OAuth 2.0 protected
+                              resource per RFC 9728.
+                              It serves a discovery document at the well-known URI and includes
+                              resource_metadata in WWW-Authenticate challenge headers.
+
+                              **Requires a minimum runtime version of `2.3`**.
+                            properties:
+                              authorizationServers:
+                                description: |-
+                                  List of authorization server issuer URIs to advertise in the RFC 9728
+                                  metadata document.
+                                items:
+                                  type: string
+                                type: array
+                              metadataEndpoint:
+                                description: |-
+                                  Override the well-known metadata endpoint path.
+                                  Defaults to the path component of resource with
+                                  /.well-known/oauth-protected-resource appended.
+                                maxLength: 253
+                                type: string
+                              resource:
+                                description: |-
+                                  The URI of the protected resource.
+                                  Used as the resource field in the RFC 9728 metadata document and to derive
+                                  the well-known endpoint path.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              scopesSupported:
+                                description: |-
+                                  Scopes supported by this protected resource.
+                                  Included in the RFC 9728 metadata document and in the scope attribute of
+                                  WWW-Authenticate challenge headers on 401 responses.
+                                items:
+                                  type: string
+                                type: array
+                            required:
+                            - authorizationServers
+                            - resource
+                            type: object
                           pushedAuthorizationRequestEndpoint:
                             description: |-
                               The pushed authorization endpoint.
@@ -2441,10 +2552,90 @@ spec:
                                       Token expiry will be used if shorter than this value.
                                     type: integer
                                 type: object
+                              grantType:
+                                description: |-
+                                  The token exchange grant.
+                                  `token_exchange` (default) uses the OAuth 2.0 Token Exchange grant (RFC
+                                  8693).
+                                  `jwt_bearer` uses the JWT Bearer authorization-grant flow (RFC 7523); see
+                                  `token_exchange.provider` for provider-specific defaults in this mode.
+
+                                  **Requires a minimum runtime version of `2.3`**.
+                                enum:
+                                - jwt_bearer
+                                - token_exchange
+                                maxLength: 253
+                                type: string
+                              mapIdentitiesFrom:
+                                description: |-
+                                  Which token's claims to use for consumer, consumer group, and principal
+                                  mapping.
+                                  Only takes effect when token exchange is configured.
+                                  `exchanged_tokens` (default) uses the token(s) returned by the exchange or
+                                  tokens derived from it, as today.
+                                  `subject_token` uses the original, pre-exchange bearer token's claims
+                                  instead.
+
+                                  **Requires a minimum runtime version of `2.3`**.
+                                enum:
+                                - exchanged_tokens
+                                - subject_token
+                                maxLength: 253
+                                type: string
+                              provider:
+                                description: |-
+                                  Identity provider used with `grant_type = jwt_bearer`; not allowed with
+                                  `grant_type = token_exchange`.
+                                  `standard` (default) adds no provider-specific parameter.
+                                  `microsoft` adds the required `requested_token_use=on_behalf_of`, which is
+                                  fixed and cannot be overridden via `post_args_names/values`.
+
+                                  **Requires a minimum runtime version of `2.3`**.
+                                enum:
+                                - microsoft
+                                - standard
+                                maxLength: 253
+                                type: string
                               request:
                                 description: Parameters used in the token exchange
                                   request.
                                 properties:
+                                  actorToken:
+                                    description: |-
+                                      How to obtain the actor token to include in the token exchange request.
+                                      Represents the identity of the party acting on behalf of the subject.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    properties:
+                                      headerName:
+                                        description: Header name containing the actor
+                                          token. Required when `source` is `header`.
+                                        maxLength: 253
+                                        type: string
+                                      source:
+                                        description: |-
+                                          Where to obtain the actor token.
+                                          `header` reads it from a request header.
+                                          `config` uses a fixed value.
+                                          `none` disables actor token support.
+                                        enum:
+                                        - config
+                                        - header
+                                        - none
+                                        maxLength: 253
+                                        type: string
+                                      staticToken:
+                                        description: Static actor token value. Required
+                                          when `source` is `config`.
+                                        maxLength: 253
+                                        type: string
+                                      type:
+                                        description: |-
+                                          The RFC 8693 token type identifier of the actor token (the
+                                          `actor_token_type` request parameter).
+                                        maxLength: 253
+                                        type: string
+                                    type: object
                                   audience:
                                     description: |-
                                       Audiences used in the token exchange request.
@@ -2460,6 +2651,28 @@ spec:
                                     - Enabled
                                     - Disabled
                                     type: string
+                                  emptyHeaders:
+                                    description: |-
+                                      Use no extra headers on the token exchange request.
+                                      Use this field to remove extra headers defined in
+                                      `config.token_headers_names`.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    enum:
+                                    - Enabled
+                                    - Disabled
+                                    type: string
+                                  emptyPostArgs:
+                                    description: |-
+                                      Use no extra POST arguments on the token exchange request.
+                                      Use this field to remove extra POST arguments defined in
+                                      `config.token_post_args_names`.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    enum:
+                                    - Enabled
+                                    - Disabled
+                                    type: string
                                   emptyScopes:
                                     description: |-
                                       Use empty scopes.
@@ -2468,6 +2681,43 @@ spec:
                                     - Enabled
                                     - Disabled
                                     type: string
+                                  headersNames:
+                                    description: |-
+                                      Extra header names sent only on the token exchange request.
+                                      Overrides `config.token_headers_names` for this request.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
+                                  headersValues:
+                                    description: |-
+                                      Values paired by index with `headers_names`.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
+                                  postArgsNames:
+                                    description: |-
+                                      Extra POST argument names sent only on the token exchange request.
+                                      Overrides `config.token_post_args_names` for this request.
+                                      Use this, not the top-level field, for parameters that must not be attached
+                                      to the plugin's other token endpoint calls, for example
+                                      `requested_token_use` for Entra ID's On-Behalf-Of flow.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
+                                  postArgsValues:
+                                    description: |-
+                                      Values paired by index with `post_args_names`.
+
+                                      **Requires a minimum runtime version of `2.3`**.
+                                    items:
+                                      type: string
+                                    type: array
                                   scopes:
                                     description: |-
                                       Scopes used in the token exchange request.
@@ -2528,11 +2778,50 @@ spec:
                                             type: string
                                           type: array
                                       type: object
+                                    denyOnMismatch:
+                                      description: |-
+                                        When true, a token issued by `issuer` that fails to match `conditions` is
+                                        denied instead of being passed through unexchanged.
+                                        Evaluated independently for this item only, with no effect on other
+                                        `subject_token_issuers` items.
+                                        Only allowed when this issuer is the target issuer, since `conditions` is
+                                        required there and foreign-issuer items always match.
+
+                                        **Requires a minimum runtime version of `2.3`**.
+                                      enum:
+                                      - Enabled
+                                      - Disabled
+                                      type: string
                                     issuer:
                                       description: Tokens of whose iss claim matches
                                         this value will be exchanged.
                                       maxLength: 253
                                       minLength: 1
+                                      type: string
+                                    jwksURI:
+                                      description: |-
+                                        An explicit JWKS endpoint for this issuer.
+                                        This field should be left empty when this issuer is the same as the target
+                                        issuer.
+                                        It is only used when `verify_signature` is `true`.
+                                        When set, Kong fetches the signing keys from this URI directly instead of
+                                        using OIDC Discovery.
+
+                                        **Requires a minimum runtime version of `2.3`**.
+                                      maxLength: 253
+                                      type: string
+                                    verifySignature:
+                                      description: |-
+                                        When true, Kong cryptographically verifies the signature of the incoming
+                                        subject token before exchanging it.
+                                        This field should be left empty or set to `false` when this issuer is the
+                                        same as the target issuer.
+                                        Defaults to `false` for backward compatibility.
+
+                                        **Requires a minimum runtime version of `2.3`**.
+                                      enum:
+                                      - Enabled
+                                      - Disabled
                                       type: string
                                   required:
                                   - issuer
@@ -2803,6 +3092,33 @@ spec:
                         - cacheTokensSalt
                         - issuer
                         type: object
+                      datastores:
+                        description: |-
+                          The Token Vault Datastore holding this entity's credential storage: the
+                          directory credentials
+                          are written to, and the encryption keys that seal them.
+                          Required when `token_vault` is set
+                          (on an auth strategy, when its credential manager is enabled), and the
+                          referenced Datastore
+                          must have type `token-vault`. Only one Datastore can be referenced.
+
+                          **Requires a minimum runtime version of `2.3`**.
+                        items:
+                          description: AIGatewayDatastoreRef A reference to an existing
+                            datastore
+                          properties:
+                            name:
+                              description: An immutable user-defined identifier for
+                                this resource.
+                              maxLength: 255
+                              minLength: 2
+                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        maxItems: 1
+                        type: array
                       displayName:
                         description: The display name for this auth strategy instance.
                         maxLength: 256
@@ -2849,6 +3165,27 @@ spec:
                         minLength: 1
                         pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
+                      tokenVault:
+                        description: |-
+                          Serves the self-service enrollment UI through which end users authorize the
+                          upstream providers
+                          this auth strategy authenticates against.
+                          Omit `token_vault` entirely to serve no such UI.
+
+                          Requires a `token-vault` Datastore reference in `datastores`; enabling the
+                          credential manager
+                          without one is rejected.
+
+                          **Requires a minimum runtime version of `2.3`**.
+                        properties:
+                          enableCredentialManager:
+                            description: Whether the self-service enrollment UI is
+                              served for this auth strategy.
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                        type: object
                     required:
                     - displayName
                     - name
