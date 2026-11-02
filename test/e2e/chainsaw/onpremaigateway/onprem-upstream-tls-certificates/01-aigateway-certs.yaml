@@ -1,0 +1,42 @@
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayCACertificate
+metadata:
+  name: ($ca_cert_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    name: ($ca_cert_name)
+    cert:
+      type: secretRef
+      secretRef:
+        name: ($ca_secret_name)
+        key: ca.crt
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayCertificate
+metadata:
+  name: ($client_cert_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    name: ($client_cert_name)
+    cert:
+      type: secretRef
+      secretRef:
+        name: ($client_cert_secret_name)
+        key: tls.crt
+    key:
+      type: secretRef
+      secretRef:
+        name: ($client_cert_secret_name)
+        key: tls.key
