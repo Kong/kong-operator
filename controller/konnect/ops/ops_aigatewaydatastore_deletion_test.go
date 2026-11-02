@@ -134,6 +134,47 @@ func TestDeleteAIGatewayDatastoreGuarded(t *testing.T) {
 		require.Contains(t, blocked.DeletionBlockedMessage(), "still in use")
 	})
 
+	t.Run("a bad request naming users is reported as a blocked deletion", func(t *testing.T) {
+		t.Parallel()
+
+		sdk := sdkmocks.NewMockAIGatewayDatastoresSDK(t)
+		sdk.EXPECT().
+			DeleteAiGatewayDatastore(mock.Anything, gatewayID, datastoreID).
+			Return(nil, &sdkkonnecterrs.BadRequestError{Status: 400, Title: "Bad Request"}).
+			Once()
+		sdk.EXPECT().
+			ListAiGatewayDatastoreUsage(mock.Anything, mock.Anything).
+			Return(usageResponse(
+				sdkkonnectcomp.AIGatewayDatastoreUsageEntry{Type: sdkkonnectcomp.AIGatewayDatastoreUsageEntryTypePolicy, Name: "p1"},
+			), nil).
+			Once()
+
+		err := deleteAIGatewayDatastoreGuarded(t.Context(), sdk, newDatastore())
+		var blocked DeletionBlockedError
+		require.ErrorAs(t, err, &blocked, "expected a DeletionBlockedError, got %T", err)
+		require.Contains(t, blocked.DeletionBlockedMessage(), "policy/p1")
+	})
+
+	t.Run("a conflict with no reported users is not a blocked deletion", func(t *testing.T) {
+		t.Parallel()
+
+		conflictErr := newConflictErr()
+		sdk := sdkmocks.NewMockAIGatewayDatastoresSDK(t)
+		sdk.EXPECT().
+			DeleteAiGatewayDatastore(mock.Anything, gatewayID, datastoreID).
+			Return(nil, conflictErr).
+			Once()
+		sdk.EXPECT().
+			ListAiGatewayDatastoreUsage(mock.Anything, mock.Anything).
+			Return(usageResponse(), nil).
+			Once()
+
+		err := deleteAIGatewayDatastoreGuarded(t.Context(), sdk, newDatastore())
+		require.ErrorIs(t, err, conflictErr)
+		var blocked DeletionBlockedError
+		require.NotErrorAs(t, err, &blocked, "unexpected DeletionBlockedError: %v", err)
+	})
+
 	t.Run("other Konnect errors are not reported as a blocked deletion", func(t *testing.T) {
 		t.Parallel()
 

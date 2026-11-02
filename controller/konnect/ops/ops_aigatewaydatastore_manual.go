@@ -13,8 +13,8 @@ import (
 )
 
 // AIGatewayDatastoreInUseError is returned when Konnect rejects the deletion
-// of an AIGatewayDatastore because policies or models still use it. The
-// deletion is blocked until those stop referencing it.
+// of an AIGatewayDatastore because other entities still use it. The deletion
+// is blocked until those stop referencing it.
 type AIGatewayDatastoreInUseError struct {
 	// DatastoreName is the Konnect name of the datastore.
 	DatastoreName string
@@ -42,7 +42,7 @@ func (e AIGatewayDatastoreInUseError) Unwrap() error {
 // the datastore.
 func (e AIGatewayDatastoreInUseError) DeletionBlockedMessage() string {
 	if len(e.Users) == 0 {
-		return "deletion blocked: the datastore is still in use; remove it from the policies and models " +
+		return "deletion blocked: the datastore is still in use; remove it from the entities " +
 			"that reference it and the deletion will proceed automatically"
 	}
 	return fmt.Sprintf(
@@ -64,7 +64,7 @@ func deleteAIGatewayDatastoreGuarded(
 	obj *aiconfigurationv1alpha1.AIGatewayDatastore,
 ) error {
 	err := deleteAIGatewayDatastore(ctx, sdk, obj)
-	if err == nil || !ErrorIsCreateConflict(err) {
+	if err == nil || (!errorIsBadRequest(err) && !ErrorIsCreateConflict(err)) {
 		return err
 	}
 
@@ -83,6 +83,9 @@ func deleteAIGatewayDatastoreGuarded(
 	}
 	for _, u := range usage.GetListAIGatewayDatastoreUsageResponse().GetData() {
 		inUse.Users = append(inUse.Users, fmt.Sprintf("%s/%s", u.GetType(), u.GetName()))
+	}
+	if len(inUse.Users) == 0 {
+		return err
 	}
 	return inUse
 }
