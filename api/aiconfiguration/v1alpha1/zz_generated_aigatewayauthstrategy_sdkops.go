@@ -311,6 +311,16 @@ var AIGatewayAuthStrategySDKOpsBoolFields = []AIGatewayAuthStrategySDKOpsBoolFie
 		},
 	},
 	{
+		Label: "openid-connect.config.principals.jit.all_claims",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"principals",
+			"jit",
+			"all_claims",
+		},
+	},
+	{
 		Label: "openid-connect.config.principals.match_consumer",
 		Path: []string{
 			"openid-connect",
@@ -554,6 +564,26 @@ var AIGatewayAuthStrategySDKOpsBoolFields = []AIGatewayAuthStrategySDKOpsBoolFie
 		},
 	},
 	{
+		Label: "openid-connect.config.token_exchange.request.empty_headers",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"token_exchange",
+			"request",
+			"empty_headers",
+		},
+	},
+	{
+		Label: "openid-connect.config.token_exchange.request.empty_post_args",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"token_exchange",
+			"request",
+			"empty_post_args",
+		},
+	},
+	{
 		Label: "openid-connect.config.token_exchange.request.empty_scopes",
 		Path: []string{
 			"openid-connect",
@@ -561,6 +591,28 @@ var AIGatewayAuthStrategySDKOpsBoolFields = []AIGatewayAuthStrategySDKOpsBoolFie
 			"token_exchange",
 			"request",
 			"empty_scopes",
+		},
+	},
+	{
+		Label: "openid-connect.config.token_exchange.subject_token_issuers.[].deny_on_mismatch",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"token_exchange",
+			"subject_token_issuers",
+			"[]",
+			"deny_on_mismatch",
+		},
+	},
+	{
+		Label: "openid-connect.config.token_exchange.subject_token_issuers.[].verify_signature",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"token_exchange",
+			"subject_token_issuers",
+			"[]",
+			"verify_signature",
 		},
 	},
 	{
@@ -609,6 +661,14 @@ var AIGatewayAuthStrategySDKOpsBoolFields = []AIGatewayAuthStrategySDKOpsBoolFie
 			"openid-connect",
 			"config",
 			"verify_signature",
+		},
+	},
+	{
+		Label: "openid-connect.token_vault.enable_credential_manager",
+		Path: []string{
+			"openid-connect",
+			"token_vault",
+			"enable_credential_manager",
 		},
 	},
 }

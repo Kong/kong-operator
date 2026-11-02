@@ -56,6 +56,9 @@ func TestCreateAIGatewayModelProvider_UsesSDKOpsConversion(t *testing.T) {
 	if expectedRequest.AIGatewayModelProviderAzure != nil {
 		expectedRequest.AIGatewayModelProviderAzure.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderAzure.Labels)
 	}
+	if expectedRequest.AIGatewayModelProviderBaseten != nil {
+		expectedRequest.AIGatewayModelProviderBaseten.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderBaseten.Labels)
+	}
 	if expectedRequest.AIGatewayModelProviderBedrock != nil {
 		expectedRequest.AIGatewayModelProviderBedrock.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderBedrock.Labels)
 	}
@@ -148,6 +151,9 @@ func TestCreateAIGatewayModelProvider_PropagatesSDKError(t *testing.T) {
 	if expectedRequest.AIGatewayModelProviderAzure != nil {
 		expectedRequest.AIGatewayModelProviderAzure.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderAzure.Labels)
 	}
+	if expectedRequest.AIGatewayModelProviderBaseten != nil {
+		expectedRequest.AIGatewayModelProviderBaseten.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderBaseten.Labels)
+	}
 	if expectedRequest.AIGatewayModelProviderBedrock != nil {
 		expectedRequest.AIGatewayModelProviderBedrock.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderBedrock.Labels)
 	}
@@ -234,6 +240,9 @@ func TestUpdateAIGatewayModelProvider_UsesSDKOpsConversion(t *testing.T) {
 	}
 	if expectedRequest.AIGatewayModelProviderAzure != nil {
 		expectedRequest.AIGatewayModelProviderAzure.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderAzure.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderBaseten != nil {
+		expectedRequest.AIGatewayModelProviderBaseten.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderBaseten.Labels)
 	}
 	if expectedRequest.AIGatewayModelProviderBedrock != nil {
 		expectedRequest.AIGatewayModelProviderBedrock.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderBedrock.Labels)
@@ -322,6 +331,9 @@ func TestUpdateAIGatewayModelProvider_PropagatesSDKError(t *testing.T) {
 	}
 	if expectedRequest.AIGatewayModelProviderAzure != nil {
 		expectedRequest.AIGatewayModelProviderAzure.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderAzure.Labels)
+	}
+	if expectedRequest.AIGatewayModelProviderBaseten != nil {
+		expectedRequest.AIGatewayModelProviderBaseten.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderBaseten.Labels)
 	}
 	if expectedRequest.AIGatewayModelProviderBedrock != nil {
 		expectedRequest.AIGatewayModelProviderBedrock.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.AIGatewayModelProviderBedrock.Labels)

@@ -196,6 +196,15 @@ spec:
                     type: object
                   config:
                     properties:
+                      caCertificates:
+                        items:
+                          type: string
+                        type: array
+                      certificates:
+                        items:
+                          type: string
+                        maxItems: 1
+                        type: array
                       logging:
                         properties:
                           maxPayloadSize:

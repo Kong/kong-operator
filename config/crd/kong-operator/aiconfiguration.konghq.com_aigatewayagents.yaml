@@ -309,6 +309,52 @@ spec:
                       Configuration for the agent.
                       The structure varies depending on the agent type.
                     properties:
+                      caCertificates:
+                        description: |-
+                          CA certificates used to verify the TLS certificate of the upstream agent
+                          endpoint,
+                          referenced by name.
+                          Each entry must be the `name` of an existing AI CA Certificate on the
+                          same AI Gateway.
+
+                          The CA certificates build the trust store (`ca_certificates`) of the Kong
+                          Gateway Service
+                          generated for this Agent, which proxies requests to `config.url`.
+
+                          If unset, the default trust store is used to verify the upstream's TLS
+                          certificate.
+                        items:
+                          description: |-
+                            AIGatewayCACertificateReference A reference to an AI CA Certificate on the
+                            same AI Gateway, by CA certificate name.
+                          type: string
+                        type: array
+                      certificates:
+                        description: |-
+                          Client certificates used for mutual TLS (mTLS) authentication with the
+                          upstream agent
+                          endpoint, referenced by name.
+                          Each entry must be the `name` of an existing AI Certificate
+                          on the same AI Gateway.
+
+                          The certificates are applied to the Kong Gateway Service generated for this
+                          Agent, which
+                          proxies requests to `config.url`.
+                          The generated Service presents a single client
+                          certificate (`client_certificate`) during the TLS handshake with the
+                          upstream, so at most
+                          one certificate may be configured.
+
+                          If unset, no client certificate is presented to the upstream.
+                        items:
+                          description: |-
+                            AIGatewayCertificateReference A reference to an AI Certificate on the same AI
+                            Gateway, by certificate name.
+                            The certificate must have a valid private key to be presented as a client
+                            certificate to an upstream.
+                          type: string
+                        maxItems: 1
+                        type: array
                       logging:
                         description: Configuration for AI Gateway logging.
                         properties:

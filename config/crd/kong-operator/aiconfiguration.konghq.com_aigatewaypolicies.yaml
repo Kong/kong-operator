@@ -225,6 +225,23 @@ spec:
                     required:
                     - name
                     type: object
+                  datastores:
+                    description: Names of the Datastores this policy references.
+                    items:
+                      description: AIGatewayDatastoreRef A reference to an existing
+                        datastore
+                      properties:
+                        name:
+                          description: An immutable user-defined identifier for this
+                            resource.
+                          maxLength: 255
+                          minLength: 2
+                          pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
                   displayName:
                     description: The display name for this policy instance.
                     maxLength: 256
@@ -236,6 +253,12 @@ spec:
                     - Enabled
                     - Disabled
                     type: string
+                  expressions:
+                    description: |-
+                      Policy config expressions
+
+                      **Requires a minimum runtime version of `2.3`**.
+                    x-kubernetes-preserve-unknown-fields: true
                   global:
                     description: Whether the policy is globally applied to all resources.
                     enum:
