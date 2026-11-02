@@ -321,15 +321,25 @@ spec:
 
                           **Requires a minimum runtime version of `2.3`**.
                         items:
-                          description: AIGatewayDatastoreRef A reference to an existing
-                            datastore
+                          description: |-
+                            AIGatewayDatastoreNamespacedRef references an AIGatewayDatastore in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              description: An immutable user-defined identifier for
-                                this resource.
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace defaults to the referrer's namespace. If set, it must be
+                                the same as the referrer's namespace; cross-namespace references are
+                                not supported.
                               type: string
                           required:
                           - name
@@ -1198,15 +1208,25 @@ spec:
 
                           **Requires a minimum runtime version of `2.3`**.
                         items:
-                          description: AIGatewayDatastoreRef A reference to an existing
-                            datastore
+                          description: |-
+                            AIGatewayDatastoreNamespacedRef references an AIGatewayDatastore in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              description: An immutable user-defined identifier for
-                                this resource.
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace defaults to the referrer's namespace. If set, it must be
+                                the same as the referrer's namespace; cross-namespace references are
+                                not supported.
                               type: string
                           required:
                           - name
@@ -1937,15 +1957,25 @@ spec:
 
                           **Requires a minimum runtime version of `2.3`**.
                         items:
-                          description: AIGatewayDatastoreRef A reference to an existing
-                            datastore
+                          description: |-
+                            AIGatewayDatastoreNamespacedRef references an AIGatewayDatastore in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              description: An immutable user-defined identifier for
-                                this resource.
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace defaults to the referrer's namespace. If set, it must be
+                                the same as the referrer's namespace; cross-namespace references are
+                                not supported.
                               type: string
                           required:
                           - name
@@ -2800,15 +2830,25 @@ spec:
 
                           **Requires a minimum runtime version of `2.3`**.
                         items:
-                          description: AIGatewayDatastoreRef A reference to an existing
-                            datastore
+                          description: |-
+                            AIGatewayDatastoreNamespacedRef references an AIGatewayDatastore in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              description: An immutable user-defined identifier for
-                                this resource.
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace defaults to the referrer's namespace. If set, it must be
+                                the same as the referrer's namespace; cross-namespace references are
+                                not supported.
                               type: string
                           required:
                           - name
@@ -3539,15 +3579,25 @@ spec:
 
                           **Requires a minimum runtime version of `2.3`**.
                         items:
-                          description: AIGatewayDatastoreRef A reference to an existing
-                            datastore
+                          description: |-
+                            AIGatewayDatastoreNamespacedRef references an AIGatewayDatastore in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              description: An immutable user-defined identifier for
-                                this resource.
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace defaults to the referrer's namespace. If set, it must be
+                                the same as the referrer's namespace; cross-namespace references are
+                                not supported.
                               type: string
                           required:
                           - name
@@ -4278,15 +4328,25 @@ spec:
 
                           **Requires a minimum runtime version of `2.3`**.
                         items:
-                          description: AIGatewayDatastoreRef A reference to an existing
-                            datastore
+                          description: |-
+                            AIGatewayDatastoreNamespacedRef references an AIGatewayDatastore in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              description: An immutable user-defined identifier for
-                                this resource.
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace defaults to the referrer's namespace. If set, it must be
+                                the same as the referrer's namespace; cross-namespace references are
+                                not supported.
                               type: string
                           required:
                           - name
@@ -5017,15 +5077,25 @@ spec:
 
                           **Requires a minimum runtime version of `2.3`**.
                         items:
-                          description: AIGatewayDatastoreRef A reference to an existing
-                            datastore
+                          description: |-
+                            AIGatewayDatastoreNamespacedRef references an AIGatewayDatastore in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              description: An immutable user-defined identifier for
-                                this resource.
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace defaults to the referrer's namespace. If set, it must be
+                                the same as the referrer's namespace; cross-namespace references are
+                                not supported.
                               type: string
                           required:
                           - name
@@ -5756,15 +5826,25 @@ spec:
 
                           **Requires a minimum runtime version of `2.3`**.
                         items:
-                          description: AIGatewayDatastoreRef A reference to an existing
-                            datastore
+                          description: |-
+                            AIGatewayDatastoreNamespacedRef references an AIGatewayDatastore in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              description: An immutable user-defined identifier for
-                                this resource.
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace defaults to the referrer's namespace. If set, it must be
+                                the same as the referrer's namespace; cross-namespace references are
+                                not supported.
                               type: string
                           required:
                           - name
@@ -6495,15 +6575,25 @@ spec:
 
                           **Requires a minimum runtime version of `2.3`**.
                         items:
-                          description: AIGatewayDatastoreRef A reference to an existing
-                            datastore
+                          description: |-
+                            AIGatewayDatastoreNamespacedRef references an AIGatewayDatastore in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              description: An immutable user-defined identifier for
-                                this resource.
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace defaults to the referrer's namespace. If set, it must be
+                                the same as the referrer's namespace; cross-namespace references are
+                                not supported.
                               type: string
                           required:
                           - name
@@ -7426,15 +7516,25 @@ spec:
 
                           **Requires a minimum runtime version of `2.3`**.
                         items:
-                          description: AIGatewayDatastoreRef A reference to an existing
-                            datastore
+                          description: |-
+                            AIGatewayDatastoreNamespacedRef references an AIGatewayDatastore in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              description: An immutable user-defined identifier for
-                                this resource.
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace defaults to the referrer's namespace. If set, it must be
+                                the same as the referrer's namespace; cross-namespace references are
+                                not supported.
                               type: string
                           required:
                           - name
@@ -8165,15 +8265,25 @@ spec:
 
                           **Requires a minimum runtime version of `2.3`**.
                         items:
-                          description: AIGatewayDatastoreRef A reference to an existing
-                            datastore
+                          description: |-
+                            AIGatewayDatastoreNamespacedRef references an AIGatewayDatastore in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              description: An immutable user-defined identifier for
-                                this resource.
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace defaults to the referrer's namespace. If set, it must be
+                                the same as the referrer's namespace; cross-namespace references are
+                                not supported.
                               type: string
                           required:
                           - name
@@ -8904,15 +9014,25 @@ spec:
 
                           **Requires a minimum runtime version of `2.3`**.
                         items:
-                          description: AIGatewayDatastoreRef A reference to an existing
-                            datastore
+                          description: |-
+                            AIGatewayDatastoreNamespacedRef references an AIGatewayDatastore in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              description: An immutable user-defined identifier for
-                                this resource.
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace defaults to the referrer's namespace. If set, it must be
+                                the same as the referrer's namespace; cross-namespace references are
+                                not supported.
                               type: string
                           required:
                           - name
@@ -9643,15 +9763,25 @@ spec:
 
                           **Requires a minimum runtime version of `2.3`**.
                         items:
-                          description: AIGatewayDatastoreRef A reference to an existing
-                            datastore
+                          description: |-
+                            AIGatewayDatastoreNamespacedRef references an AIGatewayDatastore in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              description: An immutable user-defined identifier for
-                                this resource.
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace defaults to the referrer's namespace. If set, it must be
+                                the same as the referrer's namespace; cross-namespace references are
+                                not supported.
                               type: string
                           required:
                           - name
@@ -10382,15 +10512,25 @@ spec:
 
                           **Requires a minimum runtime version of `2.3`**.
                         items:
-                          description: AIGatewayDatastoreRef A reference to an existing
-                            datastore
+                          description: |-
+                            AIGatewayDatastoreNamespacedRef references an AIGatewayDatastore in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              description: An immutable user-defined identifier for
-                                this resource.
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace defaults to the referrer's namespace. If set, it must be
+                                the same as the referrer's namespace; cross-namespace references are
+                                not supported.
                               type: string
                           required:
                           - name
@@ -11121,15 +11261,25 @@ spec:
 
                           **Requires a minimum runtime version of `2.3`**.
                         items:
-                          description: AIGatewayDatastoreRef A reference to an existing
-                            datastore
+                          description: |-
+                            AIGatewayDatastoreNamespacedRef references an AIGatewayDatastore in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              description: An immutable user-defined identifier for
-                                this resource.
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace defaults to the referrer's namespace. If set, it must be
+                                the same as the referrer's namespace; cross-namespace references are
+                                not supported.
                               type: string
                           required:
                           - name
@@ -11860,15 +12010,25 @@ spec:
 
                           **Requires a minimum runtime version of `2.3`**.
                         items:
-                          description: AIGatewayDatastoreRef A reference to an existing
-                            datastore
+                          description: |-
+                            AIGatewayDatastoreNamespacedRef references an AIGatewayDatastore in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              description: An immutable user-defined identifier for
-                                this resource.
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace defaults to the referrer's namespace. If set, it must be
+                                the same as the referrer's namespace; cross-namespace references are
+                                not supported.
                               type: string
                           required:
                           - name
@@ -12641,15 +12801,25 @@ spec:
 
                           **Requires a minimum runtime version of `2.3`**.
                         items:
-                          description: AIGatewayDatastoreRef A reference to an existing
-                            datastore
+                          description: |-
+                            AIGatewayDatastoreNamespacedRef references an AIGatewayDatastore in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              description: An immutable user-defined identifier for
-                                this resource.
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace defaults to the referrer's namespace. If set, it must be
+                                the same as the referrer's namespace; cross-namespace references are
+                                not supported.
                               type: string
                           required:
                           - name
@@ -13406,15 +13576,25 @@ spec:
 
                           **Requires a minimum runtime version of `2.3`**.
                         items:
-                          description: AIGatewayDatastoreRef A reference to an existing
-                            datastore
+                          description: |-
+                            AIGatewayDatastoreNamespacedRef references an AIGatewayDatastore in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              description: An immutable user-defined identifier for
-                                this resource.
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace defaults to the referrer's namespace. If set, it must be
+                                the same as the referrer's namespace; cross-namespace references are
+                                not supported.
                               type: string
                           required:
                           - name
@@ -14145,15 +14325,25 @@ spec:
 
                           **Requires a minimum runtime version of `2.3`**.
                         items:
-                          description: AIGatewayDatastoreRef A reference to an existing
-                            datastore
+                          description: |-
+                            AIGatewayDatastoreNamespacedRef references an AIGatewayDatastore in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              description: An immutable user-defined identifier for
-                                this resource.
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace defaults to the referrer's namespace. If set, it must be
+                                the same as the referrer's namespace; cross-namespace references are
+                                not supported.
                               type: string
                           required:
                           - name
@@ -14884,15 +15074,25 @@ spec:
 
                           **Requires a minimum runtime version of `2.3`**.
                         items:
-                          description: AIGatewayDatastoreRef A reference to an existing
-                            datastore
+                          description: |-
+                            AIGatewayDatastoreNamespacedRef references an AIGatewayDatastore in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              description: An immutable user-defined identifier for
-                                this resource.
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace defaults to the referrer's namespace. If set, it must be
+                                the same as the referrer's namespace; cross-namespace references are
+                                not supported.
                               type: string
                           required:
                           - name
@@ -15623,15 +15823,25 @@ spec:
 
                           **Requires a minimum runtime version of `2.3`**.
                         items:
-                          description: AIGatewayDatastoreRef A reference to an existing
-                            datastore
+                          description: |-
+                            AIGatewayDatastoreNamespacedRef references an AIGatewayDatastore in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
                           properties:
+                            kind:
+                              default: AIGatewayDatastore
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayDatastore
+                              type: string
                             name:
-                              description: An immutable user-defined identifier for
-                                this resource.
-                              maxLength: 255
-                              minLength: 2
-                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: |-
+                                Namespace defaults to the referrer's namespace. If set, it must be
+                                the same as the referrer's namespace; cross-namespace references are
+                                not supported.
                               type: string
                           required:
                           - name

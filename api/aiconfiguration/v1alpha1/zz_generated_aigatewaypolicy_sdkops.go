@@ -282,6 +282,66 @@ func resolveAIGatewayPolicyCustomPolicyRef(ctx context.Context, cl client.Client
 	return resolved, nil
 }
 
+// resolveAIGatewayPolicyDatastores resolves the CR references in spec.apiSpec.datastores
+// to Konnect names.
+func resolveAIGatewayPolicyDatastores(ctx context.Context, cl client.Client, obj *AIGatewayPolicy) ([]string, error) {
+	resolved := make([]string, 0, len(obj.Spec.APISpec.Datastores))
+	var errs []error
+	for _, ref := range obj.Spec.APISpec.Datastores {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayDatastore"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
+		if ns != obj.GetNamespace() {
+			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
+			continue
+		}
+		var referenced AIGatewayDatastore
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayDatastore %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		// An object the Konnect reconciler does not manage never gets a Konnect ID.
+		if referenced.SkipKonnectReconciliation() {
+			errs = append(errs, ReferenceNotKonnectManagedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		// AIGatewayDatastore objects being deleted must not gain new users, which
+		// could keep their deletion blocked: a referrer not created in Konnect
+		// yet can't use them, while existing ones keep syncing until they drop
+		// the reference.
+		if !referenced.GetDeletionTimestamp().IsZero() && obj.GetKonnectID() == "" {
+			errs = append(errs, ReferenceBeingDeletedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayDatastore", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
 // AIGatewayPolicyRefsToAIGatewayCustomPolicy returns the keys of the AIGatewayCustomPolicy
 // objects obj references through spec.apiSpec.customPolicyRef, with the default namespace applied.
 func AIGatewayPolicyRefsToAIGatewayCustomPolicy(obj *AIGatewayPolicy) []client.ObjectKey {
@@ -299,11 +359,31 @@ func AIGatewayPolicyRefsToAIGatewayCustomPolicy(obj *AIGatewayPolicy) []client.O
 	return keys
 }
 
+// AIGatewayPolicyRefsToAIGatewayDatastore returns the keys of the AIGatewayDatastore
+// objects obj references through spec.apiSpec.datastores, with the default namespace applied.
+func AIGatewayPolicyRefsToAIGatewayDatastore(obj *AIGatewayPolicy) []client.ObjectKey {
+	var keys []client.ObjectKey
+	for _, ref := range obj.Spec.APISpec.Datastores {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
+	}
+	return keys
+}
+
 // ResolveKonnectReferences resolves every CR reference declared on the spec and
 // returns the joined resolution errors, or nil when all references resolve.
 func (obj *AIGatewayPolicy) ResolveKonnectReferences(ctx context.Context, cl client.Client) error {
 	var errs []error
 	if _, err := resolveAIGatewayPolicyCustomPolicyRef(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayPolicyDatastores(ctx, cl, obj); err != nil {
 		errs = append(errs, err)
 	}
 	return errors.Join(errs...)
@@ -346,6 +426,18 @@ func (obj *AIGatewayPolicy) ToCreateAIGatewayPolicyRequest(ctx context.Context, 
 	if len(resolvedCustomPolicyRef) > 0 {
 		payload["type"] = resolvedCustomPolicyRef[0]
 	}
+	resolvedDatastores, err := resolveAIGatewayPolicyDatastores(ctx, cl, obj)
+	if err != nil {
+		return nil, fmt.Errorf("resolving spec.apiSpec.datastores references: %w", err)
+	}
+	// Each item keeps its OAS object shape, with the resolved Konnect value
+	// under "name".
+	wrappedDatastores := make([]map[string]string, 0, len(resolvedDatastores))
+	for _, v := range resolvedDatastores {
+		wrappedDatastores = append(wrappedDatastores, map[string]string{"name": v})
+	}
+	// Always include the resolved list, including an explicit empty list.
+	payload["datastores"] = wrappedDatastores
 	data, err = json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal AIGatewayPolicy SDK payload with references: %w", err)
@@ -385,6 +477,18 @@ func (obj *AIGatewayPolicy) ToUpdateAIGatewayPolicyRequest(ctx context.Context, 
 	if len(resolvedCustomPolicyRef) > 0 {
 		payload["type"] = resolvedCustomPolicyRef[0]
 	}
+	resolvedDatastores, err := resolveAIGatewayPolicyDatastores(ctx, cl, obj)
+	if err != nil {
+		return nil, fmt.Errorf("resolving spec.apiSpec.datastores references: %w", err)
+	}
+	// Each item keeps its OAS object shape, with the resolved Konnect value
+	// under "name".
+	wrappedDatastores := make([]map[string]string, 0, len(resolvedDatastores))
+	for _, v := range resolvedDatastores {
+		wrappedDatastores = append(wrappedDatastores, map[string]string{"name": v})
+	}
+	// Always include the resolved list, including an explicit empty list.
+	payload["datastores"] = wrappedDatastores
 	data, err = json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal AIGatewayPolicy SDK payload with references: %w", err)

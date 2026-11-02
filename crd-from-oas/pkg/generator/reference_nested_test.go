@@ -1357,3 +1357,122 @@ func TestGenerateSDKOps_UnionMemberInArrayElements(t *testing.T) {
 		require.Contains(t, content, `if rewrittenEncryptFieldsFieldsEncryptionKeyStaticKey != len(resolvedEncryptFieldsFieldsEncryptionKeyStaticKey) {`)
 	})
 }
+
+// datastoreRefParsedSpec builds a fixture whose AIGatewayPolicy and
+// AIGatewayModel both carry a datastores array of {name} objects, matching the
+// AI Gateway OAS: the policy's is a top-level apiSpec field, the model's sits
+// on the shared AIGatewayModelAPI schema.
+func datastoreRefParsedSpec() *parser.ParsedSpec {
+	datastoreRef := &parser.Schema{Properties: []*parser.Property{
+		{Name: "name", Type: "string", Required: true},
+	}}
+	datastores := &parser.Property{
+		Name:     "datastores",
+		Type:     "array",
+		Items:    &parser.Property{Type: "object", RefName: "AIGatewayDatastoreRef"},
+		Required: false,
+	}
+	policyAPISpec := &parser.Schema{Properties: []*parser.Property{datastores}}
+	modelAPI := &parser.Schema{Properties: []*parser.Property{datastores}}
+	modelAPISpec := &parser.Schema{Properties: []*parser.Property{
+		{Name: "api", Type: "object", RefName: "AIGatewayModelAPI"},
+	}}
+	return &parser.ParsedSpec{
+		RequestBodies: map[string]*parser.Schema{
+			"AIGatewayPolicy": policyAPISpec,
+			"AIGatewayModel":  modelAPISpec,
+		},
+		Schemas: map[string]*parser.Schema{
+			"AIGatewayDatastoreRef": datastoreRef,
+			"AIGatewayModelAPI":     modelAPI,
+		},
+	}
+}
+
+func datastoreReferences() map[string][]config.ReferenceConfig {
+	ref := config.ReferenceConfig{
+		Kinds:       []string{"AIGatewayDatastore"},
+		ResolvesTo:  "name",
+		RefTypeName: "AIGatewayDatastoreNamespacedRef",
+	}
+	policyRef := ref
+	policyRef.Path = "spec.apiSpec.datastores"
+	modelRef := ref
+	modelRef.Path = "spec.apiSpec.api.datastores"
+	return map[string][]config.ReferenceConfig{
+		"AIGatewayPolicy": {policyRef},
+		"AIGatewayModel":  {modelRef},
+	}
+}
+
+// TestRefFieldTarget_DatastoreItems verifies the leaf of an array of
+// single-property objects is marked so the resolved names keep the OAS item
+// shape.
+func TestRefFieldTarget_DatastoreItems(t *testing.T) {
+	parsed := datastoreRefParsedSpec()
+	g := newTestGeneratorWithParsed(t, parsed, datastoreReferences())
+
+	_, field, goPath, err := g.refFieldTarget("AIGatewayPolicy", datastoreReferences()["AIGatewayPolicy"][0])
+	require.NoError(t, err)
+	require.Equal(t, "datastores", field)
+	require.Equal(t, []GoPathSegment{
+		{Name: "Datastores", JSONKey: "datastores", LeafArray: true, ItemObjectKey: "name"},
+	}, goPath)
+
+	// The leaf of a plain array of strings keeps no item key.
+	parsed.Schemas["AIGatewayModelAPI"].Properties = []*parser.Property{
+		{Name: "policies", Type: "array", Items: &parser.Property{Type: "string"}},
+	}
+	ref := config.ReferenceConfig{
+		Path:       "spec.apiSpec.api.policies",
+		Kinds:      []string{"AIGatewayPolicy"},
+		ResolvesTo: "name",
+	}
+	_, _, goPath, err = g.refFieldTarget("AIGatewayModel", ref)
+	require.NoError(t, err)
+	require.Empty(t, goPath[len(goPath)-1].ItemObjectKey)
+}
+
+// TestGenerateSDKOps_DatastoreItemsWrapped verifies resolved datastore names are
+// sent as [{"name": "<konnect name>"}] for both a top-level apiSpec field and a
+// nested one.
+func TestGenerateSDKOps_DatastoreItemsWrapped(t *testing.T) {
+	parsed := datastoreRefParsedSpec()
+	g := newTestGeneratorWithParsed(t, parsed, datastoreReferences())
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayPolicyRequest"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayPolicyRequest"},
+		},
+	}
+
+	policyContent, err := g.generateSDKOps("AIGatewayPolicy", parsed.RequestBodies["AIGatewayPolicy"], opsConfig)
+	require.NoError(t, err)
+	_, err = format.Source([]byte(policyContent))
+	require.NoError(t, err)
+	require.Contains(t, policyContent, `wrappedDatastores = append(wrappedDatastores, map[string]string{"name": v})`)
+	require.Contains(t, policyContent, `payload["datastores"] = wrappedDatastores`)
+	require.NotContains(t, policyContent, `payload["datastores"] = resolvedDatastores`)
+
+	modelContent, err := g.generateSDKOps("AIGatewayModel", parsed.RequestBodies["AIGatewayModel"], opsConfig)
+	require.NoError(t, err)
+	_, err = format.Source([]byte(modelContent))
+	require.NoError(t, err)
+	require.Contains(t, modelContent, "func RefsAtAIGatewayModelAPIDatastores(obj *AIGatewayModel) []AIGatewayDatastoreNamespacedRef")
+	require.Contains(t, modelContent, `wrappedAPIDatastores = append(wrappedAPIDatastores, map[string]string{"name": v})`)
+	require.Contains(t, modelContent, `api["datastores"] = wrappedAPIDatastores`)
+}
+
+// TestValidateReferences_RefTypeNameCollidesWithSchema verifies a ref type name
+// that would shadow a generated OAS schema type is rejected.
+func TestValidateReferences_RefTypeNameCollidesWithSchema(t *testing.T) {
+	parsed := datastoreRefParsedSpec()
+	g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{
+		"AIGatewayPolicy": {{
+			Path:       "spec.apiSpec.datastores",
+			Kinds:      []string{"AIGatewayDatastore"},
+			ResolvesTo: "name",
+		}},
+	})
+	require.ErrorContains(t, g.validateReferences(parsed), `refTypeName "AIGatewayDatastoreRef" collides with the generated OAS schema type AIGatewayDatastoreRef`)
+}

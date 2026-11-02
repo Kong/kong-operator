@@ -15,6 +15,8 @@ const (
 	IndexFieldAIGatewayPolicyOnOnPremAIGatewayRef = "aiGatewayPolicyOnOnPremAIGatewayRef"
 	// IndexFieldAIGatewayPolicyOnAIGatewayCustomPolicyRef is the index field for AIGatewayPolicy -> AIGatewayCustomPolicy.
 	IndexFieldAIGatewayPolicyOnAIGatewayCustomPolicyRef = "aiGatewayPolicyOnAIGatewayCustomPolicyRef"
+	// IndexFieldAIGatewayPolicyOnAIGatewayDatastoreRef is the index field for AIGatewayPolicy -> AIGatewayDatastore.
+	IndexFieldAIGatewayPolicyOnAIGatewayDatastoreRef = "aiGatewayPolicyOnAIGatewayDatastoreRef"
 	// IndexFieldAIGatewayPolicyOnType is the index field for AIGatewayPolicy by
 	// "<gatewayID>/<Type>", used to find the objects naming a referenced object literally (injectInto).
 	IndexFieldAIGatewayPolicyOnType = "aiGatewayPolicyOnType"
@@ -39,6 +41,11 @@ func OptionsForAIGatewayPolicy() []Option {
 			Object:         &aiconfigurationv1alpha1.AIGatewayPolicy{},
 			Field:          IndexFieldAIGatewayPolicyOnAIGatewayCustomPolicyRef,
 			ExtractValueFn: aiGatewayPolicyOnAIGatewayCustomPolicyRef,
+		},
+		{
+			Object:         &aiconfigurationv1alpha1.AIGatewayPolicy{},
+			Field:          IndexFieldAIGatewayPolicyOnAIGatewayDatastoreRef,
+			ExtractValueFn: aiGatewayPolicyOnAIGatewayDatastoreRef,
 		},
 		{
 			Object:         &aiconfigurationv1alpha1.AIGatewayPolicy{},
@@ -104,6 +111,25 @@ func aiGatewayPolicyOnAIGatewayCustomPolicyRef(object client.Object) []string {
 	var out []string
 	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayPolicyCustomPolicyRef(ent) {
 		if ref.Kind != "" && ref.Kind != "AIGatewayCustomPolicy" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
+}
+
+func aiGatewayPolicyOnAIGatewayDatastoreRef(object client.Object) []string {
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayPolicy)
+	if !ok {
+		return nil
+	}
+	var out []string
+	for _, ref := range ent.Spec.APISpec.Datastores {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
 			continue
 		}
 		ns := ref.Namespace

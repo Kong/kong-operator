@@ -48,8 +48,10 @@ spec:
       name: ai-gw-cp-1
   apiSpec:
     # type selects the backend; the field named after it holds that backend's
-    # configuration. name is the identifier policies and models use to
-    # reference this datastore, and cannot change after creation.
+    # configuration. name is this datastore's name in Konnect, and cannot
+    # change after creation. Policies, models and other AI Gateway entities
+    # reference the datastore with their own datastores field, by this
+    # object's metadata.name (ai-gw-datastore-redis) in the same namespace.
     type: redis-ce
     redis-ce:
       name: shared-redis

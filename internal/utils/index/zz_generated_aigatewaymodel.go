@@ -21,6 +21,8 @@ const (
 	IndexFieldAIGatewayModelOnAIGatewayModelProviderRef = "aiGatewayModelOnAIGatewayModelProviderRef"
 	// IndexFieldAIGatewayModelOnAIGatewayAuthStrategyRef is the index field for AIGatewayModel -> AIGatewayAuthStrategy.
 	IndexFieldAIGatewayModelOnAIGatewayAuthStrategyRef = "aiGatewayModelOnAIGatewayAuthStrategyRef"
+	// IndexFieldAIGatewayModelOnAIGatewayDatastoreRef is the index field for AIGatewayModel -> AIGatewayDatastore.
+	IndexFieldAIGatewayModelOnAIGatewayDatastoreRef = "aiGatewayModelOnAIGatewayDatastoreRef"
 )
 
 // OptionsForAIGatewayModel returns required Index options for AIGatewayModel reconciler.
@@ -55,6 +57,11 @@ func OptionsForAIGatewayModel() []Option {
 			Object:         &aiconfigurationv1alpha1.AIGatewayModel{},
 			Field:          IndexFieldAIGatewayModelOnAIGatewayAuthStrategyRef,
 			ExtractValueFn: aiGatewayModelOnAIGatewayAuthStrategyRef,
+		},
+		{
+			Object:         &aiconfigurationv1alpha1.AIGatewayModel{},
+			Field:          IndexFieldAIGatewayModelOnAIGatewayDatastoreRef,
+			ExtractValueFn: aiGatewayModelOnAIGatewayDatastoreRef,
 		},
 	}
 }
@@ -227,6 +234,35 @@ func aiGatewayModelOnAIGatewayAuthStrategyRef(object client.Object) []string {
 	}
 	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelModelAccessAuthStrategies(ent) {
 		if ref.Kind != "" && ref.Kind != "AIGatewayAuthStrategy" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
+}
+
+func aiGatewayModelOnAIGatewayDatastoreRef(object client.Object) []string {
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayModel)
+	if !ok {
+		return nil
+	}
+	var out []string
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelAPIDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelModelDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
 			continue
 		}
 		ns := ref.Namespace

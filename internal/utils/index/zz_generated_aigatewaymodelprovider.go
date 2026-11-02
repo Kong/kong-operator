@@ -13,6 +13,8 @@ const (
 	IndexFieldAIGatewayModelProviderOnKonnectAIGatewayRef = "aiGatewayModelProviderOnKonnectAIGatewayRef"
 	// IndexFieldAIGatewayModelProviderOnOnPremAIGatewayRef is the index field for AIGatewayModelProvider -> OnPremAIGateway.
 	IndexFieldAIGatewayModelProviderOnOnPremAIGatewayRef = "aiGatewayModelProviderOnOnPremAIGatewayRef"
+	// IndexFieldAIGatewayModelProviderOnAIGatewayDatastoreRef is the index field for AIGatewayModelProvider -> AIGatewayDatastore.
+	IndexFieldAIGatewayModelProviderOnAIGatewayDatastoreRef = "aiGatewayModelProviderOnAIGatewayDatastoreRef"
 	// IndexFieldAIGatewayModelProviderOnSecretRef is the index field for AIGatewayModelProvider -> the Secrets it reads.
 	IndexFieldAIGatewayModelProviderOnSecretRef = "aiGatewayModelProviderOnSecretRef"
 )
@@ -29,6 +31,11 @@ func OptionsForAIGatewayModelProvider() []Option {
 			Object:         &aiconfigurationv1alpha1.AIGatewayModelProvider{},
 			Field:          IndexFieldAIGatewayModelProviderOnOnPremAIGatewayRef,
 			ExtractValueFn: aiGatewayModelProviderOnOnPremAIGatewayRef,
+		},
+		{
+			Object:         &aiconfigurationv1alpha1.AIGatewayModelProvider{},
+			Field:          IndexFieldAIGatewayModelProviderOnAIGatewayDatastoreRef,
+			ExtractValueFn: aiGatewayModelProviderOnAIGatewayDatastoreRef,
 		},
 		{
 			Object:         &aiconfigurationv1alpha1.AIGatewayModelProvider{},
@@ -79,6 +86,225 @@ func aiGatewayModelProviderOnOnPremAIGatewayRef(object client.Object) []string {
 	}
 
 	return []string{refNamespace + "/" + ent.Spec.AIGatewayRef.NamespacedRef.Name}
+}
+
+func aiGatewayModelProviderOnAIGatewayDatastoreRef(object client.Object) []string {
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayModelProvider)
+	if !ok {
+		return nil
+	}
+	var out []string
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelProviderAnthropicDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelProviderAzureDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelProviderBasetenDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelProviderBedrockDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelProviderCerebrasDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelProviderCohereDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelProviderDashscopeDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelProviderDatabricksDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelProviderDeepseekDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelProviderGeminiDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelProviderHuggingfaceDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelProviderKimiDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelProviderLlama2Datastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelProviderMistralDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelProviderOllamaDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelProviderOpenaiDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelProviderSagemakerDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelProviderTypesafeDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelProviderVercelDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelProviderVllmDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelProviderXaiDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
 }
 
 func aiGatewayModelProviderOnSecretRef(object client.Object) []string {

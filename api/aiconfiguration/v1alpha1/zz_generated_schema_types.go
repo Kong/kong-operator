@@ -2802,7 +2802,7 @@ type AIGatewayAuthStrategyKeyAuth struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this auth strategy instance.
 	//
 	// +required
@@ -2858,7 +2858,7 @@ type AIGatewayAuthStrategyOpenIDConnect struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this auth strategy instance.
 	//
 	// +required
@@ -3533,7 +3533,7 @@ type AIGatewayMCPServerConversionListener struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for the MCP Server.
 	//
 	// +required
@@ -3882,7 +3882,7 @@ type AIGatewayMCPServerConversionOnly struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for the MCP Server.
 	//
 	// +required
@@ -3975,7 +3975,7 @@ type AIGatewayMCPServerListener struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for the MCP Server.
 	//
 	// +required
@@ -4381,7 +4381,7 @@ type AIGatewayMCPServerPassthroughListener struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for the MCP Server.
 	//
 	// +required
@@ -4844,7 +4844,7 @@ type AIGatewayMCPServerUpstreamServer struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for the MCP Server.
 	//
 	// +required
@@ -5898,7 +5898,7 @@ type AIGatewayModelAPI struct {
 	// Names of the Datastores this model references.
 	//
 	// +optional
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model instance.
 	//
 	// +required
@@ -7502,7 +7502,7 @@ type AIGatewayModelModel struct {
 	// Names of the Datastores this model references.
 	//
 	// +optional
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model instance.
 	//
 	// +required
@@ -7855,7 +7855,7 @@ type AIGatewayModelProviderAnthropic struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -7939,7 +7939,7 @@ type AIGatewayModelProviderAzure struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -8177,7 +8177,7 @@ type AIGatewayModelProviderBaseten struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -8261,7 +8261,7 @@ type AIGatewayModelProviderBedrock struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -8461,7 +8461,7 @@ type AIGatewayModelProviderCerebras struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -8545,7 +8545,7 @@ type AIGatewayModelProviderCohere struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -8951,7 +8951,7 @@ type AIGatewayModelProviderDashscope struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -9036,7 +9036,7 @@ type AIGatewayModelProviderDatabricks struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -9120,7 +9120,7 @@ type AIGatewayModelProviderDeepseek struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -9204,7 +9204,7 @@ type AIGatewayModelProviderGemini struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -9405,7 +9405,7 @@ type AIGatewayModelProviderHuggingface struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -9489,7 +9489,7 @@ type AIGatewayModelProviderKimi struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -9573,7 +9573,7 @@ type AIGatewayModelProviderLlama2 struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -9657,7 +9657,7 @@ type AIGatewayModelProviderMistral struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -9741,7 +9741,7 @@ type AIGatewayModelProviderOllama struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -9825,7 +9825,7 @@ type AIGatewayModelProviderOpenai struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -9913,7 +9913,7 @@ type AIGatewayModelProviderSagemaker struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -10113,7 +10113,7 @@ type AIGatewayModelProviderTypesafe struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -10197,7 +10197,7 @@ type AIGatewayModelProviderVercel struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -10281,7 +10281,7 @@ type AIGatewayModelProviderVllm struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -10365,7 +10365,7 @@ type AIGatewayModelProviderXai struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	Datastores []AIGatewayDatastoreRef `json:"datastores,omitempty"`
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required

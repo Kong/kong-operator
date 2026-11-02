@@ -640,9 +640,12 @@
   Kubernetes Secret. Those credentials are the Redis passwords, the vector
   database password and TLS private key, and the cloud Redis credentials.
   `name` and `type` cannot change after creation, as Konnect requires. The
-  entity is reconciled for a `KonnectAIGateway`. A policy or a model cannot
-  reference an `AIGatewayDatastore` yet: the generated `datastores` field of
-  those entities still takes Konnect names.
+  entity is reconciled for a `KonnectAIGateway`. Policies, models, model
+  providers, auth strategies and MCP servers reference a datastore by its
+  Kubernetes name in `datastores`, in the same namespace, and the operator
+  sends the referenced datastore's Konnect name. Konnect refuses to delete a
+  datastore that they still use: the deletion reports `DeletionBlocked` and
+  resumes when the last reference is gone.
   [#6375](https://github.com/Kong/kong-operator/issues/6375)
 
 ### Changed

@@ -21,6 +21,8 @@ const (
 	IndexFieldAIGatewayMCPServerOnAIGatewayAuthStrategyRef = "aiGatewayMCPServerOnAIGatewayAuthStrategyRef"
 	// IndexFieldAIGatewayMCPServerOnAIGatewayConsumerGroupRef is the index field for AIGatewayMCPServer -> AIGatewayConsumerGroup.
 	IndexFieldAIGatewayMCPServerOnAIGatewayConsumerGroupRef = "aiGatewayMCPServerOnAIGatewayConsumerGroupRef"
+	// IndexFieldAIGatewayMCPServerOnAIGatewayDatastoreRef is the index field for AIGatewayMCPServer -> AIGatewayDatastore.
+	IndexFieldAIGatewayMCPServerOnAIGatewayDatastoreRef = "aiGatewayMCPServerOnAIGatewayDatastoreRef"
 )
 
 // OptionsForAIGatewayMCPServer returns required Index options for AIGatewayMCPServer reconciler.
@@ -55,6 +57,11 @@ func OptionsForAIGatewayMCPServer() []Option {
 			Object:         &aiconfigurationv1alpha1.AIGatewayMCPServer{},
 			Field:          IndexFieldAIGatewayMCPServerOnAIGatewayConsumerGroupRef,
 			ExtractValueFn: aiGatewayMCPServerOnAIGatewayConsumerGroupRef,
+		},
+		{
+			Object:         &aiconfigurationv1alpha1.AIGatewayMCPServer{},
+			Field:          IndexFieldAIGatewayMCPServerOnAIGatewayDatastoreRef,
+			ExtractValueFn: aiGatewayMCPServerOnAIGatewayDatastoreRef,
 		},
 	}
 }
@@ -590,6 +597,65 @@ func aiGatewayMCPServerOnAIGatewayConsumerGroupRef(object client.Object) []strin
 			}
 			out = append(out, ns+"/"+ref.Name)
 		}
+	}
+	return out
+}
+
+func aiGatewayMCPServerOnAIGatewayDatastoreRef(object client.Object) []string {
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayMCPServer)
+	if !ok {
+		return nil
+	}
+	var out []string
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerConversionListenerDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerConversionOnlyDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerListenerDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerPassthroughListenerDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerUpstreamServerDatastores(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayDatastore" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
 	}
 	return out
 }
