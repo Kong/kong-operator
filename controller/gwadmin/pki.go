@@ -35,14 +35,12 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-
-	"github.com/kong/kong-operator/v2/internal/utils/pki"
 )
 
 // clockSkew is how far certificates are backdated, and how early a Manual
 // certificate is accepted, to tolerate clock skew between the operator and
 // the peers.
-const clockSkew = pki.CertificateBackdate
+const clockSkew = 5 * time.Minute
 
 var certificateSubject = pkix.Name{Organization: []string{"Kong, Inc."}, Country: []string{"US"}}
 

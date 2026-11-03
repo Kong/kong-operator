@@ -510,7 +510,7 @@ func leafNeedsIssue(secret *corev1.Secret, spec leafSpec, signer *x509.Certifica
 }
 
 // renewalExtends reports whether issuing the certificate again from signer
-// would at least double its remaining validity. A certificate capped at the
+// would more than double its remaining validity. A certificate capped at the
 // expiry of its certificate authority can't be extended: renewing it would
 // only roll the pods ever more often as that expiry nears.
 func renewalExtends(leaf, signer *x509.Certificate, now time.Time, ttl time.Duration) bool {

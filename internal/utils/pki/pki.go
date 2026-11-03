@@ -11,15 +11,10 @@ import (
 	"time"
 )
 
-const (
-	// CertificateBackdate is how far the signers of the operator backdate the
-	// NotBefore of the certificates they issue, against clock skew.
-	CertificateBackdate = 5 * time.Minute
-	// MaxRenewalRequeue caps the delay until the certificates the operator
-	// issues are checked again, so that long-lived ones are re-validated at
-	// least once a day.
-	MaxRenewalRequeue = 24 * time.Hour
-)
+// MaxRenewalRequeue caps the delay until the certificates the operator issues
+// are checked again, so that long-lived ones are re-validated at least once a
+// day.
+const MaxRenewalRequeue = 24 * time.Hour
 
 // ParseCertificates parses the PEM encoded certificates, skipping anything else.
 func ParseCertificates(data []byte) []*x509.Certificate {
@@ -59,7 +54,7 @@ func RenewalTime(issuedAt, notAfter time.Time) time.Time {
 }
 
 // RenewalExtends reports whether a certificate issued again with the fresh
-// validity would at least double the remaining validity of the current one.
+// validity would more than double the remaining validity of the current one.
 // A certificate capped at the expiry of its certificate authority can't be
 // extended: renewing it would only roll its consumers ever more often as that
 // expiry nears.
