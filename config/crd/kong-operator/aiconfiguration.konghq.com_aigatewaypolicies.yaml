@@ -225,6 +225,33 @@ spec:
                     required:
                     - name
                     type: object
+                  datastores:
+                    description: Names of the Datastores this policy references.
+                    items:
+                      description: |-
+                        AIGatewayDatastoreNamespacedRef references an AIGatewayDatastore in the cluster. The referenced
+                        object's Konnect name is used where the Konnect API accepts it.
+                      properties:
+                        kind:
+                          default: AIGatewayDatastore
+                          description: Kind is the kind of the referenced object.
+                          enum:
+                          - AIGatewayDatastore
+                          type: string
+                        name:
+                          description: Name is the name of the referenced object.
+                          minLength: 1
+                          type: string
+                        namespace:
+                          description: |-
+                            Namespace defaults to the referrer's namespace. If set, it must be
+                            the same as the referrer's namespace; cross-namespace references are
+                            not supported.
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
                   displayName:
                     description: The display name for this policy instance.
                     maxLength: 256
@@ -236,6 +263,12 @@ spec:
                     - Enabled
                     - Disabled
                     type: string
+                  expressions:
+                    description: |-
+                      Policy config expressions
+
+                      **Requires a minimum runtime version of `2.3`**.
+                    x-kubernetes-preserve-unknown-fields: true
                   global:
                     description: Whether the policy is globally applied to all resources.
                     enum:

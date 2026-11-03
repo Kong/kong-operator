@@ -34,6 +34,7 @@ func testGeneratedKonnectAIGatewayForSDKOps() *konnectv1alpha1.KonnectAIGateway 
 				Description:        "test-value",
 				DisplayName:        "test-value",
 				Labels:             konnectv1alpha1.PublicLabels{"test-key": "test-value"},
+				ManagedBy:          konnectv1alpha1.ManagedBy{"test-key": "test-value"},
 				MinRuntimeVersion:  "test-value",
 				Name:               "test-value",
 				RuntimeAutoUpgrade: "Enabled",

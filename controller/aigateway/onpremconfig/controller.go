@@ -106,6 +106,7 @@ func (cs *Controllers) SetupWithManager(_ context.Context, mgr ctrl.Manager) err
 		&AIGatewayConsumerReconciler{},
 		&AIGatewayConsumerGroupReconciler{},
 		&AIGatewayCustomPolicyReconciler{},
+		&AIGatewayDatastoreReconciler{},
 		&AIGatewayDataPlaneCertificateReconciler{},
 		&AIGatewayMCPServerReconciler{},
 		&AIGatewayModelReconciler{},
@@ -123,6 +124,15 @@ func (cs *Controllers) SetupWithManager(_ context.Context, mgr ctrl.Manager) err
 	// Secrets referenced by the entities' secretRefs so that updating a Secret
 	// re-renders the configuration without waiting for an unrelated entity event.
 	if err := (&SecretReconciler{
+		Client:         cs.Client,
+		Log:            cs.Log,
+		ChangeNotifier: cs.ChangeNotifier,
+	}).SetupWithManager(mgr); err != nil {
+		return err
+	}
+	// Like the Secret reconciler, it re-renders the configuration when a
+	// KongReferenceGrant for a cross-namespace secretRef changes.
+	if err := (&KongReferenceGrantReconciler{
 		Client:         cs.Client,
 		Log:            cs.Log,
 		ChangeNotifier: cs.ChangeNotifier,

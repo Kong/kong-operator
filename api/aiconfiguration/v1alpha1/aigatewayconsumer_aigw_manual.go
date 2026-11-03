@@ -161,11 +161,11 @@ func (obj *AIGatewayConsumer) aigwCredentials(
 }
 
 // toAIGWCredential converts a single AIGatewayConsumerCredential into ai-deck-converter's
-// aigw.Credential, resolving its secretRef apiKey. Cross-namespace secretRefs are rejected
-// per the on-prem rule (the generated sdkOpsAPISpec alone would resolve them regardless of
-// namespace).
+// aigw.Credential, resolving its secretRef apiKey. A cross-namespace secretRef must be
+// allowed by a KongReferenceGrant (the generated sdkOpsAPISpec alone would resolve it
+// regardless of namespace).
 func (obj *AIGatewayConsumerCredential) toAIGWCredential(ctx context.Context, cl client.Client) (*aigw.Credential, error) {
-	if err := rejectCrossNamespaceSecretRefs(obj); err != nil {
+	if err := checkCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
 		return nil, err
 	}
 

@@ -224,6 +224,8 @@ type AIGWOpenIDConnectGeneratedConfig struct {
 	// The `access-token` and `x-access-token` headers are also checked as a
 	// fallback for backward compatibility regardless of this setting.
 	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	BearerTokenHeaderName string `json:"bearerTokenHeaderName,omitzero"`
@@ -372,14 +374,20 @@ type AIGWOpenIDConnectGeneratedConfig struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	ConsumerOptional string `json:"consumerOptional,omitzero"`
-	// The claim used to derive virtual credentials (e.g.
-	// to be consumed by the rate-limiting plugin), in case the consumer mapping is
-	// not used.
-	// If multiple values are set, it means the claim is inside a nested object of
-	// the token payload.
+	// Claim path used to derive virtual credentials when consumer mapping is not
+	// used.
 	//
 	// +optional
 	CredentialClaim []string `json:"credentialClaim,omitempty"`
+	// The claims used to derive a virtual credential, for example to be consumed
+	// by the rate-limiting plugin, when consumer mapping is not used.
+	// Each entry represents a claim path inside the token payload.
+	// The paths are evaluated in order, and the first matching claim is used.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	CredentialClaims [][]string `json:"credentialClaims,omitempty"`
 	// Disable issuing the session cookie with the specified grants.
 	//
 	// +optional
@@ -851,6 +859,15 @@ type AIGWOpenIDConnectGeneratedConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=off;optional;strict
 	ProofOfPossessionMtls string `json:"proofOfPossessionMtls,omitzero"`
+	// When configured, the plugin advertises this API as an OAuth 2.0 protected
+	// resource per RFC 9728.
+	// It serves a discovery document at the well-known URI and includes
+	// resource_metadata in WWW-Authenticate challenge headers.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	ProtectedResourceMetadata AIGWOpenIDConnectGeneratedConfigProtectedResourceMetadata `json:"protectedResourceMetadata,omitzero"`
 	// The pushed authorization endpoint.
 	// If set it overrides the value in `pushed_authorization_request_endpoint`
 	// returned by the discovery endpoint.
@@ -1876,6 +1893,17 @@ type AIGWOpenIDConnectGeneratedConfigPrincipals struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	ErrorOnMiss string `json:"errorOnMiss,omitzero"`
+	// Token claims to share with the Kong Identity principal lookup.
+	// Kong Identity, not this plugin, decides whether the claims are used: a
+	// trusted IdP with JIT provisioning enabled in Konnect maps them onto a
+	// principal provisioned just in time.
+	// By default the lookup only carries the principal claim (e.g.
+	// 'sub') and no additional claims are shared.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	Jit AIGWOpenIDConnectGeneratedConfigPrincipalsJit `json:"jit,omitzero"`
 	// If a Consumer is attached to the matched Principal in Kong Identity, load it
 	// and set it in the request context, overriding consumer_by.
 	//
@@ -1906,6 +1934,66 @@ type AIGWOpenIDConnectGeneratedConfigPrincipals struct {
 	//
 	// +optional
 	PrincipalClaim []string `json:"principalClaim,omitempty"`
+}
+
+// AIGWOpenIDConnectGeneratedConfigPrincipalsJit Token claims to share with the
+// Kong Identity principal lookup.
+// Kong Identity, not this plugin, decides whether the claims are used: a
+// trusted IdP with JIT provisioning enabled in Konnect maps them onto a
+// principal provisioned just in time.
+// By default the lookup only carries the principal claim (e.g.
+// 'sub') and no additional claims are shared.
+//
+// **Requires a minimum runtime version of `2.3`**.
+type AIGWOpenIDConnectGeneratedConfigPrincipalsJit struct {
+	// Send the full set of verified token claims with the Kong Identity principal
+	// lookup.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	AllClaims string `json:"allClaims,omitzero"`
+	// Send only the named token claims with the Kong Identity principal lookup.
+	// The claims are picked from the same source the principal claim is read from.
+	// Set all_claims to send every verified claim instead.
+	//
+	// +optional
+	Claims []string `json:"claims,omitempty"`
+}
+
+// AIGWOpenIDConnectGeneratedConfigProtectedResourceMetadata When configured,
+// the plugin advertises this API as an OAuth 2.0 protected resource per RFC
+// 9728.
+// It serves a discovery document at the well-known URI and includes
+// resource_metadata in WWW-Authenticate challenge headers.
+//
+// **Requires a minimum runtime version of `2.3`**.
+type AIGWOpenIDConnectGeneratedConfigProtectedResourceMetadata struct {
+	// List of authorization server issuer URIs to advertise in the RFC 9728
+	// metadata document.
+	//
+	// +required
+	AuthorizationServers []string `json:"authorizationServers,omitempty"`
+	// Override the well-known metadata endpoint path.
+	// Defaults to the path component of resource with
+	// /.well-known/oauth-protected-resource appended.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	MetadataEndpoint string `json:"metadataEndpoint,omitzero"`
+	// The URI of the protected resource.
+	// Used as the resource field in the RFC 9728 metadata document and to derive
+	// the well-known endpoint path.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Resource string `json:"resource,omitzero"`
+	// Scopes supported by this protected resource.
+	// Included in the RFC 9728 metadata document and in the scope attribute of
+	// WWW-Authenticate challenge headers on 401 responses.
+	//
+	// +optional
+	ScopesSupported []string `json:"scopesSupported,omitempty"`
 }
 
 // AIGWOpenIDConnectGeneratedConfigRedis is a type alias.
@@ -2195,6 +2283,44 @@ type AIGWOpenIDConnectGeneratedConfigTokenExchange struct {
 	//
 	// +optional
 	Cache AIGWOpenIDConnectGeneratedConfigTokenExchangeCache `json:"cache,omitzero"`
+	// The token exchange grant.
+	// `token_exchange` (default) uses the OAuth 2.0 Token Exchange grant (RFC
+	// 8693).
+	// `jwt_bearer` uses the JWT Bearer authorization-grant flow (RFC 7523); see
+	// `token_exchange.provider` for provider-specific defaults in this mode.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=jwt_bearer;token_exchange
+	GrantType string `json:"grantType,omitzero"`
+	// Which token's claims to use for consumer, consumer group, and principal
+	// mapping.
+	// Only takes effect when token exchange is configured.
+	// `exchanged_tokens` (default) uses the token(s) returned by the exchange or
+	// tokens derived from it, as today.
+	// `subject_token` uses the original, pre-exchange bearer token's claims
+	// instead.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=exchanged_tokens;subject_token
+	MapIdentitiesFrom string `json:"mapIdentitiesFrom,omitzero"`
+	// Identity provider used with `grant_type = jwt_bearer`; not allowed with
+	// `grant_type = token_exchange`.
+	// `standard` (default) adds no provider-specific parameter.
+	// `microsoft` adds the required `requested_token_use=on_behalf_of`, which is
+	// fixed and cannot be overridden via `post_args_names/values`.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=microsoft;standard
+	Provider string `json:"provider,omitzero"`
 	// Parameters used in the token exchange request.
 	//
 	// +optional
@@ -2227,23 +2353,77 @@ type AIGWOpenIDConnectGeneratedConfigTokenExchangeCache struct {
 // AIGWOpenIDConnectGeneratedConfigTokenExchangeRequest Parameters used in the
 // token exchange request.
 type AIGWOpenIDConnectGeneratedConfigTokenExchangeRequest struct {
+	// How to obtain the actor token to include in the token exchange request.
+	// Represents the identity of the party acting on behalf of the subject.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	ActorToken AIGWOpenIDConnectGeneratedConfigTokenExchangeRequestActorToken `json:"actorToken,omitzero"`
 	// Audiences used in the token exchange request.
 	// Values defined here override those defined in `config.audience`.
 	//
 	// +optional
 	Audience []string `json:"audience,omitempty"`
 	// Use empty audiences.
-	// Use this field to override audiences defined in `config.audience`.
+	// Use this field to remove audiences defined in `config.audience`.
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	EmptyAudience string `json:"emptyAudience,omitzero"`
+	// Use no extra headers on the token exchange request.
+	// Use this field to remove extra headers defined in
+	// `config.token_headers_names`.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	EmptyHeaders string `json:"emptyHeaders,omitzero"`
+	// Use no extra POST arguments on the token exchange request.
+	// Use this field to remove extra POST arguments defined in
+	// `config.token_post_args_names`.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	EmptyPostArgs string `json:"emptyPostArgs,omitzero"`
 	// Use empty scopes.
-	// Use this field to override scopes defined in `config.scopes`.
+	// Use this field to remove scopes defined in `config.scopes`.
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	EmptyScopes string `json:"emptyScopes,omitzero"`
+	// Extra header names sent only on the token exchange request.
+	// Overrides `config.token_headers_names` for this request.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	HeadersNames []string `json:"headersNames,omitempty"`
+	// Values paired by index with `headers_names`.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	HeadersValues []string `json:"headersValues,omitempty"`
+	// Extra POST argument names sent only on the token exchange request.
+	// Overrides `config.token_post_args_names` for this request.
+	// Use this, not the top-level field, for parameters that must not be attached
+	// to the plugin's other token endpoint calls, for example
+	// `requested_token_use` for Entra ID's On-Behalf-Of flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	PostArgsNames []string `json:"postArgsNames,omitempty"`
+	// Values paired by index with `post_args_names`.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	PostArgsValues []string `json:"postArgsValues,omitempty"`
 	// Scopes used in the token exchange request.
 	// Values defined here override those defined in `config.scopes`.
 	//
@@ -2251,45 +2431,123 @@ type AIGWOpenIDConnectGeneratedConfigTokenExchangeRequest struct {
 	Scopes []string `json:"scopes,omitempty"`
 }
 
+// AIGWOpenIDConnectGeneratedConfigTokenExchangeRequestActorToken How to obtain
+// the actor token to include in the token exchange request.
+// Represents the identity of the party acting on behalf of the subject.
+//
+// **Requires a minimum runtime version of `2.3`**.
+type AIGWOpenIDConnectGeneratedConfigTokenExchangeRequestActorToken struct {
+	// Header name containing the actor token. Required when `source` is `header`.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	HeaderName string `json:"headerName,omitzero"`
+	// Where to obtain the actor token.
+	// `header` reads it from a request header.
+	// `config` uses a fixed value.
+	// `none` disables actor token support.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=config;header;none
+	Source string `json:"source,omitzero"`
+	// Static actor token value. Required when `source` is `config`.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	StaticToken string `json:"staticToken,omitzero"`
+	// The RFC 8693 token type identifier of the actor token (the
+	// `actor_token_type` request parameter).
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Type string `json:"type,omitzero"`
+}
+
 // AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuers Trusted
 // token issuers from which the upstream may accept tokens to be exchanged.
 // If a JWT bearer matches all the conditions of a subject token issuer item,
 // the token will be exchanged.
 type AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuers struct {
-	// A tokens will only be exchange when it matches all these criteria.
-	// To exchanging tokens issued from a different issuer, conditions must not be
-	// defined; On the contrary, to exchange tokens issued from the target issuer
-	// itself, conditions must be defined.
+	// A token will only be exchanged when it matches all these criteria.
+	// To exchange tokens issued by a different issuer, `conditions` must not be
+	// defined -- every token from that issuer is exchanged unconditionally, since
+	// a foreign-issued token that isn't exchanged can never pass normal
+	// verification against the target issuer anyway.
+	// In contrast, to exchange tokens issued by the target issuer itself,
+	// `conditions` must be defined.
 	//
 	// +optional
 	Conditions AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuersConditions `json:"conditions,omitzero"`
+	// When true, a token issued by `issuer` that fails to match `conditions` is
+	// denied instead of being passed through unexchanged.
+	// Evaluated independently for this item only, with no effect on other
+	// `subject_token_issuers` items.
+	// Only allowed when this issuer is the target issuer, since `conditions` is
+	// required there and foreign-issuer items always match.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	DenyOnMismatch string `json:"denyOnMismatch,omitzero"`
 	// Tokens of whose iss claim matches this value will be exchanged.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	Issuer string `json:"issuer,omitzero"`
+	// An explicit JWKS endpoint for this issuer.
+	// This field should be left empty when this issuer is the same as the target
+	// issuer.
+	// It is only used when `verify_signature` is `true`.
+	// When set, Kong fetches the signing keys from this URI directly instead of
+	// using OIDC Discovery.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	JwksURI string `json:"jwksURI,omitzero"`
+	// When true, Kong cryptographically verifies the signature of the incoming
+	// subject token before exchanging it.
+	// This field should be left empty or set to `false` when this issuer is the
+	// same as the target issuer.
+	// Defaults to `false` for backward compatibility.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	VerifySignature string `json:"verifySignature,omitzero"`
 }
 
 // AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuersConditions A
-// tokens will only be exchange when it matches all these criteria.
-// To exchanging tokens issued from a different issuer, conditions must not be
-// defined; On the contrary, to exchange tokens issued from the target issuer
-// itself, conditions must be defined.
+// token will only be exchanged when it matches all these criteria.
+// To exchange tokens issued by a different issuer, `conditions` must not be
+// defined -- every token from that issuer is exchanged unconditionally, since a
+// foreign-issued token that isn't exchanged can never pass normal verification
+// against the target issuer anyway.
+// In contrast, to exchange tokens issued by the target issuer itself,
+// `conditions` must be defined.
 type AIGWOpenIDConnectGeneratedConfigTokenExchangeSubjectTokenIssuersConditions struct {
-	//
+	// Audience values that must all be present in the token, matched against
+	// `audience_claim`.
 	//
 	// +optional
 	HasAudience []string `json:"hasAudience,omitempty"`
-	//
+	// Scope values that must all be present in the token, matched against
+	// `scopes_claim`.
 	//
 	// +optional
 	HasScopes []string `json:"hasScopes,omitempty"`
-	//
+	// Audience values that must all be absent from the token, matched against
+	// `audience_claim`.
 	//
 	// +optional
 	MissingAudience []string `json:"missingAudience,omitempty"`
-	//
+	// Scope values that must all be absent from the token, matched against
+	// `scopes_claim`.
 	//
 	// +optional
 	MissingScopes []string `json:"missingScopes,omitempty"`
@@ -2532,6 +2790,19 @@ type AIGatewayAuthStrategyKeyAuth struct {
 	//
 	// +optional
 	Config AIGWKeyAuthGeneratedConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this auth strategy instance.
 	//
 	// +required
@@ -2575,6 +2846,19 @@ type AIGatewayAuthStrategyOpenIDConnect struct {
 	//
 	// +optional
 	Config AIGWOpenIDConnectGeneratedConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this auth strategy instance.
 	//
 	// +required
@@ -2610,6 +2894,19 @@ type AIGatewayAuthStrategyOpenIDConnect struct {
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// Serves the self-service enrollment UI through which end users authorize the
+	// upstream providers
+	// this auth strategy authenticates against.
+	// Omit `token_vault` entirely to serve no such UI.
+	//
+	// Requires a `token-vault` Datastore reference in `datastores`; enabling the
+	// credential manager
+	// without one is rejected.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVaultCredentialManager `json:"tokenVault,omitzero"`
 }
 
 // AIGatewayAuthStrategyReference Reference to an auth strategy instance by
@@ -2674,7 +2971,20 @@ type AIGatewayBedrockEmbeddingsModelConfig struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	VideoOutputS3URI string `json:"videoOutputS3URI,omitzero"`
+	// Hostname of an AWS PrivateLink VPC endpoint to use instead of the public
+	// Bedrock endpoint.
+	// Ignored if `upstream_url` is set.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	VpcEndpoint string `json:"vpcEndpoint,omitzero"`
 }
+
+// AIGatewayCACertificateReference A reference to an AI CA Certificate on the
+// same AI Gateway, by CA certificate name.
+type AIGatewayCACertificateReference string
 
 // AIGatewayCacheWriteCost is a type alias.
 type AIGatewayCacheWriteCost struct {
@@ -2691,6 +3001,12 @@ type AIGatewayCacheWriteCost struct {
 	// +kubebuilder:validation:Pattern=`^[0-9]+\.?[0-9]*[hm]$`
 	Ttl string `json:"ttl,omitzero"`
 }
+
+// AIGatewayCertificateReference A reference to an AI Certificate on the same AI
+// Gateway, by certificate name.
+// The certificate must have a valid private key to be presented as a client
+// certificate to an upstream.
+type AIGatewayCertificateReference string
 
 // AIGatewayContextWindowFactor is a type alias.
 type AIGatewayContextWindowFactor struct {
@@ -2711,6 +3027,21 @@ type AIGatewayContextWindowFactor struct {
 	// +required
 	// +kubebuilder:validation:Minimum=0
 	OutputFactor float64 `json:"outputFactor,omitzero"`
+}
+
+// AIGatewayDatastoreName An immutable user-defined identifier for this
+// resource.
+type AIGatewayDatastoreName string
+
+// AIGatewayDatastoreRef A reference to an existing datastore
+type AIGatewayDatastoreRef struct {
+	// An immutable user-defined identifier for this resource.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=2
+	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[a-z][a-z0-9-]*[a-z0-9]+$`
+	Name AIGatewayDatastoreName `json:"name,omitzero"`
 }
 
 // AIGatewayDenyACL is a type alias.
@@ -3014,10 +3345,24 @@ type AIGatewayMCPACLs struct {
 	//
 	// +optional
 	Allow []AIGatewayMCPACLRef `json:"allow,omitempty"`
+	// Allow the request if it matches any of these CEL boolean expressions
+	// evaluated against the request context.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	AllowWhen []string `json:"allowWhen,omitempty"`
 	// List of consumer groups that are denied access.
 	//
 	// +optional
 	Deny []AIGatewayMCPACLRef `json:"deny,omitempty"`
+	// Deny the request if it matches any of these CEL boolean expressions
+	// evaluated against the request context.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	DenyWhen []string `json:"denyWhen,omitempty"`
 }
 
 // AIGatewayMCPConversionTool A tool exposed by an MCP Server in
@@ -3176,6 +3521,19 @@ type AIGatewayMCPServerConversionListener struct {
 	//
 	// +required
 	Config AIGatewayMCPServerConversionListenerConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for the MCP Server.
 	//
 	// +required
@@ -3220,6 +3578,33 @@ type AIGatewayMCPServerConversionListener struct {
 	//
 	// +optional
 	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
+	// Rate limits applied to requests to this MCP Server, matched by MCP method or
+	// tool name.
+	// Each AI Gateway node counts and enforces the limits independently.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	RateLimiting AIGatewayMCPServerRateLimiting `json:"rateLimiting,omitzero"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 	// List of tools exposed by this MCP Server.
 	// Each tool's `path`, `method`, and `host`
 	// describe the backend HTTP operation on the upstream selected by `config.url`
@@ -3246,6 +3631,23 @@ type AIGatewayMCPServerConversionListenerConfig struct {
 	//
 	// +optional
 	AllowedVersions []string `json:"allowedVersions,omitempty"`
+	// CA certificates used to verify the TLS certificate of the upstream MCP
+	// server, referenced by
+	// name.
+	// Each entry must be the `name` of an existing AI CA Certificate on the same
+	// AI Gateway.
+	//
+	// The CA certificates build the trust store (`ca_certificates`) of the Kong
+	// Gateway Service
+	// generated for this MCP Server, which proxies requests to the upstream MCP
+	// server.
+	//
+	// If unset, the default trust store is used to verify the upstream's TLS
+	// certificate.
+	//
+	//
+	// +optional
+	CaCertificates []AIGatewayCACertificateReference `json:"caCertificates,omitempty"`
 	// Cache hints Kong emits on the cacheable operations it serves.
 	// Only clients on a protocol
 	// revision that defines them receive them.
@@ -3254,6 +3656,26 @@ type AIGatewayMCPServerConversionListenerConfig struct {
 	//
 	// +optional
 	Cache AIGatewayMCPServerConversionListenerConfigCache `json:"cache,omitzero"`
+	// Client certificates used for mutual TLS (mTLS) authentication with the
+	// upstream MCP server,
+	// referenced by name.
+	// Each entry must be the `name` of an existing AI Certificate on the same
+	// AI Gateway.
+	//
+	// The certificates are applied to the Kong Gateway Service generated for this
+	// MCP Server, which
+	// proxies requests to the upstream MCP server.
+	// The generated Service presents a single client
+	// certificate (`client_certificate`) during the TLS handshake with the
+	// upstream, so at most one
+	// certificate may be configured.
+	//
+	// If unset, no client certificate is presented to the upstream.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Certificates []AIGatewayCertificateReference `json:"certificates,omitempty"`
 	//
 	//
 	// +optional
@@ -3448,6 +3870,19 @@ type AIGatewayMCPServerConversionOnly struct {
 	//
 	// +required
 	Config AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for the MCP Server.
 	//
 	// +required
@@ -3492,6 +3927,25 @@ type AIGatewayMCPServerConversionOnly struct {
 	//
 	// +optional
 	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 	// List of tools exposed by this MCP Server.
 	//
 	// +required
@@ -3509,6 +3963,19 @@ type AIGatewayMCPServerListener struct {
 	//
 	// +required
 	Config AIGatewayMCPServerListenerConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for the MCP Server.
 	//
 	// +required
@@ -3562,6 +4029,25 @@ type AIGatewayMCPServerListener struct {
 	//
 	// +required
 	Sources []AIGatewayMCPServerRef `json:"sources,omitempty"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 }
 
 // AIGatewayMCPServerListenerConfig Server-side configuration specific to modes
@@ -3883,6 +4369,19 @@ type AIGatewayMCPServerPassthroughListener struct {
 	//
 	// +required
 	Config AIGatewayMCPServerWithUpstreamConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for the MCP Server.
 	//
 	// +required
@@ -3927,6 +4426,33 @@ type AIGatewayMCPServerPassthroughListener struct {
 	//
 	// +optional
 	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
+	// Rate limits applied to requests to this MCP Server, matched by MCP method or
+	// tool name.
+	// Each AI Gateway node counts and enforces the limits independently.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	RateLimiting AIGatewayMCPServerRateLimiting `json:"rateLimiting,omitzero"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 	// Per-tool access-control overrides for tools advertised by the remote MCP
 	// Server.
 	// Each
@@ -4084,6 +4610,50 @@ type AIGatewayMCPServerProtectedResourceMetadata struct {
 	//
 	// +optional
 	ScopesSupported []string `json:"scopesSupported,omitempty"`
+}
+
+// AIGatewayMCPServerRateLimit A rate limit on an MCP method or tool.
+// Exactly one of `method` or `tool` must be set.
+type AIGatewayMCPServerRateLimit struct {
+	// The number of requests allowed per window.
+	//
+	// +required
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=2147483646
+	Limit int `json:"limit,omitzero"`
+	// The MCP method this limit applies to.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._/-]+$`
+	Method string `json:"method,omitzero"`
+	// The name of the tool this limit applies to.
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=128
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._/-]+$`
+	Tool string `json:"tool,omitzero"`
+	// The window size in seconds, one of a second, a minute, an hour, or a day.
+	//
+	// +required
+	WindowSize int `json:"windowSize,omitzero"`
+}
+
+// AIGatewayMCPServerRateLimiting Rate limits applied to requests to this MCP
+// Server, matched by MCP method or tool name.
+// Each AI Gateway node counts and enforces the limits independently.
+//
+// **Requires a minimum runtime version of `2.3`**.
+type AIGatewayMCPServerRateLimiting struct {
+	// The rate limits to enforce.
+	// Each entry targets exactly one of `method` or `tool`.
+	// Two
+	// entries cannot share the same target and `window_size`.
+	//
+	//
+	// +required
+	Limits []AIGatewayMCPServerRateLimit `json:"limits,omitempty"`
 }
 
 // AIGatewayMCPServerRouteWithMatcher Route configuration for an MCP Server that
@@ -4262,6 +4832,19 @@ type AIGatewayMCPServerUpstreamServer struct {
 	//
 	// +required
 	Config AIGatewayMCPServerUpstreamServerConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for the MCP Server.
 	//
 	// +required
@@ -4306,6 +4889,25 @@ type AIGatewayMCPServerUpstreamServer struct {
 	//
 	// +optional
 	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 	// List of tools exposed by this MCP Server.
 	//
 	//
@@ -4316,6 +4918,43 @@ type AIGatewayMCPServerUpstreamServer struct {
 // AIGatewayMCPServerUpstreamServerConfig Routing, logging, and server
 // configuration for the MCP Server.
 type AIGatewayMCPServerUpstreamServerConfig struct {
+	// CA certificates used to verify the TLS certificate of the upstream MCP
+	// server, referenced by
+	// name.
+	// Each entry must be the `name` of an existing AI CA Certificate on the same
+	// AI Gateway.
+	//
+	// The CA certificates build the trust store (`ca_certificates`) of the Kong
+	// Gateway Service
+	// generated for this MCP Server, which proxies requests to the upstream MCP
+	// server.
+	//
+	// If unset, the default trust store is used to verify the upstream's TLS
+	// certificate.
+	//
+	//
+	// +optional
+	CaCertificates []AIGatewayCACertificateReference `json:"caCertificates,omitempty"`
+	// Client certificates used for mutual TLS (mTLS) authentication with the
+	// upstream MCP server,
+	// referenced by name.
+	// Each entry must be the `name` of an existing AI Certificate on the same
+	// AI Gateway.
+	//
+	// The certificates are applied to the Kong Gateway Service generated for this
+	// MCP Server, which
+	// proxies requests to the upstream MCP server.
+	// The generated Service presents a single client
+	// certificate (`client_certificate`) during the TLS handshake with the
+	// upstream, so at most one
+	// certificate may be configured.
+	//
+	// If unset, no client certificate is presented to the upstream.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Certificates []AIGatewayCertificateReference `json:"certificates,omitempty"`
 	// Configuration for AI Gateway logging.
 	//
 	// +optional
@@ -4790,6 +5429,43 @@ type AIGatewayMCPServerUpstreamServerToolOauth2ConfigJwt struct {
 // AIGatewayMCPServerWithUpstreamConfig Routing, logging, and server
 // configuration for the MCP Server.
 type AIGatewayMCPServerWithUpstreamConfig struct {
+	// CA certificates used to verify the TLS certificate of the upstream MCP
+	// server, referenced by
+	// name.
+	// Each entry must be the `name` of an existing AI CA Certificate on the same
+	// AI Gateway.
+	//
+	// The CA certificates build the trust store (`ca_certificates`) of the Kong
+	// Gateway Service
+	// generated for this MCP Server, which proxies requests to the upstream MCP
+	// server.
+	//
+	// If unset, the default trust store is used to verify the upstream's TLS
+	// certificate.
+	//
+	//
+	// +optional
+	CaCertificates []AIGatewayCACertificateReference `json:"caCertificates,omitempty"`
+	// Client certificates used for mutual TLS (mTLS) authentication with the
+	// upstream MCP server,
+	// referenced by name.
+	// Each entry must be the `name` of an existing AI Certificate on the same
+	// AI Gateway.
+	//
+	// The certificates are applied to the Kong Gateway Service generated for this
+	// MCP Server, which
+	// proxies requests to the upstream MCP server.
+	// The generated Service presents a single client
+	// certificate (`client_certificate`) during the TLS handshake with the
+	// upstream, so at most one
+	// certificate may be configured.
+	//
+	// If unset, no client certificate is presented to the upstream.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Certificates []AIGatewayCertificateReference `json:"certificates,omitempty"`
 	// Configuration for AI Gateway logging.
 	//
 	// +optional
@@ -4928,6 +5604,43 @@ type AIGatewayMCPServerWithUpstreamConfigServerSessionClient struct {
 // AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig Routing, logging,
 // and request body size limits for the MCP Server.
 type AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig struct {
+	// CA certificates used to verify the TLS certificate of the upstream MCP
+	// server, referenced by
+	// name.
+	// Each entry must be the `name` of an existing AI CA Certificate on the same
+	// AI Gateway.
+	//
+	// The CA certificates build the trust store (`ca_certificates`) of the Kong
+	// Gateway Service
+	// generated for this MCP Server, which proxies requests to the upstream MCP
+	// server.
+	//
+	// If unset, the default trust store is used to verify the upstream's TLS
+	// certificate.
+	//
+	//
+	// +optional
+	CaCertificates []AIGatewayCACertificateReference `json:"caCertificates,omitempty"`
+	// Client certificates used for mutual TLS (mTLS) authentication with the
+	// upstream MCP server,
+	// referenced by name.
+	// Each entry must be the `name` of an existing AI Certificate on the same
+	// AI Gateway.
+	//
+	// The certificates are applied to the Kong Gateway Service generated for this
+	// MCP Server, which
+	// proxies requests to the upstream MCP server.
+	// The generated Service presents a single client
+	// certificate (`client_certificate`) during the TLS handshake with the
+	// upstream, so at most one
+	// certificate may be configured.
+	//
+	// If unset, no client certificate is presented to the upstream.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Certificates []AIGatewayCertificateReference `json:"certificates,omitempty"`
 	// Configuration for AI Gateway logging.
 	//
 	// +optional
@@ -5169,7 +5882,12 @@ type AIGatewayModelAPI struct {
 	//
 	// +optional
 	Access AIGatewayModelAccess `json:"access,omitzero"`
-	// List of AI capabilities enabled for this API model.
+	// The capabilities this model supports. Set to a specific capability to
+	// restrict the model to that capability only, or to `*` to allow all
+	// capabilities that the targets support at the gateway's
+	// min_runtime_version. A capability that needs a newer
+	// min_runtime_version is left out of `*`.
+	//
 	//
 	// +required
 	Capabilities []string `json:"capabilities,omitempty"`
@@ -5177,6 +5895,10 @@ type AIGatewayModelAPI struct {
 	//
 	// +required
 	Config AIGatewayModelAPIConfig `json:"config,omitzero"`
+	// Names of the Datastores this model references.
+	//
+	// +optional
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model instance.
 	//
 	// +required
@@ -5191,7 +5913,6 @@ type AIGatewayModelAPI struct {
 	// List of request/response formats supported by this model.
 	//
 	// +required
-	// +kubebuilder:validation:MaxItems=1
 	Formats []AIGatewayModelFormat `json:"formats,omitempty"`
 	// Public labels store information about an entity that can be used for
 	// filtering a list of objects.
@@ -6741,7 +7462,12 @@ func (s *AIGatewayModelBalancerSemanticConfig) UnmarshalJSON(data []byte) error 
 
 // AIGatewayModelFormat Request and response format supported by this model.
 type AIGatewayModelFormat struct {
-	// The format type.
+	// The request and response format this model supports.
+	// Set to a specific format to restrict the model to that format only, or to
+	// `*` to allow all formats that the targets support at the gateway's
+	// min_runtime_version.
+	// A format that needs a newer min_runtime_version is left out of `*`.
+	// The `*` format never includes passthrough.
 	//
 	// **`passthrough` requires a minimum runtime version of `2.2`**.
 	//
@@ -6749,7 +7475,7 @@ type AIGatewayModelFormat struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Enum=anthropic;bedrock;cohere;gemini;huggingface;openai;passthrough;typesafe
+	// +kubebuilder:validation:Enum=*;anthropic;bedrock;cohere;gemini;huggingface;openai;passthrough;typesafe
 	Type string `json:"type,omitzero"`
 }
 
@@ -6760,7 +7486,12 @@ type AIGatewayModelModel struct {
 	//
 	// +optional
 	Access AIGatewayModelAccess `json:"access,omitzero"`
-	// List of AI capabilities enabled for this model.
+	// The capabilities this model supports. Set to a specific capability to
+	// restrict the model to that capability only, or to `*` to allow all
+	// capabilities that the targets support at the gateway's
+	// min_runtime_version. A capability that needs a newer
+	// min_runtime_version is left out of `*`.
+	//
 	//
 	// +required
 	Capabilities []string `json:"capabilities,omitempty"`
@@ -6768,6 +7499,10 @@ type AIGatewayModelModel struct {
 	//
 	// +required
 	Config AIGatewayModelModelConfig `json:"config,omitzero"`
+	// Names of the Datastores this model references.
+	//
+	// +optional
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model instance.
 	//
 	// +required
@@ -6782,7 +7517,6 @@ type AIGatewayModelModel struct {
 	// List of request/response formats supported by this model.
 	//
 	// +required
-	// +kubebuilder:validation:MaxItems=1
 	Formats []AIGatewayModelFormat `json:"formats,omitempty"`
 	// Public labels store information about an entity that can be used for
 	// filtering a list of objects.
@@ -7109,6 +7843,19 @@ type AIGatewayModelProviderAnthropic struct {
 	//
 	// +required
 	Config AIGatewayModelProviderAnthropicConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -7144,6 +7891,25 @@ type AIGatewayModelProviderAnthropic struct {
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 }
 
 // AIGatewayModelProviderAnthropicConfig Configuration for the model provider.
@@ -7161,6 +7927,19 @@ type AIGatewayModelProviderAzure struct {
 	//
 	// +required
 	Config AIGatewayModelProviderAzureConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -7196,6 +7975,25 @@ type AIGatewayModelProviderAzure struct {
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 }
 
 // AIGatewayModelProviderAzureConfig is a type alias.
@@ -7361,12 +8159,25 @@ func (s *AIGatewayModelProviderAzureConfig) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// AIGatewayModelProviderBedrock Config for AWS model provider.
-type AIGatewayModelProviderBedrock struct {
-	//
+// AIGatewayModelProviderBaseten Configuration for an upstream model provider.
+type AIGatewayModelProviderBaseten struct {
+	// Configuration for the model provider.
 	//
 	// +required
-	Config AIGatewayModelProviderBedrockConfig `json:"config,omitzero"`
+	Config AIGatewayModelProviderBasetenConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -7402,6 +8213,109 @@ type AIGatewayModelProviderBedrock struct {
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
+}
+
+// AIGatewayModelProviderBasetenConfig Configuration for the model provider.
+type AIGatewayModelProviderBasetenConfig struct {
+	// Basic auth config for an upstream model provider.
+	//
+	//
+	// +required
+	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
+}
+
+// AIGatewayModelProviderBedrock Config for AWS model provider.
+type AIGatewayModelProviderBedrock struct {
+	//
+	//
+	// +required
+	Config AIGatewayModelProviderBedrockConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
+	// The display name for this model provider instance.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this model provider instance, used as a
+	// stable human-readable reference.
+	// This value is immutable after creation.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 }
 
 // AIGatewayModelProviderBedrockConfig is a type alias.
@@ -7535,6 +8449,19 @@ type AIGatewayModelProviderCerebras struct {
 	//
 	// +required
 	Config AIGatewayModelProviderCerebrasConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -7570,6 +8497,25 @@ type AIGatewayModelProviderCerebras struct {
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 }
 
 // AIGatewayModelProviderCerebrasConfig Configuration for the model provider.
@@ -7587,6 +8533,19 @@ type AIGatewayModelProviderCohere struct {
 	//
 	// +required
 	Config AIGatewayModelProviderCohereConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -7622,6 +8581,25 @@ type AIGatewayModelProviderCohere struct {
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 }
 
 // AIGatewayModelProviderCohereConfig Configuration for the model provider.
@@ -7961,6 +8939,19 @@ type AIGatewayModelProviderDashscope struct {
 	//
 	// +required
 	Config AIGatewayModelProviderDashscopeConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -7996,6 +8987,25 @@ type AIGatewayModelProviderDashscope struct {
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 }
 
 // AIGatewayModelProviderDashscopeConfig Configuration for the model provider.
@@ -8014,6 +9024,19 @@ type AIGatewayModelProviderDatabricks struct {
 	//
 	// +required
 	Config AIGatewayModelProviderDatabricksConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -8049,6 +9072,25 @@ type AIGatewayModelProviderDatabricks struct {
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 }
 
 // AIGatewayModelProviderDatabricksConfig Configuration for the model provider.
@@ -8066,6 +9108,19 @@ type AIGatewayModelProviderDeepseek struct {
 	//
 	// +required
 	Config AIGatewayModelProviderDeepseekConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -8101,6 +9156,25 @@ type AIGatewayModelProviderDeepseek struct {
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 }
 
 // AIGatewayModelProviderDeepseekConfig Configuration for the model provider.
@@ -8118,6 +9192,19 @@ type AIGatewayModelProviderGemini struct {
 	//
 	// +required
 	Config AIGatewayModelProviderGeminiConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -8153,6 +9240,25 @@ type AIGatewayModelProviderGemini struct {
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 }
 
 // AIGatewayModelProviderGeminiConfig is a type alias.
@@ -8287,6 +9393,19 @@ type AIGatewayModelProviderHuggingface struct {
 	//
 	// +required
 	Config AIGatewayModelProviderHuggingfaceConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -8322,6 +9441,25 @@ type AIGatewayModelProviderHuggingface struct {
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 }
 
 // AIGatewayModelProviderHuggingfaceConfig Configuration for the model provider.
@@ -8339,6 +9477,19 @@ type AIGatewayModelProviderKimi struct {
 	//
 	// +required
 	Config AIGatewayModelProviderKimiConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -8374,6 +9525,25 @@ type AIGatewayModelProviderKimi struct {
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 }
 
 // AIGatewayModelProviderKimiConfig Configuration for the model provider.
@@ -8391,6 +9561,19 @@ type AIGatewayModelProviderLlama2 struct {
 	//
 	// +required
 	Config AIGatewayModelProviderLlama2Config `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -8426,6 +9609,25 @@ type AIGatewayModelProviderLlama2 struct {
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 }
 
 // AIGatewayModelProviderLlama2Config Configuration for the model provider.
@@ -8443,6 +9645,19 @@ type AIGatewayModelProviderMistral struct {
 	//
 	// +required
 	Config AIGatewayModelProviderMistralConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -8478,6 +9693,25 @@ type AIGatewayModelProviderMistral struct {
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 }
 
 // AIGatewayModelProviderMistralConfig Configuration for the model provider.
@@ -8495,6 +9729,19 @@ type AIGatewayModelProviderOllama struct {
 	//
 	// +required
 	Config AIGatewayModelProviderOllamaConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -8530,6 +9777,25 @@ type AIGatewayModelProviderOllama struct {
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 }
 
 // AIGatewayModelProviderOllamaConfig Configuration for the model provider.
@@ -8547,6 +9813,19 @@ type AIGatewayModelProviderOpenai struct {
 	//
 	// +required
 	Config AIGatewayModelProviderOpenaiConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -8582,6 +9861,25 @@ type AIGatewayModelProviderOpenai struct {
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 }
 
 // AIGatewayModelProviderOpenaiConfig Configuration for the model provider.
@@ -8603,6 +9901,19 @@ type AIGatewayModelProviderSagemaker struct {
 	//
 	// +required
 	Config AIGatewayModelProviderSagemakerConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -8638,6 +9949,25 @@ type AIGatewayModelProviderSagemaker struct {
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 }
 
 // AIGatewayModelProviderSagemakerConfig is a type alias.
@@ -8771,6 +10101,19 @@ type AIGatewayModelProviderTypesafe struct {
 	//
 	// +required
 	Config AIGatewayModelProviderTypesafeConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -8806,6 +10149,25 @@ type AIGatewayModelProviderTypesafe struct {
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 }
 
 // AIGatewayModelProviderTypesafeConfig Configuration for the model provider.
@@ -8823,6 +10185,19 @@ type AIGatewayModelProviderVercel struct {
 	//
 	// +required
 	Config AIGatewayModelProviderVercelConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -8858,6 +10233,25 @@ type AIGatewayModelProviderVercel struct {
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 }
 
 // AIGatewayModelProviderVercelConfig Configuration for the model provider.
@@ -8875,6 +10269,19 @@ type AIGatewayModelProviderVllm struct {
 	//
 	// +required
 	Config AIGatewayModelProviderVllmConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -8910,6 +10317,25 @@ type AIGatewayModelProviderVllm struct {
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 }
 
 // AIGatewayModelProviderVllmConfig Configuration for the model provider.
@@ -8927,6 +10353,19 @@ type AIGatewayModelProviderXai struct {
 	//
 	// +required
 	Config AIGatewayModelProviderXaiConfig `json:"config,omitzero"`
+	// The Token Vault Datastore holding this entity's credential storage: the
+	// directory credentials
+	// are written to, and the encryption keys that seal them.
+	// Required when `token_vault` is set
+	// (on an auth strategy, when its credential manager is enabled), and the
+	// referenced Datastore
+	// must have type `token-vault`. Only one Datastore can be referenced.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	Datastores []AIGatewayDatastoreNamespacedRef `json:"datastores,omitempty"`
 	// The display name for this model provider instance.
 	//
 	// +required
@@ -8962,6 +10401,25 @@ type AIGatewayModelProviderXai struct {
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// Resolves an upstream credential per request via Kong's Token Vault instead
+	// of sending a static
+	// credential.
+	// The directory credentials live in, and the keys that encrypt them, come from
+	// the
+	// `token-vault` Datastore this entity references, and are returned read-only
+	// in `storage`.
+	//
+	// Callers must enroll with the configured Token Vault provider before the
+	// credential can be
+	// resolved.
+	// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+	// `check_authentication_status` tools that guide the caller through the
+	// enrollment flow.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	TokenVault AIGatewayTokenVault `json:"tokenVault,omitzero"`
 }
 
 // AIGatewayModelProviderXaiConfig Configuration for the model provider.
@@ -10663,7 +12121,7 @@ func (s *AIGatewayTarget) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling AIGatewayTarget: %w", err)
 	}
-	if aux.Config != nil && aux.Config.Type == "" && aux.Config.Anthropic == nil && aux.Config.Azure == nil && aux.Config.Bedrock == nil && aux.Config.Cerebras == nil && aux.Config.Cohere == nil && aux.Config.Dashscope == nil && aux.Config.Databricks == nil && aux.Config.Deepseek == nil && aux.Config.Gemini == nil && aux.Config.Huggingface == nil && aux.Config.Kimi == nil && aux.Config.Llama2 == nil && aux.Config.Mistral == nil && aux.Config.Ollama == nil && aux.Config.Openai == nil && aux.Config.Sagemaker == nil && aux.Config.Typesafe == nil && aux.Config.Vercel == nil && aux.Config.Vllm == nil && aux.Config.Xai == nil {
+	if aux.Config != nil && aux.Config.Type == "" && aux.Config.Anthropic == nil && aux.Config.Azure == nil && aux.Config.Baseten == nil && aux.Config.Bedrock == nil && aux.Config.Cerebras == nil && aux.Config.Cohere == nil && aux.Config.Dashscope == nil && aux.Config.Databricks == nil && aux.Config.Deepseek == nil && aux.Config.Gemini == nil && aux.Config.Huggingface == nil && aux.Config.Kimi == nil && aux.Config.Llama2 == nil && aux.Config.Mistral == nil && aux.Config.Ollama == nil && aux.Config.Openai == nil && aux.Config.Sagemaker == nil && aux.Config.Typesafe == nil && aux.Config.Vercel == nil && aux.Config.Vllm == nil && aux.Config.Xai == nil {
 		aux.Config = nil
 	}
 	*s = AIGatewayTarget(aux)
@@ -10899,6 +12357,118 @@ type AIGatewayTargetAzureConfig struct {
 	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
 
+// AIGatewayTargetBasetenConfig Baseten-specific configuration for a model.
+// Requests are sent to Baseten Model APIs at
+// `https://inference.baseten.co/v1` by default, and the target `name` is the
+// Baseten model
+// slug (for example, `deepseek-ai/DeepSeek-V4-Pro-0813`).
+// To route to a dedicated Baseten
+// deployment, set `upstream_url` to the deployment's full OpenAI-compatible
+// endpoint (for
+// example,
+// `https://model-{model_id}.api.baseten.co/environments/{environment}/sync/v1/chat/completions`)
+// or use passthrough format.
+//
+// **Requires a minimum runtime version of `2.3`**.
+type AIGatewayTargetBasetenConfig struct {
+	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
+	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
+	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+	// Configure this when the upstream provider charges differently for different
+	// cache TTLs.
+	//
+	// +optional
+	CacheWriteCostList []AIGatewayCacheWriteCost `json:"cacheWriteCostList,omitempty"`
+	// Above an input-token threshold, scale input and output pricing by the
+	// corresponding factor.
+	//
+	// +optional
+	ContextWindowFactor []AIGatewayContextWindowFactor `json:"contextWindowFactor,omitempty"`
+	// The number of dimensions for embedding outputs.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
+	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
+	// Cost per 1M input tokens for billing and cost tracking.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
+	// The maximum number of tokens to generate in the response.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
+	MaxTokens int `json:"maxTokens,omitzero"`
+	// Cost per 1M output tokens for billing and cost tracking.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
+	// Multiplier applied to the whole request for a service tier.
+	// The default factor is 1.0 when no tier matches.
+	//
+	// +optional
+	ServiceTierFactor []AIGatewayServiceTierFactor `json:"serviceTierFactor,omitempty"`
+	// Controls randomness in the model output.
+	// Higher values produce more varied responses.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=5
+	Temperature float64 `json:"temperature,omitzero"`
+	// Limits the number of highest-probability tokens considered during
+	// generation.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=500
+	TopK int `json:"topK,omitzero"`
+	// Nucleus sampling probability mass.
+	// Tokens with cumulative probability up to top_p are considered.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=1
+	TopP float64 `json:"topP,omitzero"`
+	// The upstream URL for the model endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
 // AIGatewayTargetBedrockConfig AWS Bedrock-specific configuration for a model.
 type AIGatewayTargetBedrockConfig struct {
 	// S3 bucket prefix for batch inference jobs.
@@ -10946,6 +12516,22 @@ type AIGatewayTargetBedrockConfig struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	EmbeddingsNormalize string `json:"embeddingsNormalize,omitzero"`
+	// The AWS Bedrock inference endpoint that requests to this target are sent to.
+	// `runtime` sends requests to the Bedrock Runtime endpoint
+	// (`bedrock-runtime.{region}.amazonaws.com`). `mantle` sends requests to the
+	// Bedrock Mantle endpoint (`bedrock-mantle.{region}.api.aws`), which accepts
+	// OpenAI and Anthropic request formats natively.
+	//
+	// A target with `endpoint_type` set to `mantle` is rejected if its model
+	// includes a format with `type` set to `bedrock`, because the Mantle endpoint
+	// does not support the Bedrock Converse or InvokeModel APIs.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=runtime;mantle
+	EndpointType string `json:"endpointType,omitzero"`
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
@@ -11024,6 +12610,15 @@ type AIGatewayTargetBedrockConfig struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	VideoOutputS3URI string `json:"videoOutputS3URI,omitzero"`
+	// Hostname of an AWS PrivateLink VPC endpoint to use instead of the public
+	// Bedrock endpoint.
+	// Ignored if `upstream_url` is set.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	VpcEndpoint string `json:"vpcEndpoint,omitzero"`
 }
 
 // AIGatewayTargetCerebrasConfig Cerebras-specific configuration for a model.
@@ -11252,7 +12847,7 @@ type AIGatewayTargetConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=anthropic;azure;bedrock;cerebras;cohere;dashscope;databricks;deepseek;gemini;huggingface;kimi;llama2;mistral;ollama;openai;sagemaker;typesafe;vercel;vllm;xai
+	// +kubebuilder:validation:Enum=anthropic;azure;baseten;bedrock;cerebras;cohere;dashscope;databricks;deepseek;gemini;huggingface;kimi;llama2;mistral;ollama;openai;sagemaker;typesafe;vercel;vllm;xai
 	Type AIGatewayTargetConfigType `json:"type,omitempty"`
 
 	// Anthropic configuration.
@@ -11263,6 +12858,10 @@ type AIGatewayTargetConfig struct {
 	//
 	// +optional
 	Azure *AIGatewayTargetAzureConfig `json:"azure,omitempty"`
+	// Baseten configuration.
+	//
+	// +optional
+	Baseten *AIGatewayTargetBasetenConfig `json:"baseten,omitempty"`
 	// Bedrock configuration.
 	//
 	// +optional
@@ -11344,6 +12943,7 @@ type AIGatewayTargetConfigType string
 const (
 	AIGatewayTargetConfigTypeAnthropic   AIGatewayTargetConfigType = "anthropic"
 	AIGatewayTargetConfigTypeAzure       AIGatewayTargetConfigType = "azure"
+	AIGatewayTargetConfigTypeBaseten     AIGatewayTargetConfigType = "baseten"
 	AIGatewayTargetConfigTypeBedrock     AIGatewayTargetConfigType = "bedrock"
 	AIGatewayTargetConfigTypeCerebras    AIGatewayTargetConfigType = "cerebras"
 	AIGatewayTargetConfigTypeCohere      AIGatewayTargetConfigType = "cohere"
@@ -11388,6 +12988,14 @@ func (u AIGatewayTargetConfig) MarshalJSON() ([]byte, error) {
 				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig azure: %w", err)
 			}
 			m["azure"] = raw
+		}
+	case AIGatewayTargetConfigTypeBaseten:
+		if u.Baseten != nil {
+			raw, err := json.Marshal(u.Baseten)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig baseten: %w", err)
+			}
+			m["baseten"] = raw
 		}
 	case AIGatewayTargetConfigTypeBedrock:
 		if u.Bedrock != nil {
@@ -11574,6 +13182,16 @@ func (u *AIGatewayTargetConfig) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling AIGatewayTargetConfig azure: %w", err)
 		}
 		u.Azure = &val
+	case "baseten":
+		payload, ok := raw["baseten"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayTargetBasetenConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayTargetConfig baseten: %w", err)
+		}
+		u.Baseten = &val
 	case "bedrock":
 		payload, ok := raw["bedrock"]
 		if !ok || len(payload) == 0 {
@@ -13287,6 +14905,155 @@ type AIGatewayTargetXaiConfig struct {
 	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
 
+// AIGatewayTokenVault Resolves an upstream credential per request via Kong's
+// Token Vault instead of sending a static
+// credential.
+// The directory credentials live in, and the keys that encrypt them, come from
+// the
+// `token-vault` Datastore this entity references, and are returned read-only in
+// `storage`.
+//
+// Callers must enroll with the configured Token Vault provider before the
+// credential can be
+// resolved.
+// Until enrollment completes, an MCP Server serves virtual `authenticate` and
+// `check_authentication_status` tools that guide the caller through the
+// enrollment flow.
+//
+// **Requires a minimum runtime version of `2.3`**.
+type AIGatewayTokenVault struct {
+	// Optional best-effort cache for exchanged credentials, shared across the
+	// cluster.
+	// Losing it
+	// only costs a re-exchange.
+	// Credentials are encrypted with the keys held by the Token Vault
+	// Datastore before being cached.
+	//
+	//
+	// +optional
+	Cache AIGatewayTokenVaultCache `json:"cache,omitzero"`
+	// Where the caller's subject token is read from, and where the credential the
+	// Token Vault returns
+	// is placed on the upstream request.
+	//
+	// Both placements default to `Authorization: Bearer <credential>` in a header,
+	// though an
+	// `outbound` placement left unset honours whatever the provider advertises
+	// instead.
+	// Set them for
+	// providers that take the credential elsewhere, such as an `x-api-key` header
+	// carrying the raw
+	// credential.
+	//
+	//
+	// +optional
+	Credential AIGatewayTokenVaultCredential `json:"credential,omitzero"`
+	// Name of the upstream credential provider registered in the Token Vault
+	// directory.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Provider string `json:"provider,omitzero"`
+	// The kind of bearer token the caller presents, which the Token Vault
+	// exchanges for the
+	// upstream credential.
+	// Omit it unless the request shape makes the token type ambiguous: it is
+	// otherwise resolved from the request, and failing that from the token's shape
+	// (a JWS is an
+	// `access_token`, anything else an `api_key`).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=access_token;api_key
+	SubjectTokenType string `json:"subjectTokenType,omitzero"`
+}
+
+// AIGatewayTokenVaultCache Optional best-effort cache for exchanged
+// credentials, shared across the cluster.
+// Losing it
+// only costs a re-exchange.
+// Credentials are encrypted with the keys held by the Token Vault
+// Datastore before being cached.
+type AIGatewayTokenVaultCache struct {
+	// Config for connecting to a Cloud Provider's Redis instance.
+	//
+	// +optional
+	Redis AIGatewayRedisCloudConfiguration `json:"redis,omitzero"`
+}
+
+// AIGatewayTokenVaultCredential Where the caller's subject token is read from,
+// and where the credential the Token Vault returns
+// is placed on the upstream request.
+//
+// Both placements default to `Authorization: Bearer <credential>` in a header,
+// though an
+// `outbound` placement left unset honours whatever the provider advertises
+// instead.
+// Set them for
+// providers that take the credential elsewhere, such as an `x-api-key` header
+// carrying the raw
+// credential.
+type AIGatewayTokenVaultCredential struct {
+	//
+	//
+	// +optional
+	Inbound AIGatewayTokenVaultCredentialPlacement `json:"inbound,omitzero"`
+	//
+	//
+	// +optional
+	Outbound AIGatewayTokenVaultCredentialPlacement `json:"outbound,omitzero"`
+}
+
+// AIGatewayTokenVaultCredentialManager Serves the self-service enrollment UI
+// through which end users authorize the upstream providers
+// this auth strategy authenticates against.
+// Omit `token_vault` entirely to serve no such UI.
+//
+// Requires a `token-vault` Datastore reference in `datastores`; enabling the
+// credential manager
+// without one is rejected.
+//
+// **Requires a minimum runtime version of `2.3`**.
+type AIGatewayTokenVaultCredentialManager struct {
+	// Whether the self-service enrollment UI is served for this auth strategy.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	EnableCredentialManager string `json:"enableCredentialManager,omitzero"`
+}
+
+// AIGatewayTokenVaultCredentialPlacement is a type alias.
+type AIGatewayTokenVaultCredentialPlacement struct {
+	// Whether the credential travels in a header, the request body, or the query
+	// string.
+	// Defaults to `header`.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=header;body;query
+	Location string `json:"location,omitzero"`
+	// Name of the header, query parameter, or body field carrying the credential.
+	// Defaults to
+	// `Authorization` for a header, `access_token` otherwise.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Name string `json:"name,omitzero"`
+	// String prepended verbatim to the credential value.
+	// Defaults to `Bearer ` (with its trailing
+	// space) for a header, and to no prefix otherwise.
+	// Set it to an empty string when the provider
+	// expects the raw credential.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Prefix string `json:"prefix,omitzero"`
+}
+
 // AIGatewayUpstreamAuthAWS AWS IAM (SigV4) authentication for the upstream
 // service.
 type AIGatewayUpstreamAuthAWS struct {
@@ -14021,6 +15788,190 @@ type CreateAIGatewayCustomPolicyStreamingRequest struct {
 	//
 	// +required
 	Schema ConfigMapDataSource `json:"schema,omitzero"`
+}
+
+// DatastoreRedisCloudAuthentication Cloud-managed Redis authentication.
+// Only the fields relevant to the chosen `auth_provider` need to be set.
+type DatastoreRedisCloudAuthentication struct {
+	//
+	//
+	// +optional
+	AuthProvider *DatastoreRedisCloudAuthenticationAuthProvider `json:"authProvider,omitempty"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AwsAccessKeyID *string `json:"awsAccessKeyID,omitempty"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AwsAssumeRoleArn *string `json:"awsAssumeRoleArn,omitempty"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AwsCacheName *string `json:"awsCacheName,omitempty"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	AwsIsServerless *string `json:"awsIsServerless,omitempty"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AwsRegion *string `json:"awsRegion,omitempty"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AwsRoleSessionName *string `json:"awsRoleSessionName,omitempty"`
+	//
+	//
+	// +optional
+	AwsSecretAccessKey SensitiveDataSource `json:"awsSecretAccessKey,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AzureClientID *string `json:"azureClientID,omitempty"`
+	//
+	//
+	// +optional
+	AzureClientSecret SensitiveDataSource `json:"azureClientSecret,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AzureTenantID *string `json:"azureTenantID,omitempty"`
+	//
+	//
+	// +optional
+	GcpServiceAccountJSON SensitiveDataSource `json:"gcpServiceAccountJSON,omitzero"`
+}
+
+// DatastoreRedisCloudAuthenticationAuthProviderVariant1 is a type alias.
+type DatastoreRedisCloudAuthenticationAuthProviderVariant1 string
+
+// DatastoreRedisCloudAuthenticationAuthProviderVariant2 is a type alias.
+type DatastoreRedisCloudAuthenticationAuthProviderVariant2 string
+
+// DatastoreRedisCloudAuthenticationAuthProvider represents a union type for auth_provider.
+// Only one of the fields should be set based on the Type.
+type DatastoreRedisCloudAuthenticationAuthProvider struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=variant1;variant2
+	Type DatastoreRedisCloudAuthenticationAuthProviderType `json:"type,omitempty"`
+
+	// Variant1 configuration.
+	//
+	// +optional
+	Variant1 *DatastoreRedisCloudAuthenticationAuthProviderVariant1 `json:"variant1,omitempty"`
+	// Variant2 configuration.
+	//
+	// +optional
+	Variant2 *DatastoreRedisCloudAuthenticationAuthProviderVariant2 `json:"variant2,omitempty"`
+}
+
+// DatastoreRedisCloudAuthenticationAuthProviderType represents the type of auth_provider.
+type DatastoreRedisCloudAuthenticationAuthProviderType string
+
+// DatastoreRedisCloudAuthenticationAuthProviderType values.
+const (
+	DatastoreRedisCloudAuthenticationAuthProviderTypeVariant1 DatastoreRedisCloudAuthenticationAuthProviderType = "variant1"
+	DatastoreRedisCloudAuthenticationAuthProviderTypeVariant2 DatastoreRedisCloudAuthenticationAuthProviderType = "variant2"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u DatastoreRedisCloudAuthenticationAuthProvider) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling DatastoreRedisCloudAuthenticationAuthProvider type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case DatastoreRedisCloudAuthenticationAuthProviderTypeVariant1:
+		if u.Variant1 != nil {
+			raw, err := json.Marshal(u.Variant1)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling DatastoreRedisCloudAuthenticationAuthProvider Variant1: %w", err)
+			}
+			m["variant1"] = raw
+		}
+	case DatastoreRedisCloudAuthenticationAuthProviderTypeVariant2:
+		if u.Variant2 != nil {
+			raw, err := json.Marshal(u.Variant2)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling DatastoreRedisCloudAuthenticationAuthProvider Variant2: %w", err)
+			}
+			m["variant2"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *DatastoreRedisCloudAuthenticationAuthProvider) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling DatastoreRedisCloudAuthenticationAuthProvider: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = DatastoreRedisCloudAuthenticationAuthProviderType(probe.Type)
+	switch probe.Type {
+	case "variant1":
+		payload, ok := raw["variant1"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val DatastoreRedisCloudAuthenticationAuthProviderVariant1
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling DatastoreRedisCloudAuthenticationAuthProvider Variant1: %w", err)
+		}
+		u.Variant1 = &val
+	case "variant2":
+		payload, ok := raw["variant2"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val DatastoreRedisCloudAuthenticationAuthProviderVariant2
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling DatastoreRedisCloudAuthenticationAuthProvider Variant2: %w", err)
+		}
+		u.Variant2 = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *DatastoreRedisCloudAuthentication) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling DatastoreRedisCloudAuthentication: nil receiver")
+	}
+	type alias DatastoreRedisCloudAuthentication
+	aux := alias{}
+	aux.AuthProvider = &DatastoreRedisCloudAuthenticationAuthProvider{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling DatastoreRedisCloudAuthentication: %w", err)
+	}
+	if aux.AuthProvider != nil && aux.AuthProvider.Type == "" && aux.AuthProvider.Variant1 == nil && aux.AuthProvider.Variant2 == nil {
+		aux.AuthProvider = nil
+	}
+	*s = DatastoreRedisCloudAuthentication(aux)
+	return nil
 }
 
 // EnvironmentVariableVault is a type alias.
@@ -15673,3 +17624,629 @@ type PublicLabelsValue string
 //
 // +kubebuilder:validation:MaxProperties=50
 type PublicLabels map[string]PublicLabelsValue
+
+// RedisCEDatastore is a type alias.
+type RedisCEDatastore struct {
+	//
+	//
+	// +required
+	Config RedisCEDatastoreConfig `json:"config,omitzero"`
+	// The description of the Datastore.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1024
+	Description string `json:"description,omitzero"`
+	// The display name for this Datastore.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this Datastore, used as a stable
+	// human-readable reference.
+	// This value is immutable after creation.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=2
+	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[a-z][a-z0-9-]*[a-z0-9]+$`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="name is immutable"
+	Name AIGatewayDatastoreName `json:"name,omitzero"`
+}
+
+// RedisCEDatastoreConfig is a type alias.
+type RedisCEDatastoreConfig struct {
+	// Cloud-managed Redis authentication.
+	// Only the fields relevant to the chosen `auth_provider` need to be set.
+	//
+	// +optional
+	CloudAuthentication DatastoreRedisCloudAuthentication `json:"cloudAuthentication,omitzero"`
+	// The Redis database index to use.
+	//
+	// +optional
+	Database int `json:"database,omitzero"`
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	//
+	//
+	// +optional
+	Password SensitiveDataSource `json:"password,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	Port int `json:"port,omitzero"`
+	// SNI to use when connecting over SSL.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	ServerName *string `json:"serverName,omitempty"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSL string `json:"ssl,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSLVerify string `json:"sslVerify,omitzero"`
+	// Timeout in milliseconds for connecting, reading, and writing to the Redis
+	// server.
+	//
+	// +optional
+	Timeout int `json:"timeout,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Username *string `json:"username,omitempty"`
+}
+
+// RedisEEDatastore is a type alias.
+type RedisEEDatastore struct {
+	//
+	//
+	// +required
+	Config RedisEEDatastoreConfig `json:"config,omitzero"`
+	// The description of the Datastore.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1024
+	Description string `json:"description,omitzero"`
+	// The display name for this Datastore.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this Datastore, used as a stable
+	// human-readable reference.
+	// This value is immutable after creation.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=2
+	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[a-z][a-z0-9-]*[a-z0-9]+$`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="name is immutable"
+	Name AIGatewayDatastoreName `json:"name,omitzero"`
+}
+
+// RedisEEDatastoreConfig is a type alias.
+type RedisEEDatastoreConfig struct {
+	// Cloud-managed Redis authentication.
+	// Only the fields relevant to the chosen `auth_provider` need to be set.
+	//
+	// +optional
+	CloudAuthentication DatastoreRedisCloudAuthentication `json:"cloudAuthentication,omitzero"`
+	//
+	//
+	// +optional
+	ClusterMaxRedirections int `json:"clusterMaxRedirections,omitzero"`
+	//
+	//
+	// +optional
+	ClusterNodes []RedisEEDatastoreConfigClusterNodes `json:"clusterNodes,omitempty"`
+	//
+	//
+	// +optional
+	ConnectTimeout int `json:"connectTimeout,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ConnectionIsProxied string `json:"connectionIsProxied,omitzero"`
+	// The Redis database index to use.
+	//
+	// +optional
+	Database int `json:"database,omitzero"`
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	//
+	//
+	// +optional
+	KeepaliveBacklog *int `json:"keepaliveBacklog,omitempty"`
+	//
+	//
+	// +optional
+	KeepalivePoolSize int `json:"keepalivePoolSize,omitzero"`
+	//
+	//
+	// +optional
+	Password SensitiveDataSource `json:"password,omitzero"`
+	// An integer representing a port number between 0 and 65535, inclusive.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	Port *RedisEEDatastoreConfigPort `json:"port,omitempty"`
+	//
+	//
+	// +optional
+	ReadTimeout int `json:"readTimeout,omitzero"`
+	//
+	//
+	// +optional
+	SendTimeout int `json:"sendTimeout,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SentinelMaster *string `json:"sentinelMaster,omitempty"`
+	//
+	//
+	// +optional
+	SentinelNodes []RedisEEDatastoreConfigSentinelNodes `json:"sentinelNodes,omitempty"`
+	//
+	//
+	// +optional
+	SentinelPassword SensitiveDataSource `json:"sentinelPassword,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=master;slave;any
+	SentinelRole *string `json:"sentinelRole,omitempty"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SentinelUsername *string `json:"sentinelUsername,omitempty"`
+	// SNI to use when connecting over SSL.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	ServerName *string `json:"serverName,omitempty"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSL string `json:"ssl,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSLVerify string `json:"sslVerify,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Username *string `json:"username,omitempty"`
+}
+
+// RedisEEDatastoreConfigClusterNodes is a type alias.
+type RedisEEDatastoreConfigClusterNodes struct {
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	IP string `json:"ip,omitzero"`
+	//
+	//
+	// +required
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	Port int `json:"port,omitzero"`
+}
+
+// RedisEEDatastoreConfigSentinelNodes is a type alias.
+type RedisEEDatastoreConfigSentinelNodes struct {
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	//
+	//
+	// +required
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	Port int `json:"port,omitzero"`
+}
+
+// RedisEEDatastoreConfigPortVariant1 is a type alias.
+type RedisEEDatastoreConfigPortVariant1 int
+
+// RedisEEDatastoreConfigPortVariant2 is a type alias.
+type RedisEEDatastoreConfigPortVariant2 string
+
+// RedisEEDatastoreConfigPort represents a union type for port.
+// Only one of the fields should be set based on the Type.
+type RedisEEDatastoreConfigPort struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=variant1;variant2
+	Type RedisEEDatastoreConfigPortType `json:"type,omitempty"`
+
+	// Variant1 configuration.
+	//
+	// +optional
+	Variant1 *RedisEEDatastoreConfigPortVariant1 `json:"variant1,omitempty"`
+	// Variant2 configuration.
+	//
+	// +optional
+	Variant2 *RedisEEDatastoreConfigPortVariant2 `json:"variant2,omitempty"`
+}
+
+// RedisEEDatastoreConfigPortType represents the type of port.
+type RedisEEDatastoreConfigPortType string
+
+// RedisEEDatastoreConfigPortType values.
+const (
+	RedisEEDatastoreConfigPortTypeVariant1 RedisEEDatastoreConfigPortType = "variant1"
+	RedisEEDatastoreConfigPortTypeVariant2 RedisEEDatastoreConfigPortType = "variant2"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u RedisEEDatastoreConfigPort) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling RedisEEDatastoreConfigPort type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case RedisEEDatastoreConfigPortTypeVariant1:
+		if u.Variant1 != nil {
+			raw, err := json.Marshal(u.Variant1)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling RedisEEDatastoreConfigPort Variant1: %w", err)
+			}
+			m["variant1"] = raw
+		}
+	case RedisEEDatastoreConfigPortTypeVariant2:
+		if u.Variant2 != nil {
+			raw, err := json.Marshal(u.Variant2)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling RedisEEDatastoreConfigPort Variant2: %w", err)
+			}
+			m["variant2"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *RedisEEDatastoreConfigPort) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling RedisEEDatastoreConfigPort: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = RedisEEDatastoreConfigPortType(probe.Type)
+	switch probe.Type {
+	case "variant1":
+		payload, ok := raw["variant1"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val RedisEEDatastoreConfigPortVariant1
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling RedisEEDatastoreConfigPort Variant1: %w", err)
+		}
+		u.Variant1 = &val
+	case "variant2":
+		payload, ok := raw["variant2"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val RedisEEDatastoreConfigPortVariant2
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling RedisEEDatastoreConfigPort Variant2: %w", err)
+		}
+		u.Variant2 = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *RedisEEDatastoreConfig) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling RedisEEDatastoreConfig: nil receiver")
+	}
+	type alias RedisEEDatastoreConfig
+	aux := alias{}
+	aux.Port = &RedisEEDatastoreConfigPort{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling RedisEEDatastoreConfig: %w", err)
+	}
+	if aux.Port != nil && aux.Port.Type == "" && aux.Port.Variant1 == nil && aux.Port.Variant2 == nil {
+		aux.Port = nil
+	}
+	*s = RedisEEDatastoreConfig(aux)
+	return nil
+}
+
+// TokenVaultDatastore is a type alias.
+type TokenVaultDatastore struct {
+	//
+	//
+	// +required
+	Config TokenVaultDatastoreConfig `json:"config,omitzero"`
+	// The description of the Datastore.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1024
+	Description string `json:"description,omitzero"`
+	// The display name for this Datastore.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this Datastore, used as a stable
+	// human-readable reference.
+	// This value is immutable after creation.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=2
+	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[a-z][a-z0-9-]*[a-z0-9]+$`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="name is immutable"
+	Name AIGatewayDatastoreName `json:"name,omitzero"`
+}
+
+// TokenVaultDatastoreConfig is a type alias.
+type TokenVaultDatastoreConfig struct {
+	// The version of the encryption key used to encrypt new tokens.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	CurrentVersion string `json:"currentVersion,omitzero"`
+	// The name of the directory in which tokens are stored.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Directory string `json:"directory,omitzero"`
+	// The encryption keys used to protect stored tokens.
+	// Keep previous versions in the list so existing tokens can still be
+	// decrypted.
+	//
+	// +required
+	Keys []TokenVaultDatastoreKey `json:"keys,omitempty"`
+}
+
+// TokenVaultDatastoreKey is a type alias.
+type TokenVaultDatastoreKey struct {
+	// A [vault
+	// reference](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault)
+	// to the encryption key.
+	// A literal key value is rejected.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^\{vault://.*\}$`
+	Key string `json:"key,omitzero"`
+	// The identifier of this key version.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Version string `json:"version,omitzero"`
+}
+
+// VectorDBDatastore Carries the pgvector connection only.
+// `strategy`, `dimensions`, `distance_metric`, and `threshold`
+// belong to the policy or model referencing this Datastore, not the Datastore
+// itself.
+type VectorDBDatastore struct {
+	//
+	//
+	// +required
+	Config VectorDBDatastoreConfig `json:"config,omitzero"`
+	// The description of the Datastore.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1024
+	Description string `json:"description,omitzero"`
+	// The display name for this Datastore.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
+	// A user-defined unique identifier for this Datastore, used as a stable
+	// human-readable reference.
+	// This value is immutable after creation.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=2
+	// +kubebuilder:validation:MaxLength=255
+	// +kubebuilder:validation:Pattern=`^[a-z][a-z0-9-]*[a-z0-9]+$`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="name is immutable"
+	Name AIGatewayDatastoreName `json:"name,omitzero"`
+}
+
+// VectorDBDatastoreConfig is a type alias.
+type VectorDBDatastoreConfig struct {
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Database string `json:"database,omitzero"`
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Host string `json:"host,omitzero"`
+	//
+	//
+	// +optional
+	Password SensitiveDataSource `json:"password,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	Port int `json:"port,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSL string `json:"ssl,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SSLCert *string `json:"sslCert,omitempty"`
+	//
+	//
+	// +optional
+	SSLCertKey SensitiveDataSource `json:"sslCertKey,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSLRequired string `json:"sslRequired,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	SSLVerify string `json:"sslVerify,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SSLVersion string `json:"sslVersion,omitzero"`
+	// Timeout in milliseconds for connecting, reading, and writing to the
+	// database.
+	//
+	// +optional
+	Timeout int `json:"timeout,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	User string `json:"user,omitzero"`
+}

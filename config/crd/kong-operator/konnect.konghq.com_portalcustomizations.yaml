@@ -305,7 +305,7 @@ spec:
                       name:
                         description: |-
                           The theme name to apply to this portal.
-                          Supported names are 'ocean', 'mesa', and 'grove'.
+                          Supported names are 'mesa', 'grove', 'pebble', or 'ocean'.
                           If another name is provided or this property is omitted, the portal uses the
                           default 'ocean' theme.
                         maxLength: 253

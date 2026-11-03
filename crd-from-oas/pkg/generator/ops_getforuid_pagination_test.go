@@ -28,6 +28,13 @@ func TestResolveListPagination(t *testing.T) {
 			expectedPagination: listPaginationCursor,
 		},
 		{
+			name:               "cursor with a total",
+			listMethod:         "ListAiGatewayDatastores",
+			listResponseType:   "ListAIGatewayDatastoresResponse",
+			parents:            1,
+			expectedPagination: listPaginationCursor,
+		},
+		{
 			name:               "cursor with a meta that is the page itself",
 			listMethod:         "ListPortalIPAllowList",
 			listResponseType:   "PortalSourceIPRestrictionPaginatedResponse",

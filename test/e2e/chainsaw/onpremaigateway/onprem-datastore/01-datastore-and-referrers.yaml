@@ -1,0 +1,168 @@
+# One redis-ee datastore (a shared Redis connection) that both a Policy and a
+# Model reference by CR name. The datastore's own credentials come from a
+# Secret, like every other entity's secretRef.
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ($datastore_credentials_name)
+  namespace: ($namespace)
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+stringData:
+  password: test-redis-password
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayDatastore
+metadata:
+  name: ($datastore_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: redis-ee
+    redis-ee:
+      # name is the datastore's entity name: the referencing entities resolve
+      # their reference to it, and the rendered `datastores` collection is keyed
+      # by it.
+      name: ($datastore_name)
+      displayName: Shared Redis
+      config:
+        host: redis.example.com
+        port:
+          type: variant1
+          variant1: 6379
+        password:
+          type: secretRef
+          secretRef:
+            name: ($datastore_credentials_name)
+            key: password
+---
+# A rate-limiting policy whose Redis connection comes from the datastore: the
+# converter substitutes the datastore's config into the plugin's redis block and
+# sets strategy to redis.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayPolicy
+metadata:
+  name: ($policy_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    name: ($policy_name)
+    displayName: Rate limiting backed by the shared datastore
+    type: rate-limiting-advanced
+    enabled: Enabled
+    global: Disabled
+    datastores:
+      - name: ($datastore_name)
+    config:
+      type: inline
+      value:
+        limit:
+          - 10
+        window_size:
+          - 60
+        sync_rate: -1
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ($provider_credentials_name)
+  namespace: ($namespace)
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+stringData:
+  apikey: test-ai-gateway-key
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModelProvider
+metadata:
+  name: ($provider_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: openai
+    openai:
+      name: ($provider_name)
+      displayName: OpenAI-compatible mock provider
+      config:
+        auth:
+          headers:
+            - name: apikey
+              value:
+                type: secretRef
+                secretRef:
+                  name: ($provider_credentials_name)
+                  key: apikey
+---
+# A model whose semantic balancer keeps its vectors in the same Redis. The
+# connection fields (host, port, password) come from the datastore; the model
+# keeps the vector settings it authors itself (dimensions, distance metric,
+# threshold), which the converter preserves next to the datastore's connection.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModel
+metadata:
+  name: ($model_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: model
+    model:
+      name: ($model_name)
+      displayName: On-prem semantic-balancer model backed by a datastore
+      enabled: Enabled
+      capabilities:
+        - generate
+      formats:
+        - type: openai
+      datastores:
+        - name: ($datastore_name)
+      config:
+        route:
+          paths:
+            - /semantic-chat
+        balancer:
+          algorithm: semantic
+          semantic:
+            slots: 10000
+            embeddings:
+              name: text-embedding-3-small
+              provider: ($provider_name)
+              allowAuthOverride: Enabled
+              config:
+                type: openai
+            vectordb:
+              type: redis
+              redis:
+                dimensions: 1536
+                distanceMetric: cosine
+                threshold: 0.7
+      targets:
+        - name: qwen2.5:0.5b
+          provider:
+            name: ($provider_name)
+          config:
+            type: openai
+            openai:
+              upstreamURL: http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/provider-a

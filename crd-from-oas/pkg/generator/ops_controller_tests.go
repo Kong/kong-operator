@@ -484,6 +484,43 @@ func buildOpsControllerRootUnionFixture(entityName string, schema *parser.Schema
 		})
 	}`,
 		}
+	case "AIGatewayDatastore":
+		// The fallback fixture (first variant, empty) cannot be used here: the
+		// redis-ce variant's SDK type requires name, displayName and config.host,
+		// so unmarshalling the empty payload into the request union fails. The
+		// password also exercises a SensitiveDataSource nested inside the variant.
+		return &opsControllerRootUnionFixture{
+			UnionTypeName:   "AIGatewayDatastoreConfig",
+			TypeConstName:   "AIGatewayDatastoreConfigTypeRedisCE",
+			VariantField:    "RedisCE",
+			VariantTypeName: "RedisCEDatastore",
+			VariantValue: fmt.Sprintf(
+				`&%[1]s.RedisCEDatastore{Name: "test-datastore", DisplayName: "test-display-name", Config: %[1]s.RedisCEDatastoreConfig{Host: "redis.example.com", Port: 6379, Password: %[1]s.SensitiveDataSource{Type: %[1]s.SensitiveDataSourceTypeInline, Value: new("test-password")}}}`,
+				apiAlias,
+			),
+			ExpectedPayloadCheck: `
+	{
+		// Check the conversion against a hand-written Konnect payload: the mock
+		// expectation below is built by calling the same conversion function, so
+		// it cannot catch a wrong payload by itself.
+		data, err := json.Marshal(expectedRequest)
+		require.NoError(t, err)
+		var body map[string]any
+		require.NoError(t, json.Unmarshal(data, &body))
+		require.Subset(t, body, map[string]any{
+			"name":        "test-datastore",
+			"display_name": "test-display-name",
+			"type":        "redis-ce",
+		})
+		config, ok := body["config"].(map[string]any)
+		require.True(t, ok)
+		require.Subset(t, config, map[string]any{
+			"host":     "redis.example.com",
+			"port":     float64(6379),
+			"password": "test-password",
+		})
+	}`,
+		}
 	}
 
 	rootUnionTypeName := goFieldName(entityName + "Config")

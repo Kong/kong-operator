@@ -114,6 +114,10 @@ func (obj *AIGatewayMCPServer) ToAIGWMCPServer(ctx context.Context, cl client.Cl
 	}
 	mcp.Access.AuthStrategies = append(authStrategyNames, mcp.Access.AuthStrategies...)
 
+	if err := resolveDatastoreRefs(ctx, cl, obj.Namespace, AIGatewayMCPServerRefsToAIGatewayDatastore(obj), &mcp.Datastores); err != nil {
+		return nil, fmt.Errorf("resolving AIGatewayMCPServer %s/%s datastores: %w", obj.Namespace, obj.Name, err)
+	}
+
 	// Per-tool access ACLs, resolved in payload order.
 	toolACLs := mcpToolACLRefs(tools)
 	if len(toolACLs) != len(mcp.Tools) {
@@ -261,6 +265,7 @@ func (obj *AIGatewayMCPServer) marshalAIGWMCPServerPayload() ([]byte, error) {
 	// here, re-attached resolved in ToAIGWMCPServer.
 	delete(cfg, "policies")
 	delete(cfg, "sources")
+	delete(cfg, "datastores")
 	if a, ok := cfg["access"].(map[string]any); ok {
 		delete(a, "auth_strategies")
 		delete(a, "acls")

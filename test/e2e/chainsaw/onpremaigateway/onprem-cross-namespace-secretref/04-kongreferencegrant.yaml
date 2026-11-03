@@ -1,0 +1,18 @@
+# Allows the provider and the policy in the test namespace to reference the
+# Secrets in the Secrets namespace.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: ($kong_reference_grant_name)
+  namespace: ($secrets_namespace)
+spec:
+  from:
+    - group: aiconfiguration.konghq.com
+      kind: AIGatewayModelProvider
+      namespace: ($namespace)
+    - group: aiconfiguration.konghq.com
+      kind: AIGatewayPolicy
+      namespace: ($namespace)
+  to:
+    - group: core
+      kind: Secret

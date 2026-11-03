@@ -40,6 +40,21 @@ apiGroupVersions:
         dataSources:
           - path: spec.apiSpec.openid-connect.config.clientSecret
             type: Secret
+        # datastores are AIGatewayDatastore references (by metadata.name in the
+        # same namespace, resolved to their Konnect names). Konnect refuses to
+        # delete a datastore while an auth strategy uses it, so the
+        # AIGatewayDatastore controller watches auth strategies too.
+        references:
+          - path: spec.apiSpec.key-auth.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
+          - path: spec.apiSpec.openid-connect.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayAuthStrategiesSDK
@@ -114,6 +129,21 @@ apiGroupVersions:
             kinds: [AIGatewayAuthStrategy]
             refTypeName: AIGatewayAuthStrategyRef
             resolvesTo: name
+          # datastores are AIGatewayDatastore references (by metadata.name in
+          # the same namespace, resolved to their Konnect names). A model holds
+          # one when its balancer is semantic. Konnect refuses to delete a
+          # datastore while a model uses it, so the AIGatewayDatastore
+          # controller watches models too.
+          - path: spec.apiSpec.api.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
+          - path: spec.apiSpec.model.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayModelsSDK
@@ -155,6 +185,118 @@ apiGroupVersions:
             type: Secret
           - path: spec.apiSpec.gemini.config.auth.gcp.serviceAccountJSON
             type: Secret
+        # datastores are AIGatewayDatastore references (by metadata.name in the
+        # same namespace, resolved to their Konnect names). A provider holds one
+        # when it stores credentials in the Token Vault. Konnect refuses to
+        # delete a datastore while a provider uses it, so the AIGatewayDatastore
+        # controller watches providers too. References take no wildcard, hence
+        # one entry per provider variant.
+        references:
+          - path: spec.apiSpec.anthropic.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
+          - path: spec.apiSpec.azure.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
+          - path: spec.apiSpec.baseten.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
+          - path: spec.apiSpec.bedrock.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
+          - path: spec.apiSpec.cerebras.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
+          - path: spec.apiSpec.cohere.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
+          - path: spec.apiSpec.dashscope.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
+          - path: spec.apiSpec.databricks.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
+          - path: spec.apiSpec.deepseek.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
+          - path: spec.apiSpec.gemini.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
+          - path: spec.apiSpec.huggingface.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
+          - path: spec.apiSpec.kimi.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
+          - path: spec.apiSpec.llama2.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
+          - path: spec.apiSpec.mistral.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
+          - path: spec.apiSpec.ollama.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
+          - path: spec.apiSpec.openai.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
+          - path: spec.apiSpec.sagemaker.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
+          - path: spec.apiSpec.typesafe.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
+          - path: spec.apiSpec.vercel.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
+          - path: spec.apiSpec.vllm.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
+          - path: spec.apiSpec.xai.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayModelProvidersSDK
@@ -472,6 +614,36 @@ apiGroupVersions:
             resolvesTo: name
             refTypeName: AIGatewayMCPACLRef
             supportCrossNamespaceReference: true
+          # datastores are AIGatewayDatastore references (by metadata.name in
+          # the same namespace, resolved to their Konnect names). A listener
+          # holds one when it stores credentials in the Token Vault. Konnect
+          # refuses to delete a datastore while an MCP server uses it, so the
+          # AIGatewayDatastore controller watches MCP servers too.
+          - path: spec.apiSpec.conversion-listener.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
+          - path: spec.apiSpec.conversion-only.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
+          - path: spec.apiSpec.listener.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
+          - path: spec.apiSpec.passthrough-listener.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
+          - path: spec.apiSpec.upstream-server.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
         # The OpenAPI examples quote the value as a JSON string, which the
         # object-typed requestBody/responses fields reject at apply time. The
         # descriptions below show the same shapes in their object form.
@@ -585,6 +757,15 @@ apiGroupVersions:
               Konnect name. The referenced custom policy must be programmed in
               the same AI Gateway; its Konnect name is sent as the policy type.
               Exactly one of type and customPolicyRef must be set.
+          # datastores are AIGatewayDatastore references (by metadata.name in
+          # the same namespace, resolved to their Konnect names). Konnect
+          # refuses to delete a datastore while a policy uses it, so the
+          # AIGatewayDatastore controller watches policies too.
+          - path: spec.apiSpec.datastores
+            kinds: [AIGatewayDatastore]
+            refTypeName: AIGatewayDatastoreNamespacedRef
+            resolvesTo: name
+            reverseWatch: true
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayPoliciesSDK
@@ -774,6 +955,109 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayVaultRequest
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayVaultRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectAIGateway
+            group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayRef
+            typeName: AIGatewayRef
+
+      # Every writeOnly credential in the datastore configs is sourced from a
+      # Secret, like AIGatewayModelProvider's cloud credentials. The token-vault
+      # key is left alone: the OAS only accepts a {vault://...} reference there,
+      # which is not a secret.
+      - path: /v1/ai-gateways/{gatewayId}/datastores
+        name: AIGatewayDatastore
+        dataSources:
+          - path: spec.apiSpec.redis-ce.config.password
+            type: Secret
+          - path: spec.apiSpec.redis-ce.config.cloudAuthentication.awsSecretAccessKey
+            type: Secret
+          - path: spec.apiSpec.redis-ce.config.cloudAuthentication.gcpServiceAccountJSON
+            type: Secret
+          - path: spec.apiSpec.redis-ce.config.cloudAuthentication.azureClientSecret
+            type: Secret
+          - path: spec.apiSpec.redis-ee.config.password
+            type: Secret
+          - path: spec.apiSpec.redis-ee.config.sentinelPassword
+            type: Secret
+          - path: spec.apiSpec.redis-ee.config.cloudAuthentication.awsSecretAccessKey
+            type: Secret
+          - path: spec.apiSpec.redis-ee.config.cloudAuthentication.gcpServiceAccountJSON
+            type: Secret
+          - path: spec.apiSpec.redis-ee.config.cloudAuthentication.azureClientSecret
+            type: Secret
+          - path: spec.apiSpec.vectordb.config.password
+            type: Secret
+          - path: spec.apiSpec.vectordb.config.sslCertKey
+            type: Secret
+        # Konnect rejects a change of name or type after creation. Both are
+        # checked from the resource root where needed so that removing the
+        # field cannot reset the value.
+        cel:
+          _validations:
+            - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.spec) || !has(oldSelf.spec.apiSpec) || !has(oldSelf.spec.apiSpec.type) || (has(self.spec) && has(self.spec.apiSpec) && has(self.spec.apiSpec.type) && self.spec.apiSpec.type == oldSelf.spec.apiSpec.type)\",message=\"type is immutable\",fieldPath=\".spec.apiSpec.type\""
+          spec:
+            apiSpec:
+              redis-ce:
+                name:
+                  _validations:
+                    - "+kubebuilder:validation:XValidation:rule=\"self == oldSelf\",message=\"name is immutable\""
+              redis-ee:
+                name:
+                  _validations:
+                    - "+kubebuilder:validation:XValidation:rule=\"self == oldSelf\",message=\"name is immutable\""
+              vectordb:
+                name:
+                  _validations:
+                    - "+kubebuilder:validation:XValidation:rule=\"self == oldSelf\",message=\"name is immutable\""
+              token-vault:
+                name:
+                  _validations:
+                    - "+kubebuilder:validation:XValidation:rule=\"self == oldSelf\",message=\"name is immutable\""
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayDatastoresSDK
+            fieldName: AIGatewayDatastores
+          # The list endpoint returns summaries that carry no labels, so
+          # conflicts are recovered by matching the immutable name the API
+          # echoes back. This mitigates
+          # https://github.com/Kong/kong-operator/issues/3987.
+          getForUID:
+            rootUnion:
+              unionField: Spec.APISpec.AIGatewayDatastoreConfig
+              responseTypeField: Type
+              cases:
+                - typeValue: redis-ce
+                  variantField: RedisCE
+                  responseTypeValue: redis-ce
+                  matchFields:
+                    - objectField: Name
+                      responseField: Name
+                - typeValue: redis-ee
+                  variantField: RedisEE
+                  responseTypeValue: redis-ee
+                  matchFields:
+                    - objectField: Name
+                      responseField: Name
+                - typeValue: vectordb
+                  variantField: VectorDB
+                  responseTypeValue: vectordb
+                  matchFields:
+                    - objectField: Name
+                      responseField: Name
+                - typeValue: token-vault
+                  variantField: TokenVault
+                  responseTypeValue: token-vault
+                  matchFields:
+                    - objectField: Name
+                      responseField: Name
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayDatastoreRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayDatastoreRequest
           delete: {}
         reconciler:
           parentEntityGVK:

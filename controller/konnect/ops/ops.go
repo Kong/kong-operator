@@ -396,6 +396,8 @@ func Delete[
 		err = deleteKonnectConfigStoreGuarded(ctx, sdk.GetConfigStoresSDK(), sdk.GetConfigStoreSecretsSDK(), e)
 	case *aiconfigurationv1alpha1.AIGatewayCustomPolicy:
 		err = deleteAIGatewayCustomPolicyGuarded(ctx, sdk.GetAIGatewayCustomPoliciesSDK(), sdk.GetAIGatewayPoliciesSDK(), cl, e)
+	case *aiconfigurationv1alpha1.AIGatewayDatastore:
+		err = deleteAIGatewayDatastoreGuarded(ctx, sdk.GetAIGatewayDatastoresSDK(), e)
 	case *configurationv1alpha1.EventGatewayStaticKey:
 		err = deleteEventGatewayStaticKeyGuarded(
 			ctx, sdk.GetEventGatewayStaticKeysSDK(), sdk.GetEventGatewayVirtualClustersSDK(), sdk.GetEventGatewayVirtualClusterProducePoliciesSDK(), cl, e,
@@ -989,8 +991,8 @@ func ClearInstanceFromError(err error) error {
 	// Some delete operations wrap the typed SDK error in a richer error that
 	// carries extra context for the reconciler (a DeletionBlockedError such as
 	// KonnectConfigStoreNotEmptyError, AIGatewayCustomPolicyInUseError,
-	// EventGatewayTLSTrustBundleInUseError or EventGatewayStaticKeyInUseError
-	// describes what blocks the deletion). Keep such wrappers intact so
+	// AIGatewayDatastoreInUseError, EventGatewayTLSTrustBundleInUseError or
+	// EventGatewayStaticKeyInUseError describes what blocks the deletion). Keep such wrappers intact so
 	// reconcilers can act on them; the instance field of the underlying typed
 	// error is still cleared in place. This check must stay ahead of the
 	// typed-error branches below, which unwrap and would otherwise silently

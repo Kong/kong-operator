@@ -85,6 +85,14 @@ func AIGatewayMCPServerReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
+				&aiconfigurationv1alpha1.AIGatewayDatastore{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueAIGatewayMCPServerForAIGatewayDatastore(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
 				&configurationv1alpha1.KongReferenceGrant{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectsForKongReferenceGrant[aiconfigurationv1alpha1.AIGatewayMCPServerList](cl),
@@ -177,6 +185,24 @@ func enqueueAIGatewayMCPServerForAIGatewayConsumerGroup(
 		var l aiconfigurationv1alpha1.AIGatewayMCPServerList
 		if err := cl.List(ctx, &l, client.MatchingFields{
 			index.IndexFieldAIGatewayMCPServerOnAIGatewayConsumerGroupRef: client.ObjectKeyFromObject(ref).String(),
+		}); err != nil {
+			return nil
+		}
+		return objectListToReconcileRequests(l.Items)
+	}
+}
+
+func enqueueAIGatewayMCPServerForAIGatewayDatastore(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		ref, ok := obj.(*aiconfigurationv1alpha1.AIGatewayDatastore)
+		if !ok {
+			return nil
+		}
+		var l aiconfigurationv1alpha1.AIGatewayMCPServerList
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexFieldAIGatewayMCPServerOnAIGatewayDatastoreRef: client.ObjectKeyFromObject(ref).String(),
 		}); err != nil {
 			return nil
 		}

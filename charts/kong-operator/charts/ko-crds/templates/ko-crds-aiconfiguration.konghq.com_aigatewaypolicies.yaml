@@ -146,6 +146,23 @@ spec:
                     required:
                     - name
                     type: object
+                  datastores:
+                    items:
+                      properties:
+                        kind:
+                          default: AIGatewayDatastore
+                          enum:
+                          - AIGatewayDatastore
+                          type: string
+                        name:
+                          minLength: 1
+                          type: string
+                        namespace:
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
                   displayName:
                     maxLength: 256
                     minLength: 1
@@ -155,6 +172,8 @@ spec:
                     - Enabled
                     - Disabled
                     type: string
+                  expressions:
+                    x-kubernetes-preserve-unknown-fields: true
                   global:
                     enum:
                     - Enabled

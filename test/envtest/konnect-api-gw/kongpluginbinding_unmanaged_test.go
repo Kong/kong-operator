@@ -1,18 +1,22 @@
 package konnectapigw
 
 import (
+	"slices"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/google/uuid"
+	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/konnect"
@@ -72,7 +76,11 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		pluginID := uuid.NewString()
 
 		createCall := sdk.PluginSDK.EXPECT().
-			CreatePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
+			// any-typed so Call.Unset, which diffs the matcher against itself, can find it.
+			CreatePlugin(mock.Anything, mock.MatchedBy(func(a any) bool {
+				r, ok := a.(sdkkonnectops.CreatePluginRequest)
+				return !ok || r.ControlPlaneID == cp.GetKonnectStatus().GetKonnectID()
+			})).
 			Return(
 				&sdkkonnectops.CreatePluginResponse{
 					Plugin: &sdkkonnectcomp.Plugin{
@@ -106,7 +114,9 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		)
 
 		sdk.PluginSDK.EXPECT().
-			DeletePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
+			DeletePlugin(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.DeletePluginRequest) bool {
+				return r.ControlPlaneID == cp.GetKonnectStatus().GetKonnectID()
+			})).
 			Return(
 				&sdkkonnectops.DeletePluginResponse{
 					StatusCode: 200,
@@ -145,7 +155,11 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		pluginID := uuid.NewString()
 
 		createCall := sdk.PluginSDK.EXPECT().
-			CreatePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
+			// any-typed so Call.Unset, which diffs the matcher against itself, can find it.
+			CreatePlugin(mock.Anything, mock.MatchedBy(func(a any) bool {
+				r, ok := a.(sdkkonnectops.CreatePluginRequest)
+				return !ok || r.ControlPlaneID == cp.GetKonnectStatus().GetKonnectID()
+			})).
 			Return(
 				&sdkkonnectops.CreatePluginResponse{
 					Plugin: &sdkkonnectcomp.Plugin{
@@ -182,7 +196,9 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		)
 
 		sdk.PluginSDK.EXPECT().
-			DeletePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
+			DeletePlugin(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.DeletePluginRequest) bool {
+				return r.ControlPlaneID == cp.GetKonnectStatus().GetKonnectID()
+			})).
 			Return(
 				&sdkkonnectops.DeletePluginResponse{
 					StatusCode: 200,
@@ -232,8 +248,11 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		sdk.PluginSDK.EXPECT().
 			CreatePlugin(
 				mock.Anything,
-				cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(pi sdkkonnectcomp.Plugin) bool {
+				mock.MatchedBy(func(r sdkkonnectops.CreatePluginRequest) bool {
+					if r.ControlPlaneID != cp.GetKonnectStatus().GetKonnectID() {
+						return false
+					}
+					pi := r.Plugin
 					return pi.Route != nil && pi.Route.ID != nil && *pi.Route.ID == routeID &&
 						pi.Service != nil && pi.Service.ID != nil && *pi.Service.ID == serviceID
 				})).
@@ -264,7 +283,9 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		)
 
 		sdk.PluginSDK.EXPECT().
-			DeletePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
+			DeletePlugin(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.DeletePluginRequest) bool {
+				return r.ControlPlaneID == cp.GetKonnectStatus().GetKonnectID()
+			})).
 			Return(
 				&sdkkonnectops.DeletePluginResponse{
 					StatusCode: 200,
@@ -323,8 +344,11 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		sdk.PluginSDK.EXPECT().
 			CreatePlugin(
 				mock.Anything,
-				cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(pi sdkkonnectcomp.Plugin) bool {
+				mock.MatchedBy(func(r sdkkonnectops.CreatePluginRequest) bool {
+					if r.ControlPlaneID != cp.GetKonnectStatus().GetKonnectID() {
+						return false
+					}
+					pi := r.Plugin
 					return pi.Consumer != nil && pi.Consumer.ID != nil && *pi.Consumer.ID == consumerID &&
 						pi.Service != nil && pi.Service.ID != nil && *pi.Service.ID == serviceID
 				})).
@@ -355,7 +379,9 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		)
 
 		sdk.PluginSDK.EXPECT().
-			DeletePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
+			DeletePlugin(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.DeletePluginRequest) bool {
+				return r.ControlPlaneID == cp.GetKonnectStatus().GetKonnectID()
+			})).
 			Return(
 				&sdkkonnectops.DeletePluginResponse{
 					StatusCode: 200,
@@ -407,8 +433,11 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		sdk.PluginSDK.EXPECT().
 			CreatePlugin(
 				mock.Anything,
-				cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(pi sdkkonnectcomp.Plugin) bool {
+				mock.MatchedBy(func(r sdkkonnectops.CreatePluginRequest) bool {
+					if r.ControlPlaneID != cp.GetKonnectStatus().GetKonnectID() {
+						return false
+					}
+					pi := r.Plugin
 					return pi.ConsumerGroup != nil && pi.ConsumerGroup.ID != nil && *pi.ConsumerGroup.ID == consumerGroupID &&
 						pi.Service != nil && pi.Service.ID != nil && *pi.Service.ID == serviceID
 				})).
@@ -439,7 +468,9 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		)
 
 		sdk.PluginSDK.EXPECT().
-			DeletePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
+			DeletePlugin(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.DeletePluginRequest) bool {
+				return r.ControlPlaneID == cp.GetKonnectStatus().GetKonnectID()
+			})).
 			Return(
 				&sdkkonnectops.DeletePluginResponse{
 					StatusCode: 200,
@@ -478,8 +509,11 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		sdk.PluginSDK.EXPECT().
 			CreatePlugin(
 				mock.Anything,
-				cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(pi sdkkonnectcomp.Plugin) bool {
+				mock.MatchedBy(func(r sdkkonnectops.CreatePluginRequest) bool {
+					if r.ControlPlaneID != cp.GetKonnectStatus().GetKonnectID() {
+						return false
+					}
+					pi := r.Plugin
 					return pi.Consumer == nil && pi.ConsumerGroup == nil && pi.Route == nil && pi.Service == nil
 				})).
 			Return(
@@ -489,7 +523,8 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 					},
 				},
 				nil,
-			)
+			).
+			Once()
 		kpb := deploy.KongPluginBinding(t, ctx, clientNamespaced,
 			konnect.NewKongPluginBindingBuilder().
 				WithControlPlaneRefKonnectNamespaced(cp.Name).
@@ -508,7 +543,9 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		)
 
 		sdk.PluginSDK.EXPECT().
-			DeletePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
+			DeletePlugin(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.DeletePluginRequest) bool {
+				return r.ControlPlaneID == cp.GetKonnectStatus().GetKonnectID()
+			})).
 			Return(
 				&sdkkonnectops.DeletePluginResponse{
 					StatusCode: 200,
@@ -529,6 +566,76 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		envtest.EventuallyAssertSDKExpectations(t, sdk.PluginSDK, consts.WaitTime, consts.TickTime)
 	})
 
+	t.Run("binding globally with plugin ordering", func(t *testing.T) {
+		orderedKongPlugin := &configurationv1.KongPlugin{
+			GenerateName: "request-termination-kp-",
+			PluginName:   "request-termination",
+			Config: apiextensionsv1.JSON{
+				Raw: []byte(`{"status_code": 418}`),
+			},
+			Ordering: &kong.PluginOrdering{
+				Before: kong.PluginOrderingPhase{"access": {"key-auth"}},
+			},
+		}
+		require.NoError(t, clientNamespaced.Create(ctx, orderedKongPlugin))
+		pluginID := uuid.NewString()
+
+		sdk.PluginSDK.EXPECT().
+			CreatePlugin(
+				mock.Anything,
+				mock.MatchedBy(func(r sdkkonnectops.CreatePluginRequest) bool {
+					return r.ControlPlaneID == cp.GetKonnectStatus().GetKonnectID() &&
+						r.Plugin.Name == orderedKongPlugin.PluginName &&
+						slices.Equal(r.Plugin.Ordering.GetBefore().GetAccess(), []string{"key-auth"}) &&
+						r.Plugin.Ordering.GetAfter() == nil
+				})).
+			Return(
+				&sdkkonnectops.CreatePluginResponse{
+					Plugin: &sdkkonnectcomp.Plugin{
+						ID: new(pluginID),
+					},
+				},
+				nil,
+			).
+			Once()
+		kpb := deploy.KongPluginBinding(t, ctx, clientNamespaced,
+			konnect.NewKongPluginBindingBuilder().
+				WithControlPlaneRefKonnectNamespaced(cp.Name).
+				WithPluginRefName(orderedKongPlugin.Name).
+				WithScope(configurationv1alpha1.KongPluginBindingScopeGlobalInControlPlane).
+				Build(),
+		)
+		t.Logf(
+			"wait for the controller to create the global KongPluginBinding %s with plugin ordering in Konnect",
+			client.ObjectKeyFromObject(kpb),
+		)
+		assert.EventuallyWithT(t,
+			envtest.AssertCollectObjectExistsAndHasKonnectID(t, ctx, clientNamespaced, kpb, pluginID),
+			consts.WaitTime, consts.TickTime,
+			"KongPluginBinding wasn't created using Konnect API or its KonnectID wasn't set",
+		)
+
+		sdk.PluginSDK.EXPECT().
+			DeletePlugin(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.DeletePluginRequest) bool {
+				return r.ControlPlaneID == cp.GetKonnectStatus().GetKonnectID()
+			})).
+			Return(
+				&sdkkonnectops.DeletePluginResponse{
+					StatusCode: 200,
+				},
+				nil,
+			)
+
+		require.NoError(t, clientNamespaced.Delete(ctx, kpb))
+		assert.EventuallyWithT(t, func(c *assert.CollectT) {
+			assert.True(c, apierrors.IsNotFound(
+				clientNamespaced.Get(ctx, client.ObjectKeyFromObject(kpb), kpb),
+			))
+		}, consts.WaitTime, consts.TickTime, "KongPluginBinding did not get deleted but should have")
+
+		envtest.EventuallyAssertSDKExpectations(t, sdk.PluginSDK, consts.WaitTime, consts.TickTime)
+	})
+
 	t.Run("binding to KongService with KongPlugin from another namespace with valid KongReferenceGrant", func(t *testing.T) {
 		w := envtest.SetupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, cl, client.InNamespace(ns.Name))
 		proxyCacheKongPlugin := deploy.ProxyCachePlugin(t, ctx, clientNamespaced2)
@@ -537,7 +644,11 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		pluginID := uuid.NewString()
 
 		createCall := sdk.PluginSDK.EXPECT().
-			CreatePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
+			// any-typed so Call.Unset, which diffs the matcher against itself, can find it.
+			CreatePlugin(mock.Anything, mock.MatchedBy(func(a any) bool {
+				r, ok := a.(sdkkonnectops.CreatePluginRequest)
+				return !ok || r.ControlPlaneID == cp.GetKonnectStatus().GetKonnectID()
+			})).
 			Return(
 				&sdkkonnectops.CreatePluginResponse{
 					Plugin: &sdkkonnectcomp.Plugin{
@@ -597,7 +708,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		}, "KongPluginBinding didn't get PluginRefValid status condition set to True")
 
 		deleteCall := sdk.PluginSDK.EXPECT().
-			DeletePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), pluginID).
+			DeletePlugin(mock.Anything, sdkkonnectops.DeletePluginRequest{ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(), PluginID: pluginID}).
 			Return(
 				&sdkkonnectops.DeletePluginResponse{
 					StatusCode: 200,

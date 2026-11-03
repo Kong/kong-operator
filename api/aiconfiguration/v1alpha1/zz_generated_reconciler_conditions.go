@@ -83,6 +83,22 @@ const (
 	// yet programmed in Konnect.
 	AIGatewayCustomPolicyRefReasonNotProgrammed = "NotProgrammed"
 
+	// AIGatewayDatastoreRefValidConditionType is the type of the condition that indicates
+	// whether the AIGatewayDatastore reference is valid and points to an existing
+	// AIGatewayDatastore.
+	AIGatewayDatastoreRefValidConditionType = "AIGatewayDatastoreRefValid"
+
+	// AIGatewayDatastoreRefReasonValid is the reason used with the AIGatewayDatastoreRefValid
+	// condition type indicating that the AIGatewayDatastore reference is valid.
+	AIGatewayDatastoreRefReasonValid = "Valid"
+	// AIGatewayDatastoreRefReasonInvalid is the reason used with the AIGatewayDatastoreRefValid
+	// condition type indicating that the AIGatewayDatastore reference is invalid.
+	AIGatewayDatastoreRefReasonInvalid = "Invalid"
+	// AIGatewayDatastoreRefReasonNotProgrammed is the reason used with the AIGatewayDatastoreRefValid
+	// condition type indicating that the referenced AIGatewayDatastore exists but is not
+	// yet programmed in Konnect.
+	AIGatewayDatastoreRefReasonNotProgrammed = "NotProgrammed"
+
 	// AIGatewayMCPServerRefValidConditionType is the type of the condition that indicates
 	// whether the AIGatewayMCPServer reference is valid and points to an existing
 	// AIGatewayMCPServer.

@@ -73,10 +73,13 @@ func TestKongConsumerGroup(t *testing.T) {
 		)
 		t.Log("Setting up SDK expectations on KongConsumerGroup creation")
 		sdk.ConsumerGroupSDK.EXPECT().
-			CreateConsumerGroup(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(cg sdkkonnectcomp.ConsumerGroup) bool {
-					return cg.Name == cgName
-				}),
+			CreateConsumerGroup(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.CreateConsumerGroupRequest) bool {
+				if r.ControlPlaneID != cp.GetKonnectStatus().GetKonnectID() {
+					return false
+				}
+				cg := r.ConsumerGroup
+				return cg.Name == cgName
+			}),
 			).Return(&sdkkonnectops.CreateConsumerGroupResponse{
 			ConsumerGroup: &sdkkonnectcomp.ConsumerGroup{
 				ID: new(cgID),
@@ -122,7 +125,7 @@ func TestKongConsumerGroup(t *testing.T) {
 
 		t.Log("Setting up SDK expectations on KongConsumerGroup deletion")
 		sdk.ConsumerGroupSDK.EXPECT().
-			DeleteConsumerGroup(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), cgID).
+			DeleteConsumerGroup(mock.Anything, sdkkonnectops.DeleteConsumerGroupRequest{ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(), ConsumerGroupID: cgID}).
 			Return(&sdkkonnectops.DeleteConsumerGroupResponse{}, nil)
 
 		t.Log("Deleting KongConsumerGroup")
@@ -147,10 +150,13 @@ func TestKongConsumerGroup(t *testing.T) {
 		)
 		t.Log("Setting up SDK expectations on KongConsumerGroup creation")
 		sdk.ConsumerGroupSDK.EXPECT().
-			CreateConsumerGroup(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(cg sdkkonnectcomp.ConsumerGroup) bool {
-					return cg.Name == cgName
-				}),
+			CreateConsumerGroup(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.CreateConsumerGroupRequest) bool {
+				if r.ControlPlaneID != cp.GetKonnectStatus().GetKonnectID() {
+					return false
+				}
+				cg := r.ConsumerGroup
+				return cg.Name == cgName
+			}),
 			).Return(
 			nil,
 			&sdkkonnecterrs.SDKError{
@@ -211,8 +217,11 @@ func TestKongConsumerGroup(t *testing.T) {
 		sdk.ConsumerGroupSDK.EXPECT().
 			CreateConsumerGroup(
 				mock.Anything,
-				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.ConsumerGroup) bool {
+				mock.MatchedBy(func(r sdkkonnectops.CreateConsumerGroupRequest) bool {
+					if r.ControlPlaneID != cp.GetKonnectID() {
+						return false
+					}
+					req := r.ConsumerGroup
 					return req.Name == name
 				}),
 			).
@@ -294,7 +303,7 @@ func TestKongConsumerGroup(t *testing.T) {
 		)
 
 		t.Log("Setting up SDK expectations for consumer group deletion")
-		sdk.ConsumerGroupSDK.EXPECT().DeleteConsumerGroup(mock.Anything, cp.GetKonnectID(), cgID).Return(nil, nil)
+		sdk.ConsumerGroupSDK.EXPECT().DeleteConsumerGroup(mock.Anything, sdkkonnectops.DeleteConsumerGroupRequest{ControlPlaneID: cp.GetKonnectID(), ConsumerGroupID: cgID}).Return(nil, nil)
 
 		t.Logf("Deleting KongConsumerGroup %s and waiting for it to disappear", client.ObjectKeyFromObject(createdConsumerGroup))
 		require.NoError(t, clientNamespaced.Delete(ctx, createdConsumerGroup))

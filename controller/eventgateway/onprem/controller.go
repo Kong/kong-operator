@@ -72,8 +72,9 @@ type Reconciler struct {
 	LoggingMode logging.Mode
 
 	// GWAdminSync reaches the gw-admin pods of the GWAdmins. It is the
-	// controller's own: what it keeps, e.g. what was written to each pod, is
-	// of the gateways only.
+	// reconciler's own, shared by its two controllers, of the gateways and of
+	// the GWAdmins without gateways: what it keeps, e.g. what was written to
+	// each pod, is of the gateways only.
 	GWAdminSync *gwadminsync.Syncer
 
 	// TypeConverter converts the gateways for the Server-Side Apply of their
@@ -161,6 +162,9 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 		builder.WithPredicates(onlyDeletions()))
 
 	if err := b.Complete(reconcile.AsReconciler(r.Client, r)); err != nil {
+		return err
+	}
+	if err := r.setupGWAdminsWithoutGateways(mgr); err != nil {
 		return err
 	}
 	return r.setupUnreachable(mgr)

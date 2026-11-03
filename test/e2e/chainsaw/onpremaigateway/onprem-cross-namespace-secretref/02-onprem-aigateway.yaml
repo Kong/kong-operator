@@ -1,0 +1,12 @@
+# The gateway watches its own namespace (always included) and the Secrets
+# namespace.
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: OnPremAIGateway
+metadata:
+  name: ($aigw_cp_name)
+  namespace: ($namespace)
+spec:
+  watchNamespaces:
+    type: list
+    list:
+      - ($secrets_namespace)

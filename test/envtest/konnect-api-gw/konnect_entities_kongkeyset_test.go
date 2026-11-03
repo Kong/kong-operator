@@ -66,10 +66,13 @@ func TestKongKeySet(t *testing.T) {
 
 	t.Run("create, patch, delete", func(t *testing.T) {
 		t.Log("Setting up SDK expectations on KongKeySet creation")
-		sdk.KeySetsSDK.EXPECT().CreateKeySet(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-			mock.MatchedBy(func(input *sdkkonnectcomp.KeySet) bool {
-				return input.Name != nil && *input.Name == keySetName
-			}),
+		sdk.KeySetsSDK.EXPECT().CreateKeySet(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.CreateKeySetRequest) bool {
+			if r.ControlPlaneID != cp.GetKonnectStatus().GetKonnectID() {
+				return false
+			}
+			input := r.KeySet
+			return input.Name != nil && *input.Name == keySetName
+		}),
 		).Return(&sdkkonnectops.CreateKeySetResponse{
 			KeySet: &sdkkonnectcomp.KeySet{
 				ID: new(keySetID),
@@ -117,7 +120,7 @@ func TestKongKeySet(t *testing.T) {
 		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.KeySetsSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up SDK expectations on KongKeySet deletion")
-		sdk.KeySetsSDK.EXPECT().DeleteKeySet(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), keySetID).
+		sdk.KeySetsSDK.EXPECT().DeleteKeySet(mock.Anything, sdkkonnectops.DeleteKeySetRequest{ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(), KeySetID: keySetID}).
 			Return(&sdkkonnectops.DeleteKeySetResponse{}, nil)
 
 		t.Log("Deleting KongKeySet")
@@ -144,8 +147,11 @@ func TestKongKeySet(t *testing.T) {
 		cpID := cp.GetKonnectStatus().GetKonnectID()
 		sdk.KeySetsSDK.EXPECT().CreateKeySet(
 			mock.Anything,
-			cpID,
-			mock.MatchedBy(func(input *sdkkonnectcomp.KeySet) bool {
+			mock.MatchedBy(func(r sdkkonnectops.CreateKeySetRequest) bool {
+				if r.ControlPlaneID != cpID {
+					return false
+				}
+				input := r.KeySet
 				return *input.Name == keySetName
 			}),
 		).Return(&sdkkonnectops.CreateKeySetResponse{}, &sdkkonnecterrs.ConflictError{})
@@ -193,8 +199,11 @@ func TestKongKeySet(t *testing.T) {
 		sdk.KeySetsSDK.EXPECT().
 			CreateKeySet(
 				mock.Anything,
-				cp.GetKonnectID(),
-				mock.MatchedBy(func(req *sdkkonnectcomp.KeySet) bool {
+				mock.MatchedBy(func(r sdkkonnectops.CreateKeySetRequest) bool {
+					if r.ControlPlaneID != cp.GetKonnectID() {
+						return false
+					}
+					req := r.KeySet
 					return slices.Contains(req.Tags, "test-1")
 				}),
 			).
@@ -239,7 +248,7 @@ func TestKongKeySet(t *testing.T) {
 		w := envtest.SetupWatch[configurationv1alpha1.KongKeySetList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations for getting and updating key set")
-		sdk.KeySetsSDK.EXPECT().GetKeySet(mock.Anything, keySetID, cp.GetKonnectID()).Return(
+		sdk.KeySetsSDK.EXPECT().GetKeySet(mock.Anything, sdkkonnectops.GetKeySetRequest{ControlPlaneID: cp.GetKonnectID(), KeySetID: keySetID}).Return(
 			&sdkkonnectops.GetKeySetResponse{
 				KeySet: &sdkkonnectcomp.KeySet{
 					Name: new(keySetName),
@@ -271,7 +280,7 @@ func TestKongKeySet(t *testing.T) {
 		)
 
 		t.Log("Setting up SDK expectations for key set deletion")
-		sdk.KeySetsSDK.EXPECT().DeleteKeySet(mock.Anything, cp.GetKonnectID(), keySetID).Return(nil, nil)
+		sdk.KeySetsSDK.EXPECT().DeleteKeySet(mock.Anything, sdkkonnectops.DeleteKeySetRequest{ControlPlaneID: cp.GetKonnectID(), KeySetID: keySetID}).Return(nil, nil)
 
 		t.Logf("Deleting KongKeySet %s and waiting for it to disappear", client.ObjectKeyFromObject(createdKeySet))
 		require.NoError(t, clientNamespaced.Delete(ctx, createdKeySet))

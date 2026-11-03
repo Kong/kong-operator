@@ -600,15 +600,22 @@ func (g *testGWAdmin) setServing(ctx context.Context, ip string, serving bool) {
 	})
 }
 
-// stopPod removes the pod from the EndpointSlice.
+// stopPod removes the pod from the EndpointSlice, and closes its
+// connections, as a pod stopped does: a pod started on its address, e.g. the
+// pod restarted, isn't reached over them.
 func (g *testGWAdmin) stopPod(ctx context.Context, ip string) {
 	g.t.Helper()
 	g.updateEndpoints(ctx, func(endpoints []discoveryv1.Endpoint) []discoveryv1.Endpoint {
 		return slices.DeleteFunc(endpoints, func(ep discoveryv1.Endpoint) bool { return ep.Addresses[0] == ip })
 	})
+	addr := fmt.Sprintf("%s:%d", ip, gwadminsynctest.APIPort)
 	g.mu.Lock()
-	delete(g.pods, fmt.Sprintf("%s:%d", ip, gwadminsynctest.APIPort))
+	pod := g.pods[addr]
+	delete(g.pods, addr)
 	g.mu.Unlock()
+	if pod != nil {
+		pod.CloseClientConnections()
+	}
 }
 
 func (g *testGWAdmin) updateEndpoints(ctx context.Context, update func([]discoveryv1.Endpoint) []discoveryv1.Endpoint) {

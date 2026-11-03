@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
+	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -811,6 +812,82 @@ func TestPluginsForRule_ExtensionRef_ResolvedConfig(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, plugins, 1)
 			assert.JSONEq(t, tc.expected, string(plugins[0].Config.Raw))
+		})
+	}
+}
+
+// orderingCase is shared by the HTTPRoute and GRPCRoute ExtensionRef ordering tests.
+type orderingCase struct {
+	name     string
+	ordering *kong.PluginOrdering
+}
+
+func orderingCases() []orderingCase {
+	return []orderingCase{
+		{
+			name:     "no ordering",
+			ordering: nil,
+		},
+		{
+			name: "access phase before and after",
+			ordering: &kong.PluginOrdering{
+				Before: kong.PluginOrderingPhase{"access": {"key-auth"}},
+				After:  kong.PluginOrderingPhase{"access": {"rate-limiting"}},
+			},
+		},
+		{
+			// Unsupported phases are rejected by the Konnect layer, the mirror copies them verbatim.
+			name: "non-access phase",
+			ordering: &kong.PluginOrdering{
+				Before: kong.PluginOrderingPhase{"header_filter": {"key-auth"}},
+			},
+		},
+	}
+}
+
+func TestPluginsForRule_ExtensionRef_Ordering(t *testing.T) {
+	logger := logr.Discard()
+	ctx := context.Background()
+
+	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
+	}
+	parentRef := &gwtypes.ParentReference{
+		Name: "test-gateway",
+	}
+	rule := gwtypes.HTTPRouteRule{
+		Filters: []gwtypes.HTTPRouteFilter{
+			{
+				Type: gatewayv1.HTTPRouteFilterExtensionRef,
+				ExtensionRef: &gatewayv1.LocalObjectReference{
+					Group: gatewayv1.Group(configurationv1.GroupVersion.Group),
+					Kind:  "KongPlugin",
+					Name:  "referenced-plugin",
+				},
+			},
+		},
+	}
+
+	for _, tc := range orderingCases() {
+		t.Run(tc.name, func(t *testing.T) {
+			referencedPlugin := &configurationv1.KongPlugin{
+				Name:       "referenced-plugin",
+				Namespace:  "test-namespace",
+				PluginName: "request-termination",
+				Ordering:   tc.ordering,
+			}
+			fakeClient := fakectrlruntimeclient.NewClientBuilder().
+				WithScheme(scheme.Get()).
+				WithObjects(referencedPlugin).
+				Build()
+
+			plugins, err := PluginsForRule(ctx, logger, fakeClient, httpRoute, rule, parentRef)
+			require.NoError(t, err)
+			require.Len(t, plugins, 1)
+			assert.Equal(t, tc.ordering, plugins[0].Ordering)
 		})
 	}
 }

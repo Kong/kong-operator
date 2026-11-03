@@ -217,7 +217,7 @@ func TestPushCertificates(t *testing.T) {
 		r, client := newPushReconciler(), &fakeGWAdminClient{}
 		require.NoError(t, push(t, r, client, first, withCertificate, firstID))
 		// e.g. it may not use its GWAdmin for a while.
-		require.NoError(t, r.removeGateway(t.Context(), target, pod, client, firstID, nil))
+		require.NoError(t, r.removeGateway(t.Context(), target, pod, client, firstID, []uuid.UUID{}))
 		assert.Empty(t, client.holds(firstID))
 		client.reset()
 		require.NoError(t, push(t, r, client, first, withCertificate, firstID))

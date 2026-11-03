@@ -81,10 +81,13 @@ func TestKongConsumer(t *testing.T) {
 		)
 		t.Log("Setting up SDK expectations on KongConsumer creation")
 		sdk.ConsumersSDK.EXPECT().
-			CreateConsumer(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(input sdkkonnectcomp.Consumer) bool {
-					return input.Username != nil && *input.Username == username
-				}),
+			CreateConsumer(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.CreateConsumerRequest) bool {
+				if r.ControlPlaneID != cp.GetKonnectStatus().GetKonnectID() {
+					return false
+				}
+				input := r.Consumer
+				return input.Username != nil && *input.Username == username
+			}),
 			).Return(&sdkkonnectops.CreateConsumerResponse{
 			Consumer: &sdkkonnectcomp.Consumer{
 				ID: new(consumerID),
@@ -151,7 +154,7 @@ func TestKongConsumer(t *testing.T) {
 
 		t.Log("Setting up SDK expectations on KongConsumer deletion")
 		sdk.ConsumersSDK.EXPECT().
-			DeleteConsumer(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), consumerID).
+			DeleteConsumer(mock.Anything, sdkkonnectops.DeleteConsumerRequest{ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(), ConsumerID: consumerID}).
 			Return(&sdkkonnectops.DeleteConsumerResponse{}, nil)
 
 		t.Log("Deleting KongConsumer")
@@ -180,10 +183,13 @@ func TestKongConsumer(t *testing.T) {
 		)
 		t.Log("Setting up SDK expectations on KongConsumer creation with ConsumerGroup")
 		sdk.ConsumersSDK.EXPECT().
-			CreateConsumer(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(input sdkkonnectcomp.Consumer) bool {
-					return input.Username != nil && *input.Username == username
-				}),
+			CreateConsumer(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.CreateConsumerRequest) bool {
+				if r.ControlPlaneID != cp.GetKonnectStatus().GetKonnectID() {
+					return false
+				}
+				input := r.Consumer
+				return input.Username != nil && *input.Username == username
+			}),
 			).Return(&sdkkonnectops.CreateConsumerResponse{
 			Consumer: &sdkkonnectcomp.Consumer{
 				ID: new(consumerID),
@@ -199,10 +205,13 @@ func TestKongConsumer(t *testing.T) {
 			Maybe()
 
 		sdk.ConsumerGroupSDK.EXPECT().
-			CreateConsumerGroup(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(input sdkkonnectcomp.ConsumerGroup) bool {
-					return input.Name == consumerGroupName
-				}),
+			CreateConsumerGroup(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.CreateConsumerGroupRequest) bool {
+				if r.ControlPlaneID != cp.GetKonnectStatus().GetKonnectID() {
+					return false
+				}
+				input := r.ConsumerGroup
+				return input.Name == consumerGroupName
+			}),
 			).Return(&sdkkonnectops.CreateConsumerGroupResponse{
 			ConsumerGroup: &sdkkonnectcomp.ConsumerGroup{
 				ID: new(cgID),
@@ -322,8 +331,11 @@ func TestKongConsumer(t *testing.T) {
 		cpID := cp.GetKonnectStatus().GetKonnectID()
 		sdk.ConsumersSDK.EXPECT().CreateConsumer(
 			mock.Anything,
-			cpID,
-			mock.MatchedBy(func(input sdkkonnectcomp.Consumer) bool {
+			mock.MatchedBy(func(r sdkkonnectops.CreateConsumerRequest) bool {
+				if r.ControlPlaneID != cpID {
+					return false
+				}
+				input := r.Consumer
 				return input.Username != nil && *input.Username == username
 			}),
 		).Return(&sdkkonnectops.CreateConsumerResponse{}, &sdkkonnecterrs.ConflictError{})
@@ -371,8 +383,11 @@ func TestKongConsumer(t *testing.T) {
 		sdk.ConsumersSDK.EXPECT().
 			CreateConsumer(
 				mock.Anything,
-				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.Consumer) bool {
+				mock.MatchedBy(func(r sdkkonnectops.CreateConsumerRequest) bool {
+					if r.ControlPlaneID != cp.GetKonnectID() {
+						return false
+					}
+					req := r.Consumer
 					return req.Username != nil && *req.Username == name
 				}),
 			).
@@ -433,8 +448,11 @@ func TestKongConsumer(t *testing.T) {
 		sdk.ConsumersSDK.EXPECT().
 			CreateConsumer(
 				mock.Anything,
-				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.Consumer) bool {
+				mock.MatchedBy(func(r sdkkonnectops.CreateConsumerRequest) bool {
+					if r.ControlPlaneID != cp.GetKonnectID() {
+						return false
+					}
+					req := r.Consumer
 					return req.Username != nil && *req.Username == name
 				}),
 			).
@@ -577,10 +595,13 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 
 		t.Log("Setting up SDK expectations on KongConsumer creation")
 		sdk.ConsumersSDK.EXPECT().
-			CreateConsumer(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(input sdkkonnectcomp.Consumer) bool {
-					return input.Username != nil && *input.Username == username
-				}),
+			CreateConsumer(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.CreateConsumerRequest) bool {
+				if r.ControlPlaneID != cp.GetKonnectStatus().GetKonnectID() {
+					return false
+				}
+				input := r.Consumer
+				return input.Username != nil && *input.Username == username
+			}),
 			).Return(&sdkkonnectops.CreateConsumerResponse{
 			Consumer: &sdkkonnectcomp.Consumer{
 				ID: new(consumerID),
@@ -667,10 +688,13 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 
 		t.Log("Setting up SDK expectations on KongConsumer creation")
 		sdk.ConsumersSDK.EXPECT().
-			CreateConsumer(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(input sdkkonnectcomp.Consumer) bool {
-					return input.Username != nil && *input.Username == username
-				}),
+			CreateConsumer(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.CreateConsumerRequest) bool {
+				if r.ControlPlaneID != cp.GetKonnectStatus().GetKonnectID() {
+					return false
+				}
+				input := r.Consumer
+				return input.Username != nil && *input.Username == username
+			}),
 			).Return(&sdkkonnectops.CreateConsumerResponse{
 			Consumer: &sdkkonnectcomp.Consumer{
 				ID: new(consumerID),
@@ -755,10 +779,13 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 
 		t.Log("Setting up SDK expectations on KongConsumer creation")
 		sdk.ConsumersSDK.EXPECT().
-			CreateConsumer(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(input sdkkonnectcomp.Consumer) bool {
-					return input.Username != nil && *input.Username == username
-				}),
+			CreateConsumer(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.CreateConsumerRequest) bool {
+				if r.ControlPlaneID != cp.GetKonnectStatus().GetKonnectID() {
+					return false
+				}
+				input := r.Consumer
+				return input.Username != nil && *input.Username == username
+			}),
 			).Return(&sdkkonnectops.CreateConsumerResponse{
 			Consumer: &sdkkonnectcomp.Consumer{
 				ID: new(consumerID),
@@ -846,10 +873,13 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 
 		t.Log("Setting up SDK expectations on KongConsumer creation")
 		sdk.ConsumersSDK.EXPECT().
-			CreateConsumer(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(input sdkkonnectcomp.Consumer) bool {
-					return input.Username != nil && *input.Username == username
-				}),
+			CreateConsumer(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.CreateConsumerRequest) bool {
+				if r.ControlPlaneID != cp.GetKonnectStatus().GetKonnectID() {
+					return false
+				}
+				input := r.Consumer
+				return input.Username != nil && *input.Username == username
+			}),
 			).Return(&sdkkonnectops.CreateConsumerResponse{
 			Consumer: &sdkkonnectcomp.Consumer{
 				ID: new(consumerID),
@@ -937,10 +967,13 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 
 		t.Log("Setting up SDK expectations on KongConsumer creation")
 		sdk.ConsumersSDK.EXPECT().
-			CreateConsumer(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(input sdkkonnectcomp.Consumer) bool {
-					return input.Username != nil && *input.Username == username
-				}),
+			CreateConsumer(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.CreateConsumerRequest) bool {
+				if r.ControlPlaneID != cp.GetKonnectStatus().GetKonnectID() {
+					return false
+				}
+				input := r.Consumer
+				return input.Username != nil && *input.Username == username
+			}),
 			).Return(&sdkkonnectops.CreateConsumerResponse{
 			Consumer: &sdkkonnectcomp.Consumer{
 				ID: new(consumerID),
@@ -1086,8 +1119,7 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 		}, nil)
 	sdk.ConsumersSDK.EXPECT().GetConsumer(
 		mock.Anything,
-		consumerID,
-		cp.GetKonnectID(),
+		sdkkonnectops.GetConsumerRequest{ControlPlaneID: cp.GetKonnectID(), ConsumerID: consumerID},
 	).Return(&sdkkonnectops.GetConsumerResponse{
 		Consumer: &sdkkonnectcomp.Consumer{
 			ID:       new(consumerID),

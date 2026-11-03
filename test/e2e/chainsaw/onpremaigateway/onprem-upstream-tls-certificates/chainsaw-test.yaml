@@ -1,0 +1,236 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: onprem-upstream-tls-certificates
+spec:
+  description: |
+    Covers `caCertificates` and `certificates` (the Kong Service
+    `ca_certificates` / `client_certificate`) on an OnPremAIGateway for
+    AIGatewayAgent (http, a2a) and every AIGatewayMCPServer variant that
+    supports them (conversion-only, conversion-listener, upstream-server,
+    passthrough-listener). Mirrors the Konnect suite's
+    `upstream-tls-certificates` test.
+
+    Programmed=True proves the referenced certificates are resolved, rendered
+    into the on-prem configuration and accepted by the data plane when pushed.
+    More than one client certificate is rejected at admission. The upstream URLs
+    are not reachable: this covers configuration acceptance, not an mTLS
+    handshake.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'onprem-cp']))
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+    - name: ca_secret_name
+      value: (join('-', [($test_name), 'ca-cert']))
+    - name: client_cert_secret_name
+      value: (join('-', [($test_name), 'client-cert']))
+    - name: ca_cert_name
+      value: (join('-', [($test_name), 'ca-cert']))
+    - name: client_cert_name
+      value: (join('-', [($test_name), 'client-cert']))
+    - name: http_agent_name
+      value: (join('-', [($test_name), 'agent-http']))
+    - name: a2a_agent_name
+      value: (join('-', [($test_name), 'agent-a2a']))
+    - name: mcp_conversion_only_name
+      value: (join('-', [($test_name), 'mcp-conversion-only']))
+    - name: mcp_conversion_listener_name
+      value: (join('-', [($test_name), 'mcp-conversion-listener']))
+    - name: mcp_upstream_server_name
+      value: (join('-', [($test_name), 'mcp-upstream-server']))
+    - name: mcp_passthrough_listener_name
+      value: (join('-', [($test_name), 'mcp-passthrough-listener']))
+  steps:
+    - name: Create-onprem-aigateway
+      use:
+        template: ../../common/_step_templates/apply-assert-onpremAIGateway.yaml
+    - name: Generate-cert-chain-secrets
+      bindings:
+        - name: ca_common_name
+          value: (join('-', [($test_name), 'ca']))
+        - name: server_common_name
+          value: (join('-', [($test_name), 'client']))
+        - name: server_sans
+          value: ''
+        - name: ca_secret_namespace
+          value: ($namespace)
+        - name: server_secret_name
+          value: ($client_cert_secret_name)
+        - name: server_secret_namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-mtlsCertChainSecrets.yaml
+    - name: Create-aigateway-certificates
+      try:
+        - apply:
+            file: 01-aigateway-certs.yaml
+    - name: Create-agents-and-mcpservers
+      try:
+        - apply:
+            file: 02-agents-and-mcpservers.yaml
+    - name: Create-aigateway-dataplane
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+        with:
+          bindings:
+            - name: control_plane_ref
+              value: "({type: 'onpremNamespacedRef', onpremNamespacedRef: {name: ($aigw_cp_name)}})"
+    - name: Assert-certificates-programmed
+      try:
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayCACertificate
+              metadata:
+                name: ($ca_cert_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayCertificate
+              metadata:
+                name: ($client_cert_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+    - name: Assert-agents-and-mcpservers-programmed
+      try:
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayAgent
+              metadata:
+                name: ($http_agent_name)
+                namespace: ($namespace)
+              spec:
+                apiSpec:
+                  config:
+                    caCertificates:
+                      - ($ca_cert_name)
+                    certificates:
+                      - ($client_cert_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayAgent
+              metadata:
+                name: ($a2a_agent_name)
+                namespace: ($namespace)
+              spec:
+                apiSpec:
+                  config:
+                    caCertificates:
+                      - ($ca_cert_name)
+                    certificates:
+                      - ($client_cert_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayMCPServer
+              metadata:
+                name: ($mcp_conversion_only_name)
+                namespace: ($namespace)
+              spec:
+                apiSpec:
+                  conversion-only:
+                    config:
+                      caCertificates:
+                        - ($ca_cert_name)
+                      certificates:
+                        - ($client_cert_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayMCPServer
+              metadata:
+                name: ($mcp_conversion_listener_name)
+                namespace: ($namespace)
+              spec:
+                apiSpec:
+                  conversion-listener:
+                    config:
+                      caCertificates:
+                        - ($ca_cert_name)
+                      certificates:
+                        - ($client_cert_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayMCPServer
+              metadata:
+                name: ($mcp_upstream_server_name)
+                namespace: ($namespace)
+              spec:
+                apiSpec:
+                  upstream-server:
+                    config:
+                      caCertificates:
+                        - ($ca_cert_name)
+                      certificates:
+                        - ($client_cert_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayMCPServer
+              metadata:
+                name: ($mcp_passthrough_listener_name)
+                namespace: ($namespace)
+              spec:
+                apiSpec:
+                  passthrough-listener:
+                    config:
+                      caCertificates:
+                        - ($ca_cert_name)
+                      certificates:
+                        - ($client_cert_name)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+    - name: Reject-more-than-one-client-certificate
+      description: |
+        The generated Kong Service presents a single client_certificate, so
+        `certificates` is capped at one entry. Two entries must be rejected at
+        admission.
+      try:
+        - apply:
+            file: 03-agent-two-client-certs.yaml
+            expect:
+              - check:
+                  (contains($error, 'must have at most 1 item')): true
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: onprem-upstream-tls-certificates
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

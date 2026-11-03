@@ -245,7 +245,8 @@ type SetupControllersFunc func(manager.Manager, *Config, *multiinstance.Manager,
 // used to construct the admission webhook handler for the validating webhook
 // that is added to the manager too. Argument startedChan can be used as a signal
 // to notify the caller when the manager has been started. Specifically, this channel
-// gets closed when manager.Start() is called. Pass nil if you don't need this signal.
+// gets closed once the manager's caches are synced and its controllers are started.
+// Pass nil if you don't need this signal.
 func Run(
 	cfg Config,
 	scheme *runtime.Scheme,
@@ -451,11 +452,24 @@ func Run(
 		}
 	}
 
-	setupLog.Info("starting manager")
-	// If started channel is set, close it to notify the caller that manager has started.
+	// If started channel is set, close it once caches are synced and controllers are started.
 	if startedChan != nil {
-		close(startedChan)
+		if err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
+			select {
+			case <-mgr.Elected():
+			case <-ctx.Done():
+				return nil
+			}
+			if mgr.GetCache().WaitForCacheSync(ctx) {
+				close(startedChan)
+			}
+			return nil
+		})); err != nil {
+			return fmt.Errorf("unable to add manager started notifier: %w", err)
+		}
 	}
+
+	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		return fmt.Errorf("problem running manager: %w", err)
 	}

@@ -60,6 +60,8 @@ func getForUID[
 		return getAIGatewayCustomPolicyForUID(ctx, sdk.GetAIGatewayCustomPoliciesSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate:
 		return getAIGatewayDataPlaneCertificateForUID(ctx, sdk.GetAIGatewayDataPlaneCertificatesSDK(), ent)
+	case *aiconfigurationv1alpha1.AIGatewayDatastore:
+		return getAIGatewayDatastoreForUID(ctx, sdk.GetAIGatewayDatastoresSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayMCPServer:
 		return getAIGatewayMCPServerForUID(ctx, sdk.GetAIGatewayMCPServersSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayModel:

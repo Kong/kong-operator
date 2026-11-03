@@ -54,6 +54,14 @@ func AIGatewayAuthStrategyReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
+				&aiconfigurationv1alpha1.AIGatewayDatastore{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueAIGatewayAuthStrategyForAIGatewayDatastore(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
 				&configurationv1alpha1.KongReferenceGrant{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectsForKongReferenceGrant[aiconfigurationv1alpha1.AIGatewayAuthStrategyList](cl),
@@ -82,6 +90,24 @@ func enqueueAIGatewayAuthStrategyForKonnectAIGateway(
 		var l aiconfigurationv1alpha1.AIGatewayAuthStrategyList
 		if err := cl.List(ctx, &l, client.MatchingFields{
 			index.IndexFieldAIGatewayAuthStrategyOnKonnectAIGatewayRef: client.ObjectKeyFromObject(parent).String(),
+		}); err != nil {
+			return nil
+		}
+		return objectListToReconcileRequests(l.Items)
+	}
+}
+
+func enqueueAIGatewayAuthStrategyForAIGatewayDatastore(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		ref, ok := obj.(*aiconfigurationv1alpha1.AIGatewayDatastore)
+		if !ok {
+			return nil
+		}
+		var l aiconfigurationv1alpha1.AIGatewayAuthStrategyList
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexFieldAIGatewayAuthStrategyOnAIGatewayDatastoreRef: client.ObjectKeyFromObject(ref).String(),
 		}); err != nil {
 			return nil
 		}

@@ -73,6 +73,20 @@
 
 ### Fixed
 
+- `KongPlugin` `spec.ordering` is now sent to Konnect. It was dropped for every
+  `KongPluginBinding`, and for `KongPlugin`s referenced from `HTTPRoute` and
+  `GRPCRoute` `ExtensionRef` filters in hybrid gateways, so dynamic plugin
+  ordering only worked with the ingress controller. Konnect supports the
+  `access` phase only: an ordering in another phase is reported on the
+  `KongPluginBinding` as `Programmed=False` instead of being dropped.
+  **On upgrade, existing `access` orderings take effect at the next Konnect
+  sync, which can change how plugins behave (for example `rate-limiting`
+  ordered before `key-auth` limits by IP instead of by consumer). A plugin
+  with an ordering in another phase stops being updated in Konnect, and is no
+  longer created for new bindings: the route it is attached to is still
+  configured without it, so check orderings of authentication plugins before
+  upgrading.**
+  [#6321](https://github.com/Kong/kong-operator/pull/6321)
 - `KonnectAPIAuthConfiguration` `spec.serverURL` is now checked against the
   domains Kong serves Konnect from. A host outside the list is refused before
   any request is made and reported with an `APIAuthValid=False` condition that
@@ -124,6 +138,17 @@
   without a path keeps the previous behaviour, and a development host with an
   explicit port no longer lands on the production global host.
   [#6108](https://github.com/Kong/kong-operator/issues/6108)
+- On-prem AI Gateway: two `AIGatewayModel`s declaring the same model alias
+  (the same `config.route.model.values` entry, or the same model name when no
+  selector is set) no longer make the whole gateway configuration fail to
+  push. The operator detects the conflict before the push, excludes the later
+  model from the document, and reports the conflict on that model's own
+  status (`Programmed=False`) while the rest of the configuration and the
+  data planes program normally. The alias is claimed by the earliest-created
+  model (ties fall back to namespace/name order); a disabled model claims no
+  alias. The conflict is also reported as a Warning event on the
+  `OnPremAIGateway`.
+  [#6220](https://github.com/Kong/kong-operator/pull/6220)
 - On-prem AI Gateway: an `AIGatewayModel` with a semantic load balancer is now
   rendered in the shape `ai-proxy-advanced` accepts, so the data plane no longer
   rejects the whole pushed configuration with HTTP 400 and every entity on the
@@ -287,6 +312,8 @@
   reported by the AI Gateway configuration converter are also emitted as
   Warning events on the OnPremAIGateway.
   [#6051](https://github.com/Kong/kong-operator/pull/6051)
+- OnPremAIGateway: support for cross-namespace references to Secrets.
+  [#6362](https://github.com/Kong/kong-operator/pull/6362)
 - Event Gateway: `EventGatewayBackendCluster`, `EventGatewayDataPlaneCertificate`,
   `EventGatewayListener`, `EventGatewaySchemaRegistry`, `EventGatewayStaticKey`
   and `EventGatewayTLSTrustBundle` gained `spec.parentRef`, a reference to the
@@ -445,6 +472,17 @@
   of its API, which lists the data plane certificates and deletes them with
   their gateway.
   [#6314](https://github.com/Kong/kong-operator/pull/6314)
+- `OnPremEventGateway`: the gw-admin pods of a `GWAdmin` no
+  `OnPremEventGateway` may use, e.g. one without gateways, one whose gateways
+  are all being deleted, or one whose gateways of other namespaces lost their
+  `KongReferenceGrant`, are told they serve no gateway. A gw-admin pod only
+  turns Ready once told the gateways it serves, so a new or restarted pod of
+  such a `GWAdmin` would never turn Ready, and its rollouts, e.g. one rotating
+  its certificate authorities, would stall. A pod still starting is tried
+  again less and less often, up to every 30s, and one that can't be told is
+  tried again with a backoff and reported once, with a
+  `GWAdminProvisioningFailed` Warning event on the `GWAdmin`.
+  [#6332](https://github.com/Kong/kong-operator/pull/6332)
 - `--konnect-list-page-size` flag (default and maximum `100`): the page size
   the operator requests when listing Konnect entities to find the Konnect
   entity of an object, e.g. one whose Konnect ID was lost. It is a fallback in
@@ -604,9 +642,38 @@
   `https://us.svc.konghq.com/api`) instead of the public global host, so they
   can be managed over AWS PrivateLink by adding a `GLOBAL` VPC endpoint.
   [#6110](https://github.com/Kong/kong-operator/issues/6110)
+- Added `AIGatewayDatastore` CRD: a datastore that AI Gateway entities share.
+  The backend is Redis CE (`redis-ce`), Redis EE (`redis-ee`), a vector
+  database (`vectordb`) or a token vault (`token-vault`). `spec.apiSpec.type`
+  selects the backend, and the field named after it holds that backend's
+  configuration. Each write-only credential can be given inline or read from a
+  Kubernetes Secret. Those credentials are the Redis passwords, the vector
+  database password and TLS private key, and the cloud Redis credentials.
+  `name` and `type` cannot change after creation, as Konnect requires. The
+  entity is reconciled for a `KonnectAIGateway`. Policies, models, model
+  providers, auth strategies and MCP servers reference a datastore by its
+  Kubernetes name in `datastores`, in the same namespace, and the operator
+  sends the referenced datastore's Konnect name. Konnect refuses to delete a
+  datastore that they still use: the deletion reports `DeletionBlocked` and
+  resumes when the last reference is gone.
+  [#6375](https://github.com/Kong/kong-operator/issues/6375)
+- On-prem AI Gateway: `AIGatewayDatastore` configuration entities referencing
+  an `OnPremAIGateway` are now translated into the pushed configuration
+  document. A policy, a model, a model provider, an auth strategy or an MCP
+  server that references one resolves the reference to the datastore's name.
+  The datastore supplies the connection of the referencing entity. An entity
+  referencing a datastore that cannot be translated is left out of the
+  document and reports the failure on its own status.
+  [#6376](https://github.com/Kong/kong-operator/issues/6376)
 
 ### Changed
 
+- Bumped `sdk-konnect-go` to `v0.78.0`. Konnect core entities (`KongService`,
+  `KongRoute`, `KongConsumer`, `KongConsumerGroup`, `KongPluginBinding`,
+  `KongCertificate`, `KongKey`, `KongKeySet`, `KongUpstream`, `KongVault`) are
+  now created, read and deleted through the workspace-scoped
+  `/v2/control-planes/{controlPlaneId}/core-entities/default/...` endpoints.
+  [#6347](https://github.com/Kong/kong-operator/pull/6347)
 - On-prem AI Gateway: an `AIGatewayConsumer` with a broken
   `AIGatewayConsumerCredential` now reports `Programmed=True` while its healthy
   credentials keep rendering. The failure of the broken credential reports on

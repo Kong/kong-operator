@@ -65,12 +65,15 @@ func TestKongCertificate(t *testing.T) {
 
 		t.Log("Setting up SDK expectations on KongCertificate creation")
 		sdk.CertificatesSDK.EXPECT().
-			CreateCertificate(mock.Anything, cpID,
-				mock.MatchedBy(func(input sdkkonnectcomp.CertificateRequest) bool {
-					return input.CertificateWithCertAndKey.Cert == deploy.TestValidCertPEM &&
-						input.CertificateWithCertAndKey.Key == deploy.TestValidCertKeyPEM &&
-						slices.Contains(input.CertificateWithCertAndKey.Tags, "tag1")
-				}),
+			CreateCertificate(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.CreateCertificateRequest) bool {
+				if r.ControlPlaneID != cpID {
+					return false
+				}
+				input := r.CertificateRequest
+				return input.CertificateWithCertAndKey.Cert == deploy.TestValidCertPEM &&
+					input.CertificateWithCertAndKey.Key == deploy.TestValidCertKeyPEM &&
+					slices.Contains(input.CertificateWithCertAndKey.Tags, "tag1")
+			}),
 			).
 			Return(&sdkkonnectops.CreateCertificateResponse{
 				Certificate: &sdkkonnectcomp.Certificate{
@@ -127,7 +130,7 @@ func TestKongCertificate(t *testing.T) {
 		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.CertificatesSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up SDK expectations on KongCertificate deletion")
-		sdk.CertificatesSDK.EXPECT().DeleteCertificate(mock.Anything, cpID, "cert-12345").
+		sdk.CertificatesSDK.EXPECT().DeleteCertificate(mock.Anything, sdkkonnectops.DeleteCertificateRequest{ControlPlaneID: cpID, CertificateID: "cert-12345"}).
 			Return(&sdkkonnectops.DeleteCertificateResponse{}, nil)
 
 		t.Log("Deleting KongCertificate")
@@ -213,8 +216,11 @@ func TestKongCertificate(t *testing.T) {
 		sdk.CertificatesSDK.EXPECT().
 			CreateCertificate(
 				mock.Anything,
-				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.CertificateRequest) bool {
+				mock.MatchedBy(func(r sdkkonnectops.CreateCertificateRequest) bool {
+					if r.ControlPlaneID != cp.GetKonnectID() {
+						return false
+					}
+					req := r.CertificateRequest
 					return slices.Contains(req.CertificateWithCertAndKey.Tags, "tag3")
 				}),
 			).
@@ -261,8 +267,7 @@ func TestKongCertificate(t *testing.T) {
 		t.Log("Setting up SDK expectations for getting and updating certificates")
 		sdk.CertificatesSDK.EXPECT().GetCertificate(
 			mock.Anything,
-			certID,
-			cpID,
+			sdkkonnectops.GetCertificateRequest{ControlPlaneID: cpID, CertificateID: certID},
 		).Return(&sdkkonnectops.GetCertificateResponse{
 			Certificate: &sdkkonnectcomp.Certificate{
 				Cert: "test-cert",
@@ -294,7 +299,7 @@ func TestKongCertificate(t *testing.T) {
 		)
 
 		t.Log("Setting up SDK expectations for certificate deletion")
-		sdk.CertificatesSDK.EXPECT().DeleteCertificate(mock.Anything, cpID, certID).Return(nil, nil)
+		sdk.CertificatesSDK.EXPECT().DeleteCertificate(mock.Anything, sdkkonnectops.DeleteCertificateRequest{ControlPlaneID: cpID, CertificateID: certID}).Return(nil, nil)
 
 		t.Logf("Deleting KongCertificate %s and waiting for it to disappear", client.ObjectKeyFromObject(createdCert))
 		require.NoError(t, clientNamespaced.Delete(ctx, createdCert))
@@ -382,11 +387,14 @@ func TestKongCertificate(t *testing.T) {
 			}, nil)
 
 		sdk.CertificatesSDK.EXPECT().
-			CreateCertificate(mock.Anything, cpID,
-				mock.MatchedBy(func(input sdkkonnectcomp.CertificateRequest) bool {
-					return input.CertificateWithCertAndKey.Cert == deploy.TestValidCertPEM &&
-						input.CertificateWithCertAndKey.Key == deploy.TestValidCertKeyPEM
-				}),
+			CreateCertificate(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.CreateCertificateRequest) bool {
+				if r.ControlPlaneID != cpID {
+					return false
+				}
+				input := r.CertificateRequest
+				return input.CertificateWithCertAndKey.Cert == deploy.TestValidCertPEM &&
+					input.CertificateWithCertAndKey.Key == deploy.TestValidCertKeyPEM
+			}),
 			).
 			Return(&sdkkonnectops.CreateCertificateResponse{
 				Certificate: &sdkkonnectcomp.Certificate{
@@ -414,7 +422,7 @@ func TestKongCertificate(t *testing.T) {
 		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.CertificatesSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up SDK expectations for certificate deletion")
-		sdk.CertificatesSDK.EXPECT().DeleteCertificate(mock.Anything, cpID, certID).Return(nil, nil)
+		sdk.CertificatesSDK.EXPECT().DeleteCertificate(mock.Anything, sdkkonnectops.DeleteCertificateRequest{ControlPlaneID: cpID, CertificateID: certID}).Return(nil, nil)
 
 		t.Logf("Deleting KongCertificate %s and waiting for it to disappear", client.ObjectKeyFromObject(createdCert))
 		require.NoError(t, cl.Delete(ctx, createdCert))
@@ -479,11 +487,14 @@ func TestKongCertificate(t *testing.T) {
 			}, nil)
 
 		sdk.CertificatesSDK.EXPECT().
-			CreateCertificate(mock.Anything, cpID,
-				mock.MatchedBy(func(input sdkkonnectcomp.CertificateRequest) bool {
-					return input.CertificateWithCertAndKey.Cert == deploy.TestValidCertPEM &&
-						input.CertificateWithCertAndKey.Key == deploy.TestValidCertKeyPEM
-				}),
+			CreateCertificate(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.CreateCertificateRequest) bool {
+				if r.ControlPlaneID != cpID {
+					return false
+				}
+				input := r.CertificateRequest
+				return input.CertificateWithCertAndKey.Cert == deploy.TestValidCertPEM &&
+					input.CertificateWithCertAndKey.Key == deploy.TestValidCertKeyPEM
+			}),
 			).
 			Return(&sdkkonnectops.CreateCertificateResponse{
 				Certificate: &sdkkonnectcomp.Certificate{
@@ -536,7 +547,7 @@ func TestKongCertificate(t *testing.T) {
 		envtest.EventuallyAssertSDKExpectations(t, factory.SDK.CertificatesSDK, consts.WaitTime, consts.TickTime)
 
 		t.Log("Setting up SDK expectations for certificate deletion")
-		sdk.CertificatesSDK.EXPECT().DeleteCertificate(mock.Anything, cpID, certID).Return(nil, nil)
+		sdk.CertificatesSDK.EXPECT().DeleteCertificate(mock.Anything, sdkkonnectops.DeleteCertificateRequest{ControlPlaneID: cpID, CertificateID: certID}).Return(nil, nil)
 
 		t.Logf("Deleting KongCertificate %s and waiting for it to disappear", client.ObjectKeyFromObject(createdCert))
 		require.NoError(t, cl.Delete(ctx, createdCert))

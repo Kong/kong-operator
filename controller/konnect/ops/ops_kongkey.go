@@ -25,10 +25,10 @@ func createKey(
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: key, Op: CreateOp}
 	}
 
-	resp, err := sdk.CreateKey(ctx,
-		cpID,
-		kongKeyToKeyInput(key),
-	)
+	resp, err := sdk.CreateKey(ctx, sdkkonnectops.CreateKeyRequest{
+		ControlPlaneID: cpID,
+		Key:            kongKeyToKeyInput(key),
+	})
 
 	// TODO: handle already exists
 	// Can't adopt it as it will cause conflicts between the controller
@@ -83,7 +83,10 @@ func deleteKey(
 	key *configurationv1alpha1.KongKey,
 ) error {
 	id := key.Status.Konnect.GetKonnectID()
-	_, err := sdk.DeleteKey(ctx, key.GetControlPlaneID(), id)
+	_, err := sdk.DeleteKey(ctx, sdkkonnectops.DeleteKeyRequest{
+		ControlPlaneID: key.GetControlPlaneID(),
+		KeyID:          id,
+	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, key); errWrap != nil {
 		return handleDeleteError(ctx, err, key)
 	}
@@ -104,7 +107,10 @@ func adoptKey(
 	adoptOptions := key.Spec.Adopt
 	konnectID := adoptOptions.Konnect.ID
 
-	resp, err := sdk.GetKey(ctx, konnectID, cpID)
+	resp, err := sdk.GetKey(ctx, sdkkonnectops.GetKeyRequest{
+		KeyID:          konnectID,
+		ControlPlaneID: cpID,
+	})
 	if err != nil {
 		return KonnectEntityAdoptionFetchError{
 			KonnectID: konnectID,

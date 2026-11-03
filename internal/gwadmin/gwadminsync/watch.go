@@ -50,12 +50,27 @@ type RequestsFunc func(ctx context.Context, gwAdmin types.NamespacedName) []reco
 // It also makes the controller reconcile the object TryLock wakes, once the
 // lock it waits for is released.
 func (s *Syncer) Watch(b *builder.Builder, requests RequestsFunc) *builder.Builder {
+	return s.watchGWAdmin(b, requests).
+		WatchesRawSource(source.Channel(s.wakeupChannel(), &handler.EnqueueRequestForObject{}))
+}
+
+// WatchGWAdmins is Watch, for a second controller of the Syncer, which
+// reconciles the GWAdmins: it reconciles the GWAdmin TryLockGWAdmin wakes,
+// not the objects TryLock wakes, which the controller set up with Watch
+// reconciles.
+func (s *Syncer) WatchGWAdmins(b *builder.Builder, requests RequestsFunc) *builder.Builder {
+	return s.watchGWAdmin(b, requests).
+		WatchesRawSource(source.Channel(s.gwAdminWakeupChannel(), &handler.EnqueueRequestForObject{}))
+}
+
+// watchGWAdmin makes the controller watch what the Syncer reads of a
+// GWAdmin (see Watch).
+func (s *Syncer) watchGWAdmin(b *builder.Builder, requests RequestsFunc) *builder.Builder {
 	return b.
 		Watches(&operatorv1alpha1.GWAdmin{}, handler.EnqueueRequestsFromMapFunc(mapGWAdmin(requests)),
 			builder.WithPredicates(servingChanged(), s.forgetDeleted())).
 		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(mapSecret(requests))).
-		Watches(&discoveryv1.EndpointSlice{}, handler.EnqueueRequestsFromMapFunc(mapEndpointSlice(requests))).
-		WatchesRawSource(source.Channel(s.wakeupChannel(), &handler.EnqueueRequestForObject{}))
+		Watches(&discoveryv1.EndpointSlice{}, handler.EnqueueRequestsFromMapFunc(mapEndpointSlice(requests)))
 }
 
 // forgetDeleted lets every event through, and forgets what the Syncer keeps
