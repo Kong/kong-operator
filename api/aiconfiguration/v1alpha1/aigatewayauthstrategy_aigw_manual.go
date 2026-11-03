@@ -17,7 +17,8 @@ import (
 
 // ToAIGWAuthStrategy converts the AIGatewayAuthStrategy into ai-deck-converter's
 // aigw.AuthStrategy, resolving secretRefs in the config (e.g. the openid-connect
-// clientSecret) and the token-vault datastore references of the openid-connect variant.
+// clientSecret) and the datastore references of the key-auth and openid-connect
+// variants.
 func (obj *AIGatewayAuthStrategy) ToAIGWAuthStrategy(ctx context.Context, cl client.Client) (*aigw.AuthStrategy, error) {
 	if err := checkCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
 		return nil, fmt.Errorf("AIGatewayAuthStrategy %s/%s: %w", obj.Namespace, obj.Name, err)
