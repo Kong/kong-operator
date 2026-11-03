@@ -144,7 +144,10 @@ func TestDeleteHybridGatewayServiceWithInvalidCertificate(t *testing.T) {
 				WithStatusSubresource(&configurationv1alpha1.KongService{}, &konnectv1alpha1.KonnectAPIAuthConfiguration{}).Build()
 			require.NoError(t, cl.Delete(t.Context(), service))
 			factory := sdkmocks.NewMockSDKFactory(t)
-			factory.SDK.ServicesSDK.EXPECT().DeleteService(mock.Anything, cp.Status.ID, "service-id").
+			factory.SDK.ServicesSDK.EXPECT().DeleteService(mock.Anything, sdkkonnectops.DeleteServiceRequest{
+				ControlPlaneID: cp.Status.ID,
+				ServiceID:      "service-id",
+			}).
 				Return(&sdkkonnectops.DeleteServiceResponse{}, nil).Once()
 			reconciler := NewKonnectEntityReconciler[configurationv1alpha1.KongService](
 				factory, logging.DevelopmentMode, cl,
