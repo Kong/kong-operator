@@ -2047,7 +2047,7 @@ func TestBuildDocument_MCPServerListenerOfGrantDeniedSourceIsEntityScoped(t *tes
 		require.True(t, IsEntityScopedFailure(status.Err), "%s: %v", name, status.Err)
 	}
 	require.EqualError(t, findStatusByName(t, statuses, "mcp-listener").Err,
-		`referenced AIGatewayMCPServer "mcp-src" was excluded from the document: its own translation failed`)
+		`referenced AIGatewayMCPServer "mcp-src" was excluded from the document: its own translation failed, or it references an excluded server`)
 }
 
 // TestBuildDocument_MCPServerSourceSortedLater is the regression guard for the same-kind
