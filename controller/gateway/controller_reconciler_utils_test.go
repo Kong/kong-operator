@@ -5406,6 +5406,80 @@ func TestSetListenersProgrammedPending(t *testing.T) {
 		"already pending listener must keep its LastTransitionTime")
 }
 
+func TestSetResolvedRefsAndSupportedKindsDemotesProgrammed(t *testing.T) {
+	storedLTT := metav1.NewTime(time.Now().Add(-time.Hour))
+	generation := int64(1)
+
+	// The listener references a Secret that is absent from the client. This is
+	// what a Secret deletion looks like to a reconcile triggered by the Secret
+	// watch: ResolvedRefs flips to False with no generation bump, so the
+	// carried-over listener status must not keep Programmed=True.
+	gw := &gwtypes.Gateway{
+		APIVersion: gatewayv1.GroupVersion.String(),
+		Kind:       "Gateway",
+		Name:       "test-gw",
+		Namespace:  "test-namespace",
+		Generation: generation,
+		Spec: gwtypes.GatewaySpec{
+			Listeners: []gwtypes.Listener{
+				{
+					Name:     "https",
+					Protocol: gatewayv1.HTTPSProtocolType,
+					Port:     443,
+					TLS: &gatewayv1.ListenerTLSConfig{
+						Mode: new(gatewayv1.TLSModeTerminate),
+						CertificateRefs: []gatewayv1.SecretObjectReference{
+							{Name: "missing-secret"},
+						},
+					},
+				},
+			},
+		},
+		Status: gatewayv1.GatewayStatus{
+			Listeners: []gatewayv1.ListenerStatus{
+				{
+					Name: "https",
+					Conditions: []metav1.Condition{
+						{
+							Type:               string(gatewayv1.ListenerConditionProgrammed),
+							Status:             metav1.ConditionTrue,
+							Reason:             string(gatewayv1.ListenerReasonProgrammed),
+							ObservedGeneration: generation,
+							LastTransitionTime: storedLTT,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	fakeClient := fakectrlruntimeclient.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		Build()
+
+	gwAware := gatewayConditionsAndListenersAware(gw)
+	require.NoError(t, gwAware.setResolvedRefsAndSupportedKinds(
+		t.Context(), fakeClient, schema.GroupVersion{Group: "policy.networking.k8s.io", Version: "v1"},
+	))
+
+	programmed, ok := k8sutils.GetCondition(
+		kcfgconsts.ConditionType(gatewayv1.ListenerConditionProgrammed),
+		listenerConditionsAware(&gw.Status.Listeners[0]),
+	)
+	require.True(t, ok)
+	assert.Equal(t, metav1.ConditionFalse, programmed.Status,
+		"carried-over Programmed=True must not outlive unresolved references")
+	assert.Equal(t, string(gatewayv1.ListenerReasonPending), programmed.Reason)
+	assert.Equal(t, "Listener references are not resolved yet.", programmed.Message)
+
+	resolvedRefs, ok := k8sutils.GetCondition(
+		kcfgconsts.ConditionType(gatewayv1.ListenerConditionResolvedRefs),
+		listenerConditionsAware(&gw.Status.Listeners[0]),
+	)
+	require.True(t, ok)
+	assert.Equal(t, metav1.ConditionFalse, resolvedRefs.Status)
+}
+
 func TestEnforceKonnectGatewayControlPlaneSpec(t *testing.T) {
 	ns := func(s string) *string { return &s }
 

@@ -1023,6 +1023,19 @@ func (g *gatewayConditionsAndListenersAwareT) setResolvedRefsAndSupportedKinds(
 		}
 
 		k8sutils.SetCondition(resolvedRefsCondition, lStatus)
+		if resolvedRefsCondition.Status == metav1.ConditionFalse {
+			// Unresolved references keep the listener from serving: a
+			// carried-over Programmed=True must not outlive them. This mirrors
+			// the guard in setListenersStatus.
+			k8sutils.SetCondition(metav1.Condition{
+				Type:               string(gatewayv1.ListenerConditionProgrammed),
+				Status:             metav1.ConditionFalse,
+				Reason:             string(gatewayv1.ListenerReasonPending),
+				Message:            "Listener references are not resolved yet.",
+				ObservedGeneration: g.Generation,
+				LastTransitionTime: metav1.Now(),
+			}, lStatus)
+		}
 	}
 	return nil
 }
@@ -1389,10 +1402,8 @@ func (g *gatewayConditionsAndListenersAwareT) setProgrammed(listenersStatus meta
 }
 
 // setListenersProgrammedPending resets the listeners Programmed condition to
-// False/Pending. Listener statuses are preserved across reconciliations, so
-// unlike the other condition types they no longer get an implicit reset from
-// the status initialization: paths that report a degraded DataPlane must reset
-// the condition explicitly before persisting the status.
+// False/Pending. initListenersStatus keeps listener statuses, so paths that
+// report a degraded DataPlane must reset this condition before they persist status.
 func (g *gatewayConditionsAndListenersAwareT) setListenersProgrammedPending() {
 	for i := range g.Status.Listeners {
 		lStatus := listenerConditionsAware(&g.Status.Listeners[i])
