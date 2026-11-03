@@ -217,7 +217,8 @@ type DeploymentConfig[T Object] struct {
 	// annotations are applied and before the user PodTemplateSpec overlay is
 	// merged, e.g. to label it for the control plane. The labels and
 	// annotations maps of the Deployment and of its Pod template may be
-	// shared: replace them rather than mutating them.
+	// shared: replace them rather than mutating them. cp is empty, with a nil
+	// Object, when the DataPlane has no control plane reference.
 	Customize func(dp T, cp ResolvedControlPlane, d *appsv1.Deployment)
 }
 
@@ -388,7 +389,9 @@ type CertificateConfig[T Object, Cert CertificateObject] struct {
 	CleanupStale func(ctx context.Context, cl client.Client, logger logr.Logger, dp T, cp ResolvedControlPlane, certChecksum string) error
 	// RequeueAfter, when non-nil, returns when the resolved certificate must
 	// be checked again, e.g. for its renewal, or 0. The reconcile is requeued
-	// for the earliest of it and the expiry of a manual certificate.
+	// for the earliest of it and the expiry of a manual certificate. It isn't
+	// called when no certificate Secret is resolved. cp is empty, with a nil
+	// Object, when the DataPlane has no control plane reference.
 	RequeueAfter func(dp T, cp ResolvedControlPlane, secret *corev1.Secret, now time.Time) time.Duration
 }
 
@@ -535,7 +538,8 @@ func (r *Reconciler[T, Cert]) SetupWithManager(ctx context.Context, mgr ctrl.Man
 // become deletable), and an AdminAPI block, when present, must be fully
 // populated with a CertificateLabelKey distinct from Certificate.LabelKey
 // (so the two Secrets never collide in the owner-scoped Secret listings
-// performed during provisioning).
+// performed during provisioning). It also checks the control plane kinds (see
+// validateControlPlaneKind).
 func (r *Reconciler[T, Cert]) validateConfig() error {
 	if r.Config.Service.SetStatusAddresses == nil {
 		return fmt.Errorf("Service: SetStatusAddresses must be set: the primary Service feeds the DataPlane status")
@@ -566,6 +570,50 @@ func (r *Reconciler[T, Cert]) validateConfig() error {
 		case r.Config.Conditions.AdminCertificateProvisionedReason == "":
 			return fmt.Errorf("Conditions: AdminCertificateProvisionedReason must be set when AdminAPI is configured")
 		}
+	}
+	for _, cpKind := range r.Config.ControlPlanes {
+		if err := r.validateControlPlaneKind(cpKind); err != nil {
+			return fmt.Errorf("ControlPlanes: %s: %w", cpKind.Kind, err)
+		}
+	}
+	return nil
+}
+
+// validateControlPlaneKind checks that a control plane kind sets what its
+// optional behaviors report with or call: an empty condition type or reason
+// makes the status of the DataPlane invalid.
+func (r *Reconciler[T, Cert]) validateControlPlaneKind(cpKind ControlPlaneKindConfig) error {
+	if cpKind.DisabledMessage != "" && cpKind.Conditions.NotFoundReason == "" {
+		return fmt.Errorf("Conditions: NotFoundReason must be set when DisabledMessage is set")
+	}
+	if cpKind.Dependencies != nil && cpKind.Conditions.NotReadyReason == "" {
+		return fmt.Errorf("Conditions: NotReadyReason must be set when Dependencies is set")
+	}
+	reg := cpKind.CertificateRegistration
+	if reg == nil {
+		return nil
+	}
+	switch {
+	case r.Config.Certificate.Build == nil:
+		return fmt.Errorf("CertificateRegistration: Certificate.Build must be set")
+	case r.Config.Conditions.CertificateProvisionedType == "":
+		return fmt.Errorf("CertificateRegistration: Conditions.CertificateProvisionedType must be set")
+	case cpKind.Conditions.NotFoundReason == "":
+		return fmt.Errorf("CertificateRegistration: Conditions.NotFoundReason of the kind must be set")
+	case reg.Type == "":
+		return fmt.Errorf("CertificateRegistration: Type must not be empty")
+	case reg.RegisteredReason == "":
+		return fmt.Errorf("CertificateRegistration: RegisteredReason must not be empty")
+	case reg.RegistrationFailedReason == "":
+		return fmt.Errorf("CertificateRegistration: RegistrationFailedReason must not be empty")
+	case reg.NotProgrammedReason == "":
+		return fmt.Errorf("CertificateRegistration: NotProgrammedReason must not be empty")
+	case reg.Target == "":
+		return fmt.Errorf("CertificateRegistration: Target must not be empty")
+	case reg.CreatedEventReason == "" || reg.CreatedEventAction == "":
+		return fmt.Errorf("CertificateRegistration: CreatedEventReason and CreatedEventAction must not be empty")
+	case reg.UpdatedEventReason == "" || reg.UpdatedEventAction == "":
+		return fmt.Errorf("CertificateRegistration: UpdatedEventReason and UpdatedEventAction must not be empty")
 	}
 	return nil
 }
@@ -804,7 +852,7 @@ func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Res
 // renewal.
 func (r *Reconciler[T, Cert]) certificateRequeue(dp T, cp ResolvedControlPlane, certSecret *corev1.Secret, now time.Time) time.Duration {
 	requeue := manualCertificateExpiryRequeue(certSecret, now)
-	if r.Config.Certificate.RequeueAfter != nil {
+	if certSecret != nil && r.Config.Certificate.RequeueAfter != nil {
 		if after := r.Config.Certificate.RequeueAfter(dp, cp, certSecret, now); after > 0 && (requeue == 0 || after < requeue) {
 			requeue = after
 		}

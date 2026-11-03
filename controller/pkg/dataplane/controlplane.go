@@ -90,9 +90,9 @@ type CertificateRegistrationConditions struct {
 	NotProgrammedReason string
 	// Target names what the certificate is registered on, e.g. "gw-admin".
 	Target string
-	// NotProgrammedHint, when set, is added to the message used while the
-	// certificate object has no Programmed condition, e.g. to name what
-	// programs it.
+	// NotProgrammedHint, when set, is appended as is, so with its own leading
+	// space, to the message used while the certificate object has no
+	// Programmed condition, e.g. to name what programs it.
 	NotProgrammedHint string
 	// ReportProgrammedCondition, when set, adds the reason and message of the
 	// Programmed condition of the certificate object, when it has one, to the

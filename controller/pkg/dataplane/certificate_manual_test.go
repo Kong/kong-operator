@@ -221,6 +221,7 @@ func TestCertificateRequeue(t *testing.T) {
 		want time.Duration
 	}{
 		{name: "no certificate", want: 0},
+		{name: "no certificate: the hook is not called", hook: new(10 * time.Minute), want: 0},
 		{name: "a user-owned certificate without hook requeues at its expiry", secret: manual, want: untilExpiry},
 		{name: "an operator-provisioned certificate without hook", secret: automatic, want: 0},
 		{name: "a hook returning 0 keeps the expiry", secret: manual, hook: new(time.Duration(0)), want: untilExpiry},
