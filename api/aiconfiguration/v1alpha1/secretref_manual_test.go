@@ -11,7 +11,116 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
 )
+
+// secretReferenceGrant returns a KongReferenceGrant in secretNamespace that allows fromKind
+// entities in fromNamespace to reference the Secret secretName. An empty secretName allows
+// every Secret in the namespace.
+func secretReferenceGrant(secretNamespace, fromNamespace, fromKind, secretName string) *configurationv1alpha1.KongReferenceGrant {
+	to := configurationv1alpha1.ReferenceGrantTo{Group: "core", Kind: "Secret"}
+	if secretName != "" {
+		to.Name = new(configurationv1alpha1.ObjectName(secretName))
+	}
+	return &configurationv1alpha1.KongReferenceGrant{
+		Name: "allow-" + fromNamespace + "-" + fromKind, Namespace: secretNamespace,
+		Spec: configurationv1alpha1.KongReferenceGrantSpec{
+			From: []configurationv1alpha1.ReferenceGrantFrom{{
+				Group:     configurationv1alpha1.Group(GroupVersion.Group),
+				Kind:      configurationv1alpha1.Kind(fromKind),
+				Namespace: configurationv1alpha1.Namespace(fromNamespace),
+			}},
+			To: []configurationv1alpha1.ReferenceGrantTo{to},
+		},
+	}
+}
+
+func TestCheckCrossNamespaceSecretRefsGranted(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+
+	policyWithSecretRef := func(namespace *string) *AIGatewayPolicy {
+		return &AIGatewayPolicy{
+			Name: "policy", Namespace: "default",
+			Spec: AIGatewayPolicySpec{
+				APISpec: AIGatewayPolicyAPISpec{
+					Config: AIGatewayPolicyConfigDataSource{
+						Type:      SensitiveDataSourceTypeSecretRef,
+						SecretRef: &SensitiveDataSecretRef{Name: "creds", Key: "config", Namespace: namespace},
+					},
+				},
+			},
+		}
+	}
+
+	tests := []struct {
+		name           string
+		obj            *AIGatewayPolicy
+		grants         []client.Object
+		wantNotGranted bool
+	}{
+		{
+			name: "secretRef without namespace needs no grant",
+			obj:  policyWithSecretRef(nil),
+		},
+		{
+			name: "secretRef to the entity's namespace needs no grant",
+			obj:  policyWithSecretRef(new("default")),
+		},
+		{
+			name:           "cross-namespace secretRef without grant is denied",
+			obj:            policyWithSecretRef(new("secrets")),
+			wantNotGranted: true,
+		},
+		{
+			name:   "cross-namespace secretRef allowed by a grant for the Secret",
+			obj:    policyWithSecretRef(new("secrets")),
+			grants: []client.Object{secretReferenceGrant("secrets", "default", "AIGatewayPolicy", "creds")},
+		},
+		{
+			name:   "cross-namespace secretRef allowed by a grant for every Secret",
+			obj:    policyWithSecretRef(new("secrets")),
+			grants: []client.Object{secretReferenceGrant("secrets", "default", "AIGatewayPolicy", "")},
+		},
+		{
+			name:           "grant for another kind is denied",
+			obj:            policyWithSecretRef(new("secrets")),
+			grants:         []client.Object{secretReferenceGrant("secrets", "default", "AIGatewayVault", "creds")},
+			wantNotGranted: true,
+		},
+		{
+			name:           "grant for another source namespace is denied",
+			obj:            policyWithSecretRef(new("secrets")),
+			grants:         []client.Object{secretReferenceGrant("secrets", "other", "AIGatewayPolicy", "creds")},
+			wantNotGranted: true,
+		},
+		{
+			name:           "grant for another Secret is denied",
+			obj:            policyWithSecretRef(new("secrets")),
+			grants:         []client.Object{secretReferenceGrant("secrets", "default", "AIGatewayPolicy", "other")},
+			wantNotGranted: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.grants...).Build()
+			err := checkCrossNamespaceSecretRefsGranted(t.Context(), cl, tt.obj)
+			if tt.wantNotGranted {
+				require.True(t, crossnamespace.IsReferenceNotGranted(err), "expected not granted error, got %v", err)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
 
 // TestNoteSecretLabelRequirement pins the not-found gate: only not-found errors get the
 // Secret label selector hint (the operator's caches hold only labeled Secrets), other

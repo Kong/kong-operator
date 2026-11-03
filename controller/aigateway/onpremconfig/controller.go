@@ -129,6 +129,15 @@ func (cs *Controllers) SetupWithManager(_ context.Context, mgr ctrl.Manager) err
 	}).SetupWithManager(mgr); err != nil {
 		return err
 	}
+	// Like the Secret reconciler, it re-renders the configuration when a
+	// KongReferenceGrant for a cross-namespace secretRef changes.
+	if err := (&KongReferenceGrantReconciler{
+		Client:         cs.Client,
+		Log:            cs.Log,
+		ChangeNotifier: cs.ChangeNotifier,
+	}).SetupWithManager(mgr); err != nil {
+		return err
+	}
 	// The credential reconciler is hand-written rather than generated: see
 	// AIGatewayConsumerCredentialReconciler for why.
 	return (&AIGatewayConsumerCredentialReconciler{

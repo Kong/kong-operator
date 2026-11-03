@@ -30,7 +30,7 @@ func (obj *AIGatewayVault) ToAIGWVault(ctx context.Context, cl client.Client) (*
 		)
 	}
 
-	if err := rejectCrossNamespaceSecretRefs(obj); err != nil {
+	if err := checkCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
 		return nil, fmt.Errorf("AIGatewayVault %s/%s: %w", obj.Namespace, obj.Name, err)
 	}
 

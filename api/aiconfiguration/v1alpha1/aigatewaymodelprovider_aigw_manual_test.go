@@ -10,6 +10,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
 // TestAIGatewayModelProvider_ToAIGWProvider covers the basic-auth and azure variants, the
@@ -21,6 +23,7 @@ func TestAIGatewayModelProvider_ToAIGWProvider(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, AddToScheme(scheme))
 	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
 
 	// newAzureSecret returns a fresh object per subtest: the fake client's tracker mutates the
 	// objects it's given (SetResourceVersion on Build), so parallel subtests sharing one
@@ -133,7 +136,7 @@ func TestAIGatewayModelProvider_ToAIGWProvider(t *testing.T) {
 			},
 		},
 		{
-			name: "cross-namespace secretRef rejected",
+			name: "cross-namespace secretRef without KongReferenceGrant rejected",
 			obj: &AIGatewayModelProvider{
 				Name: "sample-ai-gw-provider-cross-ns", Namespace: "default",
 				Spec: AIGatewayModelProviderSpec{
@@ -163,10 +166,10 @@ func TestAIGatewayModelProvider_ToAIGWProvider(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "cross-namespace secretRef",
+			wantErr: "is not granted by any KongReferenceGrant",
 		},
 		{
-			name: "cross-namespace header secretRef rejected",
+			name: "cross-namespace header secretRef without KongReferenceGrant rejected",
 			obj: &AIGatewayModelProvider{
 				Name: "sample-ai-gw-provider-cross-ns-header", Namespace: "default",
 				Spec: AIGatewayModelProviderSpec{
@@ -198,7 +201,7 @@ func TestAIGatewayModelProvider_ToAIGWProvider(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "cross-namespace secretRef",
+			wantErr: "is not granted by any KongReferenceGrant",
 		},
 		{
 			name: "nil config",

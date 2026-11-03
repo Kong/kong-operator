@@ -20,7 +20,7 @@ import (
 // clientSecret). It carries no entity references, so unlike the model translation it needs
 // no name resolution.
 func (obj *AIGatewayAuthStrategy) ToAIGWAuthStrategy(ctx context.Context, cl client.Client) (*aigw.AuthStrategy, error) {
-	if err := rejectCrossNamespaceSecretRefs(obj); err != nil {
+	if err := checkCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
 		return nil, fmt.Errorf("AIGatewayAuthStrategy %s/%s: %w", obj.Namespace, obj.Name, err)
 	}
 

@@ -53,10 +53,8 @@ type sensitiveSecretRefGetter interface {
 // (see pkg/multiinstance/aigateway's cacheOpts), so only ingestible Secrets produce
 // events and no label predicate is needed here.
 //
-// NOTE: cross-namespace secretRefs are rejected by the on-prem translation, so only
-// Secrets in the entity's namespace are matched here. When cross-namespace secretRefs
-// gain support (https://github.com/Kong/kong-operator/issues/5908), the reference
-// namespace resolution must follow suit.
+// Entities are listed in every watched namespace, not only the Secret's: a
+// cross-namespace secretRef (allowed by a KongReferenceGrant) can point at it.
 type SecretReconciler struct {
 	client.Client
 
@@ -72,21 +70,53 @@ func (r *SecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// Reconcile notifies the ChangeNotifier for every configuration entity in the
-// Secret's namespace whose secretRefs reference the Secret. The Secret itself is
-// not fetched: on deletion the entity list still comes from the cache, so the
-// referencing entities re-render and report the now-dangling reference.
+// Reconcile notifies the ChangeNotifier for every configuration entity whose
+// secretRefs reference the Secret. The Secret itself is not fetched: on deletion
+// the entity list still comes from the cache, so the referencing entities
+// re-render and report the now-dangling reference.
 func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	if r.ChangeNotifier == nil {
-		return ctrl.Result{}, nil
+	return ctrl.Result{}, notifySecretRefEntities(ctx, r.Client, referencesSecret(req.NamespacedName), r.ChangeNotifier, r.Log)
+}
+
+// secretRefMatcher reports whether an entity in entityNamespace is affected by
+// one of its secretRefs.
+type secretRefMatcher func(entityNamespace string, ref aiconfigurationv1alpha1.SensitiveDataSecretRef) bool
+
+// secretRefNamespace resolves the namespace of a secretRef: an explicit
+// namespace wins, else the entity's namespace.
+func secretRefNamespace(entityNamespace string, ref aiconfigurationv1alpha1.SensitiveDataSecretRef) string {
+	if ref.Namespace != nil && *ref.Namespace != "" {
+		return *ref.Namespace
+	}
+	return entityNamespace
+}
+
+// referencesSecret matches the secretRefs that point at the Secret secretNN.
+func referencesSecret(secretNN types.NamespacedName) secretRefMatcher {
+	return func(entityNamespace string, ref aiconfigurationv1alpha1.SensitiveDataSecretRef) bool {
+		return ref.Name == secretNN.Name && secretRefNamespace(entityNamespace, ref) == secretNN.Namespace
+	}
+}
+
+// notifySecretRefEntities runs every secretRefNotifierFuncs entry with match and
+// joins their errors, so that the queue retries the event.
+func notifySecretRefEntities(
+	ctx context.Context,
+	cl client.Client,
+	match secretRefMatcher,
+	cn *changenotifier.ChangeNotifier,
+	log logr.Logger,
+) error {
+	if cn == nil {
+		return nil
 	}
 	var errs []error
 	for _, notify := range secretRefNotifierFuncs {
-		if err := notify(ctx, r.Client, req.NamespacedName, r.ChangeNotifier, r.Log); err != nil {
+		if err := notify(ctx, cl, match, cn, log); err != nil {
 			errs = append(errs, err)
 		}
 	}
-	return ctrl.Result{}, errors.Join(errs...)
+	return errors.Join(errs...)
 }
 
 // secretRefNotifierFuncs holds one fan-out entry per configuration entity kind
@@ -98,7 +128,7 @@ func (r *SecretReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 var secretRefNotifierFuncs = []func(
 	ctx context.Context,
 	cl client.Client,
-	secretNN types.NamespacedName,
+	match secretRefMatcher,
 	cn *changenotifier.ChangeNotifier,
 	log logr.Logger,
 ) error{
@@ -108,31 +138,27 @@ var secretRefNotifierFuncs = []func(
 	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateList],
 	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayModelProviderList],
 	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayPolicyList],
+	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayDatastoreList],
+	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayVaultList],
 	notifyConsumersForCredentialSecrets,
 }
 
 // notifyConsumersForCredentialSecrets notifies the parent AIGatewayConsumer of every
-// AIGatewayConsumerCredential in the Secret's namespace whose secretRefs reference the
-// Secret. The credential itself has no aiGatewayRef, and the reconciler it has only
-// writes its own Programmed condition: its rendered form is embedded in the parent
-// consumer's document, so the consumer is what must re-render and report the resolved
-// (or dangling) credential Secret on its status.
-//
-// Like the SecretReconciler itself, cross-namespace secretRefs are not resolved here
-// beyond the refNamespace matching rule: they are rejected by the on-prem translation,
-// and when they gain support (https://github.com/Kong/kong-operator/issues/5908) the
-// reference namespace resolution must follow suit.
+// AIGatewayConsumerCredential with a secretRef that match accepts. The credential
+// itself has no aiGatewayRef, and the reconciler it has only writes its own
+// Programmed condition: its rendered form is embedded in the parent consumer's
+// document, so the consumer is what must re-render and report the resolved (or
+// dangling) credential Secret on its status.
 func notifyConsumersForCredentialSecrets(
 	ctx context.Context,
 	cl client.Client,
-	secretNN types.NamespacedName,
+	match secretRefMatcher,
 	cn *changenotifier.ChangeNotifier,
 	log logr.Logger,
 ) error {
 	var list aiconfigurationv1alpha1.AIGatewayConsumerCredentialList
-	if err := cl.List(ctx, &list, client.InNamespace(secretNN.Namespace)); err != nil {
-		log.Error(err, "Failed to list AIGatewayConsumerCredentials referencing a Secret",
-			"secretNamespace", secretNN.Namespace, "secretName", secretNN.Name)
+	if err := cl.List(ctx, &list); err != nil {
+		log.Error(err, "Failed to list AIGatewayConsumerCredentials referencing a Secret")
 		return err
 	}
 	for i := range list.Items {
@@ -150,13 +176,7 @@ func notifyConsumersForCredentialSecrets(
 			continue
 		}
 		for _, secretRef := range cred.GetSensitiveDataSecretRefs() {
-			// Same refNamespace resolution as notifyEntitiesForSecret: explicit
-			// secretRef.Namespace wins, else the credential's namespace.
-			refNamespace := cred.GetNamespace()
-			if secretRef.Namespace != nil && *secretRef.Namespace != "" {
-				refNamespace = *secretRef.Namespace
-			}
-			if secretRef.Name != secretNN.Name || refNamespace != secretNN.Namespace {
+			if !match(cred.GetNamespace(), secretRef) {
 				continue
 			}
 			consumerNN := types.NamespacedName{
@@ -194,10 +214,10 @@ func notifyConsumersForCredentialSecrets(
 	return nil
 }
 
-// notifyEntitiesForSecret lists the entities of one kind in the Secret's namespace and
-// notifies the ChangeNotifier for every entity referencing the Secret, addressed to the
-// OnPremAIGateway the entity targets. It returns the List error so that Reconcile can
-// propagate it and the queue retries the Secret event.
+// notifyEntitiesForSecret lists the entities of one kind and notifies the ChangeNotifier
+// for every entity with a secretRef that match accepts, addressed to the OnPremAIGateway
+// the entity targets. It returns the List error so that the caller can propagate it and
+// the queue retries the event.
 func notifyEntitiesForSecret[
 	TList interface {
 		GetItems() []T
@@ -216,7 +236,7 @@ func notifyEntitiesForSecret[
 ](
 	ctx context.Context,
 	cl client.Client,
-	secretNN types.NamespacedName,
+	match secretRefMatcher,
 	cn *changenotifier.ChangeNotifier,
 	log logr.Logger,
 ) error {
@@ -224,9 +244,8 @@ func notifyEntitiesForSecret[
 		l    TList
 		lPtr TListPtr = &l
 	)
-	if err := cl.List(ctx, lPtr, client.InNamespace(secretNN.Namespace)); err != nil {
-		log.Error(err, "Failed to list configuration entities referencing a Secret",
-			"secretNamespace", secretNN.Namespace, "secretName", secretNN.Name)
+	if err := cl.List(ctx, lPtr); err != nil {
+		log.Error(err, "Failed to list configuration entities referencing a Secret")
 		return err
 	}
 	items := lPtr.GetItems()
@@ -237,14 +256,7 @@ func notifyEntitiesForSecret[
 			continue
 		}
 		for _, secretRef := range ent.GetSensitiveDataSecretRefs() {
-			// Match on the secretRef's resolved namespace rather than the entity's: the List
-			// above is already scoped to the Secret's namespace, so comparing the entity's
-			// namespace here would never filter anything.
-			refNamespace := ent.GetNamespace()
-			if secretRef.Namespace != nil && *secretRef.Namespace != "" {
-				refNamespace = *secretRef.Namespace
-			}
-			if secretRef.Name != secretNN.Name || refNamespace != secretNN.Namespace {
+			if !match(ent.GetNamespace(), secretRef) {
 				continue
 			}
 			parent := types.NamespacedName{
