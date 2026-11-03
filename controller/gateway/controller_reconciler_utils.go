@@ -1016,6 +1016,10 @@ func (g *gatewayConditionsAndListenersAwareT) setResolvedRefsAndSupportedKinds(
 		accepted, ok := k8sutils.GetCondition(kcfgconsts.ConditionType(gatewayv1.ListenerConditionAccepted), lStatus)
 		if ok && accepted.Status == metav1.ConditionTrue {
 			lStatus.SupportedKinds = supportedKinds
+		} else {
+			// Carried-over listener statuses may hold SupportedKinds from when
+			// the listener was accepted; clear them to match a fresh status.
+			lStatus.SupportedKinds = nil
 		}
 
 		k8sutils.SetCondition(resolvedRefsCondition, lStatus)
@@ -1023,11 +1027,21 @@ func (g *gatewayConditionsAndListenersAwareT) setResolvedRefsAndSupportedKinds(
 	return nil
 }
 
-// initListenersStatus initialize the listener status for a given gateway.
+// initListenersStatus initializes the listener status for a given gateway.
+// Existing status entries are carried over by listener name: their conditions
+// are then refreshed in place, which keeps LastTransitionTime stable across
+// reconciliations when nothing changed.
 func (g *gatewayConditionsAndListenersAwareT) initListenersStatus() {
-	// Initialize listeners status.
+	existing := make(map[gatewayv1.SectionName]gatewayv1.ListenerStatus, len(g.Status.Listeners))
+	for _, l := range g.Status.Listeners {
+		existing[l.Name] = l
+	}
 	listenersStatus := make([]gatewayv1.ListenerStatus, len(g.Spec.Listeners))
 	for i, listener := range g.Spec.Listeners {
+		if prev, ok := existing[listener.Name]; ok {
+			listenersStatus[i] = prev
+			continue
+		}
 		listenersStatus[i] = gatewayv1.ListenerStatus{
 			Name:       listener.Name,
 			Conditions: []metav1.Condition{},
@@ -1063,7 +1077,9 @@ func (g *gatewayConditionsAndListenersAwareT) setAcceptedAndAttachedRoutes(ctx c
 			acceptedCondition.Status = metav1.ConditionFalse
 			acceptedCondition.Reason = conflicted.Reason
 		}
-		listenerConditionsAware.SetConditions(append(listenerConditionsAware.Conditions, acceptedCondition))
+		// SetCondition keeps the stored condition (including LastTransitionTime)
+		// when nothing changed, instead of re-timestamping on every reconcile.
+		k8sutils.SetCondition(acceptedCondition, listenerConditionsAware)
 
 		// AttachedRoutes
 		count, err := countAttachedRoutesForGatewayListener(ctx, g.Gateway, g.Spec.Listeners[i], c)
@@ -1370,6 +1386,24 @@ func (g *gatewayConditionsAndListenersAwareT) setConflicted() {
 func (g *gatewayConditionsAndListenersAwareT) setProgrammed(listenersStatus metav1.ConditionStatus) {
 	k8sutils.SetProgrammed(g)
 	g.setListenersStatus(listenersStatus)
+}
+
+// setListenersProgrammedPending resets the listeners Programmed condition to
+// False/Pending. Listener statuses are preserved across reconciliations, so
+// unlike the other condition types they no longer get an implicit reset from
+// the status initialization: paths that report a degraded DataPlane must reset
+// the condition explicitly before persisting the status.
+func (g *gatewayConditionsAndListenersAwareT) setListenersProgrammedPending() {
+	for i := range g.Status.Listeners {
+		lStatus := listenerConditionsAware(&g.Status.Listeners[i])
+		k8sutils.SetCondition(metav1.Condition{
+			Type:               string(gatewayv1.ListenerConditionProgrammed),
+			Status:             metav1.ConditionFalse,
+			Reason:             string(gatewayv1.ListenerReasonPending),
+			ObservedGeneration: g.Generation,
+			LastTransitionTime: metav1.Now(),
+		}, lStatus)
+	}
 }
 
 func (g *gatewayConditionsAndListenersAwareT) setListenersStatus(status metav1.ConditionStatus) {

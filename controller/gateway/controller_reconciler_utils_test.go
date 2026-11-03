@@ -5,6 +5,7 @@ import (
 	"maps"
 	"net/http"
 	"testing"
+	"time"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/stretchr/testify/assert"
@@ -5291,6 +5292,118 @@ func TestSetAcceptedAndAttachedRoutes(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestInitListenersStatusPreservesExistingStatuses(t *testing.T) {
+	storedLTT := metav1.NewTime(time.Now().Add(-time.Hour))
+
+	gw := &gwtypes.Gateway{
+		APIVersion: gatewayv1.GroupVersion.String(),
+		Kind:       "Gateway",
+		Name:       "test-gw",
+		Namespace:  "test-namespace",
+		Generation: 1,
+		Spec: gwtypes.GatewaySpec{
+			Listeners: []gwtypes.Listener{
+				{Name: "http", Protocol: gatewayv1.HTTPProtocolType, Port: 80},
+				{Name: "https", Protocol: gatewayv1.HTTPSProtocolType, Port: 443},
+			},
+		},
+		Status: gatewayv1.GatewayStatus{
+			Listeners: []gatewayv1.ListenerStatus{
+				{
+					Name: "http",
+					Conditions: []metav1.Condition{
+						{
+							Type:               string(gatewayv1.ListenerConditionAccepted),
+							Status:             metav1.ConditionTrue,
+							Reason:             string(gatewayv1.ListenerReasonAccepted),
+							LastTransitionTime: storedLTT,
+						},
+					},
+				},
+				// A listener that no longer exists in the spec: its status
+				// entry must be dropped.
+				{Name: "removed"},
+			},
+		},
+	}
+
+	gwAware := gatewayConditionsAndListenersAware(gw)
+	gwAware.initListenersStatus()
+
+	require.Len(t, gw.Status.Listeners, 2)
+	http := gw.Status.Listeners[0]
+	assert.Equal(t, gatewayv1.SectionName("http"), http.Name)
+	require.Len(t, http.Conditions, 1, "preserved listener must keep its conditions")
+	assert.Equal(t, storedLTT, http.Conditions[0].LastTransitionTime,
+		"preserved listener must keep its LastTransitionTime")
+
+	https := gw.Status.Listeners[1]
+	assert.Equal(t, gatewayv1.SectionName("https"), https.Name)
+	assert.Empty(t, https.Conditions, "new listener must start with no conditions")
+}
+
+func TestSetListenersProgrammedPending(t *testing.T) {
+	storedLTT := metav1.NewTime(time.Now().Add(-time.Hour))
+	generation := int64(1)
+
+	gw := &gwtypes.Gateway{
+		APIVersion: gatewayv1.GroupVersion.String(),
+		Kind:       "Gateway",
+		Name:       "test-gw",
+		Namespace:  "test-namespace",
+		Generation: generation,
+		Status: gatewayv1.GatewayStatus{
+			Listeners: []gatewayv1.ListenerStatus{
+				{
+					Name: "http",
+					Conditions: []metav1.Condition{
+						{
+							Type:               string(gatewayv1.ListenerConditionProgrammed),
+							Status:             metav1.ConditionTrue,
+							Reason:             string(gatewayv1.ListenerReasonProgrammed),
+							ObservedGeneration: generation,
+							LastTransitionTime: storedLTT,
+						},
+					},
+				},
+				{
+					Name: "https",
+					Conditions: []metav1.Condition{
+						{
+							Type:               string(gatewayv1.ListenerConditionProgrammed),
+							Status:             metav1.ConditionFalse,
+							Reason:             string(gatewayv1.ListenerReasonPending),
+							ObservedGeneration: generation,
+							LastTransitionTime: storedLTT,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	gwAware := gatewayConditionsAndListenersAware(gw)
+	gwAware.setListenersProgrammedPending()
+
+	httpProgrammed, ok := k8sutils.GetCondition(
+		kcfgconsts.ConditionType(gatewayv1.ListenerConditionProgrammed),
+		listenerConditionsAware(&gw.Status.Listeners[0]),
+	)
+	require.True(t, ok)
+	assert.Equal(t, metav1.ConditionFalse, httpProgrammed.Status, "programmed listener must be reset to False")
+	assert.Equal(t, string(gatewayv1.ListenerReasonPending), httpProgrammed.Reason)
+	assert.NotEqual(t, storedLTT, httpProgrammed.LastTransitionTime,
+		"transition True->False must update LastTransitionTime")
+
+	httpsProgrammed, ok := k8sutils.GetCondition(
+		kcfgconsts.ConditionType(gatewayv1.ListenerConditionProgrammed),
+		listenerConditionsAware(&gw.Status.Listeners[1]),
+	)
+	require.True(t, ok)
+	assert.Equal(t, storedLTT, httpsProgrammed.LastTransitionTime,
+		"already pending listener must keep its LastTransitionTime")
 }
 
 func TestEnforceKonnectGatewayControlPlaneSpec(t *testing.T) {
