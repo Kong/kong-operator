@@ -138,6 +138,7 @@ var secretRefNotifierFuncs = []func(
 	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateList],
 	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayModelProviderList],
 	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayPolicyList],
+	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayDatastoreList],
 	notifyEntitiesForSecret[aiconfigurationv1alpha1.AIGatewayVaultList],
 	notifyConsumersForCredentialSecrets,
 }

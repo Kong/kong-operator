@@ -193,7 +193,7 @@ type ReferencedEntityExcludedError struct {
 
 func (e *ReferencedEntityExcludedError) Error() string {
 	return fmt.Sprintf(
-		"referenced %s %q was excluded from the document: its own translation failed",
+		"referenced %s %q was excluded from the document: its own translation failed, or it references an excluded server",
 		e.Kind, e.Name,
 	)
 }
