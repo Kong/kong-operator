@@ -116,9 +116,9 @@ func (c gatewayOnlyCacheClient) List(
 }
 
 // TestKongReferenceGrantReconcilerWithGrantOutsideGatewayNamespace covers a grant in the
-// namespace of a cross-namespace Secret: no gateway lives there, so listing the gateways of
-// that namespace fails on the instance's cache and must not abort the notification of the
-// entities whose secretRefs the grant governs.
+// namespace of a cross-namespace Secret: the stub fails a namespace-scoped gateway list, so
+// the reconciler must list without InNamespace and must still notify the entities whose
+// secretRefs the grant governs.
 func TestKongReferenceGrantReconcilerWithGrantOutsideGatewayNamespace(t *testing.T) {
 	strategy := onPremAuthStrategyWithSecretRef("cross-ns-strat", "client-secret")
 	strategy.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect.Config.ClientSecret[0].
@@ -139,6 +139,41 @@ func TestKongReferenceGrantReconcilerWithGrantOutsideGatewayNamespace(t *testing
 	change := waitForChange(t, ch)
 	require.Equal(t, types.NamespacedName{Namespace: "default", Name: "cross-ns-strat"}, client.ObjectKeyFromObject(change.Object))
 	require.Equal(t, types.NamespacedName{Namespace: "default", Name: "gw"}, *change.ParentNN)
+}
+
+func TestKongReferenceGrantReconcilerNotifiesSecretRefEntitiesWhenGatewayListFails(t *testing.T) {
+	strategy := onPremAuthStrategyWithSecretRef("cross-ns-strat", "client-secret")
+	strategy.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect.Config.ClientSecret[0].
+		SecretRef.Namespace = new("secrets")
+
+	cn := changenotifier.New()
+	defer cn.Close()
+	cl := failingGatewayListClient{Client: newReconcilerClient(t, onPremGatewayFixture("gw", "default"), strategy)}
+	r := &KongReferenceGrantReconciler{Client: cl, Log: logr.Discard(), ChangeNotifier: cn}
+	ch := cn.NotifyChannel()
+
+	_, err := r.Reconcile(t.Context(), ctrl.Request{Namespace: "secrets", Name: "allow-aigateway-secrets"})
+	require.Error(t, err)
+
+	change := waitForChange(t, ch)
+	require.Equal(t, types.NamespacedName{Namespace: "default", Name: "cross-ns-strat"}, client.ObjectKeyFromObject(change.Object))
+}
+
+// failingGatewayListClient fails every OnPremAIGateway list, to prove that a gateway
+// list failure does not skip the notification of the secretRef entities.
+type failingGatewayListClient struct {
+	client.Client
+}
+
+func (c failingGatewayListClient) List(
+	ctx context.Context,
+	list client.ObjectList,
+	opts ...client.ListOption,
+) error {
+	if _, ok := list.(*aigatewayv1alpha1.OnPremAIGatewayList); ok {
+		return fmt.Errorf("unable to list: gateway cache unavailable")
+	}
+	return c.Client.List(ctx, list, opts...)
 }
 
 func TestKongReferenceGrantReconcilerWithoutChangeNotifierIsNoop(t *testing.T) {

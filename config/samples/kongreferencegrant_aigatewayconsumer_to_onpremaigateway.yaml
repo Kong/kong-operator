@@ -43,7 +43,7 @@ spec:
 apiVersion: configuration.konghq.com/v1alpha1
 kind: KongReferenceGrant
 metadata:
-  name: allow-consumer-to-onprem-aigateway
+  name: allow-consumer-to-onprem-aigateway-refgrant
   namespace: default
 spec:
   from:

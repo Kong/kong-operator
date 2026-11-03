@@ -18,6 +18,7 @@ package onpremconfig
 
 import (
 	"context"
+	"errors"
 
 	"github.com/go-logr/logr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -70,10 +71,10 @@ func (r *KongReferenceGrantReconciler) SetupWithManager(mgr ctrl.Manager) error 
 // into the grant's namespace. The grant itself is not read: on deletion its spec is
 // gone, and the translation decides access anyway.
 func (r *KongReferenceGrantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	if err := r.notifyGateways(ctx, req.Namespace); err != nil {
-		return ctrl.Result{}, err
-	}
-	return ctrl.Result{}, notifySecretRefEntities(ctx, r.Client, crossNamespaceSecretRefInto(req.Namespace), r.ChangeNotifier, r.Log)
+	return ctrl.Result{}, errors.Join(
+		r.notifyGateways(ctx, req.Namespace),
+		notifySecretRefEntities(ctx, r.Client, crossNamespaceSecretRefInto(req.Namespace), r.ChangeNotifier, r.Log),
+	)
 }
 
 // notifyGateways notifies every on-prem gateway of namespace: a grant there may
