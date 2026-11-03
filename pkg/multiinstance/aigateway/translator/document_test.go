@@ -2157,7 +2157,7 @@ func TestTranslatedNamesRecord(t *testing.T) {
 
 	err := checkTranslatedRefs(names, "AIGatewayPolicy", []string{"failed"})
 	require.ErrorIs(t, err, failure, "the first failure is kept as the cause")
-	require.EqualError(t, err, `referenced AIGatewayPolicy "failed" was excluded from the document: its own translation failed`)
+	require.EqualError(t, err, `referenced AIGatewayPolicy "failed" was excluded from the document: its own translation failed, or it references an excluded server`)
 
 	err = checkTranslatedRefs(names, "AIGatewayPolicy", []string{"unknown"})
 	require.Error(t, err)
