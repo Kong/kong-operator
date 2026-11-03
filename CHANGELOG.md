@@ -649,6 +649,14 @@
   datastore that they still use: the deletion reports `DeletionBlocked` and
   resumes when the last reference is gone.
   [#6375](https://github.com/Kong/kong-operator/issues/6375)
+- On-prem AI Gateway: `AIGatewayDatastore` configuration entities referencing
+  an `OnPremAIGateway` are now translated into the pushed configuration
+  document. A policy, a model, a model provider, an auth strategy or an MCP
+  server that references one resolves the reference to the datastore's name.
+  The datastore supplies the connection of the referencing entity. An entity
+  referencing a datastore that cannot be translated is left out of the
+  document and reports the failure on its own status.
+  [#6376](https://github.com/Kong/kong-operator/issues/6376)
 
 ### Changed
 

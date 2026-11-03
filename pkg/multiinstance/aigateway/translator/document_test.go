@@ -458,6 +458,9 @@ func TestBuildDocument(t *testing.T) {
 	for _, opt := range index.OptionsForAIGatewayVault() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
+	for _, opt := range index.OptionsForAIGatewayDatastore() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
 	cl := builder.Build()
 
 	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
@@ -677,6 +680,9 @@ func TestBuildDocument_NoModels(t *testing.T) {
 	for _, opt := range index.OptionsForAIGatewayVault() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
+	for _, opt := range index.OptionsForAIGatewayDatastore() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
 	cl := builder.Build()
 
 	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
@@ -758,6 +764,9 @@ func TestBuildDocument_PerEntityFailure(t *testing.T) {
 	for _, opt := range index.OptionsForAIGatewayVault() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
+	for _, opt := range index.OptionsForAIGatewayDatastore() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
 	cl := builder.Build()
 
 	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
@@ -816,6 +825,7 @@ func TestBuildDocument_CACertificateDuplicateContent(t *testing.T) {
 		index.OptionsForAIGatewayAgent(),
 		index.OptionsForAIGatewayMCPServer(),
 		index.OptionsForAIGatewayVault(),
+		index.OptionsForAIGatewayDatastore(),
 	} {
 		for _, opt := range opts {
 			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
@@ -874,6 +884,7 @@ func TestBuildDocument_VaultDuplicatePrefix(t *testing.T) {
 		index.OptionsForAIGatewayAgent(),
 		index.OptionsForAIGatewayMCPServer(),
 		index.OptionsForAIGatewayVault(),
+		index.OptionsForAIGatewayDatastore(),
 	} {
 		for _, opt := range opts {
 			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
@@ -940,6 +951,7 @@ func TestBuildDocument_ModelDuplicateAlias(t *testing.T) {
 			index.OptionsForAIGatewayAgent(),
 			index.OptionsForAIGatewayMCPServer(),
 			index.OptionsForAIGatewayVault(),
+			index.OptionsForAIGatewayDatastore(),
 		} {
 			for _, opt := range opts {
 				builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
@@ -1142,6 +1154,7 @@ func TestBuildDocument_ModelAliasCollisionVariants(t *testing.T) {
 		index.OptionsForAIGatewayAgent(),
 		index.OptionsForAIGatewayMCPServer(),
 		index.OptionsForAIGatewayVault(),
+		index.OptionsForAIGatewayDatastore(),
 	} {
 		for _, opt := range opts {
 			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
@@ -1245,6 +1258,9 @@ func TestBuildDocument_SNIFailsWhenReferencedCertificateFails(t *testing.T) {
 	for _, opt := range index.OptionsForAIGatewayVault() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
+	for _, opt := range index.OptionsForAIGatewayDatastore() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
 	cl := builder.Build()
 
 	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
@@ -1340,6 +1356,9 @@ func TestBuildDocument_CrossNamespaceEntityTranslated(t *testing.T) {
 	for _, opt := range index.OptionsForAIGatewayVault() {
 		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 	}
+	for _, opt := range index.OptionsForAIGatewayDatastore() {
+		builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+	}
 	cl := builder.Build()
 
 	doc, statuses, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
@@ -1422,6 +1441,7 @@ func TestBuildDocument_CredentialChangeRerender(t *testing.T) {
 		index.OptionsForAIGatewayAgent(),
 		index.OptionsForAIGatewayMCPServer(),
 		index.OptionsForAIGatewayVault(),
+		index.OptionsForAIGatewayDatastore(),
 	} {
 		for _, opt := range opts {
 			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
@@ -1540,6 +1560,7 @@ func newTestBuilder(scheme *runtime.Scheme, objs ...client.Object) *fake.ClientB
 		index.OptionsForAIGatewayAgent(),
 		index.OptionsForAIGatewayMCPServer(),
 		index.OptionsForAIGatewayVault(),
+		index.OptionsForAIGatewayDatastore(),
 	} {
 		for _, opt := range opts {
 			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
@@ -2162,4 +2183,167 @@ func TestTranslatedNamesRecord(t *testing.T) {
 	err = checkTranslatedRefs(names, "AIGatewayPolicy", []string{"unknown"})
 	require.Error(t, err)
 	require.NoError(t, errors.Unwrap(err))
+}
+
+// aiGatewayDatastoreFixture returns a redis-ce datastore whose entity name is "shared-redis",
+// distinct from its CR name, as the references resolve the entity name. Two CRs made by it
+// therefore share the entity name.
+func aiGatewayDatastoreFixture(name string) *aiconfigurationv1alpha1.AIGatewayDatastore {
+	return &aiconfigurationv1alpha1.AIGatewayDatastore{
+		Name: name, Namespace: "default",
+		Spec: aiconfigurationv1alpha1.AIGatewayDatastoreSpec{
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				Group:         aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+				Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gw"},
+			},
+			APISpec: aiconfigurationv1alpha1.AIGatewayDatastoreAPISpec{
+				AIGatewayDatastoreConfig: &aiconfigurationv1alpha1.AIGatewayDatastoreConfig{
+					Type: aiconfigurationv1alpha1.AIGatewayDatastoreConfigTypeRedisCE,
+					RedisCE: &aiconfigurationv1alpha1.RedisCEDatastore{
+						Name:   aiconfigurationv1alpha1.AIGatewayDatastoreName("shared-redis"),
+						Config: aiconfigurationv1alpha1.RedisCEDatastoreConfig{Host: "redis.example.com", Port: 6379},
+					},
+				},
+			},
+		},
+	}
+}
+
+// datastoreRefsReferrers returns one CR of each kind that references the given datastore:
+// the datastore entity is what a Policy, a Model, a ModelProvider, an MCPServer and an
+// AuthStrategy all point at.
+func datastoreRefsReferrers(datastoreName string) []client.Object {
+	ref := aiconfigurationv1alpha1.AIGatewayDatastoreNamespacedRef{Name: datastoreName}
+
+	policy := aiGatewayPolicyFixture("policy")
+	policy.Spec.APISpec.Datastores = []aiconfigurationv1alpha1.AIGatewayDatastoreNamespacedRef{ref}
+
+	model := aiGatewayModelFixture("model")
+	model.Spec.APISpec.Model.Datastores = []aiconfigurationv1alpha1.AIGatewayDatastoreNamespacedRef{ref}
+
+	provider := aiGatewayModelProviderFixture("provider")
+	provider.Spec.APISpec.Openai.Datastores = []aiconfigurationv1alpha1.AIGatewayDatastoreNamespacedRef{ref}
+
+	mcpServer := aiGatewayMCPServerFixture("mcp-server-a")
+	mcpServer.Spec.APISpec.PassthroughListener.Policies = nil
+	mcpServer.Spec.APISpec.PassthroughListener.Datastores = []aiconfigurationv1alpha1.AIGatewayDatastoreNamespacedRef{ref}
+
+	authStrategy := aiGatewayAuthStrategyFixture("auth-strategy")
+	authStrategy.Spec.APISpec.KeyAuth.Datastores = []aiconfigurationv1alpha1.AIGatewayDatastoreNamespacedRef{ref}
+
+	return []client.Object{policy, model, provider, mcpServer, authStrategy}
+}
+
+// TestBuildDocument_DatastoreRefs covers the datastores collection and its references: every
+// kind that can reference a datastore resolves it to the datastore's entity name, which is what
+// the converter keys its datastore registry by.
+func TestBuildDocument_DatastoreRefs(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	// The CR name differs from the datastore's entity name, so the assertions observe the
+	// resolved name, not the name the reference was written with.
+	objs := append([]client.Object{aiGatewayDatastoreFixture("datastore")},
+		datastoreRefsReferrers("datastore")...)
+
+	doc, statuses, err := BuildDocument(t.Context(), newTestBuilder(scheme, append([]client.Object{gw}, objs...)...).Build(),
+		client.ObjectKeyFromObject(gw))
+	require.NoError(t, err)
+
+	require.Len(t, doc.Datastores, 1)
+	require.Equal(t, aigw.Datastore{
+		Type:   "redis-ce",
+		Name:   "shared-redis",
+		Config: map[string]any{"host": "redis.example.com", "port": 6379},
+	}, doc.Datastores[0])
+
+	require.Len(t, doc.Policies, 1)
+	require.Len(t, doc.Policies[0].Datastores, 1)
+	require.Equal(t, "shared-redis", doc.Policies[0].Datastores[0].Name)
+	require.Len(t, doc.Models, 1)
+	require.Len(t, doc.Models[0].Datastores, 1)
+	require.Equal(t, "shared-redis", doc.Models[0].Datastores[0].Name)
+	require.Len(t, doc.ModelProviders, 1)
+	require.Len(t, doc.ModelProviders[0].Datastores, 1)
+	require.Equal(t, "shared-redis", doc.ModelProviders[0].Datastores[0].Name)
+	require.Len(t, doc.MCPServers, 1)
+	require.Len(t, doc.MCPServers[0].Datastores, 1)
+	require.Equal(t, "shared-redis", doc.MCPServers[0].Datastores[0].Name)
+	require.Len(t, doc.AuthStrategies, 1)
+	require.Len(t, doc.AuthStrategies[0].Datastores, 1)
+	require.Equal(t, "shared-redis", doc.AuthStrategies[0].Datastores[0].Name)
+
+	require.Len(t, statuses, 6)
+	for _, s := range statuses {
+		require.NoError(t, s.Err)
+	}
+}
+
+// TestBuildDocument_DatastoreFailsWhenReferencedDatastoreFails pins the translated-reference
+// check for datastores: a datastore that failed its own translation is excluded, and every
+// entity referencing it fails with an explicit error instead of reporting success while the
+// converter leaves its connection out of the pushed payload.
+func TestBuildDocument_DatastoreFailsWhenReferencedDatastoreFails(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	broken := aiGatewayDatastoreFixture("datastore")
+	broken.Spec.APISpec.RedisCE.Config.Password = aiconfigurationv1alpha1.SensitiveDataSource{
+		Type:      aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+		SecretRef: &aiconfigurationv1alpha1.SensitiveDataSecretRef{Name: "does-not-exist", Key: "password"},
+	}
+	objs := append([]client.Object{broken}, datastoreRefsReferrers("datastore")...)
+
+	doc, statuses, err := BuildDocument(t.Context(), newTestBuilder(scheme, append([]client.Object{gw}, objs...)...).Build(),
+		client.ObjectKeyFromObject(gw))
+	require.NoError(t, err)
+
+	require.Empty(t, doc.Datastores)
+	require.Empty(t, doc.Policies)
+	require.Empty(t, doc.Models)
+	require.Empty(t, doc.ModelProviders)
+	require.Empty(t, doc.MCPServers)
+	require.Empty(t, doc.AuthStrategies)
+
+	require.ErrorContains(t, findStatusByName(t, statuses, "datastore").Err, "does-not-exist")
+	for _, name := range []string{"policy", "model", "provider", "mcp-server-a", "auth-strategy"} {
+		require.ErrorContains(
+			t, findStatusByName(t, statuses, name).Err,
+			"referenced AIGatewayDatastore default/datastore was excluded from the document",
+		)
+	}
+}
+
+// TestBuildDocument_DatastoreDuplicateEntityNameRejected: the converter resolves a datastore
+// reference by name into one registry, so two AIGatewayDatastores sharing a spec name would
+// leave the later one unreachable. The second CR is rejected with a per-entity error.
+func TestBuildDocument_DatastoreDuplicateEntityNameRejected(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, aigatewayv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
+
+	gw := &aigatewayv1alpha1.OnPremAIGateway{Name: "gw", Namespace: "default"}
+	first := aiGatewayDatastoreFixture("datastore-a")
+	second := aiGatewayDatastoreFixture("datastore-b")
+
+	doc, statuses, err := BuildDocument(t.Context(), newTestBuilder(scheme, gw, first, second).Build(),
+		client.ObjectKeyFromObject(gw))
+	require.NoError(t, err)
+
+	require.Len(t, doc.Datastores, 1)
+	require.Equal(t, "shared-redis", doc.Datastores[0].Name)
+	require.NoError(t, findStatusByName(t, statuses, "datastore-a").Err)
+	require.ErrorContains(t, findStatusByName(t, statuses, "datastore-b").Err,
+		`duplicate datastore name "shared-redis"`)
 }
