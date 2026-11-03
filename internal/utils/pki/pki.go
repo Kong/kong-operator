@@ -50,7 +50,7 @@ func LeafCertificate(certPEM, keyPEM []byte) *x509.Certificate {
 // RenewalTime returns when a certificate valid from issuedAt until notAfter
 // is due for renewal: once two thirds of that validity have elapsed.
 func RenewalTime(issuedAt, notAfter time.Time) time.Time {
-	return issuedAt.Add(notAfter.Sub(issuedAt) * 2 / 3)
+	return notAfter.Add(-notAfter.Sub(issuedAt) / 3)
 }
 
 // RenewalExtends reports whether a certificate issued again with the fresh
@@ -59,7 +59,7 @@ func RenewalTime(issuedAt, notAfter time.Time) time.Time {
 // extended: renewing it would only roll its consumers ever more often as that
 // expiry nears.
 func RenewalExtends(fresh, remaining time.Duration) bool {
-	return fresh > 2*remaining
+	return fresh/2 > remaining
 }
 
 // Fingerprint returns the SHA-256 fingerprint of the certificate, in hex.

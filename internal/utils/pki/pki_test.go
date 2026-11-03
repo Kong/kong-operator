@@ -35,10 +35,14 @@ func TestLeafCertificate(t *testing.T) {
 func TestRenewalTime(t *testing.T) {
 	issuedAt := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	require.Equal(t, issuedAt.Add(2*time.Hour), RenewalTime(issuedAt, issuedAt.Add(3*time.Hour)))
+
+	noExpiry := time.Date(9999, 12, 31, 23, 59, 59, 0, time.UTC)
+	require.True(t, RenewalTime(issuedAt, noExpiry).After(issuedAt), "a validity past the range of a Duration must not overflow")
 }
 
 func TestRenewalExtends(t *testing.T) {
 	require.True(t, RenewalExtends(3*time.Hour, time.Hour))
 	require.False(t, RenewalExtends(2*time.Hour, time.Hour), "doubling isn't enough")
 	require.False(t, RenewalExtends(time.Hour, time.Hour))
+	require.False(t, RenewalExtends(time.Hour, 200*365*24*time.Hour), "a remaining validity past half the range of a Duration must not overflow")
 }

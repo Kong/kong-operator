@@ -250,8 +250,8 @@ func GroupVersionResources() []schema.GroupVersionResource {
 	}
 }
 
-// NotReadyError tells what the GWAdmin of a gateway doesn't provide yet. It
-// is not retried: a change to the GWAdmin or to its Secrets triggers the
+// NotReadyError tells what the GWAdmin of a gateway doesn't provide yet. Callers
+// shouldn't retry it: a change to the GWAdmin or to its Secrets triggers the
 // controllers following it again.
 type NotReadyError struct {
 	Message string
