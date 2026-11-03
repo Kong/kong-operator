@@ -76,32 +76,32 @@ var globalURLCalls = []globalURLCall{
 	{
 		name: "network create",
 		call: func(ctx context.Context, sdk sdkops.SDKWrapper) error {
-			return createKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(), testNetwork())
+			return createKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), testNetwork())
 		},
 	},
 	{
 		name: "network update",
 		call: func(ctx context.Context, sdk sdkops.SDKWrapper) error {
-			return updateKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(), testNetwork())
+			return updateKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), testNetwork())
 		},
 	},
 	{
 		name: "network delete",
 		call: func(ctx context.Context, sdk sdkops.SDKWrapper) error {
-			return deleteKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(), testNetwork())
+			return deleteKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), testNetwork())
 		},
 	},
 	{
 		name: "network get matching spec name",
 		call: func(ctx context.Context, sdk sdkops.SDKWrapper) error {
-			_, err := getKonnectNetworkMatchingSpecName(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(), testNetwork())
+			_, err := getKonnectNetworkMatchingSpecName(ctx, sdk.GetCloudGatewaysSDK(), testNetwork())
 			return err
 		},
 	},
 	{
 		name: "network adopt",
 		call: func(ctx context.Context, sdk sdkops.SDKWrapper) error {
-			return adoptKonnectCloudGatewayNetwork(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(), testNetwork(), commonv1alpha1.AdoptOptions{
+			return adoptKonnectCloudGatewayNetwork(ctx, sdk.GetCloudGatewaysSDK(), testNetwork(), commonv1alpha1.AdoptOptions{
 				From:    commonv1alpha1.AdoptSourceKonnect,
 				Mode:    commonv1alpha1.AdoptModeMatch,
 				Konnect: &commonv1alpha1.AdoptKonnectOptions{ID: "net-1"},
@@ -111,32 +111,32 @@ var globalURLCalls = []globalURLCall{
 	{
 		name: "transit gateway create",
 		call: func(ctx context.Context, sdk sdkops.SDKWrapper) error {
-			return createKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(), testTransitGateway())
+			return createKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), testTransitGateway())
 		},
 	},
 	{
 		name: "transit gateway update",
 		call: func(ctx context.Context, sdk sdkops.SDKWrapper) error {
-			return updateKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(), testTransitGateway())
+			return updateKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), testTransitGateway())
 		},
 	},
 	{
 		name: "transit gateway delete",
 		call: func(ctx context.Context, sdk sdkops.SDKWrapper) error {
-			return deleteKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(), testTransitGateway())
+			return deleteKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), testTransitGateway())
 		},
 	},
 	{
 		name: "transit gateway get matching spec name",
 		call: func(ctx context.Context, sdk sdkops.SDKWrapper) error {
-			_, err := getKonnectTransitGatewayMatchingSpecName(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(), testTransitGateway())
+			_, err := getKonnectTransitGatewayMatchingSpecName(ctx, sdk.GetCloudGatewaysSDK(), testTransitGateway())
 			return err
 		},
 	},
 	{
 		name: "transit gateway adopt",
 		call: func(ctx context.Context, sdk sdkops.SDKWrapper) error {
-			return adoptKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(), testTransitGateway(), commonv1alpha1.AdoptOptions{
+			return adoptKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), testTransitGateway(), commonv1alpha1.AdoptOptions{
 				From:    commonv1alpha1.AdoptSourceKonnect,
 				Mode:    commonv1alpha1.AdoptModeMatch,
 				Konnect: &commonv1alpha1.AdoptKonnectOptions{ID: "tg-1"},
@@ -146,28 +146,28 @@ var globalURLCalls = []globalURLCall{
 	{
 		name: "data plane group configuration create",
 		call: func(ctx context.Context, sdk sdkops.SDKWrapper) error {
-			return createKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(),
-				testClient(), testDataPlaneGroupConfiguration())
+			return createKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(),
+				testClient(), testDataPlaneGroupConfiguration(), sdk.GetServer().Region())
 		},
 	},
 	{
 		name: "data plane group configuration update",
 		call: func(ctx context.Context, sdk sdkops.SDKWrapper) error {
-			return updateKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(),
-				testClient(), testDataPlaneGroupConfiguration())
+			return updateKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(),
+				testClient(), testDataPlaneGroupConfiguration(), sdk.GetServer())
 		},
 	},
 	{
 		name: "data plane group configuration delete",
 		call: func(ctx context.Context, sdk sdkops.SDKWrapper) error {
-			return deleteKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(),
-				testDataPlaneGroupConfiguration())
+			return deleteKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(),
+				testDataPlaneGroupConfiguration(), sdk.GetServer().Region())
 		},
 	},
 	{
 		name: "data plane group configuration adopt",
 		call: func(ctx context.Context, sdk sdkops.SDKWrapper) error {
-			return adoptKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), sdk.GetServer(),
+			return adoptKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(),
 				testClient(), testDataPlaneGroupConfiguration(), commonv1alpha1.AdoptOptions{
 					From:    commonv1alpha1.AdoptSourceKonnect,
 					Mode:    commonv1alpha1.AdoptModeMatch,
@@ -246,8 +246,8 @@ func TestCreateDataPlaneGroupConfigurationKeepsRegionalGeo(t *testing.T) {
 	sdk, rt := newRecordingSDK(t, "https://us.svc.konghq.com/api")
 
 	// Errors are expected: the transport answers 404.
-	_ = createKonnectDataPlaneGroupConfiguration(t.Context(), sdk.GetCloudGatewaysSDK(), sdk.GetServer(),
-		testClient(), testDataPlaneGroupConfiguration())
+	_ = createKonnectDataPlaneGroupConfiguration(t.Context(), sdk.GetCloudGatewaysSDK(),
+		testClient(), testDataPlaneGroupConfiguration(), sdk.GetServer().Region())
 
 	require.NotEmpty(t, rt.requests)
 	assert.Contains(t, string(rt.requests[0].body), `"control_plane_geo":"us"`)

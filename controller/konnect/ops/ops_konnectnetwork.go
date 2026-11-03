@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnectretry "github.com/Kong/sdk-konnect-go/retry"
@@ -12,19 +11,16 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
-	"github.com/kong/kong-operator/v2/controller/konnect/server"
+	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 )
 
 // createKonnectNetwork creates the Konnect Network as specified in provided spec.
 func createKonnectNetwork(
 	ctx context.Context,
-	sdk sdkkonnectgo.CloudGatewaysSDK,
-	srv server.Server,
+	sdk sdkops.CloudGatewaysSDK,
 	n *konnectv1alpha1.KonnectCloudGatewayNetwork,
 ) error {
-	resp, err := sdk.CreateNetwork(ctx, cloudGatewayNetworkToCreateNetworkRequest(n.Spec),
-		sdkkonnectops.WithServerURL(srv.GlobalURL()),
-	)
+	resp, err := sdk.CreateNetwork(ctx, cloudGatewayNetworkToCreateNetworkRequest(n.Spec))
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, n); errWrap != nil {
 		return errWrap
@@ -48,12 +44,11 @@ func createKonnectNetwork(
 // It is assumed that the Konnect ControlPlane has a Konnect ID.
 func updateKonnectNetwork(
 	ctx context.Context,
-	sdk sdkkonnectgo.CloudGatewaysSDK,
-	srv server.Server,
+	sdk sdkops.CloudGatewaysSDK,
 	n *konnectv1alpha1.KonnectCloudGatewayNetwork,
 ) error {
 	id := n.GetKonnectStatus().GetKonnectID()
-	resp, err := sdk.GetNetwork(ctx, id, sdkkonnectops.WithServerURL(srv.GlobalURL()))
+	resp, err := sdk.GetNetwork(ctx, id)
 	if errWrap := wrapErrIfKonnectOpFailed(err, GetOp, n); errWrap != nil {
 		return errWrap
 	}
@@ -71,16 +66,12 @@ func updateKonnectNetwork(
 // It is assumed that the Konnect Network has a Konnect ID.
 func deleteKonnectNetwork(
 	ctx context.Context,
-	sdk sdkkonnectgo.CloudGatewaysSDK,
-	srv server.Server,
+	sdk sdkops.CloudGatewaysSDK,
 	n *konnectv1alpha1.KonnectCloudGatewayNetwork,
 ) error {
 	id := n.GetKonnectStatus().GetKonnectID()
 	// Override retries as we do not want to block the reconciliation loop.
-	_, err := sdk.DeleteNetwork(ctx, id,
-		sdkkonnectops.WithRetries(sdkkonnectretry.Config{}),
-		sdkkonnectops.WithServerURL(srv.GlobalURL()),
-	)
+	_, err := sdk.DeleteNetwork(ctx, id, sdkkonnectops.WithRetries(sdkkonnectretry.Config{}))
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, n); errWrap != nil {
 		return handleDeleteError(ctx, err, n)
 	}
@@ -92,8 +83,7 @@ func deleteKonnectNetwork(
 // that matches the name of the provided Konnect Network.
 func getKonnectNetworkMatchingSpecName(
 	ctx context.Context,
-	sdk sdkkonnectgo.CloudGatewaysSDK,
-	srv server.Server,
+	sdk sdkops.CloudGatewaysSDK,
 	n *konnectv1alpha1.KonnectCloudGatewayNetwork,
 ) (string, error) {
 	reqList := sdkkonnectops.ListNetworksRequest{
@@ -107,7 +97,7 @@ func getKonnectNetworkMatchingSpecName(
 		},
 	}
 
-	resp, err := sdk.ListNetworks(ctx, reqList, sdkkonnectops.WithServerURL(srv.GlobalURL()))
+	resp, err := sdk.ListNetworks(ctx, reqList)
 	if err != nil {
 		return "", fmt.Errorf("failed listing %s: %w", n.GetTypeName(), err)
 	}
@@ -140,8 +130,7 @@ func cloudGatewayNetworkToCreateNetworkRequest(s konnectv1alpha1.KonnectCloudGat
 // Only match mode adoption is supported for Network resources.
 func adoptKonnectCloudGatewayNetwork(
 	ctx context.Context,
-	sdk sdkkonnectgo.CloudGatewaysSDK,
-	srv server.Server,
+	sdk sdkops.CloudGatewaysSDK,
 	n *konnectv1alpha1.KonnectCloudGatewayNetwork,
 	adoptOptions commonv1alpha1.AdoptOptions,
 ) error {
@@ -153,7 +142,7 @@ func adoptKonnectCloudGatewayNetwork(
 	}
 
 	konnectID := adoptOptions.Konnect.ID
-	resp, err := sdk.GetNetwork(ctx, konnectID, sdkkonnectops.WithServerURL(srv.GlobalURL()))
+	resp, err := sdk.GetNetwork(ctx, konnectID)
 	if err != nil {
 		return KonnectEntityAdoptionFetchError{KonnectID: konnectID, Err: err}
 	}

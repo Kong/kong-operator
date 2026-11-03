@@ -6,39 +6,36 @@ import (
 	"slices"
 	"sort"
 
-	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
-	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/konnect/server"
 )
 
 // createKonnectDataPlaneGroupConfiguration creates the Konnect DataPlane configuration as specified in provided spec.
 func createKonnectDataPlaneGroupConfiguration(
 	ctx context.Context,
-	sdk sdkkonnectgo.CloudGatewaysSDK,
-	srv server.Server,
+	sdk sdkops.CloudGatewaysSDK,
 	cl client.Client,
 	n *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration,
+	serverRegion server.Region,
 ) error {
 	cpID := n.GetControlPlaneID()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: n, Op: CreateOp}
 	}
 
-	req, err := cloudGatewayDataPlaneGroupConfigurationToAPIRequest(ctx, cl, n.Spec, n.Namespace, cpID, srv.Region())
+	req, err := cloudGatewayDataPlaneGroupConfigurationToAPIRequest(ctx, cl, n.Spec, n.Namespace, cpID, serverRegion)
 	if err != nil {
 		return fmt.Errorf("failed to convert configuration spec: %w", err)
 	}
 
-	resp, err := sdk.CreateConfiguration(ctx, req,
-		sdkkonnectops.WithServerURL(srv.GlobalURL()),
-	)
+	resp, err := sdk.CreateConfiguration(ctx, req)
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, n); errWrap != nil {
 		return errWrap
@@ -59,24 +56,22 @@ func createKonnectDataPlaneGroupConfiguration(
 // updateKonnectDataPlaneGroupConfiguration updates a Konnect DataPlaneGroupConfiguration.
 func updateKonnectDataPlaneGroupConfiguration(
 	ctx context.Context,
-	sdk sdkkonnectgo.CloudGatewaysSDK,
-	srv server.Server,
+	sdk sdkops.CloudGatewaysSDK,
 	cl client.Client,
 	n *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration,
+	server server.Server,
 ) error {
 	cpID := n.GetControlPlaneID()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: n, Op: UpdateOp}
 	}
 
-	req, err := cloudGatewayDataPlaneGroupConfigurationToAPIRequest(ctx, cl, n.Spec, n.Namespace, cpID, srv.Region())
+	req, err := cloudGatewayDataPlaneGroupConfigurationToAPIRequest(ctx, cl, n.Spec, n.Namespace, cpID, server.Region())
 	if err != nil {
 		return fmt.Errorf("failed to convert configuration spec: %w", err)
 	}
 
-	resp, err := sdk.CreateConfiguration(ctx, req,
-		sdkkonnectops.WithServerURL(srv.GlobalURL()),
-	)
+	resp, err := sdk.CreateConfiguration(ctx, req)
 	if err != nil {
 		var transientError bool
 
@@ -100,9 +95,7 @@ func updateKonnectDataPlaneGroupConfiguration(
 
 		if transientError {
 			id := n.GetKonnectID()
-			resp, err := sdk.GetConfiguration(ctx, id,
-				sdkkonnectops.WithServerURL(srv.GlobalURL()),
-			)
+			resp, err := sdk.GetConfiguration(ctx, id)
 			if errWrap := wrapErrIfKonnectOpFailed(err, GetOp, n); errWrap != nil {
 				return errWrap
 			}
@@ -137,9 +130,9 @@ func updateKonnectDataPlaneGroupConfiguration(
 // It is assumed that the Konnect DataPlaneGroupConfiguration has a Konnect ID.
 func deleteKonnectDataPlaneGroupConfiguration(
 	ctx context.Context,
-	sdk sdkkonnectgo.CloudGatewaysSDK,
-	srv server.Server,
+	sdk sdkops.CloudGatewaysSDK,
 	n *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration,
+	serverRegion server.Region,
 ) error {
 	cpID := n.GetControlPlaneID()
 	if cpID == "" {
@@ -148,10 +141,8 @@ func deleteKonnectDataPlaneGroupConfiguration(
 	// NOTE: we delete the data plane group configuration by "creating" (using PUT)
 	// a new configuration with the same ID and the same version, but with an empty
 	// list of data plane groups.
-	req := cloudGatewayDataPlaneGroupConfigurationInit(n.Spec, cpID, srv.Region())
-	resp, err := sdk.CreateConfiguration(ctx, req,
-		sdkkonnectops.WithServerURL(srv.GlobalURL()),
-	)
+	req := cloudGatewayDataPlaneGroupConfigurationInit(n.Spec, cpID, serverRegion)
+	resp, err := sdk.CreateConfiguration(ctx, req)
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, n); errWrap != nil {
 		return errWrap
@@ -315,8 +306,7 @@ func dataPlaneGroupsResponseToStatus(
 
 func adoptKonnectDataPlaneGroupConfiguration(
 	ctx context.Context,
-	sdk sdkkonnectgo.CloudGatewaysSDK,
-	srv server.Server,
+	sdk sdkops.CloudGatewaysSDK,
 	cl client.Client,
 	cfg *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration,
 	adoptOptions commonv1alpha1.AdoptOptions,
@@ -334,9 +324,7 @@ func adoptKonnectDataPlaneGroupConfiguration(
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: cfg, Op: GetOp}
 	}
 
-	resp, err := sdk.GetConfiguration(ctx, konnectID,
-		sdkkonnectops.WithServerURL(srv.GlobalURL()),
-	)
+	resp, err := sdk.GetConfiguration(ctx, konnectID)
 	if err != nil {
 		return KonnectEntityAdoptionFetchError{KonnectID: konnectID, Err: err}
 	}
