@@ -2,7 +2,7 @@
 
 ## Table of Contents
 
-- [Unreleased](#unreleased)
+- [v2.4.0-rapid.3.0](#v240-rapid30)
 - [v2.4.0-rapid.2.0](#v240-rapid20)
 - [v2.4.0-rapid.1](#v240-rapid1)
 - [v2.3.3](#v233)
@@ -69,9 +69,11 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## [Unreleased]
+## [v2.4.0-rapid.3.0]
 
-### Fixed
+> Release date: 2026-11-03
+
+### Fixes
 
 - `KongPlugin` `spec.ordering` is now sent to Konnect. It was dropped for every
   `KongPluginBinding`, and for `KongPlugin`s referenced from `HTTPRoute` and
@@ -660,9 +662,9 @@
 
 ### Changed
 
-- Bumped `sdk-konnect-go` to `v0.78.0`. Konnect core entities (`KongService`,
-  `KongRoute`, `KongConsumer`, `KongConsumerGroup`, `KongPluginBinding`,
-  `KongCertificate`, `KongKey`, `KongKeySet`, `KongUpstream`, `KongVault`) are
+- Konnect core entities (`KongService`, `KongRoute`, `KongConsumer`,
+  `KongConsumerGroup`, `KongPluginBinding`, `KongCertificate`,
+  `KongKey`, `KongKeySet`, `KongUpstream`, `KongVault`) are
   now created, read and deleted through the workspace-scoped
   `/v2/control-planes/{controlPlaneId}/core-entities/default/...` endpoints.
   [#6347](https://github.com/Kong/kong-operator/pull/6347)
@@ -717,6 +719,7 @@
   planes. An SNI's `certificate` reference resolves to the referenced
   certificate's entity name in the same namespace; the referenced certificate
   must target the same `OnPremAIGateway` as the SNI.
+  [#5959](https://github.com/Kong/kong-operator/pull/5959)
 - `KegDataPlane`: the `EventGatewayDataPlaneCertificate` is renamed from
   `<kegdataplane>` to `<kegdataplane>-<checksum>`, derived from the certificate
   content, and now carries the operator's managed-by labels. Tooling that looks
@@ -895,7 +898,6 @@
   to read the second page of policies, so the blocking objects were not
   reported.
   [#5961](https://github.com/Kong/kong-operator/pull/5961)
-
 - On-prem AI Gateway: `AIGatewayConsumer`s referenced by an `OnPremAIGateway`
   are now rendered into the on-prem document, with their
   `AIGatewayConsumerCredential`s embedded and their `secretRef` api keys
@@ -4450,7 +4452,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
-[Unreleased]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.2.0..HEAD
+[v2.4.0-rapid.3.0]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.2.0..v2.4.0-rapid.3.0
 [v2.4.0-rapid.2.0]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.1..v2.4.0-rapid.2.0
 [v2.4.0-rapid.1]: https://github.com/Kong/kong-operator/compare/v2.3.1..v2.4.0-rapid.1
 [v2.3.3]: https://github.com/Kong/kong-operator/compare/v2.3.2..v2.3.3
