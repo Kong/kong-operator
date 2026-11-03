@@ -2,7 +2,6 @@ package konnectapigw
 
 import (
 	"fmt"
-	"math/rand"
 	"strings"
 	"testing"
 
@@ -589,8 +588,8 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 
 	t.Run("BasicAuth", func(t *testing.T) {
-		consumerID := fmt.Sprintf("consumer-%d", rand.Int31n(1000))
-		username := fmt.Sprintf("user-secret-credentials-%d", rand.Int31n(1000))
+		consumerID := "consumer-basic-auth"
+		username := "user-secret-credentials-basic-auth"
 		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
 		t.Log("Setting up SDK expectations on KongConsumer creation")
@@ -682,8 +681,8 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 	})
 
 	t.Run("APIKey", func(t *testing.T) {
-		consumerID := fmt.Sprintf("consumer-%d", rand.Int31n(1000))
-		username := fmt.Sprintf("user-secret-credentials-%d", rand.Int31n(1000))
+		consumerID := "consumer-api-key"
+		username := "user-secret-credentials-api-key"
 		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
 		t.Log("Setting up SDK expectations on KongConsumer creation")
@@ -773,8 +772,8 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 	})
 
 	t.Run("ACL", func(t *testing.T) {
-		consumerID := fmt.Sprintf("consumer-%d", rand.Int31n(1000))
-		username := fmt.Sprintf("user-secret-credentials-%d", rand.Int31n(1000))
+		consumerID := "consumer-acl"
+		username := "user-secret-credentials-acl"
 		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
 		t.Log("Setting up SDK expectations on KongConsumer creation")
@@ -867,8 +866,8 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 	})
 
 	t.Run("JWT", func(t *testing.T) {
-		consumerID := fmt.Sprintf("consumer-%d", rand.Int31n(1000))
-		username := fmt.Sprintf("user-secret-credentials-%d", rand.Int31n(1000))
+		consumerID := "consumer-jwt"
+		username := "user-secret-credentials-jwt"
 		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
 		t.Log("Setting up SDK expectations on KongConsumer creation")
@@ -961,8 +960,8 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 	})
 
 	t.Run("HMAC", func(t *testing.T) {
-		consumerID := fmt.Sprintf("consumer-%d", rand.Int31n(1000))
-		username := fmt.Sprintf("user-secret-credentials-%d", rand.Int31n(1000))
+		consumerID := "consumer-hmac"
+		username := "user-secret-credentials-hmac"
 		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
 		t.Log("Setting up SDK expectations on KongConsumer creation")
