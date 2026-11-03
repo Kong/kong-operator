@@ -17,6 +17,8 @@ limitations under the License.
 package dataplane
 
 import (
+	"context"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -56,7 +58,72 @@ type ResolvedControlPlane struct {
 	// Object is the resolved control plane object. It is nil when the DataPlane
 	// has no control plane reference configured.
 	Object ControlPlaneObject
+	// Dependencies is what ControlPlaneKindConfig.Dependencies read for the
+	// control plane, or nil.
+	Dependencies any
+	// CertificateRegistration is the ControlPlaneKindConfig.CertificateRegistration
+	// of the kind of the control plane.
+	CertificateRegistration *CertificateRegistrationConditions
 }
+
+// RegistersCertificate reports whether the client certificate of the DataPlane
+// is registered on the control plane through a certificate object.
+func (cp ResolvedControlPlane) RegistersCertificate() bool {
+	return cp.IsKonnect || cp.CertificateRegistration != nil
+}
+
+// CertificateRegistrationConditions carries the condition type and reasons a
+// non-Konnect control plane kind reports the registration of the client
+// certificate of the DataPlane with, and the name of what it is registered on
+// for the messages. Konnect-backed kinds use the Konnect certificate
+// conditions of Config.Conditions.
+type CertificateRegistrationConditions struct {
+	// Type is the type of the condition.
+	Type string
+	// RegisteredReason is the reason used once the certificate is Programmed.
+	RegisteredReason string
+	// RegistrationFailedReason is the reason used when the certificate object
+	// can't be ensured.
+	RegistrationFailedReason string
+	// NotProgrammedReason is the reason used while the certificate object is
+	// not Programmed.
+	NotProgrammedReason string
+	// Target names what the certificate is registered on, e.g. "gw-admin".
+	Target string
+	// NotProgrammedHint, when set, is added to the message used while the
+	// certificate object has no Programmed condition, e.g. to name what
+	// programs it.
+	NotProgrammedHint string
+	// ReportProgrammedCondition, when set, adds the reason and message of the
+	// Programmed condition of the certificate object, when it has one, to the
+	// message used while it is not Programmed.
+	ReportProgrammedCondition bool
+	// CreatedEventReason and CreatedEventAction are the reason and action of
+	// the event recorded on the DataPlane when the certificate object is
+	// created.
+	CreatedEventReason string
+	CreatedEventAction string
+	// UpdatedEventReason and UpdatedEventAction are the reason and action of
+	// the event recorded on the DataPlane when the certificate object is
+	// updated.
+	UpdatedEventReason string
+	UpdatedEventAction string
+}
+
+// DependenciesNotReadyError is returned by ControlPlaneKindConfig.Dependencies
+// when something the DataPlane needs from the control plane is not available
+// yet. The resolution condition is set to False with the NotReadyReason of
+// the kind and the message of the error, and the reconcile is not retried: a
+// watch must trigger it again.
+type DependenciesNotReadyError struct {
+	Message string
+	// ControlPlaneGone tells the control plane won't be resolved again, e.g.
+	// it is being deleted: the DataPlane is then released from it (see
+	// DeploymentConfig.ControlPlaneGone), like when it doesn't exist.
+	ControlPlaneGone bool
+}
+
+func (e *DependenciesNotReadyError) Error() string { return e.Message }
 
 // IsResolved reports whether the DataPlane has a control plane reference resolved.
 func (cp ResolvedControlPlane) IsResolved() bool {
@@ -113,4 +180,22 @@ type ControlPlaneKindConfig struct {
 	// Conditions carries the control plane resolution condition types, reasons
 	// and messages for this kind.
 	Conditions ControlPlaneConditions
+	// DisabledMessage, when set, disables the kind, e.g. when its CRDs are
+	// not installed: no watch is registered for it, and a DataPlane
+	// referencing it is reported in the resolution condition with
+	// Conditions.NotFoundReason and this message, and not retried.
+	DisabledMessage string
+	// Dependencies, when set, reads what the DataPlane needs besides the
+	// control plane object once it is resolved, e.g. the trust material of
+	// an on-prem control plane. The result is carried in
+	// ResolvedControlPlane.Dependencies. A *DependenciesNotReadyError is
+	// reported in the resolution condition, with Conditions.NotReadyReason.
+	Dependencies func(ctx context.Context, cl client.Client, cp ControlPlaneObject) (any, error)
+	// CertificateRegistration, when set, makes the DataPlane register its
+	// client certificate on the control plane through a certificate object
+	// (Config.Certificate.Build), and wait for it to be Programmed before
+	// building the Deployment, as Konnect-backed kinds do. It is meant for
+	// non-Konnect kinds: on a Konnect-backed kind it replaces the Konnect
+	// certificate conditions of Config.Conditions.
+	CertificateRegistration *CertificateRegistrationConditions
 }

@@ -322,6 +322,10 @@ func GenerateBaseDeployment[T Object](
 	addAnnotationsForDataPlaneDeployment(logger, d, cfg.DeploymentAnnotations(dp))
 	addLabelsForDataPlaneDeployment(logger, d, cfg.DeploymentLabels(dp))
 
+	if cfg.Customize != nil {
+		cfg.Customize(dp, cp, d)
+	}
+
 	return d, nil
 }
 

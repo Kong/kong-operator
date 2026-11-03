@@ -729,6 +729,63 @@ func Test_ensureDeployment_Replicas(t *testing.T) {
 	}
 }
 
+func TestRolloutOntoCertificateComplete(t *testing.T) {
+	const annotation = "test/cert-checksum"
+	deployment := func(checksum string, rolledOut bool) *appsv1.Deployment {
+		d := &appsv1.Deployment{
+			Name: "test-dp", Namespace: "default", Generation: 1,
+			Spec: appsv1.DeploymentSpec{
+				Replicas: new(int32(1)),
+				Template: corev1.PodTemplateSpec{Annotations: map[string]string{annotation: checksum}},
+			},
+		}
+		if rolledOut {
+			d.Status = appsv1.DeploymentStatus{ObservedGeneration: 1, Replicas: 1, UpdatedReplicas: 1, AvailableReplicas: 1}
+		}
+		return d
+	}
+	for _, tc := range []struct {
+		name               string
+		deployment         *appsv1.Deployment
+		checksumAnnotation string
+		getErr             error
+		want               bool
+		wantErr            bool
+	}{
+		{name: "no Deployment", checksumAnnotation: annotation},
+		{name: "the Deployment can't be read", checksumAnnotation: annotation, getErr: assert.AnError, wantErr: true},
+		{name: "rolling out", deployment: deployment("current", false), checksumAnnotation: annotation},
+		{name: "rolled out onto another certificate", deployment: deployment("previous", true), checksumAnnotation: annotation},
+		{name: "rolled out onto the certificate", deployment: deployment("current", true), checksumAnnotation: annotation, want: true},
+		{name: "rolled out, without checksum tracking", deployment: deployment("previous", true), want: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			builder := fake.NewClientBuilder().WithScheme(managerscheme.Get())
+			if tc.deployment != nil {
+				builder = builder.WithObjects(tc.deployment).WithStatusSubresource(tc.deployment)
+			}
+			cl := interceptor.NewClient(builder.Build(), interceptor.Funcs{
+				Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					if tc.getErr != nil {
+						return tc.getErr
+					}
+					return c.Get(ctx, key, obj, opts...)
+				},
+			})
+			cfg := testConfig
+			cfg.Certificate.ChecksumAnnotation = tc.checksumAnnotation
+			r := &testReconciler{Client: cl, Config: cfg}
+			got, err := r.rolloutOntoCertificateComplete(t.Context(), newTestAIGWDP(), "current")
+			if tc.wantErr {
+				require.ErrorIs(t, err, tc.getErr)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
 func Test_ensureDeployment_ReplicasResetWhenScalingRemoved(t *testing.T) {
 	const (
 		ns     = "test-ns"
@@ -769,4 +826,28 @@ func Test_ensureDeployment_ReplicasResetWhenScalingRemoved(t *testing.T) {
 
 	require.NoError(t, cl.Get(t.Context(), key, &deploy))
 	assert.Equal(t, new(int32(1)), deploy.Spec.Replicas)
+}
+
+func TestAdminAPIConfig(t *testing.T) {
+	enabled := func(*aigatewayv1alpha1.AIGatewayDataPlane, ResolvedControlPlane) bool { return true }
+	adminAPI := AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
+		Enabled:             enabled,
+		ServiceNameSuffix:   "-admin",
+		ServicePort:         8444,
+		ServicePortName:     "admin",
+		ManagedByLabelValue: "aigwdp-admin",
+		CertificateLabelKey: "test/admin-cert",
+	}
+
+	svcCfg := adminAPI.serviceConfig()
+	assert.Equal(t, "Admin", svcCfg.Description)
+	assert.Equal(t, "-admin", svcCfg.NameSuffix)
+	assert.Equal(t, "admin", svcCfg.DefaultPortName)
+	assert.Equal(t, int32(8444), svcCfg.DefaultPort)
+	assert.Equal(t, "aigwdp-admin", svcCfg.ManagedByLabelValue)
+	require.NotNil(t, svcCfg.Enabled, "the Service is gated like the certificate")
+	assert.True(t, svcCfg.Enabled(newTestAIGWDP(), ResolvedControlPlane{}))
+	assert.Nil(t, svcCfg.SetStatusAddresses, "the admin Service doesn't feed the status")
+
+	assert.Equal(t, "test-dp-admin.default.svc", adminAPI.certificateSubject(newTestAIGWDP()))
 }

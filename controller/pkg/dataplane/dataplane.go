@@ -201,6 +201,24 @@ type DeploymentConfig[T Object] struct {
 	// to drain its connections, or nil to keep the Kubernetes default. A
 	// value the user pod template overlay sets wins.
 	TerminationGracePeriodSeconds func(T) *int64
+	// ControlPlaneGone, when non-nil, adjusts the existing Deployment once its
+	// control plane won't be resolved again: it doesn't exist, or is being
+	// deleted (see DependenciesNotReadyError.ControlPlaneGone). The
+	// Deployment isn't rebuilt then, so what Customize set for the control
+	// plane stays otherwise, e.g. labels other controllers select the data
+	// planes of the control plane with.
+	// It is called for a control plane of any configured kind, on every
+	// reconcile while the control plane is gone, and possibly before the
+	// Deployment exists: implementations must be idempotent and tolerate a
+	// missing Deployment.
+	ControlPlaneGone func(ctx context.Context, cl client.Client, dp T) error
+	// Customize, when non-nil, adjusts the operator base Deployment for the
+	// resolved control plane, after the user Deployment labels and
+	// annotations are applied and before the user PodTemplateSpec overlay is
+	// merged, e.g. to label it for the control plane. The labels and
+	// annotations maps of the Deployment and of its Pod template may be
+	// shared: replace them rather than mutating them.
+	Customize func(dp T, cp ResolvedControlPlane, d *appsv1.Deployment)
 }
 
 // ServiceConfig carries the type specific bits of an owned Service.
@@ -309,7 +327,9 @@ type CertificateConfig[T Object, Cert CertificateObject] struct {
 	// certificate entity after the content should derive both the object name
 	// and the Konnect title from it so a rotation registers a new entity
 	// instead of mutating the previous one in place.
-	// Only called for Konnect-backed control planes (cp.IsKonnect).
+	// Only called for control planes registering the certificate
+	// (cp.RegistersCertificate): Konnect-backed ones, and non-Konnect kinds
+	// with CertificateRegistration.
 	Build func(dp T, cp ResolvedControlPlane, certSecretName, certChecksum string) Cert
 	// AdaptToExisting, when non-nil, is called with the desired certificate
 	// built by Build and the certificate currently stored in the cluster
@@ -357,15 +377,19 @@ type CertificateConfig[T Object, Cert CertificateObject] struct {
 	// ChecksumAnnotation is the Pod-template annotation key used with
 	// Checksum. Required when Checksum is set.
 	ChecksumAnnotation string
-	// CleanupStale, when non-nil, removes stale Konnect certificate entities
-	// and operator-provisioned Secrets once the rollout onto the current
+	// CleanupStale, when non-nil, removes stale certificate entities and
+	// operator-provisioned Secrets once the rollout onto the current
 	// certificate completed.
-	// Unlike Konnect certificate registration, this hook is intentionally
-	// not gated on cp.IsKonnect: stale Konnect certificate entities still
-	// need cleanup after a DataPlane switches to a non-Konnect control
-	// plane. Implementations must tolerate a resolved control plane of any
-	// configured kind (or an unconfigured one).
+	// Unlike certificate registration, this hook is intentionally not gated
+	// on cp.RegistersCertificate: stale certificate entities still need
+	// cleanup after a DataPlane switches to a control plane that doesn't
+	// register its certificate. Implementations must tolerate a resolved
+	// control plane of any configured kind (or an unconfigured one).
 	CleanupStale func(ctx context.Context, cl client.Client, logger logr.Logger, dp T, cp ResolvedControlPlane, certChecksum string) error
+	// RequeueAfter, when non-nil, returns when the resolved certificate must
+	// be checked again, e.g. for its renewal, or 0. The reconcile is requeued
+	// for the earliest of it and the expiry of a manual certificate.
+	RequeueAfter func(dp T, cp ResolvedControlPlane, secret *corev1.Secret, now time.Time) time.Duration
 }
 
 // Config wires the type specific behavior of a specialized DataPlane
@@ -484,6 +508,9 @@ func (r *Reconciler[T, Cert]) SetupWithManager(ctx context.Context, mgr ctrl.Man
 	// One watch per supported control plane kind: a change to a control plane
 	// object re-triggers reconciliation of every DataPlane referencing it.
 	for _, cpKind := range r.Config.ControlPlanes {
+		if cpKind.DisabledMessage != "" {
+			continue
+		}
 		blder = blder.Watches(
 			cpKind.NewObject(),
 			handler.EnqueueRequestsFromMapFunc(EnqueueDataPlanesByIndex(
@@ -549,15 +576,16 @@ func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Res
 
 	log.Trace(logger, "reconciling "+r.Config.Kind+" resource")
 
-	// expiryRequeue is set once a user-owned certificate is resolved: it
-	// expires without any watch event firing, so every successful exit below
-	// requeues for its expiry, not just the one at the end of the reconcile.
-	var expiryRequeue time.Duration
+	// certRequeue is set once the certificate is resolved: a user-owned one
+	// expires, and one the controller renews falls due, without any watch
+	// event firing, so every successful exit below requeues for it, not just
+	// the one at the end of the reconcile.
+	var certRequeue time.Duration
 	defer func() {
 		err = errors.Join(err, r.ensureReadyStatus(ctx, dp))
 		err = errors.Join(err, r.applyStatus(ctx, logger, dp))
-		if err == nil && res.RequeueAfter == 0 && expiryRequeue > 0 {
-			res.RequeueAfter = expiryRequeue
+		if err == nil && res.RequeueAfter == 0 && certRequeue > 0 {
+			res.RequeueAfter = certRequeue
 		}
 	}()
 
@@ -580,15 +608,22 @@ func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Res
 	}
 	if ref.Name != "" {
 		cp, err = r.resolveControlPlane(ctx, logger, dp, ref)
+		if errors.Is(err, errControlPlaneGone) && r.Config.Deployment.ControlPlaneGone != nil {
+			if goneErr := r.Config.Deployment.ControlPlaneGone(ctx, r.Client, dp); goneErr != nil {
+				return ctrl.Result{}, goneErr
+			}
+		}
 		if err != nil {
 			// A missing, not yet Programmed, or not yet Ready control plane is
 			// an expected, user-fixable state: resolveControlPlane has set the
 			// resolution condition and the control plane watch re-triggers the
 			// reconcile once the control plane appears or becomes healthy, so
-			// there is no need to retry with error backoff.
+			// there is no need to retry with error backoff. Nor is there for a
+			// disabled kind: only a restart of the operator enables it.
 			if apierrors.IsNotFound(err) ||
 				errors.Is(err, errControlPlaneNotProgrammed) ||
-				errors.Is(err, errControlPlaneNotReady) {
+				errors.Is(err, errControlPlaneNotReady) ||
+				errors.Is(err, errControlPlaneKindDisabled) {
 				return ctrl.Result{}, nil
 			}
 			return ctrl.Result{}, err
@@ -613,7 +648,7 @@ func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Res
 		}
 		return ctrl.Result{}, err
 	}
-	expiryRequeue = manualCertificateExpiryRequeue(certSecret, time.Now())
+	certRequeue = r.certificateRequeue(dp, cp, certSecret, time.Now())
 
 	// Return early if the Secret was just created/updated so the Deployment
 	// picks up the correct Secret name on the next reconcile. No explicit
@@ -644,19 +679,20 @@ func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Res
 		}
 	}
 
-	// Ensure the certificate is registered with Konnect.
+	// Ensure the certificate is registered with the control plane (Konnect,
+	// or a non-Konnect kind with CertificateRegistration).
 	// Return early if not yet programmed; the Owns() watch retriggers once
-	// the Konnect controller flips Programmed to True.
-	// Certificate automation only applies to Konnect-backed control planes.
+	// the controller of the certificate flips Programmed to True.
 	certProgrammed := true
-	if cp.IsResolved() && cp.IsKonnect && certSecret != nil {
-		certProgrammed, err = r.ensureKonnectCertificate(ctx, logger, dp, cp, certSecret, certChecksum)
+	if cp.IsResolved() && cp.RegistersCertificate() && certSecret != nil {
+		certProgrammed, err = r.ensureCertificateRegistration(ctx, logger, dp, cp, certSecret, certChecksum)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 	}
-	// If the certificate is not yet programmed on Konnect, return early.
-	// Without this, we would create a deployment that uses a cert secret not yet present in Konnect.
+	// If the certificate is not yet programmed on the control plane, return
+	// early. Without this, we would create a deployment that uses a cert
+	// secret the control plane doesn't trust yet.
 	if !certProgrammed {
 		return ctrl.Result{}, nil
 	}
@@ -760,6 +796,20 @@ func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Res
 
 	log.Debug(logger, "reconciliation complete for "+r.Config.Kind+" resource")
 	return ctrl.Result{}, nil
+}
+
+// certificateRequeue returns when the certificate Secret must be checked
+// again, or 0: the earliest of the expiry of a user-owned one and of the
+// delay Config.Certificate.RequeueAfter returns, e.g. until it is due for
+// renewal.
+func (r *Reconciler[T, Cert]) certificateRequeue(dp T, cp ResolvedControlPlane, certSecret *corev1.Secret, now time.Time) time.Duration {
+	requeue := manualCertificateExpiryRequeue(certSecret, now)
+	if r.Config.Certificate.RequeueAfter != nil {
+		if after := r.Config.Certificate.RequeueAfter(dp, cp, certSecret, now); after > 0 && (requeue == 0 || after < requeue) {
+			requeue = after
+		}
+	}
+	return requeue
 }
 
 // ensureServiceReadyCondition sets the ServiceReady condition and populates

@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
+	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -202,6 +203,46 @@ func TestManualCertificateExpiryRequeue(t *testing.T) {
 	noExpiryCrt, noExpiryKey := certificate.MustGenerateCertPEMFormat(certificate.WithValidity(now.Add(-time.Hour), time.Date(9999, 12, 31, 23, 59, 59, 0, time.UTC)))
 	assert.Equal(t, maxCertificateRequeue, manualCertificateExpiryRequeue(tlsSecret("s", noExpiryCrt, noExpiryKey), now),
 		"a 9999-12-31 NotAfter must not overflow into a negative delay")
+}
+
+func TestCertificateRequeue(t *testing.T) {
+	now := time.Now()
+	crt, key := certificate.MustGenerateCertPEMFormat(certificate.WithValidity(now.Add(-time.Hour), now.Add(time.Hour)))
+	manual := tlsSecret("s", crt, key)
+	automatic := tlsSecret("s", crt, key)
+	automatic.Labels = map[string]string{consts.SecretProvisioningLabelKey: consts.SecretProvisioningAutomaticLabelValue}
+	untilExpiry := time.Hour + time.Second
+
+	for _, tc := range []struct {
+		name   string
+		secret *corev1.Secret
+		// hook is the Config.Certificate.RequeueAfter delay, or nil.
+		hook *time.Duration
+		want time.Duration
+	}{
+		{name: "no certificate", want: 0},
+		{name: "a user-owned certificate without hook requeues at its expiry", secret: manual, want: untilExpiry},
+		{name: "an operator-provisioned certificate without hook", secret: automatic, want: 0},
+		{name: "a hook returning 0 keeps the expiry", secret: manual, hook: new(time.Duration(0)), want: untilExpiry},
+		{name: "an earlier hook wins", secret: manual, hook: new(10 * time.Minute), want: 10 * time.Minute},
+		{name: "a later hook loses", secret: manual, hook: new(2 * time.Hour), want: untilExpiry},
+		{name: "a hook without expiry", secret: automatic, hook: new(2 * time.Hour), want: 2 * time.Hour},
+		{name: "a negative hook is ignored", secret: automatic, hook: new(-time.Minute), want: 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := testConfig
+			if tc.hook != nil {
+				cfg.Certificate.RequeueAfter = func(_ *aigatewayv1alpha1.AIGatewayDataPlane, _ ResolvedControlPlane, secret *corev1.Secret, at time.Time) time.Duration {
+					assert.Same(t, tc.secret, secret)
+					assert.Equal(t, now, at)
+					return *tc.hook
+				}
+			}
+			r := &testReconciler{Config: cfg}
+			got := r.certificateRequeue(newTestAIGWDP(), ResolvedControlPlane{}, tc.secret, now)
+			assert.InDelta(t, tc.want.Seconds(), got.Seconds(), 1)
+		})
+	}
 }
 
 func TestGetManualCertificateSecret(t *testing.T) {

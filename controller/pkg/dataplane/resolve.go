@@ -38,10 +38,21 @@ import (
 // error backoff.
 var errControlPlaneNotProgrammed = errors.New("control plane is not yet Programmed")
 
+// errControlPlaneKindDisabled is returned by resolveControlPlane when the
+// kind of the referenced control plane is disabled (see
+// ControlPlaneKindConfig.DisabledMessage).
+var errControlPlaneKindDisabled = errors.New("control plane kind is disabled")
+
 // errControlPlaneNotReady is returned by resolveControlPlane when the
 // referenced non-Konnect control plane exists but is not yet Ready. Like
 // errControlPlaneNotProgrammed it is an expected transient state.
 var errControlPlaneNotReady = errors.New("control plane is not yet Ready")
+
+// errControlPlaneGone is wrapped by the error resolveControlPlane returns
+// when the referenced control plane won't be resolved again: it doesn't
+// exist, or its dependencies tell it is gone (see
+// DependenciesNotReadyError.ControlPlaneGone).
+var errControlPlaneGone = errors.New("control plane is gone")
 
 // resolveControlPlane resolves the control plane referenced by the DataPlane.
 // It sets the kind-specific control plane resolved condition on the DataPlane
@@ -75,6 +86,16 @@ func (r *Reconciler[T, Cert]) resolveControlPlane(
 		removeStatusCondition(dp, other.Conditions.ResolvedType)
 	}
 
+	if cpKindCfg.DisabledMessage != "" {
+		log.Debug(logger, "referenced "+cpKindCfg.Kind+" kind is disabled",
+			"ref", ref.Name)
+
+		r.markUnresolved(dp, cpKindCfg, cpKindCfg.Conditions.NotFoundReason, cpKindCfg.DisabledMessage)
+
+		return ResolvedControlPlane{}, fmt.Errorf("referenced %s %q: %w",
+			cpKindCfg.Kind, ref.Name, errControlPlaneKindDisabled)
+	}
+
 	cp := cpKindCfg.NewObject()
 	err := r.Get(ctx, types.NamespacedName{
 		Name:      ref.Name,
@@ -85,15 +106,9 @@ func (r *Reconciler[T, Cert]) resolveControlPlane(
 		log.Debug(logger, "referenced "+cpKindCfg.Kind+" not found",
 			"ref", ref.Name)
 
-		setStatusCondition(dp, metav1.Condition{
-			Type:               cpKindCfg.Conditions.ResolvedType,
-			Status:             metav1.ConditionFalse,
-			Reason:             cpKindCfg.Conditions.NotFoundReason,
-			Message:            cpKindCfg.Conditions.NotFoundMessage,
-			ObservedGeneration: dp.GetGeneration(),
-		})
+		r.markUnresolved(dp, cpKindCfg, cpKindCfg.Conditions.NotFoundReason, cpKindCfg.Conditions.NotFoundMessage)
 
-		return ResolvedControlPlane{}, err
+		return ResolvedControlPlane{}, fmt.Errorf("%w: %w", errControlPlaneGone, err)
 	}
 	if err != nil {
 		return ResolvedControlPlane{}, err
@@ -112,13 +127,7 @@ func (r *Reconciler[T, Cert]) resolveControlPlane(
 		log.Debug(logger, "referenced "+cpKindCfg.Kind+" is not yet Programmed",
 			"ref", ref.Name)
 
-		setStatusCondition(dp, metav1.Condition{
-			Type:               cpKindCfg.Conditions.ResolvedType,
-			Status:             metav1.ConditionFalse,
-			Reason:             cpKindCfg.Conditions.NotProgrammedReason,
-			Message:            cpKindCfg.Conditions.NotProgrammedMessage,
-			ObservedGeneration: dp.GetGeneration(),
-		})
+		r.markUnresolved(dp, cpKindCfg, cpKindCfg.Conditions.NotProgrammedReason, cpKindCfg.Conditions.NotProgrammedMessage)
 
 		return resolved, fmt.Errorf("referenced %s %q: %w",
 			cpKindCfg.Kind, ref.Name, errControlPlaneNotProgrammed)
@@ -128,16 +137,37 @@ func (r *Reconciler[T, Cert]) resolveControlPlane(
 		log.Debug(logger, "referenced "+cpKindCfg.Kind+" is not yet Ready",
 			"ref", ref.Name)
 
-		setStatusCondition(dp, metav1.Condition{
-			Type:               cpKindCfg.Conditions.ResolvedType,
-			Status:             metav1.ConditionFalse,
-			Reason:             cpKindCfg.Conditions.NotReadyReason,
-			Message:            cpKindCfg.Conditions.NotReadyMessage,
-			ObservedGeneration: dp.GetGeneration(),
-		})
+		r.markUnresolved(dp, cpKindCfg, cpKindCfg.Conditions.NotReadyReason, cpKindCfg.Conditions.NotReadyMessage)
 
 		return resolved, fmt.Errorf("referenced %s %q: %w",
 			cpKindCfg.Kind, ref.Name, errControlPlaneNotReady)
+	}
+
+	resolved.CertificateRegistration = cpKindCfg.CertificateRegistration
+	if cpKindCfg.Dependencies != nil {
+		deps, err := cpKindCfg.Dependencies(ctx, r.Client, cp)
+		if notReady, ok := errors.AsType[*DependenciesNotReadyError](err); ok {
+			log.Debug(logger, "dependencies of the referenced "+cpKindCfg.Kind+" are not ready",
+				"ref", ref.Name, "reason", notReady.Message)
+
+			r.markUnresolved(dp, cpKindCfg, cpKindCfg.Conditions.NotReadyReason, notReady.Message)
+
+			if notReady.ControlPlaneGone {
+				return resolved, fmt.Errorf("referenced %s %q: %w: %w: %w",
+					cpKindCfg.Kind, ref.Name, errControlPlaneNotReady, errControlPlaneGone, err)
+			}
+			return resolved, fmt.Errorf("referenced %s %q: %w: %w",
+				cpKindCfg.Kind, ref.Name, errControlPlaneNotReady, err)
+		}
+		if err != nil {
+			err = fmt.Errorf("failed to read the dependencies of the referenced %s %q: %w",
+				cpKindCfg.Kind, ref.Name, err)
+			// What the certificate is issued from can't be read: conditions
+			// left True would say it is still valid and registered.
+			r.markCertificateUnknown(dp, cpKindCfg, cpKindCfg.Conditions.NotReadyReason, err.Error())
+			return resolved, err
+		}
+		resolved.Dependencies = deps
 	}
 
 	setStatusCondition(dp, metav1.Condition{
@@ -149,4 +179,41 @@ func (r *Reconciler[T, Cert]) resolveControlPlane(
 	})
 
 	return resolved, nil
+}
+
+// markUnresolved sets the control plane resolution condition of the DataPlane
+// to False with reason and message, and its certificate conditions to
+// Unknown (see markCertificateUnknown).
+func (r *Reconciler[T, Cert]) markUnresolved(dp T, cpKindCfg ControlPlaneKindConfig, reason, message string) {
+	setStatusCondition(dp, metav1.Condition{
+		Type:               cpKindCfg.Conditions.ResolvedType,
+		Status:             metav1.ConditionFalse,
+		Reason:             reason,
+		Message:            message,
+		ObservedGeneration: dp.GetGeneration(),
+	})
+	r.markCertificateUnknown(dp, cpKindCfg, reason, message)
+}
+
+// markCertificateUnknown sets the certificate conditions of a DataPlane of a
+// kind registering its client certificate on the control plane
+// (CertificateRegistration) to Unknown when what the certificate is issued
+// from and registered on can't be read: whether the certificate is still
+// valid and registered can't be told, and conditions left True would say it
+// is. Konnect-backed kinds read nothing besides the control plane object, so
+// they keep their conditions.
+func (r *Reconciler[T, Cert]) markCertificateUnknown(dp T, cpKindCfg ControlPlaneKindConfig, reason, message string) {
+	reg := cpKindCfg.CertificateRegistration
+	if reg == nil {
+		return
+	}
+	for _, condType := range []string{reg.Type, r.Config.Conditions.CertificateProvisionedType} {
+		setStatusCondition(dp, metav1.Condition{
+			Type:               condType,
+			Status:             metav1.ConditionUnknown,
+			Reason:             reason,
+			Message:            message,
+			ObservedGeneration: dp.GetGeneration(),
+		})
+	}
 }
