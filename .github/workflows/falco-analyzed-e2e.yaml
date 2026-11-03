@@ -74,12 +74,9 @@ jobs:
       env:
         TEST_IMAGE: ${{ inputs.test-image }}
       run: |
-        # TEST_IMAGE is usually a multi-platform registry tag. kind loads it into the
-        # nodes with `ctr images import --all-platforms`, which fails when the saved
-        # archive is an index that refers to platform manifests the archive does not
-        # contain ("content digest ...: not found"). Pull the local platform's
-        # manifest by digest and point the tag at it, so the archive saves one
-        # manifest only.
+        # kind imports the archive with `ctr images import --all-platforms`, which
+        # fails on a multi-platform index whose manifests are absent. Pin the local
+        # platform's manifest by digest so `docker save` writes a single manifest.
         platform="$(docker version --format '{{.Server.Os}}/{{.Server.Arch}}')"
         digest="$(
           docker buildx imagetools inspect --raw "$TEST_IMAGE" \
