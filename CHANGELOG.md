@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.4.0-rapid.3.1](#v240-rapid31)
 - [v2.4.0-rapid.3.0](#v240-rapid30)
 - [v2.4.0-rapid.2.0](#v240-rapid20)
 - [v2.4.0-rapid.1](#v240-rapid1)
@@ -68,6 +69,19 @@
 - [v0.2.0](#v020)
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
+
+## [v2.4.0-rapid.3.1]
+
+> Release date: 2026-11-04
+
+### Fixes
+
+- `AIGatewayMCPServer`: an `AIGatewayMCPServer` whose listener access sets
+  server-level `access.acls` is no longer refused by Konnect with
+  `400 Bad Request`.
+  [#6419](https://github.com/Kong/kong-operator/pull/6419) ([#6424](https://github.com/Kong/kong-operator/pull/6424))
+  [#6418](https://github.com/Kong/kong-operator/pull/6418) ([#6427](https://github.com/Kong/kong-operator/pull/6427))
+  [#6414](https://github.com/Kong/kong-operator/pull/6414) ([#6429](https://github.com/Kong/kong-operator/pull/6429))
 
 ## [v2.4.0-rapid.3.0]
 
@@ -4449,6 +4463,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.4.0-rapid.3.1]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.3.0..v2.4.0-rapid.3.1
 [v2.4.0-rapid.3.0]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.2.0..v2.4.0-rapid.3.0
 [v2.4.0-rapid.2.0]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.1..v2.4.0-rapid.2.0
 [v2.4.0-rapid.1]: https://github.com/Kong/kong-operator/compare/v2.3.1..v2.4.0-rapid.1
