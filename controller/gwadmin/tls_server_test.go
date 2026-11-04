@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
+	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
@@ -70,14 +71,14 @@ func TestEnsureTLS_ServerCARotationWaitsForTheDataPlanes(t *testing.T) {
 	assert.Contains(t, cond.Message, "data plane Deployment dp-ns/dp doesn't run it yet")
 
 	// The data plane records the new bundle, but its rollout isn't complete.
-	setDataPlane(t, r, dDataPlaneNamespace, dDataPlaneName, map[string]string{consts.GWAdminDataPlaneServerBundleAnnotation: DataPlaneServerBundleChecksum(m.serverBundle)}, false)
+	setDataPlane(t, r, dDataPlaneNamespace, dDataPlaneName, map[string]string{consts.GWAdminDataPlaneServerBundleAnnotation: gwadminref.DataPlaneServerBundleChecksum(m.serverBundle)}, false)
 	m = ensure(t, r, gw, rolledDeployment(m))
 	requireSignedBy(t, old, m.cp)
 	assert.Contains(t, certificateCondition(gw).Message, "data plane Deployment dp-ns/dp: waiting for the Deployment to roll out")
 
 	// Once it rolled out, the certificate moves, without waiting for the
 	// gw-admin rollout.
-	setDataPlane(t, r, dDataPlaneNamespace, dDataPlaneName, map[string]string{consts.GWAdminDataPlaneServerBundleAnnotation: DataPlaneServerBundleChecksum(m.serverBundle)}, true)
+	setDataPlane(t, r, dDataPlaneNamespace, dDataPlaneName, map[string]string{consts.GWAdminDataPlaneServerBundleAnnotation: gwadminref.DataPlaneServerBundleChecksum(m.serverBundle)}, true)
 	stuck := rollingDeployment(m)
 	m = ensure(t, r, gw, stuck)
 	requireSignedBy(t, next, m.cp)
@@ -157,7 +158,7 @@ func TestEnsureTLS_ServerBundleIsNotMounted(t *testing.T) {
 	sum, trust := m.checksum(), m.trustChecksum()
 
 	m.serverBundle = m.serverBundle.DeepCopy()
-	m.serverBundle.Data[caBundleKey] = append(m.serverBundle.Data[caBundleKey], m.serverBundle.Data[caBundleKey]...)
+	m.serverBundle.Data[consts.CACRT] = append(m.serverBundle.Data[consts.CACRT], m.serverBundle.Data[consts.CACRT]...)
 	assert.Equal(t, sum, m.checksum())
 	assert.Equal(t, trust, m.trustChecksum())
 	m.serverBundle = nil
@@ -220,7 +221,7 @@ func TestEnsureTLS_ServerManualCertificate(t *testing.T) {
 	m = ensure(t, r, gw, rolledDeployment(m))
 	require.True(t, isManualCopy(m.cp))
 	assert.Equal(t, src.Data[corev1.TLSCertKey], m.cp.Data[corev1.TLSCertKey])
-	assert.Equal(t, src.Data[caBundleKey], m.cp.Data[caBundleKey], "the copy keeps ca.crt")
+	assert.Equal(t, src.Data[consts.CACRT], m.cp.Data[consts.CACRT], "the copy keeps ca.crt")
 
 	// A renewal from the same issuer, the data plane running the current
 	// bundle, is copied at once.
@@ -270,7 +271,7 @@ func TestEnsureTLS_ServerManualIntermediateChangesUnderTheSameRoot(t *testing.T)
 	root := dRoot(t, now)
 	issue := func(intermediate *corev1.Secret) *corev1.Secret {
 		s := userCPSecretFrom(t, intermediate, now, 30*24*time.Hour, true)
-		s.Data[caBundleKey] = root.Data[corev1.TLSCertKey]
+		s.Data[consts.CACRT] = root.Data[corev1.TLSCertKey]
 		return s
 	}
 	intA := dIntermediate(t, root, "int-a", now)

@@ -33,6 +33,8 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
+	"github.com/kong/kong-operator/v2/internal/utils/gwadminref"
+	"github.com/kong/kong-operator/v2/internal/utils/pki"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
@@ -124,7 +126,7 @@ func rollingDeployment(m *tlsMaterial) *appsv1.Deployment {
 
 func caCert(t *testing.T, s *corev1.Secret) *x509.Certificate {
 	t.Helper()
-	certs := parseCertificates(s.Data[corev1.TLSCertKey])
+	certs := pki.ParseCertificates(s.Data[corev1.TLSCertKey])
 	require.NotEmpty(t, certs)
 	return certs[0]
 }
@@ -233,7 +235,7 @@ func userCPSecretFrom(t *testing.T, ca *corev1.Secret, issuedAt time.Time, ttl t
 		data[corev1.TLSCertKey] = append(certPEM, ca.Data[corev1.TLSCertKey]...)
 	} else {
 		data[corev1.TLSCertKey] = certPEM
-		data[caBundleKey] = ca.Data[corev1.TLSCertKey]
+		data[consts.CACRT] = ca.Data[corev1.TLSCertKey]
 	}
 	return &corev1.Secret{
 		Name: userCPSecretName, Namespace: testNamespace, Labels: map[string]string{"konghq.com/secret": "true"},
@@ -284,7 +286,7 @@ func verifyWith(secret *corev1.Secret, bundle []*x509.Certificate, usage x509.Ex
 		roots.AddCert(c)
 	}
 	intermediates := x509.NewCertPool()
-	for _, c := range parseCertificates(secret.Data[corev1.TLSCertKey])[1:] {
+	for _, c := range pki.ParseCertificates(secret.Data[corev1.TLSCertKey])[1:] {
 		intermediates.AddCert(c)
 	}
 	_, err := leafCertificate(secret).Verify(x509.VerifyOptions{
@@ -346,10 +348,10 @@ func dataPlaneDeploymentWith(dpNamespace, name, serverBundleChecksum, clientCA s
 // the published cp client CA of m, as the controller managing it would.
 func rollDataPlane(t *testing.T, r *Reconciler, dpNamespace, name string, m *tlsMaterial) {
 	t.Helper()
-	published := getPrivateSecret(t, r, "gwadmin-gw-uid-cp-client-ca")
+	clientCA := getPrivateSecret(t, r, "gwadmin-gw-uid-cp-client-ca")
 	setDataPlane(t, r, dpNamespace, name, map[string]string{
-		consts.GWAdminDataPlaneServerBundleAnnotation: DataPlaneServerBundleChecksum(m.serverBundle),
-		consts.GWAdminDataPlaneClientCAAnnotation:     DataPlaneClientCAFingerprint(published.Data[corev1.TLSCertKey]),
+		consts.GWAdminDataPlaneServerBundleAnnotation: gwadminref.DataPlaneServerBundleChecksum(m.serverBundle),
+		consts.GWAdminDataPlaneClientCAAnnotation:     gwadminref.DataPlaneClientCAFingerprint(clientCA.Data[corev1.TLSCertKey]),
 	}, true)
 }
 
