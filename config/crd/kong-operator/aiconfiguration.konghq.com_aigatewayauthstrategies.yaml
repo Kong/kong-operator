@@ -736,6 +736,8 @@ spec:
                                   required when type=secretRef
                                 rule: 'self.type == ''inline'' ? has(self.value) :
                                   has(self.secretRef)'
+                              - message: only one of value and secretRef can be set
+                                rule: '!(has(self.value) && has(self.secretRef))'
                             type: array
                           clusterCacheRedis:
                             description: AIGWOpenIDConnectGeneratedConfigClusterCacheRedis
@@ -909,8 +911,63 @@ spec:
                                 description: |-
                                   Password to use for Redis connections.
                                   If undefined, no AUTH commands are sent to Redis.
-                                maxLength: 253
-                                type: string
+                                properties:
+                                  secretRef:
+                                    description: |-
+                                      SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                      Required when type is 'secretRef'.
+                                    properties:
+                                      key:
+                                        description: Key is the data key within the
+                                          Secret.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      name:
+                                        description: Name is the name of the referred
+                                          resource.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        description: |-
+                                          Namespace is the namespace of the referred resource.
+
+                                          For namespace-scoped resources if no Namespace is provided then the
+                                          namespace of the parent object MUST be used.
+
+                                          This field MUST not be set when referring to cluster-scoped resources.
+                                        maxLength: 253
+                                        type: string
+                                    required:
+                                    - key
+                                    - name
+                                    type: object
+                                  type:
+                                    default: inline
+                                    description: 'Type indicates the source of the
+                                      sensitive data: ''inline'' or ''secretRef''.'
+                                    enum:
+                                    - inline
+                                    - secretRef
+                                    type: string
+                                  value:
+                                    description: |-
+                                      Value contains the sensitive data provided inline.
+                                      Required when type is 'inline'.
+                                    maxLength: 4096
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                                x-kubernetes-validations:
+                                - message: value required when type=inline; secretRef
+                                    required when type=secretRef
+                                  rule: 'self.type == ''inline'' ? has(self.value)
+                                    : has(self.secretRef)'
+                                - message: only one of value and secretRef can be
+                                    set
+                                  rule: '!(has(self.value) && has(self.secretRef))'
                               port:
                                 description: An integer representing a port number
                                   between 0 and 65535, inclusive.
@@ -967,8 +1024,63 @@ spec:
                                 description: |-
                                   Sentinel password to authenticate with a Redis Sentinel instance.
                                   If undefined, no AUTH commands are sent to Redis Sentinels.
-                                maxLength: 253
-                                type: string
+                                properties:
+                                  secretRef:
+                                    description: |-
+                                      SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                      Required when type is 'secretRef'.
+                                    properties:
+                                      key:
+                                        description: Key is the data key within the
+                                          Secret.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      name:
+                                        description: Name is the name of the referred
+                                          resource.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        description: |-
+                                          Namespace is the namespace of the referred resource.
+
+                                          For namespace-scoped resources if no Namespace is provided then the
+                                          namespace of the parent object MUST be used.
+
+                                          This field MUST not be set when referring to cluster-scoped resources.
+                                        maxLength: 253
+                                        type: string
+                                    required:
+                                    - key
+                                    - name
+                                    type: object
+                                  type:
+                                    default: inline
+                                    description: 'Type indicates the source of the
+                                      sensitive data: ''inline'' or ''secretRef''.'
+                                    enum:
+                                    - inline
+                                    - secretRef
+                                    type: string
+                                  value:
+                                    description: |-
+                                      Value contains the sensitive data provided inline.
+                                      Required when type is 'inline'.
+                                    maxLength: 4096
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                                x-kubernetes-validations:
+                                - message: value required when type=inline; secretRef
+                                    required when type=secretRef
+                                  rule: 'self.type == ''inline'' ? has(self.value)
+                                    : has(self.secretRef)'
+                                - message: only one of value and secretRef can be
+                                    set
+                                  rule: '!(has(self.value) && has(self.secretRef))'
                               sentinelRole:
                                 description: |-
                                   Sentinel role to use for Redis connections when the `redis` strategy is
@@ -1990,8 +2102,63 @@ spec:
                                 description: |-
                                   Password to use for Redis connections.
                                   If undefined, no AUTH commands are sent to Redis.
-                                maxLength: 253
-                                type: string
+                                properties:
+                                  secretRef:
+                                    description: |-
+                                      SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                      Required when type is 'secretRef'.
+                                    properties:
+                                      key:
+                                        description: Key is the data key within the
+                                          Secret.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      name:
+                                        description: Name is the name of the referred
+                                          resource.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        description: |-
+                                          Namespace is the namespace of the referred resource.
+
+                                          For namespace-scoped resources if no Namespace is provided then the
+                                          namespace of the parent object MUST be used.
+
+                                          This field MUST not be set when referring to cluster-scoped resources.
+                                        maxLength: 253
+                                        type: string
+                                    required:
+                                    - key
+                                    - name
+                                    type: object
+                                  type:
+                                    default: inline
+                                    description: 'Type indicates the source of the
+                                      sensitive data: ''inline'' or ''secretRef''.'
+                                    enum:
+                                    - inline
+                                    - secretRef
+                                    type: string
+                                  value:
+                                    description: |-
+                                      Value contains the sensitive data provided inline.
+                                      Required when type is 'inline'.
+                                    maxLength: 4096
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                                x-kubernetes-validations:
+                                - message: value required when type=inline; secretRef
+                                    required when type=secretRef
+                                  rule: 'self.type == ''inline'' ? has(self.value)
+                                    : has(self.secretRef)'
+                                - message: only one of value and secretRef can be
+                                    set
+                                  rule: '!(has(self.value) && has(self.secretRef))'
                               port:
                                 description: An integer representing a port number
                                   between 0 and 65535, inclusive.
@@ -2052,8 +2219,63 @@ spec:
                                 description: |-
                                   Sentinel password to authenticate with a Redis Sentinel instance.
                                   If undefined, no AUTH commands are sent to Redis Sentinels.
-                                maxLength: 253
-                                type: string
+                                properties:
+                                  secretRef:
+                                    description: |-
+                                      SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
+                                      Required when type is 'secretRef'.
+                                    properties:
+                                      key:
+                                        description: Key is the data key within the
+                                          Secret.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      name:
+                                        description: Name is the name of the referred
+                                          resource.
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                      namespace:
+                                        description: |-
+                                          Namespace is the namespace of the referred resource.
+
+                                          For namespace-scoped resources if no Namespace is provided then the
+                                          namespace of the parent object MUST be used.
+
+                                          This field MUST not be set when referring to cluster-scoped resources.
+                                        maxLength: 253
+                                        type: string
+                                    required:
+                                    - key
+                                    - name
+                                    type: object
+                                  type:
+                                    default: inline
+                                    description: 'Type indicates the source of the
+                                      sensitive data: ''inline'' or ''secretRef''.'
+                                    enum:
+                                    - inline
+                                    - secretRef
+                                    type: string
+                                  value:
+                                    description: |-
+                                      Value contains the sensitive data provided inline.
+                                      Required when type is 'inline'.
+                                    maxLength: 4096
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                                x-kubernetes-validations:
+                                - message: value required when type=inline; secretRef
+                                    required when type=secretRef
+                                  rule: 'self.type == ''inline'' ? has(self.value)
+                                    : has(self.secretRef)'
+                                - message: only one of value and secretRef can be
+                                    set
+                                  rule: '!(has(self.value) && has(self.secretRef))'
                               sentinelRole:
                                 description: |-
                                   Sentinel role to use for Redis connections when the `redis` strategy is

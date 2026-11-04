@@ -281,6 +281,8 @@ spec:
                             - message: value required when type=inline; secretRef
                                 required when type=secretRef
                               rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                            - message: only one of value and secretRef can be set
+                              rule: '!(has(self.value) && has(self.secretRef))'
                           base64Decode:
                             enum:
                             - Enabled
@@ -527,6 +529,9 @@ spec:
                                     required when type=secretRef
                                   rule: 'self.type == ''inline'' ? has(self.value)
                                     : has(self.secretRef)'
+                                - message: only one of value and secretRef can be
+                                    set
+                                  rule: '!(has(self.value) && has(self.secretRef))'
                               secretIDFile:
                                 maxLength: 253
                                 type: string
@@ -663,6 +668,9 @@ spec:
                                     required when type=secretRef
                                   rule: 'self.type == ''inline'' ? has(self.value)
                                     : has(self.secretRef)'
+                                - message: only one of value and secretRef can be
+                                    set
+                                  rule: '!(has(self.value) && has(self.secretRef))'
                               assumeRoleArn:
                                 maxLength: 253
                                 type: string
@@ -754,6 +762,9 @@ spec:
                                     required when type=secretRef
                                   rule: 'self.type == ''inline'' ? has(self.value)
                                     : has(self.secretRef)'
+                                - message: only one of value and secretRef can be
+                                    set
+                                  rule: '!(has(self.value) && has(self.secretRef))'
                               sslVerify:
                                 enum:
                                 - Enabled
@@ -878,6 +889,9 @@ spec:
                                     required when type=secretRef
                                   rule: 'self.type == ''inline'' ? has(self.value)
                                     : has(self.secretRef)'
+                                - message: only one of value and secretRef can be
+                                    set
+                                  rule: '!(has(self.value) && has(self.secretRef))'
                               host:
                                 maxLength: 253
                                 minLength: 1
@@ -918,6 +932,9 @@ spec:
                                     required when type=secretRef
                                   rule: 'self.type == ''inline'' ? has(self.value)
                                     : has(self.secretRef)'
+                                - message: only one of value and secretRef can be
+                                    set
+                                  rule: '!(has(self.value) && has(self.secretRef))'
                               kv:
                                 enum:
                                 - v1
@@ -1111,6 +1128,9 @@ spec:
                                     required when type=secretRef
                                   rule: 'self.type == ''inline'' ? has(self.value)
                                     : has(self.secretRef)'
+                                - message: only one of value and secretRef can be
+                                    set
+                                  rule: '!(has(self.value) && has(self.secretRef))'
                               sslVerify:
                                 enum:
                                 - Enabled
@@ -1178,6 +1198,9 @@ spec:
                                     required when type=secretRef
                                   rule: 'self.type == ''inline'' ? has(self.value)
                                     : has(self.secretRef)'
+                                - message: only one of value and secretRef can be
+                                    set
+                                  rule: '!(has(self.value) && has(self.secretRef))'
                               host:
                                 maxLength: 253
                                 minLength: 1
@@ -1380,6 +1403,9 @@ spec:
                                     required when type=secretRef
                                   rule: 'self.type == ''inline'' ? has(self.value)
                                     : has(self.secretRef)'
+                                - message: only one of value and secretRef can be
+                                    set
+                                  rule: '!(has(self.value) && has(self.secretRef))'
                               ttl:
                                 maximum: 4294967295
                                 minimum: 0

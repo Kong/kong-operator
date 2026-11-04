@@ -242,6 +242,9 @@ spec:
                                     required when type=secretRef
                                   rule: 'self.type == ''inline'' ? has(self.value)
                                     : has(self.secretRef)'
+                                - message: only one of value and secretRef can be
+                                    set
+                                  rule: '!(has(self.value) && has(self.secretRef))'
                               azureClientID:
                                 maxLength: 253
                                 type: string
@@ -303,6 +306,9 @@ spec:
                                     required when type=secretRef
                                   rule: 'self.type == ''inline'' ? has(self.value)
                                     : has(self.secretRef)'
+                                - message: only one of value and secretRef can be
+                                    set
+                                  rule: '!(has(self.value) && has(self.secretRef))'
                               azureTenantID:
                                 maxLength: 253
                                 type: string
@@ -364,6 +370,9 @@ spec:
                                     required when type=secretRef
                                   rule: 'self.type == ''inline'' ? has(self.value)
                                     : has(self.secretRef)'
+                                - message: only one of value and secretRef can be
+                                    set
+                                  rule: '!(has(self.value) && has(self.secretRef))'
                             type: object
                           database:
                             description: The Redis database index to use.
@@ -428,6 +437,8 @@ spec:
                             - message: value required when type=inline; secretRef
                                 required when type=secretRef
                               rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                            - message: only one of value and secretRef can be set
+                              rule: '!(has(self.value) && has(self.secretRef))'
                           port:
                             maximum: 65535
                             minimum: 1
@@ -625,6 +636,9 @@ spec:
                                     required when type=secretRef
                                   rule: 'self.type == ''inline'' ? has(self.value)
                                     : has(self.secretRef)'
+                                - message: only one of value and secretRef can be
+                                    set
+                                  rule: '!(has(self.value) && has(self.secretRef))'
                               azureClientID:
                                 maxLength: 253
                                 type: string
@@ -686,6 +700,9 @@ spec:
                                     required when type=secretRef
                                   rule: 'self.type == ''inline'' ? has(self.value)
                                     : has(self.secretRef)'
+                                - message: only one of value and secretRef can be
+                                    set
+                                  rule: '!(has(self.value) && has(self.secretRef))'
                               azureTenantID:
                                 maxLength: 253
                                 type: string
@@ -747,6 +764,9 @@ spec:
                                     required when type=secretRef
                                   rule: 'self.type == ''inline'' ? has(self.value)
                                     : has(self.secretRef)'
+                                - message: only one of value and secretRef can be
+                                    set
+                                  rule: '!(has(self.value) && has(self.secretRef))'
                             type: object
                           clusterMaxRedirections:
                             type: integer
@@ -842,6 +862,8 @@ spec:
                             - message: value required when type=inline; secretRef
                                 required when type=secretRef
                               rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                            - message: only one of value and secretRef can be set
+                              rule: '!(has(self.value) && has(self.secretRef))'
                           port:
                             description: |-
                               An integer representing a port number between 0 and 65535, inclusive.
@@ -945,6 +967,8 @@ spec:
                             - message: value required when type=inline; secretRef
                                 required when type=secretRef
                               rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                            - message: only one of value and secretRef can be set
+                              rule: '!(has(self.value) && has(self.secretRef))'
                           sentinelRole:
                             enum:
                             - master
@@ -1219,6 +1243,8 @@ spec:
                             - message: value required when type=inline; secretRef
                                 required when type=secretRef
                               rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                            - message: only one of value and secretRef can be set
+                              rule: '!(has(self.value) && has(self.secretRef))'
                           port:
                             maximum: 65535
                             minimum: 1
@@ -1287,6 +1313,8 @@ spec:
                             - message: value required when type=inline; secretRef
                                 required when type=secretRef
                               rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                            - message: only one of value and secretRef can be set
+                              rule: '!(has(self.value) && has(self.secretRef))'
                           sslRequired:
                             enum:
                             - Enabled

@@ -113,10 +113,13 @@ func TestAIGatewayModel(t *testing.T) {
 						Dimensions:     1536,
 						DistanceMetric: "cosine",
 						Host:           "pgvector.example.com",
-						Password:       "pgvector-password",
-						Port:           5432,
-						Threshold:      0.7,
-						SSL:            aiconfigurationv1alpha1.AIGatewayModelVectorDBConfigPgVectorSSL{Enabled: "Enabled"},
+						Password: aiconfigurationv1alpha1.SensitiveDataSource{
+							Type:  aiconfigurationv1alpha1.SensitiveDataSourceTypeInline,
+							Value: new("pgvector-password"),
+						},
+						Port:      5432,
+						Threshold: 0.7,
+						SSL:       aiconfigurationv1alpha1.AIGatewayModelVectorDBConfigPgVectorSSL{Enabled: "Enabled"},
 					},
 				},
 			}

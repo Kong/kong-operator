@@ -49,9 +49,19 @@ import (
 )
 
 // ToAIGWModel converts the AIGatewayModel into ai-deck-converter's aigw.Model, resolving CR
-// references to the referenced entities' AI Gateway names.
+// references to the referenced entities' AI Gateway names, and the vector DB and proxy
+// basic-auth passwords' secretRefs to their Secret values.
 func (obj *AIGatewayModel) ToAIGWModel(ctx context.Context, cl client.Client) (*aigw.Model, error) {
-	spec := &obj.Spec.APISpec
+	if err := checkCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
+		return nil, fmt.Errorf("AIGatewayModel %s/%s: %w", obj.Namespace, obj.Name, err)
+	}
+
+	// Resolve secretRefs against a copy: sdkOpsAPISpec deep-copies the spec, so the
+	// caller's object is not mutated.
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
+	if err != nil {
+		return nil, fmt.Errorf("resolving AIGatewayModel %s/%s secrets: %w", obj.Namespace, obj.Name, noteSecretLabelRequirement(err))
+	}
 	if spec.AIGatewayModelConfig == nil {
 		return nil, fmt.Errorf("AIGatewayModel %s/%s: spec.apiSpec is required", obj.Namespace, obj.Name)
 	}

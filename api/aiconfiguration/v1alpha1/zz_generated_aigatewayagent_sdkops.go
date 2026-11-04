@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -184,6 +185,7 @@ func (s *AIGatewayAgentAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 		return nil, fmt.Errorf("failed to decode AIGatewayAgentAPISpec: %w", err)
 	}
 	payload = flattenSDKUnionsExcept(payload, AIGatewayAgentSDKOpsFreeformKeyFields)
+	payload = flattenSensitiveDataExcept(payload, AIGatewayAgentSDKOpsFreeformKeyFields)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
 	payload = renameKeysToSDKExcept(payload, AIGatewayAgentSDKOpsFreeformKeyFields)
@@ -197,6 +199,53 @@ func (s *AIGatewayAgentAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 		return nil, fmt.Errorf("failed to marshal normalized AIGatewayAgentAPISpec: %w", err)
 	}
 	return data, nil
+}
+
+func (obj *AIGatewayAgent) sdkOpsAPISpec(ctx context.Context, cl client.Client) (*AIGatewayAgentAPISpec, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("AIGatewayAgent is nil")
+	}
+
+	// Resolve against a deep copy: resolved values are written into the spec
+	// being walked, and union variants and slices are shared by reference, so
+	// a shallow copy would leak them into obj (e.g. the informer cache).
+	apiSpec := *obj.Spec.APISpec.DeepCopy()
+	// Resolve spec.apiSpec.config.proxy.auth.password
+	{
+		src := apiSpec.Config.Proxy.Auth.Password
+		if src.Type == SensitiveDataSourceTypeSecretRef {
+			if src.SecretRef == nil {
+				return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.config.proxy.auth.password")
+			}
+			namespace := obj.GetNamespace()
+			if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+				namespace = *src.SecretRef.Namespace
+			}
+			var secret corev1.Secret
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+				return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+			}
+			secretBytes, ok := secret.Data[src.SecretRef.Key]
+			if !ok {
+				return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+			}
+			resolved := string(secretBytes)
+			apiSpec.Config.Proxy.Auth.Password.Value = &resolved
+		}
+	}
+	return &apiSpec, nil
+}
+
+// GetSensitiveDataSecretRefs returns all Secret references used to populate sensitive SDK payload fields.
+func (obj *AIGatewayAgent) GetSensitiveDataSecretRefs() []SensitiveDataSecretRef {
+	if obj == nil {
+		return nil
+	}
+	var refs []SensitiveDataSecretRef
+	if obj.Spec.APISpec.Config.Proxy.Auth.Password.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.Config.Proxy.Auth.Password.SecretRef != nil {
+		refs = append(refs, *obj.Spec.APISpec.Config.Proxy.Auth.Password.SecretRef)
+	}
+	return refs
 }
 
 // resolveAIGatewayAgentPolicies resolves the CR references in spec.apiSpec.policies
@@ -501,9 +550,12 @@ func (obj *AIGatewayAgent) CrossNamespaceSiblingReferences() []CrossNamespaceRef
 }
 
 // ToCreateAIGatewayAgentRequest converts the AIGatewayAgent to the SDK type
-// sdkkonnectcomp.CreateAIGatewayAgentRequest, resolving referenced CRs to Konnect IDs via the provided client.
+// sdkkonnectcomp.CreateAIGatewayAgentRequest, resolving referenced Secrets, resolving referenced CRs to Konnect IDs via the provided client.
 func (obj *AIGatewayAgent) ToCreateAIGatewayAgentRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.CreateAIGatewayAgentRequest, error) {
-	spec := &obj.Spec.APISpec
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
+	if err != nil {
+		return nil, err
+	}
 	data, err := spec.marshalSDKOpsPayload()
 	if err != nil {
 		return nil, err
@@ -573,9 +625,12 @@ func (obj *AIGatewayAgent) ToCreateAIGatewayAgentRequest(ctx context.Context, cl
 }
 
 // ToUpdateAIGatewayAgentRequest converts the AIGatewayAgent to the SDK type
-// sdkkonnectcomp.UpdateAIGatewayAgentRequest, resolving referenced CRs to Konnect IDs via the provided client.
+// sdkkonnectcomp.UpdateAIGatewayAgentRequest, resolving referenced Secrets, resolving referenced CRs to Konnect IDs via the provided client.
 func (obj *AIGatewayAgent) ToUpdateAIGatewayAgentRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.UpdateAIGatewayAgentRequest, error) {
-	spec := &obj.Spec.APISpec
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
+	if err != nil {
+		return nil, err
+	}
 	data, err := spec.marshalSDKOpsPayload()
 	if err != nil {
 		return nil, err

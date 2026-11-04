@@ -1660,8 +1660,7 @@ type AIGWOpenIDConnectGeneratedConfigClusterCacheRedis struct {
 	// If undefined, no AUTH commands are sent to Redis.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Password string `json:"password,omitzero"`
+	Password SensitiveDataSource `json:"password,omitzero"`
 	// An integer representing a port number between 0 and 65535, inclusive.
 	//
 	// +optional
@@ -1699,8 +1698,7 @@ type AIGWOpenIDConnectGeneratedConfigClusterCacheRedis struct {
 	// If undefined, no AUTH commands are sent to Redis Sentinels.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	SentinelPassword string `json:"sentinelPassword,omitzero"`
+	SentinelPassword SensitiveDataSource `json:"sentinelPassword,omitzero"`
 	// Sentinel role to use for Redis connections when the `redis` strategy is
 	// defined.
 	// Defining this value implies using Redis Sentinel.
@@ -2068,8 +2066,7 @@ type AIGWOpenIDConnectGeneratedConfigRedis struct {
 	// If undefined, no AUTH commands are sent to Redis.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Password string `json:"password,omitzero"`
+	Password SensitiveDataSource `json:"password,omitzero"`
 	// An integer representing a port number between 0 and 65535, inclusive.
 	//
 	// +optional
@@ -2112,8 +2109,7 @@ type AIGWOpenIDConnectGeneratedConfigRedis struct {
 	// If undefined, no AUTH commands are sent to Redis Sentinels.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	SentinelPassword string `json:"sentinelPassword,omitzero"`
+	SentinelPassword SensitiveDataSource `json:"sentinelPassword,omitzero"`
 	// Sentinel role to use for Redis connections when the `redis` strategy is
 	// defined.
 	// Defining this value implies using Redis Sentinel.
@@ -11162,8 +11158,7 @@ type AIGatewayModelVectorDBConfigPgVector struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Password string `json:"password,omitzero"`
+	Password SensitiveDataSource `json:"password,omitzero"`
 	// the port of the pgvector database
 	//
 	// +optional
@@ -11290,8 +11285,7 @@ type AIGatewayModelVectorDBConfigRedis struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Password string `json:"password,omitzero"`
+	Password SensitiveDataSource `json:"password,omitzero"`
 	// An integer representing a port number between 0 and 65535, inclusive.
 	// This field is
 	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
@@ -11447,8 +11441,7 @@ type AIGatewayModelVectorDBConfigRedisSentinel struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Password string `json:"password,omitzero"`
+	Password SensitiveDataSource `json:"password,omitzero"`
 	// Sentinel role to use for Redis connections when the `redis` strategy is
 	// defined.
 	// Defining this value implies using Redis Sentinel.
@@ -11797,8 +11790,7 @@ type AIGatewayProxyConfigAuth struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Password string `json:"password,omitzero"`
+	Password SensitiveDataSource `json:"password,omitzero"`
 	// The username to use for proxy authentication.
 	// This field is
 	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
@@ -11979,8 +11971,7 @@ type AIGatewayRedisCloudConfiguration struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Password string `json:"password,omitzero"`
+	Password SensitiveDataSource `json:"password,omitzero"`
 	// An integer representing a port number between 0 and 65535, inclusive.
 	// This field is
 	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
@@ -12130,8 +12121,7 @@ type AIGatewayRedisCloudConfigurationSentinel struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Password string `json:"password,omitzero"`
+	Password SensitiveDataSource `json:"password,omitzero"`
 	// Sentinel role to use for Redis connections when the `redis` strategy is
 	// defined.
 	// Defining this value implies using Redis Sentinel.

@@ -82,6 +82,16 @@
   `Ready=False` with reason `EndpointMismatch`. Use a `serverURL` without a path
   to keep the previous behaviour.
   [#6265](https://github.com/Kong/kong-operator/pull/6265)
+- AI Gateway: the Redis and Sentinel `password` fields of the OIDC `redis` and
+  `clusterCacheRedis` blocks, the vector database passwords of a semantic
+  model, the Redis passwords of the token-vault cache, and the proxy basic auth
+  `password` now accept a `SensitiveDataSource`. A value can come from a
+  Kubernetes Secret or stay inline.
+  **On upgrade, the field shape changes from a string to an object. A manifest
+  that sets `password: secret` must use `password: value: secret`. Stored
+  objects still decode, because a bare string reads as an inline value, but any
+  update must use the object shape.**
+  [#6433](https://github.com/Kong/kong-operator/pull/6433)
 
 ### Fixed
 

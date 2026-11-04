@@ -17,11 +17,21 @@ import (
 
 // ToAIGWAgent converts the AIGatewayAgent into ai-deck-converter's aigw.Agent, resolving
 // spec.apiSpec.policies and spec.apiSpec.access (ACL consumer groups and auth strategies)
-// references to the referenced entities' names.
-//
-// It carries no secretRefs, so unlike e.g. AIGatewayConsumer it needs no secret resolution.
+// references to the referenced entities' names, and the proxy's basic-auth password
+// secretRef to its Secret value.
 func (obj *AIGatewayAgent) ToAIGWAgent(ctx context.Context, cl client.Client) (*aigw.Agent, error) {
-	data, err := obj.Spec.APISpec.marshalAIGWAgentPayload()
+	if err := checkCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
+		return nil, fmt.Errorf("AIGatewayAgent %s/%s: %w", obj.Namespace, obj.Name, err)
+	}
+
+	// Resolve secretRefs against a copy: sdkOpsAPISpec deep-copies the spec, so the
+	// caller's object is not mutated.
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
+	if err != nil {
+		return nil, fmt.Errorf("resolving AIGatewayAgent %s/%s secrets: %w", obj.Namespace, obj.Name, noteSecretLabelRequirement(err))
+	}
+
+	data, err := spec.marshalAIGWAgentPayload()
 	if err != nil {
 		return nil, fmt.Errorf("marshaling AIGatewayAgent %s/%s: %w", obj.Namespace, obj.Name, err)
 	}

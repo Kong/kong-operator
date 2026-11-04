@@ -7,6 +7,7 @@ import (
 	"github.com/Kong/ai-deck-converter/aigw"
 	"github.com/stretchr/testify/require"
 	yaml "gopkg.in/yaml.v3"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -310,6 +311,7 @@ func TestAIGatewayModel_ToAIGWModel_SemanticBalancer(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, AddToScheme(scheme))
 
+	pgVectorPassword := "{vault://env/lcl-pgvector-password}"
 	obj := &AIGatewayModel{
 		Name: "sample-ai-gw-semantic-model", Namespace: "default",
 		Spec: AIGatewayModelSpec{
@@ -342,10 +344,13 @@ func TestAIGatewayModel_ToAIGWModel_SemanticBalancer(t *testing.T) {
 											Dimensions:     1536,
 											DistanceMetric: "cosine",
 											Host:           "pgvector.aigw-backends.svc.cluster.local",
-											Password:       "{vault://env/lcl-pgvector-password}",
-											Port:           5432,
-											Threshold:      0.7,
-											SSL:            AIGatewayModelVectorDBConfigPgVectorSSL{Enabled: "Enabled"},
+											Password: SensitiveDataSource{
+												Type:  SensitiveDataSourceTypeInline,
+												Value: &pgVectorPassword,
+											},
+											Port:      5432,
+											Threshold: 0.7,
+											SSL:       AIGatewayModelVectorDBConfigPgVectorSSL{Enabled: "Enabled"},
 										},
 									},
 								},
@@ -401,6 +406,64 @@ func TestAIGatewayModel_ToAIGWModel_SemanticBalancer(t *testing.T) {
 		},
 		"auth": map[string]any{"allow_override": true},
 	}, balancer["embeddings"])
+}
+
+// TestAIGatewayModel_ToAIGWModel_ResolvesVectorDBPassword pins that the pgvector
+// password comes from its Secret when it uses the SensitiveDataSource secretRef
+// shape.
+func TestAIGatewayModel_ToAIGWModel_ResolvesVectorDBPassword(t *testing.T) {
+	t.Parallel()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, AddToScheme(scheme))
+	require.NoError(t, corev1.AddToScheme(scheme))
+
+	obj := &AIGatewayModel{
+		Name: "semantic-model", Namespace: "default",
+		Spec: AIGatewayModelSpec{
+			APISpec: AIGatewayModelAPISpec{
+				AIGatewayModelConfig: &AIGatewayModelConfig{
+					Type: AIGatewayModelConfigTypeModel,
+					Model: &AIGatewayModelModel{
+						Config: AIGatewayModelModelConfig{
+							Balancer: &AIGatewayModelModelConfigBalancer{
+								Algorithm: AIGatewayModelModelConfigBalancerTypeSemantic,
+								Semantic: &AIGatewayModelBalancerSemanticConfig{
+									Embeddings: AIGatewayModelBalancerSemanticConfigEmbeddings{
+										Name:     "text-embedding-3-small",
+										Provider: "ai-gw-provider-openai",
+										Config: &AIGatewayModelBalancerSemanticConfigEmbeddingsConfig{
+											Type: AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeOpenai,
+										},
+									},
+									Vectordb: &AIGatewayModelBalancerSemanticConfigVectordb{
+										Type: AIGatewayModelBalancerSemanticConfigVectordbTypePgVector,
+										PgVector: &AIGatewayModelVectorDBConfigPgVector{
+											Database: "semantic",
+											Password: redisPasswordRef("pg-credentials", "password"),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	objects := append(aigwFixtureReferences(), &corev1.Secret{
+		Name: "pg-credentials", Namespace: "default",
+		Data: map[string][]byte{"password": []byte("pg-pass")},
+	})
+	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
+
+	got, err := obj.ToAIGWModel(t.Context(), cl)
+	require.NoError(t, err)
+	require.NotNil(t, got.Config.Balancer)
+	vectordb, ok := got.Config.Balancer.Fields["vectordb"].(map[string]any)
+	require.True(t, ok)
+	require.Equal(t, "pg-pass", vectordb["password"])
 }
 
 // TestAIGatewayModel_ToAIGWModel_SemanticBalancerProviderNamedLikeASibling pins the collision

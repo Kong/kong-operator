@@ -86,6 +86,8 @@ spec:
                     - message: value required when type=inline; secretRef required
                         when type=secretRef
                       rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                    - message: only one of value and secretRef can be set
+                      rule: '!(has(self.value) && has(self.secretRef))'
                   description:
                     maxLength: 253
                     type: string

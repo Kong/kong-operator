@@ -193,6 +193,7 @@ type AIGatewayPolicyStatus struct {
 // sourced from a Kubernetes Secret.
 //
 // +kubebuilder:validation:XValidation:rule="self.type == 'inline' ? has(self.value) : has(self.secretRef)",message="value required when type=inline; secretRef required when type=secretRef"
+// +kubebuilder:validation:XValidation:rule="!(has(self.value) && has(self.secretRef))",message="only one of value and secretRef can be set"
 type AIGatewayPolicyConfigDataSource struct {
 	// Type indicates the source of the sensitive data: 'inline' or 'secretRef'.
 	//

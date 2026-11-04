@@ -666,8 +666,44 @@ spec:
                                             type: integer
                                         type: object
                                       password:
-                                        maxLength: 253
-                                        type: string
+                                        properties:
+                                          secretRef:
+                                            properties:
+                                              key:
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                              name:
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                              namespace:
+                                                maxLength: 253
+                                                type: string
+                                            required:
+                                            - key
+                                            - name
+                                            type: object
+                                          type:
+                                            default: inline
+                                            enum:
+                                            - inline
+                                            - secretRef
+                                            type: string
+                                          value:
+                                            maxLength: 4096
+                                            type: string
+                                        required:
+                                        - type
+                                        type: object
+                                        x-kubernetes-validations:
+                                        - message: value required when type=inline;
+                                            secretRef required when type=secretRef
+                                          rule: 'self.type == ''inline'' ? has(self.value)
+                                            : has(self.secretRef)'
+                                        - message: only one of value and secretRef
+                                            can be set
+                                          rule: '!(has(self.value) && has(self.secretRef))'
                                       port:
                                         properties:
                                           type:
@@ -709,8 +745,44 @@ spec:
                                               type: object
                                             type: array
                                           password:
-                                            maxLength: 253
-                                            type: string
+                                            properties:
+                                              secretRef:
+                                                properties:
+                                                  key:
+                                                    maxLength: 253
+                                                    minLength: 1
+                                                    type: string
+                                                  name:
+                                                    maxLength: 253
+                                                    minLength: 1
+                                                    type: string
+                                                  namespace:
+                                                    maxLength: 253
+                                                    type: string
+                                                required:
+                                                - key
+                                                - name
+                                                type: object
+                                              type:
+                                                default: inline
+                                                enum:
+                                                - inline
+                                                - secretRef
+                                                type: string
+                                              value:
+                                                maxLength: 4096
+                                                type: string
+                                            required:
+                                            - type
+                                            type: object
+                                            x-kubernetes-validations:
+                                            - message: value required when type=inline;
+                                                secretRef required when type=secretRef
+                                              rule: 'self.type == ''inline'' ? has(self.value)
+                                                : has(self.secretRef)'
+                                            - message: only one of value and secretRef
+                                                can be set
+                                              rule: '!(has(self.value) && has(self.secretRef))'
                                           role:
                                             enum:
                                             - any
@@ -1001,8 +1073,44 @@ spec:
                                         type: integer
                                     type: object
                                   password:
-                                    maxLength: 253
-                                    type: string
+                                    properties:
+                                      secretRef:
+                                        properties:
+                                          key:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          name:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            maxLength: 253
+                                            type: string
+                                        required:
+                                        - key
+                                        - name
+                                        type: object
+                                      type:
+                                        default: inline
+                                        enum:
+                                        - inline
+                                        - secretRef
+                                        type: string
+                                      value:
+                                        maxLength: 4096
+                                        type: string
+                                    required:
+                                    - type
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: value required when type=inline; secretRef
+                                        required when type=secretRef
+                                      rule: 'self.type == ''inline'' ? has(self.value)
+                                        : has(self.secretRef)'
+                                    - message: only one of value and secretRef can
+                                        be set
+                                      rule: '!(has(self.value) && has(self.secretRef))'
                                   port:
                                     properties:
                                       type:
@@ -1044,8 +1152,44 @@ spec:
                                           type: object
                                         type: array
                                       password:
-                                        maxLength: 253
-                                        type: string
+                                        properties:
+                                          secretRef:
+                                            properties:
+                                              key:
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                              name:
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                              namespace:
+                                                maxLength: 253
+                                                type: string
+                                            required:
+                                            - key
+                                            - name
+                                            type: object
+                                          type:
+                                            default: inline
+                                            enum:
+                                            - inline
+                                            - secretRef
+                                            type: string
+                                          value:
+                                            maxLength: 4096
+                                            type: string
+                                        required:
+                                        - type
+                                        type: object
+                                        x-kubernetes-validations:
+                                        - message: value required when type=inline;
+                                            secretRef required when type=secretRef
+                                          rule: 'self.type == ''inline'' ? has(self.value)
+                                            : has(self.secretRef)'
+                                        - message: only one of value and secretRef
+                                            can be set
+                                          rule: '!(has(self.value) && has(self.secretRef))'
                                       role:
                                         enum:
                                         - any
@@ -1585,8 +1729,44 @@ spec:
                                         type: integer
                                     type: object
                                   password:
-                                    maxLength: 253
-                                    type: string
+                                    properties:
+                                      secretRef:
+                                        properties:
+                                          key:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          name:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            maxLength: 253
+                                            type: string
+                                        required:
+                                        - key
+                                        - name
+                                        type: object
+                                      type:
+                                        default: inline
+                                        enum:
+                                        - inline
+                                        - secretRef
+                                        type: string
+                                      value:
+                                        maxLength: 4096
+                                        type: string
+                                    required:
+                                    - type
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: value required when type=inline; secretRef
+                                        required when type=secretRef
+                                      rule: 'self.type == ''inline'' ? has(self.value)
+                                        : has(self.secretRef)'
+                                    - message: only one of value and secretRef can
+                                        be set
+                                      rule: '!(has(self.value) && has(self.secretRef))'
                                   port:
                                     properties:
                                       type:
@@ -1628,8 +1808,44 @@ spec:
                                           type: object
                                         type: array
                                       password:
-                                        maxLength: 253
-                                        type: string
+                                        properties:
+                                          secretRef:
+                                            properties:
+                                              key:
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                              name:
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                              namespace:
+                                                maxLength: 253
+                                                type: string
+                                            required:
+                                            - key
+                                            - name
+                                            type: object
+                                          type:
+                                            default: inline
+                                            enum:
+                                            - inline
+                                            - secretRef
+                                            type: string
+                                          value:
+                                            maxLength: 4096
+                                            type: string
+                                        required:
+                                        - type
+                                        type: object
+                                        x-kubernetes-validations:
+                                        - message: value required when type=inline;
+                                            secretRef required when type=secretRef
+                                          rule: 'self.type == ''inline'' ? has(self.value)
+                                            : has(self.secretRef)'
+                                        - message: only one of value and secretRef
+                                            can be set
+                                          rule: '!(has(self.value) && has(self.secretRef))'
                                       role:
                                         enum:
                                         - any
@@ -2434,8 +2650,44 @@ spec:
                                             type: integer
                                         type: object
                                       password:
-                                        maxLength: 253
-                                        type: string
+                                        properties:
+                                          secretRef:
+                                            properties:
+                                              key:
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                              name:
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                              namespace:
+                                                maxLength: 253
+                                                type: string
+                                            required:
+                                            - key
+                                            - name
+                                            type: object
+                                          type:
+                                            default: inline
+                                            enum:
+                                            - inline
+                                            - secretRef
+                                            type: string
+                                          value:
+                                            maxLength: 4096
+                                            type: string
+                                        required:
+                                        - type
+                                        type: object
+                                        x-kubernetes-validations:
+                                        - message: value required when type=inline;
+                                            secretRef required when type=secretRef
+                                          rule: 'self.type == ''inline'' ? has(self.value)
+                                            : has(self.secretRef)'
+                                        - message: only one of value and secretRef
+                                            can be set
+                                          rule: '!(has(self.value) && has(self.secretRef))'
                                       port:
                                         properties:
                                           type:
@@ -2477,8 +2729,44 @@ spec:
                                               type: object
                                             type: array
                                           password:
-                                            maxLength: 253
-                                            type: string
+                                            properties:
+                                              secretRef:
+                                                properties:
+                                                  key:
+                                                    maxLength: 253
+                                                    minLength: 1
+                                                    type: string
+                                                  name:
+                                                    maxLength: 253
+                                                    minLength: 1
+                                                    type: string
+                                                  namespace:
+                                                    maxLength: 253
+                                                    type: string
+                                                required:
+                                                - key
+                                                - name
+                                                type: object
+                                              type:
+                                                default: inline
+                                                enum:
+                                                - inline
+                                                - secretRef
+                                                type: string
+                                              value:
+                                                maxLength: 4096
+                                                type: string
+                                            required:
+                                            - type
+                                            type: object
+                                            x-kubernetes-validations:
+                                            - message: value required when type=inline;
+                                                secretRef required when type=secretRef
+                                              rule: 'self.type == ''inline'' ? has(self.value)
+                                                : has(self.secretRef)'
+                                            - message: only one of value and secretRef
+                                                can be set
+                                              rule: '!(has(self.value) && has(self.secretRef))'
                                           role:
                                             enum:
                                             - any
@@ -2715,8 +3003,44 @@ spec:
                                         type: integer
                                     type: object
                                   password:
-                                    maxLength: 253
-                                    type: string
+                                    properties:
+                                      secretRef:
+                                        properties:
+                                          key:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          name:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            maxLength: 253
+                                            type: string
+                                        required:
+                                        - key
+                                        - name
+                                        type: object
+                                      type:
+                                        default: inline
+                                        enum:
+                                        - inline
+                                        - secretRef
+                                        type: string
+                                      value:
+                                        maxLength: 4096
+                                        type: string
+                                    required:
+                                    - type
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: value required when type=inline; secretRef
+                                        required when type=secretRef
+                                      rule: 'self.type == ''inline'' ? has(self.value)
+                                        : has(self.secretRef)'
+                                    - message: only one of value and secretRef can
+                                        be set
+                                      rule: '!(has(self.value) && has(self.secretRef))'
                                   port:
                                     properties:
                                       type:
@@ -2758,8 +3082,44 @@ spec:
                                           type: object
                                         type: array
                                       password:
-                                        maxLength: 253
-                                        type: string
+                                        properties:
+                                          secretRef:
+                                            properties:
+                                              key:
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                              name:
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                              namespace:
+                                                maxLength: 253
+                                                type: string
+                                            required:
+                                            - key
+                                            - name
+                                            type: object
+                                          type:
+                                            default: inline
+                                            enum:
+                                            - inline
+                                            - secretRef
+                                            type: string
+                                          value:
+                                            maxLength: 4096
+                                            type: string
+                                        required:
+                                        - type
+                                        type: object
+                                        x-kubernetes-validations:
+                                        - message: value required when type=inline;
+                                            secretRef required when type=secretRef
+                                          rule: 'self.type == ''inline'' ? has(self.value)
+                                            : has(self.secretRef)'
+                                        - message: only one of value and secretRef
+                                            can be set
+                                          rule: '!(has(self.value) && has(self.secretRef))'
                                       role:
                                         enum:
                                         - any
@@ -3211,8 +3571,44 @@ spec:
                               auth:
                                 properties:
                                   password:
-                                    maxLength: 253
-                                    type: string
+                                    properties:
+                                      secretRef:
+                                        properties:
+                                          key:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          name:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            maxLength: 253
+                                            type: string
+                                        required:
+                                        - key
+                                        - name
+                                        type: object
+                                      type:
+                                        default: inline
+                                        enum:
+                                        - inline
+                                        - secretRef
+                                        type: string
+                                      value:
+                                        maxLength: 4096
+                                        type: string
+                                    required:
+                                    - type
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: value required when type=inline; secretRef
+                                        required when type=secretRef
+                                      rule: 'self.type == ''inline'' ? has(self.value)
+                                        : has(self.secretRef)'
+                                    - message: only one of value and secretRef can
+                                        be set
+                                      rule: '!(has(self.value) && has(self.secretRef))'
                                   username:
                                     maxLength: 253
                                     type: string
@@ -3425,8 +3821,44 @@ spec:
                                             type: integer
                                         type: object
                                       password:
-                                        maxLength: 253
-                                        type: string
+                                        properties:
+                                          secretRef:
+                                            properties:
+                                              key:
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                              name:
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                              namespace:
+                                                maxLength: 253
+                                                type: string
+                                            required:
+                                            - key
+                                            - name
+                                            type: object
+                                          type:
+                                            default: inline
+                                            enum:
+                                            - inline
+                                            - secretRef
+                                            type: string
+                                          value:
+                                            maxLength: 4096
+                                            type: string
+                                        required:
+                                        - type
+                                        type: object
+                                        x-kubernetes-validations:
+                                        - message: value required when type=inline;
+                                            secretRef required when type=secretRef
+                                          rule: 'self.type == ''inline'' ? has(self.value)
+                                            : has(self.secretRef)'
+                                        - message: only one of value and secretRef
+                                            can be set
+                                          rule: '!(has(self.value) && has(self.secretRef))'
                                       port:
                                         properties:
                                           type:
@@ -3468,8 +3900,44 @@ spec:
                                               type: object
                                             type: array
                                           password:
-                                            maxLength: 253
-                                            type: string
+                                            properties:
+                                              secretRef:
+                                                properties:
+                                                  key:
+                                                    maxLength: 253
+                                                    minLength: 1
+                                                    type: string
+                                                  name:
+                                                    maxLength: 253
+                                                    minLength: 1
+                                                    type: string
+                                                  namespace:
+                                                    maxLength: 253
+                                                    type: string
+                                                required:
+                                                - key
+                                                - name
+                                                type: object
+                                              type:
+                                                default: inline
+                                                enum:
+                                                - inline
+                                                - secretRef
+                                                type: string
+                                              value:
+                                                maxLength: 4096
+                                                type: string
+                                            required:
+                                            - type
+                                            type: object
+                                            x-kubernetes-validations:
+                                            - message: value required when type=inline;
+                                                secretRef required when type=secretRef
+                                              rule: 'self.type == ''inline'' ? has(self.value)
+                                                : has(self.secretRef)'
+                                            - message: only one of value and secretRef
+                                                can be set
+                                              rule: '!(has(self.value) && has(self.secretRef))'
                                           role:
                                             enum:
                                             - any
@@ -3760,8 +4228,44 @@ spec:
                                         type: integer
                                     type: object
                                   password:
-                                    maxLength: 253
-                                    type: string
+                                    properties:
+                                      secretRef:
+                                        properties:
+                                          key:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          name:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            maxLength: 253
+                                            type: string
+                                        required:
+                                        - key
+                                        - name
+                                        type: object
+                                      type:
+                                        default: inline
+                                        enum:
+                                        - inline
+                                        - secretRef
+                                        type: string
+                                      value:
+                                        maxLength: 4096
+                                        type: string
+                                    required:
+                                    - type
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: value required when type=inline; secretRef
+                                        required when type=secretRef
+                                      rule: 'self.type == ''inline'' ? has(self.value)
+                                        : has(self.secretRef)'
+                                    - message: only one of value and secretRef can
+                                        be set
+                                      rule: '!(has(self.value) && has(self.secretRef))'
                                   port:
                                     properties:
                                       type:
@@ -3803,8 +4307,44 @@ spec:
                                           type: object
                                         type: array
                                       password:
-                                        maxLength: 253
-                                        type: string
+                                        properties:
+                                          secretRef:
+                                            properties:
+                                              key:
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                              name:
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                              namespace:
+                                                maxLength: 253
+                                                type: string
+                                            required:
+                                            - key
+                                            - name
+                                            type: object
+                                          type:
+                                            default: inline
+                                            enum:
+                                            - inline
+                                            - secretRef
+                                            type: string
+                                          value:
+                                            maxLength: 4096
+                                            type: string
+                                        required:
+                                        - type
+                                        type: object
+                                        x-kubernetes-validations:
+                                        - message: value required when type=inline;
+                                            secretRef required when type=secretRef
+                                          rule: 'self.type == ''inline'' ? has(self.value)
+                                            : has(self.secretRef)'
+                                        - message: only one of value and secretRef
+                                            can be set
+                                          rule: '!(has(self.value) && has(self.secretRef))'
                                       role:
                                         enum:
                                         - any
@@ -4170,8 +4710,44 @@ spec:
                                             type: integer
                                         type: object
                                       password:
-                                        maxLength: 253
-                                        type: string
+                                        properties:
+                                          secretRef:
+                                            properties:
+                                              key:
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                              name:
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                              namespace:
+                                                maxLength: 253
+                                                type: string
+                                            required:
+                                            - key
+                                            - name
+                                            type: object
+                                          type:
+                                            default: inline
+                                            enum:
+                                            - inline
+                                            - secretRef
+                                            type: string
+                                          value:
+                                            maxLength: 4096
+                                            type: string
+                                        required:
+                                        - type
+                                        type: object
+                                        x-kubernetes-validations:
+                                        - message: value required when type=inline;
+                                            secretRef required when type=secretRef
+                                          rule: 'self.type == ''inline'' ? has(self.value)
+                                            : has(self.secretRef)'
+                                        - message: only one of value and secretRef
+                                            can be set
+                                          rule: '!(has(self.value) && has(self.secretRef))'
                                       port:
                                         properties:
                                           type:
@@ -4213,8 +4789,44 @@ spec:
                                               type: object
                                             type: array
                                           password:
-                                            maxLength: 253
-                                            type: string
+                                            properties:
+                                              secretRef:
+                                                properties:
+                                                  key:
+                                                    maxLength: 253
+                                                    minLength: 1
+                                                    type: string
+                                                  name:
+                                                    maxLength: 253
+                                                    minLength: 1
+                                                    type: string
+                                                  namespace:
+                                                    maxLength: 253
+                                                    type: string
+                                                required:
+                                                - key
+                                                - name
+                                                type: object
+                                              type:
+                                                default: inline
+                                                enum:
+                                                - inline
+                                                - secretRef
+                                                type: string
+                                              value:
+                                                maxLength: 4096
+                                                type: string
+                                            required:
+                                            - type
+                                            type: object
+                                            x-kubernetes-validations:
+                                            - message: value required when type=inline;
+                                                secretRef required when type=secretRef
+                                              rule: 'self.type == ''inline'' ? has(self.value)
+                                                : has(self.secretRef)'
+                                            - message: only one of value and secretRef
+                                                can be set
+                                              rule: '!(has(self.value) && has(self.secretRef))'
                                           role:
                                             enum:
                                             - any
@@ -4538,8 +5150,44 @@ spec:
                                         type: integer
                                     type: object
                                   password:
-                                    maxLength: 253
-                                    type: string
+                                    properties:
+                                      secretRef:
+                                        properties:
+                                          key:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          name:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            maxLength: 253
+                                            type: string
+                                        required:
+                                        - key
+                                        - name
+                                        type: object
+                                      type:
+                                        default: inline
+                                        enum:
+                                        - inline
+                                        - secretRef
+                                        type: string
+                                      value:
+                                        maxLength: 4096
+                                        type: string
+                                    required:
+                                    - type
+                                    type: object
+                                    x-kubernetes-validations:
+                                    - message: value required when type=inline; secretRef
+                                        required when type=secretRef
+                                      rule: 'self.type == ''inline'' ? has(self.value)
+                                        : has(self.secretRef)'
+                                    - message: only one of value and secretRef can
+                                        be set
+                                      rule: '!(has(self.value) && has(self.secretRef))'
                                   port:
                                     properties:
                                       type:
@@ -4581,8 +5229,44 @@ spec:
                                           type: object
                                         type: array
                                       password:
-                                        maxLength: 253
-                                        type: string
+                                        properties:
+                                          secretRef:
+                                            properties:
+                                              key:
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                              name:
+                                                maxLength: 253
+                                                minLength: 1
+                                                type: string
+                                              namespace:
+                                                maxLength: 253
+                                                type: string
+                                            required:
+                                            - key
+                                            - name
+                                            type: object
+                                          type:
+                                            default: inline
+                                            enum:
+                                            - inline
+                                            - secretRef
+                                            type: string
+                                          value:
+                                            maxLength: 4096
+                                            type: string
+                                        required:
+                                        - type
+                                        type: object
+                                        x-kubernetes-validations:
+                                        - message: value required when type=inline;
+                                            secretRef required when type=secretRef
+                                          rule: 'self.type == ''inline'' ? has(self.value)
+                                            : has(self.secretRef)'
+                                        - message: only one of value and secretRef
+                                            can be set
+                                          rule: '!(has(self.value) && has(self.secretRef))'
                                       role:
                                         enum:
                                         - any
