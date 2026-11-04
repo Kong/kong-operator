@@ -166,7 +166,7 @@ func TestSetRouteConditionResolvedRefsCondition_TCPRoute(t *testing.T) {
 		return map[string]*gatewayapi.RouteParentStatus{
 			parentKey: {
 				ParentRef:      gatewayapi.ParentReference{Name: "gw"},
-				ControllerName: gatewayapi.GatewayController("test"),
+				ControllerName: GetControllerName(),
 				Conditions:     conds,
 			},
 		}

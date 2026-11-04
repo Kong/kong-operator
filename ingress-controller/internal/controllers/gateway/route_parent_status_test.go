@@ -885,3 +885,67 @@ func TestParentStatusesForRoute(t *testing.T) {
 		}
 	})
 }
+
+func TestInitializeParentStatusesWithProgrammedCondition(t *testing.T) {
+	foreignParentStatus := gatewayapi.RouteParentStatus{
+		ParentRef: builder.NewParentReference().
+			Group("gateway.networking.k8s.io").
+			Kind("Gateway").
+			Namespace("namespace").
+			Name("unmanaged-gateway").
+			Build(),
+		ControllerName: "gateway.networking.k8s.io/stale-controller",
+		Conditions: []metav1.Condition{
+			newCondition(string(gatewayapi.RouteConditionAccepted), metav1.ConditionTrue, string(gatewayapi.RouteReasonAccepted), 7),
+		},
+	}
+	ownParentStatus := gatewayapi.RouteParentStatus{
+		ParentRef: builder.NewParentReference().
+			Group("gateway.networking.k8s.io").
+			Kind("Gateway").
+			Namespace("namespace").
+			Name("gateway1").
+			Build(),
+		ControllerName: GetControllerName(),
+	}
+
+	t.Run("foreign parent status entries are not modified", func(t *testing.T) {
+		route := &gatewayapi.HTTPRoute{
+			Name:       uuid.NewString(),
+			Namespace:  "namespace",
+			Generation: 7,
+		}
+		foreign := foreignParentStatus
+		parentStatuses := map[string]*gatewayapi.RouteParentStatus{
+			"namespace/unmanaged-gateway": &foreign,
+			"namespace/gateway1":          &ownParentStatus,
+		}
+
+		changed := initializeParentStatusesWithProgrammedCondition(route, parentStatuses)
+
+		assert.True(t, changed)
+		// The foreign entry must be left exactly as seeded.
+		assert.Equal(t, foreignParentStatus, foreign)
+		// Our own entry gets the Programmed=Unknown condition.
+		assert.Len(t, ownParentStatus.Conditions, 1)
+		assert.Equal(t, string(ConditionTypeProgrammed), ownParentStatus.Conditions[0].Type)
+		assert.Equal(t, metav1.ConditionUnknown, ownParentStatus.Conditions[0].Status)
+	})
+
+	t.Run("no changes when only a foreign parent status entry exists", func(t *testing.T) {
+		route := &gatewayapi.HTTPRoute{
+			Name:       uuid.NewString(),
+			Namespace:  "namespace",
+			Generation: 7,
+		}
+		foreign := foreignParentStatus
+		parentStatuses := map[string]*gatewayapi.RouteParentStatus{
+			"namespace/unmanaged-gateway": &foreign,
+		}
+
+		changed := initializeParentStatusesWithProgrammedCondition(route, parentStatuses)
+
+		assert.False(t, changed)
+		assert.Equal(t, foreignParentStatus, foreign)
+	})
+}
