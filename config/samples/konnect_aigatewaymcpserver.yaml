@@ -58,12 +58,12 @@ spec:
           #   - name: my-auth-strategy
           # Server-level consumer group ACLs (by metadata.name). The operator
           # resolves each reference to the referenced AIGatewayConsumerGroup
-          # CR's Konnect name at reconcile time.
+          # CR's Konnect name at reconcile time. Exactly one of allow, deny,
+          # allowWhen, or denyWhen can be set.
           # acls:
+          #   type: allow
           #   allow:
           #     - name: my-consumer-group
-          #   deny:
-          #     - name: another-consumer-group
           # Default per-tool ACLs, applied to every tool without its own
           # access.acls override.
           # defaultToolAcls:

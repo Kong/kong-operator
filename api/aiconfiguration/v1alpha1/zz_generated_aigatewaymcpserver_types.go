@@ -137,11 +137,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayMCPServerConfig) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayMCPServerConfig type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case AIGatewayMCPServerConfigTypeConversionListener:
 		if u.ConversionListener != nil {
@@ -183,6 +178,13 @@ func (u AIGatewayMCPServerConfig) MarshalJSON() ([]byte, error) {
 			}
 			m["upstream-server"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayMCPServerConfig type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }

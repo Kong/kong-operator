@@ -451,168 +451,170 @@ apiGroupVersions:
             kinds: [AIGatewayAuthStrategy]
             resolvesTo: name
           # Consumer group ACLs (by metadata.name, resolved to the consumer
-          # group's Konnect name). acls/defaultToolAcls are plain objects with
-          # allow/deny arrays; tool-level access.acls lives inside the tools
-          # array elements.
+          # group's Konnect name). Server-level `acls` is a oneOf union of
+          # {allow}, {deny}, {allow_when}, {deny_when} variants, flattened onto
+          # the union wrapper; defaultToolAcls is a plain object with allow/deny
+          # arrays, and tool-level access.acls lives inside the tools array
+          # elements.
           - path: spec.apiSpec.listener.access.consumer.acls.allow
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.listener.access.consumer.acls.deny
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.listener.access.consumer.defaultToolAcls.allow
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.listener.access.consumer.defaultToolAcls.deny
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.listener.access.oauthAccessToken.acls.allow
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.listener.access.oauthAccessToken.acls.deny
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.listener.access.oauthAccessToken.defaultToolAcls.allow
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.listener.access.oauthAccessToken.defaultToolAcls.deny
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.conversion-listener.access.consumer.acls.allow
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.conversion-listener.access.consumer.acls.deny
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.conversion-listener.access.consumer.defaultToolAcls.allow
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.conversion-listener.access.consumer.defaultToolAcls.deny
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.conversion-listener.access.oauthAccessToken.acls.allow
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.conversion-listener.access.oauthAccessToken.acls.deny
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultToolAcls.allow
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultToolAcls.deny
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.passthrough-listener.access.consumer.acls.allow
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.passthrough-listener.access.consumer.acls.deny
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.passthrough-listener.access.consumer.defaultToolAcls.allow
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.passthrough-listener.access.consumer.defaultToolAcls.deny
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.passthrough-listener.access.oauthAccessToken.acls.allow
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.passthrough-listener.access.oauthAccessToken.acls.deny
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultToolAcls.allow
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultToolAcls.deny
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.conversion-listener.tools.access.acls.allow
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.conversion-listener.tools.access.acls.deny
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.conversion-only.tools.access.acls.allow
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.conversion-only.tools.access.acls.deny
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.passthrough-listener.tools.access.acls.allow
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.passthrough-listener.tools.access.acls.deny
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.upstream-server.tools.access.acls.allow
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           - path: spec.apiSpec.upstream-server.tools.access.acls.deny
             kinds: [AIGatewayConsumerGroup]
             resolvesTo: name
-            refTypeName: AIGatewayMCPACLRef
+            refTypeName: AIGatewayACLRef
             supportCrossNamespaceReference: true
           # datastores are AIGatewayDatastore references (by metadata.name in
           # the same namespace, resolved to their Konnect names). A listener

@@ -1812,13 +1812,13 @@ func (obj *AIGatewayModel) ToCreateAIGatewayModelRequest(ctx context.Context, cl
 			access = map[string]any{}
 		}
 		switch {
-		case acls.Type == AIGatewayModelAccessAclsTypeAllow:
+		case acls.Allow != nil:
 			resolvedAPIAccessAclsAllowAllow, err := resolveAIGatewayModelAPIAccessAclsAllowAllow(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.api.access.acls.allow.allow references: %w", err)
 			}
 			access["acls"] = map[string]any{"allow": resolvedAPIAccessAclsAllowAllow}
-		case acls.Type == AIGatewayModelAccessAclsTypeDeny:
+		case acls.Deny != nil:
 			resolvedAPIAccessAclsDenyDeny, err := resolveAIGatewayModelAPIAccessAclsDenyDeny(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.api.access.acls.deny.deny references: %w", err)
@@ -1843,13 +1843,13 @@ func (obj *AIGatewayModel) ToCreateAIGatewayModelRequest(ctx context.Context, cl
 			access2 = map[string]any{}
 		}
 		switch {
-		case acls2.Type == AIGatewayModelAccessAclsTypeAllow:
+		case acls2.Allow != nil:
 			resolvedModelAccessAclsAllowAllow, err := resolveAIGatewayModelModelAccessAclsAllowAllow(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.model.access.acls.allow.allow references: %w", err)
 			}
 			access2["acls"] = map[string]any{"allow": resolvedModelAccessAclsAllowAllow}
-		case acls2.Type == AIGatewayModelAccessAclsTypeDeny:
+		case acls2.Deny != nil:
 			resolvedModelAccessAclsDenyDeny, err := resolveAIGatewayModelModelAccessAclsDenyDeny(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.model.access.acls.deny.deny references: %w", err)
@@ -2063,13 +2063,13 @@ func (obj *AIGatewayModel) ToUpdateAIGatewayModelRequest(ctx context.Context, cl
 			access = map[string]any{}
 		}
 		switch {
-		case acls.Type == AIGatewayModelAccessAclsTypeAllow:
+		case acls.Allow != nil:
 			resolvedAPIAccessAclsAllowAllow, err := resolveAIGatewayModelAPIAccessAclsAllowAllow(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.api.access.acls.allow.allow references: %w", err)
 			}
 			access["acls"] = map[string]any{"allow": resolvedAPIAccessAclsAllowAllow}
-		case acls.Type == AIGatewayModelAccessAclsTypeDeny:
+		case acls.Deny != nil:
 			resolvedAPIAccessAclsDenyDeny, err := resolveAIGatewayModelAPIAccessAclsDenyDeny(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.api.access.acls.deny.deny references: %w", err)
@@ -2094,13 +2094,13 @@ func (obj *AIGatewayModel) ToUpdateAIGatewayModelRequest(ctx context.Context, cl
 			access2 = map[string]any{}
 		}
 		switch {
-		case acls2.Type == AIGatewayModelAccessAclsTypeAllow:
+		case acls2.Allow != nil:
 			resolvedModelAccessAclsAllowAllow, err := resolveAIGatewayModelModelAccessAclsAllowAllow(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.model.access.acls.allow.allow references: %w", err)
 			}
 			access2["acls"] = map[string]any{"allow": resolvedModelAccessAclsAllowAllow}
-		case acls2.Type == AIGatewayModelAccessAclsTypeDeny:
+		case acls2.Deny != nil:
 			resolvedModelAccessAclsDenyDeny, err := resolveAIGatewayModelModelAccessAclsDenyDeny(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.model.access.acls.deny.deny references: %w", err)

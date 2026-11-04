@@ -122,11 +122,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayAuthStrategyConfig) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayAuthStrategyConfig type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case AIGatewayAuthStrategyConfigTypeKeyAuth:
 		if u.KeyAuth != nil {
@@ -144,6 +139,13 @@ func (u AIGatewayAuthStrategyConfig) MarshalJSON() ([]byte, error) {
 			}
 			m["openid-connect"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayAuthStrategyConfig type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }

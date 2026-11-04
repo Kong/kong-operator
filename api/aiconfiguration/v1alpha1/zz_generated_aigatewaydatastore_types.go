@@ -133,11 +133,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayDatastoreConfig) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayDatastoreConfig type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case AIGatewayDatastoreConfigTypeRedisCE:
 		if u.RedisCE != nil {
@@ -171,6 +166,13 @@ func (u AIGatewayDatastoreConfig) MarshalJSON() ([]byte, error) {
 			}
 			m["vectordb"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayDatastoreConfig type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
