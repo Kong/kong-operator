@@ -209,13 +209,9 @@ func (b *KongServiceBuilder) WithProtocol(protocol string) *KongServiceBuilder {
 }
 
 // WithClientCertificateRef sets the clientCertificateRef on the KongService.
-// name is the metadata.name of the KongCertificate in the same namespace.
-// No-op when name is empty.
-func (b *KongServiceBuilder) WithClientCertificateRef(name string) *KongServiceBuilder {
-	if name == "" {
-		return b
-	}
-	b.service.Spec.ClientCertificateRef = &commonv1alpha1.NamespacedRef{Name: name}
+// A nil reference leaves client authentication unset.
+func (b *KongServiceBuilder) WithClientCertificateRef(ref *commonv1alpha1.NamespacedRef) *KongServiceBuilder {
+	b.service.Spec.ClientCertificateRef = ref.DeepCopy()
 	return b
 }
 

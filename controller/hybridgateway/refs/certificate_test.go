@@ -59,13 +59,28 @@ func TestResolveListenerKongCertificate(t *testing.T) {
 		apiError     bool
 		mutate       func(*configurationv1alpha1.KongCertificate)
 		expected     gatewayv1.ListenerConditionReason
+		message      string
 	}{
 		{name: "same namespace uses existing certificate"},
 		{name: "different mirror objects can represent the same CP", crossNS: true, gatewayGrant: true, kongGrant: true},
 		{name: "missing Gateway ReferenceGrant", crossNS: true, kongGrant: true, expected: gatewayv1.ListenerReasonRefNotPermitted},
 		{name: "missing SNI KongReferenceGrant", crossNS: true, gatewayGrant: true, expected: gatewayv1.ListenerReasonRefNotPermitted},
 		{name: "certificate does not exist", missing: true, expected: gatewayv1.ListenerReasonInvalidCertificateRef},
-		{name: "on premises Gateway", onPrem: true, expected: gatewayv1.ListenerReasonInvalidCertificateRef},
+		{name: "on premises Gateway", onPrem: true, expected: gatewayv1.ListenerReasonInvalidCertificateRef,
+			message: "KongCertificate references are only supported for Konnect Gateways"},
+		{name: "missing certificate before Gateway ControlPlane", onPrem: true, missing: true,
+			expected: gatewayv1.ListenerReasonInvalidCertificateRef,
+			message:  "KongCertificate gateways/vault-certificate does not exist"},
+		{name: "unprogrammed certificate before Gateway ControlPlane", onPrem: true,
+			mutate: func(c *configurationv1alpha1.KongCertificate) {
+				c.Status.Conditions[0].Status = metav1.ConditionFalse
+			}, expected: gatewayv1.ListenerReasonInvalidCertificateRef, message: "is not programmed in Konnect yet"},
+		{name: "deleting certificate before Gateway ControlPlane", onPrem: true,
+			mutate: func(c *configurationv1alpha1.KongCertificate) {
+				c.DeletionTimestamp = new(metav1.Now())
+				c.Finalizers = []string{"test.example/cleanup"}
+			}, expected: gatewayv1.ListenerReasonInvalidCertificateRef, message: "is being deleted"},
+		{name: "certificate API failure before Gateway ControlPlane", onPrem: true, apiError: true},
 		{name: "different actual ControlPlane", otherCP: true, expected: gatewayv1.ListenerReasonInvalidCertificateRef},
 		{name: "certificate not programmed", mutate: func(c *configurationv1alpha1.KongCertificate) {
 			c.Status.Conditions[0].Status = metav1.ConditionFalse
@@ -159,6 +174,9 @@ func TestResolveListenerKongCertificate(t *testing.T) {
 						var invalid *ListenerCertificateRefError
 						require.ErrorAs(t, err, &invalid)
 						require.Equal(t, tt.expected, invalid.Reason)
+						if tt.message != "" {
+							require.Contains(t, invalid.Message, tt.message)
+						}
 						require.Nil(t, resolved)
 					default:
 						require.NoError(t, err)

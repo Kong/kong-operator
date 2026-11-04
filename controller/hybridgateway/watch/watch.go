@@ -86,11 +86,11 @@ func Watches(obj client.Object, cl client.Client, referenceGrantVersion schema.G
 				&corev1.Secret{},
 			},
 			{
-				MapRouteForKongResource[*configurationv1alpha1.KongCertificate](kindHTTPRoute),
+				MapRouteForClientCertificate(cl, kindHTTPRoute),
 				&configurationv1alpha1.KongCertificate{},
 			},
 			{
-				MapRouteForKongResource[*configurationv1alpha1.KongReferenceGrant](kindHTTPRoute),
+				MapRouteForClientCertificate(cl, kindHTTPRoute),
 				&configurationv1alpha1.KongReferenceGrant{},
 			},
 		}
@@ -153,11 +153,11 @@ func Watches(obj client.Object, cl client.Client, referenceGrantVersion schema.G
 				&corev1.Secret{},
 			},
 			{
-				MapRouteForKongResource[*configurationv1alpha1.KongCertificate](kindGRPCRoute),
+				MapRouteForClientCertificate(cl, kindGRPCRoute),
 				&configurationv1alpha1.KongCertificate{},
 			},
 			{
-				MapRouteForKongResource[*configurationv1alpha1.KongReferenceGrant](kindGRPCRoute),
+				MapRouteForClientCertificate(cl, kindGRPCRoute),
 				&configurationv1alpha1.KongReferenceGrant{},
 			},
 		}
@@ -204,11 +204,11 @@ func Watches(obj client.Object, cl client.Client, referenceGrantVersion schema.G
 				&corev1.Secret{},
 			},
 			{
-				MapRouteForKongResource[*configurationv1alpha1.KongCertificate](kindTLSRoute),
+				MapRouteForClientCertificate(cl, kindTLSRoute),
 				&configurationv1alpha1.KongCertificate{},
 			},
 			{
-				MapRouteForKongResource[*configurationv1alpha1.KongReferenceGrant](kindTLSRoute),
+				MapRouteForClientCertificate(cl, kindTLSRoute),
 				&configurationv1alpha1.KongReferenceGrant{},
 			},
 		}
@@ -255,11 +255,11 @@ func Watches(obj client.Object, cl client.Client, referenceGrantVersion schema.G
 				&corev1.Secret{},
 			},
 			{
-				MapRouteForKongResource[*configurationv1alpha1.KongCertificate](kindTCPRoute),
+				MapRouteForClientCertificate(cl, kindTCPRoute),
 				&configurationv1alpha1.KongCertificate{},
 			},
 			{
-				MapRouteForKongResource[*configurationv1alpha1.KongReferenceGrant](kindTCPRoute),
+				MapRouteForClientCertificate(cl, kindTCPRoute),
 				&configurationv1alpha1.KongReferenceGrant{},
 			},
 		}
@@ -306,11 +306,11 @@ func Watches(obj client.Object, cl client.Client, referenceGrantVersion schema.G
 				&corev1.Secret{},
 			},
 			{
-				MapRouteForKongResource[*configurationv1alpha1.KongCertificate](kindUDPRoute),
+				MapRouteForClientCertificate(cl, kindUDPRoute),
 				&configurationv1alpha1.KongCertificate{},
 			},
 			{
-				MapRouteForKongResource[*configurationv1alpha1.KongReferenceGrant](kindUDPRoute),
+				MapRouteForClientCertificate(cl, kindUDPRoute),
 				&configurationv1alpha1.KongReferenceGrant{},
 			},
 		}

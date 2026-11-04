@@ -22,6 +22,7 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
+	hybridgatewaymetadata "github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/controller/konnect/ops"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
@@ -348,6 +349,10 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 
 	// If a type has a KongCertificateRef (KongCertificate), handle it.
 	res, err = handleKongCertificateRef(ctx, r.Client, ent)
+	if service, ok := any(ent).(*configurationv1alpha1.KongService); ok &&
+		hybridgatewaymetadata.IsHybridGatewayService(service) && err != nil {
+		return ctrl.Result{}, err
+	}
 	if err != nil {
 		// If the referenced KongCertificate is being deleted and the object
 		// is not being deleted yet then requeue until it will
