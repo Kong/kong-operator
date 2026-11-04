@@ -304,3 +304,32 @@ behavior, on-prem does not preserve the last remote order or cache a historical
 ordering. After adding or deleting policy CRs, update the declaration to match;
 until then, an incomplete declaration or a reference to a deleted policy pauses
 the gateway's configuration updates.
+
+#### Verifying the gw-admin ordering contract
+
+The cluster-level round-trip contract test submits both orders of the same
+policies, then repeats the reads to check that gw-admin preserves their order
+and payload with its known defaults for omitted optional fields (`condition: ""`,
+`description: ""`, `enabled: true`). Comparison accounts for these defaults so
+they do not cause repeated pushes. It does not test listener,
+consume or produce ordering.
+
+To run it against a **dedicated real gw-admin**, set `GW_ADMIN_CONTRACT_URL`
+(including `/v1`), `GW_ADMIN_CONTRACT_SERVER_NAME`, and the certificate file paths
+`GW_ADMIN_CONTRACT_CA`, `GW_ADMIN_CONTRACT_CERT` and `GW_ADMIN_CONTRACT_KEY`, then run:
+
+```bash
+go test ./test/envtest/eventgateway -run '^TestGWAdminContract$/^cluster-level_policy_order_survives_an_entities_round_trip$' -count=1 -v
+```
+
+The tests replace the gateways served by that gw-admin and clean up their
+temporary gateway afterward. Without `GW_ADMIN_CONTRACT_URL`, the test uses the
+fake backend; passing against the fake does not establish the real backend's
+ordering contract.
+
+On 2026-11-04, this test passed against the pinned
+`kong/kong-gw-admin-cp-dev:pr-1502` image
+(`sha256:eb9db0feab9291065ba185f6fb5841661f39ce93868c311346ae3599d8d0522b`).
+That backend preserved both submitted orders across repeated reads and supplied
+the three defaults listed above. This observation applies to the tested image,
+not every gw-admin version.

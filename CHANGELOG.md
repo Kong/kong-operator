@@ -461,7 +461,9 @@
   policy ordering to `OnPremEventGateway` configuration, using Kubernetes policy
   references without Konnect IDs. Invalid owning declarations pause the
   gateway's complete configuration updates; deleting a chain restores the
-  default policy order without deleting policies.
+  default policy order without deleting policies. Configuration comparison
+  accounts for gw-admin's default cluster-policy condition, description and
+  enabled flag to avoid repeatedly pushing an unchanged configuration.
   [#6365](https://github.com/Kong/kong-operator/issues/6365)
 
 - Added the `EventGatewayVirtualClusterPolicyChain` CRD to declare the execution
