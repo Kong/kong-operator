@@ -7038,8 +7038,9 @@ type sdkOpsRootUnionMethod struct {
 type sdkOpsTestMethod struct {
 	sdkOpsMethod
 
-	ExpectError bool
-	TestFields  []sdkOpsTestField
+	ExpectError           bool
+	ExpectedErrorContains string
+	TestFields            []sdkOpsTestField
 }
 
 // sdkOpsBoolField represents a boolean field path that needs normalization
@@ -7626,10 +7627,19 @@ func (g *Generator) generateSDKOpsTest(entityName string, schema *parser.Schema,
 	testMethods := make([]sdkOpsTestMethod, 0, len(methods))
 	for _, method := range methods {
 		testFields := g.buildSDKOpsTestFields(entityName, schema.Properties, method)
+		expectError := len(testFields) == 0
+		expectedErrorContains := ""
+		if expectError {
+			if !hasRootOneOf(schema) {
+				return "", fmt.Errorf("cannot generate SDK ops test for %s: no testable fields and no stable expected error", entityName)
+			}
+			expectedErrorContains = fmt.Sprintf("%s config is required", entityName)
+		}
 		testMethods = append(testMethods, sdkOpsTestMethod{
-			sdkOpsMethod: method,
-			ExpectError:  len(testFields) == 0,
-			TestFields:   testFields,
+			sdkOpsMethod:          method,
+			ExpectError:           expectError,
+			ExpectedErrorContains: expectedErrorContains,
+			TestFields:            testFields,
 		})
 	}
 

@@ -2492,7 +2492,7 @@ func Test{{$.EntityName}}APISpec_{{.MethodName}}(t *testing.T) {
 	}
 	result, err := spec.{{.MethodName}}()
 {{- if .ExpectError}}
-	require.Error(t, err)
+	require.ErrorContains(t, err, {{printf "%q" .ExpectedErrorContains}})
 	require.Nil(t, result)
 {{- else}}
 	require.NoError(t, err)

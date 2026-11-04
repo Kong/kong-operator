@@ -4124,6 +4124,30 @@ func TestGenerateSDKOpsTest_SkipsTypeAssertionsForUpdateMethods(t *testing.T) {
 	assert.Equal(t, 1, strings.Count(content, `Type: "oidc"`))
 }
 
+func TestGenerateSDKOpsTest_NegativeCaseAssertsMissingConfigError(t *testing.T) {
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	schema := &parser.Schema{
+		OneOf: []*parser.Property{
+			{RefName: "AIGatewayCustomPolicyInstalledRequest"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayCustomPolicyRequest",
+			},
+			"update": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayCustomPolicyRequest",
+			},
+		},
+	}
+
+	content, err := g.generateSDKOpsTest("AIGatewayCustomPolicy", schema, opsConfig)
+	require.NoError(t, err)
+	assert.Contains(t, content, `require.ErrorContains(t, err, "AIGatewayCustomPolicy config is required")`)
+	assert.NotContains(t, content, `require.Error(t, err)`)
+}
+
 func TestParseSDKTypePath(t *testing.T) {
 	tests := []struct {
 		name       string
