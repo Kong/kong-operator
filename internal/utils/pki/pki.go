@@ -1,5 +1,5 @@
-// Package pki contains helpers to inspect the certificates the operator
-// issues, shared by the controllers that issue and renew them.
+// Package pki contains helpers to issue and inspect the certificates the
+// operator manages, shared by the controllers that issue and renew them.
 package pki
 
 import (
@@ -51,6 +51,13 @@ func LeafCertificate(certPEM, keyPEM []byte) *x509.Certificate {
 // is due for renewal: once two thirds of that validity have elapsed.
 func RenewalTime(issuedAt, notAfter time.Time) time.Time {
 	return notAfter.Add(-notAfter.Sub(issuedAt) / 3)
+}
+
+// WarningTime returns when a certificate the user provides, which the operator
+// can't renew, is reported as about to expire: once less than a sixth of its
+// validity is left, half of the renewal window cert-manager leaves by default.
+func WarningTime(cert *x509.Certificate) time.Time {
+	return cert.NotAfter.Add(-cert.NotAfter.Sub(cert.NotBefore) / 6)
 }
 
 // RenewalExtends reports whether a certificate issued again with the fresh

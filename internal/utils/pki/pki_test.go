@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"crypto/x509"
 	"slices"
 	"testing"
 	"time"
@@ -45,4 +46,10 @@ func TestRenewalExtends(t *testing.T) {
 	require.False(t, RenewalExtends(2*time.Hour, time.Hour), "doubling isn't enough")
 	require.False(t, RenewalExtends(time.Hour, time.Hour))
 	require.False(t, RenewalExtends(time.Hour, 200*365*24*time.Hour), "a remaining validity past half the range of a Duration must not overflow")
+}
+
+func TestWarningTime(t *testing.T) {
+	now := time.Now()
+	cert := &x509.Certificate{NotBefore: now, NotAfter: now.Add(60 * time.Hour)}
+	require.Equal(t, now.Add(50*time.Hour), WarningTime(cert), "once less than a sixth of its validity is left")
 }

@@ -56,7 +56,7 @@ func Test_resolveCertificateSecret(t *testing.T) {
 		secret := manualCertSecret(true)
 		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(egdp, secret).Build()
 
-		res, got, err := resolveCertificateSecret(t.Context(), cl, egdp, shareddataplane.ResolvedControlPlane{}, automaticFallbackUnexpected(t))
+		res, got, err := (&Reconciler{}).resolveCertificateSecret(t.Context(), cl, egdp, shareddataplane.ResolvedControlPlane{}, automaticFallbackUnexpected(t))
 		require.NoError(t, err)
 		assert.Equal(t, op.Noop, res)
 		require.NotNil(t, got)
@@ -78,34 +78,13 @@ func Test_resolveCertificateSecret(t *testing.T) {
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(egdp).Build()
 
 			called := false
-			_, _, err := resolveCertificateSecret(t.Context(), cl, egdp, shareddataplane.ResolvedControlPlane{},
+			_, _, err := (&Reconciler{}).resolveCertificateSecret(t.Context(), cl, egdp, shareddataplane.ResolvedControlPlane{},
 				func(context.Context, *eventgatewayv1alpha1.KegDataPlane) (op.Result, *corev1.Secret, error) {
 					called = true
 					return op.Noop, nil, nil
 				})
 			require.NoError(t, err)
 			assert.True(t, called)
-		})
-	}
-
-	for name, cs := range map[string]*eventgatewayv1alpha1.CertificateSecret{
-		"Automatic": {Provisioning: new(eventgatewayv1alpha1.AutomaticCertificateProvisioning)},
-		"Manual": {
-			Provisioning: new(eventgatewayv1alpha1.ManualCertificateProvisioning),
-			SecretRef:    &eventgatewayv1alpha1.SecretRef{Name: manualCertSecretName},
-		},
-	} {
-		t.Run(name+" with an onpremNamespacedRef: refused before provisioning", func(t *testing.T) {
-			egdp := newOnPremEGDP()
-			egdp.Spec.CertificateSecret = cs
-			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(egdp, manualCertSecret(true)).Build()
-
-			res, got, err := resolveCertificateSecret(t.Context(), cl, egdp, shareddataplane.ResolvedControlPlane{}, automaticFallbackUnexpected(t))
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "an onpremNamespacedRef is not supported by the controller yet")
-			assert.Equal(t, op.Noop, res)
-			assert.Nil(t, got)
-			assert.Empty(t, egdp.Status.Conditions)
 		})
 	}
 }
@@ -152,7 +131,7 @@ func Test_cleanupStaleCertificates(t *testing.T) {
 			automaticSecret(egdp),
 		).Build()
 
-		require.NoError(t, cleanupStaleCertificates(t.Context(), cl, logr.Discard(), egdp, shareddataplane.ResolvedControlPlane{}, checksum))
+		require.NoError(t, (&Reconciler{}).cleanupStaleCertificates(t.Context(), cl, logr.Discard(), egdp, shareddataplane.ResolvedControlPlane{}, checksum))
 
 		assert.True(t, exists(t, cl, &configurationv1alpha1.EventGatewayDataPlaneCertificate{}, current))
 		assert.False(t, exists(t, cl, &configurationv1alpha1.EventGatewayDataPlaneCertificate{}, egdp.Name))
@@ -169,7 +148,7 @@ func Test_cleanupStaleCertificates(t *testing.T) {
 			automaticSecret(egdp),
 		).Build()
 
-		require.NoError(t, cleanupStaleCertificates(t.Context(), cl, logr.Discard(), egdp, shareddataplane.ResolvedControlPlane{}, checksum))
+		require.NoError(t, (&Reconciler{}).cleanupStaleCertificates(t.Context(), cl, logr.Discard(), egdp, shareddataplane.ResolvedControlPlane{}, checksum))
 
 		assert.False(t, exists(t, cl, &corev1.Secret{}, "automatic-cert"))
 		assert.True(t, exists(t, cl, &corev1.Secret{}, manualCertSecretName), "the user-owned Secret must never be touched")

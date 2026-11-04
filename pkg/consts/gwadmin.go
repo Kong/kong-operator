@@ -69,9 +69,9 @@ const (
 	// Deployment, holds the namespace of the GWAdmin it pulls the
 	// configuration from: its rollouts gate the rotations of that GWAdmin.
 	// The controller managing the data plane sets it, with
-	// GWAdminDataPlaneNameLabel, when it creates the Deployment, and never
-	// removes them while the data plane runs: a GWAdmin with no data plane
-	// rotates without waiting.
+	// GWAdminDataPlaneNameLabel, on the Deployment, and removes them once its
+	// gateway is gone, or being deleted, as its pods then never move, even if
+	// they still run: a GWAdmin with no such data plane rotates without waiting.
 	GWAdminDataPlaneNamespaceLabel = OperatorLabelPrefix + "gwadmin-namespace"
 	// GWAdminDataPlaneNameLabel is the label that, set on a data plane
 	// Deployment, holds the name of the GWAdmin it pulls the configuration from.
@@ -104,11 +104,11 @@ const (
 	DefaultGWAdminBaseImage = "kong/kong-gw-admin-cp-dev"
 	// DefaultGWAdminTag is the default image tag for the gw-admin container.
 	// gw-admin has no release yet: the tag pins the dev image by digest, the
-	// build of its pull request 1502 serving version 1.11.0 of its API and
+	// build of its pull request 1520 serving version 1.11.0 of its API and
 	// deleting the data plane certificates of a gateway with it, and must be
 	// bumped by hand, to a main-<commit> build once that is merged.
 	// TODO: move to a released image with a renovate annotation once gw-admin is released.
-	DefaultGWAdminTag = "pr-1502@sha256:eb9db0feab9291065ba185f6fb5841661f39ce93868c311346ae3599d8d0522b"
+	DefaultGWAdminTag = "pr-1520@sha256:dcf2f39c9d9e4f308603701073c0fe57b903b65ee484756a20807bb598007f49"
 	// DefaultGWAdminImage is the full default image reference for the gw-admin container.
 	DefaultGWAdminImage = DefaultGWAdminBaseImage + ":" + DefaultGWAdminTag
 

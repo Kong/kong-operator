@@ -148,6 +148,10 @@ func StartReconcilersWithConfig(
 
 	// Setup cache indices for all types.
 	cfg := testutils.DefaultControllerConfigForTests(cfgOpts...)
+	// envtest installs every CRD of the operator: like manager.Run finds
+	// them, the indexes of the OnPremEventGateway control plane kind of the
+	// KegDataPlane controller are set up.
+	cfg.OnPremEventGatewayKindAvailable = true
 	require.NoError(t, kgomanager.SetupCacheIndexes(ctx, mgr, cfg))
 
 	for _, r := range reconcilers {

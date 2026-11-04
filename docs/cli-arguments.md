@@ -131,7 +131,7 @@ rows:
     default: '`false`'
   - flag: '`--enable-controller-onpremeventgateway`'
     type: '`bool`'
-    description: "Enable the on-prem Event Gateway controller (alpha), pushing the OnPremEventGateways to gw-admin."
+    description: "Enable the on-prem Event Gateway controller (alpha), pushing the configuration of the OnPremEventGateways to gw-admin. The KEG DataPlanes of an OnPremEventGateway need it."
     default: '`false`'
   - flag: '`--enable-controlplane-config-dump`'
     type: '`bool`'

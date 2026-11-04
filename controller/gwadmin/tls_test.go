@@ -659,7 +659,7 @@ func TestEnsureTLS_ManualCAExpiryWarning(t *testing.T) {
 
 	m := ensure(t, r, gw, nil)
 	assert.NotContains(t, certificateCondition(gw).Message, "expires at")
-	warnAt := warningTime(caCert(t, ca))
+	warnAt := pki.WarningTime(caCert(t, ca))
 	assert.LessOrEqual(t, m.requeueAfter, warnAt.Sub(now))
 
 	now = warnAt.Add(-time.Minute)
@@ -702,7 +702,7 @@ func TestEnsureTLS_ManualCAValidity(t *testing.T) {
 		_, err := r.ensureTLS(t.Context(), gw, nil)
 		require.ErrorIs(t, err, errStop)
 		// Accepted up to 5 minutes before its NotBefore, for clock skew.
-		assert.InDelta(t, notBefore.Add(-clockSkew).Sub(now), stopRequeue(err), float64(time.Second))
+		assert.InDelta(t, notBefore.Add(-pki.ClockSkew).Sub(now), stopRequeue(err), float64(time.Second))
 		assert.InDelta(t, 50*time.Minute, stopRequeue(err), float64(time.Second))
 		cond := certificateCondition(gw)
 		assert.Equal(t, operatorv1alpha1.GWAdminReasonInvalidSecret, cond.Reason)

@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [Unreleased](#unreleased)
 - [v2.4.0-rapid.3.1](#v240-rapid31)
 - [v2.4.0-rapid.3.0](#v240-rapid30)
 - [v2.4.0-rapid.2.0](#v240-rapid20)
@@ -69,6 +70,17 @@
 - [v0.2.0](#v020)
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
+
+## [Unreleased]
+
+### Added
+
+- `KegDataPlane`: the operator deploys a data plane for an
+  `onpremNamespacedRef`, which pulls its configuration from the `GWAdmin` of the
+  gateway. Its client certificate can be `Automatic` or `Manual`, and `GWAdmin`
+  certificate authority rotations wait for the data plane to move to the new
+  authority. Its name must be a valid DNS-1035 label of at most 57 characters.
+  [#6435](https://github.com/Kong/kong-operator/pull/6435)
 
 ## [v2.4.0-rapid.3.1]
 
@@ -4480,6 +4492,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[Unreleased]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.3.1..HEAD
 [v2.4.0-rapid.3.1]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.3.0..v2.4.0-rapid.3.1
 [v2.4.0-rapid.3.0]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.2.0..v2.4.0-rapid.3.0
 [v2.4.0-rapid.2.0]: https://github.com/Kong/kong-operator/compare/v2.4.0-rapid.1..v2.4.0-rapid.2.0

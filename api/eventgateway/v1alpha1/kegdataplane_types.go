@@ -36,6 +36,7 @@ import (
 // +kubebuilder:resource:shortName=kegdp,categories=kong
 // +kubebuilder:printcolumn:name="Ready",description="The Resource is ready",type=string,JSONPath=`.status.conditions[?(@.type=='Ready')].status`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
+// +kubebuilder:validation:XValidation:rule="oldSelf.hasValue() || self.spec.controlPlaneRef.type != 'onpremNamespacedRef' || (self.metadata.name.size() <= 57 && self.metadata.name.matches('^[a-z]([-a-z0-9]*[a-z0-9])?$'))",optionalOldSelf=true,message="the name of a KegDataPlane of an OnPremEventGateway must be a valid DNS-1035 label of at most 57 characters, so that its labels and the name of its Service are valid"
 // +kong:channels=kong-operator
 type KegDataPlane struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -124,7 +125,12 @@ type KegDataPlaneSpec struct {
 	// so that GWAdmin needs a Manual clientCA: an Automatic one keeps its key
 	// in the namespace of Kong Operator. During a rotation of that CA, a
 	// certificate from the previous one stays trusted until every data plane
-	// runs a certificate from the new one; reissue it from the new CA.
+	// runs a certificate from the new one; reissue it from the new CA. The
+	// certificate is used from a copy, with its key, that Kong Operator keeps in
+	// a Secret of this namespace: a new certificate in the referenced Secret
+	// reaches the Pods once it is checked and registered on gw-admin, the previous
+	// one staying trusted until they rolled out, and new Pods keep starting with
+	// the last one if the referenced Secret is deleted or holds an invalid one.
 	//
 	// +optional
 	CertificateSecret *CertificateSecret `json:"certificateSecret,omitempty"`

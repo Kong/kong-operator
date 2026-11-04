@@ -38,6 +38,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
+	"github.com/kong/kong-operator/v2/internal/utils/pki"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
@@ -47,13 +48,13 @@ import (
 // cert-manager set NotBefore to the issuance time, so a freshly issued
 // certificate must not be rejected just because the operator's clock is
 // slightly behind the issuer's.
-const certificateClockSkewAllowance = 5 * time.Minute
+const certificateClockSkewAllowance = pki.ClockSkew
 
 // maxCertificateRequeue caps the delays derived from a certificate's validity
 // period. Far-future dates (e.g. a NotAfter of 9999-12-31) would otherwise
 // overflow [time.Duration], and the cap also re-validates long-lived
 // certificates at least once a day.
-const maxCertificateRequeue = 24 * time.Hour
+const maxCertificateRequeue = pki.MaxRenewalRequeue
 
 // RequeueAfterError is returned by certificate resolution when the
 // certificate can't be used yet but will become usable on its own at a known

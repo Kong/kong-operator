@@ -1,8 +1,10 @@
 # Sample attaching an Event Gateway entity to an OnPremEventGateway.
 #
 # The Konnect controllers leave the listener alone. The OnPremEventGateway
-# reconciler (--enable-controller-onpremeventgateway) pushes the gateway to
-# gw-admin, but not its entities yet.
+# reconciler (--enable-controller-onpremeventgateway) pushes it to the gw-admin
+# pods of the GWAdmin gw-admin: see onprem_eventgateway.yaml for one. Until
+# that GWAdmin exists, the gateway reports GWAdminResolved False with reason
+# NotFound, and the listener Programmed False with reason GatewayNotProgrammed.
 apiVersion: eventgateway.konghq.com/v1alpha1
 kind: OnPremEventGateway
 metadata:

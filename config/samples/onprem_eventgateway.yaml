@@ -1,10 +1,18 @@
 # Sample for the on-prem Event Gateway control plane CRD.
 #
 # The reconciler for OnPremEventGateway is opt in via
-# --enable-controller-onpremeventgateway. It pushes the gateway to the gw-admin
-# pods of the GWAdmin gw-admin, without its entities yet: the gateway reports
-# Programmed True once the gw-admin pods serving received it; those still
-# starting get it once they listen.
+# --enable-controller-onpremeventgateway. It pushes the configuration of the
+# gateway to every gw-admin pod of the GWAdmin named below, which the GWAdmin
+# controller (--enable-controller-gwadmin) deploys, over mutual TLS. The
+# KegDataPlane pulls it from there, with a client certificate issued from the
+# cp client CA of the GWAdmin and registered on the gateway.
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: GWAdmin
+metadata:
+  name: gw-admin
+  namespace: default
+spec: {}
+---
 apiVersion: eventgateway.konghq.com/v1alpha1
 kind: OnPremEventGateway
 metadata:
@@ -13,3 +21,14 @@ metadata:
 spec:
   gwAdminRef:
     name: gw-admin
+---
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: KegDataPlane
+metadata:
+  name: event-gateway-onprem-1
+  namespace: default
+spec:
+  controlPlaneRef:
+    type: onpremNamespacedRef
+    onpremNamespacedRef:
+      name: event-gateway-onprem-1

@@ -562,3 +562,37 @@ func TestNotProgrammedMessage(t *testing.T) {
 		assert.Equal(t, "AIGatewayDataPlaneCertificate is not yet programmed on the control plane: LeftOut: the gateway left it out", cond.Message)
 	})
 }
+
+func TestCheckCertificateProgrammedBeingDeleted(t *testing.T) {
+	conds := CertificateRegistrationConditions{Type: "Registered", NotProgrammedReason: "NotProgrammed", Target: "the control plane"}
+	cert := func(deleting bool) *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate {
+		c := &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
+			Name: "cert", Namespace: "default", Generation: 2,
+			Status: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateStatus{Conditions: []metav1.Condition{{
+				Type: konnectv1alpha1.KonnectEntityProgrammedConditionType, Status: metav1.ConditionTrue,
+				Reason: "Programmed", ObservedGeneration: 2, LastTransitionTime: metav1.Now(),
+			}}},
+		}
+		if deleting {
+			c.Finalizers = []string{"test/cleanup"}
+			c.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+		}
+		return c
+	}
+	for _, tc := range []struct {
+		name     string
+		deleting bool
+		want     bool
+	}{
+		{name: "programmed", want: true},
+		{name: "programmed, but being deleted", deleting: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(cert(tc.deleting)).Build()
+			r := newTestReconciler(cl, events.NewFakeRecorder(1))
+			got, err := r.checkCertificateProgrammed(t.Context(), newTestAIGWDP(), cert(false), conds)
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}

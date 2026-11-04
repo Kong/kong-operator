@@ -57,6 +57,31 @@ func TestEventGatewayDataPlane(t *testing.T) {
 		}.RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("name", func(t *testing.T) {
+		named := func(name string, onPrem bool) *eventgatewayv1alpha1.KegDataPlane {
+			dp := validDataPlane(ns.Name)
+			dp.GenerateName = ""
+			dp.Name = name
+			if onPrem {
+				dp.Spec.ControlPlaneRef = eventgatewayv1alpha1.ControlPlaneRef{
+					Type:                eventgatewayv1alpha1.ControlPlaneRefTypeOnPremNamespacedRef,
+					OnPremNamespacedRef: &eventgatewayv1alpha1.OnPremNamespacedRef{Name: "my-onprem-gateway"},
+				}
+			}
+			return dp
+		}
+		const invalid = "must be a valid DNS-1035 label of at most 57 characters"
+		common.TestCasesGroup[*eventgatewayv1alpha1.KegDataPlane]{
+			{Name: "on-prem: the longest name, whose Service name is 63 characters", TestObject: named(strings.Repeat("a", 57), true)},
+			{Name: "on-prem: a leading digit, which a Service name can't hold on every supported version", TestObject: named("1keg", true), ExpectedErrorMessage: new(invalid)},
+			{Name: "on-prem: a name too long for the name of its Service", TestObject: named(strings.Repeat("a", 58), true), ExpectedErrorMessage: new(invalid)},
+			{Name: "on-prem: a name too long for a label", TestObject: named(strings.Repeat("a", 64), true), ExpectedErrorMessage: new(invalid)},
+			{Name: "on-prem: a dot, which a Service name can't hold", TestObject: named("my.keg", true), ExpectedErrorMessage: new(invalid)},
+			{Name: "Konnect: the rule doesn't apply to a long name", TestObject: named(strings.Repeat("b", 64), false)},
+			{Name: "Konnect: the rule doesn't apply to a dot", TestObject: named("my.konnect-keg", false)},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("onpremNamespacedRef validation", func(t *testing.T) {
 		onPrem := func(mutate func(*eventgatewayv1alpha1.KegDataPlane)) *eventgatewayv1alpha1.KegDataPlane {
 			dp := &eventgatewayv1alpha1.KegDataPlane{

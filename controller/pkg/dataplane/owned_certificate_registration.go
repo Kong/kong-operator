@@ -171,6 +171,14 @@ func (r *Reconciler[T, Cert]) checkCertificateProgrammed(
 		return markNotProgrammed(nil, 0)
 	}
 
+	// A certificate being deleted is going away, whatever its status still says:
+	// a certificate named after its content can be needed again meanwhile, e.g.
+	// once the previous one is back in a Manual Secret. The Owns() watch retriggers
+	// once it is gone, and it is created again.
+	if !current.GetDeletionTimestamp().IsZero() {
+		return markNotProgrammed(nil, 0)
+	}
+
 	programmedCond := apimeta.FindStatusCondition(current.GetConditions(), konnectv1alpha1.KonnectEntityProgrammedConditionType)
 	if programmedCond == nil || programmedCond.Status != metav1.ConditionTrue ||
 		programmedCond.ObservedGeneration != current.GetGeneration() {

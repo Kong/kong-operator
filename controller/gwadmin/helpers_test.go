@@ -70,7 +70,7 @@ func userCASecret(t *testing.T, commonName string) *corev1.Secret {
 // at now (backdated by 5 minutes) and valid for ttl.
 func userCASecretValidAt(t *testing.T, commonName string, now time.Time, ttl time.Duration) *corev1.Secret {
 	t.Helper()
-	certPEM, keyPEM, err := generateCA(commonName, now, ttl)
+	certPEM, keyPEM, err := pki.GenerateCA(commonName, now, ttl)
 	require.NoError(t, err)
 	return &corev1.Secret{
 		Name: userCASecretName, Namespace: testNamespace, Labels: map[string]string{"konghq.com/secret": "true"},
@@ -225,9 +225,9 @@ func userCPSecretFrom(t *testing.T, ca *corev1.Secret, issuedAt time.Time, ttl t
 	if len(dnsNames) == 0 {
 		dnsNames = []string{"cp.example.com"}
 	}
-	certPEM, keyPEM, err := issueCertificate(ca, certRequest{
-		commonName: dnsNames[0], dnsNames: dnsNames,
-		usages: serverUsages, ttl: ttl, now: issuedAt,
+	certPEM, keyPEM, err := pki.IssueCertificate(ca, pki.CertRequest{
+		CommonName: dnsNames[0], DNSNames: dnsNames,
+		Usages: serverUsages, TTL: ttl, Now: issuedAt,
 	})
 	require.NoError(t, err)
 	data := map[string][]byte{corev1.TLSPrivateKeyKey: keyPEM}

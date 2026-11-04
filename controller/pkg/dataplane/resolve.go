@@ -111,6 +111,12 @@ func (r *Reconciler[T, Cert]) resolveControlPlane(
 		return ResolvedControlPlane{}, fmt.Errorf("%w: %w", errControlPlaneGone, err)
 	}
 	if err != nil {
+		// Conditions left True would say the certificate is still valid and
+		// registered, and Ready would say so too. Konnect-backed kinds keep
+		// their conditions (see markCertificateUnknown).
+		if cpKindCfg.CertificateRegistration != nil {
+			r.markUnresolved(dp, cpKindCfg, cpKindCfg.Conditions.NotReadyReason, err.Error())
+		}
 		return ResolvedControlPlane{}, err
 	}
 
@@ -163,8 +169,9 @@ func (r *Reconciler[T, Cert]) resolveControlPlane(
 			err = fmt.Errorf("failed to read the dependencies of the referenced %s %q: %w",
 				cpKindCfg.Kind, ref.Name, err)
 			// What the certificate is issued from can't be read: conditions
-			// left True would say it is still valid and registered.
-			r.markCertificateUnknown(dp, cpKindCfg, cpKindCfg.Conditions.NotReadyReason, err.Error())
+			// left True would say it is still valid and registered, and Ready
+			// would say so too.
+			r.markUnresolved(dp, cpKindCfg, cpKindCfg.Conditions.NotReadyReason, err.Error())
 			return resolved, err
 		}
 		resolved.Dependencies = deps
