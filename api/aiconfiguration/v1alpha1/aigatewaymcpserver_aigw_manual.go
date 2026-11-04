@@ -181,7 +181,7 @@ func mcpAccessInnerRefs(
 // variant. The union allows exactly one of allow/deny/allow_when/deny_when; only
 // allow and deny carry references.
 type mcpServerACLRefs struct {
-	allow, deny []AIGatewayACLRef
+	allow, deny []AIGatewayACLRef //nolint:kubeapilinter
 }
 
 // mcpServerACLs projects an access union onto its selected variant's refs. The
