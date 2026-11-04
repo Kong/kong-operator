@@ -129,11 +129,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u EventGatewayListenerPolicyConfig) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling EventGatewayListenerPolicyConfig type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case EventGatewayListenerPolicyConfigTypeForwardToVirtualClust:
 		if u.ForwardToVirtualClust != nil {
@@ -151,6 +146,13 @@ func (u EventGatewayListenerPolicyConfig) MarshalJSON() ([]byte, error) {
 			}
 			m["tlsServer"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling EventGatewayListenerPolicyConfig type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }

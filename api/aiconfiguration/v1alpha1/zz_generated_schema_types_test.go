@@ -241,62 +241,10 @@ func TestAIGatewayMCPACLs_MarshalEmpty(t *testing.T) {
 	}
 }
 
-func TestAIGatewayMCPAllowACL_MarshalEmpty(t *testing.T) {
-	t.Parallel()
-
-	var spec AIGatewayMCPAllowACL
-	out, err := json.Marshal(spec)
-	if err != nil {
-		t.Fatalf("json.Marshal() error = %v", err)
-	}
-	if got, want := string(out), "{}"; got != want {
-		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
-	}
-}
-
-func TestAIGatewayMCPAllowWhenACL_MarshalEmpty(t *testing.T) {
-	t.Parallel()
-
-	var spec AIGatewayMCPAllowWhenACL
-	out, err := json.Marshal(spec)
-	if err != nil {
-		t.Fatalf("json.Marshal() error = %v", err)
-	}
-	if got, want := string(out), "{}"; got != want {
-		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
-	}
-}
-
 func TestAIGatewayMCPConversionTool_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
 	var spec AIGatewayMCPConversionTool
-	out, err := json.Marshal(spec)
-	if err != nil {
-		t.Fatalf("json.Marshal() error = %v", err)
-	}
-	if got, want := string(out), "{}"; got != want {
-		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
-	}
-}
-
-func TestAIGatewayMCPDenyACL_MarshalEmpty(t *testing.T) {
-	t.Parallel()
-
-	var spec AIGatewayMCPDenyACL
-	out, err := json.Marshal(spec)
-	if err != nil {
-		t.Fatalf("json.Marshal() error = %v", err)
-	}
-	if got, want := string(out), "{}"; got != want {
-		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
-	}
-}
-
-func TestAIGatewayMCPDenyWhenACL_MarshalEmpty(t *testing.T) {
-	t.Parallel()
-
-	var spec AIGatewayMCPDenyWhenACL
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)

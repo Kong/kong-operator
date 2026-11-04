@@ -1195,9 +1195,15 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 
 	// These named oneOf components only host the arms of an "acls" union. The
 	// arms are flattened onto the union wrapper, so no generated field uses the
-	// component and it would emit as an unused map[string]string type.
+	// component and it would emit as an unused map[string]string type. The
+	// flattened MCP arms go too: the wrapper carries their slices directly, so
+	// they would emit as structs nothing references.
 	delete(referencedSchemas, "AIGatewayACLS")
 	delete(referencedSchemas, "AIGatewayMCPServerACLs")
+	delete(referencedSchemas, "AIGatewayMCPAllowACL")
+	delete(referencedSchemas, "AIGatewayMCPDenyACL")
+	delete(referencedSchemas, "AIGatewayMCPAllowWhenACL")
+	delete(referencedSchemas, "AIGatewayMCPDenyWhenACL")
 
 	reconcilerFiles, err := g.generateReconcilerEntityFiles(reconcilerEntities, parsed)
 	if err != nil {
@@ -3741,6 +3747,20 @@ var unionVariantFlattenExceptions = map[string]bool{
 	"AIGatewayACLS": true,
 }
 
+// legacyOptionalDiscriminatorUnions lists unions whose CRs may already exist in
+// the pre-union shape, i.e. an object holding the former plain struct's fields
+// with no discriminator (AIGatewayMCPServer access.acls used to be a plain
+// {allow, deny, allowWhen, denyWhen} object). Their discriminator is optional so
+// those CRs stay writable, and their generated code round-trips the shape.
+//
+// shortcut: a legacy object with several members keeps them all through the
+// on-prem path, but the Konnect SDK union carries one member, so only the first
+// one reaches Konnect. Split such a CR before moving it to Konnect.
+var legacyOptionalDiscriminatorUnions = map[string]bool{
+	"AIGatewayMCPServerListenerConsumerAcls": true,
+	"AIGatewayMCPServerListenerOauthAcls":    true,
+}
+
 // flattenableUnionVariantField returns a $ref union arm's only non-skipped
 // field when that field's JSON name is the arm's own name, i.e. the arm adds
 // no structure beyond {key: value}. Such an arm is flattened onto the union
@@ -4373,6 +4393,10 @@ func emitDiscriminatedUnionCode(typeName, propName, discriminatorJSONName string
 		discValues = append(discValues, jsonName(v.discValue))
 	}
 
+	// legacyOptional widens the union to accept the pre-union shape: no
+	// discriminator, members holding the former plain struct's values.
+	legacyOptional := legacyOptionalDiscriminatorUnions[typeName]
+
 	var buf strings.Builder
 	fmt.Fprintf(&buf, "// %s represents a union type for %s.\n", typeName, propName)
 	fmt.Fprintf(&buf, "// Only one of the fields should be set based on the %s.\n", discriminatorFieldName)
@@ -4380,16 +4404,24 @@ func emitDiscriminatedUnionCode(typeName, propName, discriminatorJSONName string
 	if shouldEmitTypeMatchCEL(typeName) {
 		for _, v := range variants {
 			camelDiscValue := jsonName(v.discValue)
-			fmt.Fprintf(&buf, "// +kubebuilder:validation:XValidation:rule=\"self.%s == '%s' ? has(self.%s) : !has(self.%s)\",message=\"%s must be set only when %s is %s\"\n",
-				discriminatorJSONName, camelDiscValue, camelDiscValue, camelDiscValue, camelDiscValue, discriminatorJSONName, camelDiscValue)
+			rule := fmt.Sprintf("self.%s == '%s' ? has(self.%s) : !has(self.%s)", discriminatorJSONName, camelDiscValue, camelDiscValue, camelDiscValue)
+			if legacyOptional {
+				rule = fmt.Sprintf("!has(self.%s) || (%s)", discriminatorJSONName, rule)
+			}
+			fmt.Fprintf(&buf, "// +kubebuilder:validation:XValidation:rule=%q,message=\"%s must be set only when %s is %s\"\n",
+				rule, camelDiscValue, discriminatorJSONName, camelDiscValue)
 		}
 	}
 	fmt.Fprintf(&buf, "type %s struct {\n", typeName)
 
 	fmt.Fprintf(&buf, "\t// %s designates the type of configuration.\n", discriminatorFieldName)
 	buf.WriteString("\t//\n")
-	buf.WriteString("\t// +required\n")
-	buf.WriteString("\t// +kubebuilder:validation:MinLength=1\n")
+	if legacyOptional {
+		buf.WriteString("\t// +optional\n")
+	} else {
+		buf.WriteString("\t// +required\n")
+		buf.WriteString("\t// +kubebuilder:validation:MinLength=1\n")
+	}
 	fmt.Fprintf(&buf, "\t// +kubebuilder:validation:Enum=%s\n", strings.Join(discValues, ";"))
 	fmt.Fprintf(&buf, "\t%s %sType `json:\"%s,omitempty\"`\n\n", discriminatorFieldName, typeName, discriminatorJSONName)
 
@@ -4436,23 +4468,40 @@ func emitDiscriminatedUnionCode(typeName, propName, discriminatorJSONName string
 	fmt.Fprintf(&buf, "// MarshalJSON implements json.Marshaler.\n")
 	fmt.Fprintf(&buf, "func (u %s) MarshalJSON() ([]byte, error) {\n", typeName)
 	buf.WriteString("\tm := map[string]json.RawMessage{}\n")
-	fmt.Fprintf(&buf, "\ttypeBytes, err := json.Marshal(string(u.%s))\n", discriminatorFieldName)
-	buf.WriteString("\tif err != nil {\n")
-	fmt.Fprintf(&buf, "\t\treturn nil, fmt.Errorf(\"marshaling %s %s: %%w\", err)\n", typeName, discriminatorJSONName)
-	buf.WriteString("\t}\n")
-	fmt.Fprintf(&buf, "\tm[%q] = typeBytes\n", discriminatorJSONName)
-	fmt.Fprintf(&buf, "\tswitch u.%s {\n", discriminatorFieldName)
-	for _, v := range variants {
-		camelDiscValue := jsonName(v.discValue)
-		fmt.Fprintf(&buf, "\tcase %sType%s:\n", typeName, v.fieldName)
-		fmt.Fprintf(&buf, "\t\tif u.%s != nil {\n", v.fieldName)
-		fmt.Fprintf(&buf, "\t\t\traw, err := json.Marshal(u.%s)\n", v.fieldName)
-		buf.WriteString("\t\t\tif err != nil {\n")
-		fmt.Fprintf(&buf, "\t\t\t\treturn nil, fmt.Errorf(\"marshaling %s %s: %%w\", err)\n", typeName, v.discValue)
-		buf.WriteString("\t\t\t}\n")
-		fmt.Fprintf(&buf, "\t\t\tm[\"%s\"] = raw\n", camelDiscValue)
-		buf.WriteString("\t\t}\n")
+	if legacyOptional {
+		// A pre-union CR has no discriminator, so every member set carries data.
+		for _, v := range variants {
+			fmt.Fprintf(&buf, "\tif u.%s != nil {\n", v.fieldName)
+			fmt.Fprintf(&buf, "\t\traw, err := json.Marshal(u.%s)\n", v.fieldName)
+			buf.WriteString("\t\tif err != nil {\n")
+			fmt.Fprintf(&buf, "\t\t\treturn nil, fmt.Errorf(\"marshaling %s %s: %%w\", err)\n", typeName, v.discValue)
+			buf.WriteString("\t\t}\n")
+			fmt.Fprintf(&buf, "\t\tm[\"%s\"] = raw\n", jsonName(v.discValue))
+			buf.WriteString("\t}\n")
+		}
+	} else {
+		fmt.Fprintf(&buf, "\tswitch u.%s {\n", discriminatorFieldName)
+		for _, v := range variants {
+			camelDiscValue := jsonName(v.discValue)
+			fmt.Fprintf(&buf, "\tcase %sType%s:\n", typeName, v.fieldName)
+			fmt.Fprintf(&buf, "\t\tif u.%s != nil {\n", v.fieldName)
+			fmt.Fprintf(&buf, "\t\t\traw, err := json.Marshal(u.%s)\n", v.fieldName)
+			buf.WriteString("\t\t\tif err != nil {\n")
+			fmt.Fprintf(&buf, "\t\t\t\treturn nil, fmt.Errorf(\"marshaling %s %s: %%w\", err)\n", typeName, v.discValue)
+			buf.WriteString("\t\t\t}\n")
+			fmt.Fprintf(&buf, "\t\t\tm[\"%s\"] = raw\n", camelDiscValue)
+			buf.WriteString("\t\t}\n")
+		}
+		buf.WriteString("\t}\n")
 	}
+	// A zero-value union carries no discriminator; emitting "type": "" would
+	// instead reach the SDK payload builder, which finds no member for it.
+	fmt.Fprintf(&buf, "\tif u.%s != \"\" {\n", discriminatorFieldName)
+	fmt.Fprintf(&buf, "\t\ttypeBytes, err := json.Marshal(string(u.%s))\n", discriminatorFieldName)
+	buf.WriteString("\t\tif err != nil {\n")
+	fmt.Fprintf(&buf, "\t\t\treturn nil, fmt.Errorf(\"marshaling %s %s: %%w\", err)\n", typeName, discriminatorJSONName)
+	buf.WriteString("\t\t}\n")
+	fmt.Fprintf(&buf, "\t\tm[%q] = typeBytes\n", discriminatorJSONName)
 	buf.WriteString("\t}\n")
 	buf.WriteString("\treturn json.Marshal(m)\n")
 	buf.WriteString("}\n\n")
@@ -4494,6 +4543,23 @@ func emitDiscriminatedUnionCode(typeName, propName, discriminatorJSONName string
 		}
 	}
 	buf.WriteString("\t}\n")
+	if legacyOptional {
+		// Pre-union CRs carry no discriminator; decode every member they set
+		// and take the type from the member when exactly one is present.
+		fmt.Fprintf(&buf, "\tif probe.%s == \"\" {\n", discriminatorFieldName)
+		buf.WriteString("\t\tmembers := 0\n")
+		for _, v := range variants {
+			fmt.Fprintf(&buf, "\t\tif payload, ok := raw[%q]; ok && len(payload) > 0 {\n", jsonName(v.discValue))
+			fmt.Fprintf(&buf, "\t\t\tif err := json.Unmarshal(payload, &u.%s); err != nil {\n", v.fieldName)
+			fmt.Fprintf(&buf, "\t\t\t\treturn fmt.Errorf(\"unmarshaling %s %s: %%w\", err)\n", typeName, v.discValue)
+			buf.WriteString("\t\t\t}\n")
+			buf.WriteString("\t\t\tmembers++\n")
+			fmt.Fprintf(&buf, "\t\t\tif members == 1 {\n\t\t\t\tu.%s = %sType%s\n\t\t\t}\n", discriminatorFieldName, typeName, v.fieldName)
+			buf.WriteString("\t\t}\n")
+		}
+		fmt.Fprintf(&buf, "\t\tif members > 1 {\n\t\t\t// Several members have no union equivalent; keep the legacy shape.\n\t\t\tu.%s = \"\"\n\t\t}\n", discriminatorFieldName)
+		buf.WriteString("\t}\n")
+	}
 	buf.WriteString("\treturn nil\n")
 	buf.WriteString("}\n")
 
@@ -5430,14 +5496,14 @@ type TemplateRefParentNav struct {
 }
 
 // TemplateRefVariant is one arm written at a TemplateRefInjection's own SDK
-// payload key. A direct injection (UnionVar empty) has exactly one variant
-// with no TypeConst; an AIGatewayACLRef injection (UnionVar set) has one
-// variant per configured allow/deny reference sharing that union, each
-// selected by TypeConst.
+// payload key. A direct injection (UnionVar empty) has exactly one variant;
+// an AIGatewayACLRef injection (UnionVar set) has one variant per configured
+// allow/deny reference sharing that union, each selected by its member field.
 type TemplateRefVariant struct {
 	// GoMemberField is the variant member field on the CRD union struct for
-	// an ACL injection, or the leaf field itself for a direct injection. Used
-	// only to detect duplicate references sharing one TemplateRefInjection.
+	// an ACL injection, or the leaf field itself for a direct injection. It
+	// selects the arm to write and detects duplicate references sharing one
+	// TemplateRefInjection.
 	GoMemberField string
 	// LeafSDKKey is the SDK payload key this variant writes: the ACL variant
 	// member's key (e.g. "allow") for an ACL injection, or the leaf array's
@@ -5445,9 +5511,6 @@ type TemplateRefVariant struct {
 	LeafSDKKey string
 	// ResolverName is the resolver-name suffix (TemplateReferenceConfig.GoResolverName).
 	ResolverName string
-	// TypeConst is the generated discriminator constant selecting this arm.
-	// Empty for a direct injection, which has no discriminator to switch on.
-	TypeConst string
 	// RefPath is the full configured reference path, used in error messages.
 	RefPath string
 }
@@ -5671,7 +5734,6 @@ func appendRefInjection(ref TemplateReferenceConfig, usedVars map[string]bool, g
 			GoMemberField: variantSeg.Name,
 			LeafSDKKey:    sdkJSONKey(leafKey),
 			ResolverName:  ref.GoResolverName,
-			TypeConst:     segs[writeIdx].UnionTypeName + "Type" + variantSeg.Name,
 			RefPath:       ref.Path,
 		}
 	case isArrayElement:

@@ -2405,10 +2405,6 @@ _Appears in:_
 - [AIGatewayMCPServerListenerOauth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneroauth)
 - [AIGatewayMCPToolAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolaccess)
 
-
-
-
-
 #### AIGatewayMCPConversionTool
 
 
@@ -2437,10 +2433,6 @@ _Appears in:_
 
 - [AIGatewayMCPServerConversionListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistener)
 - [AIGatewayMCPServerConversionOnly](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversiononly)
-
-
-
-
 
 #### AIGatewayMCPPassthroughTool
 

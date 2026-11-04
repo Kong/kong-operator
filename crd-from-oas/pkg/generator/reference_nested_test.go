@@ -699,11 +699,11 @@ func TestGenerateSDKOps_ACLRefPayloadInjection(t *testing.T) {
 	// Variant switch follows the union discriminator and rebuilds the union
 	// value with the resolved names only.
 	require.Contains(t, content, "switch {")
-	require.Contains(t, content, "case acls.Type == AIGatewayAgentAccessAclsTypeAllow:")
+	require.Contains(t, content, "case acls.Allow != nil:")
 	require.Contains(t, content, "resolvedAccessAclsAllowAllow, err := resolveAIGatewayAgentAccessAclsAllowAllow(ctx, cl, obj)")
 	require.Contains(t, content, `return nil, fmt.Errorf("resolving spec.apiSpec.access.acls.allow.allow references: %w", err)`)
 	require.Contains(t, content, `access["acls"] = map[string]any{"allow": resolvedAccessAclsAllowAllow}`)
-	require.Contains(t, content, "case acls.Type == AIGatewayAgentAccessAclsTypeDeny:")
+	require.Contains(t, content, "case acls.Deny != nil:")
 	require.Contains(t, content, `access["acls"] = map[string]any{"deny": resolvedAccessAclsDenyDeny}`)
 	// No flat top-level leaf-key assignment for ACL references inside SDK unions.
 	require.NotContains(t, content, `payload["allow"]`)
@@ -767,8 +767,8 @@ func TestGenerateSDKOps_RootUnionReferenceInjection(t *testing.T) {
 	// Sibling-preserving write-back, innermost first.
 	require.Contains(t, content, `api["access"] = access`)
 	require.Contains(t, content, `payload["api"] = api`)
-	require.Contains(t, content, "case acls.Type == AIGatewayModelAccessAclsTypeAllow:")
-	require.Contains(t, content, "case acls.Type == AIGatewayModelAccessAclsTypeDeny:")
+	require.Contains(t, content, "case acls.Allow != nil:")
+	require.Contains(t, content, "case acls.Deny != nil:")
 	require.Contains(t, content, "return spec.toCreateAIGatewayModelRequestFromPayload(payload)")
 	require.Contains(t, content, "return spec.toUpdateAIGatewayModelRequestFromPayload(payload)")
 	// The whole variant subtree is never rebuilt wholesale (that would drop

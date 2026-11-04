@@ -5806,13 +5806,13 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 			consumer = map[string]any{}
 		}
 		switch {
-		case acls.Type == AIGatewayMCPServerListenerConsumerAclsTypeAllow:
+		case acls.Allow != nil:
 			resolvedListenerAccessConsumerAclsAllow, err := resolveAIGatewayMCPServerListenerAccessConsumerAclsAllow(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.consumer.acls.allow references: %w", err)
 			}
 			consumer["acls"] = map[string]any{"allow": resolvedListenerAccessConsumerAclsAllow}
-		case acls.Type == AIGatewayMCPServerListenerConsumerAclsTypeDeny:
+		case acls.Deny != nil:
 			resolvedListenerAccessConsumerAclsDeny, err := resolveAIGatewayMCPServerListenerAccessConsumerAclsDeny(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.consumer.acls.deny references: %w", err)
@@ -5842,13 +5842,13 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 			oauthAccessToken = map[string]any{}
 		}
 		switch {
-		case acls2.Type == AIGatewayMCPServerListenerOauthAclsTypeAllow:
+		case acls2.Allow != nil:
 			resolvedListenerAccessOauthAccessTokenAclsAllow, err := resolveAIGatewayMCPServerListenerAccessOauthAccessTokenAclsAllow(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.oauthAccessToken.acls.allow references: %w", err)
 			}
 			oauthAccessToken["acls"] = map[string]any{"allow": resolvedListenerAccessOauthAccessTokenAclsAllow}
-		case acls2.Type == AIGatewayMCPServerListenerOauthAclsTypeDeny:
+		case acls2.Deny != nil:
 			resolvedListenerAccessOauthAccessTokenAclsDeny, err := resolveAIGatewayMCPServerListenerAccessOauthAccessTokenAclsDeny(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.oauthAccessToken.acls.deny references: %w", err)
@@ -5878,13 +5878,13 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 			consumer2 = map[string]any{}
 		}
 		switch {
-		case acls3.Type == AIGatewayMCPServerListenerConsumerAclsTypeAllow:
+		case acls3.Allow != nil:
 			resolvedConversionListenerAccessConsumerAclsAllow, err := resolveAIGatewayMCPServerConversionListenerAccessConsumerAclsAllow(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.consumer.acls.allow references: %w", err)
 			}
 			consumer2["acls"] = map[string]any{"allow": resolvedConversionListenerAccessConsumerAclsAllow}
-		case acls3.Type == AIGatewayMCPServerListenerConsumerAclsTypeDeny:
+		case acls3.Deny != nil:
 			resolvedConversionListenerAccessConsumerAclsDeny, err := resolveAIGatewayMCPServerConversionListenerAccessConsumerAclsDeny(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.consumer.acls.deny references: %w", err)
@@ -5914,13 +5914,13 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 			oauthAccessToken2 = map[string]any{}
 		}
 		switch {
-		case acls4.Type == AIGatewayMCPServerListenerOauthAclsTypeAllow:
+		case acls4.Allow != nil:
 			resolvedConversionListenerAccessOauthAccessTokenAclsAllow, err := resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenAclsAllow(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.oauthAccessToken.acls.allow references: %w", err)
 			}
 			oauthAccessToken2["acls"] = map[string]any{"allow": resolvedConversionListenerAccessOauthAccessTokenAclsAllow}
-		case acls4.Type == AIGatewayMCPServerListenerOauthAclsTypeDeny:
+		case acls4.Deny != nil:
 			resolvedConversionListenerAccessOauthAccessTokenAclsDeny, err := resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenAclsDeny(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.oauthAccessToken.acls.deny references: %w", err)
@@ -5950,13 +5950,13 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 			consumer3 = map[string]any{}
 		}
 		switch {
-		case acls5.Type == AIGatewayMCPServerListenerConsumerAclsTypeAllow:
+		case acls5.Allow != nil:
 			resolvedPassthroughListenerAccessConsumerAclsAllow, err := resolveAIGatewayMCPServerPassthroughListenerAccessConsumerAclsAllow(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.consumer.acls.allow references: %w", err)
 			}
 			consumer3["acls"] = map[string]any{"allow": resolvedPassthroughListenerAccessConsumerAclsAllow}
-		case acls5.Type == AIGatewayMCPServerListenerConsumerAclsTypeDeny:
+		case acls5.Deny != nil:
 			resolvedPassthroughListenerAccessConsumerAclsDeny, err := resolveAIGatewayMCPServerPassthroughListenerAccessConsumerAclsDeny(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.consumer.acls.deny references: %w", err)
@@ -5986,13 +5986,13 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 			oauthAccessToken3 = map[string]any{}
 		}
 		switch {
-		case acls6.Type == AIGatewayMCPServerListenerOauthAclsTypeAllow:
+		case acls6.Allow != nil:
 			resolvedPassthroughListenerAccessOauthAccessTokenAclsAllow, err := resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAclsAllow(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.oauthAccessToken.acls.allow references: %w", err)
 			}
 			oauthAccessToken3["acls"] = map[string]any{"allow": resolvedPassthroughListenerAccessOauthAccessTokenAclsAllow}
-		case acls6.Type == AIGatewayMCPServerListenerOauthAclsTypeDeny:
+		case acls6.Deny != nil:
 			resolvedPassthroughListenerAccessOauthAccessTokenAclsDeny, err := resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAclsDeny(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.oauthAccessToken.acls.deny references: %w", err)
@@ -7030,13 +7030,13 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 			consumer = map[string]any{}
 		}
 		switch {
-		case acls.Type == AIGatewayMCPServerListenerConsumerAclsTypeAllow:
+		case acls.Allow != nil:
 			resolvedListenerAccessConsumerAclsAllow, err := resolveAIGatewayMCPServerListenerAccessConsumerAclsAllow(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.consumer.acls.allow references: %w", err)
 			}
 			consumer["acls"] = map[string]any{"allow": resolvedListenerAccessConsumerAclsAllow}
-		case acls.Type == AIGatewayMCPServerListenerConsumerAclsTypeDeny:
+		case acls.Deny != nil:
 			resolvedListenerAccessConsumerAclsDeny, err := resolveAIGatewayMCPServerListenerAccessConsumerAclsDeny(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.consumer.acls.deny references: %w", err)
@@ -7066,13 +7066,13 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 			oauthAccessToken = map[string]any{}
 		}
 		switch {
-		case acls2.Type == AIGatewayMCPServerListenerOauthAclsTypeAllow:
+		case acls2.Allow != nil:
 			resolvedListenerAccessOauthAccessTokenAclsAllow, err := resolveAIGatewayMCPServerListenerAccessOauthAccessTokenAclsAllow(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.oauthAccessToken.acls.allow references: %w", err)
 			}
 			oauthAccessToken["acls"] = map[string]any{"allow": resolvedListenerAccessOauthAccessTokenAclsAllow}
-		case acls2.Type == AIGatewayMCPServerListenerOauthAclsTypeDeny:
+		case acls2.Deny != nil:
 			resolvedListenerAccessOauthAccessTokenAclsDeny, err := resolveAIGatewayMCPServerListenerAccessOauthAccessTokenAclsDeny(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.oauthAccessToken.acls.deny references: %w", err)
@@ -7102,13 +7102,13 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 			consumer2 = map[string]any{}
 		}
 		switch {
-		case acls3.Type == AIGatewayMCPServerListenerConsumerAclsTypeAllow:
+		case acls3.Allow != nil:
 			resolvedConversionListenerAccessConsumerAclsAllow, err := resolveAIGatewayMCPServerConversionListenerAccessConsumerAclsAllow(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.consumer.acls.allow references: %w", err)
 			}
 			consumer2["acls"] = map[string]any{"allow": resolvedConversionListenerAccessConsumerAclsAllow}
-		case acls3.Type == AIGatewayMCPServerListenerConsumerAclsTypeDeny:
+		case acls3.Deny != nil:
 			resolvedConversionListenerAccessConsumerAclsDeny, err := resolveAIGatewayMCPServerConversionListenerAccessConsumerAclsDeny(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.consumer.acls.deny references: %w", err)
@@ -7138,13 +7138,13 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 			oauthAccessToken2 = map[string]any{}
 		}
 		switch {
-		case acls4.Type == AIGatewayMCPServerListenerOauthAclsTypeAllow:
+		case acls4.Allow != nil:
 			resolvedConversionListenerAccessOauthAccessTokenAclsAllow, err := resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenAclsAllow(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.oauthAccessToken.acls.allow references: %w", err)
 			}
 			oauthAccessToken2["acls"] = map[string]any{"allow": resolvedConversionListenerAccessOauthAccessTokenAclsAllow}
-		case acls4.Type == AIGatewayMCPServerListenerOauthAclsTypeDeny:
+		case acls4.Deny != nil:
 			resolvedConversionListenerAccessOauthAccessTokenAclsDeny, err := resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenAclsDeny(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.oauthAccessToken.acls.deny references: %w", err)
@@ -7174,13 +7174,13 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 			consumer3 = map[string]any{}
 		}
 		switch {
-		case acls5.Type == AIGatewayMCPServerListenerConsumerAclsTypeAllow:
+		case acls5.Allow != nil:
 			resolvedPassthroughListenerAccessConsumerAclsAllow, err := resolveAIGatewayMCPServerPassthroughListenerAccessConsumerAclsAllow(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.consumer.acls.allow references: %w", err)
 			}
 			consumer3["acls"] = map[string]any{"allow": resolvedPassthroughListenerAccessConsumerAclsAllow}
-		case acls5.Type == AIGatewayMCPServerListenerConsumerAclsTypeDeny:
+		case acls5.Deny != nil:
 			resolvedPassthroughListenerAccessConsumerAclsDeny, err := resolveAIGatewayMCPServerPassthroughListenerAccessConsumerAclsDeny(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.consumer.acls.deny references: %w", err)
@@ -7210,13 +7210,13 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 			oauthAccessToken3 = map[string]any{}
 		}
 		switch {
-		case acls6.Type == AIGatewayMCPServerListenerOauthAclsTypeAllow:
+		case acls6.Allow != nil:
 			resolvedPassthroughListenerAccessOauthAccessTokenAclsAllow, err := resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAclsAllow(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.oauthAccessToken.acls.allow references: %w", err)
 			}
 			oauthAccessToken3["acls"] = map[string]any{"allow": resolvedPassthroughListenerAccessOauthAccessTokenAclsAllow}
-		case acls6.Type == AIGatewayMCPServerListenerOauthAclsTypeDeny:
+		case acls6.Deny != nil:
 			resolvedPassthroughListenerAccessOauthAccessTokenAclsDeny, err := resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAclsDeny(ctx, cl, obj)
 			if err != nil {
 				return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.oauthAccessToken.acls.deny references: %w", err)

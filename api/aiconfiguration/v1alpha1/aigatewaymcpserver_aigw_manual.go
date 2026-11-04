@@ -190,21 +190,11 @@ func mcpServerACLs(acls any) mcpServerACLRefs {
 	switch a := acls.(type) {
 	case *AIGatewayMCPServerListenerConsumerAcls:
 		if a != nil {
-			switch {
-			case a.Allow != nil:
-				return mcpServerACLRefs{allow: a.Allow}
-			case a.Deny != nil:
-				return mcpServerACLRefs{deny: a.Deny}
-			}
+			return mcpServerACLRefs{allow: a.Allow, deny: a.Deny}
 		}
 	case *AIGatewayMCPServerListenerOauthAcls:
 		if a != nil {
-			switch {
-			case a.Allow != nil:
-				return mcpServerACLRefs{allow: a.Allow}
-			case a.Deny != nil:
-				return mcpServerACLRefs{deny: a.Deny}
-			}
+			return mcpServerACLRefs{allow: a.Allow, deny: a.Deny}
 		}
 	}
 	return mcpServerACLRefs{}

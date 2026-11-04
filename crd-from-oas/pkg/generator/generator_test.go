@@ -2440,8 +2440,10 @@ func TestGenerateSchemaTypes_EmitsTypeMatchCELForSelectedUnions(t *testing.T) {
 		"AIGatewayMCPServerListenerConsumer": true,
 	}, aclsParsed, nil)
 
-	assert.Contains(t, aclsContent, `// +kubebuilder:validation:XValidation:rule="self.type == 'allow' ? has(self.allow) : !has(self.allow)",message="allow must be set only when type is allow"`)
-	assert.Contains(t, aclsContent, `// +kubebuilder:validation:XValidation:rule="self.type == 'deny' ? has(self.deny) : !has(self.deny)",message="deny must be set only when type is deny"`)
+	assert.Contains(t, aclsContent, `// +kubebuilder:validation:XValidation:rule="!has(self.type) || (self.type == 'allow' ? has(self.allow) : !has(self.allow))",message="allow must be set only when type is allow"`)
+	assert.Contains(t, aclsContent, `// +kubebuilder:validation:XValidation:rule="!has(self.type) || (self.type == 'deny' ? has(self.deny) : !has(self.deny))",message="deny must be set only when type is deny"`)
+	// The discriminator stays optional so a pre-union CR keeps its ACLs.
+	assert.Contains(t, aclsContent, "\t// +optional\n\t// +kubebuilder:validation:Enum=allow;deny\n\tType AIGatewayMCPServerListenerConsumerAclsType `json:\"type,omitempty\"`")
 }
 
 func TestBuildSchemaCursors_NestedInlineObject(t *testing.T) {
