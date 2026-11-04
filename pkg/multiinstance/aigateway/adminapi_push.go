@@ -316,16 +316,17 @@ func (i *Instance) reportTranslationStatus(
 	entityFailures []EntityFailure,
 	warnings []string,
 ) []string {
-	// Entity failures carrying a translator conflict marker (the model-alias
-	// routing conflict) are surfaced as warnings instead of failures: the
-	// offending entity is excluded from the document and reports the conflict on
-	// its own status, but the rest of the configuration translated and pushed
-	// fine, so the gateway's aggregated ConfigurationTranslated condition stays
-	// True and the gateway — and its data planes — become Ready
-	// (see ai-deck-converter#248).
+	// Entity-scoped failures (a model-alias routing conflict, a cross-namespace
+	// reference that no KongReferenceGrant allows, and the entities that
+	// reference an entity excluded for one of these) are surfaced as warnings
+	// instead of failures: the offending entity is excluded from the document and
+	// reports the failure on its own status, but the rest of the configuration
+	// translated and pushed fine, so the gateway's aggregated
+	// ConfigurationTranslated condition stays True and the gateway — and its data
+	// planes — become Ready (see ai-deck-converter#248).
 	realFailures := make([]EntityFailure, 0, len(entityFailures))
 	for _, f := range entityFailures {
-		if _, ok := errors.AsType[*translator.ModelAliasConflictError](f.Err); ok {
+		if translator.IsEntityScopedFailure(f.Err) {
 			warnings = append(warnings, i.entityFailureDesc(f))
 			continue
 		}

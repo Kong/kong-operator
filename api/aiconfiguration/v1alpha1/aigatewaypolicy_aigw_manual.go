@@ -21,7 +21,7 @@ import (
 // spec.apiSpec.customPolicyRef into the referenced custom policy's Konnect
 // name (which is sent as the policy's type, per the CRD field's contract).
 func (obj *AIGatewayPolicy) ToAIGWPolicy(ctx context.Context, cl client.Client) (*aigw.Policy, error) {
-	if err := rejectCrossNamespaceSecretRefs(obj); err != nil {
+	if err := checkCrossNamespaceSecretRefsGranted(ctx, cl, obj); err != nil {
 		return nil, fmt.Errorf("AIGatewayPolicy %s/%s: %w", obj.Namespace, obj.Name, err)
 	}
 
@@ -40,6 +40,10 @@ func (obj *AIGatewayPolicy) ToAIGWPolicy(ctx context.Context, cl client.Client) 
 	var policy aigw.Policy
 	if err := yaml.Unmarshal(data, &policy); err != nil {
 		return nil, fmt.Errorf("decoding AIGatewayPolicy %s/%s as aigw.Policy: %w", obj.Namespace, obj.Name, err)
+	}
+
+	if err := resolveDatastoreRefs(ctx, cl, obj.Namespace, AIGatewayPolicyRefsToAIGatewayDatastore(obj), &policy.Datastores); err != nil {
+		return nil, fmt.Errorf("resolving AIGatewayPolicy %s/%s datastores: %w", obj.Namespace, obj.Name, err)
 	}
 
 	if ref := obj.Spec.APISpec.CustomPolicyRef; ref.Name != "" {
@@ -89,5 +93,8 @@ func (spec *AIGatewayPolicyAPISpec) marshalAIGWPolicyPayload() ([]byte, error) {
 	}
 	// Konnect-only bookkeeping: no on-prem equivalent.
 	delete(cfg, "managed_by")
+	// Carries {kind,name} CR references; aigw wants plain resolved names. Stripped here,
+	// re-attached resolved in ToAIGWPolicy.
+	delete(cfg, "datastores")
 	return json.Marshal(cfg)
 }

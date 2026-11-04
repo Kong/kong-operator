@@ -5,12 +5,12 @@ go 1.27.3
 require (
 	cloud.google.com/go/container v1.56.1
 	dario.cat/mergo v1.0.2
-	github.com/Kong/ai-deck-converter v0.32.2
+	github.com/Kong/ai-deck-converter v0.32.4
 	github.com/Kong/sdk-konnect-go v0.80.0
 	github.com/avast/retry-go/v5 v5.0.0
 	github.com/blang/semver/v4 v4.0.0
 	github.com/cert-manager/cert-manager v1.21.3
-	github.com/cloudflare/cfssl v1.6.5
+	github.com/cloudflare/cfssl v1.7.1
 	github.com/cnf/structhash v0.0.0-20250313080605-df4c6cc74a9a
 	github.com/docker/go-connections v0.8.2
 	github.com/dominikbraun/graph v0.23.0
@@ -38,7 +38,7 @@ require (
 	github.com/moul/pb v0.0.0-20220425114252-bca18df4138c
 	github.com/oapi-codegen/runtime v1.8.0
 	github.com/opencontainers/image-spec v1.1.1
-	github.com/prometheus/client_golang v1.24.1
+	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/client_model v0.6.3
 	github.com/prometheus/common v0.73.1
 	github.com/samber/lo v1.53.0
@@ -56,14 +56,14 @@ require (
 	google.golang.org/api v0.304.0
 	google.golang.org/grpc v1.84.0
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/api v0.37.1
-	k8s.io/apiextensions-apiserver v0.37.1
-	k8s.io/apimachinery v0.37.1
-	k8s.io/cli-runtime v0.37.1
-	k8s.io/client-go v0.37.1
+	k8s.io/api v0.37.2
+	k8s.io/apiextensions-apiserver v0.37.2
+	k8s.io/apimachinery v0.37.2
+	k8s.io/cli-runtime v0.37.2
+	k8s.io/client-go v0.37.2
 	k8s.io/kube-openapi v0.0.0-20260821135717-be32def86098
-	k8s.io/kubectl v0.37.1
-	k8s.io/kubernetes v1.37.1
+	k8s.io/kubectl v0.37.2
+	k8s.io/kubernetes v1.37.2
 	oras.land/oras-go/v2 v2.6.4
 	sigs.k8s.io/controller-runtime v0.25.2
 	sigs.k8s.io/controller-tools v0.23.0
@@ -208,7 +208,7 @@ require (
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jmoiron/sqlx v1.3.5 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.19.2 // indirect
+	github.com/klauspost/compress v1.20.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
 	github.com/lucasb-eyer/go-colorful v1.4.0 // indirect
@@ -243,7 +243,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
 	github.com/pquerna/otp v1.4.0 // indirect
-	github.com/prometheus/procfs v0.21.1 // indirect
+	github.com/prometheus/procfs v0.22.0 // indirect
 	github.com/puzpuzpuz/xsync/v2 v2.5.1 // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
@@ -307,12 +307,12 @@ require (
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	k8s.io/apiserver v0.37.1 // indirect
-	k8s.io/component-base v0.37.1 // indirect
-	k8s.io/component-helpers v0.37.1 // indirect
+	k8s.io/apiserver v0.37.2 // indirect
+	k8s.io/component-base v0.37.2 // indirect
+	k8s.io/component-helpers v0.37.2 // indirect
 	k8s.io/controller-manager v0.0.0 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
-	k8s.io/streaming v0.37.1 // indirect
+	k8s.io/streaming v0.37.2 // indirect
 	k8s.io/utils v0.0.0-20260626114624-be93311217bd // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.36.0 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
@@ -327,38 +327,38 @@ require (
 // They can be updated with `./hack/update-k8sio-gomod-replace.sh` script.
 // This is a workaround for https://github.com/kong/kong-operator/issues/1384.
 replace (
-	k8s.io/api => k8s.io/api v0.37.1
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.37.1
-	k8s.io/apimachinery => k8s.io/apimachinery v0.37.1
-	k8s.io/apiserver => k8s.io/apiserver v0.37.1
-	k8s.io/cli-runtime => k8s.io/cli-runtime v0.37.1
-	k8s.io/client-go => k8s.io/client-go v0.37.1
-	k8s.io/cloud-provider => k8s.io/cloud-provider v0.37.1
-	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.37.1
-	k8s.io/code-generator => k8s.io/code-generator v0.37.1
-	k8s.io/component-base => k8s.io/component-base v0.37.1
-	k8s.io/component-helpers => k8s.io/component-helpers v0.37.1
-	k8s.io/controller-manager => k8s.io/controller-manager v0.37.1
+	k8s.io/api => k8s.io/api v0.37.2
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.37.2
+	k8s.io/apimachinery => k8s.io/apimachinery v0.37.2
+	k8s.io/apiserver => k8s.io/apiserver v0.37.2
+	k8s.io/cli-runtime => k8s.io/cli-runtime v0.37.2
+	k8s.io/client-go => k8s.io/client-go v0.37.2
+	k8s.io/cloud-provider => k8s.io/cloud-provider v0.37.2
+	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.37.2
+	k8s.io/code-generator => k8s.io/code-generator v0.37.2
+	k8s.io/component-base => k8s.io/component-base v0.37.2
+	k8s.io/component-helpers => k8s.io/component-helpers v0.37.2
+	k8s.io/controller-manager => k8s.io/controller-manager v0.37.2
 	k8s.io/cri-api => k8s.io/cri-api v0.37.2
-	k8s.io/cri-client => k8s.io/cri-client v0.37.1
-	k8s.io/cri-streaming => k8s.io/cri-streaming v0.37.1
-	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.37.1
-	k8s.io/dynamic-resource-allocation => k8s.io/dynamic-resource-allocation v0.37.1
-	k8s.io/endpointslice => k8s.io/endpointslice v0.37.1
+	k8s.io/cri-client => k8s.io/cri-client v0.37.2
+	k8s.io/cri-streaming => k8s.io/cri-streaming v0.37.2
+	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.37.2
+	k8s.io/dynamic-resource-allocation => k8s.io/dynamic-resource-allocation v0.37.2
+	k8s.io/endpointslice => k8s.io/endpointslice v0.37.2
 	k8s.io/externaljwt => k8s.io/externaljwt v0.37.2
-	k8s.io/kms => k8s.io/kms v0.37.1
-	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.37.1
-	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.37.1
-	k8s.io/kube-proxy => k8s.io/kube-proxy v0.37.1
-	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.37.1
-	k8s.io/kubectl => k8s.io/kubectl v0.37.1
-	k8s.io/kubelet => k8s.io/kubelet v0.37.1
+	k8s.io/kms => k8s.io/kms v0.37.2
+	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.37.2
+	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.37.2
+	k8s.io/kube-proxy => k8s.io/kube-proxy v0.37.2
+	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.37.2
+	k8s.io/kubectl => k8s.io/kubectl v0.37.2
+	k8s.io/kubelet => k8s.io/kubelet v0.37.2
 	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.30.14
-	k8s.io/metrics => k8s.io/metrics v0.37.1
+	k8s.io/metrics => k8s.io/metrics v0.37.2
 	k8s.io/mount-utils => k8s.io/mount-utils v0.37.2
-	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.37.1
-	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.37.1
-	k8s.io/sample-cli-plugin => k8s.io/sample-cli-plugin v0.37.1
-	k8s.io/sample-controller => k8s.io/sample-controller v0.37.1
+	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.37.2
+	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.37.2
+	k8s.io/sample-cli-plugin => k8s.io/sample-cli-plugin v0.37.2
+	k8s.io/sample-controller => k8s.io/sample-controller v0.37.2
 	k8s.io/streaming => k8s.io/streaming v0.37.2
 )

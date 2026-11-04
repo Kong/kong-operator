@@ -10,6 +10,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 )
 
 // TestAIGatewayAuthStrategy_ToAIGWAuthStrategy covers the variant lifting (the Konnect SDK
@@ -21,6 +23,7 @@ func TestAIGatewayAuthStrategy_ToAIGWAuthStrategy(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, AddToScheme(scheme))
 	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
 
 	// newReferencedSecret returns a fresh object per subtest: the fake client's tracker
 	// mutates the objects it's given (SetResourceVersion on Build), so parallel subtests
@@ -104,7 +107,7 @@ func TestAIGatewayAuthStrategy_ToAIGWAuthStrategy(t *testing.T) {
 			},
 		},
 		{
-			name: "cross-namespace secretRef rejected",
+			name: "cross-namespace secretRef without KongReferenceGrant rejected",
 			obj: &AIGatewayAuthStrategy{
 				Name: "ai-gw-auth-strategy-cross-ns", Namespace: "default",
 				Spec: AIGatewayAuthStrategySpec{
@@ -129,7 +132,49 @@ func TestAIGatewayAuthStrategy_ToAIGWAuthStrategy(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "cross-namespace secretRef",
+			wantErr: "is not granted by any KongReferenceGrant",
+		},
+		{
+			name: "cross-namespace secretRef allowed by KongReferenceGrant resolved",
+			obj: &AIGatewayAuthStrategy{
+				Name: "ai-gw-auth-strategy-cross-ns-granted", Namespace: "default",
+				Spec: AIGatewayAuthStrategySpec{
+					APISpec: AIGatewayAuthStrategyAPISpec{
+						AIGatewayAuthStrategyConfig: &AIGatewayAuthStrategyConfig{
+							Type: AIGatewayAuthStrategyConfigTypeOpenIDConnect,
+							OpenIDConnect: &AIGatewayAuthStrategyOpenIDConnect{
+								Name:        "cross-ns-oidc",
+								DisplayName: "Cross NS OIDC",
+								Config: AIGWOpenIDConnectGeneratedConfig{
+									ClientSecret: []SensitiveDataSource{{
+										Type: SensitiveDataSourceTypeSecretRef,
+										SecretRef: &SensitiveDataSecretRef{
+											Name:      "oidc-client-secret",
+											Key:       "clientSecret",
+											Namespace: new("other-namespace"),
+										},
+									}},
+								},
+							},
+						},
+					},
+				},
+			},
+			objects: []runtime.Object{
+				&corev1.Secret{
+					Name: "oidc-client-secret", Namespace: "other-namespace",
+					Data: map[string][]byte{"clientSecret": []byte("cr0ss")},
+				},
+				secretReferenceGrant("other-namespace", "default", "AIGatewayAuthStrategy", "oidc-client-secret"),
+			},
+			want: &aigw.AuthStrategy{
+				Type:        "openid-connect",
+				Name:        "cross-ns-oidc",
+				DisplayName: "Cross NS OIDC",
+				Config: map[string]any{
+					"client_secret": []any{"cr0ss"},
+				},
+			},
 		},
 		{
 			name: "empty apiSpec fails",

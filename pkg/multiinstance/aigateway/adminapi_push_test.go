@@ -33,6 +33,7 @@ import (
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager"
 	adminapi "github.com/kong/kong-operator/v2/internal/adminapi"
+	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/translator"
@@ -159,6 +160,7 @@ func testPushInstance(t *testing.T, objs ...client.Object) *Instance {
 		index.OptionsForAIGatewayAgent(),
 		index.OptionsForAIGatewayMCPServer(),
 		index.OptionsForAIGatewayVault(),
+		index.OptionsForAIGatewayDatastore(),
 	} {
 		for _, opt := range opts {
 			builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
@@ -488,6 +490,42 @@ func TestReportTranslationStatus(t *testing.T) {
 		require.Len(t, events, 1)
 		require.Contains(t, events[0], aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslationWarningReason)
 		require.Contains(t, events[0], conflictErr.Error())
+	})
+
+	t.Run("cross-namespace reference not granted stays a warning, with its dependents", func(t *testing.T) {
+		instance := testPushInstance(t)
+		notGranted := &crossnamespace.ReferenceNotGrantedError{
+			FromNamespace: "default", ToNamespace: "secrets", ToName: "creds",
+			FromGVK: metav1.GroupVersionKind{Group: "aiconfiguration.konghq.com", Kind: "AIGatewayModelProvider"},
+			ToGVK:   metav1.GroupVersionKind{Group: "core", Kind: "Secret"},
+		}
+		providerErr := fmt.Errorf("converting provider: %w", notGranted)
+		returned := instance.reportTranslationStatus(ctx, gwNN, nil, []EntityFailure{
+			{Obj: testAIGatewayModel("provider-stand-in"), Err: providerErr},
+			// The model is excluded only because its provider is: it is entity-scoped too.
+			{Obj: testAIGatewayModel("model-a"), Err: &translator.ReferencedEntityExcludedError{
+				Kind: "AIGatewayModelProvider", Name: "provider", Cause: providerErr,
+			}},
+		}, nil)
+
+		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType)
+		require.Equal(t, metav1.ConditionTrue, condition.Status)
+		require.Contains(t, condition.Message, "translated with 2 warnings")
+		require.Len(t, returned, 2)
+		require.Contains(t, returned[0], "is not granted by any KongReferenceGrant")
+	})
+
+	t.Run("reference to an entity excluded for another failure stays a failure", func(t *testing.T) {
+		instance := testPushInstance(t)
+		instance.reportTranslationStatus(ctx, gwNN, nil, []EntityFailure{
+			{Obj: testAIGatewayModel("model-a"), Err: &translator.ReferencedEntityExcludedError{
+				Kind: "AIGatewayModelProvider", Name: "provider", Cause: errors.New("secret default/creds is missing key"),
+			}},
+		}, nil)
+
+		condition := getGatewayCondition(t, instance, aigatewayv1alpha1.OnPremAIGatewayConfigurationTranslatedType)
+		require.Equal(t, metav1.ConditionFalse, condition.Status)
+		require.Contains(t, condition.Message, `referenced AIGatewayModelProvider "provider" was excluded`)
 	})
 
 	t.Run("recurring failure emits a single event and keeps the transition time", func(t *testing.T) {

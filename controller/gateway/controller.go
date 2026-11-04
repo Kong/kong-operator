@@ -494,6 +494,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 
 		oldCondition, oldFound := k8sutils.GetCondition(kcfggateway.DataPlaneReadyType, oldGwConditionsAware)
 		if !oldFound || oldCondition.Status == metav1.ConditionTrue {
+			// The DataPlane just stopped being ready: listeners are no longer
+			// programmed. Preserved listener statuses would otherwise keep
+			// Programmed=True while the DataPlane is down.
+			gwConditionAware.setListenersProgrammedPending()
 			// requeue will be triggered by the update of the dataplane status
 			if err := r.patchStatus(ctx, gateway, oldGateway); err != nil {
 				return ctrl.Result{}, err

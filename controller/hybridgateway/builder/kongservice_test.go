@@ -38,40 +38,27 @@ func TestKongServiceBuilder_WithNamespace(t *testing.T) {
 }
 
 func TestKongServiceBuilder_WithLabels(t *testing.T) {
-	httpRoute := &gwtypes.HTTPRoute{
-		Name:      "test-route",
-		Namespace: "test-namespace",
-	}
-
-	parentRef := &gwtypes.ParentReference{
-		Name: "test-gateway",
-	}
+	httpRoute := newHTTPRouteMetadataFixture()
+	parentRef := newParentRefMetadataFixture()
 
 	builder := NewKongService().WithLabels(httpRoute, parentRef)
 
 	service, err := builder.Build()
 	require.NoError(t, err)
 
-	assert.NotNil(t, service.Labels)
-	assert.NotEmpty(t, service.Labels)
+	assert.Equal(t, wantHTTPRouteLabels(), service.Labels)
 }
 
 func TestKongServiceBuilder_WithAnnotations(t *testing.T) {
-	httpRoute := &gwtypes.HTTPRoute{
-		Name:      "test-route",
-		Namespace: "test-namespace",
-	}
-
-	parentRef := &gwtypes.ParentReference{
-		Name: "test-gateway",
-	}
+	httpRoute := newHTTPRouteMetadataFixture()
+	parentRef := newParentRefMetadataFixture()
 
 	builder := NewKongService().WithAnnotations(httpRoute, parentRef)
 
 	service, err := builder.Build()
 	require.NoError(t, err)
 
-	assert.NotNil(t, service.Annotations)
+	assert.Equal(t, wantHTTPRouteAnnotations(), service.Annotations)
 }
 
 func TestKongServiceBuilder_WithSpecName(t *testing.T) {

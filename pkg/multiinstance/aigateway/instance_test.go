@@ -397,6 +397,7 @@ func TestAttributeConversionIssues(t *testing.T) {
 		// Zero-value CRs suffice: GetTypeName is constant per type.
 		crs := map[string]client.Object{
 			"AIGatewayModel":         new(aiconfigurationv1alpha1.AIGatewayModel),
+			"AIGatewayModelProvider": new(aiconfigurationv1alpha1.AIGatewayModelProvider),
 			"AIGatewayMCPServer":     new(aiconfigurationv1alpha1.AIGatewayMCPServer),
 			"AIGatewayAgent":         new(aiconfigurationv1alpha1.AIGatewayAgent),
 			"AIGatewayPolicy":        new(aiconfigurationv1alpha1.AIGatewayPolicy),

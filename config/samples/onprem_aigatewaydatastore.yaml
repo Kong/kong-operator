@@ -1,0 +1,104 @@
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongLicense
+metadata:
+  name: kong-license
+enabled: true
+rawLicenseString: |
+  <paste your Kong license payload here>
+---
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: OnPremAIGateway
+metadata:
+  name: ai-gw-cp-onprem-1
+  namespace: default
+spec: {}
+---
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: AIGatewayDataPlane
+metadata:
+  name: ai-gw-dp-onprem-1
+  namespace: default
+spec:
+  controlPlaneRef:
+    type: onpremNamespacedRef
+    onpremNamespacedRef:
+      name: ai-gw-cp-onprem-1
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ai-gw-datastore-redis-password
+  namespace: default
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+stringData:
+  # Fake sample password so the manifest applies out of the box. Replace it with
+  # the real Redis password for anything real.
+  password: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+---
+kind: AIGatewayDatastore
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-datastore-redis
+  namespace: default
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ai-gw-cp-onprem-1
+  apiSpec:
+    # type selects the datastore backend; the field named after it holds that
+    # backend's connection. name is the datastore's entity name: a Policy and a
+    # Model reference the datastore by this CR name, and the operator resolves it
+    # to this name in the rendered configuration.
+    type: redis-ee
+    redis-ee:
+      name: shared-redis
+      displayName: Shared Redis
+      config:
+        host: redis.example.com
+        # port is a union of the literal value (variant1) and a vault reference
+        # (variant2).
+        port:
+          type: variant1
+          variant1: 6379
+        # Credentials a datastore needs are sourced from a Kubernetes Secret, like
+        # a certificate's key. The Secret must carry the operator's Secret label
+        # (konghq.com/secret=true by default).
+        password:
+          type: secretRef
+          secretRef:
+            name: ai-gw-datastore-redis-password
+            key: password
+---
+kind: AIGatewayPolicy
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-policy-rate-limiting-datastore
+  namespace: default
+spec:
+  aiGatewayRef:
+    group: aigateway.konghq.com
+    kind: OnPremAIGateway
+    namespacedRef:
+      name: ai-gw-cp-onprem-1
+  apiSpec:
+    name: ai-gw-policy-rate-limiting-datastore
+    displayName: Rate limiting backed by the shared datastore
+    type: rate-limiting-advanced
+    enabled: Enabled
+    global: Disabled
+    # The datastore supplies the policy's Redis connection: the operator renders
+    # the connection from the datastore and selects the redis strategy.
+    datastores:
+      - name: ai-gw-datastore-redis
+    config:
+      type: inline
+      value:
+        limit:
+          - 10
+        window_size:
+          - 60
+        sync_rate: -1

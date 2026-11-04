@@ -225,6 +225,22 @@ var inputControllersNeeded = &typesNeeded{
 	typeNeeded{
 		Group:                            "aiconfiguration.konghq.com",
 		Version:                          "v1alpha1",
+		Kind:                             "AIGatewayDatastore",
+		PackageImportAlias:               "aiconfigurationv1alpha1",
+		PackageAlias:                     "aiconfigurationv1alpha1",
+		Package:                          aiconfigurationv1alpha1,
+		Plural:                           "aigatewaydatastores",
+		CacheType:                        "AIGatewayDatastore",
+		NeedsStatusPermissions:           true,
+		ConfigStatusNotificationsEnabled: true,
+		ProgrammedCondition: ProgrammedConditionConfiguration{
+			UpdatesEnabled: true,
+		},
+		RBACVerbs: []string{"get", "list", "watch"},
+	},
+	typeNeeded{
+		Group:                            "aiconfiguration.konghq.com",
+		Version:                          "v1alpha1",
 		Kind:                             "AIGatewaySNI",
 		PackageImportAlias:               "aiconfigurationv1alpha1",
 		PackageAlias:                     "aiconfigurationv1alpha1",

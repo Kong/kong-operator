@@ -253,6 +253,7 @@ func onPremAIEntityLists() []client.ObjectList {
 		&aiconfigurationv1alpha1.AIGatewayConsumerGroupList{},
 		&aiconfigurationv1alpha1.AIGatewayCustomPolicyList{},
 		&aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateList{},
+		&aiconfigurationv1alpha1.AIGatewayDatastoreList{},
 		&aiconfigurationv1alpha1.AIGatewayMCPServerList{},
 		&aiconfigurationv1alpha1.AIGatewayModelList{},
 		&aiconfigurationv1alpha1.AIGatewayModelProviderList{},

@@ -1,6 +1,6 @@
 version: "2"
 run:
-  timeout: 10m
+  timeout: 15m
 linters:
   enable:
     - asasalint
@@ -210,10 +210,6 @@ linters:
       - linters:
           - forbidigo
         text: use of `.*(Create|Delete)Dataplane.+` forbidden because "Please use camel case
-      - linters:
-          - gosec
-        path: .*_test\.go
-        text: Use of weak random number generator
       - linters:
           - gosec
         path: .*_test\.go
