@@ -128,8 +128,8 @@ func byID[E any](entities []E, id func(E) gwadminapi.UUIDv4) []E {
 // withGWAdminDefaults returns the entities as gw-admin returns them: with the
 // value it sets on each field left out, e.g. the empty name of the
 // destination of a virtual cluster, the null fields of a policy of a virtual
-// cluster (see policyNulls) or the condition and the TLS versions of a policy
-// of a listener (see withListenerPolicyDefaults), without the empty
+// cluster (see policyNulls and withClusterPolicyDefaults) or the condition and
+// the TLS versions of a policy of a listener (see withListenerPolicyDefaults), without the empty
 // descriptions of the TLS trust bundles and the static keys, which it drops,
 // and with the single ports of a listener as strings, as it returns them.
 // Otherwise they would be pushed again on every reconcile. A default missing
@@ -159,6 +159,7 @@ func withGWAdminDefaults(e gwadminapi.GatewayEntitySet) gwadminapi.GatewayEntity
 				fields["name"] = ""
 			}
 		})
+		vc.ClusterPolicies = withClusterPolicyDefaults(vc.ClusterPolicies)
 		vc.ConsumePolicies = withPolicyNulls(vc.ConsumePolicies)
 		vc.ProducePolicies = withPolicyNulls(vc.ProducePolicies)
 	}
@@ -185,6 +186,22 @@ func portsAsStrings(ports gwadminapi.EventGatewayListenerPorts) gwadminapi.Event
 		asStrings = append(asStrings, port)
 	}
 	return asStrings
+}
+
+// withClusterPolicyDefaults returns a copy with the common fields gw-admin
+// supplies when omitted, without changing the execution order.
+func withClusterPolicyDefaults(policies []gwadminapi.EventGatewayClusterPolicyOnPrem) []gwadminapi.EventGatewayClusterPolicyOnPrem {
+	withDefaults := make([]gwadminapi.EventGatewayClusterPolicyOnPrem, 0, len(policies))
+	for _, p := range policies {
+		withDefaults = append(withDefaults, editedJSON(p, func(fields map[string]any) {
+			for field, value := range map[string]any{"condition": "", "description": "", "enabled": true} {
+				if _, ok := fields[field]; !ok {
+					fields[field] = value
+				}
+			}
+		}))
+	}
+	return withDefaults
 }
 
 // withListenerPolicyDefaults returns a copy of the policies of a listener

@@ -66,3 +66,66 @@ func TestComparisonPreservesOnlyExplicitClusterPolicyOrder(t *testing.T) {
 	require.Equal(t, uuid.MustParse("00000000-0000-4000-8000-000000000011"),
 		entities.VirtualClusters[0].ClusterPolicies[0].Id, "comparison must not mutate the desired document")
 }
+
+func TestComparisonAccountsForClusterPolicyDefaults(t *testing.T) {
+	var pushed, held gwadminapi.GatewayEntitySet
+	require.NoError(t, json.Unmarshal([]byte(`{
+		"virtual_clusters": [{
+			"id":"00000000-0000-4000-8000-000000000001",
+			"cluster_policies":[
+				{"id":"00000000-0000-4000-8000-000000000012","type":"acls"},
+				{"id":"00000000-0000-4000-8000-000000000011","type":"request_rule_validator",
+				 "condition":"true","description":"configured","enabled":false}
+			]
+		}]
+	}`), &pushed))
+	require.NoError(t, json.Unmarshal([]byte(`{
+		"virtual_clusters": [{
+			"id":"00000000-0000-4000-8000-000000000001",
+			"cluster_policies":[
+				{"id":"00000000-0000-4000-8000-000000000012","type":"acls",
+				 "condition":"","description":"","enabled":true},
+				{"id":"00000000-0000-4000-8000-000000000011","type":"request_rule_validator",
+				 "condition":"true","description":"configured","enabled":false}
+			]
+		}]
+	}`), &held))
+	original, err := json.Marshal(pushed)
+	require.NoError(t, err)
+
+	for _, managed := range []bool{false, true} {
+		t.Run(map[bool]string{false: "implicit order", true: "explicit chain"}[managed], func(t *testing.T) {
+			var scopes []uuid.UUID
+			if managed {
+				scopes = []uuid.UUID{pushed.VirtualClusters[0].Id}
+			}
+			key, err := comparisonKey(withGWAdminDefaults(pushed), scopes...)
+			require.NoError(t, err)
+			same, err := sameEntities(held, key, scopes...)
+			require.NoError(t, err)
+			require.True(t, same, "backend defaults must not cause another push, and explicit values must be preserved")
+
+			for field, value := range map[string]any{"condition": "false", "description": "changed", "enabled": false} {
+				drifted := held
+				drifted.VirtualClusters = slices.Clone(held.VirtualClusters)
+				policies := slices.Clone(held.VirtualClusters[0].ClusterPolicies)
+				policies[0] = editedJSON(policies[0], func(fields map[string]any) { fields[field] = value })
+				drifted.VirtualClusters[0].ClusterPolicies = policies
+				same, err := sameEntities(drifted, key, scopes...)
+				require.NoError(t, err)
+				require.False(t, same, "a changed %s must still be detected as drift", field)
+			}
+
+			reordered := held
+			reordered.VirtualClusters = slices.Clone(held.VirtualClusters)
+			reordered.VirtualClusters[0].ClusterPolicies = slices.Clone(held.VirtualClusters[0].ClusterPolicies)
+			slices.Reverse(reordered.VirtualClusters[0].ClusterPolicies)
+			same, err = sameEntities(reordered, key, scopes...)
+			require.NoError(t, err)
+			require.Equal(t, !managed, same, "default normalization must not change which scopes have order-sensitive comparison")
+		})
+	}
+	unchanged, err := json.Marshal(pushed)
+	require.NoError(t, err)
+	require.JSONEq(t, string(original), string(unchanged), "default normalization must not mutate the desired document")
+}

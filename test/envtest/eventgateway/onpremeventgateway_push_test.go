@@ -236,7 +236,8 @@ func newFakeGWAdmin(t *testing.T, tlsConfig *tls.Config) *fakeGWAdmin {
 // withResolvedDestinations returns the entities as gw-admin keeps them: each
 // destination with both the id and the name of its target, resolved from the
 // one it was sent with, the backend cluster of a virtual cluster, or the
-// virtual cluster a listener policy forwards to.
+// virtual cluster a listener policy forwards to, and the common defaults of
+// cluster-level policies.
 func withResolvedDestinations(e gwadminapi.GatewayEntitySet) gwadminapi.GatewayEntitySet {
 	data, err := json.Marshal(e)
 	if err != nil {
@@ -274,6 +275,15 @@ func withResolvedDestinations(e gwadminapi.GatewayEntitySet) gwadminapi.GatewayE
 	for _, vc := range vcs {
 		if fields, ok := vc.(map[string]any); ok {
 			resolve(fields["destination"], bcByID, bcByName)
+			policies, _ := fields["cluster_policies"].([]any)
+			for _, p := range policies {
+				policy, _ := p.(map[string]any)
+				for field, value := range map[string]any{"condition": "", "description": "", "enabled": true} {
+					if _, ok := policy[field]; !ok {
+						policy[field] = value
+					}
+				}
+			}
 		}
 	}
 	listeners, _ := doc["listeners"].([]any)
