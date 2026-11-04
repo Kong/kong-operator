@@ -34,7 +34,7 @@ func (obj *AIGatewayMCPServer) ToAIGWMCPServer(ctx context.Context, cl client.Cl
 		policies        []AIGatewayPolicyRef
 		sources         []AIGatewayMCPServerRef
 		tools           any // one of the three generated tool slices, see mcpToolACLRefs
-		acls            AIGatewayMCPACLs
+		acls            mcpServerACLRefs
 		defaultToolAcls AIGatewayMCPACLs
 		authStrategies  []AIGatewayAuthStrategyRef
 	)
@@ -96,10 +96,10 @@ func (obj *AIGatewayMCPServer) ToAIGWMCPServer(ctx context.Context, cl client.Cl
 
 	// The access union's reference surface. Resolved current-key refs come
 	// first, mirroring AIGatewayModel.
-	if mcp.Access.ACLs.Allow, err = resolveEntityNames[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, mcpACLRefs(acls.Allow)); err != nil {
+	if mcp.Access.ACLs.Allow, err = resolveEntityNames[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, mcpACLRefs(acls.allow)); err != nil {
 		return nil, fmt.Errorf("resolving AIGatewayMCPServer %s/%s access.acls.allow: %w", obj.Namespace, obj.Name, err)
 	}
-	if mcp.Access.ACLs.Deny, err = resolveEntityNames[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, mcpACLRefs(acls.Deny)); err != nil {
+	if mcp.Access.ACLs.Deny, err = resolveEntityNames[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, mcpACLRefs(acls.deny)); err != nil {
 		return nil, fmt.Errorf("resolving AIGatewayMCPServer %s/%s access.acls.deny: %w", obj.Namespace, obj.Name, err)
 	}
 	if mcp.Access.DefaultToolACLs.Allow, err = resolveEntityNames[AIGatewayConsumerGroup](ctx, cl, obj.Namespace, mcpACLRefs(defaultToolAcls.Allow)); err != nil {
@@ -144,7 +144,7 @@ func (obj *AIGatewayMCPServer) ToAIGWMCPServer(ctx context.Context, cl client.Cl
 // untyped) means no access.
 func mcpAccessRefs(
 	access any,
-) (acls, defaultToolAcls AIGatewayMCPACLs, authStrategies []AIGatewayAuthStrategyRef) {
+) (acls mcpServerACLRefs, defaultToolAcls AIGatewayMCPACLs, authStrategies []AIGatewayAuthStrategyRef) {
 	switch a := access.(type) {
 	case *AIGatewayMCPServerConversionListenerAccess:
 		if a != nil {
@@ -167,14 +167,47 @@ func mcpAccessRefs(
 func mcpAccessInnerRefs(
 	consumer *AIGatewayMCPServerListenerConsumer,
 	oauth *AIGatewayMCPServerListenerOauth,
-) (acls, defaultToolAcls AIGatewayMCPACLs, authStrategies []AIGatewayAuthStrategyRef) {
+) (acls mcpServerACLRefs, defaultToolAcls AIGatewayMCPACLs, authStrategies []AIGatewayAuthStrategyRef) {
 	switch {
 	case consumer != nil:
-		return consumer.Acls, consumer.DefaultToolAcls, consumer.AuthStrategies
+		return mcpServerACLs(consumer.Acls), consumer.DefaultToolAcls, consumer.AuthStrategies
 	case oauth != nil:
-		return oauth.Acls, oauth.DefaultToolAcls, oauth.AuthStrategies
+		return mcpServerACLs(oauth.Acls), oauth.DefaultToolAcls, oauth.AuthStrategies
 	}
 	return
+}
+
+// mcpServerACLRefs holds the refs of the access union's selected server-level ACL
+// variant. The union allows exactly one of allow/deny/allow_when/deny_when; only
+// allow and deny carry references.
+type mcpServerACLRefs struct {
+	allow, deny []AIGatewayACLRef
+}
+
+// mcpServerACLs projects an access union onto its selected variant's refs. The
+// consumer and oauth arms are distinct generated structs with the same shape.
+func mcpServerACLs(acls any) mcpServerACLRefs {
+	switch a := acls.(type) {
+	case *AIGatewayMCPServerListenerConsumerAcls:
+		if a != nil {
+			switch {
+			case a.Allow != nil:
+				return mcpServerACLRefs{allow: a.Allow}
+			case a.Deny != nil:
+				return mcpServerACLRefs{deny: a.Deny}
+			}
+		}
+	case *AIGatewayMCPServerListenerOauthAcls:
+		if a != nil {
+			switch {
+			case a.Allow != nil:
+				return mcpServerACLRefs{allow: a.Allow}
+			case a.Deny != nil:
+				return mcpServerACLRefs{deny: a.Deny}
+			}
+		}
+	}
+	return mcpServerACLRefs{}
 }
 
 // mcpToolACLRefs extracts each tool's access.acls for resolution, in payload order. The
@@ -207,7 +240,7 @@ func mcpToolACLRefs(tools any) []AIGatewayMCPACLs {
 // mcpACLRefs and mcpServerRefs project the MCP-specific reference types onto the common
 // shape resolveEntityNames needs, like policyRefs/authStrategyRefs/consumerGroupRefs in
 // aigatewaymodel_aigw_manual.go.
-func mcpACLRefs(refs []AIGatewayMCPACLRef) []namespacedRef {
+func mcpACLRefs(refs []AIGatewayACLRef) []namespacedRef {
 	out := make([]namespacedRef, len(refs))
 	for i, r := range refs {
 		out[i] = namespacedRef{Name: r.Name, Namespace: r.Namespace}

@@ -2894,19 +2894,34 @@ type AIGatewayAuthStrategyOpenIDConnect struct {
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-	// Serves the self-service enrollment UI through which end users authorize the
-	// upstream providers
-	// this auth strategy authenticates against.
-	// Omit `token_vault` entirely to serve no such UI.
+	// Enables enrollment protection for the Token Vault datastore linked to this
+	// auth strategy.
+	// Users of the linked Token Vault will need to authenticate using this OIDC
+	// auth strategy
+	// before completing enrollment with upstream providers.
+	// Enrollment links always store upstream
+	// credentials in the Token Vault belonging to the principal who requested the
+	// link.
+	// Enrollment
+	// protection ensures that other principals cannot use an enrollment link to
+	// unknowingly
+	// authorize the storage of their upstream credentials in another principal's
+	// Token Vault.
 	//
-	// Requires a `token-vault` Datastore reference in `datastores`; enabling the
-	// credential manager
+	// Note that the auth strategy used to protect upstream resources such as MCP
+	// servers need not
+	// be the same auth strategy used for enrollment protection.
+	// Omit `token_vault` entirely to
+	// enforce no such enrollment protection.
+	//
+	// Requires a `token-vault` Datastore reference in `datastores`; enabling
+	// enrollment protection
 	// without one is rejected.
 	//
 	// **Requires a minimum runtime version of `2.3`**.
 	//
 	// +optional
-	TokenVault AIGatewayTokenVaultCredentialManager `json:"tokenVault,omitzero"`
+	TokenVault AIGatewayTokenVaultEnrollmentProtection `json:"tokenVault,omitzero"`
 }
 
 // AIGatewayAuthStrategyReference Reference to an auth strategy instance by
@@ -3344,7 +3359,7 @@ type AIGatewayMCPACLs struct {
 	// List of consumer groups that are permitted access.
 	//
 	// +optional
-	Allow []AIGatewayMCPACLRef `json:"allow,omitempty"`
+	Allow []AIGatewayACLRef `json:"allow,omitempty"`
 	// Allow the request if it matches any of these CEL boolean expressions
 	// evaluated against the request context.
 	//
@@ -3355,7 +3370,7 @@ type AIGatewayMCPACLs struct {
 	// List of consumer groups that are denied access.
 	//
 	// +optional
-	Deny []AIGatewayMCPACLRef `json:"deny,omitempty"`
+	Deny []AIGatewayACLRef `json:"deny,omitempty"`
 	// Deny the request if it matches any of these CEL boolean expressions
 	// evaluated against the request context.
 	//
@@ -3363,6 +3378,25 @@ type AIGatewayMCPACLs struct {
 	//
 	// +optional
 	DenyWhen []string `json:"denyWhen,omitempty"`
+}
+
+// AIGatewayMCPAllowACL is a type alias.
+type AIGatewayMCPAllowACL struct {
+	// List of consumer groups that are permitted access.
+	//
+	// +required
+	Allow []string `json:"allow,omitempty"`
+}
+
+// AIGatewayMCPAllowWhenACL is a type alias.
+type AIGatewayMCPAllowWhenACL struct {
+	// Allow the request if it matches any of these CEL boolean expressions
+	// evaluated against the request context.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +required
+	AllowWhen []string `json:"allowWhen,omitempty"`
 }
 
 // AIGatewayMCPConversionTool A tool exposed by an MCP Server in
@@ -3474,6 +3508,25 @@ type AIGatewayMCPConversionTool struct {
 	Scheme string `json:"scheme,omitzero"`
 }
 
+// AIGatewayMCPDenyACL is a type alias.
+type AIGatewayMCPDenyACL struct {
+	// List of consumer groups that are denied access.
+	//
+	// +required
+	Deny []string `json:"deny,omitempty"`
+}
+
+// AIGatewayMCPDenyWhenACL is a type alias.
+type AIGatewayMCPDenyWhenACL struct {
+	// Deny the request if it matches any of these CEL boolean expressions
+	// evaluated against the request context.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +required
+	DenyWhen []string `json:"denyWhen,omitempty"`
+}
+
 // AIGatewayMCPPassthroughTool A tool exposed by an MCP Server in
 // `passthrough-listener` mode.
 type AIGatewayMCPPassthroughTool struct {
@@ -3488,6 +3541,10 @@ type AIGatewayMCPPassthroughTool struct {
 	// +kubebuilder:validation:MaxLength=253
 	Name string `json:"name,omitzero"`
 }
+
+// AIGatewayMCPServerACLs Access control rules for MCP resources.
+// Configure exactly one of `allow`, `deny`, `allow_when`, or `deny_when`.
+type AIGatewayMCPServerACLs map[string]string
 
 // AIGatewayMCPServerCacheHint A cache hint Kong emits on a cacheable operation
 // it serves.
@@ -4260,7 +4317,7 @@ type AIGatewayMCPServerListenerConsumer struct {
 	//
 	//
 	// +optional
-	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
+	Acls *AIGatewayMCPServerListenerConsumerAcls `json:"acls,omitempty"`
 	// List of auth strategies for granting access to the MCP server.
 	// At most 1 auth strategy of each auth strategy type can be referenced.
 	//
@@ -4296,6 +4353,175 @@ type AIGatewayMCPServerListenerConsumer struct {
 	Metadata AIGatewayMCPServerProtectedResourceMetadata `json:"metadata,omitzero"`
 }
 
+// AIGatewayMCPServerListenerConsumerAcls represents a union type for acls.
+// Only one of the fields should be set based on the Type.
+type AIGatewayMCPServerListenerConsumerAcls struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=allow;deny;allowWhen;denyWhen
+	Type AIGatewayMCPServerListenerConsumerAclsType `json:"type,omitempty"`
+
+	// List of consumer groups that are permitted access.
+	//
+	// +optional
+	Allow []AIGatewayACLRef `json:"allow,omitempty"`
+	// List of consumer groups that are denied access.
+	//
+	// +optional
+	Deny []AIGatewayACLRef `json:"deny,omitempty"`
+	// Allow the request if it matches any of these CEL boolean expressions
+	// evaluated against the request context.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	AllowWhen []string `json:"allowWhen,omitempty"`
+	// Deny the request if it matches any of these CEL boolean expressions
+	// evaluated against the request context.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	DenyWhen []string `json:"denyWhen,omitempty"`
+}
+
+// AIGatewayMCPServerListenerConsumerAclsType represents the type of acls.
+type AIGatewayMCPServerListenerConsumerAclsType string
+
+// AIGatewayMCPServerListenerConsumerAclsType values.
+const (
+	AIGatewayMCPServerListenerConsumerAclsTypeAllow     AIGatewayMCPServerListenerConsumerAclsType = "allow"
+	AIGatewayMCPServerListenerConsumerAclsTypeDeny      AIGatewayMCPServerListenerConsumerAclsType = "deny"
+	AIGatewayMCPServerListenerConsumerAclsTypeAllowWhen AIGatewayMCPServerListenerConsumerAclsType = "allowWhen"
+	AIGatewayMCPServerListenerConsumerAclsTypeDenyWhen  AIGatewayMCPServerListenerConsumerAclsType = "denyWhen"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayMCPServerListenerConsumerAcls) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayMCPServerListenerConsumerAcls type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case AIGatewayMCPServerListenerConsumerAclsTypeAllow:
+		if u.Allow != nil {
+			raw, err := json.Marshal(u.Allow)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerListenerConsumerAcls Allow: %w", err)
+			}
+			m["allow"] = raw
+		}
+	case AIGatewayMCPServerListenerConsumerAclsTypeDeny:
+		if u.Deny != nil {
+			raw, err := json.Marshal(u.Deny)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerListenerConsumerAcls Deny: %w", err)
+			}
+			m["deny"] = raw
+		}
+	case AIGatewayMCPServerListenerConsumerAclsTypeAllowWhen:
+		if u.AllowWhen != nil {
+			raw, err := json.Marshal(u.AllowWhen)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerListenerConsumerAcls AllowWhen: %w", err)
+			}
+			m["allowWhen"] = raw
+		}
+	case AIGatewayMCPServerListenerConsumerAclsTypeDenyWhen:
+		if u.DenyWhen != nil {
+			raw, err := json.Marshal(u.DenyWhen)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerListenerConsumerAcls DenyWhen: %w", err)
+			}
+			m["denyWhen"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayMCPServerListenerConsumerAcls) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerConsumerAcls: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayMCPServerListenerConsumerAclsType(probe.Type)
+	switch probe.Type {
+	case "allow":
+		payload, ok := raw["allow"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val []AIGatewayACLRef
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerConsumerAcls Allow: %w", err)
+		}
+		u.Allow = val
+	case "deny":
+		payload, ok := raw["deny"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val []AIGatewayACLRef
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerConsumerAcls Deny: %w", err)
+		}
+		u.Deny = val
+	case "allowWhen":
+		payload, ok := raw["allowWhen"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val []string
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerConsumerAcls AllowWhen: %w", err)
+		}
+		u.AllowWhen = val
+	case "denyWhen":
+		payload, ok := raw["denyWhen"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val []string
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerConsumerAcls DenyWhen: %w", err)
+		}
+		u.DenyWhen = val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayMCPServerListenerConsumer) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerConsumer: nil receiver")
+	}
+	type alias AIGatewayMCPServerListenerConsumer
+	aux := alias{}
+	aux.Acls = &AIGatewayMCPServerListenerConsumerAcls{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerConsumer: %w", err)
+	}
+	if aux.Acls != nil && aux.Acls.Type == "" && aux.Acls.Allow == nil && aux.Acls.Deny == nil && aux.Acls.AllowWhen == nil && aux.Acls.DenyWhen == nil {
+		aux.Acls = nil
+	}
+	*s = AIGatewayMCPServerListenerConsumer(aux)
+	return nil
+}
+
 // AIGatewayMCPServerListenerOauth Auth strategy and OAuth 2.0 Protected
 // Resource Metadata configuration
 // for granting access to an MCP server.
@@ -4322,7 +4548,7 @@ type AIGatewayMCPServerListenerOauth struct {
 	//
 	//
 	// +optional
-	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
+	Acls *AIGatewayMCPServerListenerOauthAcls `json:"acls,omitempty"`
 	// List of auth strategies for granting access to the MCP server.
 	// At most 1 auth strategy of each auth strategy type can be referenced.
 	//
@@ -4357,6 +4583,175 @@ type AIGatewayMCPServerListenerOauth struct {
 	//
 	// +optional
 	Metadata AIGatewayMCPServerProtectedResourceMetadata `json:"metadata,omitzero"`
+}
+
+// AIGatewayMCPServerListenerOauthAcls represents a union type for acls.
+// Only one of the fields should be set based on the Type.
+type AIGatewayMCPServerListenerOauthAcls struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=allow;deny;allowWhen;denyWhen
+	Type AIGatewayMCPServerListenerOauthAclsType `json:"type,omitempty"`
+
+	// List of consumer groups that are permitted access.
+	//
+	// +optional
+	Allow []AIGatewayACLRef `json:"allow,omitempty"`
+	// List of consumer groups that are denied access.
+	//
+	// +optional
+	Deny []AIGatewayACLRef `json:"deny,omitempty"`
+	// Allow the request if it matches any of these CEL boolean expressions
+	// evaluated against the request context.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	AllowWhen []string `json:"allowWhen,omitempty"`
+	// Deny the request if it matches any of these CEL boolean expressions
+	// evaluated against the request context.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	DenyWhen []string `json:"denyWhen,omitempty"`
+}
+
+// AIGatewayMCPServerListenerOauthAclsType represents the type of acls.
+type AIGatewayMCPServerListenerOauthAclsType string
+
+// AIGatewayMCPServerListenerOauthAclsType values.
+const (
+	AIGatewayMCPServerListenerOauthAclsTypeAllow     AIGatewayMCPServerListenerOauthAclsType = "allow"
+	AIGatewayMCPServerListenerOauthAclsTypeDeny      AIGatewayMCPServerListenerOauthAclsType = "deny"
+	AIGatewayMCPServerListenerOauthAclsTypeAllowWhen AIGatewayMCPServerListenerOauthAclsType = "allowWhen"
+	AIGatewayMCPServerListenerOauthAclsTypeDenyWhen  AIGatewayMCPServerListenerOauthAclsType = "denyWhen"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayMCPServerListenerOauthAcls) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayMCPServerListenerOauthAcls type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case AIGatewayMCPServerListenerOauthAclsTypeAllow:
+		if u.Allow != nil {
+			raw, err := json.Marshal(u.Allow)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerListenerOauthAcls Allow: %w", err)
+			}
+			m["allow"] = raw
+		}
+	case AIGatewayMCPServerListenerOauthAclsTypeDeny:
+		if u.Deny != nil {
+			raw, err := json.Marshal(u.Deny)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerListenerOauthAcls Deny: %w", err)
+			}
+			m["deny"] = raw
+		}
+	case AIGatewayMCPServerListenerOauthAclsTypeAllowWhen:
+		if u.AllowWhen != nil {
+			raw, err := json.Marshal(u.AllowWhen)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerListenerOauthAcls AllowWhen: %w", err)
+			}
+			m["allowWhen"] = raw
+		}
+	case AIGatewayMCPServerListenerOauthAclsTypeDenyWhen:
+		if u.DenyWhen != nil {
+			raw, err := json.Marshal(u.DenyWhen)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayMCPServerListenerOauthAcls DenyWhen: %w", err)
+			}
+			m["denyWhen"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayMCPServerListenerOauthAcls) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerOauthAcls: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayMCPServerListenerOauthAclsType(probe.Type)
+	switch probe.Type {
+	case "allow":
+		payload, ok := raw["allow"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val []AIGatewayACLRef
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerOauthAcls Allow: %w", err)
+		}
+		u.Allow = val
+	case "deny":
+		payload, ok := raw["deny"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val []AIGatewayACLRef
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerOauthAcls Deny: %w", err)
+		}
+		u.Deny = val
+	case "allowWhen":
+		payload, ok := raw["allowWhen"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val []string
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerOauthAcls AllowWhen: %w", err)
+		}
+		u.AllowWhen = val
+	case "denyWhen":
+		payload, ok := raw["denyWhen"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val []string
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerOauthAcls DenyWhen: %w", err)
+		}
+		u.DenyWhen = val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayMCPServerListenerOauth) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerOauth: nil receiver")
+	}
+	type alias AIGatewayMCPServerListenerOauth
+	aux := alias{}
+	aux.Acls = &AIGatewayMCPServerListenerOauthAcls{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerOauth: %w", err)
+	}
+	if aux.Acls != nil && aux.Acls.Type == "" && aux.Acls.Allow == nil && aux.Acls.Deny == nil && aux.Acls.AllowWhen == nil && aux.Acls.DenyWhen == nil {
+		aux.Acls = nil
+	}
+	*s = AIGatewayMCPServerListenerOauth(aux)
+	return nil
 }
 
 // AIGatewayMCPServerPassthroughListener is a type alias.
@@ -15006,24 +15401,6 @@ type AIGatewayTokenVaultCredential struct {
 	Outbound AIGatewayTokenVaultCredentialPlacement `json:"outbound,omitzero"`
 }
 
-// AIGatewayTokenVaultCredentialManager Serves the self-service enrollment UI
-// through which end users authorize the upstream providers
-// this auth strategy authenticates against.
-// Omit `token_vault` entirely to serve no such UI.
-//
-// Requires a `token-vault` Datastore reference in `datastores`; enabling the
-// credential manager
-// without one is rejected.
-//
-// **Requires a minimum runtime version of `2.3`**.
-type AIGatewayTokenVaultCredentialManager struct {
-	// Whether the self-service enrollment UI is served for this auth strategy.
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	EnableCredentialManager string `json:"enableCredentialManager,omitzero"`
-}
-
 // AIGatewayTokenVaultCredentialPlacement is a type alias.
 type AIGatewayTokenVaultCredentialPlacement struct {
 	// Whether the credential travels in a header, the request body, or the query
@@ -15052,6 +15429,54 @@ type AIGatewayTokenVaultCredentialPlacement struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	Prefix string `json:"prefix,omitzero"`
+}
+
+// AIGatewayTokenVaultEnrollmentProtection Enables enrollment protection for the
+// Token Vault datastore linked to this auth strategy.
+// Users of the linked Token Vault will need to authenticate using this OIDC
+// auth strategy
+// before completing enrollment with upstream providers.
+// Enrollment links always store upstream
+// credentials in the Token Vault belonging to the principal who requested the
+// link.
+// Enrollment
+// protection ensures that other principals cannot use an enrollment link to
+// unknowingly
+// authorize the storage of their upstream credentials in another principal's
+// Token Vault.
+//
+// Note that the auth strategy used to protect upstream resources such as MCP
+// servers need not
+// be the same auth strategy used for enrollment protection.
+// Omit `token_vault` entirely to
+// enforce no such enrollment protection.
+//
+// Requires a `token-vault` Datastore reference in `datastores`; enabling
+// enrollment protection
+// without one is rejected.
+//
+// **Requires a minimum runtime version of `2.3`**.
+type AIGatewayTokenVaultEnrollmentProtection struct {
+	// Enables the self-service credential manager UI through which end users
+	// authorize
+	// upstream providers for Token Vault datastore linked to this auth strategy.
+	// This OIDC
+	// auth strategy is used to authenticate access to the self-service UI, but
+	// need not
+	// necessarily be the same auth strategy that is used to authenticate access to
+	// upstream
+	// Token Vault providers.
+	//
+	// Requires a `token-vault` Datastore reference in `datastores`; enabling the
+	// credential
+	// manager without one is rejected.
+	// The credential manager cannot be used without
+	// enrollment protection.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	EnableCredentialManager string `json:"enableCredentialManager,omitzero"`
 }
 
 // AIGatewayUpstreamAuthAWS AWS IAM (SigV4) authentication for the upstream

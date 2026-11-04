@@ -241,10 +241,62 @@ func TestAIGatewayMCPACLs_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestAIGatewayMCPAllowACL_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPAllowACL
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPAllowWhenACL_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPAllowWhenACL
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestAIGatewayMCPConversionTool_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
 	var spec AIGatewayMCPConversionTool
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPDenyACL_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPDenyACL
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayMCPDenyWhenACL_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPDenyWhenACL
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -1580,10 +1632,10 @@ func TestAIGatewayTokenVaultCredential_MarshalEmpty(t *testing.T) {
 	}
 }
 
-func TestAIGatewayTokenVaultCredentialManager_MarshalEmpty(t *testing.T) {
+func TestAIGatewayTokenVaultCredentialPlacement_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
-	var spec AIGatewayTokenVaultCredentialManager
+	var spec AIGatewayTokenVaultCredentialPlacement
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -1593,10 +1645,10 @@ func TestAIGatewayTokenVaultCredentialManager_MarshalEmpty(t *testing.T) {
 	}
 }
 
-func TestAIGatewayTokenVaultCredentialPlacement_MarshalEmpty(t *testing.T) {
+func TestAIGatewayTokenVaultEnrollmentProtection_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
-	var spec AIGatewayTokenVaultCredentialPlacement
+	var spec AIGatewayTokenVaultEnrollmentProtection
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -2148,6 +2200,66 @@ func TestAIGatewayMCPServerListenerAccessUnmarshalJSON_NilReceiver(t *testing.T)
 				t.Fatal("expected error for nil receiver")
 			}
 			if got, want := err.Error(), "unmarshaling AIGatewayMCPServerListenerAccess: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestAIGatewayMCPServerListenerConsumerAclsUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "Allow", payload: []byte("{\"type\":\"allow\",\"allow\":[]}")},
+		{name: "Deny", payload: []byte("{\"type\":\"deny\",\"deny\":[]}")},
+		{name: "AllowWhen", payload: []byte("{\"type\":\"allowWhen\",\"allowWhen\":[]}")},
+		{name: "DenyWhen", payload: []byte("{\"type\":\"denyWhen\",\"denyWhen\":[]}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *AIGatewayMCPServerListenerConsumerAcls
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling AIGatewayMCPServerListenerConsumerAcls: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestAIGatewayMCPServerListenerOauthAclsUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "Allow", payload: []byte("{\"type\":\"allow\",\"allow\":[]}")},
+		{name: "Deny", payload: []byte("{\"type\":\"deny\",\"deny\":[]}")},
+		{name: "AllowWhen", payload: []byte("{\"type\":\"allowWhen\",\"allowWhen\":[]}")},
+		{name: "DenyWhen", payload: []byte("{\"type\":\"denyWhen\",\"denyWhen\":[]}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *AIGatewayMCPServerListenerOauthAcls
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling AIGatewayMCPServerListenerOauthAcls: nil receiver"; got != want {
 				t.Fatalf("unexpected error: got %q want %q", got, want)
 			}
 		})
@@ -2949,6 +3061,182 @@ func TestAIGatewayMCPServerListenerUnmarshalJSON_DecodesUnionFields(t *testing.T
 			t.Parallel()
 
 			var target AIGatewayMCPServerListener
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
+func TestAIGatewayMCPServerListenerConsumerUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+		assert  func(*testing.T, AIGatewayMCPServerListenerConsumer)
+	}{
+		{
+			name:    "Acls/Allow",
+			payload: []byte("{\"acls\":{\"type\":\"allow\",\"allow\":[]}}"),
+			assert: func(t *testing.T, target AIGatewayMCPServerListenerConsumer) {
+				t.Helper()
+				if target.Acls == nil {
+					t.Fatalf("Acls should be allocated")
+				}
+				if got, want := target.Acls.Type, AIGatewayMCPServerListenerConsumerAclsTypeAllow; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Acls.Allow == nil {
+					t.Fatalf("Acls.Allow should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Acls/Deny",
+			payload: []byte("{\"acls\":{\"type\":\"deny\",\"deny\":[]}}"),
+			assert: func(t *testing.T, target AIGatewayMCPServerListenerConsumer) {
+				t.Helper()
+				if target.Acls == nil {
+					t.Fatalf("Acls should be allocated")
+				}
+				if got, want := target.Acls.Type, AIGatewayMCPServerListenerConsumerAclsTypeDeny; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Acls.Deny == nil {
+					t.Fatalf("Acls.Deny should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Acls/AllowWhen",
+			payload: []byte("{\"acls\":{\"type\":\"allowWhen\",\"allowWhen\":[]}}"),
+			assert: func(t *testing.T, target AIGatewayMCPServerListenerConsumer) {
+				t.Helper()
+				if target.Acls == nil {
+					t.Fatalf("Acls should be allocated")
+				}
+				if got, want := target.Acls.Type, AIGatewayMCPServerListenerConsumerAclsTypeAllowWhen; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Acls.AllowWhen == nil {
+					t.Fatalf("Acls.AllowWhen should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Acls/DenyWhen",
+			payload: []byte("{\"acls\":{\"type\":\"denyWhen\",\"denyWhen\":[]}}"),
+			assert: func(t *testing.T, target AIGatewayMCPServerListenerConsumer) {
+				t.Helper()
+				if target.Acls == nil {
+					t.Fatalf("Acls should be allocated")
+				}
+				if got, want := target.Acls.Type, AIGatewayMCPServerListenerConsumerAclsTypeDenyWhen; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Acls.DenyWhen == nil {
+					t.Fatalf("Acls.DenyWhen should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target AIGatewayMCPServerListenerConsumer
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
+func TestAIGatewayMCPServerListenerOauthUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+		assert  func(*testing.T, AIGatewayMCPServerListenerOauth)
+	}{
+		{
+			name:    "Acls/Allow",
+			payload: []byte("{\"acls\":{\"type\":\"allow\",\"allow\":[]}}"),
+			assert: func(t *testing.T, target AIGatewayMCPServerListenerOauth) {
+				t.Helper()
+				if target.Acls == nil {
+					t.Fatalf("Acls should be allocated")
+				}
+				if got, want := target.Acls.Type, AIGatewayMCPServerListenerOauthAclsTypeAllow; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Acls.Allow == nil {
+					t.Fatalf("Acls.Allow should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Acls/Deny",
+			payload: []byte("{\"acls\":{\"type\":\"deny\",\"deny\":[]}}"),
+			assert: func(t *testing.T, target AIGatewayMCPServerListenerOauth) {
+				t.Helper()
+				if target.Acls == nil {
+					t.Fatalf("Acls should be allocated")
+				}
+				if got, want := target.Acls.Type, AIGatewayMCPServerListenerOauthAclsTypeDeny; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Acls.Deny == nil {
+					t.Fatalf("Acls.Deny should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Acls/AllowWhen",
+			payload: []byte("{\"acls\":{\"type\":\"allowWhen\",\"allowWhen\":[]}}"),
+			assert: func(t *testing.T, target AIGatewayMCPServerListenerOauth) {
+				t.Helper()
+				if target.Acls == nil {
+					t.Fatalf("Acls should be allocated")
+				}
+				if got, want := target.Acls.Type, AIGatewayMCPServerListenerOauthAclsTypeAllowWhen; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Acls.AllowWhen == nil {
+					t.Fatalf("Acls.AllowWhen should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Acls/DenyWhen",
+			payload: []byte("{\"acls\":{\"type\":\"denyWhen\",\"denyWhen\":[]}}"),
+			assert: func(t *testing.T, target AIGatewayMCPServerListenerOauth) {
+				t.Helper()
+				if target.Acls == nil {
+					t.Fatalf("Acls should be allocated")
+				}
+				if got, want := target.Acls.Type, AIGatewayMCPServerListenerOauthAclsTypeDenyWhen; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Acls.DenyWhen == nil {
+					t.Fatalf("Acls.DenyWhen should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target AIGatewayMCPServerListenerOauth
 			if err := json.Unmarshal(tt.payload, &target); err != nil {
 				t.Fatalf("json.Unmarshal() error = %v", err)
 			}

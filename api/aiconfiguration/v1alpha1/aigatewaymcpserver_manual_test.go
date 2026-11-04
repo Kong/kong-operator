@@ -46,8 +46,9 @@ func TestAIGatewayMCPServer_MixedToolAclsInjection(t *testing.T) {
 							Consumer: &AIGatewayMCPServerListenerConsumer{
 								// Server-level allow list must not bleed into (or
 								// consume resolved values of) the per-tool lists.
-								Acls: AIGatewayMCPACLs{
-									Allow: []AIGatewayMCPACLRef{{Name: "server-allow"}},
+								Acls: &AIGatewayMCPServerListenerConsumerAcls{
+									Type:  AIGatewayMCPServerListenerConsumerAclsTypeAllow,
+									Allow: []AIGatewayACLRef{{Name: "server-allow"}},
 								},
 							},
 						},
@@ -61,7 +62,7 @@ func TestAIGatewayMCPServer_MixedToolAclsInjection(t *testing.T) {
 								Method:      "GET",
 								Access: AIGatewayMCPToolAccess{
 									Acls: AIGatewayMCPACLs{
-										Deny: []AIGatewayMCPACLRef{{Name: "deny-group"}},
+										Deny: []AIGatewayACLRef{{Name: "deny-group"}},
 									},
 								},
 							},
@@ -71,7 +72,7 @@ func TestAIGatewayMCPServer_MixedToolAclsInjection(t *testing.T) {
 								Method:      "GET",
 								Access: AIGatewayMCPToolAccess{
 									Acls: AIGatewayMCPACLs{
-										Allow: []AIGatewayMCPACLRef{{Name: "allow-group"}},
+										Allow: []AIGatewayACLRef{{Name: "allow-group"}},
 									},
 								},
 							},

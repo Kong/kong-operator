@@ -149,6 +149,16 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  type:
+                                    enum:
+                                    - allow
+                                    - deny
+                                    - allowWhen
+                                    - denyWhen
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
                                 type: object
                               authStrategies:
                                 items:
@@ -289,6 +299,16 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  type:
+                                    enum:
+                                    - allow
+                                    - deny
+                                    - allowWhen
+                                    - denyWhen
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
                                 type: object
                               authStrategies:
                                 items:
@@ -1882,6 +1902,16 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  type:
+                                    enum:
+                                    - allow
+                                    - deny
+                                    - allowWhen
+                                    - denyWhen
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
                                 type: object
                               authStrategies:
                                 items:
@@ -2022,6 +2052,16 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  type:
+                                    enum:
+                                    - allow
+                                    - deny
+                                    - allowWhen
+                                    - denyWhen
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
                                 type: object
                               authStrategies:
                                 items:
@@ -2811,6 +2851,16 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  type:
+                                    enum:
+                                    - allow
+                                    - deny
+                                    - allowWhen
+                                    - denyWhen
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
                                 type: object
                               authStrategies:
                                 items:
@@ -2951,6 +3001,16 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  type:
+                                    enum:
+                                    - allow
+                                    - deny
+                                    - allowWhen
+                                    - denyWhen
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
                                 type: object
                               authStrategies:
                                 items:

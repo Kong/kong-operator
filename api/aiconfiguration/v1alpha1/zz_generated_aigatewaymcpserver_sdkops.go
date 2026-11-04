@@ -1031,6 +1031,60 @@ func normalizeAIGatewayMCPServerSDKOpsBoolField(value any, path []string) (any, 
 	}
 }
 
+// AIGatewayMCPServerSDKOpsUnionUnwrapFields lists property-level oneOf fields
+// with no OAS discriminator, whose payload must be unwrapped from the CRD's
+// discriminated shape to the Konnect SDK's non-discriminated shape.
+var AIGatewayMCPServerSDKOpsUnionUnwrapFields = []sdkOpsUnionUnwrapField{
+	{
+		Path: []string{
+			"conversion-listener",
+			"access",
+			"consumer",
+			"acls",
+		},
+	},
+	{
+		Path: []string{
+			"conversion-listener",
+			"access",
+			"oauth_access_token",
+			"acls",
+		},
+	},
+	{
+		Path: []string{
+			"listener",
+			"access",
+			"consumer",
+			"acls",
+		},
+	},
+	{
+		Path: []string{
+			"listener",
+			"access",
+			"oauth_access_token",
+			"acls",
+		},
+	},
+	{
+		Path: []string{
+			"passthrough-listener",
+			"access",
+			"consumer",
+			"acls",
+		},
+	},
+	{
+		Path: []string{
+			"passthrough-listener",
+			"access",
+			"oauth_access_token",
+			"acls",
+		},
+	},
+}
+
 // AIGatewayMCPServerSDKOpsFreeformKeyFields lists free-form / map data-keyed
 // subtrees whose keys are user data (e.g. an HTTP header name) and must be
 // preserved verbatim rather than camelCase→snake_case renamed.
@@ -1257,6 +1311,7 @@ func (s *AIGatewayMCPServerAPISpec) marshalSDKOpsPayload() (map[string]any, erro
 	if err := normalizeAIGatewayMCPServerSDKOpsBoolFields(payload); err != nil {
 		return nil, fmt.Errorf("failed to normalize AIGatewayMCPServerAPISpec SDK payload: %w", err)
 	}
+	unwrapSDKOpsUnionFields(payload, AIGatewayMCPServerSDKOpsUnionUnwrapFields)
 	return payload, nil
 }
 
@@ -1332,12 +1387,18 @@ func (s *AIGatewayMCPServerAPISpec) toCreateAIGatewayMCPServerRequestFromPayload
 		if err := json.Unmarshal(data, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into AIGatewayMCPServerConversionOnly: %w", err)
 		}
+		if err := assignSDKOpsUnionMembers(&member, data, AIGatewayMCPServerSDKOpsUnionUnwrapFields, "conversion-only"); err != nil {
+			return nil, fmt.Errorf("failed to assign union members: %w", err)
+		}
 		target := sdkkonnectcomp.CreateCreateAIGatewayMCPServerRequestConversionOnly(member)
 		return &target, nil
 	case "ConversionListener":
 		var member sdkkonnectcomp.AIGatewayMCPServerConversionListener
 		if err := json.Unmarshal(data, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into AIGatewayMCPServerConversionListener: %w", err)
+		}
+		if err := assignSDKOpsUnionMembers(&member, data, AIGatewayMCPServerSDKOpsUnionUnwrapFields, "conversion-listener"); err != nil {
+			return nil, fmt.Errorf("failed to assign union members: %w", err)
 		}
 		target := sdkkonnectcomp.CreateCreateAIGatewayMCPServerRequestConversionListener(member)
 		return &target, nil
@@ -1346,6 +1407,9 @@ func (s *AIGatewayMCPServerAPISpec) toCreateAIGatewayMCPServerRequestFromPayload
 		if err := json.Unmarshal(data, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into AIGatewayMCPServerListener: %w", err)
 		}
+		if err := assignSDKOpsUnionMembers(&member, data, AIGatewayMCPServerSDKOpsUnionUnwrapFields, "listener"); err != nil {
+			return nil, fmt.Errorf("failed to assign union members: %w", err)
+		}
 		target := sdkkonnectcomp.CreateCreateAIGatewayMCPServerRequestListener(member)
 		return &target, nil
 	case "PassthroughListener":
@@ -1353,12 +1417,18 @@ func (s *AIGatewayMCPServerAPISpec) toCreateAIGatewayMCPServerRequestFromPayload
 		if err := json.Unmarshal(data, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into AIGatewayMCPServerPassthroughListener: %w", err)
 		}
+		if err := assignSDKOpsUnionMembers(&member, data, AIGatewayMCPServerSDKOpsUnionUnwrapFields, "passthrough-listener"); err != nil {
+			return nil, fmt.Errorf("failed to assign union members: %w", err)
+		}
 		target := sdkkonnectcomp.CreateCreateAIGatewayMCPServerRequestPassthroughListener(member)
 		return &target, nil
 	case "UpstreamServer":
 		var member sdkkonnectcomp.AIGatewayMCPServerUpstreamServer
 		if err := json.Unmarshal(data, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into AIGatewayMCPServerUpstreamServer: %w", err)
+		}
+		if err := assignSDKOpsUnionMembers(&member, data, AIGatewayMCPServerSDKOpsUnionUnwrapFields, "upstream-server"); err != nil {
+			return nil, fmt.Errorf("failed to assign union members: %w", err)
 		}
 		target := sdkkonnectcomp.CreateCreateAIGatewayMCPServerRequestUpstreamServer(member)
 		return &target, nil
@@ -1382,12 +1452,18 @@ func (s *AIGatewayMCPServerAPISpec) toUpdateAIGatewayMCPServerRequestFromPayload
 		if err := json.Unmarshal(data, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into AIGatewayMCPServerConversionOnly: %w", err)
 		}
+		if err := assignSDKOpsUnionMembers(&member, data, AIGatewayMCPServerSDKOpsUnionUnwrapFields, "conversion-only"); err != nil {
+			return nil, fmt.Errorf("failed to assign union members: %w", err)
+		}
 		target := sdkkonnectcomp.CreateUpdateAIGatewayMCPServerRequestConversionOnly(member)
 		return &target, nil
 	case "ConversionListener":
 		var member sdkkonnectcomp.AIGatewayMCPServerConversionListener
 		if err := json.Unmarshal(data, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into AIGatewayMCPServerConversionListener: %w", err)
+		}
+		if err := assignSDKOpsUnionMembers(&member, data, AIGatewayMCPServerSDKOpsUnionUnwrapFields, "conversion-listener"); err != nil {
+			return nil, fmt.Errorf("failed to assign union members: %w", err)
 		}
 		target := sdkkonnectcomp.CreateUpdateAIGatewayMCPServerRequestConversionListener(member)
 		return &target, nil
@@ -1396,6 +1472,9 @@ func (s *AIGatewayMCPServerAPISpec) toUpdateAIGatewayMCPServerRequestFromPayload
 		if err := json.Unmarshal(data, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into AIGatewayMCPServerListener: %w", err)
 		}
+		if err := assignSDKOpsUnionMembers(&member, data, AIGatewayMCPServerSDKOpsUnionUnwrapFields, "listener"); err != nil {
+			return nil, fmt.Errorf("failed to assign union members: %w", err)
+		}
 		target := sdkkonnectcomp.CreateUpdateAIGatewayMCPServerRequestListener(member)
 		return &target, nil
 	case "PassthroughListener":
@@ -1403,12 +1482,18 @@ func (s *AIGatewayMCPServerAPISpec) toUpdateAIGatewayMCPServerRequestFromPayload
 		if err := json.Unmarshal(data, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into AIGatewayMCPServerPassthroughListener: %w", err)
 		}
+		if err := assignSDKOpsUnionMembers(&member, data, AIGatewayMCPServerSDKOpsUnionUnwrapFields, "passthrough-listener"); err != nil {
+			return nil, fmt.Errorf("failed to assign union members: %w", err)
+		}
 		target := sdkkonnectcomp.CreateUpdateAIGatewayMCPServerRequestPassthroughListener(member)
 		return &target, nil
 	case "UpstreamServer":
 		var member sdkkonnectcomp.AIGatewayMCPServerUpstreamServer
 		if err := json.Unmarshal(data, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into AIGatewayMCPServerUpstreamServer: %w", err)
+		}
+		if err := assignSDKOpsUnionMembers(&member, data, AIGatewayMCPServerSDKOpsUnionUnwrapFields, "upstream-server"); err != nil {
+			return nil, fmt.Errorf("failed to assign union members: %w", err)
 		}
 		target := sdkkonnectcomp.CreateUpdateAIGatewayMCPServerRequestUpstreamServer(member)
 		return &target, nil
@@ -2235,7 +2320,7 @@ func resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAuthStrat
 
 // RefsAtAIGatewayMCPServerListenerAccessConsumerAclsAllow returns the references at spec.apiSpec.listener.access.consumer.acls.allow,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerListenerAccessConsumerAclsAllow(obj *AIGatewayMCPServer) []AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerListenerAccessConsumerAclsAllow(obj *AIGatewayMCPServer) []AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
@@ -2246,6 +2331,9 @@ func RefsAtAIGatewayMCPServerListenerAccessConsumerAclsAllow(obj *AIGatewayMCPSe
 		return nil
 	}
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer.Acls == nil {
 		return nil
 	}
 	return obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer.Acls.Allow
@@ -2302,7 +2390,7 @@ func resolveAIGatewayMCPServerListenerAccessConsumerAclsAllow(ctx context.Contex
 
 // RefsAtAIGatewayMCPServerListenerAccessConsumerAclsDeny returns the references at spec.apiSpec.listener.access.consumer.acls.deny,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerListenerAccessConsumerAclsDeny(obj *AIGatewayMCPServer) []AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerListenerAccessConsumerAclsDeny(obj *AIGatewayMCPServer) []AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
@@ -2313,6 +2401,9 @@ func RefsAtAIGatewayMCPServerListenerAccessConsumerAclsDeny(obj *AIGatewayMCPSer
 		return nil
 	}
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer.Acls == nil {
 		return nil
 	}
 	return obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer.Acls.Deny
@@ -2369,7 +2460,7 @@ func resolveAIGatewayMCPServerListenerAccessConsumerAclsDeny(ctx context.Context
 
 // RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultToolAclsAllow returns the references at spec.apiSpec.listener.access.consumer.defaultToolAcls.allow,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultToolAclsAllow(obj *AIGatewayMCPServer) []AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultToolAclsAllow(obj *AIGatewayMCPServer) []AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
@@ -2436,7 +2527,7 @@ func resolveAIGatewayMCPServerListenerAccessConsumerDefaultToolAclsAllow(ctx con
 
 // RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultToolAclsDeny returns the references at spec.apiSpec.listener.access.consumer.defaultToolAcls.deny,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultToolAclsDeny(obj *AIGatewayMCPServer) []AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerListenerAccessConsumerDefaultToolAclsDeny(obj *AIGatewayMCPServer) []AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
@@ -2503,7 +2594,7 @@ func resolveAIGatewayMCPServerListenerAccessConsumerDefaultToolAclsDeny(ctx cont
 
 // RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenAclsAllow returns the references at spec.apiSpec.listener.access.oauthAccessToken.acls.allow,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenAclsAllow(obj *AIGatewayMCPServer) []AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenAclsAllow(obj *AIGatewayMCPServer) []AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
@@ -2514,6 +2605,9 @@ func RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenAclsAllow(obj *AIGate
 		return nil
 	}
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth.Acls == nil {
 		return nil
 	}
 	return obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth.Acls.Allow
@@ -2570,7 +2664,7 @@ func resolveAIGatewayMCPServerListenerAccessOauthAccessTokenAclsAllow(ctx contex
 
 // RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenAclsDeny returns the references at spec.apiSpec.listener.access.oauthAccessToken.acls.deny,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenAclsDeny(obj *AIGatewayMCPServer) []AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenAclsDeny(obj *AIGatewayMCPServer) []AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
@@ -2581,6 +2675,9 @@ func RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenAclsDeny(obj *AIGatew
 		return nil
 	}
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth.Acls == nil {
 		return nil
 	}
 	return obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth.Acls.Deny
@@ -2637,7 +2734,7 @@ func resolveAIGatewayMCPServerListenerAccessOauthAccessTokenAclsDeny(ctx context
 
 // RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultToolAclsAllow returns the references at spec.apiSpec.listener.access.oauthAccessToken.defaultToolAcls.allow,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultToolAclsAllow(obj *AIGatewayMCPServer) []AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultToolAclsAllow(obj *AIGatewayMCPServer) []AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
@@ -2704,7 +2801,7 @@ func resolveAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultToolAclsAllow
 
 // RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultToolAclsDeny returns the references at spec.apiSpec.listener.access.oauthAccessToken.defaultToolAcls.deny,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultToolAclsDeny(obj *AIGatewayMCPServer) []AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultToolAclsDeny(obj *AIGatewayMCPServer) []AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
@@ -2771,7 +2868,7 @@ func resolveAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultToolAclsDeny(
 
 // RefsAtAIGatewayMCPServerConversionListenerAccessConsumerAclsAllow returns the references at spec.apiSpec.conversion-listener.access.consumer.acls.allow,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerConversionListenerAccessConsumerAclsAllow(obj *AIGatewayMCPServer) []AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerConversionListenerAccessConsumerAclsAllow(obj *AIGatewayMCPServer) []AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
@@ -2782,6 +2879,9 @@ func RefsAtAIGatewayMCPServerConversionListenerAccessConsumerAclsAllow(obj *AIGa
 		return nil
 	}
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer.Acls == nil {
 		return nil
 	}
 	return obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer.Acls.Allow
@@ -2838,7 +2938,7 @@ func resolveAIGatewayMCPServerConversionListenerAccessConsumerAclsAllow(ctx cont
 
 // RefsAtAIGatewayMCPServerConversionListenerAccessConsumerAclsDeny returns the references at spec.apiSpec.conversion-listener.access.consumer.acls.deny,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerConversionListenerAccessConsumerAclsDeny(obj *AIGatewayMCPServer) []AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerConversionListenerAccessConsumerAclsDeny(obj *AIGatewayMCPServer) []AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
@@ -2849,6 +2949,9 @@ func RefsAtAIGatewayMCPServerConversionListenerAccessConsumerAclsDeny(obj *AIGat
 		return nil
 	}
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer.Acls == nil {
 		return nil
 	}
 	return obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer.Acls.Deny
@@ -2905,7 +3008,7 @@ func resolveAIGatewayMCPServerConversionListenerAccessConsumerAclsDeny(ctx conte
 
 // RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultToolAclsAllow returns the references at spec.apiSpec.conversion-listener.access.consumer.defaultToolAcls.allow,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultToolAclsAllow(obj *AIGatewayMCPServer) []AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultToolAclsAllow(obj *AIGatewayMCPServer) []AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
@@ -2972,7 +3075,7 @@ func resolveAIGatewayMCPServerConversionListenerAccessConsumerDefaultToolAclsAll
 
 // RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultToolAclsDeny returns the references at spec.apiSpec.conversion-listener.access.consumer.defaultToolAcls.deny,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultToolAclsDeny(obj *AIGatewayMCPServer) []AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerConversionListenerAccessConsumerDefaultToolAclsDeny(obj *AIGatewayMCPServer) []AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
@@ -3039,7 +3142,7 @@ func resolveAIGatewayMCPServerConversionListenerAccessConsumerDefaultToolAclsDen
 
 // RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenAclsAllow returns the references at spec.apiSpec.conversion-listener.access.oauthAccessToken.acls.allow,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenAclsAllow(obj *AIGatewayMCPServer) []AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenAclsAllow(obj *AIGatewayMCPServer) []AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
@@ -3050,6 +3153,9 @@ func RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenAclsAllow(o
 		return nil
 	}
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth.Acls == nil {
 		return nil
 	}
 	return obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth.Acls.Allow
@@ -3106,7 +3212,7 @@ func resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenAclsAllow(
 
 // RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenAclsDeny returns the references at spec.apiSpec.conversion-listener.access.oauthAccessToken.acls.deny,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenAclsDeny(obj *AIGatewayMCPServer) []AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenAclsDeny(obj *AIGatewayMCPServer) []AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
@@ -3117,6 +3223,9 @@ func RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenAclsDeny(ob
 		return nil
 	}
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth.Acls == nil {
 		return nil
 	}
 	return obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth.Acls.Deny
@@ -3173,7 +3282,7 @@ func resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenAclsDeny(c
 
 // RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultToolAclsAllow returns the references at spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultToolAcls.allow,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultToolAclsAllow(obj *AIGatewayMCPServer) []AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultToolAclsAllow(obj *AIGatewayMCPServer) []AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
@@ -3240,7 +3349,7 @@ func resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultToo
 
 // RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultToolAclsDeny returns the references at spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultToolAcls.deny,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultToolAclsDeny(obj *AIGatewayMCPServer) []AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultToolAclsDeny(obj *AIGatewayMCPServer) []AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
@@ -3307,7 +3416,7 @@ func resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultToo
 
 // RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerAclsAllow returns the references at spec.apiSpec.passthrough-listener.access.consumer.acls.allow,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerAclsAllow(obj *AIGatewayMCPServer) []AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerAclsAllow(obj *AIGatewayMCPServer) []AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
@@ -3318,6 +3427,9 @@ func RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerAclsAllow(obj *AIG
 		return nil
 	}
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer.Acls == nil {
 		return nil
 	}
 	return obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer.Acls.Allow
@@ -3374,7 +3486,7 @@ func resolveAIGatewayMCPServerPassthroughListenerAccessConsumerAclsAllow(ctx con
 
 // RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerAclsDeny returns the references at spec.apiSpec.passthrough-listener.access.consumer.acls.deny,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerAclsDeny(obj *AIGatewayMCPServer) []AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerAclsDeny(obj *AIGatewayMCPServer) []AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
@@ -3385,6 +3497,9 @@ func RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerAclsDeny(obj *AIGa
 		return nil
 	}
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer.Acls == nil {
 		return nil
 	}
 	return obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer.Acls.Deny
@@ -3441,7 +3556,7 @@ func resolveAIGatewayMCPServerPassthroughListenerAccessConsumerAclsDeny(ctx cont
 
 // RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultToolAclsAllow returns the references at spec.apiSpec.passthrough-listener.access.consumer.defaultToolAcls.allow,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultToolAclsAllow(obj *AIGatewayMCPServer) []AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultToolAclsAllow(obj *AIGatewayMCPServer) []AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
@@ -3508,7 +3623,7 @@ func resolveAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultToolAclsAl
 
 // RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultToolAclsDeny returns the references at spec.apiSpec.passthrough-listener.access.consumer.defaultToolAcls.deny,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultToolAclsDeny(obj *AIGatewayMCPServer) []AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultToolAclsDeny(obj *AIGatewayMCPServer) []AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
@@ -3575,7 +3690,7 @@ func resolveAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultToolAclsDe
 
 // RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAclsAllow returns the references at spec.apiSpec.passthrough-listener.access.oauthAccessToken.acls.allow,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAclsAllow(obj *AIGatewayMCPServer) []AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAclsAllow(obj *AIGatewayMCPServer) []AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
@@ -3586,6 +3701,9 @@ func RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAclsAllow(
 		return nil
 	}
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth.Acls == nil {
 		return nil
 	}
 	return obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth.Acls.Allow
@@ -3642,7 +3760,7 @@ func resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAclsAllow
 
 // RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAclsDeny returns the references at spec.apiSpec.passthrough-listener.access.oauthAccessToken.acls.deny,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAclsDeny(obj *AIGatewayMCPServer) []AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAclsDeny(obj *AIGatewayMCPServer) []AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
@@ -3653,6 +3771,9 @@ func RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAclsDeny(o
 		return nil
 	}
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth.Acls == nil {
 		return nil
 	}
 	return obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth.Acls.Deny
@@ -3709,7 +3830,7 @@ func resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAclsDeny(
 
 // RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultToolAclsAllow returns the references at spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultToolAcls.allow,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultToolAclsAllow(obj *AIGatewayMCPServer) []AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultToolAclsAllow(obj *AIGatewayMCPServer) []AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
@@ -3776,7 +3897,7 @@ func resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultTo
 
 // RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultToolAclsDeny returns the references at spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultToolAcls.deny,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultToolAclsDeny(obj *AIGatewayMCPServer) []AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultToolAclsDeny(obj *AIGatewayMCPServer) []AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
@@ -3843,14 +3964,14 @@ func resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultTo
 
 // RefsAtAIGatewayMCPServerConversionListenerToolsAccessAclsAllow returns the references at spec.apiSpec.conversion-listener.tools.access.acls.allow,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerConversionListenerToolsAccessAclsAllow(obj *AIGatewayMCPServer) [][]AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerConversionListenerToolsAccessAclsAllow(obj *AIGatewayMCPServer) [][]AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener == nil {
 		return nil
 	}
-	var refs [][]AIGatewayMCPACLRef
+	var refs [][]AIGatewayACLRef
 	for i := range obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Tools {
 		if len(obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Tools[i].Access.Acls.Allow) == 0 {
 			continue
@@ -3915,14 +4036,14 @@ func resolveAIGatewayMCPServerConversionListenerToolsAccessAclsAllow(ctx context
 
 // RefsAtAIGatewayMCPServerConversionListenerToolsAccessAclsDeny returns the references at spec.apiSpec.conversion-listener.tools.access.acls.deny,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerConversionListenerToolsAccessAclsDeny(obj *AIGatewayMCPServer) [][]AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerConversionListenerToolsAccessAclsDeny(obj *AIGatewayMCPServer) [][]AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener == nil {
 		return nil
 	}
-	var refs [][]AIGatewayMCPACLRef
+	var refs [][]AIGatewayACLRef
 	for i := range obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Tools {
 		if len(obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Tools[i].Access.Acls.Deny) == 0 {
 			continue
@@ -3987,14 +4108,14 @@ func resolveAIGatewayMCPServerConversionListenerToolsAccessAclsDeny(ctx context.
 
 // RefsAtAIGatewayMCPServerConversionOnlyToolsAccessAclsAllow returns the references at spec.apiSpec.conversion-only.tools.access.acls.allow,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerConversionOnlyToolsAccessAclsAllow(obj *AIGatewayMCPServer) [][]AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerConversionOnlyToolsAccessAclsAllow(obj *AIGatewayMCPServer) [][]AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionOnly == nil {
 		return nil
 	}
-	var refs [][]AIGatewayMCPACLRef
+	var refs [][]AIGatewayACLRef
 	for i := range obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionOnly.Tools {
 		if len(obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionOnly.Tools[i].Access.Acls.Allow) == 0 {
 			continue
@@ -4059,14 +4180,14 @@ func resolveAIGatewayMCPServerConversionOnlyToolsAccessAclsAllow(ctx context.Con
 
 // RefsAtAIGatewayMCPServerConversionOnlyToolsAccessAclsDeny returns the references at spec.apiSpec.conversion-only.tools.access.acls.deny,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerConversionOnlyToolsAccessAclsDeny(obj *AIGatewayMCPServer) [][]AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerConversionOnlyToolsAccessAclsDeny(obj *AIGatewayMCPServer) [][]AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionOnly == nil {
 		return nil
 	}
-	var refs [][]AIGatewayMCPACLRef
+	var refs [][]AIGatewayACLRef
 	for i := range obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionOnly.Tools {
 		if len(obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionOnly.Tools[i].Access.Acls.Deny) == 0 {
 			continue
@@ -4131,14 +4252,14 @@ func resolveAIGatewayMCPServerConversionOnlyToolsAccessAclsDeny(ctx context.Cont
 
 // RefsAtAIGatewayMCPServerPassthroughListenerToolsAccessAclsAllow returns the references at spec.apiSpec.passthrough-listener.tools.access.acls.allow,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerPassthroughListenerToolsAccessAclsAllow(obj *AIGatewayMCPServer) [][]AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerPassthroughListenerToolsAccessAclsAllow(obj *AIGatewayMCPServer) [][]AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener == nil {
 		return nil
 	}
-	var refs [][]AIGatewayMCPACLRef
+	var refs [][]AIGatewayACLRef
 	for i := range obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Tools {
 		if len(obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Tools[i].Access.Acls.Allow) == 0 {
 			continue
@@ -4203,14 +4324,14 @@ func resolveAIGatewayMCPServerPassthroughListenerToolsAccessAclsAllow(ctx contex
 
 // RefsAtAIGatewayMCPServerPassthroughListenerToolsAccessAclsDeny returns the references at spec.apiSpec.passthrough-listener.tools.access.acls.deny,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerPassthroughListenerToolsAccessAclsDeny(obj *AIGatewayMCPServer) [][]AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerPassthroughListenerToolsAccessAclsDeny(obj *AIGatewayMCPServer) [][]AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener == nil {
 		return nil
 	}
-	var refs [][]AIGatewayMCPACLRef
+	var refs [][]AIGatewayACLRef
 	for i := range obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Tools {
 		if len(obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Tools[i].Access.Acls.Deny) == 0 {
 			continue
@@ -4275,14 +4396,14 @@ func resolveAIGatewayMCPServerPassthroughListenerToolsAccessAclsDeny(ctx context
 
 // RefsAtAIGatewayMCPServerUpstreamServerToolsAccessAclsAllow returns the references at spec.apiSpec.upstream-server.tools.access.acls.allow,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerUpstreamServerToolsAccessAclsAllow(obj *AIGatewayMCPServer) [][]AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerUpstreamServerToolsAccessAclsAllow(obj *AIGatewayMCPServer) [][]AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer == nil {
 		return nil
 	}
-	var refs [][]AIGatewayMCPACLRef
+	var refs [][]AIGatewayACLRef
 	for i := range obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer.Tools {
 		if len(obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer.Tools[i].Access.Acls.Allow) == 0 {
 			continue
@@ -4347,14 +4468,14 @@ func resolveAIGatewayMCPServerUpstreamServerToolsAccessAclsAllow(ctx context.Con
 
 // RefsAtAIGatewayMCPServerUpstreamServerToolsAccessAclsDeny returns the references at spec.apiSpec.upstream-server.tools.access.acls.deny,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayMCPServerUpstreamServerToolsAccessAclsDeny(obj *AIGatewayMCPServer) [][]AIGatewayMCPACLRef {
+func RefsAtAIGatewayMCPServerUpstreamServerToolsAccessAclsDeny(obj *AIGatewayMCPServer) [][]AIGatewayACLRef {
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return nil
 	}
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer == nil {
 		return nil
 	}
-	var refs [][]AIGatewayMCPACLRef
+	var refs [][]AIGatewayACLRef
 	for i := range obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer.Tools {
 		if len(obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer.Tools[i].Access.Acls.Deny) == 0 {
 			continue
@@ -5666,6 +5787,222 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	if err != nil {
 		return nil, err
 	}
+	// spec.apiSpec.listener.access.consumer carries CR references: rebuild the "acls" union
+	// value in the SDK payload from the CRD ACL union's selected variant with the
+	// resolved Konnect values, preserving sibling keys of its ancestors. A nil
+	// CRD union leaves the payload untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer.Acls != nil {
+		acls := obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer.Acls
+		listener, _ := payload["listener"].(map[string]any)
+		if listener == nil {
+			listener = map[string]any{}
+		}
+		access, _ := listener["access"].(map[string]any)
+		if access == nil {
+			access = map[string]any{}
+		}
+		consumer, _ := access["consumer"].(map[string]any)
+		if consumer == nil {
+			consumer = map[string]any{}
+		}
+		switch {
+		case acls.Type == AIGatewayMCPServerListenerConsumerAclsTypeAllow:
+			resolvedListenerAccessConsumerAclsAllow, err := resolveAIGatewayMCPServerListenerAccessConsumerAclsAllow(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.consumer.acls.allow references: %w", err)
+			}
+			consumer["acls"] = map[string]any{"allow": resolvedListenerAccessConsumerAclsAllow}
+		case acls.Type == AIGatewayMCPServerListenerConsumerAclsTypeDeny:
+			resolvedListenerAccessConsumerAclsDeny, err := resolveAIGatewayMCPServerListenerAccessConsumerAclsDeny(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.consumer.acls.deny references: %w", err)
+			}
+			consumer["acls"] = map[string]any{"deny": resolvedListenerAccessConsumerAclsDeny}
+		}
+		access["consumer"] = consumer
+		listener["access"] = access
+		payload["listener"] = listener
+	}
+	// spec.apiSpec.listener.access.oauthAccessToken carries CR references: rebuild the "acls" union
+	// value in the SDK payload from the CRD ACL union's selected variant with the
+	// resolved Konnect values, preserving sibling keys of its ancestors. A nil
+	// CRD union leaves the payload untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth.Acls != nil {
+		acls2 := obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth.Acls
+		listener2, _ := payload["listener"].(map[string]any)
+		if listener2 == nil {
+			listener2 = map[string]any{}
+		}
+		access2, _ := listener2["access"].(map[string]any)
+		if access2 == nil {
+			access2 = map[string]any{}
+		}
+		oauthAccessToken, _ := access2["oauth_access_token"].(map[string]any)
+		if oauthAccessToken == nil {
+			oauthAccessToken = map[string]any{}
+		}
+		switch {
+		case acls2.Type == AIGatewayMCPServerListenerOauthAclsTypeAllow:
+			resolvedListenerAccessOauthAccessTokenAclsAllow, err := resolveAIGatewayMCPServerListenerAccessOauthAccessTokenAclsAllow(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.oauthAccessToken.acls.allow references: %w", err)
+			}
+			oauthAccessToken["acls"] = map[string]any{"allow": resolvedListenerAccessOauthAccessTokenAclsAllow}
+		case acls2.Type == AIGatewayMCPServerListenerOauthAclsTypeDeny:
+			resolvedListenerAccessOauthAccessTokenAclsDeny, err := resolveAIGatewayMCPServerListenerAccessOauthAccessTokenAclsDeny(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.oauthAccessToken.acls.deny references: %w", err)
+			}
+			oauthAccessToken["acls"] = map[string]any{"deny": resolvedListenerAccessOauthAccessTokenAclsDeny}
+		}
+		access2["oauth_access_token"] = oauthAccessToken
+		listener2["access"] = access2
+		payload["listener"] = listener2
+	}
+	// spec.apiSpec.conversion-listener.access.consumer carries CR references: rebuild the "acls" union
+	// value in the SDK payload from the CRD ACL union's selected variant with the
+	// resolved Konnect values, preserving sibling keys of its ancestors. A nil
+	// CRD union leaves the payload untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer.Acls != nil {
+		acls3 := obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer.Acls
+		conversionListener, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener == nil {
+			conversionListener = map[string]any{}
+		}
+		access3, _ := conversionListener["access"].(map[string]any)
+		if access3 == nil {
+			access3 = map[string]any{}
+		}
+		consumer2, _ := access3["consumer"].(map[string]any)
+		if consumer2 == nil {
+			consumer2 = map[string]any{}
+		}
+		switch {
+		case acls3.Type == AIGatewayMCPServerListenerConsumerAclsTypeAllow:
+			resolvedConversionListenerAccessConsumerAclsAllow, err := resolveAIGatewayMCPServerConversionListenerAccessConsumerAclsAllow(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.consumer.acls.allow references: %w", err)
+			}
+			consumer2["acls"] = map[string]any{"allow": resolvedConversionListenerAccessConsumerAclsAllow}
+		case acls3.Type == AIGatewayMCPServerListenerConsumerAclsTypeDeny:
+			resolvedConversionListenerAccessConsumerAclsDeny, err := resolveAIGatewayMCPServerConversionListenerAccessConsumerAclsDeny(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.consumer.acls.deny references: %w", err)
+			}
+			consumer2["acls"] = map[string]any{"deny": resolvedConversionListenerAccessConsumerAclsDeny}
+		}
+		access3["consumer"] = consumer2
+		conversionListener["access"] = access3
+		payload["conversion-listener"] = conversionListener
+	}
+	// spec.apiSpec.conversion-listener.access.oauthAccessToken carries CR references: rebuild the "acls" union
+	// value in the SDK payload from the CRD ACL union's selected variant with the
+	// resolved Konnect values, preserving sibling keys of its ancestors. A nil
+	// CRD union leaves the payload untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth.Acls != nil {
+		acls4 := obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth.Acls
+		conversionListener2, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener2 == nil {
+			conversionListener2 = map[string]any{}
+		}
+		access4, _ := conversionListener2["access"].(map[string]any)
+		if access4 == nil {
+			access4 = map[string]any{}
+		}
+		oauthAccessToken2, _ := access4["oauth_access_token"].(map[string]any)
+		if oauthAccessToken2 == nil {
+			oauthAccessToken2 = map[string]any{}
+		}
+		switch {
+		case acls4.Type == AIGatewayMCPServerListenerOauthAclsTypeAllow:
+			resolvedConversionListenerAccessOauthAccessTokenAclsAllow, err := resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenAclsAllow(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.oauthAccessToken.acls.allow references: %w", err)
+			}
+			oauthAccessToken2["acls"] = map[string]any{"allow": resolvedConversionListenerAccessOauthAccessTokenAclsAllow}
+		case acls4.Type == AIGatewayMCPServerListenerOauthAclsTypeDeny:
+			resolvedConversionListenerAccessOauthAccessTokenAclsDeny, err := resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenAclsDeny(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.oauthAccessToken.acls.deny references: %w", err)
+			}
+			oauthAccessToken2["acls"] = map[string]any{"deny": resolvedConversionListenerAccessOauthAccessTokenAclsDeny}
+		}
+		access4["oauth_access_token"] = oauthAccessToken2
+		conversionListener2["access"] = access4
+		payload["conversion-listener"] = conversionListener2
+	}
+	// spec.apiSpec.passthrough-listener.access.consumer carries CR references: rebuild the "acls" union
+	// value in the SDK payload from the CRD ACL union's selected variant with the
+	// resolved Konnect values, preserving sibling keys of its ancestors. A nil
+	// CRD union leaves the payload untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer.Acls != nil {
+		acls5 := obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer.Acls
+		passthroughListener, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener == nil {
+			passthroughListener = map[string]any{}
+		}
+		access5, _ := passthroughListener["access"].(map[string]any)
+		if access5 == nil {
+			access5 = map[string]any{}
+		}
+		consumer3, _ := access5["consumer"].(map[string]any)
+		if consumer3 == nil {
+			consumer3 = map[string]any{}
+		}
+		switch {
+		case acls5.Type == AIGatewayMCPServerListenerConsumerAclsTypeAllow:
+			resolvedPassthroughListenerAccessConsumerAclsAllow, err := resolveAIGatewayMCPServerPassthroughListenerAccessConsumerAclsAllow(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.consumer.acls.allow references: %w", err)
+			}
+			consumer3["acls"] = map[string]any{"allow": resolvedPassthroughListenerAccessConsumerAclsAllow}
+		case acls5.Type == AIGatewayMCPServerListenerConsumerAclsTypeDeny:
+			resolvedPassthroughListenerAccessConsumerAclsDeny, err := resolveAIGatewayMCPServerPassthroughListenerAccessConsumerAclsDeny(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.consumer.acls.deny references: %w", err)
+			}
+			consumer3["acls"] = map[string]any{"deny": resolvedPassthroughListenerAccessConsumerAclsDeny}
+		}
+		access5["consumer"] = consumer3
+		passthroughListener["access"] = access5
+		payload["passthrough-listener"] = passthroughListener
+	}
+	// spec.apiSpec.passthrough-listener.access.oauthAccessToken carries CR references: rebuild the "acls" union
+	// value in the SDK payload from the CRD ACL union's selected variant with the
+	// resolved Konnect values, preserving sibling keys of its ancestors. A nil
+	// CRD union leaves the payload untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth.Acls != nil {
+		acls6 := obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth.Acls
+		passthroughListener2, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener2 == nil {
+			passthroughListener2 = map[string]any{}
+		}
+		access6, _ := passthroughListener2["access"].(map[string]any)
+		if access6 == nil {
+			access6 = map[string]any{}
+		}
+		oauthAccessToken3, _ := access6["oauth_access_token"].(map[string]any)
+		if oauthAccessToken3 == nil {
+			oauthAccessToken3 = map[string]any{}
+		}
+		switch {
+		case acls6.Type == AIGatewayMCPServerListenerOauthAclsTypeAllow:
+			resolvedPassthroughListenerAccessOauthAccessTokenAclsAllow, err := resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAclsAllow(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.oauthAccessToken.acls.allow references: %w", err)
+			}
+			oauthAccessToken3["acls"] = map[string]any{"allow": resolvedPassthroughListenerAccessOauthAccessTokenAclsAllow}
+		case acls6.Type == AIGatewayMCPServerListenerOauthAclsTypeDeny:
+			resolvedPassthroughListenerAccessOauthAccessTokenAclsDeny, err := resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAclsDeny(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.oauthAccessToken.acls.deny references: %w", err)
+			}
+			oauthAccessToken3["acls"] = map[string]any{"deny": resolvedPassthroughListenerAccessOauthAccessTokenAclsDeny}
+		}
+		access6["oauth_access_token"] = oauthAccessToken3
+		passthroughListener2["access"] = access6
+		payload["passthrough-listener"] = passthroughListener2
+	}
 	// spec.apiSpec.conversion-listener.policies carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
@@ -5918,7 +6255,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		passthroughListener3["access"] = access6
 		payload["passthrough-listener"] = passthroughListener3
 	}
-	// spec.apiSpec.listener.access.consumer.acls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// spec.apiSpec.listener.access.consumer.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
@@ -5935,21 +6272,21 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		if consumer4 == nil {
 			consumer4 = map[string]any{}
 		}
-		acls, _ := consumer4["acls"].(map[string]any)
-		if acls == nil {
-			acls = map[string]any{}
+		defaultToolAcls, _ := consumer4["default_tool_acls"].(map[string]any)
+		if defaultToolAcls == nil {
+			defaultToolAcls = map[string]any{}
 		}
-		resolvedListenerAccessConsumerAclsAllow, err := resolveAIGatewayMCPServerListenerAccessConsumerAclsAllow(ctx, cl, obj)
+		resolvedListenerAccessConsumerDefaultToolAclsAllow, err := resolveAIGatewayMCPServerListenerAccessConsumerDefaultToolAclsAllow(ctx, cl, obj)
 		if err != nil {
-			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.consumer.acls.allow references: %w", err)
+			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.consumer.defaultToolAcls.allow references: %w", err)
 		}
-		acls["allow"] = resolvedListenerAccessConsumerAclsAllow
-		consumer4["acls"] = acls
+		defaultToolAcls["allow"] = resolvedListenerAccessConsumerDefaultToolAclsAllow
+		consumer4["default_tool_acls"] = defaultToolAcls
 		access7["consumer"] = consumer4
 		listener5["access"] = access7
 		payload["listener"] = listener5
 	}
-	// spec.apiSpec.listener.access.consumer.acls.deny carries a CR reference: overwrite its resolved Konnect values in
+	// spec.apiSpec.listener.access.consumer.defaultToolAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
@@ -5966,69 +6303,7 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		if consumer5 == nil {
 			consumer5 = map[string]any{}
 		}
-		acls2, _ := consumer5["acls"].(map[string]any)
-		if acls2 == nil {
-			acls2 = map[string]any{}
-		}
-		resolvedListenerAccessConsumerAclsDeny, err := resolveAIGatewayMCPServerListenerAccessConsumerAclsDeny(ctx, cl, obj)
-		if err != nil {
-			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.consumer.acls.deny references: %w", err)
-		}
-		acls2["deny"] = resolvedListenerAccessConsumerAclsDeny
-		consumer5["acls"] = acls2
-		access8["consumer"] = consumer5
-		listener6["access"] = access8
-		payload["listener"] = listener6
-	}
-	// spec.apiSpec.listener.access.consumer.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
-		listener7, _ := payload["listener"].(map[string]any)
-		if listener7 == nil {
-			listener7 = map[string]any{}
-		}
-		access9, _ := listener7["access"].(map[string]any)
-		if access9 == nil {
-			access9 = map[string]any{}
-		}
-		consumer6, _ := access9["consumer"].(map[string]any)
-		if consumer6 == nil {
-			consumer6 = map[string]any{}
-		}
-		defaultToolAcls, _ := consumer6["default_tool_acls"].(map[string]any)
-		if defaultToolAcls == nil {
-			defaultToolAcls = map[string]any{}
-		}
-		resolvedListenerAccessConsumerDefaultToolAclsAllow, err := resolveAIGatewayMCPServerListenerAccessConsumerDefaultToolAclsAllow(ctx, cl, obj)
-		if err != nil {
-			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.consumer.defaultToolAcls.allow references: %w", err)
-		}
-		defaultToolAcls["allow"] = resolvedListenerAccessConsumerDefaultToolAclsAllow
-		consumer6["default_tool_acls"] = defaultToolAcls
-		access9["consumer"] = consumer6
-		listener7["access"] = access9
-		payload["listener"] = listener7
-	}
-	// spec.apiSpec.listener.access.consumer.defaultToolAcls.deny carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
-		listener8, _ := payload["listener"].(map[string]any)
-		if listener8 == nil {
-			listener8 = map[string]any{}
-		}
-		access10, _ := listener8["access"].(map[string]any)
-		if access10 == nil {
-			access10 = map[string]any{}
-		}
-		consumer7, _ := access10["consumer"].(map[string]any)
-		if consumer7 == nil {
-			consumer7 = map[string]any{}
-		}
-		defaultToolAcls2, _ := consumer7["default_tool_acls"].(map[string]any)
+		defaultToolAcls2, _ := consumer5["default_tool_acls"].(map[string]any)
 		if defaultToolAcls2 == nil {
 			defaultToolAcls2 = map[string]any{}
 		}
@@ -6037,91 +6312,29 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.consumer.defaultToolAcls.deny references: %w", err)
 		}
 		defaultToolAcls2["deny"] = resolvedListenerAccessConsumerDefaultToolAclsDeny
-		consumer7["default_tool_acls"] = defaultToolAcls2
-		access10["consumer"] = consumer7
-		listener8["access"] = access10
-		payload["listener"] = listener8
-	}
-	// spec.apiSpec.listener.access.oauthAccessToken.acls.allow carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
-		listener9, _ := payload["listener"].(map[string]any)
-		if listener9 == nil {
-			listener9 = map[string]any{}
-		}
-		access11, _ := listener9["access"].(map[string]any)
-		if access11 == nil {
-			access11 = map[string]any{}
-		}
-		oauthAccessToken4, _ := access11["oauth_access_token"].(map[string]any)
-		if oauthAccessToken4 == nil {
-			oauthAccessToken4 = map[string]any{}
-		}
-		acls3, _ := oauthAccessToken4["acls"].(map[string]any)
-		if acls3 == nil {
-			acls3 = map[string]any{}
-		}
-		resolvedListenerAccessOauthAccessTokenAclsAllow, err := resolveAIGatewayMCPServerListenerAccessOauthAccessTokenAclsAllow(ctx, cl, obj)
-		if err != nil {
-			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.oauthAccessToken.acls.allow references: %w", err)
-		}
-		acls3["allow"] = resolvedListenerAccessOauthAccessTokenAclsAllow
-		oauthAccessToken4["acls"] = acls3
-		access11["oauth_access_token"] = oauthAccessToken4
-		listener9["access"] = access11
-		payload["listener"] = listener9
-	}
-	// spec.apiSpec.listener.access.oauthAccessToken.acls.deny carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
-		listener10, _ := payload["listener"].(map[string]any)
-		if listener10 == nil {
-			listener10 = map[string]any{}
-		}
-		access12, _ := listener10["access"].(map[string]any)
-		if access12 == nil {
-			access12 = map[string]any{}
-		}
-		oauthAccessToken5, _ := access12["oauth_access_token"].(map[string]any)
-		if oauthAccessToken5 == nil {
-			oauthAccessToken5 = map[string]any{}
-		}
-		acls4, _ := oauthAccessToken5["acls"].(map[string]any)
-		if acls4 == nil {
-			acls4 = map[string]any{}
-		}
-		resolvedListenerAccessOauthAccessTokenAclsDeny, err := resolveAIGatewayMCPServerListenerAccessOauthAccessTokenAclsDeny(ctx, cl, obj)
-		if err != nil {
-			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.oauthAccessToken.acls.deny references: %w", err)
-		}
-		acls4["deny"] = resolvedListenerAccessOauthAccessTokenAclsDeny
-		oauthAccessToken5["acls"] = acls4
-		access12["oauth_access_token"] = oauthAccessToken5
-		listener10["access"] = access12
-		payload["listener"] = listener10
+		consumer5["default_tool_acls"] = defaultToolAcls2
+		access8["consumer"] = consumer5
+		listener6["access"] = access8
+		payload["listener"] = listener6
 	}
 	// spec.apiSpec.listener.access.oauthAccessToken.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
-		listener11, _ := payload["listener"].(map[string]any)
-		if listener11 == nil {
-			listener11 = map[string]any{}
+		listener7, _ := payload["listener"].(map[string]any)
+		if listener7 == nil {
+			listener7 = map[string]any{}
 		}
-		access13, _ := listener11["access"].(map[string]any)
-		if access13 == nil {
-			access13 = map[string]any{}
+		access9, _ := listener7["access"].(map[string]any)
+		if access9 == nil {
+			access9 = map[string]any{}
 		}
-		oauthAccessToken6, _ := access13["oauth_access_token"].(map[string]any)
-		if oauthAccessToken6 == nil {
-			oauthAccessToken6 = map[string]any{}
+		oauthAccessToken4, _ := access9["oauth_access_token"].(map[string]any)
+		if oauthAccessToken4 == nil {
+			oauthAccessToken4 = map[string]any{}
 		}
-		defaultToolAcls3, _ := oauthAccessToken6["default_tool_acls"].(map[string]any)
+		defaultToolAcls3, _ := oauthAccessToken4["default_tool_acls"].(map[string]any)
 		if defaultToolAcls3 == nil {
 			defaultToolAcls3 = map[string]any{}
 		}
@@ -6130,29 +6343,29 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.oauthAccessToken.defaultToolAcls.allow references: %w", err)
 		}
 		defaultToolAcls3["allow"] = resolvedListenerAccessOauthAccessTokenDefaultToolAclsAllow
-		oauthAccessToken6["default_tool_acls"] = defaultToolAcls3
-		access13["oauth_access_token"] = oauthAccessToken6
-		listener11["access"] = access13
-		payload["listener"] = listener11
+		oauthAccessToken4["default_tool_acls"] = defaultToolAcls3
+		access9["oauth_access_token"] = oauthAccessToken4
+		listener7["access"] = access9
+		payload["listener"] = listener7
 	}
 	// spec.apiSpec.listener.access.oauthAccessToken.defaultToolAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
-		listener12, _ := payload["listener"].(map[string]any)
-		if listener12 == nil {
-			listener12 = map[string]any{}
+		listener8, _ := payload["listener"].(map[string]any)
+		if listener8 == nil {
+			listener8 = map[string]any{}
 		}
-		access14, _ := listener12["access"].(map[string]any)
-		if access14 == nil {
-			access14 = map[string]any{}
+		access10, _ := listener8["access"].(map[string]any)
+		if access10 == nil {
+			access10 = map[string]any{}
 		}
-		oauthAccessToken7, _ := access14["oauth_access_token"].(map[string]any)
-		if oauthAccessToken7 == nil {
-			oauthAccessToken7 = map[string]any{}
+		oauthAccessToken5, _ := access10["oauth_access_token"].(map[string]any)
+		if oauthAccessToken5 == nil {
+			oauthAccessToken5 = map[string]any{}
 		}
-		defaultToolAcls4, _ := oauthAccessToken7["default_tool_acls"].(map[string]any)
+		defaultToolAcls4, _ := oauthAccessToken5["default_tool_acls"].(map[string]any)
 		if defaultToolAcls4 == nil {
 			defaultToolAcls4 = map[string]any{}
 		}
@@ -6161,12 +6374,12 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.oauthAccessToken.defaultToolAcls.deny references: %w", err)
 		}
 		defaultToolAcls4["deny"] = resolvedListenerAccessOauthAccessTokenDefaultToolAclsDeny
-		oauthAccessToken7["default_tool_acls"] = defaultToolAcls4
-		access14["oauth_access_token"] = oauthAccessToken7
-		listener12["access"] = access14
-		payload["listener"] = listener12
+		oauthAccessToken5["default_tool_acls"] = defaultToolAcls4
+		access10["oauth_access_token"] = oauthAccessToken5
+		listener8["access"] = access10
+		payload["listener"] = listener8
 	}
-	// spec.apiSpec.conversion-listener.access.consumer.acls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// spec.apiSpec.conversion-listener.access.consumer.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
@@ -6175,77 +6388,15 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		if conversionListener4 == nil {
 			conversionListener4 = map[string]any{}
 		}
-		access15, _ := conversionListener4["access"].(map[string]any)
-		if access15 == nil {
-			access15 = map[string]any{}
+		access11, _ := conversionListener4["access"].(map[string]any)
+		if access11 == nil {
+			access11 = map[string]any{}
 		}
-		consumer8, _ := access15["consumer"].(map[string]any)
-		if consumer8 == nil {
-			consumer8 = map[string]any{}
+		consumer6, _ := access11["consumer"].(map[string]any)
+		if consumer6 == nil {
+			consumer6 = map[string]any{}
 		}
-		acls5, _ := consumer8["acls"].(map[string]any)
-		if acls5 == nil {
-			acls5 = map[string]any{}
-		}
-		resolvedConversionListenerAccessConsumerAclsAllow, err := resolveAIGatewayMCPServerConversionListenerAccessConsumerAclsAllow(ctx, cl, obj)
-		if err != nil {
-			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.consumer.acls.allow references: %w", err)
-		}
-		acls5["allow"] = resolvedConversionListenerAccessConsumerAclsAllow
-		consumer8["acls"] = acls5
-		access15["consumer"] = consumer8
-		conversionListener4["access"] = access15
-		payload["conversion-listener"] = conversionListener4
-	}
-	// spec.apiSpec.conversion-listener.access.consumer.acls.deny carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
-		conversionListener5, _ := payload["conversion-listener"].(map[string]any)
-		if conversionListener5 == nil {
-			conversionListener5 = map[string]any{}
-		}
-		access16, _ := conversionListener5["access"].(map[string]any)
-		if access16 == nil {
-			access16 = map[string]any{}
-		}
-		consumer9, _ := access16["consumer"].(map[string]any)
-		if consumer9 == nil {
-			consumer9 = map[string]any{}
-		}
-		acls6, _ := consumer9["acls"].(map[string]any)
-		if acls6 == nil {
-			acls6 = map[string]any{}
-		}
-		resolvedConversionListenerAccessConsumerAclsDeny, err := resolveAIGatewayMCPServerConversionListenerAccessConsumerAclsDeny(ctx, cl, obj)
-		if err != nil {
-			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.consumer.acls.deny references: %w", err)
-		}
-		acls6["deny"] = resolvedConversionListenerAccessConsumerAclsDeny
-		consumer9["acls"] = acls6
-		access16["consumer"] = consumer9
-		conversionListener5["access"] = access16
-		payload["conversion-listener"] = conversionListener5
-	}
-	// spec.apiSpec.conversion-listener.access.consumer.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
-		conversionListener6, _ := payload["conversion-listener"].(map[string]any)
-		if conversionListener6 == nil {
-			conversionListener6 = map[string]any{}
-		}
-		access17, _ := conversionListener6["access"].(map[string]any)
-		if access17 == nil {
-			access17 = map[string]any{}
-		}
-		consumer10, _ := access17["consumer"].(map[string]any)
-		if consumer10 == nil {
-			consumer10 = map[string]any{}
-		}
-		defaultToolAcls5, _ := consumer10["default_tool_acls"].(map[string]any)
+		defaultToolAcls5, _ := consumer6["default_tool_acls"].(map[string]any)
 		if defaultToolAcls5 == nil {
 			defaultToolAcls5 = map[string]any{}
 		}
@@ -6254,29 +6405,29 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.consumer.defaultToolAcls.allow references: %w", err)
 		}
 		defaultToolAcls5["allow"] = resolvedConversionListenerAccessConsumerDefaultToolAclsAllow
-		consumer10["default_tool_acls"] = defaultToolAcls5
-		access17["consumer"] = consumer10
-		conversionListener6["access"] = access17
-		payload["conversion-listener"] = conversionListener6
+		consumer6["default_tool_acls"] = defaultToolAcls5
+		access11["consumer"] = consumer6
+		conversionListener4["access"] = access11
+		payload["conversion-listener"] = conversionListener4
 	}
 	// spec.apiSpec.conversion-listener.access.consumer.defaultToolAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
-		conversionListener7, _ := payload["conversion-listener"].(map[string]any)
-		if conversionListener7 == nil {
-			conversionListener7 = map[string]any{}
+		conversionListener5, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener5 == nil {
+			conversionListener5 = map[string]any{}
 		}
-		access18, _ := conversionListener7["access"].(map[string]any)
-		if access18 == nil {
-			access18 = map[string]any{}
+		access12, _ := conversionListener5["access"].(map[string]any)
+		if access12 == nil {
+			access12 = map[string]any{}
 		}
-		consumer11, _ := access18["consumer"].(map[string]any)
-		if consumer11 == nil {
-			consumer11 = map[string]any{}
+		consumer7, _ := access12["consumer"].(map[string]any)
+		if consumer7 == nil {
+			consumer7 = map[string]any{}
 		}
-		defaultToolAcls6, _ := consumer11["default_tool_acls"].(map[string]any)
+		defaultToolAcls6, _ := consumer7["default_tool_acls"].(map[string]any)
 		if defaultToolAcls6 == nil {
 			defaultToolAcls6 = map[string]any{}
 		}
@@ -6285,91 +6436,29 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.consumer.defaultToolAcls.deny references: %w", err)
 		}
 		defaultToolAcls6["deny"] = resolvedConversionListenerAccessConsumerDefaultToolAclsDeny
-		consumer11["default_tool_acls"] = defaultToolAcls6
-		access18["consumer"] = consumer11
-		conversionListener7["access"] = access18
-		payload["conversion-listener"] = conversionListener7
-	}
-	// spec.apiSpec.conversion-listener.access.oauthAccessToken.acls.allow carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
-		conversionListener8, _ := payload["conversion-listener"].(map[string]any)
-		if conversionListener8 == nil {
-			conversionListener8 = map[string]any{}
-		}
-		access19, _ := conversionListener8["access"].(map[string]any)
-		if access19 == nil {
-			access19 = map[string]any{}
-		}
-		oauthAccessToken8, _ := access19["oauth_access_token"].(map[string]any)
-		if oauthAccessToken8 == nil {
-			oauthAccessToken8 = map[string]any{}
-		}
-		acls7, _ := oauthAccessToken8["acls"].(map[string]any)
-		if acls7 == nil {
-			acls7 = map[string]any{}
-		}
-		resolvedConversionListenerAccessOauthAccessTokenAclsAllow, err := resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenAclsAllow(ctx, cl, obj)
-		if err != nil {
-			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.oauthAccessToken.acls.allow references: %w", err)
-		}
-		acls7["allow"] = resolvedConversionListenerAccessOauthAccessTokenAclsAllow
-		oauthAccessToken8["acls"] = acls7
-		access19["oauth_access_token"] = oauthAccessToken8
-		conversionListener8["access"] = access19
-		payload["conversion-listener"] = conversionListener8
-	}
-	// spec.apiSpec.conversion-listener.access.oauthAccessToken.acls.deny carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
-		conversionListener9, _ := payload["conversion-listener"].(map[string]any)
-		if conversionListener9 == nil {
-			conversionListener9 = map[string]any{}
-		}
-		access20, _ := conversionListener9["access"].(map[string]any)
-		if access20 == nil {
-			access20 = map[string]any{}
-		}
-		oauthAccessToken9, _ := access20["oauth_access_token"].(map[string]any)
-		if oauthAccessToken9 == nil {
-			oauthAccessToken9 = map[string]any{}
-		}
-		acls8, _ := oauthAccessToken9["acls"].(map[string]any)
-		if acls8 == nil {
-			acls8 = map[string]any{}
-		}
-		resolvedConversionListenerAccessOauthAccessTokenAclsDeny, err := resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenAclsDeny(ctx, cl, obj)
-		if err != nil {
-			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.oauthAccessToken.acls.deny references: %w", err)
-		}
-		acls8["deny"] = resolvedConversionListenerAccessOauthAccessTokenAclsDeny
-		oauthAccessToken9["acls"] = acls8
-		access20["oauth_access_token"] = oauthAccessToken9
-		conversionListener9["access"] = access20
-		payload["conversion-listener"] = conversionListener9
+		consumer7["default_tool_acls"] = defaultToolAcls6
+		access12["consumer"] = consumer7
+		conversionListener5["access"] = access12
+		payload["conversion-listener"] = conversionListener5
 	}
 	// spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
-		conversionListener10, _ := payload["conversion-listener"].(map[string]any)
-		if conversionListener10 == nil {
-			conversionListener10 = map[string]any{}
+		conversionListener6, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener6 == nil {
+			conversionListener6 = map[string]any{}
 		}
-		access21, _ := conversionListener10["access"].(map[string]any)
-		if access21 == nil {
-			access21 = map[string]any{}
+		access13, _ := conversionListener6["access"].(map[string]any)
+		if access13 == nil {
+			access13 = map[string]any{}
 		}
-		oauthAccessToken10, _ := access21["oauth_access_token"].(map[string]any)
-		if oauthAccessToken10 == nil {
-			oauthAccessToken10 = map[string]any{}
+		oauthAccessToken6, _ := access13["oauth_access_token"].(map[string]any)
+		if oauthAccessToken6 == nil {
+			oauthAccessToken6 = map[string]any{}
 		}
-		defaultToolAcls7, _ := oauthAccessToken10["default_tool_acls"].(map[string]any)
+		defaultToolAcls7, _ := oauthAccessToken6["default_tool_acls"].(map[string]any)
 		if defaultToolAcls7 == nil {
 			defaultToolAcls7 = map[string]any{}
 		}
@@ -6378,29 +6467,29 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultToolAcls.allow references: %w", err)
 		}
 		defaultToolAcls7["allow"] = resolvedConversionListenerAccessOauthAccessTokenDefaultToolAclsAllow
-		oauthAccessToken10["default_tool_acls"] = defaultToolAcls7
-		access21["oauth_access_token"] = oauthAccessToken10
-		conversionListener10["access"] = access21
-		payload["conversion-listener"] = conversionListener10
+		oauthAccessToken6["default_tool_acls"] = defaultToolAcls7
+		access13["oauth_access_token"] = oauthAccessToken6
+		conversionListener6["access"] = access13
+		payload["conversion-listener"] = conversionListener6
 	}
 	// spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultToolAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
-		conversionListener11, _ := payload["conversion-listener"].(map[string]any)
-		if conversionListener11 == nil {
-			conversionListener11 = map[string]any{}
+		conversionListener7, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener7 == nil {
+			conversionListener7 = map[string]any{}
 		}
-		access22, _ := conversionListener11["access"].(map[string]any)
-		if access22 == nil {
-			access22 = map[string]any{}
+		access14, _ := conversionListener7["access"].(map[string]any)
+		if access14 == nil {
+			access14 = map[string]any{}
 		}
-		oauthAccessToken11, _ := access22["oauth_access_token"].(map[string]any)
-		if oauthAccessToken11 == nil {
-			oauthAccessToken11 = map[string]any{}
+		oauthAccessToken7, _ := access14["oauth_access_token"].(map[string]any)
+		if oauthAccessToken7 == nil {
+			oauthAccessToken7 = map[string]any{}
 		}
-		defaultToolAcls8, _ := oauthAccessToken11["default_tool_acls"].(map[string]any)
+		defaultToolAcls8, _ := oauthAccessToken7["default_tool_acls"].(map[string]any)
 		if defaultToolAcls8 == nil {
 			defaultToolAcls8 = map[string]any{}
 		}
@@ -6409,12 +6498,12 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultToolAcls.deny references: %w", err)
 		}
 		defaultToolAcls8["deny"] = resolvedConversionListenerAccessOauthAccessTokenDefaultToolAclsDeny
-		oauthAccessToken11["default_tool_acls"] = defaultToolAcls8
-		access22["oauth_access_token"] = oauthAccessToken11
-		conversionListener11["access"] = access22
-		payload["conversion-listener"] = conversionListener11
+		oauthAccessToken7["default_tool_acls"] = defaultToolAcls8
+		access14["oauth_access_token"] = oauthAccessToken7
+		conversionListener7["access"] = access14
+		payload["conversion-listener"] = conversionListener7
 	}
-	// spec.apiSpec.passthrough-listener.access.consumer.acls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// spec.apiSpec.passthrough-listener.access.consumer.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
@@ -6423,77 +6512,15 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		if passthroughListener4 == nil {
 			passthroughListener4 = map[string]any{}
 		}
-		access23, _ := passthroughListener4["access"].(map[string]any)
-		if access23 == nil {
-			access23 = map[string]any{}
+		access15, _ := passthroughListener4["access"].(map[string]any)
+		if access15 == nil {
+			access15 = map[string]any{}
 		}
-		consumer12, _ := access23["consumer"].(map[string]any)
-		if consumer12 == nil {
-			consumer12 = map[string]any{}
+		consumer8, _ := access15["consumer"].(map[string]any)
+		if consumer8 == nil {
+			consumer8 = map[string]any{}
 		}
-		acls9, _ := consumer12["acls"].(map[string]any)
-		if acls9 == nil {
-			acls9 = map[string]any{}
-		}
-		resolvedPassthroughListenerAccessConsumerAclsAllow, err := resolveAIGatewayMCPServerPassthroughListenerAccessConsumerAclsAllow(ctx, cl, obj)
-		if err != nil {
-			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.consumer.acls.allow references: %w", err)
-		}
-		acls9["allow"] = resolvedPassthroughListenerAccessConsumerAclsAllow
-		consumer12["acls"] = acls9
-		access23["consumer"] = consumer12
-		passthroughListener4["access"] = access23
-		payload["passthrough-listener"] = passthroughListener4
-	}
-	// spec.apiSpec.passthrough-listener.access.consumer.acls.deny carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
-		passthroughListener5, _ := payload["passthrough-listener"].(map[string]any)
-		if passthroughListener5 == nil {
-			passthroughListener5 = map[string]any{}
-		}
-		access24, _ := passthroughListener5["access"].(map[string]any)
-		if access24 == nil {
-			access24 = map[string]any{}
-		}
-		consumer13, _ := access24["consumer"].(map[string]any)
-		if consumer13 == nil {
-			consumer13 = map[string]any{}
-		}
-		acls10, _ := consumer13["acls"].(map[string]any)
-		if acls10 == nil {
-			acls10 = map[string]any{}
-		}
-		resolvedPassthroughListenerAccessConsumerAclsDeny, err := resolveAIGatewayMCPServerPassthroughListenerAccessConsumerAclsDeny(ctx, cl, obj)
-		if err != nil {
-			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.consumer.acls.deny references: %w", err)
-		}
-		acls10["deny"] = resolvedPassthroughListenerAccessConsumerAclsDeny
-		consumer13["acls"] = acls10
-		access24["consumer"] = consumer13
-		passthroughListener5["access"] = access24
-		payload["passthrough-listener"] = passthroughListener5
-	}
-	// spec.apiSpec.passthrough-listener.access.consumer.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
-		passthroughListener6, _ := payload["passthrough-listener"].(map[string]any)
-		if passthroughListener6 == nil {
-			passthroughListener6 = map[string]any{}
-		}
-		access25, _ := passthroughListener6["access"].(map[string]any)
-		if access25 == nil {
-			access25 = map[string]any{}
-		}
-		consumer14, _ := access25["consumer"].(map[string]any)
-		if consumer14 == nil {
-			consumer14 = map[string]any{}
-		}
-		defaultToolAcls9, _ := consumer14["default_tool_acls"].(map[string]any)
+		defaultToolAcls9, _ := consumer8["default_tool_acls"].(map[string]any)
 		if defaultToolAcls9 == nil {
 			defaultToolAcls9 = map[string]any{}
 		}
@@ -6502,29 +6529,29 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.consumer.defaultToolAcls.allow references: %w", err)
 		}
 		defaultToolAcls9["allow"] = resolvedPassthroughListenerAccessConsumerDefaultToolAclsAllow
-		consumer14["default_tool_acls"] = defaultToolAcls9
-		access25["consumer"] = consumer14
-		passthroughListener6["access"] = access25
-		payload["passthrough-listener"] = passthroughListener6
+		consumer8["default_tool_acls"] = defaultToolAcls9
+		access15["consumer"] = consumer8
+		passthroughListener4["access"] = access15
+		payload["passthrough-listener"] = passthroughListener4
 	}
 	// spec.apiSpec.passthrough-listener.access.consumer.defaultToolAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
-		passthroughListener7, _ := payload["passthrough-listener"].(map[string]any)
-		if passthroughListener7 == nil {
-			passthroughListener7 = map[string]any{}
+		passthroughListener5, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener5 == nil {
+			passthroughListener5 = map[string]any{}
 		}
-		access26, _ := passthroughListener7["access"].(map[string]any)
-		if access26 == nil {
-			access26 = map[string]any{}
+		access16, _ := passthroughListener5["access"].(map[string]any)
+		if access16 == nil {
+			access16 = map[string]any{}
 		}
-		consumer15, _ := access26["consumer"].(map[string]any)
-		if consumer15 == nil {
-			consumer15 = map[string]any{}
+		consumer9, _ := access16["consumer"].(map[string]any)
+		if consumer9 == nil {
+			consumer9 = map[string]any{}
 		}
-		defaultToolAcls10, _ := consumer15["default_tool_acls"].(map[string]any)
+		defaultToolAcls10, _ := consumer9["default_tool_acls"].(map[string]any)
 		if defaultToolAcls10 == nil {
 			defaultToolAcls10 = map[string]any{}
 		}
@@ -6533,91 +6560,29 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.consumer.defaultToolAcls.deny references: %w", err)
 		}
 		defaultToolAcls10["deny"] = resolvedPassthroughListenerAccessConsumerDefaultToolAclsDeny
-		consumer15["default_tool_acls"] = defaultToolAcls10
-		access26["consumer"] = consumer15
-		passthroughListener7["access"] = access26
-		payload["passthrough-listener"] = passthroughListener7
-	}
-	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.acls.allow carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
-		passthroughListener8, _ := payload["passthrough-listener"].(map[string]any)
-		if passthroughListener8 == nil {
-			passthroughListener8 = map[string]any{}
-		}
-		access27, _ := passthroughListener8["access"].(map[string]any)
-		if access27 == nil {
-			access27 = map[string]any{}
-		}
-		oauthAccessToken12, _ := access27["oauth_access_token"].(map[string]any)
-		if oauthAccessToken12 == nil {
-			oauthAccessToken12 = map[string]any{}
-		}
-		acls11, _ := oauthAccessToken12["acls"].(map[string]any)
-		if acls11 == nil {
-			acls11 = map[string]any{}
-		}
-		resolvedPassthroughListenerAccessOauthAccessTokenAclsAllow, err := resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAclsAllow(ctx, cl, obj)
-		if err != nil {
-			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.oauthAccessToken.acls.allow references: %w", err)
-		}
-		acls11["allow"] = resolvedPassthroughListenerAccessOauthAccessTokenAclsAllow
-		oauthAccessToken12["acls"] = acls11
-		access27["oauth_access_token"] = oauthAccessToken12
-		passthroughListener8["access"] = access27
-		payload["passthrough-listener"] = passthroughListener8
-	}
-	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.acls.deny carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
-		passthroughListener9, _ := payload["passthrough-listener"].(map[string]any)
-		if passthroughListener9 == nil {
-			passthroughListener9 = map[string]any{}
-		}
-		access28, _ := passthroughListener9["access"].(map[string]any)
-		if access28 == nil {
-			access28 = map[string]any{}
-		}
-		oauthAccessToken13, _ := access28["oauth_access_token"].(map[string]any)
-		if oauthAccessToken13 == nil {
-			oauthAccessToken13 = map[string]any{}
-		}
-		acls12, _ := oauthAccessToken13["acls"].(map[string]any)
-		if acls12 == nil {
-			acls12 = map[string]any{}
-		}
-		resolvedPassthroughListenerAccessOauthAccessTokenAclsDeny, err := resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAclsDeny(ctx, cl, obj)
-		if err != nil {
-			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.oauthAccessToken.acls.deny references: %w", err)
-		}
-		acls12["deny"] = resolvedPassthroughListenerAccessOauthAccessTokenAclsDeny
-		oauthAccessToken13["acls"] = acls12
-		access28["oauth_access_token"] = oauthAccessToken13
-		passthroughListener9["access"] = access28
-		payload["passthrough-listener"] = passthroughListener9
+		consumer9["default_tool_acls"] = defaultToolAcls10
+		access16["consumer"] = consumer9
+		passthroughListener5["access"] = access16
+		payload["passthrough-listener"] = passthroughListener5
 	}
 	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
-		passthroughListener10, _ := payload["passthrough-listener"].(map[string]any)
-		if passthroughListener10 == nil {
-			passthroughListener10 = map[string]any{}
+		passthroughListener6, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener6 == nil {
+			passthroughListener6 = map[string]any{}
 		}
-		access29, _ := passthroughListener10["access"].(map[string]any)
-		if access29 == nil {
-			access29 = map[string]any{}
+		access17, _ := passthroughListener6["access"].(map[string]any)
+		if access17 == nil {
+			access17 = map[string]any{}
 		}
-		oauthAccessToken14, _ := access29["oauth_access_token"].(map[string]any)
-		if oauthAccessToken14 == nil {
-			oauthAccessToken14 = map[string]any{}
+		oauthAccessToken8, _ := access17["oauth_access_token"].(map[string]any)
+		if oauthAccessToken8 == nil {
+			oauthAccessToken8 = map[string]any{}
 		}
-		defaultToolAcls11, _ := oauthAccessToken14["default_tool_acls"].(map[string]any)
+		defaultToolAcls11, _ := oauthAccessToken8["default_tool_acls"].(map[string]any)
 		if defaultToolAcls11 == nil {
 			defaultToolAcls11 = map[string]any{}
 		}
@@ -6626,29 +6591,29 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultToolAcls.allow references: %w", err)
 		}
 		defaultToolAcls11["allow"] = resolvedPassthroughListenerAccessOauthAccessTokenDefaultToolAclsAllow
-		oauthAccessToken14["default_tool_acls"] = defaultToolAcls11
-		access29["oauth_access_token"] = oauthAccessToken14
-		passthroughListener10["access"] = access29
-		payload["passthrough-listener"] = passthroughListener10
+		oauthAccessToken8["default_tool_acls"] = defaultToolAcls11
+		access17["oauth_access_token"] = oauthAccessToken8
+		passthroughListener6["access"] = access17
+		payload["passthrough-listener"] = passthroughListener6
 	}
 	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultToolAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
-		passthroughListener11, _ := payload["passthrough-listener"].(map[string]any)
-		if passthroughListener11 == nil {
-			passthroughListener11 = map[string]any{}
+		passthroughListener7, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener7 == nil {
+			passthroughListener7 = map[string]any{}
 		}
-		access30, _ := passthroughListener11["access"].(map[string]any)
-		if access30 == nil {
-			access30 = map[string]any{}
+		access18, _ := passthroughListener7["access"].(map[string]any)
+		if access18 == nil {
+			access18 = map[string]any{}
 		}
-		oauthAccessToken15, _ := access30["oauth_access_token"].(map[string]any)
-		if oauthAccessToken15 == nil {
-			oauthAccessToken15 = map[string]any{}
+		oauthAccessToken9, _ := access18["oauth_access_token"].(map[string]any)
+		if oauthAccessToken9 == nil {
+			oauthAccessToken9 = map[string]any{}
 		}
-		defaultToolAcls12, _ := oauthAccessToken15["default_tool_acls"].(map[string]any)
+		defaultToolAcls12, _ := oauthAccessToken9["default_tool_acls"].(map[string]any)
 		if defaultToolAcls12 == nil {
 			defaultToolAcls12 = map[string]any{}
 		}
@@ -6657,44 +6622,44 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultToolAcls.deny references: %w", err)
 		}
 		defaultToolAcls12["deny"] = resolvedPassthroughListenerAccessOauthAccessTokenDefaultToolAclsDeny
-		oauthAccessToken15["default_tool_acls"] = defaultToolAcls12
-		access30["oauth_access_token"] = oauthAccessToken15
-		passthroughListener11["access"] = access30
-		payload["passthrough-listener"] = passthroughListener11
+		oauthAccessToken9["default_tool_acls"] = defaultToolAcls12
+		access18["oauth_access_token"] = oauthAccessToken9
+		passthroughListener7["access"] = access18
+		payload["passthrough-listener"] = passthroughListener7
 	}
 	// spec.apiSpec.conversion-listener.tools.access.acls.allow carries a CR reference: inject the resolved Konnect values into
 	// each element of the "tools" array in the SDK payload, preserving
 	// sibling keys of its ancestors. A nil CRD ancestor pointer means that part
 	// of the config wasn't set, so the payload is left untouched.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil {
-		conversionListener12, _ := payload["conversion-listener"].(map[string]any)
-		if conversionListener12 == nil {
-			conversionListener12 = map[string]any{}
+		conversionListener8, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener8 == nil {
+			conversionListener8 = map[string]any{}
 		}
 		resolvedConversionListenerToolsAccessAclsAllow, err := resolveAIGatewayMCPServerConversionListenerToolsAccessAclsAllow(ctx, cl, obj)
 		if err != nil {
 			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.tools.access.acls.allow references: %w", err)
 		}
-		if arr, ok := conversionListener12["tools"].([]any); ok {
+		if arr, ok := conversionListener8["tools"].([]any); ok {
 			ri := 0
 			for _, e := range arr {
 				el, ok := e.(map[string]any)
 				if !ok {
 					continue
 				}
-				access31, ok := el["access"].(map[string]any)
+				access19, ok := el["access"].(map[string]any)
 				if !ok {
 					continue
 				}
-				acls13, ok := access31["acls"].(map[string]any)
+				acls, ok := access19["acls"].(map[string]any)
 				if !ok {
 					continue
 				}
-				if _, has := acls13["allow"]; !has {
+				if _, has := acls["allow"]; !has {
 					continue
 				}
 				if ri < len(resolvedConversionListenerToolsAccessAclsAllow) {
-					acls13["allow"] = resolvedConversionListenerToolsAccessAclsAllow[ri]
+					acls["allow"] = resolvedConversionListenerToolsAccessAclsAllow[ri]
 					ri++
 				}
 			}
@@ -6703,31 +6668,31 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		if err != nil {
 			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.tools.access.acls.deny references: %w", err)
 		}
-		if arr, ok := conversionListener12["tools"].([]any); ok {
+		if arr, ok := conversionListener8["tools"].([]any); ok {
 			ri := 0
 			for _, e := range arr {
 				el, ok := e.(map[string]any)
 				if !ok {
 					continue
 				}
-				access31, ok := el["access"].(map[string]any)
+				access19, ok := el["access"].(map[string]any)
 				if !ok {
 					continue
 				}
-				acls13, ok := access31["acls"].(map[string]any)
+				acls, ok := access19["acls"].(map[string]any)
 				if !ok {
 					continue
 				}
-				if _, has := acls13["deny"]; !has {
+				if _, has := acls["deny"]; !has {
 					continue
 				}
 				if ri < len(resolvedConversionListenerToolsAccessAclsDeny) {
-					acls13["deny"] = resolvedConversionListenerToolsAccessAclsDeny[ri]
+					acls["deny"] = resolvedConversionListenerToolsAccessAclsDeny[ri]
 					ri++
 				}
 			}
 		}
-		payload["conversion-listener"] = conversionListener12
+		payload["conversion-listener"] = conversionListener8
 	}
 	// spec.apiSpec.conversion-only.tools.access.acls.allow carries a CR reference: inject the resolved Konnect values into
 	// each element of the "tools" array in the SDK payload, preserving
@@ -6749,19 +6714,19 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 				if !ok {
 					continue
 				}
-				access32, ok := el["access"].(map[string]any)
+				access20, ok := el["access"].(map[string]any)
 				if !ok {
 					continue
 				}
-				acls14, ok := access32["acls"].(map[string]any)
+				acls2, ok := access20["acls"].(map[string]any)
 				if !ok {
 					continue
 				}
-				if _, has := acls14["allow"]; !has {
+				if _, has := acls2["allow"]; !has {
 					continue
 				}
 				if ri < len(resolvedConversionOnlyToolsAccessAclsAllow) {
-					acls14["allow"] = resolvedConversionOnlyToolsAccessAclsAllow[ri]
+					acls2["allow"] = resolvedConversionOnlyToolsAccessAclsAllow[ri]
 					ri++
 				}
 			}
@@ -6777,19 +6742,19 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 				if !ok {
 					continue
 				}
-				access32, ok := el["access"].(map[string]any)
+				access20, ok := el["access"].(map[string]any)
 				if !ok {
 					continue
 				}
-				acls14, ok := access32["acls"].(map[string]any)
+				acls2, ok := access20["acls"].(map[string]any)
 				if !ok {
 					continue
 				}
-				if _, has := acls14["deny"]; !has {
+				if _, has := acls2["deny"]; !has {
 					continue
 				}
 				if ri < len(resolvedConversionOnlyToolsAccessAclsDeny) {
-					acls14["deny"] = resolvedConversionOnlyToolsAccessAclsDeny[ri]
+					acls2["deny"] = resolvedConversionOnlyToolsAccessAclsDeny[ri]
 					ri++
 				}
 			}
@@ -6801,34 +6766,34 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// sibling keys of its ancestors. A nil CRD ancestor pointer means that part
 	// of the config wasn't set, so the payload is left untouched.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil {
-		passthroughListener12, _ := payload["passthrough-listener"].(map[string]any)
-		if passthroughListener12 == nil {
-			passthroughListener12 = map[string]any{}
+		passthroughListener8, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener8 == nil {
+			passthroughListener8 = map[string]any{}
 		}
 		resolvedPassthroughListenerToolsAccessAclsAllow, err := resolveAIGatewayMCPServerPassthroughListenerToolsAccessAclsAllow(ctx, cl, obj)
 		if err != nil {
 			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.tools.access.acls.allow references: %w", err)
 		}
-		if arr, ok := passthroughListener12["tools"].([]any); ok {
+		if arr, ok := passthroughListener8["tools"].([]any); ok {
 			ri := 0
 			for _, e := range arr {
 				el, ok := e.(map[string]any)
 				if !ok {
 					continue
 				}
-				access33, ok := el["access"].(map[string]any)
+				access21, ok := el["access"].(map[string]any)
 				if !ok {
 					continue
 				}
-				acls15, ok := access33["acls"].(map[string]any)
+				acls3, ok := access21["acls"].(map[string]any)
 				if !ok {
 					continue
 				}
-				if _, has := acls15["allow"]; !has {
+				if _, has := acls3["allow"]; !has {
 					continue
 				}
 				if ri < len(resolvedPassthroughListenerToolsAccessAclsAllow) {
-					acls15["allow"] = resolvedPassthroughListenerToolsAccessAclsAllow[ri]
+					acls3["allow"] = resolvedPassthroughListenerToolsAccessAclsAllow[ri]
 					ri++
 				}
 			}
@@ -6837,31 +6802,31 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		if err != nil {
 			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.tools.access.acls.deny references: %w", err)
 		}
-		if arr, ok := passthroughListener12["tools"].([]any); ok {
+		if arr, ok := passthroughListener8["tools"].([]any); ok {
 			ri := 0
 			for _, e := range arr {
 				el, ok := e.(map[string]any)
 				if !ok {
 					continue
 				}
-				access33, ok := el["access"].(map[string]any)
+				access21, ok := el["access"].(map[string]any)
 				if !ok {
 					continue
 				}
-				acls15, ok := access33["acls"].(map[string]any)
+				acls3, ok := access21["acls"].(map[string]any)
 				if !ok {
 					continue
 				}
-				if _, has := acls15["deny"]; !has {
+				if _, has := acls3["deny"]; !has {
 					continue
 				}
 				if ri < len(resolvedPassthroughListenerToolsAccessAclsDeny) {
-					acls15["deny"] = resolvedPassthroughListenerToolsAccessAclsDeny[ri]
+					acls3["deny"] = resolvedPassthroughListenerToolsAccessAclsDeny[ri]
 					ri++
 				}
 			}
 		}
-		payload["passthrough-listener"] = passthroughListener12
+		payload["passthrough-listener"] = passthroughListener8
 	}
 	// spec.apiSpec.upstream-server.tools.access.acls.allow carries a CR reference: inject the resolved Konnect values into
 	// each element of the "tools" array in the SDK payload, preserving
@@ -6883,19 +6848,19 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 				if !ok {
 					continue
 				}
-				access34, ok := el["access"].(map[string]any)
+				access22, ok := el["access"].(map[string]any)
 				if !ok {
 					continue
 				}
-				acls16, ok := access34["acls"].(map[string]any)
+				acls4, ok := access22["acls"].(map[string]any)
 				if !ok {
 					continue
 				}
-				if _, has := acls16["allow"]; !has {
+				if _, has := acls4["allow"]; !has {
 					continue
 				}
 				if ri < len(resolvedUpstreamServerToolsAccessAclsAllow) {
-					acls16["allow"] = resolvedUpstreamServerToolsAccessAclsAllow[ri]
+					acls4["allow"] = resolvedUpstreamServerToolsAccessAclsAllow[ri]
 					ri++
 				}
 			}
@@ -6911,19 +6876,19 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 				if !ok {
 					continue
 				}
-				access34, ok := el["access"].(map[string]any)
+				access22, ok := el["access"].(map[string]any)
 				if !ok {
 					continue
 				}
-				acls16, ok := access34["acls"].(map[string]any)
+				acls4, ok := access22["acls"].(map[string]any)
 				if !ok {
 					continue
 				}
-				if _, has := acls16["deny"]; !has {
+				if _, has := acls4["deny"]; !has {
 					continue
 				}
 				if ri < len(resolvedUpstreamServerToolsAccessAclsDeny) {
-					acls16["deny"] = resolvedUpstreamServerToolsAccessAclsDeny[ri]
+					acls4["deny"] = resolvedUpstreamServerToolsAccessAclsDeny[ri]
 					ri++
 				}
 			}
@@ -6936,9 +6901,9 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// pointer means that part of the config wasn't set, so the payload is left
 	// untouched.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil {
-		conversionListener13, _ := payload["conversion-listener"].(map[string]any)
-		if conversionListener13 == nil {
-			conversionListener13 = map[string]any{}
+		conversionListener9, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener9 == nil {
+			conversionListener9 = map[string]any{}
 		}
 		resolvedConversionListenerDatastores, err := resolveAIGatewayMCPServerConversionListenerDatastores(ctx, cl, obj)
 		if err != nil {
@@ -6948,8 +6913,8 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		for _, v := range resolvedConversionListenerDatastores {
 			wrappedConversionListenerDatastores = append(wrappedConversionListenerDatastores, map[string]string{"name": v})
 		}
-		conversionListener13["datastores"] = wrappedConversionListenerDatastores
-		payload["conversion-listener"] = conversionListener13
+		conversionListener9["datastores"] = wrappedConversionListenerDatastores
+		payload["conversion-listener"] = conversionListener9
 	}
 	// spec.apiSpec.conversion-only.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
@@ -6978,9 +6943,9 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// pointer means that part of the config wasn't set, so the payload is left
 	// untouched.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil {
-		listener13, _ := payload["listener"].(map[string]any)
-		if listener13 == nil {
-			listener13 = map[string]any{}
+		listener9, _ := payload["listener"].(map[string]any)
+		if listener9 == nil {
+			listener9 = map[string]any{}
 		}
 		resolvedListenerDatastores, err := resolveAIGatewayMCPServerListenerDatastores(ctx, cl, obj)
 		if err != nil {
@@ -6990,8 +6955,8 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		for _, v := range resolvedListenerDatastores {
 			wrappedListenerDatastores = append(wrappedListenerDatastores, map[string]string{"name": v})
 		}
-		listener13["datastores"] = wrappedListenerDatastores
-		payload["listener"] = listener13
+		listener9["datastores"] = wrappedListenerDatastores
+		payload["listener"] = listener9
 	}
 	// spec.apiSpec.passthrough-listener.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
@@ -6999,9 +6964,9 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 	// pointer means that part of the config wasn't set, so the payload is left
 	// untouched.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil {
-		passthroughListener13, _ := payload["passthrough-listener"].(map[string]any)
-		if passthroughListener13 == nil {
-			passthroughListener13 = map[string]any{}
+		passthroughListener9, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener9 == nil {
+			passthroughListener9 = map[string]any{}
 		}
 		resolvedPassthroughListenerDatastores, err := resolveAIGatewayMCPServerPassthroughListenerDatastores(ctx, cl, obj)
 		if err != nil {
@@ -7011,8 +6976,8 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		for _, v := range resolvedPassthroughListenerDatastores {
 			wrappedPassthroughListenerDatastores = append(wrappedPassthroughListenerDatastores, map[string]string{"name": v})
 		}
-		passthroughListener13["datastores"] = wrappedPassthroughListenerDatastores
-		payload["passthrough-listener"] = passthroughListener13
+		passthroughListener9["datastores"] = wrappedPassthroughListenerDatastores
+		payload["passthrough-listener"] = passthroughListener9
 	}
 	// spec.apiSpec.upstream-server.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
@@ -7046,6 +7011,222 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	if err != nil {
 		return nil, err
 	}
+	// spec.apiSpec.listener.access.consumer carries CR references: rebuild the "acls" union
+	// value in the SDK payload from the CRD ACL union's selected variant with the
+	// resolved Konnect values, preserving sibling keys of its ancestors. A nil
+	// CRD union leaves the payload untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer.Acls != nil {
+		acls := obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer.Acls
+		listener, _ := payload["listener"].(map[string]any)
+		if listener == nil {
+			listener = map[string]any{}
+		}
+		access, _ := listener["access"].(map[string]any)
+		if access == nil {
+			access = map[string]any{}
+		}
+		consumer, _ := access["consumer"].(map[string]any)
+		if consumer == nil {
+			consumer = map[string]any{}
+		}
+		switch {
+		case acls.Type == AIGatewayMCPServerListenerConsumerAclsTypeAllow:
+			resolvedListenerAccessConsumerAclsAllow, err := resolveAIGatewayMCPServerListenerAccessConsumerAclsAllow(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.consumer.acls.allow references: %w", err)
+			}
+			consumer["acls"] = map[string]any{"allow": resolvedListenerAccessConsumerAclsAllow}
+		case acls.Type == AIGatewayMCPServerListenerConsumerAclsTypeDeny:
+			resolvedListenerAccessConsumerAclsDeny, err := resolveAIGatewayMCPServerListenerAccessConsumerAclsDeny(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.consumer.acls.deny references: %w", err)
+			}
+			consumer["acls"] = map[string]any{"deny": resolvedListenerAccessConsumerAclsDeny}
+		}
+		access["consumer"] = consumer
+		listener["access"] = access
+		payload["listener"] = listener
+	}
+	// spec.apiSpec.listener.access.oauthAccessToken carries CR references: rebuild the "acls" union
+	// value in the SDK payload from the CRD ACL union's selected variant with the
+	// resolved Konnect values, preserving sibling keys of its ancestors. A nil
+	// CRD union leaves the payload untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth.Acls != nil {
+		acls2 := obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth.Acls
+		listener2, _ := payload["listener"].(map[string]any)
+		if listener2 == nil {
+			listener2 = map[string]any{}
+		}
+		access2, _ := listener2["access"].(map[string]any)
+		if access2 == nil {
+			access2 = map[string]any{}
+		}
+		oauthAccessToken, _ := access2["oauth_access_token"].(map[string]any)
+		if oauthAccessToken == nil {
+			oauthAccessToken = map[string]any{}
+		}
+		switch {
+		case acls2.Type == AIGatewayMCPServerListenerOauthAclsTypeAllow:
+			resolvedListenerAccessOauthAccessTokenAclsAllow, err := resolveAIGatewayMCPServerListenerAccessOauthAccessTokenAclsAllow(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.oauthAccessToken.acls.allow references: %w", err)
+			}
+			oauthAccessToken["acls"] = map[string]any{"allow": resolvedListenerAccessOauthAccessTokenAclsAllow}
+		case acls2.Type == AIGatewayMCPServerListenerOauthAclsTypeDeny:
+			resolvedListenerAccessOauthAccessTokenAclsDeny, err := resolveAIGatewayMCPServerListenerAccessOauthAccessTokenAclsDeny(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.oauthAccessToken.acls.deny references: %w", err)
+			}
+			oauthAccessToken["acls"] = map[string]any{"deny": resolvedListenerAccessOauthAccessTokenAclsDeny}
+		}
+		access2["oauth_access_token"] = oauthAccessToken
+		listener2["access"] = access2
+		payload["listener"] = listener2
+	}
+	// spec.apiSpec.conversion-listener.access.consumer carries CR references: rebuild the "acls" union
+	// value in the SDK payload from the CRD ACL union's selected variant with the
+	// resolved Konnect values, preserving sibling keys of its ancestors. A nil
+	// CRD union leaves the payload untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer.Acls != nil {
+		acls3 := obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer.Acls
+		conversionListener, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener == nil {
+			conversionListener = map[string]any{}
+		}
+		access3, _ := conversionListener["access"].(map[string]any)
+		if access3 == nil {
+			access3 = map[string]any{}
+		}
+		consumer2, _ := access3["consumer"].(map[string]any)
+		if consumer2 == nil {
+			consumer2 = map[string]any{}
+		}
+		switch {
+		case acls3.Type == AIGatewayMCPServerListenerConsumerAclsTypeAllow:
+			resolvedConversionListenerAccessConsumerAclsAllow, err := resolveAIGatewayMCPServerConversionListenerAccessConsumerAclsAllow(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.consumer.acls.allow references: %w", err)
+			}
+			consumer2["acls"] = map[string]any{"allow": resolvedConversionListenerAccessConsumerAclsAllow}
+		case acls3.Type == AIGatewayMCPServerListenerConsumerAclsTypeDeny:
+			resolvedConversionListenerAccessConsumerAclsDeny, err := resolveAIGatewayMCPServerConversionListenerAccessConsumerAclsDeny(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.consumer.acls.deny references: %w", err)
+			}
+			consumer2["acls"] = map[string]any{"deny": resolvedConversionListenerAccessConsumerAclsDeny}
+		}
+		access3["consumer"] = consumer2
+		conversionListener["access"] = access3
+		payload["conversion-listener"] = conversionListener
+	}
+	// spec.apiSpec.conversion-listener.access.oauthAccessToken carries CR references: rebuild the "acls" union
+	// value in the SDK payload from the CRD ACL union's selected variant with the
+	// resolved Konnect values, preserving sibling keys of its ancestors. A nil
+	// CRD union leaves the payload untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth.Acls != nil {
+		acls4 := obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth.Acls
+		conversionListener2, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener2 == nil {
+			conversionListener2 = map[string]any{}
+		}
+		access4, _ := conversionListener2["access"].(map[string]any)
+		if access4 == nil {
+			access4 = map[string]any{}
+		}
+		oauthAccessToken2, _ := access4["oauth_access_token"].(map[string]any)
+		if oauthAccessToken2 == nil {
+			oauthAccessToken2 = map[string]any{}
+		}
+		switch {
+		case acls4.Type == AIGatewayMCPServerListenerOauthAclsTypeAllow:
+			resolvedConversionListenerAccessOauthAccessTokenAclsAllow, err := resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenAclsAllow(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.oauthAccessToken.acls.allow references: %w", err)
+			}
+			oauthAccessToken2["acls"] = map[string]any{"allow": resolvedConversionListenerAccessOauthAccessTokenAclsAllow}
+		case acls4.Type == AIGatewayMCPServerListenerOauthAclsTypeDeny:
+			resolvedConversionListenerAccessOauthAccessTokenAclsDeny, err := resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenAclsDeny(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.oauthAccessToken.acls.deny references: %w", err)
+			}
+			oauthAccessToken2["acls"] = map[string]any{"deny": resolvedConversionListenerAccessOauthAccessTokenAclsDeny}
+		}
+		access4["oauth_access_token"] = oauthAccessToken2
+		conversionListener2["access"] = access4
+		payload["conversion-listener"] = conversionListener2
+	}
+	// spec.apiSpec.passthrough-listener.access.consumer carries CR references: rebuild the "acls" union
+	// value in the SDK payload from the CRD ACL union's selected variant with the
+	// resolved Konnect values, preserving sibling keys of its ancestors. A nil
+	// CRD union leaves the payload untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer.Acls != nil {
+		acls5 := obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer.Acls
+		passthroughListener, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener == nil {
+			passthroughListener = map[string]any{}
+		}
+		access5, _ := passthroughListener["access"].(map[string]any)
+		if access5 == nil {
+			access5 = map[string]any{}
+		}
+		consumer3, _ := access5["consumer"].(map[string]any)
+		if consumer3 == nil {
+			consumer3 = map[string]any{}
+		}
+		switch {
+		case acls5.Type == AIGatewayMCPServerListenerConsumerAclsTypeAllow:
+			resolvedPassthroughListenerAccessConsumerAclsAllow, err := resolveAIGatewayMCPServerPassthroughListenerAccessConsumerAclsAllow(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.consumer.acls.allow references: %w", err)
+			}
+			consumer3["acls"] = map[string]any{"allow": resolvedPassthroughListenerAccessConsumerAclsAllow}
+		case acls5.Type == AIGatewayMCPServerListenerConsumerAclsTypeDeny:
+			resolvedPassthroughListenerAccessConsumerAclsDeny, err := resolveAIGatewayMCPServerPassthroughListenerAccessConsumerAclsDeny(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.consumer.acls.deny references: %w", err)
+			}
+			consumer3["acls"] = map[string]any{"deny": resolvedPassthroughListenerAccessConsumerAclsDeny}
+		}
+		access5["consumer"] = consumer3
+		passthroughListener["access"] = access5
+		payload["passthrough-listener"] = passthroughListener
+	}
+	// spec.apiSpec.passthrough-listener.access.oauthAccessToken carries CR references: rebuild the "acls" union
+	// value in the SDK payload from the CRD ACL union's selected variant with the
+	// resolved Konnect values, preserving sibling keys of its ancestors. A nil
+	// CRD union leaves the payload untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth.Acls != nil {
+		acls6 := obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth.Acls
+		passthroughListener2, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener2 == nil {
+			passthroughListener2 = map[string]any{}
+		}
+		access6, _ := passthroughListener2["access"].(map[string]any)
+		if access6 == nil {
+			access6 = map[string]any{}
+		}
+		oauthAccessToken3, _ := access6["oauth_access_token"].(map[string]any)
+		if oauthAccessToken3 == nil {
+			oauthAccessToken3 = map[string]any{}
+		}
+		switch {
+		case acls6.Type == AIGatewayMCPServerListenerOauthAclsTypeAllow:
+			resolvedPassthroughListenerAccessOauthAccessTokenAclsAllow, err := resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAclsAllow(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.oauthAccessToken.acls.allow references: %w", err)
+			}
+			oauthAccessToken3["acls"] = map[string]any{"allow": resolvedPassthroughListenerAccessOauthAccessTokenAclsAllow}
+		case acls6.Type == AIGatewayMCPServerListenerOauthAclsTypeDeny:
+			resolvedPassthroughListenerAccessOauthAccessTokenAclsDeny, err := resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAclsDeny(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.oauthAccessToken.acls.deny references: %w", err)
+			}
+			oauthAccessToken3["acls"] = map[string]any{"deny": resolvedPassthroughListenerAccessOauthAccessTokenAclsDeny}
+		}
+		access6["oauth_access_token"] = oauthAccessToken3
+		passthroughListener2["access"] = access6
+		payload["passthrough-listener"] = passthroughListener2
+	}
 	// spec.apiSpec.conversion-listener.policies carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
@@ -7298,7 +7479,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		passthroughListener3["access"] = access6
 		payload["passthrough-listener"] = passthroughListener3
 	}
-	// spec.apiSpec.listener.access.consumer.acls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// spec.apiSpec.listener.access.consumer.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
@@ -7315,21 +7496,21 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		if consumer4 == nil {
 			consumer4 = map[string]any{}
 		}
-		acls, _ := consumer4["acls"].(map[string]any)
-		if acls == nil {
-			acls = map[string]any{}
+		defaultToolAcls, _ := consumer4["default_tool_acls"].(map[string]any)
+		if defaultToolAcls == nil {
+			defaultToolAcls = map[string]any{}
 		}
-		resolvedListenerAccessConsumerAclsAllow, err := resolveAIGatewayMCPServerListenerAccessConsumerAclsAllow(ctx, cl, obj)
+		resolvedListenerAccessConsumerDefaultToolAclsAllow, err := resolveAIGatewayMCPServerListenerAccessConsumerDefaultToolAclsAllow(ctx, cl, obj)
 		if err != nil {
-			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.consumer.acls.allow references: %w", err)
+			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.consumer.defaultToolAcls.allow references: %w", err)
 		}
-		acls["allow"] = resolvedListenerAccessConsumerAclsAllow
-		consumer4["acls"] = acls
+		defaultToolAcls["allow"] = resolvedListenerAccessConsumerDefaultToolAclsAllow
+		consumer4["default_tool_acls"] = defaultToolAcls
 		access7["consumer"] = consumer4
 		listener5["access"] = access7
 		payload["listener"] = listener5
 	}
-	// spec.apiSpec.listener.access.consumer.acls.deny carries a CR reference: overwrite its resolved Konnect values in
+	// spec.apiSpec.listener.access.consumer.defaultToolAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
@@ -7346,69 +7527,7 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		if consumer5 == nil {
 			consumer5 = map[string]any{}
 		}
-		acls2, _ := consumer5["acls"].(map[string]any)
-		if acls2 == nil {
-			acls2 = map[string]any{}
-		}
-		resolvedListenerAccessConsumerAclsDeny, err := resolveAIGatewayMCPServerListenerAccessConsumerAclsDeny(ctx, cl, obj)
-		if err != nil {
-			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.consumer.acls.deny references: %w", err)
-		}
-		acls2["deny"] = resolvedListenerAccessConsumerAclsDeny
-		consumer5["acls"] = acls2
-		access8["consumer"] = consumer5
-		listener6["access"] = access8
-		payload["listener"] = listener6
-	}
-	// spec.apiSpec.listener.access.consumer.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
-		listener7, _ := payload["listener"].(map[string]any)
-		if listener7 == nil {
-			listener7 = map[string]any{}
-		}
-		access9, _ := listener7["access"].(map[string]any)
-		if access9 == nil {
-			access9 = map[string]any{}
-		}
-		consumer6, _ := access9["consumer"].(map[string]any)
-		if consumer6 == nil {
-			consumer6 = map[string]any{}
-		}
-		defaultToolAcls, _ := consumer6["default_tool_acls"].(map[string]any)
-		if defaultToolAcls == nil {
-			defaultToolAcls = map[string]any{}
-		}
-		resolvedListenerAccessConsumerDefaultToolAclsAllow, err := resolveAIGatewayMCPServerListenerAccessConsumerDefaultToolAclsAllow(ctx, cl, obj)
-		if err != nil {
-			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.consumer.defaultToolAcls.allow references: %w", err)
-		}
-		defaultToolAcls["allow"] = resolvedListenerAccessConsumerDefaultToolAclsAllow
-		consumer6["default_tool_acls"] = defaultToolAcls
-		access9["consumer"] = consumer6
-		listener7["access"] = access9
-		payload["listener"] = listener7
-	}
-	// spec.apiSpec.listener.access.consumer.defaultToolAcls.deny carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Consumer != nil {
-		listener8, _ := payload["listener"].(map[string]any)
-		if listener8 == nil {
-			listener8 = map[string]any{}
-		}
-		access10, _ := listener8["access"].(map[string]any)
-		if access10 == nil {
-			access10 = map[string]any{}
-		}
-		consumer7, _ := access10["consumer"].(map[string]any)
-		if consumer7 == nil {
-			consumer7 = map[string]any{}
-		}
-		defaultToolAcls2, _ := consumer7["default_tool_acls"].(map[string]any)
+		defaultToolAcls2, _ := consumer5["default_tool_acls"].(map[string]any)
 		if defaultToolAcls2 == nil {
 			defaultToolAcls2 = map[string]any{}
 		}
@@ -7417,91 +7536,29 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.consumer.defaultToolAcls.deny references: %w", err)
 		}
 		defaultToolAcls2["deny"] = resolvedListenerAccessConsumerDefaultToolAclsDeny
-		consumer7["default_tool_acls"] = defaultToolAcls2
-		access10["consumer"] = consumer7
-		listener8["access"] = access10
-		payload["listener"] = listener8
-	}
-	// spec.apiSpec.listener.access.oauthAccessToken.acls.allow carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
-		listener9, _ := payload["listener"].(map[string]any)
-		if listener9 == nil {
-			listener9 = map[string]any{}
-		}
-		access11, _ := listener9["access"].(map[string]any)
-		if access11 == nil {
-			access11 = map[string]any{}
-		}
-		oauthAccessToken4, _ := access11["oauth_access_token"].(map[string]any)
-		if oauthAccessToken4 == nil {
-			oauthAccessToken4 = map[string]any{}
-		}
-		acls3, _ := oauthAccessToken4["acls"].(map[string]any)
-		if acls3 == nil {
-			acls3 = map[string]any{}
-		}
-		resolvedListenerAccessOauthAccessTokenAclsAllow, err := resolveAIGatewayMCPServerListenerAccessOauthAccessTokenAclsAllow(ctx, cl, obj)
-		if err != nil {
-			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.oauthAccessToken.acls.allow references: %w", err)
-		}
-		acls3["allow"] = resolvedListenerAccessOauthAccessTokenAclsAllow
-		oauthAccessToken4["acls"] = acls3
-		access11["oauth_access_token"] = oauthAccessToken4
-		listener9["access"] = access11
-		payload["listener"] = listener9
-	}
-	// spec.apiSpec.listener.access.oauthAccessToken.acls.deny carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
-		listener10, _ := payload["listener"].(map[string]any)
-		if listener10 == nil {
-			listener10 = map[string]any{}
-		}
-		access12, _ := listener10["access"].(map[string]any)
-		if access12 == nil {
-			access12 = map[string]any{}
-		}
-		oauthAccessToken5, _ := access12["oauth_access_token"].(map[string]any)
-		if oauthAccessToken5 == nil {
-			oauthAccessToken5 = map[string]any{}
-		}
-		acls4, _ := oauthAccessToken5["acls"].(map[string]any)
-		if acls4 == nil {
-			acls4 = map[string]any{}
-		}
-		resolvedListenerAccessOauthAccessTokenAclsDeny, err := resolveAIGatewayMCPServerListenerAccessOauthAccessTokenAclsDeny(ctx, cl, obj)
-		if err != nil {
-			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.oauthAccessToken.acls.deny references: %w", err)
-		}
-		acls4["deny"] = resolvedListenerAccessOauthAccessTokenAclsDeny
-		oauthAccessToken5["acls"] = acls4
-		access12["oauth_access_token"] = oauthAccessToken5
-		listener10["access"] = access12
-		payload["listener"] = listener10
+		consumer5["default_tool_acls"] = defaultToolAcls2
+		access8["consumer"] = consumer5
+		listener6["access"] = access8
+		payload["listener"] = listener6
 	}
 	// spec.apiSpec.listener.access.oauthAccessToken.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
-		listener11, _ := payload["listener"].(map[string]any)
-		if listener11 == nil {
-			listener11 = map[string]any{}
+		listener7, _ := payload["listener"].(map[string]any)
+		if listener7 == nil {
+			listener7 = map[string]any{}
 		}
-		access13, _ := listener11["access"].(map[string]any)
-		if access13 == nil {
-			access13 = map[string]any{}
+		access9, _ := listener7["access"].(map[string]any)
+		if access9 == nil {
+			access9 = map[string]any{}
 		}
-		oauthAccessToken6, _ := access13["oauth_access_token"].(map[string]any)
-		if oauthAccessToken6 == nil {
-			oauthAccessToken6 = map[string]any{}
+		oauthAccessToken4, _ := access9["oauth_access_token"].(map[string]any)
+		if oauthAccessToken4 == nil {
+			oauthAccessToken4 = map[string]any{}
 		}
-		defaultToolAcls3, _ := oauthAccessToken6["default_tool_acls"].(map[string]any)
+		defaultToolAcls3, _ := oauthAccessToken4["default_tool_acls"].(map[string]any)
 		if defaultToolAcls3 == nil {
 			defaultToolAcls3 = map[string]any{}
 		}
@@ -7510,29 +7567,29 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.oauthAccessToken.defaultToolAcls.allow references: %w", err)
 		}
 		defaultToolAcls3["allow"] = resolvedListenerAccessOauthAccessTokenDefaultToolAclsAllow
-		oauthAccessToken6["default_tool_acls"] = defaultToolAcls3
-		access13["oauth_access_token"] = oauthAccessToken6
-		listener11["access"] = access13
-		payload["listener"] = listener11
+		oauthAccessToken4["default_tool_acls"] = defaultToolAcls3
+		access9["oauth_access_token"] = oauthAccessToken4
+		listener7["access"] = access9
+		payload["listener"] = listener7
 	}
 	// spec.apiSpec.listener.access.oauthAccessToken.defaultToolAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener.Access.Oauth != nil {
-		listener12, _ := payload["listener"].(map[string]any)
-		if listener12 == nil {
-			listener12 = map[string]any{}
+		listener8, _ := payload["listener"].(map[string]any)
+		if listener8 == nil {
+			listener8 = map[string]any{}
 		}
-		access14, _ := listener12["access"].(map[string]any)
-		if access14 == nil {
-			access14 = map[string]any{}
+		access10, _ := listener8["access"].(map[string]any)
+		if access10 == nil {
+			access10 = map[string]any{}
 		}
-		oauthAccessToken7, _ := access14["oauth_access_token"].(map[string]any)
-		if oauthAccessToken7 == nil {
-			oauthAccessToken7 = map[string]any{}
+		oauthAccessToken5, _ := access10["oauth_access_token"].(map[string]any)
+		if oauthAccessToken5 == nil {
+			oauthAccessToken5 = map[string]any{}
 		}
-		defaultToolAcls4, _ := oauthAccessToken7["default_tool_acls"].(map[string]any)
+		defaultToolAcls4, _ := oauthAccessToken5["default_tool_acls"].(map[string]any)
 		if defaultToolAcls4 == nil {
 			defaultToolAcls4 = map[string]any{}
 		}
@@ -7541,12 +7598,12 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 			return nil, fmt.Errorf("resolving spec.apiSpec.listener.access.oauthAccessToken.defaultToolAcls.deny references: %w", err)
 		}
 		defaultToolAcls4["deny"] = resolvedListenerAccessOauthAccessTokenDefaultToolAclsDeny
-		oauthAccessToken7["default_tool_acls"] = defaultToolAcls4
-		access14["oauth_access_token"] = oauthAccessToken7
-		listener12["access"] = access14
-		payload["listener"] = listener12
+		oauthAccessToken5["default_tool_acls"] = defaultToolAcls4
+		access10["oauth_access_token"] = oauthAccessToken5
+		listener8["access"] = access10
+		payload["listener"] = listener8
 	}
-	// spec.apiSpec.conversion-listener.access.consumer.acls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// spec.apiSpec.conversion-listener.access.consumer.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
@@ -7555,77 +7612,15 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		if conversionListener4 == nil {
 			conversionListener4 = map[string]any{}
 		}
-		access15, _ := conversionListener4["access"].(map[string]any)
-		if access15 == nil {
-			access15 = map[string]any{}
+		access11, _ := conversionListener4["access"].(map[string]any)
+		if access11 == nil {
+			access11 = map[string]any{}
 		}
-		consumer8, _ := access15["consumer"].(map[string]any)
-		if consumer8 == nil {
-			consumer8 = map[string]any{}
+		consumer6, _ := access11["consumer"].(map[string]any)
+		if consumer6 == nil {
+			consumer6 = map[string]any{}
 		}
-		acls5, _ := consumer8["acls"].(map[string]any)
-		if acls5 == nil {
-			acls5 = map[string]any{}
-		}
-		resolvedConversionListenerAccessConsumerAclsAllow, err := resolveAIGatewayMCPServerConversionListenerAccessConsumerAclsAllow(ctx, cl, obj)
-		if err != nil {
-			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.consumer.acls.allow references: %w", err)
-		}
-		acls5["allow"] = resolvedConversionListenerAccessConsumerAclsAllow
-		consumer8["acls"] = acls5
-		access15["consumer"] = consumer8
-		conversionListener4["access"] = access15
-		payload["conversion-listener"] = conversionListener4
-	}
-	// spec.apiSpec.conversion-listener.access.consumer.acls.deny carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
-		conversionListener5, _ := payload["conversion-listener"].(map[string]any)
-		if conversionListener5 == nil {
-			conversionListener5 = map[string]any{}
-		}
-		access16, _ := conversionListener5["access"].(map[string]any)
-		if access16 == nil {
-			access16 = map[string]any{}
-		}
-		consumer9, _ := access16["consumer"].(map[string]any)
-		if consumer9 == nil {
-			consumer9 = map[string]any{}
-		}
-		acls6, _ := consumer9["acls"].(map[string]any)
-		if acls6 == nil {
-			acls6 = map[string]any{}
-		}
-		resolvedConversionListenerAccessConsumerAclsDeny, err := resolveAIGatewayMCPServerConversionListenerAccessConsumerAclsDeny(ctx, cl, obj)
-		if err != nil {
-			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.consumer.acls.deny references: %w", err)
-		}
-		acls6["deny"] = resolvedConversionListenerAccessConsumerAclsDeny
-		consumer9["acls"] = acls6
-		access16["consumer"] = consumer9
-		conversionListener5["access"] = access16
-		payload["conversion-listener"] = conversionListener5
-	}
-	// spec.apiSpec.conversion-listener.access.consumer.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
-		conversionListener6, _ := payload["conversion-listener"].(map[string]any)
-		if conversionListener6 == nil {
-			conversionListener6 = map[string]any{}
-		}
-		access17, _ := conversionListener6["access"].(map[string]any)
-		if access17 == nil {
-			access17 = map[string]any{}
-		}
-		consumer10, _ := access17["consumer"].(map[string]any)
-		if consumer10 == nil {
-			consumer10 = map[string]any{}
-		}
-		defaultToolAcls5, _ := consumer10["default_tool_acls"].(map[string]any)
+		defaultToolAcls5, _ := consumer6["default_tool_acls"].(map[string]any)
 		if defaultToolAcls5 == nil {
 			defaultToolAcls5 = map[string]any{}
 		}
@@ -7634,29 +7629,29 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.consumer.defaultToolAcls.allow references: %w", err)
 		}
 		defaultToolAcls5["allow"] = resolvedConversionListenerAccessConsumerDefaultToolAclsAllow
-		consumer10["default_tool_acls"] = defaultToolAcls5
-		access17["consumer"] = consumer10
-		conversionListener6["access"] = access17
-		payload["conversion-listener"] = conversionListener6
+		consumer6["default_tool_acls"] = defaultToolAcls5
+		access11["consumer"] = consumer6
+		conversionListener4["access"] = access11
+		payload["conversion-listener"] = conversionListener4
 	}
 	// spec.apiSpec.conversion-listener.access.consumer.defaultToolAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Consumer != nil {
-		conversionListener7, _ := payload["conversion-listener"].(map[string]any)
-		if conversionListener7 == nil {
-			conversionListener7 = map[string]any{}
+		conversionListener5, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener5 == nil {
+			conversionListener5 = map[string]any{}
 		}
-		access18, _ := conversionListener7["access"].(map[string]any)
-		if access18 == nil {
-			access18 = map[string]any{}
+		access12, _ := conversionListener5["access"].(map[string]any)
+		if access12 == nil {
+			access12 = map[string]any{}
 		}
-		consumer11, _ := access18["consumer"].(map[string]any)
-		if consumer11 == nil {
-			consumer11 = map[string]any{}
+		consumer7, _ := access12["consumer"].(map[string]any)
+		if consumer7 == nil {
+			consumer7 = map[string]any{}
 		}
-		defaultToolAcls6, _ := consumer11["default_tool_acls"].(map[string]any)
+		defaultToolAcls6, _ := consumer7["default_tool_acls"].(map[string]any)
 		if defaultToolAcls6 == nil {
 			defaultToolAcls6 = map[string]any{}
 		}
@@ -7665,91 +7660,29 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.consumer.defaultToolAcls.deny references: %w", err)
 		}
 		defaultToolAcls6["deny"] = resolvedConversionListenerAccessConsumerDefaultToolAclsDeny
-		consumer11["default_tool_acls"] = defaultToolAcls6
-		access18["consumer"] = consumer11
-		conversionListener7["access"] = access18
-		payload["conversion-listener"] = conversionListener7
-	}
-	// spec.apiSpec.conversion-listener.access.oauthAccessToken.acls.allow carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
-		conversionListener8, _ := payload["conversion-listener"].(map[string]any)
-		if conversionListener8 == nil {
-			conversionListener8 = map[string]any{}
-		}
-		access19, _ := conversionListener8["access"].(map[string]any)
-		if access19 == nil {
-			access19 = map[string]any{}
-		}
-		oauthAccessToken8, _ := access19["oauth_access_token"].(map[string]any)
-		if oauthAccessToken8 == nil {
-			oauthAccessToken8 = map[string]any{}
-		}
-		acls7, _ := oauthAccessToken8["acls"].(map[string]any)
-		if acls7 == nil {
-			acls7 = map[string]any{}
-		}
-		resolvedConversionListenerAccessOauthAccessTokenAclsAllow, err := resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenAclsAllow(ctx, cl, obj)
-		if err != nil {
-			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.oauthAccessToken.acls.allow references: %w", err)
-		}
-		acls7["allow"] = resolvedConversionListenerAccessOauthAccessTokenAclsAllow
-		oauthAccessToken8["acls"] = acls7
-		access19["oauth_access_token"] = oauthAccessToken8
-		conversionListener8["access"] = access19
-		payload["conversion-listener"] = conversionListener8
-	}
-	// spec.apiSpec.conversion-listener.access.oauthAccessToken.acls.deny carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
-		conversionListener9, _ := payload["conversion-listener"].(map[string]any)
-		if conversionListener9 == nil {
-			conversionListener9 = map[string]any{}
-		}
-		access20, _ := conversionListener9["access"].(map[string]any)
-		if access20 == nil {
-			access20 = map[string]any{}
-		}
-		oauthAccessToken9, _ := access20["oauth_access_token"].(map[string]any)
-		if oauthAccessToken9 == nil {
-			oauthAccessToken9 = map[string]any{}
-		}
-		acls8, _ := oauthAccessToken9["acls"].(map[string]any)
-		if acls8 == nil {
-			acls8 = map[string]any{}
-		}
-		resolvedConversionListenerAccessOauthAccessTokenAclsDeny, err := resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenAclsDeny(ctx, cl, obj)
-		if err != nil {
-			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.oauthAccessToken.acls.deny references: %w", err)
-		}
-		acls8["deny"] = resolvedConversionListenerAccessOauthAccessTokenAclsDeny
-		oauthAccessToken9["acls"] = acls8
-		access20["oauth_access_token"] = oauthAccessToken9
-		conversionListener9["access"] = access20
-		payload["conversion-listener"] = conversionListener9
+		consumer7["default_tool_acls"] = defaultToolAcls6
+		access12["consumer"] = consumer7
+		conversionListener5["access"] = access12
+		payload["conversion-listener"] = conversionListener5
 	}
 	// spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
-		conversionListener10, _ := payload["conversion-listener"].(map[string]any)
-		if conversionListener10 == nil {
-			conversionListener10 = map[string]any{}
+		conversionListener6, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener6 == nil {
+			conversionListener6 = map[string]any{}
 		}
-		access21, _ := conversionListener10["access"].(map[string]any)
-		if access21 == nil {
-			access21 = map[string]any{}
+		access13, _ := conversionListener6["access"].(map[string]any)
+		if access13 == nil {
+			access13 = map[string]any{}
 		}
-		oauthAccessToken10, _ := access21["oauth_access_token"].(map[string]any)
-		if oauthAccessToken10 == nil {
-			oauthAccessToken10 = map[string]any{}
+		oauthAccessToken6, _ := access13["oauth_access_token"].(map[string]any)
+		if oauthAccessToken6 == nil {
+			oauthAccessToken6 = map[string]any{}
 		}
-		defaultToolAcls7, _ := oauthAccessToken10["default_tool_acls"].(map[string]any)
+		defaultToolAcls7, _ := oauthAccessToken6["default_tool_acls"].(map[string]any)
 		if defaultToolAcls7 == nil {
 			defaultToolAcls7 = map[string]any{}
 		}
@@ -7758,29 +7691,29 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultToolAcls.allow references: %w", err)
 		}
 		defaultToolAcls7["allow"] = resolvedConversionListenerAccessOauthAccessTokenDefaultToolAclsAllow
-		oauthAccessToken10["default_tool_acls"] = defaultToolAcls7
-		access21["oauth_access_token"] = oauthAccessToken10
-		conversionListener10["access"] = access21
-		payload["conversion-listener"] = conversionListener10
+		oauthAccessToken6["default_tool_acls"] = defaultToolAcls7
+		access13["oauth_access_token"] = oauthAccessToken6
+		conversionListener6["access"] = access13
+		payload["conversion-listener"] = conversionListener6
 	}
 	// spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultToolAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener.Access.Oauth != nil {
-		conversionListener11, _ := payload["conversion-listener"].(map[string]any)
-		if conversionListener11 == nil {
-			conversionListener11 = map[string]any{}
+		conversionListener7, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener7 == nil {
+			conversionListener7 = map[string]any{}
 		}
-		access22, _ := conversionListener11["access"].(map[string]any)
-		if access22 == nil {
-			access22 = map[string]any{}
+		access14, _ := conversionListener7["access"].(map[string]any)
+		if access14 == nil {
+			access14 = map[string]any{}
 		}
-		oauthAccessToken11, _ := access22["oauth_access_token"].(map[string]any)
-		if oauthAccessToken11 == nil {
-			oauthAccessToken11 = map[string]any{}
+		oauthAccessToken7, _ := access14["oauth_access_token"].(map[string]any)
+		if oauthAccessToken7 == nil {
+			oauthAccessToken7 = map[string]any{}
 		}
-		defaultToolAcls8, _ := oauthAccessToken11["default_tool_acls"].(map[string]any)
+		defaultToolAcls8, _ := oauthAccessToken7["default_tool_acls"].(map[string]any)
 		if defaultToolAcls8 == nil {
 			defaultToolAcls8 = map[string]any{}
 		}
@@ -7789,12 +7722,12 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.access.oauthAccessToken.defaultToolAcls.deny references: %w", err)
 		}
 		defaultToolAcls8["deny"] = resolvedConversionListenerAccessOauthAccessTokenDefaultToolAclsDeny
-		oauthAccessToken11["default_tool_acls"] = defaultToolAcls8
-		access22["oauth_access_token"] = oauthAccessToken11
-		conversionListener11["access"] = access22
-		payload["conversion-listener"] = conversionListener11
+		oauthAccessToken7["default_tool_acls"] = defaultToolAcls8
+		access14["oauth_access_token"] = oauthAccessToken7
+		conversionListener7["access"] = access14
+		payload["conversion-listener"] = conversionListener7
 	}
-	// spec.apiSpec.passthrough-listener.access.consumer.acls.allow carries a CR reference: overwrite its resolved Konnect values in
+	// spec.apiSpec.passthrough-listener.access.consumer.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
@@ -7803,77 +7736,15 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		if passthroughListener4 == nil {
 			passthroughListener4 = map[string]any{}
 		}
-		access23, _ := passthroughListener4["access"].(map[string]any)
-		if access23 == nil {
-			access23 = map[string]any{}
+		access15, _ := passthroughListener4["access"].(map[string]any)
+		if access15 == nil {
+			access15 = map[string]any{}
 		}
-		consumer12, _ := access23["consumer"].(map[string]any)
-		if consumer12 == nil {
-			consumer12 = map[string]any{}
+		consumer8, _ := access15["consumer"].(map[string]any)
+		if consumer8 == nil {
+			consumer8 = map[string]any{}
 		}
-		acls9, _ := consumer12["acls"].(map[string]any)
-		if acls9 == nil {
-			acls9 = map[string]any{}
-		}
-		resolvedPassthroughListenerAccessConsumerAclsAllow, err := resolveAIGatewayMCPServerPassthroughListenerAccessConsumerAclsAllow(ctx, cl, obj)
-		if err != nil {
-			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.consumer.acls.allow references: %w", err)
-		}
-		acls9["allow"] = resolvedPassthroughListenerAccessConsumerAclsAllow
-		consumer12["acls"] = acls9
-		access23["consumer"] = consumer12
-		passthroughListener4["access"] = access23
-		payload["passthrough-listener"] = passthroughListener4
-	}
-	// spec.apiSpec.passthrough-listener.access.consumer.acls.deny carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
-		passthroughListener5, _ := payload["passthrough-listener"].(map[string]any)
-		if passthroughListener5 == nil {
-			passthroughListener5 = map[string]any{}
-		}
-		access24, _ := passthroughListener5["access"].(map[string]any)
-		if access24 == nil {
-			access24 = map[string]any{}
-		}
-		consumer13, _ := access24["consumer"].(map[string]any)
-		if consumer13 == nil {
-			consumer13 = map[string]any{}
-		}
-		acls10, _ := consumer13["acls"].(map[string]any)
-		if acls10 == nil {
-			acls10 = map[string]any{}
-		}
-		resolvedPassthroughListenerAccessConsumerAclsDeny, err := resolveAIGatewayMCPServerPassthroughListenerAccessConsumerAclsDeny(ctx, cl, obj)
-		if err != nil {
-			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.consumer.acls.deny references: %w", err)
-		}
-		acls10["deny"] = resolvedPassthroughListenerAccessConsumerAclsDeny
-		consumer13["acls"] = acls10
-		access24["consumer"] = consumer13
-		passthroughListener5["access"] = access24
-		payload["passthrough-listener"] = passthroughListener5
-	}
-	// spec.apiSpec.passthrough-listener.access.consumer.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
-		passthroughListener6, _ := payload["passthrough-listener"].(map[string]any)
-		if passthroughListener6 == nil {
-			passthroughListener6 = map[string]any{}
-		}
-		access25, _ := passthroughListener6["access"].(map[string]any)
-		if access25 == nil {
-			access25 = map[string]any{}
-		}
-		consumer14, _ := access25["consumer"].(map[string]any)
-		if consumer14 == nil {
-			consumer14 = map[string]any{}
-		}
-		defaultToolAcls9, _ := consumer14["default_tool_acls"].(map[string]any)
+		defaultToolAcls9, _ := consumer8["default_tool_acls"].(map[string]any)
 		if defaultToolAcls9 == nil {
 			defaultToolAcls9 = map[string]any{}
 		}
@@ -7882,29 +7753,29 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.consumer.defaultToolAcls.allow references: %w", err)
 		}
 		defaultToolAcls9["allow"] = resolvedPassthroughListenerAccessConsumerDefaultToolAclsAllow
-		consumer14["default_tool_acls"] = defaultToolAcls9
-		access25["consumer"] = consumer14
-		passthroughListener6["access"] = access25
-		payload["passthrough-listener"] = passthroughListener6
+		consumer8["default_tool_acls"] = defaultToolAcls9
+		access15["consumer"] = consumer8
+		passthroughListener4["access"] = access15
+		payload["passthrough-listener"] = passthroughListener4
 	}
 	// spec.apiSpec.passthrough-listener.access.consumer.defaultToolAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Consumer != nil {
-		passthroughListener7, _ := payload["passthrough-listener"].(map[string]any)
-		if passthroughListener7 == nil {
-			passthroughListener7 = map[string]any{}
+		passthroughListener5, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener5 == nil {
+			passthroughListener5 = map[string]any{}
 		}
-		access26, _ := passthroughListener7["access"].(map[string]any)
-		if access26 == nil {
-			access26 = map[string]any{}
+		access16, _ := passthroughListener5["access"].(map[string]any)
+		if access16 == nil {
+			access16 = map[string]any{}
 		}
-		consumer15, _ := access26["consumer"].(map[string]any)
-		if consumer15 == nil {
-			consumer15 = map[string]any{}
+		consumer9, _ := access16["consumer"].(map[string]any)
+		if consumer9 == nil {
+			consumer9 = map[string]any{}
 		}
-		defaultToolAcls10, _ := consumer15["default_tool_acls"].(map[string]any)
+		defaultToolAcls10, _ := consumer9["default_tool_acls"].(map[string]any)
 		if defaultToolAcls10 == nil {
 			defaultToolAcls10 = map[string]any{}
 		}
@@ -7913,91 +7784,29 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.consumer.defaultToolAcls.deny references: %w", err)
 		}
 		defaultToolAcls10["deny"] = resolvedPassthroughListenerAccessConsumerDefaultToolAclsDeny
-		consumer15["default_tool_acls"] = defaultToolAcls10
-		access26["consumer"] = consumer15
-		passthroughListener7["access"] = access26
-		payload["passthrough-listener"] = passthroughListener7
-	}
-	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.acls.allow carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
-		passthroughListener8, _ := payload["passthrough-listener"].(map[string]any)
-		if passthroughListener8 == nil {
-			passthroughListener8 = map[string]any{}
-		}
-		access27, _ := passthroughListener8["access"].(map[string]any)
-		if access27 == nil {
-			access27 = map[string]any{}
-		}
-		oauthAccessToken12, _ := access27["oauth_access_token"].(map[string]any)
-		if oauthAccessToken12 == nil {
-			oauthAccessToken12 = map[string]any{}
-		}
-		acls11, _ := oauthAccessToken12["acls"].(map[string]any)
-		if acls11 == nil {
-			acls11 = map[string]any{}
-		}
-		resolvedPassthroughListenerAccessOauthAccessTokenAclsAllow, err := resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAclsAllow(ctx, cl, obj)
-		if err != nil {
-			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.oauthAccessToken.acls.allow references: %w", err)
-		}
-		acls11["allow"] = resolvedPassthroughListenerAccessOauthAccessTokenAclsAllow
-		oauthAccessToken12["acls"] = acls11
-		access27["oauth_access_token"] = oauthAccessToken12
-		passthroughListener8["access"] = access27
-		payload["passthrough-listener"] = passthroughListener8
-	}
-	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.acls.deny carries a CR reference: overwrite its resolved Konnect values in
-	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
-	// ancestor pointer means that part of the config wasn't set, so the payload
-	// is left untouched.
-	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
-		passthroughListener9, _ := payload["passthrough-listener"].(map[string]any)
-		if passthroughListener9 == nil {
-			passthroughListener9 = map[string]any{}
-		}
-		access28, _ := passthroughListener9["access"].(map[string]any)
-		if access28 == nil {
-			access28 = map[string]any{}
-		}
-		oauthAccessToken13, _ := access28["oauth_access_token"].(map[string]any)
-		if oauthAccessToken13 == nil {
-			oauthAccessToken13 = map[string]any{}
-		}
-		acls12, _ := oauthAccessToken13["acls"].(map[string]any)
-		if acls12 == nil {
-			acls12 = map[string]any{}
-		}
-		resolvedPassthroughListenerAccessOauthAccessTokenAclsDeny, err := resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAclsDeny(ctx, cl, obj)
-		if err != nil {
-			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.oauthAccessToken.acls.deny references: %w", err)
-		}
-		acls12["deny"] = resolvedPassthroughListenerAccessOauthAccessTokenAclsDeny
-		oauthAccessToken13["acls"] = acls12
-		access28["oauth_access_token"] = oauthAccessToken13
-		passthroughListener9["access"] = access28
-		payload["passthrough-listener"] = passthroughListener9
+		consumer9["default_tool_acls"] = defaultToolAcls10
+		access16["consumer"] = consumer9
+		passthroughListener5["access"] = access16
+		payload["passthrough-listener"] = passthroughListener5
 	}
 	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultToolAcls.allow carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
-		passthroughListener10, _ := payload["passthrough-listener"].(map[string]any)
-		if passthroughListener10 == nil {
-			passthroughListener10 = map[string]any{}
+		passthroughListener6, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener6 == nil {
+			passthroughListener6 = map[string]any{}
 		}
-		access29, _ := passthroughListener10["access"].(map[string]any)
-		if access29 == nil {
-			access29 = map[string]any{}
+		access17, _ := passthroughListener6["access"].(map[string]any)
+		if access17 == nil {
+			access17 = map[string]any{}
 		}
-		oauthAccessToken14, _ := access29["oauth_access_token"].(map[string]any)
-		if oauthAccessToken14 == nil {
-			oauthAccessToken14 = map[string]any{}
+		oauthAccessToken8, _ := access17["oauth_access_token"].(map[string]any)
+		if oauthAccessToken8 == nil {
+			oauthAccessToken8 = map[string]any{}
 		}
-		defaultToolAcls11, _ := oauthAccessToken14["default_tool_acls"].(map[string]any)
+		defaultToolAcls11, _ := oauthAccessToken8["default_tool_acls"].(map[string]any)
 		if defaultToolAcls11 == nil {
 			defaultToolAcls11 = map[string]any{}
 		}
@@ -8006,29 +7815,29 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultToolAcls.allow references: %w", err)
 		}
 		defaultToolAcls11["allow"] = resolvedPassthroughListenerAccessOauthAccessTokenDefaultToolAclsAllow
-		oauthAccessToken14["default_tool_acls"] = defaultToolAcls11
-		access29["oauth_access_token"] = oauthAccessToken14
-		passthroughListener10["access"] = access29
-		payload["passthrough-listener"] = passthroughListener10
+		oauthAccessToken8["default_tool_acls"] = defaultToolAcls11
+		access17["oauth_access_token"] = oauthAccessToken8
+		passthroughListener6["access"] = access17
+		payload["passthrough-listener"] = passthroughListener6
 	}
 	// spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultToolAcls.deny carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener.Access.Oauth != nil {
-		passthroughListener11, _ := payload["passthrough-listener"].(map[string]any)
-		if passthroughListener11 == nil {
-			passthroughListener11 = map[string]any{}
+		passthroughListener7, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener7 == nil {
+			passthroughListener7 = map[string]any{}
 		}
-		access30, _ := passthroughListener11["access"].(map[string]any)
-		if access30 == nil {
-			access30 = map[string]any{}
+		access18, _ := passthroughListener7["access"].(map[string]any)
+		if access18 == nil {
+			access18 = map[string]any{}
 		}
-		oauthAccessToken15, _ := access30["oauth_access_token"].(map[string]any)
-		if oauthAccessToken15 == nil {
-			oauthAccessToken15 = map[string]any{}
+		oauthAccessToken9, _ := access18["oauth_access_token"].(map[string]any)
+		if oauthAccessToken9 == nil {
+			oauthAccessToken9 = map[string]any{}
 		}
-		defaultToolAcls12, _ := oauthAccessToken15["default_tool_acls"].(map[string]any)
+		defaultToolAcls12, _ := oauthAccessToken9["default_tool_acls"].(map[string]any)
 		if defaultToolAcls12 == nil {
 			defaultToolAcls12 = map[string]any{}
 		}
@@ -8037,44 +7846,44 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.access.oauthAccessToken.defaultToolAcls.deny references: %w", err)
 		}
 		defaultToolAcls12["deny"] = resolvedPassthroughListenerAccessOauthAccessTokenDefaultToolAclsDeny
-		oauthAccessToken15["default_tool_acls"] = defaultToolAcls12
-		access30["oauth_access_token"] = oauthAccessToken15
-		passthroughListener11["access"] = access30
-		payload["passthrough-listener"] = passthroughListener11
+		oauthAccessToken9["default_tool_acls"] = defaultToolAcls12
+		access18["oauth_access_token"] = oauthAccessToken9
+		passthroughListener7["access"] = access18
+		payload["passthrough-listener"] = passthroughListener7
 	}
 	// spec.apiSpec.conversion-listener.tools.access.acls.allow carries a CR reference: inject the resolved Konnect values into
 	// each element of the "tools" array in the SDK payload, preserving
 	// sibling keys of its ancestors. A nil CRD ancestor pointer means that part
 	// of the config wasn't set, so the payload is left untouched.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil {
-		conversionListener12, _ := payload["conversion-listener"].(map[string]any)
-		if conversionListener12 == nil {
-			conversionListener12 = map[string]any{}
+		conversionListener8, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener8 == nil {
+			conversionListener8 = map[string]any{}
 		}
 		resolvedConversionListenerToolsAccessAclsAllow, err := resolveAIGatewayMCPServerConversionListenerToolsAccessAclsAllow(ctx, cl, obj)
 		if err != nil {
 			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.tools.access.acls.allow references: %w", err)
 		}
-		if arr, ok := conversionListener12["tools"].([]any); ok {
+		if arr, ok := conversionListener8["tools"].([]any); ok {
 			ri := 0
 			for _, e := range arr {
 				el, ok := e.(map[string]any)
 				if !ok {
 					continue
 				}
-				access31, ok := el["access"].(map[string]any)
+				access19, ok := el["access"].(map[string]any)
 				if !ok {
 					continue
 				}
-				acls13, ok := access31["acls"].(map[string]any)
+				acls, ok := access19["acls"].(map[string]any)
 				if !ok {
 					continue
 				}
-				if _, has := acls13["allow"]; !has {
+				if _, has := acls["allow"]; !has {
 					continue
 				}
 				if ri < len(resolvedConversionListenerToolsAccessAclsAllow) {
-					acls13["allow"] = resolvedConversionListenerToolsAccessAclsAllow[ri]
+					acls["allow"] = resolvedConversionListenerToolsAccessAclsAllow[ri]
 					ri++
 				}
 			}
@@ -8083,31 +7892,31 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		if err != nil {
 			return nil, fmt.Errorf("resolving spec.apiSpec.conversion-listener.tools.access.acls.deny references: %w", err)
 		}
-		if arr, ok := conversionListener12["tools"].([]any); ok {
+		if arr, ok := conversionListener8["tools"].([]any); ok {
 			ri := 0
 			for _, e := range arr {
 				el, ok := e.(map[string]any)
 				if !ok {
 					continue
 				}
-				access31, ok := el["access"].(map[string]any)
+				access19, ok := el["access"].(map[string]any)
 				if !ok {
 					continue
 				}
-				acls13, ok := access31["acls"].(map[string]any)
+				acls, ok := access19["acls"].(map[string]any)
 				if !ok {
 					continue
 				}
-				if _, has := acls13["deny"]; !has {
+				if _, has := acls["deny"]; !has {
 					continue
 				}
 				if ri < len(resolvedConversionListenerToolsAccessAclsDeny) {
-					acls13["deny"] = resolvedConversionListenerToolsAccessAclsDeny[ri]
+					acls["deny"] = resolvedConversionListenerToolsAccessAclsDeny[ri]
 					ri++
 				}
 			}
 		}
-		payload["conversion-listener"] = conversionListener12
+		payload["conversion-listener"] = conversionListener8
 	}
 	// spec.apiSpec.conversion-only.tools.access.acls.allow carries a CR reference: inject the resolved Konnect values into
 	// each element of the "tools" array in the SDK payload, preserving
@@ -8129,19 +7938,19 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 				if !ok {
 					continue
 				}
-				access32, ok := el["access"].(map[string]any)
+				access20, ok := el["access"].(map[string]any)
 				if !ok {
 					continue
 				}
-				acls14, ok := access32["acls"].(map[string]any)
+				acls2, ok := access20["acls"].(map[string]any)
 				if !ok {
 					continue
 				}
-				if _, has := acls14["allow"]; !has {
+				if _, has := acls2["allow"]; !has {
 					continue
 				}
 				if ri < len(resolvedConversionOnlyToolsAccessAclsAllow) {
-					acls14["allow"] = resolvedConversionOnlyToolsAccessAclsAllow[ri]
+					acls2["allow"] = resolvedConversionOnlyToolsAccessAclsAllow[ri]
 					ri++
 				}
 			}
@@ -8157,19 +7966,19 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 				if !ok {
 					continue
 				}
-				access32, ok := el["access"].(map[string]any)
+				access20, ok := el["access"].(map[string]any)
 				if !ok {
 					continue
 				}
-				acls14, ok := access32["acls"].(map[string]any)
+				acls2, ok := access20["acls"].(map[string]any)
 				if !ok {
 					continue
 				}
-				if _, has := acls14["deny"]; !has {
+				if _, has := acls2["deny"]; !has {
 					continue
 				}
 				if ri < len(resolvedConversionOnlyToolsAccessAclsDeny) {
-					acls14["deny"] = resolvedConversionOnlyToolsAccessAclsDeny[ri]
+					acls2["deny"] = resolvedConversionOnlyToolsAccessAclsDeny[ri]
 					ri++
 				}
 			}
@@ -8181,34 +7990,34 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// sibling keys of its ancestors. A nil CRD ancestor pointer means that part
 	// of the config wasn't set, so the payload is left untouched.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil {
-		passthroughListener12, _ := payload["passthrough-listener"].(map[string]any)
-		if passthroughListener12 == nil {
-			passthroughListener12 = map[string]any{}
+		passthroughListener8, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener8 == nil {
+			passthroughListener8 = map[string]any{}
 		}
 		resolvedPassthroughListenerToolsAccessAclsAllow, err := resolveAIGatewayMCPServerPassthroughListenerToolsAccessAclsAllow(ctx, cl, obj)
 		if err != nil {
 			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.tools.access.acls.allow references: %w", err)
 		}
-		if arr, ok := passthroughListener12["tools"].([]any); ok {
+		if arr, ok := passthroughListener8["tools"].([]any); ok {
 			ri := 0
 			for _, e := range arr {
 				el, ok := e.(map[string]any)
 				if !ok {
 					continue
 				}
-				access33, ok := el["access"].(map[string]any)
+				access21, ok := el["access"].(map[string]any)
 				if !ok {
 					continue
 				}
-				acls15, ok := access33["acls"].(map[string]any)
+				acls3, ok := access21["acls"].(map[string]any)
 				if !ok {
 					continue
 				}
-				if _, has := acls15["allow"]; !has {
+				if _, has := acls3["allow"]; !has {
 					continue
 				}
 				if ri < len(resolvedPassthroughListenerToolsAccessAclsAllow) {
-					acls15["allow"] = resolvedPassthroughListenerToolsAccessAclsAllow[ri]
+					acls3["allow"] = resolvedPassthroughListenerToolsAccessAclsAllow[ri]
 					ri++
 				}
 			}
@@ -8217,31 +8026,31 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		if err != nil {
 			return nil, fmt.Errorf("resolving spec.apiSpec.passthrough-listener.tools.access.acls.deny references: %w", err)
 		}
-		if arr, ok := passthroughListener12["tools"].([]any); ok {
+		if arr, ok := passthroughListener8["tools"].([]any); ok {
 			ri := 0
 			for _, e := range arr {
 				el, ok := e.(map[string]any)
 				if !ok {
 					continue
 				}
-				access33, ok := el["access"].(map[string]any)
+				access21, ok := el["access"].(map[string]any)
 				if !ok {
 					continue
 				}
-				acls15, ok := access33["acls"].(map[string]any)
+				acls3, ok := access21["acls"].(map[string]any)
 				if !ok {
 					continue
 				}
-				if _, has := acls15["deny"]; !has {
+				if _, has := acls3["deny"]; !has {
 					continue
 				}
 				if ri < len(resolvedPassthroughListenerToolsAccessAclsDeny) {
-					acls15["deny"] = resolvedPassthroughListenerToolsAccessAclsDeny[ri]
+					acls3["deny"] = resolvedPassthroughListenerToolsAccessAclsDeny[ri]
 					ri++
 				}
 			}
 		}
-		payload["passthrough-listener"] = passthroughListener12
+		payload["passthrough-listener"] = passthroughListener8
 	}
 	// spec.apiSpec.upstream-server.tools.access.acls.allow carries a CR reference: inject the resolved Konnect values into
 	// each element of the "tools" array in the SDK payload, preserving
@@ -8263,19 +8072,19 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 				if !ok {
 					continue
 				}
-				access34, ok := el["access"].(map[string]any)
+				access22, ok := el["access"].(map[string]any)
 				if !ok {
 					continue
 				}
-				acls16, ok := access34["acls"].(map[string]any)
+				acls4, ok := access22["acls"].(map[string]any)
 				if !ok {
 					continue
 				}
-				if _, has := acls16["allow"]; !has {
+				if _, has := acls4["allow"]; !has {
 					continue
 				}
 				if ri < len(resolvedUpstreamServerToolsAccessAclsAllow) {
-					acls16["allow"] = resolvedUpstreamServerToolsAccessAclsAllow[ri]
+					acls4["allow"] = resolvedUpstreamServerToolsAccessAclsAllow[ri]
 					ri++
 				}
 			}
@@ -8291,19 +8100,19 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 				if !ok {
 					continue
 				}
-				access34, ok := el["access"].(map[string]any)
+				access22, ok := el["access"].(map[string]any)
 				if !ok {
 					continue
 				}
-				acls16, ok := access34["acls"].(map[string]any)
+				acls4, ok := access22["acls"].(map[string]any)
 				if !ok {
 					continue
 				}
-				if _, has := acls16["deny"]; !has {
+				if _, has := acls4["deny"]; !has {
 					continue
 				}
 				if ri < len(resolvedUpstreamServerToolsAccessAclsDeny) {
-					acls16["deny"] = resolvedUpstreamServerToolsAccessAclsDeny[ri]
+					acls4["deny"] = resolvedUpstreamServerToolsAccessAclsDeny[ri]
 					ri++
 				}
 			}
@@ -8316,9 +8125,9 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// pointer means that part of the config wasn't set, so the payload is left
 	// untouched.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.ConversionListener != nil {
-		conversionListener13, _ := payload["conversion-listener"].(map[string]any)
-		if conversionListener13 == nil {
-			conversionListener13 = map[string]any{}
+		conversionListener9, _ := payload["conversion-listener"].(map[string]any)
+		if conversionListener9 == nil {
+			conversionListener9 = map[string]any{}
 		}
 		resolvedConversionListenerDatastores, err := resolveAIGatewayMCPServerConversionListenerDatastores(ctx, cl, obj)
 		if err != nil {
@@ -8328,8 +8137,8 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		for _, v := range resolvedConversionListenerDatastores {
 			wrappedConversionListenerDatastores = append(wrappedConversionListenerDatastores, map[string]string{"name": v})
 		}
-		conversionListener13["datastores"] = wrappedConversionListenerDatastores
-		payload["conversion-listener"] = conversionListener13
+		conversionListener9["datastores"] = wrappedConversionListenerDatastores
+		payload["conversion-listener"] = conversionListener9
 	}
 	// spec.apiSpec.conversion-only.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
@@ -8358,9 +8167,9 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// pointer means that part of the config wasn't set, so the payload is left
 	// untouched.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.Listener != nil {
-		listener13, _ := payload["listener"].(map[string]any)
-		if listener13 == nil {
-			listener13 = map[string]any{}
+		listener9, _ := payload["listener"].(map[string]any)
+		if listener9 == nil {
+			listener9 = map[string]any{}
 		}
 		resolvedListenerDatastores, err := resolveAIGatewayMCPServerListenerDatastores(ctx, cl, obj)
 		if err != nil {
@@ -8370,8 +8179,8 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		for _, v := range resolvedListenerDatastores {
 			wrappedListenerDatastores = append(wrappedListenerDatastores, map[string]string{"name": v})
 		}
-		listener13["datastores"] = wrappedListenerDatastores
-		payload["listener"] = listener13
+		listener9["datastores"] = wrappedListenerDatastores
+		payload["listener"] = listener9
 	}
 	// spec.apiSpec.passthrough-listener.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
@@ -8379,9 +8188,9 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 	// pointer means that part of the config wasn't set, so the payload is left
 	// untouched.
 	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.PassthroughListener != nil {
-		passthroughListener13, _ := payload["passthrough-listener"].(map[string]any)
-		if passthroughListener13 == nil {
-			passthroughListener13 = map[string]any{}
+		passthroughListener9, _ := payload["passthrough-listener"].(map[string]any)
+		if passthroughListener9 == nil {
+			passthroughListener9 = map[string]any{}
 		}
 		resolvedPassthroughListenerDatastores, err := resolveAIGatewayMCPServerPassthroughListenerDatastores(ctx, cl, obj)
 		if err != nil {
@@ -8391,8 +8200,8 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 		for _, v := range resolvedPassthroughListenerDatastores {
 			wrappedPassthroughListenerDatastores = append(wrappedPassthroughListenerDatastores, map[string]string{"name": v})
 		}
-		passthroughListener13["datastores"] = wrappedPassthroughListenerDatastores
-		payload["passthrough-listener"] = passthroughListener13
+		passthroughListener9["datastores"] = wrappedPassthroughListenerDatastores
+		payload["passthrough-listener"] = passthroughListener9
 	}
 	// spec.apiSpec.upstream-server.datastores carries CR references: replace it in the SDK payload with one
 	// object per resolved Konnect value, each keeping the OAS item shape and
