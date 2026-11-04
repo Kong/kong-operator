@@ -2568,10 +2568,6 @@ type AIGWOpenIDConnectGeneratedConfigUpstreamHeaders struct {
 	Path []string `json:"path,omitempty"`
 }
 
-// AIGatewayACLS Access control rules.
-// Configure exactly one of `allow`, `deny`, `allow_when`, or `deny_when`.
-type AIGatewayACLS map[string]string
-
 // AIGatewayAgentAccess Access control configuration for an agent.
 type AIGatewayAgentAccess struct {
 	// Access control rules.
@@ -3542,10 +3538,6 @@ type AIGatewayMCPPassthroughTool struct {
 	Name string `json:"name,omitzero"`
 }
 
-// AIGatewayMCPServerACLs Access control rules for MCP resources.
-// Configure exactly one of `allow`, `deny`, `allow_when`, or `deny_when`.
-type AIGatewayMCPServerACLs map[string]string
-
 // AIGatewayMCPServerCacheHint A cache hint Kong emits on a cacheable operation
 // it serves.
 type AIGatewayMCPServerCacheHint struct {
@@ -4355,6 +4347,11 @@ type AIGatewayMCPServerListenerConsumer struct {
 
 // AIGatewayMCPServerListenerConsumerAcls represents a union type for acls.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'allow' ? has(self.allow) : !has(self.allow)",message="allow must be set only when type is allow"
+// +kubebuilder:validation:XValidation:rule="self.type == 'deny' ? has(self.deny) : !has(self.deny)",message="deny must be set only when type is deny"
+// +kubebuilder:validation:XValidation:rule="self.type == 'allowWhen' ? has(self.allowWhen) : !has(self.allowWhen)",message="allowWhen must be set only when type is allowWhen"
+// +kubebuilder:validation:XValidation:rule="self.type == 'denyWhen' ? has(self.denyWhen) : !has(self.denyWhen)",message="denyWhen must be set only when type is denyWhen"
 type AIGatewayMCPServerListenerConsumerAcls struct {
 	// Type designates the type of configuration.
 	//
@@ -4587,6 +4584,11 @@ type AIGatewayMCPServerListenerOauth struct {
 
 // AIGatewayMCPServerListenerOauthAcls represents a union type for acls.
 // Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'allow' ? has(self.allow) : !has(self.allow)",message="allow must be set only when type is allow"
+// +kubebuilder:validation:XValidation:rule="self.type == 'deny' ? has(self.deny) : !has(self.deny)",message="deny must be set only when type is deny"
+// +kubebuilder:validation:XValidation:rule="self.type == 'allowWhen' ? has(self.allowWhen) : !has(self.allowWhen)",message="allowWhen must be set only when type is allowWhen"
+// +kubebuilder:validation:XValidation:rule="self.type == 'denyWhen' ? has(self.denyWhen) : !has(self.denyWhen)",message="denyWhen must be set only when type is denyWhen"
 type AIGatewayMCPServerListenerOauthAcls struct {
 	// Type designates the type of configuration.
 	//

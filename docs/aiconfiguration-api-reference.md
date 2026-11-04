@@ -1072,8 +1072,6 @@ _Appears in:_
 - [AIGatewayMCPServerListenerConsumerAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconsumeracls)
 - [AIGatewayMCPServerListenerOauthAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneroauthacls)
 
-
-
 #### AIGatewayAgentAPISpec
 
 
@@ -2447,8 +2445,6 @@ AIGatewayMCPPassthroughTool A tool exposed by an MCP Server in
 _Appears in:_
 
 - [AIGatewayMCPServerPassthroughListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlistener)
-
-
 
 #### AIGatewayMCPServerAPISpec
 

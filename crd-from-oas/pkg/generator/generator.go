@@ -1193,6 +1193,12 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 		}
 	}
 
+	// These named oneOf components only host the arms of an "acls" union. The
+	// arms are flattened onto the union wrapper, so no generated field uses the
+	// component and it would emit as an unused map[string]string type.
+	delete(referencedSchemas, "AIGatewayACLS")
+	delete(referencedSchemas, "AIGatewayMCPServerACLs")
+
 	reconcilerFiles, err := g.generateReconcilerEntityFiles(reconcilerEntities, parsed)
 	if err != nil {
 		return nil, err
@@ -3766,22 +3772,6 @@ func (g *Generator) flattenableUnionVariantField(unionRefName, variantRefName, d
 	return inner
 }
 
-// singleNonSkippedProperty returns props' only non-skipped field, or nil when
-// there are zero or several.
-func (g *Generator) singleNonSkippedProperty(typeName string, props []*parser.Property) *parser.Property {
-	var inner *parser.Property
-	for _, p := range props {
-		if g.shouldSkipSchemaProperty(typeName, p) {
-			continue
-		}
-		if inner != nil {
-			return nil
-		}
-		inner = p
-	}
-	return inner
-}
-
 // allRefUnionVariantsFlattenable reports whether every arm of prop is a $ref
 // that flattenableUnionVariantField accepts. Flattening is all-or-nothing so a
 // union never mixes flattened and nested arms.
@@ -4512,7 +4502,10 @@ func emitDiscriminatedUnionCode(typeName, propName, discriminatorJSONName string
 
 func shouldEmitTypeMatchCEL(typeName string) bool {
 	switch typeName {
-	case "EncryptionKey", "EventGatewayEncryptConfigEncryptionKey":
+	case "EncryptionKey", "EventGatewayEncryptConfigEncryptionKey",
+		// MCP server ACLs: a member of the wrong type, or no member at all,
+		// would otherwise be dropped silently when the SDK payload is built.
+		"AIGatewayMCPServerListenerConsumerAcls", "AIGatewayMCPServerListenerOauthAcls":
 		return true
 	default:
 		return false

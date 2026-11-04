@@ -248,6 +248,21 @@ spec:
                                 required:
                                 - type
                                 type: object
+                                x-kubernetes-validations:
+                                - message: allow must be set only when type is allow
+                                  rule: 'self.type == ''allow'' ? has(self.allow)
+                                    : !has(self.allow)'
+                                - message: deny must be set only when type is deny
+                                  rule: 'self.type == ''deny'' ? has(self.deny) :
+                                    !has(self.deny)'
+                                - message: allowWhen must be set only when type is
+                                    allowWhen
+                                  rule: 'self.type == ''allowWhen'' ? has(self.allowWhen)
+                                    : !has(self.allowWhen)'
+                                - message: denyWhen must be set only when type is
+                                    denyWhen
+                                  rule: 'self.type == ''denyWhen'' ? has(self.denyWhen)
+                                    : !has(self.denyWhen)'
                               authStrategies:
                                 description: |-
                                   List of auth strategies for granting access to the MCP server.
@@ -528,6 +543,21 @@ spec:
                                 required:
                                 - type
                                 type: object
+                                x-kubernetes-validations:
+                                - message: allow must be set only when type is allow
+                                  rule: 'self.type == ''allow'' ? has(self.allow)
+                                    : !has(self.allow)'
+                                - message: deny must be set only when type is deny
+                                  rule: 'self.type == ''deny'' ? has(self.deny) :
+                                    !has(self.deny)'
+                                - message: allowWhen must be set only when type is
+                                    allowWhen
+                                  rule: 'self.type == ''allowWhen'' ? has(self.allowWhen)
+                                    : !has(self.allowWhen)'
+                                - message: denyWhen must be set only when type is
+                                    denyWhen
+                                  rule: 'self.type == ''denyWhen'' ? has(self.denyWhen)
+                                    : !has(self.denyWhen)'
                               authStrategies:
                                 description: |-
                                   List of auth strategies for granting access to the MCP server.
@@ -3669,6 +3699,21 @@ spec:
                                 required:
                                 - type
                                 type: object
+                                x-kubernetes-validations:
+                                - message: allow must be set only when type is allow
+                                  rule: 'self.type == ''allow'' ? has(self.allow)
+                                    : !has(self.allow)'
+                                - message: deny must be set only when type is deny
+                                  rule: 'self.type == ''deny'' ? has(self.deny) :
+                                    !has(self.deny)'
+                                - message: allowWhen must be set only when type is
+                                    allowWhen
+                                  rule: 'self.type == ''allowWhen'' ? has(self.allowWhen)
+                                    : !has(self.allowWhen)'
+                                - message: denyWhen must be set only when type is
+                                    denyWhen
+                                  rule: 'self.type == ''denyWhen'' ? has(self.denyWhen)
+                                    : !has(self.denyWhen)'
                               authStrategies:
                                 description: |-
                                   List of auth strategies for granting access to the MCP server.
@@ -3949,6 +3994,21 @@ spec:
                                 required:
                                 - type
                                 type: object
+                                x-kubernetes-validations:
+                                - message: allow must be set only when type is allow
+                                  rule: 'self.type == ''allow'' ? has(self.allow)
+                                    : !has(self.allow)'
+                                - message: deny must be set only when type is deny
+                                  rule: 'self.type == ''deny'' ? has(self.deny) :
+                                    !has(self.deny)'
+                                - message: allowWhen must be set only when type is
+                                    allowWhen
+                                  rule: 'self.type == ''allowWhen'' ? has(self.allowWhen)
+                                    : !has(self.allowWhen)'
+                                - message: denyWhen must be set only when type is
+                                    denyWhen
+                                  rule: 'self.type == ''denyWhen'' ? has(self.denyWhen)
+                                    : !has(self.denyWhen)'
                               authStrategies:
                                 description: |-
                                   List of auth strategies for granting access to the MCP server.
@@ -5502,6 +5562,21 @@ spec:
                                 required:
                                 - type
                                 type: object
+                                x-kubernetes-validations:
+                                - message: allow must be set only when type is allow
+                                  rule: 'self.type == ''allow'' ? has(self.allow)
+                                    : !has(self.allow)'
+                                - message: deny must be set only when type is deny
+                                  rule: 'self.type == ''deny'' ? has(self.deny) :
+                                    !has(self.deny)'
+                                - message: allowWhen must be set only when type is
+                                    allowWhen
+                                  rule: 'self.type == ''allowWhen'' ? has(self.allowWhen)
+                                    : !has(self.allowWhen)'
+                                - message: denyWhen must be set only when type is
+                                    denyWhen
+                                  rule: 'self.type == ''denyWhen'' ? has(self.denyWhen)
+                                    : !has(self.denyWhen)'
                               authStrategies:
                                 description: |-
                                   List of auth strategies for granting access to the MCP server.
@@ -5782,6 +5857,21 @@ spec:
                                 required:
                                 - type
                                 type: object
+                                x-kubernetes-validations:
+                                - message: allow must be set only when type is allow
+                                  rule: 'self.type == ''allow'' ? has(self.allow)
+                                    : !has(self.allow)'
+                                - message: deny must be set only when type is deny
+                                  rule: 'self.type == ''deny'' ? has(self.deny) :
+                                    !has(self.deny)'
+                                - message: allowWhen must be set only when type is
+                                    allowWhen
+                                  rule: 'self.type == ''allowWhen'' ? has(self.allowWhen)
+                                    : !has(self.allowWhen)'
+                                - message: denyWhen must be set only when type is
+                                    denyWhen
+                                  rule: 'self.type == ''denyWhen'' ? has(self.denyWhen)
+                                    : !has(self.denyWhen)'
                               authStrategies:
                                 description: |-
                                   List of auth strategies for granting access to the MCP server.
