@@ -1081,8 +1081,9 @@ _Appears in:_
 
 - [AIGatewayAllowACL](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayallowacl)
 - [AIGatewayDenyACL](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydenyacl)
-
-
+- [AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)
+- [AIGatewayMCPServerListenerConsumerAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconsumeracls)
+- [AIGatewayMCPServerListenerOauthAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneroauthacls)
 
 #### AIGatewayAgentAPISpec
 
@@ -1357,7 +1358,7 @@ AIGatewayAuthStrategyOpenIDConnect Configuration for an auth strategy.
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this auth strategy instance, used as a stable human-readable reference. This value is immutable after creation. |
-| `tokenVault` _[AIGatewayTokenVaultCredentialManager](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvaultcredentialmanager)_ | Serves the self-service enrollment UI through which end users authorize the upstream providers this auth strategy authenticates against. Omit `token_vault` entirely to serve no such UI.<br /><br />Requires a `token-vault` Datastore reference in `datastores`; enabling the credential manager without one is rejected.<br /><br />**Requires a minimum runtime version of `2.3`**. |
+| `tokenVault` _[AIGatewayTokenVaultEnrollmentProtection](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvaultenrollmentprotection)_ | Enables enrollment protection for the Token Vault datastore linked to this auth strategy. Users of the linked Token Vault will need to authenticate using this OIDC auth strategy before completing enrollment with upstream providers. Enrollment links always store upstream credentials in the Token Vault belonging to the principal who requested the link. Enrollment protection ensures that other principals cannot use an enrollment link to unknowingly authorize the storage of their upstream credentials in another principal's Token Vault.<br /><br />Note that the auth strategy used to protect upstream resources such as MCP servers need not be the same auth strategy used for enrollment protection. Omit `token_vault` entirely to enforce no such enrollment protection.<br /><br />Requires a `token-vault` Datastore reference in `datastores`; enabling enrollment protection without one is rejected.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -2383,24 +2384,6 @@ _Appears in:_
 - [AIGatewayModelAPIConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelapiconfig)
 - [AIGatewayModelModelConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelmodelconfig)
 
-#### AIGatewayMCPACLRef
-
-
-AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
-object's Konnect name is used where the Konnect API accepts it.
-
-
-
-| Field | Description |
-| --- | --- |
-| `kind` _string_ | Kind is the kind of the referenced object. |
-| `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace, if set to a namespace other than the referrer's, must be permitted by a KongReferenceGrant in that namespace. |
-
-_Appears in:_
-
-- [AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)
-
 #### AIGatewayMCPACLs
 
 
@@ -2411,9 +2394,9 @@ Configure `allow`, `deny`, or both.
 
 | Field | Description |
 | --- | --- |
-| `allow` _[][AIGatewayMCPACLRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpaclref)_ | List of consumer groups that are permitted access. |
+| `allow` _[][AIGatewayACLRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayaclref)_ | List of consumer groups that are permitted access. |
 | `allowWhen` _[]string_ | Allow the request if it matches any of these CEL boolean expressions evaluated against the request context.<br /><br />**Requires a minimum runtime version of `2.3`**. |
-| `deny` _[][AIGatewayMCPACLRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpaclref)_ | List of consumer groups that are denied access. |
+| `deny` _[][AIGatewayACLRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayaclref)_ | List of consumer groups that are denied access. |
 | `denyWhen` _[]string_ | Deny the request if it matches any of these CEL boolean expressions evaluated against the request context.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
@@ -2820,7 +2803,7 @@ for granting access to an MCP server.
 
 | Field | Description |
 | --- | --- |
-| `acls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Server-level access control rules for allowing or denying consumer groups. This is the top-level gate: a caller's consumer group must pass this check before any MCP protocol operation (`initialize`, `tools/list`, `tools/call`) is allowed, and before any tool-level `default_tool_acls` or per-tool `access.acls` check is evaluated. |
+| `acls` _[AIGatewayMCPServerListenerConsumerAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconsumeracls)_ | Server-level access control rules for allowing or denying consumer groups. This is the top-level gate: a caller's consumer group must pass this check before any MCP protocol operation (`initialize`, `tools/list`, `tools/call`) is allowed, and before any tool-level `default_tool_acls` or per-tool `access.acls` check is evaluated. |
 | `authStrategies` _[][AIGatewayAuthStrategyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyref)_ | List of auth strategies for granting access to the MCP server. At most 1 auth strategy of each auth strategy type can be referenced. |
 | `defaultToolAcls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Default per-tool access control rules for allowing or denying consumer groups access to tools. Evaluated only for callers that already passed the server-level `acls` check above. Applies to every tool exposed by this MCP Server unless a specific tool overrides it via that tool's own `access.acls`. |
 | `identityProviders` _[][AIGatewayIdentityProviderReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the MCP server. At most 1 identity provider of each identity provider type can be referenced.<br /><br />Deprecated: use `auth_strategies` instead. The two are mutually exclusive. |
@@ -2831,6 +2814,48 @@ _Appears in:_
 - [AIGatewayMCPServerConversionListenerAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlisteneraccess)
 - [AIGatewayMCPServerListenerAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneraccess)
 - [AIGatewayMCPServerPassthroughListenerAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlisteneraccess)
+
+#### AIGatewayMCPServerListenerConsumerAcls
+
+
+AIGatewayMCPServerListenerConsumerAcls represents a union type for acls.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayMCPServerListenerConsumerAclsType](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconsumeraclstype)_ | Type designates the type of configuration. |
+| `allow` _[][AIGatewayACLRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayaclref)_ | List of consumer groups that are permitted access. |
+| `deny` _[][AIGatewayACLRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayaclref)_ | List of consumer groups that are denied access. |
+| `allowWhen` _[]string_ | Allow the request if it matches any of these CEL boolean expressions evaluated against the request context.<br /><br />**Requires a minimum runtime version of `2.3`**. |
+| `denyWhen` _[]string_ | Deny the request if it matches any of these CEL boolean expressions evaluated against the request context.<br /><br />**Requires a minimum runtime version of `2.3`**. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerListenerConsumer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconsumer)
+
+#### AIGatewayMCPServerListenerConsumerAclsType
+
+_Underlying type:_ `string`
+
+AIGatewayMCPServerListenerConsumerAclsType represents the type of acls.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayMCPServerListenerConsumerAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconsumeracls)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `allow` |  |
+| `deny` |  |
+| `allowWhen` |  |
+| `denyWhen` |  |
 
 #### AIGatewayMCPServerListenerOauth
 
@@ -2844,7 +2869,7 @@ for granting access to an MCP server.
 | Field | Description |
 | --- | --- |
 | `accessTokenClaimField` _string_ | The claim in the OAuth2 access token to use as the subject for ACL evaluation when `acl_attribute_type` is set to `oauth_access_token`. Nested claim can be fetched by using a jq filter starts with dot, e.g., “.user.email”: https://jqlang.org/manual/#object-identifier-index |
-| `acls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Server-level access control rules for allowing or denying callers, evaluated against the value of the configured `access_token_claim_field`. This is the top-level gate: a caller must pass this check before any MCP protocol operation (`initialize`, `tools/list`, `tools/call`) is allowed, and before any tool-level `default_tool_acls` or per-tool `access.acls` check is evaluated. |
+| `acls` _[AIGatewayMCPServerListenerOauthAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneroauthacls)_ | Server-level access control rules for allowing or denying callers, evaluated against the value of the configured `access_token_claim_field`. This is the top-level gate: a caller must pass this check before any MCP protocol operation (`initialize`, `tools/list`, `tools/call`) is allowed, and before any tool-level `default_tool_acls` or per-tool `access.acls` check is evaluated. |
 | `authStrategies` _[][AIGatewayAuthStrategyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyref)_ | List of auth strategies for granting access to the MCP server. At most 1 auth strategy of each auth strategy type can be referenced. |
 | `defaultToolAcls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Default per-tool access control rules for allowing or denying callers access to tools, evaluated against the value of the configured `access_token_claim_field`. Evaluated only for callers that already passed the server-level `acls` check above. Applies to every tool exposed by this MCP Server unless a specific tool overrides it via that tool's own `access.acls`. |
 | `identityProviders` _[][AIGatewayIdentityProviderReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the MCP server. At most 1 identity provider of each identity provider type can be referenced.<br /><br />Deprecated: use `auth_strategies` instead. The two are mutually exclusive. |
@@ -2855,6 +2880,48 @@ _Appears in:_
 - [AIGatewayMCPServerConversionListenerAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlisteneraccess)
 - [AIGatewayMCPServerListenerAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneraccess)
 - [AIGatewayMCPServerPassthroughListenerAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlisteneraccess)
+
+#### AIGatewayMCPServerListenerOauthAcls
+
+
+AIGatewayMCPServerListenerOauthAcls represents a union type for acls.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayMCPServerListenerOauthAclsType](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneroauthaclstype)_ | Type designates the type of configuration. |
+| `allow` _[][AIGatewayACLRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayaclref)_ | List of consumer groups that are permitted access. |
+| `deny` _[][AIGatewayACLRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayaclref)_ | List of consumer groups that are denied access. |
+| `allowWhen` _[]string_ | Allow the request if it matches any of these CEL boolean expressions evaluated against the request context.<br /><br />**Requires a minimum runtime version of `2.3`**. |
+| `denyWhen` _[]string_ | Deny the request if it matches any of these CEL boolean expressions evaluated against the request context.<br /><br />**Requires a minimum runtime version of `2.3`**. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerListenerOauth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneroauth)
+
+#### AIGatewayMCPServerListenerOauthAclsType
+
+_Underlying type:_ `string`
+
+AIGatewayMCPServerListenerOauthAclsType represents the type of acls.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayMCPServerListenerOauthAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneroauthacls)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `allow` |  |
+| `deny` |  |
+| `allowWhen` |  |
+| `denyWhen` |  |
 
 #### AIGatewayMCPServerPassthroughListener
 
@@ -7447,26 +7514,6 @@ _Appears in:_
 
 - [AIGatewayTokenVault](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvault)
 
-#### AIGatewayTokenVaultCredentialManager
-
-
-AIGatewayTokenVaultCredentialManager Serves the self-service enrollment UI
-through which end users authorize the upstream providers
-this auth strategy authenticates against.
-Omit `token_vault` entirely to serve no such UI.<br /><br />Requires a `token-vault` Datastore reference in `datastores`; enabling the
-credential manager
-without one is rejected.<br /><br />**Requires a minimum runtime version of `2.3`**.
-
-
-
-| Field | Description |
-| --- | --- |
-| `enableCredentialManager` _string_ | Whether the self-service enrollment UI is served for this auth strategy. |
-
-_Appears in:_
-
-- [AIGatewayAuthStrategyOpenIDConnect](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyopenidconnect)
-
 #### AIGatewayTokenVaultCredentialPlacement
 
 
@@ -7483,6 +7530,39 @@ AIGatewayTokenVaultCredentialPlacement is a type alias.
 _Appears in:_
 
 - [AIGatewayTokenVaultCredential](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytokenvaultcredential)
+
+#### AIGatewayTokenVaultEnrollmentProtection
+
+
+AIGatewayTokenVaultEnrollmentProtection Enables enrollment protection for the
+Token Vault datastore linked to this auth strategy.
+Users of the linked Token Vault will need to authenticate using this OIDC
+auth strategy
+before completing enrollment with upstream providers.
+Enrollment links always store upstream
+credentials in the Token Vault belonging to the principal who requested the
+link.
+Enrollment
+protection ensures that other principals cannot use an enrollment link to
+unknowingly
+authorize the storage of their upstream credentials in another principal's
+Token Vault.<br /><br />Note that the auth strategy used to protect upstream resources such as MCP
+servers need not
+be the same auth strategy used for enrollment protection.
+Omit `token_vault` entirely to
+enforce no such enrollment protection.<br /><br />Requires a `token-vault` Datastore reference in `datastores`; enabling
+enrollment protection
+without one is rejected.<br /><br />**Requires a minimum runtime version of `2.3`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `enableCredentialManager` _string_ | Enables the self-service credential manager UI through which end users authorize upstream providers for Token Vault datastore linked to this auth strategy. This OIDC auth strategy is used to authenticate access to the self-service UI, but need not necessarily be the same auth strategy that is used to authenticate access to upstream Token Vault providers.<br /><br />Requires a `token-vault` Datastore reference in `datastores`; enabling the credential manager without one is rejected. The credential manager cannot be used without enrollment protection. |
+
+_Appears in:_
+
+- [AIGatewayAuthStrategyOpenIDConnect](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyopenidconnect)
 
 #### AIGatewayUpstreamAuthAWS
 
