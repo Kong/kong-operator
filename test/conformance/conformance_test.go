@@ -394,7 +394,7 @@ func createGatewayConfiguration(
 		}
 		require.NoError(t, clients.MgrClient.Create(ctx, &kapi))
 		t.Cleanup(func() {
-			require.NoError(t, clients.MgrClient.Delete(ctx, &kapi))
+			require.NoError(t, deleteIgnoringNotFound(ctx, clients.MgrClient, &kapi))
 		})
 
 		gwconf.Spec.Konnect = &operatorv2beta1.KonnectOptions{
@@ -408,9 +408,20 @@ func createGatewayConfiguration(
 
 	require.NoError(t, clients.MgrClient.Create(ctx, &gwconf))
 	t.Cleanup(func() {
-		require.NoError(t, clients.MgrClient.Delete(ctx, &gwconf))
+		require.NoError(t, deleteIgnoringNotFound(ctx, clients.MgrClient, &gwconf))
 	})
 	return &gwconf
+}
+
+// deleteIgnoringNotFound deletes obj and treats "not found" as success. Since
+// gateway-api v1.7.0 the conformance suite teardown deletes (and waits for) the
+// base manifests' gateway-conformance-infra Namespace, which takes every
+// namespaced resource with it before these cleanups run.
+func deleteIgnoringNotFound(ctx context.Context, cl client.Client, obj client.Object) error {
+	if err := cl.Delete(ctx, obj); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+	return nil
 }
 
 func createGatewayClass(ctx context.Context, t *testing.T, gwconf *operatorv2beta1.GatewayConfiguration) *gatewayv1.GatewayClass {
