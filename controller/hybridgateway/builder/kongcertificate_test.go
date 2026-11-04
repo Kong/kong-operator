@@ -34,38 +34,28 @@ func TestKongCertificateBuilder_WithControlPlaneRef(t *testing.T) {
 }
 
 func TestKongCertificateBuilder_WithLabels(t *testing.T) {
-	gw := &gwtypes.Gateway{
-		Name: "gw1", Namespace: "ns1",
-	}
+	gw := newGatewayMetadataFixture()
 	listener := &gwtypes.Listener{Port: 443}
 	b := NewKongCertificate().WithLabels(gw, listener)
 	cert, err := b.Build()
 	require.NoError(t, err)
-	require.NotNil(t, cert.Labels)
-	require.Contains(t, cert.Labels, "gateway-operator.konghq.com/listener-port")
-	require.Equal(t, "443", cert.Labels["gateway-operator.konghq.com/listener-port"])
+	require.Equal(t, wantGatewayListenerLabels("443"), cert.Labels)
 }
 
 func TestKongCertificateBuilder_WithLabels_NilListener(t *testing.T) {
-	gw := &gwtypes.Gateway{
-		Name: "gw2", Namespace: "ns2",
-	}
+	gw := newGatewayMetadataFixture()
 	b := NewKongCertificate().WithLabels(gw, nil)
 	cert, err := b.Build()
 	require.NoError(t, err)
-	require.NotNil(t, cert.Labels)
-	require.NotContains(t, cert.Labels, "gateway-operator.konghq.com/hybrid-listener-port")
+	require.Equal(t, wantGatewayLabels(), cert.Labels)
 }
 
 func TestKongCertificateBuilder_WithAnnotations(t *testing.T) {
-	gw := &gwtypes.Gateway{
-		Name: "gw3", Namespace: "ns3",
-	}
+	gw := newGatewayMetadataFixture()
 	b := NewKongCertificate().WithAnnotations(gw)
 	cert, err := b.Build()
 	require.NoError(t, err)
-	require.NotNil(t, cert.Annotations)
-	// No strict value check, just ensure map is present.
+	require.Equal(t, wantGatewayAnnotations(), cert.Annotations)
 }
 
 func TestKongCertificateBuilder_WithOwner(t *testing.T) {
@@ -110,41 +100,21 @@ func TestKongCertificateBuilder_MustBuild_Success(t *testing.T) {
 }
 
 func TestKongCertificateBuilder_WithLabelsForRoute(t *testing.T) {
-	route := &gwtypes.HTTPRoute{
-		Name:       "my-route",
-		Namespace:  "my-ns",
-		Kind:       "HTTPRoute",
-		APIVersion: "gateway.networking.k8s.io/v1",
-	}
-	pRef := &gwtypes.ParentReference{Name: "my-gateway"}
+	route := newHTTPRouteMetadataFixture()
+	pRef := newParentRefMetadataFixture()
 
 	cert, err := NewKongCertificate().WithLabelsForRoute(route, pRef).Build()
 	require.NoError(t, err)
-	require.NotNil(t, cert.Labels)
-	// BuildLabels sets managed-by label with route Kind.
-	require.Equal(t, "HTTPRoute", cert.Labels["gateway-operator.konghq.com/managed-by"])
+	require.Equal(t, wantHTTPRouteLabels(), cert.Labels)
 }
 
 func TestKongCertificateBuilder_WithAnnotationsForRoute(t *testing.T) {
-	route := &gwtypes.HTTPRoute{
-		Name:       "my-route",
-		Namespace:  "my-ns",
-		Kind:       "HTTPRoute",
-		APIVersion: "gateway.networking.k8s.io/v1",
-	}
-	pRef := &gwtypes.ParentReference{Name: "my-gateway"}
+	route := newHTTPRouteMetadataFixture()
+	pRef := newParentRefMetadataFixture()
 
 	cert, err := NewKongCertificate().WithAnnotationsForRoute(route, pRef).Build()
 	require.NoError(t, err)
-	require.NotNil(t, cert.Annotations)
-	// BuildAnnotations sets the hybrid-routes HTTPRoute annotation with the route namespace/name.
-	found := false
-	for _, v := range cert.Annotations {
-		if v == "my-ns/my-route" {
-			found = true
-		}
-	}
-	require.True(t, found, "expected route annotation value 'my-ns/my-route' in annotations %v", cert.Annotations)
+	require.Equal(t, wantHTTPRouteAnnotations(), cert.Annotations)
 }
 
 func TestKongCertificateBuilder_WithSpecTags(t *testing.T) {

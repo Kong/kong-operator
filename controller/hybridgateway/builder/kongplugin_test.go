@@ -38,53 +38,37 @@ func TestKongPluginBuilder_WithNamespace(t *testing.T) {
 }
 
 func TestKongPluginBuilder_WithLabels(t *testing.T) {
-	route := &gwtypes.HTTPRoute{
-		Name:      "test-route",
-		Namespace: "default",
-	}
-
-	parentRef := &gwtypes.ParentReference{
-		Name: "test-gateway",
-	}
+	route := newHTTPRouteMetadataFixture()
+	parentRef := newParentRefMetadataFixture()
 
 	builder := NewKongPlugin().WithLabels(route, parentRef)
 
 	plugin, err := builder.Build()
 	require.NoError(t, err)
 
-	assert.NotNil(t, plugin.Labels)
-	assert.NotEmpty(t, plugin.Labels)
+	assert.Equal(t, wantHTTPRouteLabels(), plugin.Labels)
 }
 
 func TestKongPluginBuilder_WithAnnotations(t *testing.T) {
-	route := &gwtypes.HTTPRoute{
-		Name:      "test-route",
-		Namespace: "default",
-	}
-	parentRef := &gwtypes.ParentReference{
-		Name: "test-gateway",
-	}
+	route := newHTTPRouteMetadataFixture()
+	parentRef := newParentRefMetadataFixture()
 
 	builder := NewKongPlugin().WithAnnotations(route, parentRef)
 
 	plugin, err := builder.Build()
 	require.NoError(t, err)
 
-	assert.NotNil(t, plugin.Annotations)
-	assert.NotEmpty(t, plugin.Annotations)
+	assert.Equal(t, wantHTTPRouteAnnotations(), plugin.Annotations)
 
 	t.Run("route is nil", func(t *testing.T) {
-		parentRef := &gwtypes.ParentReference{Name: "test-gateway"}
+		parentRef := newParentRefMetadataFixture()
 		builder := NewKongPlugin().WithAnnotations(nil, parentRef)
 		require.NotEmpty(t, builder.errors)
 		assert.Contains(t, builder.errors[0].Error(), "route cannot be nil")
 	})
 
 	t.Run("parentRef is nil", func(t *testing.T) {
-		route := &gwtypes.HTTPRoute{
-			Name:      "test-route",
-			Namespace: "default",
-		}
+		route := newHTTPRouteMetadataFixture()
 		builder := NewKongPlugin().WithAnnotations(route, nil)
 		require.NotEmpty(t, builder.errors)
 		assert.Contains(t, builder.errors[0].Error(), "parentRef cannot be nil")
