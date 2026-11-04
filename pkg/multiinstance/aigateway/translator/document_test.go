@@ -1901,8 +1901,9 @@ func TestBuildDocument_MCPServerFailsWhenReferencedConsumerGroupFails(t *testing
 		s.Spec.APISpec.PassthroughListener.Access = &aiconfigurationv1alpha1.AIGatewayMCPServerPassthroughListenerAccess{
 			AclAttributeType: aiconfigurationv1alpha1.AIGatewayMCPServerPassthroughListenerAccessTypeConsumer,
 			Consumer: &aiconfigurationv1alpha1.AIGatewayMCPServerListenerConsumer{
-				Acls: aiconfigurationv1alpha1.AIGatewayMCPACLs{
-					Allow: []aiconfigurationv1alpha1.AIGatewayMCPACLRef{{Name: group}},
+				Acls: &aiconfigurationv1alpha1.AIGatewayMCPServerListenerConsumerAcls{
+					Type:  aiconfigurationv1alpha1.AIGatewayMCPServerListenerConsumerAclsTypeAllow,
+					Allow: []aiconfigurationv1alpha1.AIGatewayACLRef{{Name: group}},
 				},
 			},
 		}

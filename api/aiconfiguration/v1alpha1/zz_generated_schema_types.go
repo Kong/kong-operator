@@ -2568,10 +2568,6 @@ type AIGWOpenIDConnectGeneratedConfigUpstreamHeaders struct {
 	Path []string `json:"path,omitempty"`
 }
 
-// AIGatewayACLS Access control rules.
-// Configure exactly one of `allow`, `deny`, `allow_when`, or `deny_when`.
-type AIGatewayACLS map[string]string
-
 // AIGatewayAgentAccess Access control configuration for an agent.
 type AIGatewayAgentAccess struct {
 	// Access control rules.
@@ -2640,11 +2636,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayAgentAccessAcls) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case AIGatewayAgentAccessAclsTypeAllow:
 		if u.Allow != nil {
@@ -2678,6 +2669,13 @@ func (u AIGatewayAgentAccessAcls) MarshalJSON() ([]byte, error) {
 			}
 			m["denyWhen"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayAgentAccessAcls type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -2894,19 +2892,34 @@ type AIGatewayAuthStrategyOpenIDConnect struct {
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-	// Serves the self-service enrollment UI through which end users authorize the
-	// upstream providers
-	// this auth strategy authenticates against.
-	// Omit `token_vault` entirely to serve no such UI.
+	// Enables enrollment protection for the Token Vault datastore linked to this
+	// auth strategy.
+	// Users of the linked Token Vault will need to authenticate using this OIDC
+	// auth strategy
+	// before completing enrollment with upstream providers.
+	// Enrollment links always store upstream
+	// credentials in the Token Vault belonging to the principal who requested the
+	// link.
+	// Enrollment
+	// protection ensures that other principals cannot use an enrollment link to
+	// unknowingly
+	// authorize the storage of their upstream credentials in another principal's
+	// Token Vault.
 	//
-	// Requires a `token-vault` Datastore reference in `datastores`; enabling the
-	// credential manager
+	// Note that the auth strategy used to protect upstream resources such as MCP
+	// servers need not
+	// be the same auth strategy used for enrollment protection.
+	// Omit `token_vault` entirely to
+	// enforce no such enrollment protection.
+	//
+	// Requires a `token-vault` Datastore reference in `datastores`; enabling
+	// enrollment protection
 	// without one is rejected.
 	//
 	// **Requires a minimum runtime version of `2.3`**.
 	//
 	// +optional
-	TokenVault AIGatewayTokenVaultCredentialManager `json:"tokenVault,omitzero"`
+	TokenVault AIGatewayTokenVaultEnrollmentProtection `json:"tokenVault,omitzero"`
 }
 
 // AIGatewayAuthStrategyReference Reference to an auth strategy instance by
@@ -3124,11 +3137,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayEmbeddingsModelConfig) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayEmbeddingsModelConfig type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case AIGatewayEmbeddingsModelConfigTypeAzure:
 		if u.Azure != nil {
@@ -3186,6 +3194,13 @@ func (u AIGatewayEmbeddingsModelConfig) MarshalJSON() ([]byte, error) {
 			}
 			m["openai"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayEmbeddingsModelConfig type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -3344,7 +3359,7 @@ type AIGatewayMCPACLs struct {
 	// List of consumer groups that are permitted access.
 	//
 	// +optional
-	Allow []AIGatewayMCPACLRef `json:"allow,omitempty"`
+	Allow []AIGatewayACLRef `json:"allow,omitempty"`
 	// Allow the request if it matches any of these CEL boolean expressions
 	// evaluated against the request context.
 	//
@@ -3355,7 +3370,7 @@ type AIGatewayMCPACLs struct {
 	// List of consumer groups that are denied access.
 	//
 	// +optional
-	Deny []AIGatewayMCPACLRef `json:"deny,omitempty"`
+	Deny []AIGatewayACLRef `json:"deny,omitempty"`
 	// Deny the request if it matches any of these CEL boolean expressions
 	// evaluated against the request context.
 	//
@@ -3779,11 +3794,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayMCPServerConversionListenerAccess) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.AclAttributeType))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayMCPServerConversionListenerAccess aclAttributeType: %w", err)
-	}
-	m["aclAttributeType"] = typeBytes
 	switch u.AclAttributeType {
 	case AIGatewayMCPServerConversionListenerAccessTypeConsumer:
 		if u.Consumer != nil {
@@ -3801,6 +3811,13 @@ func (u AIGatewayMCPServerConversionListenerAccess) MarshalJSON() ([]byte, error
 			}
 			m["oauthAccessToken"] = raw
 		}
+	}
+	if u.AclAttributeType != "" {
+		typeBytes, err := json.Marshal(string(u.AclAttributeType))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayMCPServerConversionListenerAccess aclAttributeType: %w", err)
+		}
+		m["aclAttributeType"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -4179,11 +4196,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayMCPServerListenerAccess) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.AclAttributeType))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayMCPServerListenerAccess aclAttributeType: %w", err)
-	}
-	m["aclAttributeType"] = typeBytes
 	switch u.AclAttributeType {
 	case AIGatewayMCPServerListenerAccessTypeConsumer:
 		if u.Consumer != nil {
@@ -4201,6 +4213,13 @@ func (u AIGatewayMCPServerListenerAccess) MarshalJSON() ([]byte, error) {
 			}
 			m["oauthAccessToken"] = raw
 		}
+	}
+	if u.AclAttributeType != "" {
+		typeBytes, err := json.Marshal(string(u.AclAttributeType))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayMCPServerListenerAccess aclAttributeType: %w", err)
+		}
+		m["aclAttributeType"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -4260,7 +4279,7 @@ type AIGatewayMCPServerListenerConsumer struct {
 	//
 	//
 	// +optional
-	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
+	Acls *AIGatewayMCPServerListenerConsumerAcls `json:"acls,omitempty"`
 	// List of auth strategies for granting access to the MCP server.
 	// At most 1 auth strategy of each auth strategy type can be referenced.
 	//
@@ -4296,6 +4315,218 @@ type AIGatewayMCPServerListenerConsumer struct {
 	Metadata AIGatewayMCPServerProtectedResourceMetadata `json:"metadata,omitzero"`
 }
 
+// AIGatewayMCPServerListenerConsumerAcls represents a union type for acls.
+// Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.type) || (self.type == 'allow' ? has(self.allow) : !has(self.allow))",message="allow must be set only when type is allow"
+// +kubebuilder:validation:XValidation:rule="!has(self.type) || (self.type == 'deny' ? has(self.deny) : !has(self.deny))",message="deny must be set only when type is deny"
+// +kubebuilder:validation:XValidation:rule="!has(self.type) || (self.type == 'allowWhen' ? has(self.allowWhen) : !has(self.allowWhen))",message="allowWhen must be set only when type is allowWhen"
+// +kubebuilder:validation:XValidation:rule="!has(self.type) || (self.type == 'denyWhen' ? has(self.denyWhen) : !has(self.denyWhen))",message="denyWhen must be set only when type is denyWhen"
+type AIGatewayMCPServerListenerConsumerAcls struct {
+	// Type designates the type of configuration.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=allow;deny;allowWhen;denyWhen
+	Type AIGatewayMCPServerListenerConsumerAclsType `json:"type,omitempty"`
+
+	// List of consumer groups that are permitted access.
+	//
+	// +optional
+	Allow []AIGatewayACLRef `json:"allow,omitempty"`
+	// List of consumer groups that are denied access.
+	//
+	// +optional
+	Deny []AIGatewayACLRef `json:"deny,omitempty"`
+	// Allow the request if it matches any of these CEL boolean expressions
+	// evaluated against the request context.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	AllowWhen []string `json:"allowWhen,omitempty"`
+	// Deny the request if it matches any of these CEL boolean expressions
+	// evaluated against the request context.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	DenyWhen []string `json:"denyWhen,omitempty"`
+}
+
+// AIGatewayMCPServerListenerConsumerAclsType represents the type of acls.
+type AIGatewayMCPServerListenerConsumerAclsType string
+
+// AIGatewayMCPServerListenerConsumerAclsType values.
+const (
+	AIGatewayMCPServerListenerConsumerAclsTypeAllow     AIGatewayMCPServerListenerConsumerAclsType = "allow"
+	AIGatewayMCPServerListenerConsumerAclsTypeDeny      AIGatewayMCPServerListenerConsumerAclsType = "deny"
+	AIGatewayMCPServerListenerConsumerAclsTypeAllowWhen AIGatewayMCPServerListenerConsumerAclsType = "allowWhen"
+	AIGatewayMCPServerListenerConsumerAclsTypeDenyWhen  AIGatewayMCPServerListenerConsumerAclsType = "denyWhen"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayMCPServerListenerConsumerAcls) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	if u.Allow != nil {
+		raw, err := json.Marshal(u.Allow)
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayMCPServerListenerConsumerAcls Allow: %w", err)
+		}
+		m["allow"] = raw
+	}
+	if u.Deny != nil {
+		raw, err := json.Marshal(u.Deny)
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayMCPServerListenerConsumerAcls Deny: %w", err)
+		}
+		m["deny"] = raw
+	}
+	if u.AllowWhen != nil {
+		raw, err := json.Marshal(u.AllowWhen)
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayMCPServerListenerConsumerAcls AllowWhen: %w", err)
+		}
+		m["allowWhen"] = raw
+	}
+	if u.DenyWhen != nil {
+		raw, err := json.Marshal(u.DenyWhen)
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayMCPServerListenerConsumerAcls DenyWhen: %w", err)
+		}
+		m["denyWhen"] = raw
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayMCPServerListenerConsumerAcls type: %w", err)
+		}
+		m["type"] = typeBytes
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayMCPServerListenerConsumerAcls) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerConsumerAcls: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayMCPServerListenerConsumerAclsType(probe.Type)
+	switch probe.Type {
+	case "allow":
+		payload, ok := raw["allow"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val []AIGatewayACLRef
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerConsumerAcls Allow: %w", err)
+		}
+		u.Allow = val
+	case "deny":
+		payload, ok := raw["deny"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val []AIGatewayACLRef
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerConsumerAcls Deny: %w", err)
+		}
+		u.Deny = val
+	case "allowWhen":
+		payload, ok := raw["allowWhen"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val []string
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerConsumerAcls AllowWhen: %w", err)
+		}
+		u.AllowWhen = val
+	case "denyWhen":
+		payload, ok := raw["denyWhen"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val []string
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerConsumerAcls DenyWhen: %w", err)
+		}
+		u.DenyWhen = val
+	}
+	if probe.Type == "" {
+		members := 0
+		if payload, ok := raw["allow"]; ok && len(payload) > 0 {
+			if err := json.Unmarshal(payload, &u.Allow); err != nil {
+				return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerConsumerAcls Allow: %w", err)
+			}
+			members++
+			if members == 1 {
+				u.Type = AIGatewayMCPServerListenerConsumerAclsTypeAllow
+			}
+		}
+		if payload, ok := raw["deny"]; ok && len(payload) > 0 {
+			if err := json.Unmarshal(payload, &u.Deny); err != nil {
+				return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerConsumerAcls Deny: %w", err)
+			}
+			members++
+			if members == 1 {
+				u.Type = AIGatewayMCPServerListenerConsumerAclsTypeDeny
+			}
+		}
+		if payload, ok := raw["allowWhen"]; ok && len(payload) > 0 {
+			if err := json.Unmarshal(payload, &u.AllowWhen); err != nil {
+				return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerConsumerAcls AllowWhen: %w", err)
+			}
+			members++
+			if members == 1 {
+				u.Type = AIGatewayMCPServerListenerConsumerAclsTypeAllowWhen
+			}
+		}
+		if payload, ok := raw["denyWhen"]; ok && len(payload) > 0 {
+			if err := json.Unmarshal(payload, &u.DenyWhen); err != nil {
+				return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerConsumerAcls DenyWhen: %w", err)
+			}
+			members++
+			if members == 1 {
+				u.Type = AIGatewayMCPServerListenerConsumerAclsTypeDenyWhen
+			}
+		}
+		if members > 1 {
+			// Several members have no union equivalent; keep the legacy shape.
+			u.Type = ""
+		}
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayMCPServerListenerConsumer) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerConsumer: nil receiver")
+	}
+	type alias AIGatewayMCPServerListenerConsumer
+	aux := alias{}
+	aux.Acls = &AIGatewayMCPServerListenerConsumerAcls{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerConsumer: %w", err)
+	}
+	if aux.Acls != nil && aux.Acls.Type == "" && aux.Acls.Allow == nil && aux.Acls.Deny == nil && aux.Acls.AllowWhen == nil && aux.Acls.DenyWhen == nil {
+		aux.Acls = nil
+	}
+	*s = AIGatewayMCPServerListenerConsumer(aux)
+	return nil
+}
+
 // AIGatewayMCPServerListenerOauth Auth strategy and OAuth 2.0 Protected
 // Resource Metadata configuration
 // for granting access to an MCP server.
@@ -4322,7 +4553,7 @@ type AIGatewayMCPServerListenerOauth struct {
 	//
 	//
 	// +optional
-	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
+	Acls *AIGatewayMCPServerListenerOauthAcls `json:"acls,omitempty"`
 	// List of auth strategies for granting access to the MCP server.
 	// At most 1 auth strategy of each auth strategy type can be referenced.
 	//
@@ -4357,6 +4588,218 @@ type AIGatewayMCPServerListenerOauth struct {
 	//
 	// +optional
 	Metadata AIGatewayMCPServerProtectedResourceMetadata `json:"metadata,omitzero"`
+}
+
+// AIGatewayMCPServerListenerOauthAcls represents a union type for acls.
+// Only one of the fields should be set based on the Type.
+//
+// +kubebuilder:validation:XValidation:rule="!has(self.type) || (self.type == 'allow' ? has(self.allow) : !has(self.allow))",message="allow must be set only when type is allow"
+// +kubebuilder:validation:XValidation:rule="!has(self.type) || (self.type == 'deny' ? has(self.deny) : !has(self.deny))",message="deny must be set only when type is deny"
+// +kubebuilder:validation:XValidation:rule="!has(self.type) || (self.type == 'allowWhen' ? has(self.allowWhen) : !has(self.allowWhen))",message="allowWhen must be set only when type is allowWhen"
+// +kubebuilder:validation:XValidation:rule="!has(self.type) || (self.type == 'denyWhen' ? has(self.denyWhen) : !has(self.denyWhen))",message="denyWhen must be set only when type is denyWhen"
+type AIGatewayMCPServerListenerOauthAcls struct {
+	// Type designates the type of configuration.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=allow;deny;allowWhen;denyWhen
+	Type AIGatewayMCPServerListenerOauthAclsType `json:"type,omitempty"`
+
+	// List of consumer groups that are permitted access.
+	//
+	// +optional
+	Allow []AIGatewayACLRef `json:"allow,omitempty"`
+	// List of consumer groups that are denied access.
+	//
+	// +optional
+	Deny []AIGatewayACLRef `json:"deny,omitempty"`
+	// Allow the request if it matches any of these CEL boolean expressions
+	// evaluated against the request context.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	AllowWhen []string `json:"allowWhen,omitempty"`
+	// Deny the request if it matches any of these CEL boolean expressions
+	// evaluated against the request context.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	DenyWhen []string `json:"denyWhen,omitempty"`
+}
+
+// AIGatewayMCPServerListenerOauthAclsType represents the type of acls.
+type AIGatewayMCPServerListenerOauthAclsType string
+
+// AIGatewayMCPServerListenerOauthAclsType values.
+const (
+	AIGatewayMCPServerListenerOauthAclsTypeAllow     AIGatewayMCPServerListenerOauthAclsType = "allow"
+	AIGatewayMCPServerListenerOauthAclsTypeDeny      AIGatewayMCPServerListenerOauthAclsType = "deny"
+	AIGatewayMCPServerListenerOauthAclsTypeAllowWhen AIGatewayMCPServerListenerOauthAclsType = "allowWhen"
+	AIGatewayMCPServerListenerOauthAclsTypeDenyWhen  AIGatewayMCPServerListenerOauthAclsType = "denyWhen"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayMCPServerListenerOauthAcls) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	if u.Allow != nil {
+		raw, err := json.Marshal(u.Allow)
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayMCPServerListenerOauthAcls Allow: %w", err)
+		}
+		m["allow"] = raw
+	}
+	if u.Deny != nil {
+		raw, err := json.Marshal(u.Deny)
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayMCPServerListenerOauthAcls Deny: %w", err)
+		}
+		m["deny"] = raw
+	}
+	if u.AllowWhen != nil {
+		raw, err := json.Marshal(u.AllowWhen)
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayMCPServerListenerOauthAcls AllowWhen: %w", err)
+		}
+		m["allowWhen"] = raw
+	}
+	if u.DenyWhen != nil {
+		raw, err := json.Marshal(u.DenyWhen)
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayMCPServerListenerOauthAcls DenyWhen: %w", err)
+		}
+		m["denyWhen"] = raw
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayMCPServerListenerOauthAcls type: %w", err)
+		}
+		m["type"] = typeBytes
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayMCPServerListenerOauthAcls) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerOauthAcls: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayMCPServerListenerOauthAclsType(probe.Type)
+	switch probe.Type {
+	case "allow":
+		payload, ok := raw["allow"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val []AIGatewayACLRef
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerOauthAcls Allow: %w", err)
+		}
+		u.Allow = val
+	case "deny":
+		payload, ok := raw["deny"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val []AIGatewayACLRef
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerOauthAcls Deny: %w", err)
+		}
+		u.Deny = val
+	case "allowWhen":
+		payload, ok := raw["allowWhen"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val []string
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerOauthAcls AllowWhen: %w", err)
+		}
+		u.AllowWhen = val
+	case "denyWhen":
+		payload, ok := raw["denyWhen"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val []string
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerOauthAcls DenyWhen: %w", err)
+		}
+		u.DenyWhen = val
+	}
+	if probe.Type == "" {
+		members := 0
+		if payload, ok := raw["allow"]; ok && len(payload) > 0 {
+			if err := json.Unmarshal(payload, &u.Allow); err != nil {
+				return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerOauthAcls Allow: %w", err)
+			}
+			members++
+			if members == 1 {
+				u.Type = AIGatewayMCPServerListenerOauthAclsTypeAllow
+			}
+		}
+		if payload, ok := raw["deny"]; ok && len(payload) > 0 {
+			if err := json.Unmarshal(payload, &u.Deny); err != nil {
+				return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerOauthAcls Deny: %w", err)
+			}
+			members++
+			if members == 1 {
+				u.Type = AIGatewayMCPServerListenerOauthAclsTypeDeny
+			}
+		}
+		if payload, ok := raw["allowWhen"]; ok && len(payload) > 0 {
+			if err := json.Unmarshal(payload, &u.AllowWhen); err != nil {
+				return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerOauthAcls AllowWhen: %w", err)
+			}
+			members++
+			if members == 1 {
+				u.Type = AIGatewayMCPServerListenerOauthAclsTypeAllowWhen
+			}
+		}
+		if payload, ok := raw["denyWhen"]; ok && len(payload) > 0 {
+			if err := json.Unmarshal(payload, &u.DenyWhen); err != nil {
+				return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerOauthAcls DenyWhen: %w", err)
+			}
+			members++
+			if members == 1 {
+				u.Type = AIGatewayMCPServerListenerOauthAclsTypeDenyWhen
+			}
+		}
+		if members > 1 {
+			// Several members have no union equivalent; keep the legacy shape.
+			u.Type = ""
+		}
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayMCPServerListenerOauth) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerOauth: nil receiver")
+	}
+	type alias AIGatewayMCPServerListenerOauth
+	aux := alias{}
+	aux.Acls = &AIGatewayMCPServerListenerOauthAcls{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayMCPServerListenerOauth: %w", err)
+	}
+	if aux.Acls != nil && aux.Acls.Type == "" && aux.Acls.Allow == nil && aux.Acls.Deny == nil && aux.Acls.AllowWhen == nil && aux.Acls.DenyWhen == nil {
+		aux.Acls = nil
+	}
+	*s = AIGatewayMCPServerListenerOauth(aux)
+	return nil
 }
 
 // AIGatewayMCPServerPassthroughListener is a type alias.
@@ -4496,11 +4939,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayMCPServerPassthroughListenerAccess) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.AclAttributeType))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayMCPServerPassthroughListenerAccess aclAttributeType: %w", err)
-	}
-	m["aclAttributeType"] = typeBytes
 	switch u.AclAttributeType {
 	case AIGatewayMCPServerPassthroughListenerAccessTypeConsumer:
 		if u.Consumer != nil {
@@ -4518,6 +4956,13 @@ func (u AIGatewayMCPServerPassthroughListenerAccess) MarshalJSON() ([]byte, erro
 			}
 			m["oauthAccessToken"] = raw
 		}
+	}
+	if u.AclAttributeType != "" {
+		typeBytes, err := json.Marshal(string(u.AclAttributeType))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayMCPServerPassthroughListenerAccess aclAttributeType: %w", err)
+		}
+		m["aclAttributeType"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -5153,11 +5598,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case AIGatewayMCPServerUpstreamServerServerConfigToolsListAuthTypeCredentials:
 		if u.Credentials != nil {
@@ -5175,6 +5615,13 @@ func (u AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth) MarshalJSON()
 			}
 			m["jwt"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -5270,11 +5717,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayMCPServerUpstreamServerServerToolAuthConfig) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayMCPServerUpstreamServerServerToolAuthConfig type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case AIGatewayMCPServerUpstreamServerServerToolAuthConfigTypeCredentials:
 		if u.Credentials != nil {
@@ -5292,6 +5734,13 @@ func (u AIGatewayMCPServerUpstreamServerServerToolAuthConfig) MarshalJSON() ([]b
 			}
 			m["jwt"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayMCPServerUpstreamServerServerToolAuthConfig type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -6045,11 +6494,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayModelAPIConfigBalancer) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Algorithm))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayModelAPIConfigBalancer algorithm: %w", err)
-	}
-	m["algorithm"] = typeBytes
 	switch u.Algorithm {
 	case AIGatewayModelAPIConfigBalancerTypeConsistentHashing:
 		if u.ConsistentHashing != nil {
@@ -6107,6 +6551,13 @@ func (u AIGatewayModelAPIConfigBalancer) MarshalJSON() ([]byte, error) {
 			}
 			m["semantic"] = raw
 		}
+	}
+	if u.Algorithm != "" {
+		typeBytes, err := json.Marshal(string(u.Algorithm))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayModelAPIConfigBalancer algorithm: %w", err)
+		}
+		m["algorithm"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -6286,11 +6737,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayModelAccessAcls) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayModelAccessAcls type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case AIGatewayModelAccessAclsTypeAllow:
 		if u.Allow != nil {
@@ -6324,6 +6770,13 @@ func (u AIGatewayModelAccessAcls) MarshalJSON() ([]byte, error) {
 			}
 			m["denyWhen"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayModelAccessAcls type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -6464,11 +6917,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayModelBalancerConfig) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Algorithm))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayModelBalancerConfig algorithm: %w", err)
-	}
-	m["algorithm"] = typeBytes
 	switch u.Algorithm {
 	case AIGatewayModelBalancerConfigTypeConsistentHashing:
 		if u.ConsistentHashing != nil {
@@ -6526,6 +6974,13 @@ func (u AIGatewayModelBalancerConfig) MarshalJSON() ([]byte, error) {
 			}
 			m["semantic"] = raw
 		}
+	}
+	if u.Algorithm != "" {
+		typeBytes, err := json.Marshal(string(u.Algorithm))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayModelBalancerConfig algorithm: %w", err)
+		}
+		m["algorithm"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -7168,11 +7623,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayModelBalancerSemanticConfigEmbeddingsConfig) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeAzure:
 		if u.Azure != nil {
@@ -7230,6 +7680,13 @@ func (u AIGatewayModelBalancerSemanticConfigEmbeddingsConfig) MarshalJSON() ([]b
 			}
 			m["openai"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -7375,11 +7832,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayModelBalancerSemanticConfigVectordb) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayModelBalancerSemanticConfigVectordb type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case AIGatewayModelBalancerSemanticConfigVectordbTypePgVector:
 		if u.PgVector != nil {
@@ -7397,6 +7849,13 @@ func (u AIGatewayModelBalancerSemanticConfigVectordb) MarshalJSON() ([]byte, err
 			}
 			m["redis"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayModelBalancerSemanticConfigVectordb type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -7662,11 +8121,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayModelModelConfigBalancer) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Algorithm))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayModelModelConfigBalancer algorithm: %w", err)
-	}
-	m["algorithm"] = typeBytes
 	switch u.Algorithm {
 	case AIGatewayModelModelConfigBalancerTypeConsistentHashing:
 		if u.ConsistentHashing != nil {
@@ -7724,6 +8178,13 @@ func (u AIGatewayModelModelConfigBalancer) MarshalJSON() ([]byte, error) {
 			}
 			m["semantic"] = raw
 		}
+	}
+	if u.Algorithm != "" {
+		typeBytes, err := json.Marshal(string(u.Algorithm))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayModelModelConfigBalancer algorithm: %w", err)
+		}
+		m["algorithm"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -8074,11 +8535,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayModelProviderAzureConfigAuth) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayModelProviderAzureConfigAuth type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case AIGatewayModelProviderAzureConfigAuthTypeAzure:
 		if u.Azure != nil {
@@ -8096,6 +8552,13 @@ func (u AIGatewayModelProviderAzureConfigAuth) MarshalJSON() ([]byte, error) {
 			}
 			m["basic"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayModelProviderAzureConfigAuth type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -8358,11 +8821,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayModelProviderBedrockConfigAuth) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayModelProviderBedrockConfigAuth type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case AIGatewayModelProviderBedrockConfigAuthTypeAWS:
 		if u.AWS != nil {
@@ -8380,6 +8838,13 @@ func (u AIGatewayModelProviderBedrockConfigAuth) MarshalJSON() ([]byte, error) {
 			}
 			m["basic"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayModelProviderBedrockConfigAuth type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -8838,11 +9303,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayModelProviderConfigAuthGCPWorkloadIdentityFederation) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Source))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayModelProviderConfigAuthGCPWorkloadIdentityFederation source: %w", err)
-	}
-	m["source"] = typeBytes
 	switch u.Source {
 	case AIGatewayModelProviderConfigAuthGCPWorkloadIdentityFederationTypeAuthGCPWorkloadIdentityFederationAwsIam:
 		if u.AuthGCPWorkloadIdentityFederationAwsIam != nil {
@@ -8852,6 +9312,13 @@ func (u AIGatewayModelProviderConfigAuthGCPWorkloadIdentityFederation) MarshalJS
 			}
 			m["awsIam"] = raw
 		}
+	}
+	if u.Source != "" {
+		typeBytes, err := json.Marshal(string(u.Source))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayModelProviderConfigAuthGCPWorkloadIdentityFederation source: %w", err)
+		}
+		m["source"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -9301,11 +9768,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayModelProviderGeminiConfigAuth) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayModelProviderGeminiConfigAuth type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case AIGatewayModelProviderGeminiConfigAuthTypeBasic:
 		if u.Basic != nil {
@@ -9323,6 +9785,13 @@ func (u AIGatewayModelProviderGeminiConfigAuth) MarshalJSON() ([]byte, error) {
 			}
 			m["gcp"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayModelProviderGeminiConfigAuth type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -10010,11 +10479,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayModelProviderSagemakerConfigAuth) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayModelProviderSagemakerConfigAuth type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case AIGatewayModelProviderSagemakerConfigAuthTypeBasic:
 		if u.Basic != nil {
@@ -10032,6 +10496,13 @@ func (u AIGatewayModelProviderSagemakerConfigAuth) MarshalJSON() ([]byte, error)
 			}
 			m["sagemaker"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayModelProviderSagemakerConfigAuth type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -10593,11 +11064,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayModelVectorDBConfig) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayModelVectorDBConfig type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case AIGatewayModelVectorDBConfigTypePgVector:
 		if u.PgVector != nil {
@@ -10615,6 +11081,13 @@ func (u AIGatewayModelVectorDBConfig) MarshalJSON() ([]byte, error) {
 			}
 			m["redis"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayModelVectorDBConfig type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -11051,11 +11524,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayModelVectorDBConfigRedisCloudAuthentication) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayModelVectorDBConfigRedisCloudAuthentication type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case AIGatewayModelVectorDBConfigRedisCloudAuthenticationTypeAWS:
 		if u.AWS != nil {
@@ -11081,6 +11549,13 @@ func (u AIGatewayModelVectorDBConfigRedisCloudAuthentication) MarshalJSON() ([]b
 			}
 			m["gcp"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayModelVectorDBConfigRedisCloudAuthentication type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -11174,11 +11649,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayModelVectorDBConfigRedisPort) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayModelVectorDBConfigRedisPort type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case AIGatewayModelVectorDBConfigRedisPortTypeVariant1:
 		if u.Variant1 != nil {
@@ -11196,6 +11666,13 @@ func (u AIGatewayModelVectorDBConfigRedisPort) MarshalJSON() ([]byte, error) {
 			}
 			m["variant2"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayModelVectorDBConfigRedisPort type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -11730,11 +12207,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayRedisCloudConfigurationCloudAuthentication) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayRedisCloudConfigurationCloudAuthentication type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case AIGatewayRedisCloudConfigurationCloudAuthenticationTypeAWS:
 		if u.AWS != nil {
@@ -11760,6 +12232,13 @@ func (u AIGatewayRedisCloudConfigurationCloudAuthentication) MarshalJSON() ([]by
 			}
 			m["gcp"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayRedisCloudConfigurationCloudAuthentication type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -11853,11 +12332,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayRedisCloudConfigurationPort) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayRedisCloudConfigurationPort type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case AIGatewayRedisCloudConfigurationPortTypeVariant1:
 		if u.Variant1 != nil {
@@ -11875,6 +12349,13 @@ func (u AIGatewayRedisCloudConfigurationPort) MarshalJSON() ([]byte, error) {
 			}
 			m["variant2"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayRedisCloudConfigurationPort type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -12967,11 +13448,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayTargetConfig) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayTargetConfig type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case AIGatewayTargetConfigTypeAnthropic:
 		if u.Anthropic != nil {
@@ -13141,6 +13617,13 @@ func (u AIGatewayTargetConfig) MarshalJSON() ([]byte, error) {
 			}
 			m["xai"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayTargetConfig type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -15006,24 +15489,6 @@ type AIGatewayTokenVaultCredential struct {
 	Outbound AIGatewayTokenVaultCredentialPlacement `json:"outbound,omitzero"`
 }
 
-// AIGatewayTokenVaultCredentialManager Serves the self-service enrollment UI
-// through which end users authorize the upstream providers
-// this auth strategy authenticates against.
-// Omit `token_vault` entirely to serve no such UI.
-//
-// Requires a `token-vault` Datastore reference in `datastores`; enabling the
-// credential manager
-// without one is rejected.
-//
-// **Requires a minimum runtime version of `2.3`**.
-type AIGatewayTokenVaultCredentialManager struct {
-	// Whether the self-service enrollment UI is served for this auth strategy.
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	EnableCredentialManager string `json:"enableCredentialManager,omitzero"`
-}
-
 // AIGatewayTokenVaultCredentialPlacement is a type alias.
 type AIGatewayTokenVaultCredentialPlacement struct {
 	// Whether the credential travels in a header, the request body, or the query
@@ -15052,6 +15517,54 @@ type AIGatewayTokenVaultCredentialPlacement struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	Prefix string `json:"prefix,omitzero"`
+}
+
+// AIGatewayTokenVaultEnrollmentProtection Enables enrollment protection for the
+// Token Vault datastore linked to this auth strategy.
+// Users of the linked Token Vault will need to authenticate using this OIDC
+// auth strategy
+// before completing enrollment with upstream providers.
+// Enrollment links always store upstream
+// credentials in the Token Vault belonging to the principal who requested the
+// link.
+// Enrollment
+// protection ensures that other principals cannot use an enrollment link to
+// unknowingly
+// authorize the storage of their upstream credentials in another principal's
+// Token Vault.
+//
+// Note that the auth strategy used to protect upstream resources such as MCP
+// servers need not
+// be the same auth strategy used for enrollment protection.
+// Omit `token_vault` entirely to
+// enforce no such enrollment protection.
+//
+// Requires a `token-vault` Datastore reference in `datastores`; enabling
+// enrollment protection
+// without one is rejected.
+//
+// **Requires a minimum runtime version of `2.3`**.
+type AIGatewayTokenVaultEnrollmentProtection struct {
+	// Enables the self-service credential manager UI through which end users
+	// authorize
+	// upstream providers for Token Vault datastore linked to this auth strategy.
+	// This OIDC
+	// auth strategy is used to authenticate access to the self-service UI, but
+	// need not
+	// necessarily be the same auth strategy that is used to authenticate access to
+	// upstream
+	// Token Vault providers.
+	//
+	// Requires a `token-vault` Datastore reference in `datastores`; enabling the
+	// credential
+	// manager without one is rejected.
+	// The credential manager cannot be used without
+	// enrollment protection.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	EnableCredentialManager string `json:"enableCredentialManager,omitzero"`
 }
 
 // AIGatewayUpstreamAuthAWS AWS IAM (SigV4) authentication for the upstream
@@ -15149,11 +15662,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AIGatewayUpstreamConfigAuth) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayUpstreamConfigAuth type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case AIGatewayUpstreamConfigAuthTypeAIGatewayUpstreamAuthAWS:
 		if u.AIGatewayUpstreamAuthAWS != nil {
@@ -15163,6 +15671,13 @@ func (u AIGatewayUpstreamConfigAuth) MarshalJSON() ([]byte, error) {
 			}
 			m["aws"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AIGatewayUpstreamConfigAuth type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -15246,11 +15761,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u AuthGCPWorkloadIdentityFederation) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Source))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AuthGCPWorkloadIdentityFederation source: %w", err)
-	}
-	m["source"] = typeBytes
 	switch u.Source {
 	case AuthGCPWorkloadIdentityFederationTypeAuthGCPWorkloadIdentityFederationAwsIam:
 		if u.AuthGCPWorkloadIdentityFederationAwsIam != nil {
@@ -15260,6 +15770,13 @@ func (u AuthGCPWorkloadIdentityFederation) MarshalJSON() ([]byte, error) {
 			}
 			m["awsIam"] = raw
 		}
+	}
+	if u.Source != "" {
+		typeBytes, err := json.Marshal(string(u.Source))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling AuthGCPWorkloadIdentityFederation source: %w", err)
+		}
+		m["source"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -15889,11 +16406,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u DatastoreRedisCloudAuthenticationAuthProvider) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling DatastoreRedisCloudAuthenticationAuthProvider type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case DatastoreRedisCloudAuthenticationAuthProviderTypeVariant1:
 		if u.Variant1 != nil {
@@ -15911,6 +16423,13 @@ func (u DatastoreRedisCloudAuthenticationAuthProvider) MarshalJSON() ([]byte, er
 			}
 			m["variant2"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling DatastoreRedisCloudAuthenticationAuthProvider type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -16834,11 +17353,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u HashiCorpVaultConfig) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.AuthMethod))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling HashiCorpVaultConfig authMethod: %w", err)
-	}
-	m["authMethod"] = typeBytes
 	switch u.AuthMethod {
 	case HashiCorpVaultConfigTypeAppRole:
 		if u.AppRole != nil {
@@ -16920,6 +17434,13 @@ func (u HashiCorpVaultConfig) MarshalJSON() ([]byte, error) {
 			}
 			m["token"] = raw
 		}
+	}
+	if u.AuthMethod != "" {
+		typeBytes, err := json.Marshal(string(u.AuthMethod))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling HashiCorpVaultConfig authMethod: %w", err)
+		}
+		m["authMethod"] = typeBytes
 	}
 	return json.Marshal(m)
 }
@@ -17956,11 +18477,6 @@ const (
 // MarshalJSON implements json.Marshaler.
 func (u RedisEEDatastoreConfigPort) MarshalJSON() ([]byte, error) {
 	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling RedisEEDatastoreConfigPort type: %w", err)
-	}
-	m["type"] = typeBytes
 	switch u.Type {
 	case RedisEEDatastoreConfigPortTypeVariant1:
 		if u.Variant1 != nil {
@@ -17978,6 +18494,13 @@ func (u RedisEEDatastoreConfigPort) MarshalJSON() ([]byte, error) {
 			}
 			m["variant2"] = raw
 		}
+	}
+	if u.Type != "" {
+		typeBytes, err := json.Marshal(string(u.Type))
+		if err != nil {
+			return nil, fmt.Errorf("marshaling RedisEEDatastoreConfigPort type: %w", err)
+		}
+		m["type"] = typeBytes
 	}
 	return json.Marshal(m)
 }

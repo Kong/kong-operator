@@ -165,10 +165,17 @@ func ParseProperty(name string, schemaRef *openapi3.SchemaRef, depth int, visite
 	// a property wraps a named schema in allOf to attach extra constraints.
 	// Treat it as a direct $ref so the generator emits the named type rather than
 	// falling back to `any`.
+	// unionSource supplies oneOf/anyOf/discriminator for the union handling
+	// below: a direct $ref is resolved into schemaValue, but an allOf-wrapped
+	// $ref is not, so a oneOf target would otherwise generate as a plain type.
+	unionSource := schemaValue
 	if len(schemaValue.AllOf) == 1 && prop.RefName == "" {
 		if entry := schemaValue.AllOf[0]; entry.Ref != "" {
 			prop.RefName = extractRefName(entry.Ref)
 			if v := entry.Value; v != nil {
+				if len(schemaValue.OneOf) == 0 && len(schemaValue.AnyOf) == 0 {
+					unionSource = v
+				}
 				if prop.Type == "" {
 					prop.Type = getSchemaType(v)
 				}
@@ -249,8 +256,8 @@ func ParseProperty(name string, schemaRef *openapi3.SchemaRef, depth int, visite
 	}
 
 	// Handle oneOf (union types).
-	if len(schemaValue.OneOf) > 0 {
-		for _, oneOfRef := range schemaValue.OneOf {
+	if len(unionSource.OneOf) > 0 {
+		for _, oneOfRef := range unionSource.OneOf {
 			// Extract the name from the $ref if available.
 			variantName := "Variant"
 			if oneOfRef.Ref != "" {
@@ -262,8 +269,8 @@ func ParseProperty(name string, schemaRef *openapi3.SchemaRef, depth int, visite
 	}
 
 	// Handle anyOf (union types without discriminator).
-	if len(schemaValue.AnyOf) > 0 {
-		for _, anyOfRef := range schemaValue.AnyOf {
+	if len(unionSource.AnyOf) > 0 {
+		for _, anyOfRef := range unionSource.AnyOf {
 			variantName := "Variant"
 			if anyOfRef.Ref != "" {
 				variantName = extractRefName(anyOfRef.Ref)
@@ -274,11 +281,11 @@ func ParseProperty(name string, schemaRef *openapi3.SchemaRef, depth int, visite
 	}
 
 	// Capture discriminator info.
-	if schemaValue.Discriminator != nil {
-		prop.Discriminator = schemaValue.Discriminator.PropertyName
-		if len(schemaValue.Discriminator.Mapping) > 0 {
-			prop.DiscriminatorMapping = make(map[string]string, len(schemaValue.Discriminator.Mapping))
-			for value, mappingRef := range schemaValue.Discriminator.Mapping {
+	if unionSource.Discriminator != nil {
+		prop.Discriminator = unionSource.Discriminator.PropertyName
+		if len(unionSource.Discriminator.Mapping) > 0 {
+			prop.DiscriminatorMapping = make(map[string]string, len(unionSource.Discriminator.Mapping))
+			for value, mappingRef := range unionSource.Discriminator.Mapping {
 				prop.DiscriminatorMapping[value] = extractRefName(mappingRef.Ref)
 			}
 		}

@@ -165,7 +165,7 @@ spec:
                                       permitted access.
                                     items:
                                       description: |-
-                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
@@ -203,7 +203,7 @@ spec:
                                       denied access.
                                     items:
                                       description: |-
-                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
@@ -236,7 +236,30 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  type:
+                                    description: Type designates the type of configuration.
+                                    enum:
+                                    - allow
+                                    - deny
+                                    - allowWhen
+                                    - denyWhen
+                                    type: string
                                 type: object
+                                x-kubernetes-validations:
+                                - message: allow must be set only when type is allow
+                                  rule: '!has(self.type) || (self.type == ''allow''
+                                    ? has(self.allow) : !has(self.allow))'
+                                - message: deny must be set only when type is deny
+                                  rule: '!has(self.type) || (self.type == ''deny''
+                                    ? has(self.deny) : !has(self.deny))'
+                                - message: allowWhen must be set only when type is
+                                    allowWhen
+                                  rule: '!has(self.type) || (self.type == ''allowWhen''
+                                    ? has(self.allowWhen) : !has(self.allowWhen))'
+                                - message: denyWhen must be set only when type is
+                                    denyWhen
+                                  rule: '!has(self.type) || (self.type == ''denyWhen''
+                                    ? has(self.denyWhen) : !has(self.denyWhen))'
                               authStrategies:
                                 description: |-
                                   List of auth strategies for granting access to the MCP server.
@@ -285,7 +308,7 @@ spec:
                                       permitted access.
                                     items:
                                       description: |-
-                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
@@ -323,7 +346,7 @@ spec:
                                       denied access.
                                     items:
                                       description: |-
-                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
@@ -434,7 +457,7 @@ spec:
                                       permitted access.
                                     items:
                                       description: |-
-                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
@@ -472,7 +495,7 @@ spec:
                                       denied access.
                                     items:
                                       description: |-
-                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
@@ -505,7 +528,30 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  type:
+                                    description: Type designates the type of configuration.
+                                    enum:
+                                    - allow
+                                    - deny
+                                    - allowWhen
+                                    - denyWhen
+                                    type: string
                                 type: object
+                                x-kubernetes-validations:
+                                - message: allow must be set only when type is allow
+                                  rule: '!has(self.type) || (self.type == ''allow''
+                                    ? has(self.allow) : !has(self.allow))'
+                                - message: deny must be set only when type is deny
+                                  rule: '!has(self.type) || (self.type == ''deny''
+                                    ? has(self.deny) : !has(self.deny))'
+                                - message: allowWhen must be set only when type is
+                                    allowWhen
+                                  rule: '!has(self.type) || (self.type == ''allowWhen''
+                                    ? has(self.allowWhen) : !has(self.allowWhen))'
+                                - message: denyWhen must be set only when type is
+                                    denyWhen
+                                  rule: '!has(self.type) || (self.type == ''denyWhen''
+                                    ? has(self.denyWhen) : !has(self.denyWhen))'
                               authStrategies:
                                 description: |-
                                   List of auth strategies for granting access to the MCP server.
@@ -555,7 +601,7 @@ spec:
                                       permitted access.
                                     items:
                                       description: |-
-                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
@@ -593,7 +639,7 @@ spec:
                                       denied access.
                                     items:
                                       description: |-
-                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
@@ -2109,7 +2155,7 @@ spec:
                                         permitted access.
                                       items:
                                         description: |-
-                                          AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                          AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                           object's Konnect name is used where the Konnect API accepts it.
                                         properties:
                                           kind:
@@ -2147,7 +2193,7 @@ spec:
                                         denied access.
                                       items:
                                         description: |-
-                                          AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                          AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                           object's Konnect name is used where the Konnect API accepts it.
                                         properties:
                                           kind:
@@ -3264,7 +3310,7 @@ spec:
                                         permitted access.
                                       items:
                                         description: |-
-                                          AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                          AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                           object's Konnect name is used where the Konnect API accepts it.
                                         properties:
                                           kind:
@@ -3302,7 +3348,7 @@ spec:
                                         denied access.
                                       items:
                                         description: |-
-                                          AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                          AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                           object's Konnect name is used where the Konnect API accepts it.
                                         properties:
                                           kind:
@@ -3564,7 +3610,7 @@ spec:
                                       permitted access.
                                     items:
                                       description: |-
-                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
@@ -3602,7 +3648,7 @@ spec:
                                       denied access.
                                     items:
                                       description: |-
-                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
@@ -3635,7 +3681,30 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  type:
+                                    description: Type designates the type of configuration.
+                                    enum:
+                                    - allow
+                                    - deny
+                                    - allowWhen
+                                    - denyWhen
+                                    type: string
                                 type: object
+                                x-kubernetes-validations:
+                                - message: allow must be set only when type is allow
+                                  rule: '!has(self.type) || (self.type == ''allow''
+                                    ? has(self.allow) : !has(self.allow))'
+                                - message: deny must be set only when type is deny
+                                  rule: '!has(self.type) || (self.type == ''deny''
+                                    ? has(self.deny) : !has(self.deny))'
+                                - message: allowWhen must be set only when type is
+                                    allowWhen
+                                  rule: '!has(self.type) || (self.type == ''allowWhen''
+                                    ? has(self.allowWhen) : !has(self.allowWhen))'
+                                - message: denyWhen must be set only when type is
+                                    denyWhen
+                                  rule: '!has(self.type) || (self.type == ''denyWhen''
+                                    ? has(self.denyWhen) : !has(self.denyWhen))'
                               authStrategies:
                                 description: |-
                                   List of auth strategies for granting access to the MCP server.
@@ -3684,7 +3753,7 @@ spec:
                                       permitted access.
                                     items:
                                       description: |-
-                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
@@ -3722,7 +3791,7 @@ spec:
                                       denied access.
                                     items:
                                       description: |-
-                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
@@ -3833,7 +3902,7 @@ spec:
                                       permitted access.
                                     items:
                                       description: |-
-                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
@@ -3871,7 +3940,7 @@ spec:
                                       denied access.
                                     items:
                                       description: |-
-                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
@@ -3904,7 +3973,30 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  type:
+                                    description: Type designates the type of configuration.
+                                    enum:
+                                    - allow
+                                    - deny
+                                    - allowWhen
+                                    - denyWhen
+                                    type: string
                                 type: object
+                                x-kubernetes-validations:
+                                - message: allow must be set only when type is allow
+                                  rule: '!has(self.type) || (self.type == ''allow''
+                                    ? has(self.allow) : !has(self.allow))'
+                                - message: deny must be set only when type is deny
+                                  rule: '!has(self.type) || (self.type == ''deny''
+                                    ? has(self.deny) : !has(self.deny))'
+                                - message: allowWhen must be set only when type is
+                                    allowWhen
+                                  rule: '!has(self.type) || (self.type == ''allowWhen''
+                                    ? has(self.allowWhen) : !has(self.allowWhen))'
+                                - message: denyWhen must be set only when type is
+                                    denyWhen
+                                  rule: '!has(self.type) || (self.type == ''denyWhen''
+                                    ? has(self.denyWhen) : !has(self.denyWhen))'
                               authStrategies:
                                 description: |-
                                   List of auth strategies for granting access to the MCP server.
@@ -3954,7 +4046,7 @@ spec:
                                       permitted access.
                                     items:
                                       description: |-
-                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
@@ -3992,7 +4084,7 @@ spec:
                                       denied access.
                                     items:
                                       description: |-
-                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
@@ -5375,7 +5467,7 @@ spec:
                                       permitted access.
                                     items:
                                       description: |-
-                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
@@ -5413,7 +5505,7 @@ spec:
                                       denied access.
                                     items:
                                       description: |-
-                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
@@ -5446,7 +5538,30 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  type:
+                                    description: Type designates the type of configuration.
+                                    enum:
+                                    - allow
+                                    - deny
+                                    - allowWhen
+                                    - denyWhen
+                                    type: string
                                 type: object
+                                x-kubernetes-validations:
+                                - message: allow must be set only when type is allow
+                                  rule: '!has(self.type) || (self.type == ''allow''
+                                    ? has(self.allow) : !has(self.allow))'
+                                - message: deny must be set only when type is deny
+                                  rule: '!has(self.type) || (self.type == ''deny''
+                                    ? has(self.deny) : !has(self.deny))'
+                                - message: allowWhen must be set only when type is
+                                    allowWhen
+                                  rule: '!has(self.type) || (self.type == ''allowWhen''
+                                    ? has(self.allowWhen) : !has(self.allowWhen))'
+                                - message: denyWhen must be set only when type is
+                                    denyWhen
+                                  rule: '!has(self.type) || (self.type == ''denyWhen''
+                                    ? has(self.denyWhen) : !has(self.denyWhen))'
                               authStrategies:
                                 description: |-
                                   List of auth strategies for granting access to the MCP server.
@@ -5495,7 +5610,7 @@ spec:
                                       permitted access.
                                     items:
                                       description: |-
-                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
@@ -5533,7 +5648,7 @@ spec:
                                       denied access.
                                     items:
                                       description: |-
-                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
@@ -5644,7 +5759,7 @@ spec:
                                       permitted access.
                                     items:
                                       description: |-
-                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
@@ -5682,7 +5797,7 @@ spec:
                                       denied access.
                                     items:
                                       description: |-
-                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
@@ -5715,7 +5830,30 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  type:
+                                    description: Type designates the type of configuration.
+                                    enum:
+                                    - allow
+                                    - deny
+                                    - allowWhen
+                                    - denyWhen
+                                    type: string
                                 type: object
+                                x-kubernetes-validations:
+                                - message: allow must be set only when type is allow
+                                  rule: '!has(self.type) || (self.type == ''allow''
+                                    ? has(self.allow) : !has(self.allow))'
+                                - message: deny must be set only when type is deny
+                                  rule: '!has(self.type) || (self.type == ''deny''
+                                    ? has(self.deny) : !has(self.deny))'
+                                - message: allowWhen must be set only when type is
+                                    allowWhen
+                                  rule: '!has(self.type) || (self.type == ''allowWhen''
+                                    ? has(self.allowWhen) : !has(self.allowWhen))'
+                                - message: denyWhen must be set only when type is
+                                    denyWhen
+                                  rule: '!has(self.type) || (self.type == ''denyWhen''
+                                    ? has(self.denyWhen) : !has(self.denyWhen))'
                               authStrategies:
                                 description: |-
                                   List of auth strategies for granting access to the MCP server.
@@ -5765,7 +5903,7 @@ spec:
                                       permitted access.
                                     items:
                                       description: |-
-                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
@@ -5803,7 +5941,7 @@ spec:
                                       denied access.
                                     items:
                                       description: |-
-                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                         object's Konnect name is used where the Konnect API accepts it.
                                       properties:
                                         kind:
@@ -7319,7 +7457,7 @@ spec:
                                         permitted access.
                                       items:
                                         description: |-
-                                          AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                          AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                           object's Konnect name is used where the Konnect API accepts it.
                                         properties:
                                           kind:
@@ -7357,7 +7495,7 @@ spec:
                                         denied access.
                                       items:
                                         description: |-
-                                          AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                          AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                           object's Konnect name is used where the Konnect API accepts it.
                                         properties:
                                           kind:
@@ -8868,7 +9006,7 @@ spec:
                                         permitted access.
                                       items:
                                         description: |-
-                                          AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                          AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                           object's Konnect name is used where the Konnect API accepts it.
                                         properties:
                                           kind:
@@ -8906,7 +9044,7 @@ spec:
                                         denied access.
                                       items:
                                         description: |-
-                                          AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                          AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
                                           object's Konnect name is used where the Konnect API accepts it.
                                         properties:
                                           kind:
