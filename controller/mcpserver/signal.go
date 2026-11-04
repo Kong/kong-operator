@@ -7,7 +7,7 @@ import (
 	"time"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
-	"github.com/jpillora/backoff"
+	"github.com/cenkalti/backoff/v5"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -189,10 +189,10 @@ func (s *SignalManager) mcpCPSignalRoutine(ctx context.Context, cp *konnectv1alp
 	logger := log.GetLogger(ctx, "mcpserver-signal", s.loggingMode)
 	offset := new(initialOffset)
 
-	b := &backoff.Backoff{
-		Min:    time.Second,
-		Max:    time.Minute,
-		Factor: 2,
+	b := &backoff.ExponentialBackOff{
+		InitialInterval: time.Second,
+		MaxInterval:     time.Minute,
+		Multiplier:      2,
 	}
 
 	for {
@@ -218,7 +218,7 @@ func (s *SignalManager) mcpCPSignalRoutine(ctx context.Context, cp *konnectv1alp
 		if err != nil {
 			log.Error(logger, err, "failed to get MCP server signal", "name", cp.Name, "namespace", cp.Namespace)
 			select {
-			case <-time.After(b.Duration()):
+			case <-time.After(b.NextBackOff()):
 			case <-resetCh:
 				offset = new(initialOffset)
 			case <-ctx.Done():
