@@ -53,7 +53,21 @@ spec:
     - name: 2-Assert-owned-resources
       try:
         - assert:
-            file: 02-assert-owned-resources.yaml
+            file: 02-assert-cp-client-ca-bundle.yaml
+        - assert:
+            file: 02-assert-cp-server-ca-bundle.yaml
+        - assert:
+            file: 02-assert-api-ca-bundle.yaml
+        - assert:
+            file: 02-assert-api-tls.yaml
+        - assert:
+            file: 02-assert-cp-tls.yaml
+        - assert:
+            file: 02-assert-api-service.yaml
+        - assert:
+            file: 02-assert-cp-service.yaml
+        - assert:
+            file: 02-assert-deployment.yaml
         - script:
             env:
               - name: NAMESPACE
@@ -63,9 +77,15 @@ spec:
             content: ../gwadmin-shared/gwadmin.sh gwadmin-uid "$NAME"
             outputs:
               - name: uid
-                value: ($stdout)
+                value: (json_parse($stdout).uid)
         - assert:
-            file: 02-assert-private-secrets.yaml
+            file: 02-assert-private-api-ca.yaml
+        - assert:
+            file: 02-assert-private-cp-server-ca.yaml
+        - assert:
+            file: 02-assert-private-operator-client-tls.yaml
+        - assert:
+            file: 02-assert-private-cp-client-ca.yaml
         # The key of the cp client CA never lands in the GWAdmin namespace,
         # under any name.
         - script:
@@ -98,7 +118,7 @@ spec:
             content: ../gwadmin-shared/gwadmin.sh secret-json "$SECRET"
             outputs:
               - name: before
-                value: (json_parse($stdout))
+                value: (json_parse($stdout).secret)
         - patch:
             resource:
               apiVersion: v1
@@ -150,14 +170,28 @@ spec:
             content: ../gwadmin-shared/gwadmin.sh gwadmin-uid "$NAME"
             outputs:
               - name: uid
-                value: ($stdout)
+                value: (json_parse($stdout).uid)
         - delete:
             ref:
               apiVersion: gateway-operator.konghq.com/v1alpha1
               kind: GWAdmin
               name: ($gwadmin_name)
         - error:
-            file: 06-error-owned-resources.yaml
+            file: 06-error-deployment.yaml
+        - error:
+            file: 06-error-cp-client-ca-bundle.yaml
+        - error:
+            file: 06-error-cp-server-ca-bundle.yaml
+        - error:
+            file: 06-error-api-ca-bundle.yaml
+        - error:
+            file: 06-error-api-tls.yaml
+        - error:
+            file: 06-error-cp-tls.yaml
+        - error:
+            file: 06-error-api-service.yaml
+        - error:
+            file: 06-error-cp-service.yaml
         - script:
             env:
               - name: NAMESPACE

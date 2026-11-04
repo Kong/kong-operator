@@ -25,7 +25,7 @@ _on_exit() { [ $? -ne 0 ] && cat "${_STDERR}" >&2; rm -f "${_STDERR}"; }
 trap _on_exit EXIT
 
 cat scripts/kafkactl_roundtrip_inner.sh | kubectl run "${POD_NAME}" \
-  --image=deviceinsight/kafkactl:latest \
+  --image=deviceinsight/kafkactl:v5.21.0 \
   --rm -i --restart=Never \
   --env="GATEWAY_ADDR=${GATEWAY_ADDR}" \
   --env="TOPIC=${TOPIC}" \

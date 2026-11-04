@@ -1,0 +1,8 @@
+# The listener policy listener_policy_name is pushed to gw-admin.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListenerPolicy
+metadata:
+  name: ($listener_policy_name)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: "True"

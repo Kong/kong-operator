@@ -3,7 +3,7 @@
 # Mirrors the scenario from the official docs:
 # https://developer.konghq.com/event-gateway/configure-sni-routing/
 #
-# Provisions an in-namespace 3-broker Apache Kafka cluster (KRaft, no Strimzi),
+# Uses the shared 3-broker Apache Kafka cluster (fixtures/onpremeventgateway),
 # configures two virtual clusters (analytics, payments) behind a single keg
 # listener port (19092), and validates SNI-based routing + namespace isolation by:
 #
@@ -117,12 +117,6 @@ spec:
       use:
         template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
 
-    # Kafka (3-broker KRaft, no Strimzi).
-    - name: Create-kafka-cluster
-      description: Deploy 3-broker Apache Kafka cluster (KRaft, combined mode).
-      use:
-        template: ../../common/_step_templates/apply-assert-kafka-cluster.yaml
-
     # Event Gateway control plane, data plane, backend cluster, virtual clusters,
     # and listener. Both VCs have additional.topics for the shared user_actions topic.
     - name: Create-event-gateway-resources
@@ -142,7 +136,8 @@ spec:
     - name: Seed-kafka-topics
       description: |
         Create all test topics directly in Kafka via the in-cluster bootstrap
-        Service (kafka-bootstrap.<ns>.svc:9092) before validating SNI routing.
+        Service (kafka-bootstrap.kafka-shared.svc:9092) before validating SNI
+        routing.
       try:
         - script:
             env:

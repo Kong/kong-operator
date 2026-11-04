@@ -1,0 +1,10 @@
+# The OnPremEventGateway gateway_name, served by the GWAdmin of the namespace
+# admin_namespace.
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: OnPremEventGateway
+metadata:
+  name: ($gateway_name)
+spec:
+  gwAdminRef:
+    name: ($gwadmin_name)
+    namespace: ($admin_namespace)

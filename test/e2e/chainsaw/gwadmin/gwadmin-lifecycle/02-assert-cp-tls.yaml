@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: (join('-', [($gwadmin_name), 'cp-tls']))
+  labels:
+    gateway.konghq.com/secret-provisioning: automatic
+type: kubernetes.io/tls

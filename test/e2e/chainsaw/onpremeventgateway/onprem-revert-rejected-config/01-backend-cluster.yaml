@@ -1,0 +1,21 @@
+# The only entity of the gateway. No data plane or Kafka cluster is needed:
+# the test looks at what gw-admin accepts, not at traffic.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayBackendCluster
+metadata:
+  name: ($backend_cluster_name)
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: ($gateway_name)
+  apiSpec:
+    name: ($backend_cluster_name)
+    bootstrapServers:
+      - kafka.example.svc:9092
+    authentication:
+      type: anonymous
+      anonymous: {}
+    insecureAllowAnonymousVirtualClusterAuth: Enabled
+    tls:
+      enabled: Disabled

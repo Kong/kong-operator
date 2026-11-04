@@ -75,11 +75,11 @@ spec:
             content: ../gwadmin-shared/gwadmin.sh template-annotations "$GWADMIN"
             check:
               ($error): ~
-              (json_parse($stdout)."konghq.com/gw-admin-tls-checksum" != null): true
-              (json_parse($stdout)."konghq.com/gw-admin-trust-checksum" != null): true
+              (json_parse($stdout).annotations."konghq.com/gw-admin-tls-checksum" != null): true
+              (json_parse($stdout).annotations."konghq.com/gw-admin-trust-checksum" != null): true
             outputs:
               - name: template_annotations
-                value: (json_parse($stdout))
+                value: (json_parse($stdout).annotations)
         - patch:
             resource:
               apiVersion: gateway-operator.konghq.com/v1alpha1

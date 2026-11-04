@@ -1,0 +1,103 @@
+# The Event Gateway entities of the OnPremEventGateway gateway_name of the
+# on-prem e2e tests: a backend cluster to the shared Kafka cluster
+# (fixtures/onpremeventgateway), a virtual cluster keeping the topics of the
+# test apart with a prefix, a consume policy injecting injected_header_key,
+# and a listener forwarding the ports of the Kafka Service of the data plane
+# keg_dp_name to it.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayBackendCluster
+metadata:
+  name: ($backend_cluster_name)
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: ($gateway_name)
+  apiSpec:
+    name: ($backend_cluster_name)
+    bootstrapServers:
+      - kafka-bootstrap.kafka-shared.svc:9092
+    authentication:
+      type: anonymous
+      anonymous: {}
+    insecureAllowAnonymousVirtualClusterAuth: Enabled
+    tls:
+      enabled: Disabled
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualCluster
+metadata:
+  name: ($virtual_cluster_name)
+spec:
+  eventGatewayBackendClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($backend_cluster_name)
+  apiSpec:
+    name: ($virtual_cluster_name)
+    dnsLabel: vcluster-1
+    # The topics and consumer groups of the test, on the shared Kafka cluster.
+    namespace:
+      mode: hide_prefix
+      prefix: (join('', [($namespace), '_']))
+    aclMode: passthrough
+    authentication:
+      - type: anonymous
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayVirtualClusterConsumePolicy
+metadata:
+  name: ($consume_policy_name)
+spec:
+  eventGatewayVirtualClusterRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($virtual_cluster_name)
+  apiSpec:
+    type: modifyHeaders
+    modifyHeaders:
+      name: add-test-header
+      config:
+        actions:
+          - op: set
+            set:
+              key: ($injected_header_key)
+              value: ($injected_header_value)
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListener
+metadata:
+  name: ($listener_name)
+spec:
+  parentRef:
+    group: eventgateway.konghq.com
+    kind: OnPremEventGateway
+    name: ($gateway_name)
+  apiSpec:
+    name: ($listener_name)
+    addresses:
+      - "0.0.0.0"
+    ports:
+      - "19092-19095"
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: EventGatewayListenerPolicy
+metadata:
+  name: ($listener_policy_name)
+spec:
+  eventGatewayListenerRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($listener_name)
+  apiSpec:
+    type: forwardToVirtualCluster
+    forwardToVirtualCluster:
+      name: forward
+      config:
+        type: portMapping
+        portMapping:
+          bootstrapPort: at_start
+          # The Kafka Service of the data plane, in the cluster.
+          advertisedHost: (join('', [($keg_dp_name), '-kafka.', ($namespace), '.svc']))
+          destination:
+            name: ($virtual_cluster_name)

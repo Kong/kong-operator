@@ -18,7 +18,7 @@ set -euo pipefail
 : "${HEADER_VALUE:?must be set}"
 : "${RECORD_VALUE:?must be set}"
 
-IMG="deviceinsight/kafkactl:latest"
+IMG="deviceinsight/kafkactl:v5.21.0"
 CFG=$(mktemp)
 trap 'rm -f "${CFG}"' EXIT
 cat > "${CFG}" <<EOF

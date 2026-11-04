@@ -1,12 +1,12 @@
 # Template for creating and asserting an EventGatewayBackendCluster pointing
-# at an in-namespace Kafka cluster (e.g. the one deployed by
-# apply-assert-kafka-cluster.yaml), with anonymous/no-TLS authentication.
+# at the shared Kafka cluster of the Event Gateway suites (namespace
+# kafka-shared, see fixtures/onpremeventgateway/prereq.sh), with
+# anonymous/no-TLS authentication.
 #
 # Required bindings:
 #   - backend_cluster_name: Name of the EventGatewayBackendCluster to create.
 #   - namespace: Namespace where the EventGatewayBackendCluster will be
-#     created, and where the target Kafka cluster's bootstrap Service
-#     (kafka-bootstrap) lives.
+#     created.
 #   - keg_cp_name: Name of the KonnectEventGateway it attaches to (same
 #     namespace).
 apiVersion: chainsaw.kyverno.io/v1alpha1
@@ -29,9 +29,9 @@ spec:
                 name: ($keg_cp_name)
             apiSpec:
               name: ($backend_cluster_name)
-              description: chainsaw e2e backend cluster (in-namespace Kafka)
+              description: chainsaw e2e backend cluster (shared Kafka)
               bootstrapServers:
-                - (join('', ['kafka-bootstrap.', ($namespace), '.svc:9092']))
+                - kafka-bootstrap.kafka-shared.svc:9092
               authentication:
                 type: anonymous
                 anonymous: {}

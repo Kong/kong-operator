@@ -1,0 +1,114 @@
+# A listener of an OnPremEventGateway terminating TLS and requiring a client
+# certificate a TLS trust bundle trusts.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-mtls-listener
+spec:
+  description: |
+    An OnPremEventGateway whose listener terminates TLS with a server
+    certificate from a Secret, and requires a client certificate the TLS trust
+    bundle of a client CA, from a Secret too, trusts:
+    1. The trust bundle and the listener policies are pushed to gw-admin.
+    2. keg accepts a Kafka client with a certificate from the client CA.
+    3. keg rejects a client without a certificate, and one with a certificate
+       from another CA.
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_name
+      value: gateway
+    - name: keg_dp_name
+      value: keg
+    - name: work_dir
+      value: (join('', ['/tmp/onprem-e2e-', ($namespace)]))
+
+  steps:
+    - name: 1-Mtls-listener-pushed
+      try:
+        - script:
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: KEG_DP
+                value: ($keg_dp_name)
+              - name: WORK_DIR
+                value: ($work_dir)
+            content: |
+              set -e
+              ../../gwadmin/gwadmin-shared/gwadmin.sh gen-ca server-ca "$WORK_DIR/server-ca"
+              ../../gwadmin/gwadmin-shared/gwadmin.sh put-server-cert server-tls "$WORK_DIR/server-ca" "$KEG_DP-kafka.$NAMESPACE.svc" "$WORK_DIR/server"
+              ../../gwadmin/gwadmin-shared/gwadmin.sh gen-ca client-ca "$WORK_DIR/client-ca"
+              ../../gwadmin/gwadmin-shared/gwadmin.sh put-tls-secret client-ca "$WORK_DIR/client-ca"
+              ../onprem-shared/onprem.sh gen-client-cert "$WORK_DIR/client-ca" client "$WORK_DIR/client"
+              ../../gwadmin/gwadmin-shared/gwadmin.sh gen-ca rogue-ca "$WORK_DIR/rogue-ca"
+              ../onprem-shared/onprem.sh gen-client-cert "$WORK_DIR/rogue-ca" rogue "$WORK_DIR/rogue"
+        - apply:
+            file: ../onprem-shared/gateway.yaml
+        - apply:
+            file: ../onprem-shared/keg-dataplane.yaml
+        - apply:
+            file: 01-entities.yaml
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayTLSTrustBundle
+              metadata:
+                name: client-ca
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListenerPolicy
+              metadata:
+                name: mtls
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+      cleanup:
+        # Holds CA keys: removed whatever the outcome of the test.
+        - script:
+            env: *env
+            content: rm -rf "$WORK_DIR"
+
+    - name: 2-Client-certificate-from-the-trusted-ca-accepted
+      try:
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../onprem-shared/onprem.sh mtls-check "$KEG_DP" "$WORK_DIR/server-ca" "$WORK_DIR/client" ok
+
+    - name: 3-Other-clients-rejected
+      try:
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh mtls-check "$KEG_DP" "$WORK_DIR/server-ca" none rejected
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../onprem-shared/onprem.sh mtls-check "$KEG_DP" "$WORK_DIR/server-ca" "$WORK_DIR/rogue" rejected
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

@@ -1,0 +1,10 @@
+# The data plane keg_dp_name is Ready: its client certificate is registered on
+# gw-admin, and its Deployment pulls the configuration from the cp endpoint of
+# the GWAdmin.
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: KegDataPlane
+metadata:
+  name: ($keg_dp_name)
+status:
+  (conditions[?type == 'Ready']):
+    - status: "True"

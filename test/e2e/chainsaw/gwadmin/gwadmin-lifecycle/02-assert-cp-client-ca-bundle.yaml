@@ -1,0 +1,8 @@
+# What the cp listener verifies the data plane client certificates with.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: (join('-', [($gwadmin_name), 'cp-client-ca-bundle']))
+  labels:
+    gateway.konghq.com/secret-provisioning: automatic
+type: Opaque

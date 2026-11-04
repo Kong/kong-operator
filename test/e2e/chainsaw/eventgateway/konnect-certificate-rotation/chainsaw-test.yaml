@@ -1,0 +1,227 @@
+# Konnect Event Gateway: a Manual client certificate of a data plane rotated
+# in place, with traffic flowing all along.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-konnect-certificate-rotation
+spec:
+  description: |
+    A KegDataPlane of a KonnectEventGateway, against the real Konnect API,
+    with a Manual client certificate:
+    1. The data plane is Ready, and keg proxies produce and consume.
+    2. Records are produced through keg, each with a new connection, while the
+       Secret of the certificate gets a new keypair, in place: the new
+       certificate is registered on Konnect, the Deployment rolls onto it, and
+       not one record fails; every one is consumed with the header the
+       consume policy injects.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: keg_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: keg_dp_name
+      value: keg
+    - name: backend_cluster_name
+      value: (join('-', [($test_name), 'backend']))
+    - name: virtual_cluster_name
+      value: (join('-', [($test_name), 'vcluster']))
+    - name: listener_name
+      value: (join('-', [($test_name), 'listener']))
+    - name: dns_label
+      value: vcluster-1
+    - name: listener_ports
+      value:
+        - "19092-19095"
+    - name: cert_secret_name
+      value: keg-cert
+    - name: cert_hostname
+      value: (join('', [($test_name), '.example.com']))
+    - name: injected_header_key
+      value: My-New-Header
+    - name: injected_header_value
+      value: header_value
+
+  steps:
+    - name: Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: Create-konnect-eventgateway
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectEventGateway.yaml
+    - name: Create-backend-cluster
+      use:
+        template: ../../common/_step_templates/apply-assert-eventGatewayBackendCluster.yaml
+    - name: Create-virtual-cluster
+      use:
+        template: ../../common/_step_templates/apply-assert-eventGatewayVirtualCluster.yaml
+    - name: Create-listener
+      use:
+        template: ../../common/_step_templates/apply-assert-eventGatewayListener.yaml
+
+    - name: 1-Data-plane-with-a-manual-certificate
+      try:
+        - script:
+            env:
+              - name: HOSTNAME
+                value: ($cert_hostname)
+            content: bash ../../common/scripts/generate_tls_certificate.sh
+            outputs:
+              - name: cert_v1
+                value: (json_parse($stdout).cert)
+              - name: key_v1
+                value: (json_parse($stdout).key)
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($cert_secret_name)
+                labels:
+                  konghq.com/secret: "true"
+              type: Opaque
+              stringData:
+                tls.crt: ($cert_v1)
+                tls.key: ($key_v1)
+        - apply:
+            file: 01-dataplane.yaml
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              metadata:
+                name: modify-headers
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterPolicy
+              metadata:
+                name: allow-all
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - script:
+            env: &env
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: KEG_DP
+                value: ($keg_dp_name)
+              - name: HEADER_KEY
+                value: ($injected_header_key)
+              - name: HEADER_VALUE
+                value: ($injected_header_value)
+            timeout: 5m
+            content: ../../onpremeventgateway/onprem-shared/onprem.sh roundtrip "$KEG_DP" "$NAMESPACE-before-rotation" hello-before-rotation
+
+    - name: 2-Certificate-rotated-in-place-without-downtime
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DEPLOYMENT_NAME
+                value: ($keg_dp_name)
+              - name: ANNOTATION_KEY
+                value: konghq.com/keg-dp-cert-checksum
+            content: bash ../../common/scripts/get_deployment_pod_annotation.sh
+            outputs:
+              - name: checksum_before
+                value: (json_parse($stdout).value)
+        - script:
+            env: *env
+            timeout: 4m
+            content: ../../onpremeventgateway/onprem-shared/onprem.sh traffic-start traffic "$KEG_DP" "$NAMESPACE-during-rotation"
+        - script:
+            env:
+              - name: HOSTNAME
+                value: ($cert_hostname)
+            content: bash ../../common/scripts/generate_tls_certificate.sh
+            outputs:
+              - name: cert_v2
+                value: (json_parse($stdout).cert)
+              - name: key_v2
+                value: (json_parse($stdout).key)
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($cert_secret_name)
+                labels:
+                  konghq.com/secret: "true"
+              type: Opaque
+              stringData:
+                tls.crt: ($cert_v2)
+                tls.key: ($key_v2)
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DEPLOYMENT_NAME
+                value: ($keg_dp_name)
+              - name: ANNOTATION_KEY
+                value: konghq.com/keg-dp-cert-checksum
+              - name: BEFORE_VALUE
+                value: ($checksum_before)
+            timeout: 5m
+            content: bash ../../common/scripts/wait_for_deployment_pod_annotation_change.sh
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../../onpremeventgateway/onprem-shared/onprem.sh wait-rolled-out "$KEG_DP" 240
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"
+        - script:
+            env: *env
+            timeout: 5m
+            content: ../../onpremeventgateway/onprem-shared/onprem.sh roundtrip "$KEG_DP" "$NAMESPACE-after-rotation" hello-after-rotation
+        - script:
+            env: *env
+            timeout: 3m
+            content: ../../onpremeventgateway/onprem-shared/onprem.sh traffic-check traffic
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

@@ -1,0 +1,42 @@
+# The data plane keg_dp_name of the OnPremEventGateway gateway_name, with the
+# Manual client certificate of the Secret keg-cert, exposing the ports the
+# listener of ../onprem-shared/entities.yaml forwards.
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: KegDataPlane
+metadata:
+  name: ($keg_dp_name)
+spec:
+  # Readiness probed every second, so the pod turns Ready without waiting for
+  # the default 10s period, and unready after 30s of failures, as by default.
+  deployment:
+    podTemplateSpec:
+      spec:
+        containers:
+          - name: keg
+            readinessProbe:
+              periodSeconds: 1
+              failureThreshold: 30
+  controlPlaneRef:
+    type: onpremNamespacedRef
+    onpremNamespacedRef:
+      name: ($gateway_name)
+  certificateSecret:
+    provisioning: Manual
+    secretRef:
+      name: keg-cert
+  network:
+    services:
+      kafka:
+        ports:
+          - name: kafka
+            port: 19092
+            targetPort: 19092
+          - name: kafka-broker-0
+            port: 19093
+            targetPort: 19093
+          - name: kafka-broker-1
+            port: 19094
+            targetPort: 19094
+          - name: kafka-broker-2
+            port: 19095
+            targetPort: 19095

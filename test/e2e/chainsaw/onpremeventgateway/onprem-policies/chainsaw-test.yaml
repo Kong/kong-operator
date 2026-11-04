@@ -1,0 +1,113 @@
+# Policies of an OnPremEventGateway enforced by keg: ACLs, and encryption with
+# a static key.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: eventgateway-onprem-policies
+spec:
+  description: |
+    An OnPremEventGateway whose virtual cluster enforces ACLs on the gateway,
+    encrypts the records it produces with a static key, read from a Secret,
+    and decrypts those it consumes:
+    1. Every policy is pushed to gw-admin (Programmed), the static key with
+       the value of its Secret.
+    2. keg denies writing to blocked-topic, which the ACL policy forbids.
+    3. A record produced through keg is handed back as it was through keg,
+       while Kafka holds it encrypted.
+  bindings:
+    - name: gwadmin_name
+      value: gw-admin
+    - name: gateway_name
+      value: gateway
+    - name: keg_dp_name
+      value: keg
+
+  steps:
+    - name: 1-Policies-pushed
+      try:
+        - apply:
+            file: ../onprem-shared/gateway.yaml
+        - apply:
+            file: ../onprem-shared/keg-dataplane.yaml
+        - apply:
+            file: 01-entities.yaml
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayStaticKey
+              metadata:
+                name: encryption-key
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterPolicy
+              metadata:
+                name: acls
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterProducePolicy
+              metadata:
+                name: encrypt
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualClusterConsumePolicy
+              metadata:
+                name: decrypt
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: "True"
+
+    - name: 2-Acls-enforced
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: KEG_DP
+                value: ($keg_dp_name)
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh acl-blocked "$KEG_DP" blocked-topic
+
+    - name: 3-Records-encrypted-at-rest
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: KEG_DP
+                value: ($keg_dp_name)
+            timeout: 5m
+            content: ../onprem-shared/onprem.sh encryption-check "$KEG_DP" encrypted
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: ($test.metadata.name)
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
