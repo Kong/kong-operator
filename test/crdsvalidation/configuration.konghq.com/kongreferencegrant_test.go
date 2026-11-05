@@ -117,6 +117,10 @@ func TestKongReferenceGrant(t *testing.T) {
 				TestObject: grantFrom("EventGatewayListenerPolicy"),
 			},
 			{
+				Name:       "from an EventGatewayDataPlaneCertificate works",
+				TestObject: grantFrom("EventGatewayDataPlaneCertificate"),
+			},
+			{
 				// Only the Event Gateway kinds pushed to gw-admin that read
 				// Secrets are supported.
 				Name:                 "from another Event Gateway kind is rejected",
