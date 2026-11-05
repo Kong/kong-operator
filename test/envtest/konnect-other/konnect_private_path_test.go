@@ -4,14 +4,13 @@ import (
 	"crypto/tls"
 	"net/http"
 	"strings"
-
-	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -127,7 +126,10 @@ func TestKonnectPrivatePath(t *testing.T) {
 		}
 
 		t.Log("Checking the fake cannot stand in for a public host")
-		_, err := fake.HTTPClient().Get("https://global.api.konghq.com/v3/organizations/me")
+		resp, err := fake.HTTPClient().Get("https://global.api.konghq.com/v3/organizations/me")
+		if resp != nil {
+			defer resp.Body.Close()
+		}
 		require.Error(t, err, "a call to a host outside the private endpoints must fail")
 		var certErr *tls.CertificateVerificationError
 		assert.ErrorAs(t, err, &certErr, "the failure must be the certificate verification")
