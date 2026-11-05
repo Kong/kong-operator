@@ -310,3 +310,146 @@ func Test_resolveControlPlane(t *testing.T) {
 		})
 	}
 }
+
+func Test_resolveControlPlane_CertificateConditions(t *testing.T) {
+	const (
+		ns       = "test-ns"
+		onpremNM = "my-onprem-aigwcp"
+	)
+	registration := &CertificateRegistrationConditions{
+		Type:                     "CertificateRegistered",
+		RegisteredReason:         "Registered",
+		RegistrationFailedReason: "RegistrationFailed",
+		NotProgrammedReason:      "NotProgrammed",
+		Target:                   "the control plane",
+	}
+	notReady := func(context.Context, client.Client, ControlPlaneObject) (any, error) {
+		return nil, &DependenciesNotReadyError{Message: "the CA isn't published yet"}
+	}
+	// newAIGWDP returns a data plane whose certificate was provisioned and
+	// registered before the dependencies of its control plane went missing.
+	newAIGWDP := func() *aigatewayv1alpha1.AIGatewayDataPlane {
+		return &aigatewayv1alpha1.AIGatewayDataPlane{
+			Namespace: ns, Name: "my-dp", Generation: 2,
+			Status: aigatewayv1alpha1.AIGatewayDataPlaneStatus{Conditions: []metav1.Condition{
+				{Type: registration.Type, Status: metav1.ConditionTrue, Reason: registration.RegisteredReason},
+				{Type: testConfig.Conditions.CertificateProvisionedType, Status: metav1.ConditionTrue, Reason: testConfig.Conditions.CertificateProvisionedReason},
+			}},
+		}
+	}
+	onprem := &aigatewayv1alpha1.OnPremAIGateway{
+		Namespace: ns, Name: onpremNM,
+		Status: aigatewayv1alpha1.OnPremAIGatewayStatus{Conditions: []metav1.Condition{{
+			Type: string(aigatewayv1alpha1.ReadyType), Status: metav1.ConditionTrue, Reason: "Ready",
+		}}},
+	}
+	resolveNamed := func(t *testing.T, kind ControlPlaneKindConfig, name string) (*aigatewayv1alpha1.AIGatewayDataPlane, error) {
+		t.Helper()
+		cfg := testConfig
+		cfg.ControlPlanes = []ControlPlaneKindConfig{testControlPlaneKind, kind}
+		cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(onprem).Build()
+		r := &testReconciler{Client: cl, Config: cfg}
+		aigwdp := newAIGWDP()
+		_, err := r.resolveControlPlane(t.Context(), zap.New(), aigwdp, ControlPlaneRef{Kind: kind.Kind, Name: name})
+		return aigwdp, err
+	}
+	resolve := func(t *testing.T, kind ControlPlaneKindConfig) (*aigatewayv1alpha1.AIGatewayDataPlane, error) {
+		t.Helper()
+		return resolveNamed(t, kind, onpremNM)
+	}
+	assertCondition := func(t *testing.T, aigwdp *aigatewayv1alpha1.AIGatewayDataPlane, condType string, status metav1.ConditionStatus, reason, message string) {
+		t.Helper()
+		cond := apimeta.FindStatusCondition(aigwdp.Status.Conditions, condType)
+		require.NotNil(t, cond, condType)
+		assert.Equal(t, status, cond.Status, condType)
+		assert.Equal(t, reason, cond.Reason, condType)
+		if message != "" {
+			assert.Equal(t, message, cond.Message, condType)
+		}
+		assert.Equal(t, aigwdp.Generation, cond.ObservedGeneration, condType)
+	}
+
+	t.Run("dependencies not ready make the certificate conditions of a kind registering it Unknown", func(t *testing.T) {
+		kind := testOnPremControlPlaneKind
+		kind.Dependencies = notReady
+		kind.CertificateRegistration = registration
+		aigwdp, err := resolve(t, kind)
+		require.ErrorIs(t, err, errControlPlaneNotReady)
+		require.NotErrorIs(t, err, errControlPlaneGone, "a dependency not ready yet may become ready")
+		assertCondition(t, aigwdp, kind.Conditions.ResolvedType, metav1.ConditionFalse, kind.Conditions.NotReadyReason, "the CA isn't published yet")
+		assertCondition(t, aigwdp, registration.Type, metav1.ConditionUnknown, kind.Conditions.NotReadyReason, "the CA isn't published yet")
+		assertCondition(t, aigwdp, testConfig.Conditions.CertificateProvisionedType, metav1.ConditionUnknown, kind.Conditions.NotReadyReason, "the CA isn't published yet")
+	})
+
+	t.Run("dependencies not ready keep the certificate conditions of a kind not registering it", func(t *testing.T) {
+		kind := testOnPremControlPlaneKind
+		kind.Dependencies = notReady
+		aigwdp, err := resolve(t, kind)
+		require.ErrorIs(t, err, errControlPlaneNotReady)
+		assertCondition(t, aigwdp, kind.Conditions.ResolvedType, metav1.ConditionFalse, kind.Conditions.NotReadyReason, "")
+		cond := apimeta.FindStatusCondition(aigwdp.Status.Conditions, testConfig.Conditions.CertificateProvisionedType)
+		require.NotNil(t, cond)
+		assert.Equal(t, metav1.ConditionTrue, cond.Status)
+	})
+
+	t.Run("dependencies that can't be read make the certificate conditions of a kind registering it Unknown", func(t *testing.T) {
+		kind := testOnPremControlPlaneKind
+		kind.Dependencies = func(context.Context, client.Client, ControlPlaneObject) (any, error) {
+			return nil, assert.AnError
+		}
+		kind.CertificateRegistration = registration
+		aigwdp, err := resolve(t, kind)
+		require.ErrorIs(t, err, assert.AnError)
+		require.NotErrorIs(t, err, errControlPlaneNotReady, "a read error is retried with backoff")
+		assertCondition(t, aigwdp, registration.Type, metav1.ConditionUnknown, kind.Conditions.NotReadyReason, err.Error())
+		assertCondition(t, aigwdp, testConfig.Conditions.CertificateProvisionedType, metav1.ConditionUnknown, kind.Conditions.NotReadyReason, err.Error())
+	})
+
+	t.Run("dependencies telling the control plane is gone", func(t *testing.T) {
+		kind := testOnPremControlPlaneKind
+		kind.Dependencies = func(context.Context, client.Client, ControlPlaneObject) (any, error) {
+			return nil, &DependenciesNotReadyError{Message: "the control plane is being deleted", ControlPlaneGone: true}
+		}
+		aigwdp, err := resolve(t, kind)
+		require.ErrorIs(t, err, errControlPlaneNotReady)
+		require.ErrorIs(t, err, errControlPlaneGone)
+		assertCondition(t, aigwdp, kind.Conditions.ResolvedType, metav1.ConditionFalse, kind.Conditions.NotReadyReason, "the control plane is being deleted")
+	})
+
+	t.Run("a disabled kind is reported without reading its control plane", func(t *testing.T) {
+		kind := testOnPremControlPlaneKind
+		kind.CertificateRegistration = registration
+		kind.DisabledMessage = "OnPremAIGateway control planes are not supported"
+		kind.NewObject = func() ControlPlaneObject {
+			require.FailNow(t, "a disabled kind must not be read")
+			return nil
+		}
+		aigwdp, err := resolve(t, kind)
+		require.ErrorIs(t, err, errControlPlaneKindDisabled)
+		assertCondition(t, aigwdp, kind.Conditions.ResolvedType, metav1.ConditionFalse, kind.Conditions.NotFoundReason, kind.DisabledMessage)
+		assertCondition(t, aigwdp, registration.Type, metav1.ConditionUnknown, kind.Conditions.NotFoundReason, kind.DisabledMessage)
+	})
+
+	t.Run("a missing control plane makes the certificate conditions of a kind registering it Unknown", func(t *testing.T) {
+		kind := testOnPremControlPlaneKind
+		kind.CertificateRegistration = registration
+		aigwdp, err := resolveNamed(t, kind, "missing")
+		require.True(t, apierrors.IsNotFound(err), "got %v", err)
+		require.ErrorIs(t, err, errControlPlaneGone)
+		assertCondition(t, aigwdp, kind.Conditions.ResolvedType, metav1.ConditionFalse, kind.Conditions.NotFoundReason, kind.Conditions.NotFoundMessage)
+		assertCondition(t, aigwdp, registration.Type, metav1.ConditionUnknown, kind.Conditions.NotFoundReason, kind.Conditions.NotFoundMessage)
+		assertCondition(t, aigwdp, testConfig.Conditions.CertificateProvisionedType, metav1.ConditionUnknown, kind.Conditions.NotFoundReason, kind.Conditions.NotFoundMessage)
+	})
+
+	t.Run("a missing control plane keeps the certificate conditions of a kind not registering it", func(t *testing.T) {
+		kind := testOnPremControlPlaneKind
+		aigwdp, err := resolveNamed(t, kind, "missing")
+		require.True(t, apierrors.IsNotFound(err), "got %v", err)
+		assertCondition(t, aigwdp, kind.Conditions.ResolvedType, metav1.ConditionFalse, kind.Conditions.NotFoundReason, "")
+		for _, condType := range []string{registration.Type, testConfig.Conditions.CertificateProvisionedType} {
+			cond := apimeta.FindStatusCondition(aigwdp.Status.Conditions, condType)
+			require.NotNil(t, cond, condType)
+			assert.Equal(t, metav1.ConditionTrue, cond.Status, condType)
+		}
+	})
+}
