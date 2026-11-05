@@ -10,8 +10,8 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	"github.com/cenkalti/backoff/v5"
 	"github.com/go-logr/logr"
-	"github.com/jpillora/backoff"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -115,13 +115,13 @@ func (f *MCPServersFetcher) wake() {
 func (f *MCPServersFetcher) run(ctx context.Context) {
 	go func() {
 		logger := log.GetLogger(ctx, "mcpserver-fetcher", f.loggingMode)
-		b := &backoff.Backoff{
-			Min:    time.Second,
-			Max:    time.Minute,
-			Factor: 2,
+		b := &backoff.ExponentialBackOff{
+			InitialInterval: time.Second,
+			MaxInterval:     time.Minute,
+			Multiplier:      2,
 		}
 		waitForBackoff := func() bool {
-			timer := time.NewTimer(b.Duration())
+			timer := time.NewTimer(b.NextBackOff())
 			defer timer.Stop()
 
 			select {
@@ -249,10 +249,10 @@ func (f *MCPServersFetcher) fetchAll(ctx context.Context) ([]sdkkonnectcomp.MCPS
 	if minBackoff <= 0 {
 		minBackoff = defaultPageRetryBackoffMin
 	}
-	b := &backoff.Backoff{
-		Min:    minBackoff,
-		Max:    time.Minute,
-		Factor: 2,
+	b := &backoff.ExponentialBackOff{
+		InitialInterval: minBackoff,
+		MaxInterval:     time.Minute,
+		Multiplier:      2,
 	}
 
 	cpID := f.controlPlane.GetKonnectID()
@@ -280,7 +280,7 @@ func (f *MCPServersFetcher) fetchAll(ctx context.Context) ([]sdkkonnectcomp.MCPS
 			log.Error(logger, err, "failed to list MCP servers by control plane, retrying",
 				"controlPlaneID", cpID)
 			select {
-			case <-time.After(b.Duration()):
+			case <-time.After(b.NextBackOff()):
 				continue
 			case <-ctx.Done():
 				return nil, ctx.Err()

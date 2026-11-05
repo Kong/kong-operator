@@ -9,6 +9,7 @@ require (
 	github.com/Kong/sdk-konnect-go v0.82.2
 	github.com/avast/retry-go/v5 v5.0.0
 	github.com/blang/semver/v4 v4.0.0
+	github.com/cenkalti/backoff/v5 v5.0.3
 	github.com/cert-manager/cert-manager v1.21.3
 	github.com/cloudflare/cfssl v1.7.1
 	github.com/cnf/structhash v0.0.0-20250313080605-df4c6cc74a9a
@@ -26,7 +27,6 @@ require (
 	github.com/gruntwork-io/terratest v1.0.1
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-retryablehttp v0.7.8
-	github.com/jpillora/backoff v1.0.0
 	github.com/kong/go-database-reconciler v1.43.0
 	github.com/kong/go-kong v0.80.0
 	github.com/kong/kubernetes-telemetry v0.1.14
@@ -130,7 +130,6 @@ require (
 	github.com/bombsimon/logrusr/v3 v3.1.0 // indirect
 	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
-	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/chai2010/gettext-go v1.0.2 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
