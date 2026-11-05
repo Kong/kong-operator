@@ -2,9 +2,11 @@ package kongstate
 
 import (
 	"bytes"
+	"cmp"
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -18,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/admission/validation/consumers/credentials"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
@@ -104,7 +107,7 @@ func (ks *KongState) FillConsumersAndCredentials(
 	credentialsConflictDetector := NewCredentialConflictsDetector()
 
 	// build consumer index
-	for _, consumer := range s.ListKongConsumers() {
+	for _, consumer := range rejectConsumersWithDuplicateIdentifiers(s.ListKongConsumers(), failuresCollector) {
 		var c Consumer
 		// This is now enforce that the CRD level but we're keeping this just for those
 		// rare cases where the CRD Validation Expressions are disabled.
@@ -234,6 +237,57 @@ func (ks *KongState) FillConsumersAndCredentials(
 	for _, c := range consumerIndex {
 		ks.Consumers = append(ks.Consumers, c)
 	}
+}
+
+// compareKongConsumers orders `KongConsumer`s by their priority when they share a username or custom_id:
+// - The one created earlier (earlier `creationTimestamp`) takes precedence.
+// - If the creationTimestamp equals, the one with smaller lexical order of namespace, then name, takes precedence.
+func compareKongConsumers(c1, c2 *configurationv1.KongConsumer) int {
+	return cmp.Or(
+		c1.CreationTimestamp.Compare(c2.CreationTimestamp.Time),
+		cmp.Compare(c1.Namespace, c2.Namespace),
+		cmp.Compare(c1.Name, c2.Name),
+	)
+}
+
+// rejectConsumersWithDuplicateIdentifiers returns the KongConsumers that can be translated without
+// violating Kong's uniqueness of consumer username and custom_id.
+// KongConsumers are processed in the order given by compareKongConsumers and each of them claims its username
+// and custom_id. A KongConsumer whose username or custom_id is already claimed is rejected with a translation failure.
+// Rejected KongConsumers do not claim their identifiers.
+func rejectConsumersWithDuplicateIdentifiers(
+	consumers []*configurationv1.KongConsumer,
+	failuresCollector *failures.ResourceFailuresCollector,
+) []*configurationv1.KongConsumer {
+	sorted := slices.SortedFunc(slices.Values(consumers), compareKongConsumers)
+
+	usernameOwners := make(map[string]*configurationv1.KongConsumer, len(sorted))
+	customIDOwners := make(map[string]*configurationv1.KongConsumer, len(sorted))
+	accepted := make([]*configurationv1.KongConsumer, 0, len(sorted))
+	for _, consumer := range sorted {
+		if owner, ok := usernameOwners[consumer.Username]; consumer.Username != "" && ok {
+			failuresCollector.PushResourceFailure(
+				fmt.Sprintf("username %q is already used by KongConsumer %s", consumer.Username, client.ObjectKeyFromObject(owner)),
+				consumer,
+			)
+			continue
+		}
+		if owner, ok := customIDOwners[consumer.CustomID]; consumer.CustomID != "" && ok {
+			failuresCollector.PushResourceFailure(
+				fmt.Sprintf("custom_id %q is already used by KongConsumer %s", consumer.CustomID, client.ObjectKeyFromObject(owner)),
+				consumer,
+			)
+			continue
+		}
+		if consumer.Username != "" {
+			usernameOwners[consumer.Username] = consumer
+		}
+		if consumer.CustomID != "" {
+			customIDOwners[consumer.CustomID] = consumer
+		}
+		accepted = append(accepted, consumer)
+	}
+	return accepted
 }
 
 func (ks *KongState) FillConsumerGroups(_ logr.Logger, s store.Storer) {
