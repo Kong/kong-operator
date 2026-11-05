@@ -13,6 +13,9 @@ data:
   #
   # The cloud gateway routes at the bottom are unused until #6110 is fixed:
   # today those calls leave for the public global API.
+  #
+  # The hosts, the /api prefix and the endpoint shapes were observed on Konnect
+  # dev on 2026-10-13; the identifiers and the abc123 suffix are placeholders.
   kong.yml: |
     _format_version: "3.0"
 

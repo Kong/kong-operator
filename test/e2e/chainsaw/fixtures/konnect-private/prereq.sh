@@ -16,6 +16,8 @@ set -o pipefail
 STUB_NAMESPACE=konnect-private-stub
 OPERATOR_NAMESPACE=kong-system
 OPERATOR_SELECTOR=app.kubernetes.io/name=kong-operator
+# The two hostnames are the ones Konnect serves over PrivateLink, observed on
+# Konnect dev on 2026-10-13; the rest of the fixture is placeholder values.
 REGIONAL_HOST=us.svc.konghq.tech
 GLOBAL_HOST=global.svc.konghq.tech
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

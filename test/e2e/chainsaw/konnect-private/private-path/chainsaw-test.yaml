@@ -27,6 +27,8 @@ spec:
     5. The fake received the calls on the private paths.
 
   bindings:
+    # The hosts, the /api prefix and the endpoint shapes were observed on
+    # Konnect dev on 2026-10-13; the identifiers and the abc123 suffix are placeholders.
     - name: test_name
       value: ($namespace)
     - name: konnect_token

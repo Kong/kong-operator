@@ -17,9 +17,8 @@ import (
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
-// Values for the private Konnect path: the two hostnames Kong serves behind
-// PrivateLink, and the identifiers the fake answers with. The chainsaw suite
-// under test/e2e/chainsaw/fixtures/konnect-private mirrors them.
+// Values for the private Konnect path, mirrored by the chainsaw fixture: hosts and
+// /api prefix observed on Konnect dev 2026-10-13, identifiers and suffix are placeholders.
 const (
 	// KonnectPrivateServerURL is the canonical private serverURL.
 	KonnectPrivateServerURL = "https://us.svc.konghq.tech/api"
